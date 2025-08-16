@@ -53,7 +53,16 @@ class PlotScalar: public PlotPanel
          void setLogY(int logy) { m_logy = logy; }
 
          void clearSamples();
-         
+        
+    private:
+        struct MinMaxPoints
+        {
+            int y1;
+            int y2;
+        };
+
+        MinMaxPoints* lineMap_;
+ 
     protected:
 
          int      m_channels;

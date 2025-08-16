@@ -24,25 +24,28 @@
 #define AUDIO_PIPELINE__TX_RX_THREAD_H
 
 #include <assert.h>
-#include <wx/thread.h>
+#include <functional>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
+#include "util/Semaphore.h"
 
 // Forward declarations
 class LinkStep;
 
+//#define ENABLE_PROCESSING_STATS
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class txRxThread - experimental tx/rx processing thread
+// class txRxThread - tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class TxRxThread : public wxThread
+class TxRxThread
 {
 public:
     TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<LinkStep> micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
-        : wxThread(wxTHREAD_JOINABLE)
-        , m_tx(tx)
+        : m_tx(tx)
         , m_run(1)
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
@@ -50,13 +53,17 @@ public:
         , equalizedMicAudioLink_(micAudioLink)
         , hasEooBeenSent_(false)
         , helper_(helper)
+        , deferReset_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
 
-        inputSamples_ = std::shared_ptr<short>(
-            new short[std::max(inputSampleRate_, outputSampleRate_)], 
-            std::default_delete<short[]>());
+        auto numSamples = std::max(inputSampleRate_, outputSampleRate_);
+        inputSamples_ = std::make_unique<short[]>(numSamples);
+        assert(inputSamples_ != nullptr);
+        inputSamplesZeros_ = std::make_unique<short[]>(numSamples);
+        assert(inputSamplesZeros_ != nullptr);
+        memset(inputSamplesZeros_.get(), 0, numSamples * sizeof(short));
     }
     
     virtual ~TxRxThread()
@@ -65,29 +72,61 @@ public:
         inputSamples_ = nullptr;
     }
 
+    void start()
+    {
+        thread_ = std::thread(std::bind(&TxRxThread::Entry, this));
+    }
+
+    void stop()
+    {
+        m_run = false;
+        if (thread_.joinable())
+        {
+            thread_.join();
+        }
+    }
+
     // thread execution starts here
     void *Entry();
 
-    // called when the thread exits - whether it terminates normally or is
-    // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit();
-
-    void terminateThread();
-    void notify();
+    void waitForReady() { readySem_.wait(); }
+    void signalToStart() { startSem_.signal(); }
 
 private:
     bool  m_tx;
     bool  m_run;
-    std::shared_ptr<AudioPipeline> pipeline_;
+    std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
-    std::shared_ptr<short> inputSamples_;
+    std::unique_ptr<short[]> inputSamples_;
+    std::unique_ptr<short[]> inputSamplesZeros_;
+    bool deferReset_;
+    std::thread thread_;
+
+    Semaphore readySem_;
+    Semaphore startSem_;
+
+#if defined(ENABLE_PROCESSING_STATS)
+    int numTimeSamples_;
+    double minDuration_;
+    std::time_t minTime_;
+    double maxDuration_;
+    std::time_t maxTime_;
+    double sumDuration_;
+    double sumDoubleDuration_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart_;
+    
+    void resetStats_();
+    void startTimer_();
+    void endTimer_();
+    void reportStats_();    
+#endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
-    void txProcessing_() noexcept
+    void txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -95,7 +134,7 @@ private:
 #endif // defined(__clang__)
     ;
 
-    void rxProcessing_() noexcept
+    void rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

@@ -104,12 +104,7 @@ public:
     bool isValidForReporting();
     
 private:
-    // Required elements to implement execution thread for FreeDV Reporter.
-    std::vector<std::function<void()> > fnQueue_;
-    std::mutex fnQueueMutex_;
-    std::condition_variable fnQueueConditionVariable_;
-    bool isExiting_;
-    std::thread fnQueueThread_;
+    std::mutex objMutex_;
     bool isConnecting_;
     std::atomic<bool> isFullyConnected_;
     
@@ -141,7 +136,6 @@ private:
         
     void connect_();
     
-    void threadEntryPoint_();
     void freqChangeImpl_(uint64_t frequency);
     void transmitImpl_(std::string mode, bool tx);
     void sendMessageImpl_(std::string message);

@@ -22,8 +22,13 @@
 
 #include "ThreadedTimer.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 ThreadedTimer::ThreadedTimer()
     : isDestroying_(false)
+    , isRestarting_(false)
     , repeat_(false)
     , timeoutMilliseconds_(0)
 {
@@ -84,14 +89,33 @@ void ThreadedTimer::stop()
     }
 }
 
+void ThreadedTimer::restart()
+{
+    if (objectThread_.joinable())
+    {
+        isRestarting_ = true;
+        timerCV_.notify_one();
+    }
+    else
+    {
+        start();
+    }
+}
+
 void ThreadedTimer::eventLoop_()
 {
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
     do
     {
         std::unique_lock<std::mutex> lk(timerMutex_);
-        if (!timerCV_.wait_for(lk, std::chrono::milliseconds(timeoutMilliseconds_), [&]() { return isDestroying_; }) && fn_)
+        isRestarting_ = false;
+        if (!timerCV_.wait_for(lk, std::chrono::milliseconds(timeoutMilliseconds_), [&]() { return isDestroying_ || isRestarting_; }) && fn_)
         {
             fn_(*this);
         }
-    } while (!isDestroying_ && repeat_);
+    } while (!isDestroying_ && (isRestarting_ || repeat_));
 }

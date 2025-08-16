@@ -83,7 +83,10 @@ private:
     AudioComponentInstance auHAL_;
     AudioBufferList* bufferList_;
     bool running_;
-    
+    int chosenFrameSize_;
+    dispatch_time_t waitTime_;
+    std::atomic<int> numRealTimeWorkers_;
+
     void joinWorkgroup_();
     void leaveWorkgroup_();
     
@@ -92,6 +95,7 @@ private:
     static thread_local void* Workgroup_;
     static thread_local void* JoinToken_;
     static thread_local int CurrentCoreAudioId_;
+    static thread_local int64_t AddedWaitDuration_;
 
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,

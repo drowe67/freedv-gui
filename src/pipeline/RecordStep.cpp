@@ -25,6 +25,10 @@
 #include <chrono>
 #include "wx/thread.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -46,6 +50,7 @@ RecordStep::RecordStep(
 RecordStep::~RecordStep()
 {
     fileIoThreadEnding_ = true;
+    fileIoThreadSem_.signal();
     if (fileIoThread_.joinable())
     {
         fileIoThread_.join();
@@ -64,12 +69,13 @@ int RecordStep::getOutputSampleRate() const
     return inputSampleRate_;
 }
 
-std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {    
-    codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
+    codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
+    fileIoThreadSem_.signal();
     
-    *numOutputSamples = 0;    
-    return std::shared_ptr<short>((short*)nullptr);
+    *numOutputSamples = 0;
+    return nullptr;
 }
 
 void RecordStep::reset()
@@ -85,7 +91,12 @@ void RecordStep::fileIoThreadEntry_()
 {
     short* buf = new short[inputSampleRate_];
     assert(buf != nullptr);
-    
+
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.        
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
+
     while (!fileIoThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
@@ -100,7 +111,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(100ms);
+        fileIoThreadSem_.wait();
     }
     
     delete[] buf;

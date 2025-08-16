@@ -25,7 +25,9 @@
 
 #include "IPipelineStep.h"
 
-#include <samplerate.h>
+#include <memory>
+//#include <samplerate.h>
+#include <speex/speex_resampler.h>
 
 class ResampleStep : public IPipelineStep
 {
@@ -35,16 +37,17 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    SRC_STATE* resampleState_;
+    //SRC_STATE* resampleState_;
+    SpeexResamplerState* resampleState_;
 
     float* tempInput_;
     float* tempOutput_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__RESAMPLE_STEP_H

@@ -21,6 +21,7 @@
 #ifndef __FDMDV2_PLOT_WATERFALL__
 #define __FDMDV2_PLOT_WATERFALL__
 
+#include <deque>
 #include <wx/graphics.h>
 
 #include "plot.h"
@@ -72,12 +73,15 @@ class PlotWaterfall : public PlotPanel
         int         m_colour;
         int         m_modem_stats_max_f_hz;
 
-        wxBitmap* m_fullBmp;
         int m_imgHeight;
         int m_imgWidth;
         
+        std::deque<wxBitmap*> waterfallSlices_;
+        
         void        OnDoubleClickCommon(wxMouseEvent& event);
 
+        void cleanupSlices_();
+        
         DECLARE_EVENT_TABLE()
 };
 

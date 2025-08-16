@@ -13,6 +13,9 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
 
+permissions:
+  pull-requests: write
+
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -224,6 +227,9 @@ jobs:
     needs: lint
 
     steps:
+    - name: Collect Workflow Telemetry
+      uses: catchpoint/workflow-telemetry-action@v2
+
     - uses: actions/checkout@v4
 
     - name: Install LLVM/Clang >=20.0 (Required for RTSan)

@@ -20,9 +20,12 @@
 //
 //==========================================================================
 
+#import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
 #include "os_interface.h"
+
+static id<NSObject> Activity = nil;
 
 void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 {
@@ -79,6 +82,24 @@ void ResetMainWindowColorSpace()
         assert(cs != nullptr);
         CGColorSpaceRelease(cs);
     }];
+}
+
+void StartLowLatencyActivity()
+{
+    NSActivityOptions options = NSActivityUserInitiated | NSActivityIdleSystemSleepDisabled | NSActivityLatencyCritical;
+
+    Activity = [[NSProcessInfo processInfo] beginActivityWithOptions: options reason:@"FreeDV provides low latency audio processing and should not be inturrupted by system throttling."];
+    [Activity retain];
+}
+
+void StopLowLatencyActivity()
+{
+    if (Activity)
+    {
+        [[NSProcessInfo processInfo] endActivity: Activity];
+        [Activity release];
+        Activity = nil;
+    }
 }
 
 std::string GetOperatingSystemString()

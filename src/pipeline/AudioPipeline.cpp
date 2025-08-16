@@ -32,7 +32,7 @@ AudioPipeline::AudioPipeline(int inputSampleRate, int outputSampleRate)
 
 AudioPipeline::~AudioPipeline()
 {
-    // empty, shared_ptr will automatically deallocate.
+    // empty, unique_ptr will automatically deallocate.
 }
 
 int AudioPipeline::getInputSampleRate() const
@@ -69,29 +69,32 @@ void AudioPipeline::dumpSetup() const
     log_debug("End at SR %d", getOutputSampleRate());
 }
 
-std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    std::shared_ptr<short> tempInput = inputSamples;
-    std::shared_ptr<short> tempResult = inputSamples;
+    short* tempInput = inputSamples;
+    short* tempResult = inputSamples;
     int tempInputSamples = numInputSamples;
     int tempOutputSamples = tempInputSamples;
-    
-    for (size_t index = 0; index < pipelineSteps_.size(); index++)
+
+    auto numSteps = pipelineSteps_.size();
+    for (size_t index = 0; index < numSteps; index++)
     {
-        if (resamplers_[index] != nullptr)
+        auto& resampler = resamplers_[index];
+        auto& step = pipelineSteps_[index];
+        if (resampler != nullptr)
         {
-            if (resamplers_[index]->getOutputSampleRate() != pipelineSteps_[index]->getInputSampleRate())
+            if (resampler->getOutputSampleRate() != step->getInputSampleRate())
             {
-                resamplers_[index] = nullptr;
+                resampler = nullptr;
                 reloadResampler_(index);
             }
 
-            tempResult = resamplers_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
+            tempResult = resampler->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;
         }
         
-        tempResult = pipelineSteps_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
+        tempResult = step->execute(tempInput, tempInputSamples, &tempOutputSamples);
         tempInput = tempResult;
         tempInputSamples = tempOutputSamples;        
     }
@@ -105,17 +108,17 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
     return tempResult;
 }
 
-void AudioPipeline::appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep)
+void AudioPipeline::appendPipelineStep(IPipelineStep* pipelineStep)
 {
-    pipelineSteps_.push_back(pipelineStep);
-    resamplers_.resize(pipelineSteps_.size(), nullptr); // will be updated by reloadResampler_() below.
+    pipelineSteps_.push_back(std::unique_ptr<IPipelineStep>(pipelineStep)); // take ownership of pointer
+    resamplers_.push_back(nullptr); // will be updated by reloadResampler_() below.
     reloadResampler_(pipelineSteps_.size() - 1);
     reloadResultResampler_();
 }
 
 void AudioPipeline::reloadResampler_(int index)
 {
-    std::shared_ptr<ResampleStep> resampleStep = resamplers_[index];
+    ResampleStep* resampleStep = resamplers_[index].get();
     bool createResampler = 
         resampleStep == nullptr || resampleStep->getOutputSampleRate() == pipelineSteps_[index]->getInputSampleRate();
     
@@ -131,8 +134,7 @@ void AudioPipeline::reloadResampler_(int index)
         {
             if (pipelineSteps_[0]->getInputSampleRate() != getInputSampleRate())
             {
-                resampleStep = std::shared_ptr<ResampleStep>(
-                    new ResampleStep(getInputSampleRate(), pipelineSteps_[0]->getInputSampleRate()));
+                resampleStep = new ResampleStep(getInputSampleRate(), pipelineSteps_[0]->getInputSampleRate());
             }
             else
             {
@@ -144,8 +146,7 @@ void AudioPipeline::reloadResampler_(int index)
             int prevOutputSampleRate = pipelineSteps_[index - 1]->getOutputSampleRate();
             if (pipelineSteps_[index]->getInputSampleRate() != prevOutputSampleRate)
             {
-                resampleStep = std::shared_ptr<ResampleStep>(
-                    new ResampleStep(prevOutputSampleRate, pipelineSteps_[index]->getInputSampleRate()));
+                resampleStep = new ResampleStep(prevOutputSampleRate, pipelineSteps_[index]->getInputSampleRate());
             }
             else
             {
@@ -154,7 +155,7 @@ void AudioPipeline::reloadResampler_(int index)
         }
     }
     
-    resamplers_[index] = resampleStep;
+    resamplers_[index] = std::unique_ptr<ResampleStep>(resampleStep);
 }
 
 void AudioPipeline::reloadResultResampler_()
@@ -173,8 +174,7 @@ void AudioPipeline::reloadResultResampler_()
             getInputSampleRate();
         if (lastOutputSampleRate != getOutputSampleRate())
         {
-            resultSampler_ = std::shared_ptr<ResampleStep>(
-                new ResampleStep(lastOutputSampleRate, getOutputSampleRate()));
+            resultSampler_ = std::make_unique<ResampleStep>(lastOutputSampleRate, getOutputSampleRate());
         }
         else
         {

@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            LevelAdjustStep.h
-// Purpose:         Describes a level adjust step in the audio pipeline.
+// Name:            ThreadedObject.mm
+// Purpose:         macOS-specific implementation of ThreadedObject using GCD.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,28 +20,37 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
-#define AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
+#include <cassert>
 
-#include <functional>
-#include <memory>
+#include "ThreadedObject.h"
 
-#include "IPipelineStep.h"
-
-class LevelAdjustStep : public IPipelineStep
+ThreadedObject::ThreadedObject(ThreadedObject* parent)
+    : parent_(parent)
 {
-public:
-    LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn);
-    virtual ~LevelAdjustStep();
+    dispatch_queue_t parentQueue;
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    if (parent_ != nullptr)
+    {
+        parentQueue = parent_->queue_;
+    }
+    else
+    {
+        parentQueue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
+    }
     
-private:
-    std::function<float()> scaleFactorFn_;
-    int sampleRate_;
-    std::unique_ptr<short[]> outputSamples_;
-};
+    queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
+    assert(queue_ != nil);
+}
 
-#endif // AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
+ThreadedObject::~ThreadedObject()
+{
+    // empty
+}
+
+void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
+{
+    // note: timeout not implemented
+    dispatch_async(queue_, ^() {
+        fn();
+    });
+}

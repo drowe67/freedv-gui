@@ -44,11 +44,13 @@ public:
     
     void start();
     void stop();
+    void restart();
     
     bool isRunning();
     
 private:
     bool isDestroying_;
+    bool isRestarting_;
     std::thread objectThread_;
     std::mutex timerMutex_;
     std::condition_variable timerCV_;

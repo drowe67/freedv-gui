@@ -345,11 +345,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Set up timers. Highlight clear timer has a slightly longer interval
     // to reduce CPU usage.
     m_highlightClearTimer = new wxTimer(this);
-    m_highlightClearTimer->Start(250);
+    m_highlightClearTimer->Start(251);
     m_resortTimer = new wxTimer(this);
-    m_resortTimer->Start(100);
+    m_resortTimer->Start(101);
     m_deleteTimer = new wxTimer(this);
-    m_deleteTimer->Start(1000);
+    m_deleteTimer->Start(1009);
     
     // Create Set popup menu
     setPopupMenu_ = new wxMenu();
@@ -839,11 +839,36 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             {
                 reportData->backgroundColor = backgroundColor;
                 reportData->foregroundColor = foregroundColor;
+            }
 
-                if (reportData->isVisible)
+            if (parent_->IsShownOnScreen())
+            {
+                bool newVisibility = !isFiltered_(reportData->frequency);
+                if (newVisibility != reportData->isVisible)
                 {
-                    wxDataViewItem dvi(reportData);
-                    itemsChanged.Add(dvi);
+                    reportData->isVisible = newVisibility;
+                    if (newVisibility)
+                    {
+                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    else
+                    {
+                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    sortOnNextTimerInterval = true;
+                }
+                else
+                {
+                    if (isHighlightUpdated || reportData->isPendingUpdate)
+                    {
+                        if (reportData->isVisible)
+                        {
+                            reportData->isPendingUpdate = false;
+
+                            wxDataViewItem dvi(reportData);
+                            itemsChanged.Add(dvi);
+                        }
+                    }
                 }
             }
         }
@@ -866,6 +891,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     else
     {
+        if (!IsShownOnScreen()) return;
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
@@ -1549,7 +1575,12 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
-    
+   
+    if (!parent_->IsShownOnScreen())
+    {
+        return true;
+    }
+
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
     {
         return false;
@@ -2053,7 +2084,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         }
         else if (updated && kvp.second->isVisible)
         {
-            ItemChanged(wxDataViewItem(kvp.second));
+            kvp.second->isPendingUpdate = true;
         }
     }
 }
@@ -2207,7 +2238,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
         temp->isVisible = !isFiltered_(temp->frequency);
-        
+        temp->isPendingUpdate = false;
+
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
         {
             log_warn("Received duplicate user during connection process");
@@ -2333,7 +2365,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             }
             else if (newVisibility)
             {            
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2382,13 +2414,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
-            iter->second->lastUpdate = lastUpdateTime;
+            if (isChanged)
+            {
+                iter->second->lastUpdate = lastUpdateTime;
+            }
 
             if (iter->second->isVisible)
             { 
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2420,10 +2453,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsign;
             iter->second->lastRxMode = rxMode;
         
-            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
-            iter->second->lastUpdate = lastUpdateTime;
-        
             wxString snrString = wxString::Format(_("%.01f"), snr);
             if (receivedCallsign == "" && rxMode == "")
             {
@@ -2449,10 +2478,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 iter->second->lastRxDate = wxDateTime::Now();
             }
        
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            if (isChanged)
+            {
+                iter->second->lastUpdate = lastUpdateTime;
+            }
+        
             if (iter->second->isVisible)
             { 
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2490,8 +2524,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
-            iter->second->lastUpdate = lastUpdateTime;
+            if (isChanged)
+            {
+                iter->second->lastUpdate = lastUpdateTime;
+            }
 
             // Only highlight on non-empty messages.
             bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
@@ -2509,8 +2545,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
        
             if (iter->second->isVisible)
             {
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }

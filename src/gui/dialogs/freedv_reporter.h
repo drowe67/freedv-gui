@@ -259,6 +259,9 @@ class FreeDVReporterDialog : public wxFrame
                 bool isPendingDelete;
                 wxDateTime deleteTime;
 
+                // Controls whether this row is pending update
+                bool isPendingUpdate;
+
                 // Controls the current highlight color
                 wxColour foregroundColor;
                 wxColour backgroundColor;
