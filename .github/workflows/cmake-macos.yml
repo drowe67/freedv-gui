@@ -25,7 +25,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    #steps:
+    steps:
     #- name: Collect Workflow Telemetry
     #  uses: catchpoint/workflow-telemetry-action@v2
 
