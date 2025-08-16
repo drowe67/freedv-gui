@@ -129,7 +129,7 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
     
     *numOutputSamples = 0;
 
-    //auto inputPtr = inputSamples;
+    auto inputPtr = inputSamples;
     auto outputPtr = outputSamples_.get();
 #if 0
     while (numInputSamples > 0)

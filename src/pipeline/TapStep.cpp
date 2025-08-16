@@ -37,12 +37,10 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     , sampleRate_(sampleRate)
 #if defined(TAP_STEP_USE_THREADING)
     , tapThreadInput_(sampleRate / 4)
-#if !defined(__APPLE__)
     , endingTapThread_(false)
-#endif // !defined(__APPLE__)
 #endif // defined(TAP_STEP_USE_THREADING)
 {
-#if defined(TAP_STEP_USE_THREADING) && !defined(__APPLE__)
+#if defined(TAP_STEP_USE_THREADING)
     tapThread_ = std::thread([&]() {
         const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
         short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
@@ -66,16 +64,16 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
 
         delete[] fifoInput;
     });
-#endif // defined(TAP_STEP_USE_THREADING) && !defined(__APPLE__)
+#endif // defined(TAP_STEP_USE_THREADING)
 }
 
 TapStep::~TapStep()
 {
-#if defined(TAP_STEP_USE_THREADING) && !defined(__APPLE__)
+#if defined(TAP_STEP_USE_THREADING)
     endingTapThread_ = true;
     sem_.signal();
     tapThread_.join();
-#endif // defined(TAP_STEP_USE_THREADING) && !defined(__APPLE__)
+#endif // defined(TAP_STEP_USE_THREADING)
 }
 
 int TapStep::getInputSampleRate() const
@@ -96,24 +94,7 @@ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     tapThreadInput_.write(inputSamples, numInputSamples);
     if (tapThreadInput_.numUsed() > (100 * sampleRate_ / 1000))
     {
-#if !defined(__APPLE__)
         sem_.signal();
-#else
-        enqueue_([&]() {
-            const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
-            short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
-            assert(fifoInput != nullptr);
-            
-            while (tapThreadInput_.numUsed() >= SAMPLE_RATE_AT_10MS)
-            {
-                int temp = 0;
-                tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
-                tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
-            }
-            
-            delete[] fifoInput;
-        });
-#endif // !defined(__APPLE__)
     }
 #else
     int temp = 0;
