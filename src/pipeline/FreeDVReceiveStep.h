@@ -61,6 +61,7 @@ private:
     std::atomic<int> syncState_;
     struct freedv* dv_;
     struct FIFO* inputSampleFifo_;
+    struct FIFO* outputSampleFifo_;
     COMP rxFreqOffsetPhaseRectObjs_;
     float sigPwrAvg_;
     bool channelNoiseEnabled_;

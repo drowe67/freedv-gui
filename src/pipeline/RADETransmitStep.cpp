@@ -197,6 +197,7 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
         *numOutputSamples = outputSampleFifo_.numUsed();
     }
 
+    *numOutputSamples = std::min(outputSampleFifo_.numUsed(), (numInputSamples * RADE_MODEM_SAMPLE_RATE) / RADE_SPEECH_SAMPLE_RATE);
     if (*numOutputSamples > 0)
     {
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);

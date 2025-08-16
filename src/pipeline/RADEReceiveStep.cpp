@@ -199,7 +199,7 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                         pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
                     }
 
-                    *numOutputSamples += LPCNET_FRAME_SIZE;
+                    //*numOutputSamples += LPCNET_FRAME_SIZE;
                     outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
                 }
             }
@@ -207,7 +207,8 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
 
         nin = rade_nin(dv_);
     }
-   
+  
+    *numOutputSamples = std::min(outputSampleFifo_.numUsed(), (numInputSamples * RADE_SPEECH_SAMPLE_RATE) / RADE_MODEM_SAMPLE_RATE); 
     if (*numOutputSamples > 0)
     { 
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);

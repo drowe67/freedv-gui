@@ -37,6 +37,8 @@ FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()>
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(freedv_get_speech_sample_rate(dv_));
     assert(inputSampleFifo_ != nullptr);
+    outputSampleFifo_ = codec2_fifo_create(freedv_get_modem_sample_rate(dv_));
+    assert(outputSampleFifo_ != nullptr);
     
     txFreqOffsetPhaseRectObj_.real = cos(0.0);
     txFreqOffsetPhaseRectObj_.imag = sin(0.0);
@@ -72,6 +74,11 @@ FreeDVTransmitStep::~FreeDVTransmitStep()
     {
         codec2_fifo_destroy(inputSampleFifo_);
     }
+
+    if (outputSampleFifo_ != nullptr)
+    {
+        codec2_fifo_destroy(outputSampleFifo_);
+    }
 }
 
 int FreeDVTransmitStep::getInputSampleRate() const
@@ -94,12 +101,13 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples;
-    while (numInputSamples > 0 && inputPtr)
+    int ctr = numInputSamples;
+    while (ctr > 0 && inputPtr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
-        numInputSamples--;
+        ctr--;
         
-        if ((*numOutputSamples + nfreedv) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
+        if (/*(*numOutputSamples + nfreedv) < maxSamples &&*/ codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
         
@@ -116,20 +124,27 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
                 for(int i = 0; i<nfreedv; i++)
                     tmpOutput_[i] = txFdmOffset_[i].real;
             }
-                       
-            memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
-            *numOutputSamples += nfreedv;
+             
+            codec2_fifo_write(outputSampleFifo_, tmpOutput_, nfreedv);          
+            //memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
+            //*numOutputSamples += nfreedv;
         }
     }
-    
+   
+    *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (numInputSamples * freedv_get_modem_sample_rate(dv_)) / freedv_get_speech_sample_rate(dv_));
+    codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples); 
     return outputSamples_.get();
 }
 
 void FreeDVTransmitStep::reset()
 {
+    short tmp;
     while (codec2_fifo_used(inputSampleFifo_) > 0)
     {
-        short tmp;
         codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
+    while (codec2_fifo_used(outputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(outputSampleFifo_, &tmp, 1);
     }
 }
