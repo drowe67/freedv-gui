@@ -60,6 +60,8 @@ class PlotScalar: public PlotPanel
             int y1;
             int y2;
         };
+
+        MinMaxPoints* lineMap_;
  
     protected:
 

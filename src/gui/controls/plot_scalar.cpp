@@ -59,6 +59,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
 
     m_rCtrl = GetClientRect();
 
+    lineMap_ = nullptr;
     m_channels = channels;
     m_t_secs = t_secs;
     m_sample_period_secs = sample_period_secs;
@@ -89,6 +90,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
 PlotScalar::~PlotScalar()
 {
     delete[] m_mem;
+    delete[] lineMap_;
 }
 
 //----------------------------------------------------------------
@@ -167,7 +169,9 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
     plotWidth = m_rGrid.GetWidth();
     plotHeight = m_rGrid.GetHeight();
-        
+
+    if (plotWidth <= 0 || plotHeight <= 0) return;
+ 
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
@@ -184,13 +188,16 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     // plot each channel     
 
     // x -> (y1, y2)
-    MinMaxPoints* lineMap = new MinMaxPoints[plotWidth];
-    assert(lineMap != nullptr);
-
-    for (int index = 0; index < plotWidth; index++)
+    if (lineMap_ != nullptr)
     {
-        lineMap[index].y1 = INT_MAX;
-        lineMap[index].y2 = INT_MIN;
+        lineMap_ = new MinMaxPoints[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
+        assert(lineMap_ != nullptr);
+    }
+
+    for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+    {
+        lineMap_[index].y1 = INT_MAX;
+        lineMap_[index].y2 = INT_MIN;
     }
 
     int offset, x, y;
@@ -251,9 +258,9 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             else {
                 if (i)
                 {
-                    auto& item = lineMap[x - (PLOT_BORDER + XLEFT_OFFSET)];
-                    item.y1 = std::min(item.y1, y);
-                    item.y2 = std::max(item.y2, y);
+                    auto item = &lineMap_[x];
+                    item->y1 = std::min(item->y1, y);
+                    item->y2 = std::max(item->y2, y);
                 }
             }
         }
@@ -261,13 +268,15 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
    
     if (!m_bar_graph)
     {
-        for (int index = 0; index < plotWidth; index++)
+        for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
         {
+            auto item = &lineMap_[index];
+            if (item->y1 == INT_MAX || item->y2 == INT_MIN) continue;
+
             int x = index + PLOT_BORDER + XLEFT_OFFSET;
-            ctx->StrokeLine(x, lineMap[index].y1, x, lineMap[index].y2);
+            ctx->StrokeLine(x, item->y1, x, item->y2);
         }
     } 
-    delete[] lineMap;
 
     drawGraticule(ctx);
 }
@@ -372,6 +381,16 @@ void PlotScalar::clearSamples()
 //----------------------------------------------------------------
 void PlotScalar::OnSize(wxSizeEvent& event)
 {
+    m_rCtrl = GetClientRect();
+    m_rGrid = m_rCtrl;
+    if (!m_mini)
+        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+
+    int plotWidth = m_rGrid.GetWidth();
+    delete[] lineMap_;
+
+    lineMap_ = new MinMaxPoints[plotWidth];
+    assert(lineMap_ != nullptr);
 }
 
 //----------------------------------------------------------------
