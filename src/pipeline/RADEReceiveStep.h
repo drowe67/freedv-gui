@@ -64,8 +64,8 @@ private:
     std::atomic<int> snr_;
     struct rade* dv_;
     FARGANState* fargan_;
-    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE / 2> inputSampleFifo_;
-    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE / 2> outputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE> inputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE> outputSampleFifo_;
     float* pendingFeatures_;
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
@@ -78,7 +78,7 @@ private:
     float* eooOut_;
     std::unique_ptr<short[]> outputSamples_;
     
-    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
+    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
     Semaphore featuresAvailableSem_;

@@ -57,9 +57,6 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 {
     if (utTxFeatureFile != "")
     {
-        utFeatures_ = new PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>;
-        assert(utFeatures_ != nullptr);
-
         featuresFile_ = fopen((const char*)utTxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
         
@@ -109,8 +106,6 @@ RADETransmitStep::~RADETransmitStep()
         featuresAvailableSem_.signal();
         utFeatureThread_.join();
         fclose(featuresFile_);
-
-        delete utFeatures_;
     }
 }
 
@@ -156,8 +151,8 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
             
         if (featuresFile_)
         {
-            utFeatures_->write(features, NB_TOTAL_FEATURES);
-            if (utFeatures_->numUsed() > (0.75 * utFeatures_->capacity()))
+            utFeatures_.write(features, NB_TOTAL_FEATURES);
+            if (utFeatures_.numUsed() > (0.75 * utFeatures_.capacity()))
             {
                 featuresAvailableSem_.signal();
             }
@@ -197,7 +192,6 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
         *numOutputSamples = outputSampleFifo_.numUsed();
     }
 
-    *numOutputSamples = std::min(outputSampleFifo_.numUsed(), (numInputSamples * RADE_MODEM_SAMPLE_RATE) / RADE_SPEECH_SAMPLE_RATE);
     if (*numOutputSamples > 0)
     {
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
@@ -255,28 +249,28 @@ void RADETransmitStep::utFeatureThreadEntry_()
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
 
-    float* featureBuf = new float[utFeatures_->capacity()];
+    float* featureBuf = new float[utFeatures_.capacity()];
     assert(featureBuf != nullptr);
 
     while (!exitingFeatureThread_)
     {
-        auto numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
+        auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
         while (numToRead > 0)
         {
-            utFeatures_->read(featureBuf, numToRead);
+            utFeatures_.read(featureBuf, numToRead);
             fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
-            numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
+            numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
         }
         
         featuresAvailableSem_.wait();
     }
 
-    auto numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
+    auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
     while (numToRead > 0)
     {
-        utFeatures_->read(featureBuf, numToRead);
+        utFeatures_.read(featureBuf, numToRead);
         fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
-        numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
+        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
     }
 
     delete[] featureBuf;

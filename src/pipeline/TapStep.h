@@ -30,9 +30,6 @@
 
 #include "IPipelineStep.h"
 
-// Creates a separate thread for each TapStep instance if uncommented.
-//#define TAP_STEP_USE_THREADING
-
 class TapStep : public IPipelineStep
 {
 public:
@@ -46,13 +43,10 @@ public:
 private:
     std::unique_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
-
-#if defined(TAP_STEP_USE_THREADING)
     std::thread tapThread_;
     bool endingTapThread_;
     GenericFIFO<short> tapThreadInput_;
     Semaphore sem_;
-#endif // defined(TAP_STEP_USE_THREADING)
 };
 
 #endif // AUDIO_PIPELINE__TAP_STEP_H

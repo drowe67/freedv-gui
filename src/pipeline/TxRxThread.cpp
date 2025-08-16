@@ -673,7 +673,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
 
         int             nout;
 
-        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= (outputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC /*nsam_one_modem_frame*/) {        
+        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
             
@@ -805,7 +805,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= (outputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC /*nsam_one_speech_frame*/ && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
+    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
         
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();

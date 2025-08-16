@@ -35,12 +35,9 @@ using namespace std::chrono_literals;
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     : tapStep_(tapStep)
     , sampleRate_(sampleRate)
-#if defined(TAP_STEP_USE_THREADING)
-    , tapThreadInput_(sampleRate / 4)
     , endingTapThread_(false)
-#endif // defined(TAP_STEP_USE_THREADING)
+    , tapThreadInput_(sampleRate)
 {
-#if defined(TAP_STEP_USE_THREADING)
     tapThread_ = std::thread([&]() {
         const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
         short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
@@ -64,16 +61,13 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
 
         delete[] fifoInput;
     });
-#endif // defined(TAP_STEP_USE_THREADING)
 }
 
 TapStep::~TapStep()
 {
-#if defined(TAP_STEP_USE_THREADING)
     endingTapThread_ = true;
     sem_.signal();
     tapThread_.join();
-#endif // defined(TAP_STEP_USE_THREADING)
 }
 
 int TapStep::getInputSampleRate() const
@@ -89,17 +83,12 @@ int TapStep::getOutputSampleRate() const
 short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
-
-#if defined(TAP_STEP_USE_THREADING) 
+    
     tapThreadInput_.write(inputSamples, numInputSamples);
     if (tapThreadInput_.numUsed() > (100 * sampleRate_ / 1000))
     {
         sem_.signal();
     }
-#else
-    int temp = 0;
-    tapStep_->execute(inputSamples, numInputSamples, &temp);
-#endif // defined(TAP_STEP_USE_THREADING) 
  
     *numOutputSamples = numInputSamples;
     return inputSamples;

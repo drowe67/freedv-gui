@@ -50,7 +50,6 @@ private:
     struct freedv* dv_;
     std::function<float()> getFreqOffsetFn_;
     struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
     COMP txFreqOffsetPhaseRectObj_;
 
     COMP* txFdm_;
