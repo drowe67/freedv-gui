@@ -25,9 +25,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    steps:
-    - name: Collect Workflow Telemetry
-      uses: catchpoint/workflow-telemetry-action@v2
+    #steps:
+    #- name: Collect Workflow Telemetry
+    #  uses: catchpoint/workflow-telemetry-action@v2
 
     - name: Print current sysctl values (debug)
       shell: bash
