@@ -660,17 +660,15 @@ void MainFrame::loadConfiguration_()
         SetSize(w, h);
     });
     
+    // TX
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
-    char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
-    snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
-    wxString fmtString(fmt);
-    m_txtTxLevelNum->SetLabel(fmtString);
-    
-    m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-    snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
-    fmtString = fmt;
-    m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    m_txtTxLevelNum->SetLabel(wxString::Format("%d dB", g_txLevel));
+
+    // Mic/Spkr (SpkOut at Start)
+    int spk = (int)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+    m_sliderMicSpkrLevel->SetValue(spk);
+    m_txtMicSpkrLevelNum->SetLabel(wxString::Format("%d dB", spk));
 
     // Adjust frequency entry labels
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
@@ -1340,21 +1338,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {
-         // Synchronize changes with Filter dialog
-         auto sliderVal = 0.0;
-         if (g_tx)
+         // Synchronize Mic/Spkr Level (now whole dB, 1 dB steps)
+         int sliderVal =
+             g_tx
+             ? (int)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB
+             : (int)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+
+         // Update only if different to avoid flicker
+         if (m_sliderMicSpkrLevel->GetValue() != sliderVal)
          {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
+            m_sliderMicSpkrLevel->SetValue(sliderVal);
+            m_txtMicSpkrLevelNum->SetLabel(wxString::Format("%d dB", sliderVal));
          }
-         else
-         {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-         }
-         char fmt[16];
-         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-         wxString fmtString(fmt);
-         m_txtMicSpkrLevelNum->SetLabel(fmtString);
          
          if (m_filterDialog != nullptr)
          {

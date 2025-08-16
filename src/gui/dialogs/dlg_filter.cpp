@@ -24,7 +24,7 @@
 
 #define SLIDER_MAX_FREQ_BASS 600
 #define SLIDER_MAX_FREQ 3900
-#define SLIDER_MAX_GAIN 400
+#define SLIDER_MAX_GAIN 40
 #define SLIDER_MAX_Q 100
 #define SLIDER_MAX_BETA_GAMMA 100
 #define SLIDER_LENGTH 100
@@ -393,7 +393,8 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     if (enableFreq)
     {
         wxSizer* sizerFreq = new wxBoxSizer(wxVERTICAL);
-        newEQControl(eq.eqBox, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", maxSliderFreq);
+        // NEW: every slider step = 100 Hz → max = maxSliderFreq / 100
+        newEQControl(eq.eqBox, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", (int)(maxSliderFreq / 100));
         bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
@@ -791,14 +792,16 @@ void FilterDlg::setFreq(EQ *eq)
     wxString buf;
     buf.Printf(wxT("%3.0f"), eq->freqHz);
     eq->valueFreq->SetLabel(buf);
-    int slider = (int)((eq->freqHz/eq->maxFreqHz)*eq->sliderFreq->GetMax() + 0.5);
+    // NEW: 100-Hz-raster
+    int slider = (int)(eq->freqHz / 100.0 + 0.5);
     eq->sliderFreq->SetValue(slider);
 }
 
 void FilterDlg::sliderToFreq(EQ *eq, bool micIn)
 {
-    eq->freqHz = ((float)eq->sliderFreq->GetValue()/eq->sliderFreq->GetMax())*eq->maxFreqHz;
-    if (eq->freqHz < 1.0) eq->freqHz = 1.0; // sox doesn't like 0 Hz;
+    // NEW: 100-Hz-steps, start at 100 Hz
+    eq->freqHz = eq->sliderFreq->GetValue() * 100.0f;
+    if (eq->freqHz < 100.0f) eq->freqHz = 100.0f;
     setFreq(eq);
     if (micIn) {
         plotMicInFilterSpectrum();

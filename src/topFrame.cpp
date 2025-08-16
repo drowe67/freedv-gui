@@ -660,8 +660,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
     
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -30, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel->SetLineSize(1);  // optional
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
@@ -683,8 +683,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
     
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    // NEU (1 dB Schritte, keine *10-Skalierung)
+    m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -20, 20, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderMicSpkrLevel->SetLineSize(1);  // optional
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
     micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
@@ -702,8 +703,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     rightSizer->Add(micSpeakerLevelSizer, 0, wxALL | wxEXPAND, 2);
     
-    /* new --- */
-
     //------------------------------
     // Mode box
     //------------------------------
