@@ -273,8 +273,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             auto item = &lineMap_[index];
             if (item->y1 == INT_MAX || item->y2 == INT_MIN) continue;
 
-            int x = index + PLOT_BORDER + XLEFT_OFFSET;
-            ctx->StrokeLine(x, item->y1, x, item->y2);
+            ctx->StrokeLine(index, item->y1, index, item->y2);
         }
     } 
 
@@ -298,10 +297,6 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     int plotWidth = m_rGrid.GetWidth();
     int plotHeight = m_rGrid.GetHeight();
 
-    wxBrush ltGraphBkgBrush;
-    ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
-    ltGraphBkgBrush.SetColour(*wxBLACK);
-    ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
