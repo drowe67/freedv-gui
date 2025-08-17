@@ -839,11 +839,36 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             {
                 reportData->backgroundColor = backgroundColor;
                 reportData->foregroundColor = foregroundColor;
+            }
 
-                if (reportData->isVisible)
+            if (parent_->IsShownOnScreen())
+            {
+                bool newVisibility = !isFiltered_(reportData->frequency);
+                if (newVisibility != reportData->isVisible)
                 {
-                    wxDataViewItem dvi(reportData);
-                    itemsChanged.Add(dvi);
+                    reportData->isVisible = newVisibility;
+                    if (newVisibility)
+                    {
+                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    else
+                    {
+                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    sortOnNextTimerInterval = true;
+                }
+                else
+                {
+                    if (isHighlightUpdated || reportData->isPendingUpdate)
+                    {
+                        if (reportData->isVisible)
+                        {
+                            reportData->isPendingUpdate = false;
+
+                            wxDataViewItem dvi(reportData);
+                            itemsChanged.Add(dvi);
+                        }
+                    }
                 }
             }
         }
@@ -866,6 +891,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     else
     {
+        if (!IsShownOnScreen()) return;
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
@@ -1549,7 +1575,12 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
-    
+   
+    if (!parent_->IsShownOnScreen())
+    {
+        return true;
+    }
+
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
     {
         return false;
@@ -2053,7 +2084,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         }
         else if (updated && kvp.second->isVisible)
         {
-            ItemChanged(wxDataViewItem(kvp.second));
+            kvp.second->isPendingUpdate = true;
         }
     }
 }
@@ -2207,7 +2238,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
         temp->isVisible = !isFiltered_(temp->frequency);
-        
+        temp->isPendingUpdate = false;
+
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
         {
             log_warn("Received duplicate user during connection process");
@@ -2311,6 +2343,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             bool isChanged = 
                 (sortingColumn == parent_->m_listSpots->GetColumn(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
                 (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
+            bool isDataChanged = 
+                (iter->second->frequency != frequencyHz ||
+                 iter->second->lastUpdate != lastUpdateTime);
             
             iter->second->frequency = frequencyHz;
             iter->second->freqString = frequencyString;
@@ -2333,7 +2368,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             }
             else if (newVisibility)
             {            
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2358,6 +2393,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             }
 
             bool isChanged = iter->second->transmitting != transmitting;
+            bool isDataChanged = isChanged;
+            
             iter->second->transmitting = transmitting;
         
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
@@ -2372,23 +2409,25 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 isChanged |=
                     (sortingColumn == parent_->m_listSpots->GetColumn(STATUS_COL) && iter->second->status != txStatus) ||
                     (sortingColumn == parent_->m_listSpots->GetColumn(TX_MODE_COL) && iter->second->txMode != txMode);
-                    
+                isDataChanged |=
+                    iter->second->status != txStatus ||
+                    iter->second->txMode != txMode;
+                
                 iter->second->status = txStatus;
                 iter->second->txMode = txMode;
             
                 auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
                 isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
+                isDataChanged |= iter->second->lastTx != lastTxTime;
                 iter->second->lastTx = lastTxTime;
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             iter->second->lastUpdate = lastUpdateTime;
 
             if (iter->second->isVisible)
             { 
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2416,13 +2455,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             bool isChanged = 
                 (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsign) ||
                 (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxMode);
-                
+            bool isDataChanged =
+                iter->second->lastRxCallsign != receivedCallsign ||
+                iter->second->lastRxMode != rxMode;
+            
             iter->second->lastRxCallsign = receivedCallsign;
             iter->second->lastRxMode = rxMode;
-        
-            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
-            iter->second->lastUpdate = lastUpdateTime;
         
             wxString snrString = wxString::Format(_("%.01f"), snr);
             if (receivedCallsign == "" && rxMode == "")
@@ -2433,7 +2471,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                     (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != UNKNOWN_STR) ||
                     (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
-                    
+                isDataChanged |=
+                    iter->second->lastRxCallsign != UNKNOWN_STR ||
+                    iter->second->lastRxMode != UNKNOWN_STR ||
+                    iter->second->snr != UNKNOWN_STR ||
+                    iter->second->lastRxDate.IsValid();
+                
                 iter->second->lastRxCallsign = UNKNOWN_STR;
                 iter->second->lastRxMode = UNKNOWN_STR;
                 iter->second->snrVal = UNKNOWN_SNR_VAL;
@@ -2444,15 +2487,20 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             {
                 isChanged |=
                     (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString);
+                isDataChanged |=
+                    iter->second->snr != snrString;
+                
                 iter->second->snrVal = snr;
                 iter->second->snr = snrString;
                 iter->second->lastRxDate = wxDateTime::Now();
             }
        
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+        
             if (iter->second->isVisible)
             { 
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
@@ -2478,19 +2526,22 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = false;
+            bool isDataChanged = false;
             if (message.size() == 0)
             {
                 isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != UNKNOWN_STR);
+                isDataChanged |= iter->second->userMessage != UNKNOWN_STR;
                 iter->second->userMessage = UNKNOWN_STR;
             }
             else
             {
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != wxString::FromUTF8(message.c_str()));
-                iter->second->userMessage = wxString::FromUTF8(message.c_str());
+                auto msgAsWxString = wxString::FromUTF8(message.c_str());
+                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
+                isDataChanged |= iter->second->userMessage != msgAsWxString;
+                iter->second->userMessage = msgAsWxString;
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             iter->second->lastUpdate = lastUpdateTime;
 
             // Only highlight on non-empty messages.
@@ -2509,8 +2560,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
        
             if (iter->second->isVisible)
             {
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
             }
         }

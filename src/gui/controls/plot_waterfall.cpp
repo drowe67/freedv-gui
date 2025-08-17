@@ -79,7 +79,6 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
-    m_fullBmp = NULL;
     sync_ = false;
 }
 
@@ -87,8 +86,6 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 // we plot in and allocate a bit map of the correct size
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
-    delete m_fullBmp;
-    
     // resize bit map
 
     m_rCtrl  = GetClientRect();
@@ -103,19 +100,9 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     m_imgHeight = std::max(1,m_rGrid.GetHeight());
     m_imgWidth = std::max(1,m_rGrid.GetWidth());
-    m_fullBmp = new wxBitmap(m_imgWidth, m_imgHeight);
 
-    // Reset bitmap to black.   
-    {
-        wxMemoryDC dc(*m_fullBmp);
-        wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
-        
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        gc->SetBrush(ltGraphBkgBrush);
-        gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);  // DC waterfall bitmap starts at origin and spans full width
-        delete gc;
-    }
+    // Reset waterfall to black.
+    cleanupSlices_();
 
     m_dT = DT;
     
@@ -134,7 +121,7 @@ void PlotWaterfall::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 PlotWaterfall::~PlotWaterfall()
 {
-    delete m_fullBmp;
+    cleanupSlices_();
 }
 
 //----------------------------------------------------------------
@@ -206,36 +193,32 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
 
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    if (m_fullBmp == NULL) 
+    
+    float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y; 
+    float dy = m_dT * px_per_sec;
+    if (dy > 0 && waterfallSlices_.size() < (m_imgHeight / dy))
     {
-        // we want a bit map the size of m_rGrid
-        m_imgHeight = m_rGrid.GetHeight();
-        m_imgWidth = m_rGrid.GetWidth();
-        m_fullBmp = new wxBitmap(m_imgWidth, m_imgHeight);
-        
-        // Reset bitmap to black.   
-        {
-            wxMemoryDC dc(*m_fullBmp);
-            wxGraphicsContext *mGc = wxGraphicsContext::Create( dc );
-        
-            wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-            mGc->SetBrush(ltGraphBkgBrush);
-            mGc->SetPen(wxPen(BLACK_COLOR, 0));
-            mGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight); // DC waterfall bitmap starts at origin and spans full width
-            delete mGc;
-        }
+        // Reset waterfall to black
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight); 
     }
-
+    
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData();
     } 
-           
-    wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
-    gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
-    m_dT = DT;
+    
+    int yOffset = 0;
+    for (auto& bmp : waterfallSlices_)
+    {
+        gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
+        yOffset += bmp->GetHeight();
+    }    
 
+    m_dT = DT;
     drawGraticule(gc);
 }
 
@@ -386,7 +369,7 @@ void PlotWaterfall::plotPixelData()
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char* dyImageData = new unsigned char[3 * baseRowWidthPixels];
+    unsigned char* dyImageData = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
     assert(dyImageData != nullptr);
 
     for(px = 0; px < baseRowWidthPixels; px++)
@@ -423,24 +406,45 @@ void PlotWaterfall::plotPixelData()
         }
     }
     
+    for (int row = 1; row < dy; row++)
+    {
+        memcpy(&dyImageData[row * 3 * baseRowWidthPixels], &dyImageData[0], 3 * baseRowWidthPixels);
+    }
+    
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
     // on macOS due to how it handles color spaces.
     ResetMainWindowColorSpace();
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)dyImageData, true);
-        wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
+        wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
+        wxBitmap* tmpBmp = nullptr;
+        wxBitmap* destBmp = nullptr;
+        if (waterfallSlices_.size() >= (m_imgHeight / dy))
         {
-            wxMemoryDC fullBmpSourceDC(*m_fullBmp);
-            wxMemoryDC fullBmpDestDC(*m_fullBmp);
-            wxMemoryDC tmpBmpSourceDC(*tmpBmp);
-
-            fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-            fullBmpDestDC.StretchBlit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0, baseRowWidthPixels, 1);
+            tmpBmp = waterfallSlices_[waterfallSlices_.size() - 1];
+            waterfallSlices_.pop_back();
+            destBmp = tmpBmp;
+            
+            tmpBmp = new wxBitmap(*tmpImage);
+            
+            wxMemoryDC sourceDC;
+            sourceDC.SelectObjectAsSource(*tmpBmp);
+            wxMemoryDC destDC(*destBmp);
+            
+            destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         }
-        delete tmpBmp; 
+        else
+        {
+            destBmp = new wxBitmap(*tmpImage);
+        }
+        waterfallSlices_.push_front(destBmp);
+        
         delete tmpImage;
+        if (tmpBmp != nullptr)
+        {
+            delete tmpBmp;
+        }
     }
 
     delete[] dyImageData;
@@ -551,4 +555,13 @@ void PlotWaterfall::OnMouseRightDoubleClick(wxMouseEvent& event)
 void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent& event)
 {
     clickTune(FDMDV_FCENTRE);
+}
+
+void PlotWaterfall::cleanupSlices_()
+{
+    for (auto& bmp : waterfallSlices_)
+    {
+        delete bmp;
+    }
+    waterfallSlices_.clear();
 }
