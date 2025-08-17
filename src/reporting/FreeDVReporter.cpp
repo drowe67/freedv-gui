@@ -24,11 +24,14 @@
 #include "../util/SocketIoClient.h"
 #include "../os/os_interface.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 using namespace std::chrono_literals;
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
-    : isExiting_(false)
-    , isConnecting_(false)
+    : isConnecting_(false)
     , hostname_(hostname)
     , callsign_(callsign)
     , gridSquare_(gridSquare)
@@ -51,23 +54,18 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
 
 FreeDVReporter::~FreeDVReporter()
 {
-    if (fnQueueThread_.joinable())
-    {
-        isExiting_ = true;
-        fnQueueConditionVariable_.notify_one();
-        fnQueueThread_.join();
-    }
-    
     delete sioClient_;
 }
 
 void FreeDVReporter::connect()
-{    
-    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
+{
+    connect_();
 }
 
 void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::string message)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
         nlohmann::json qsyMsg = {
@@ -82,13 +80,11 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
 
 void FreeDVReporter::updateMessage(std::string message)
 {
-    message_ = message;
-
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back(std::bind(&FreeDVReporter::sendMessageImpl_, this, message_));
-        fnQueueConditionVariable_.notify_one();
+        sendMessageImpl_(message);
     }
 }
 
@@ -109,59 +105,57 @@ void FreeDVReporter::inAnalogMode(bool inAnalog)
 
 void FreeDVReporter::freqChange(uint64_t frequency)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back(std::bind(&FreeDVReporter::freqChangeImpl_, this, frequency));
-        fnQueueConditionVariable_.notify_one();
+        freqChangeImpl_(frequency);
     }
 }
 
 void FreeDVReporter::transmit(std::string mode, bool tx)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back(std::bind(&FreeDVReporter::transmitImpl_, this, mode, tx));
-        fnQueueConditionVariable_.notify_one();
+        transmitImpl_(mode, tx);
     }
 }
 
 void FreeDVReporter::hideFromView()
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back(std::bind(&FreeDVReporter::hideFromViewImpl_, this));
-        fnQueueConditionVariable_.notify_one();
+        hideFromViewImpl_();
     }
 }
 
 void FreeDVReporter::showOurselves()
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back(std::bind(&FreeDVReporter::showOurselvesImpl_, this));
-        fnQueueConditionVariable_.notify_one();
+        showOurselvesImpl_();
     }
 }
     
 void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
+    
     if (isValidForReporting() && isFullyConnected_)
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, mode, snr, callsign]() {
-            nlohmann::json rxData = {
-                {"callsign", callsign},
-                {"mode", mode},
-                {"snr", (int)snr}
-            };
-        
-            sioClient_->emit("rx_report", rxData);
-        });
-        fnQueueConditionVariable_.notify_one();
+        nlohmann::json rxData = {
+            {"callsign", callsign},
+            {"mode", mode},
+            {"snr", (int)snr}
+        };
+    
+        sioClient_->emit("rx_report", rxData);
     }
 }
 
@@ -172,56 +166,67 @@ void FreeDVReporter::send()
 
 void FreeDVReporter::setOnReporterConnectFn(ReporterConnectionFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onReporterConnectFn_ = fn;
 }
 
 void FreeDVReporter::setOnReporterDisconnectFn(ReporterConnectionFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onReporterDisconnectFn_ = fn;
 }
 
 void FreeDVReporter::setOnUserConnectFn(ConnectionDataFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onUserConnectFn_ = fn;
 }
 
 void FreeDVReporter::setOnUserDisconnectFn(ConnectionDataFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onUserDisconnectFn_ = fn;
 }
 
 void FreeDVReporter::setOnFrequencyChangeFn(FrequencyChangeFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onFrequencyChangeFn_ = fn;
 }
 
 void FreeDVReporter::setOnTransmitUpdateFn(TxUpdateFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onTransmitUpdateFn_ = fn;
 }
 
 void FreeDVReporter::setOnReceiveUpdateFn(RxUpdateFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onReceiveUpdateFn_ = fn;
 }
 
 void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onQsyRequestFn_ = fn;
 }
 
 void FreeDVReporter::setMessageUpdateFn(MessageUpdateFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onMessageUpdateFn_ = fn;
 }
 
 void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onConnectionSuccessfulFn_ = fn;
 }
 
 void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
 {
+    std::unique_lock<std::mutex> lk(objMutex_);
     onAboutToShowSelfFn_ = fn;
 }
 
@@ -256,10 +261,12 @@ void FreeDVReporter::connect_()
     // doesn't appear.
     sioClient_->setOnConnectFn([&]()
     {
+        std::unique_lock<std::mutex> lk(objMutex_);
         isConnecting_ = false;
     });
     
     sioClient_->setOnDisconnectFn([&]() {
+        std::unique_lock<std::mutex> lk(objMutex_);
         isConnecting_ = false;
         isFullyConnected_ = false;
         
@@ -293,300 +300,251 @@ void FreeDVReporter::connect_()
     }
     
     sioClient_->on("new_connection", [&](nlohmann::json msgParams) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {
-            if (onUserConnectFn_)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        if (onUserConnectFn_)
+        {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto version = msgParams["version"];
+            auto rxOnly = msgParams["rx_only"];
+        
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                version.is_string() &&
+                rxOnly.is_boolean())
             {
-                auto sid = msgParams["sid"];
-                auto lastUpdate = msgParams["last_update"];
-                auto callsign = msgParams["callsign"];
-                auto gridSquare = msgParams["grid_square"];
-                auto version = msgParams["version"];
-                auto rxOnly = msgParams["rx_only"];
-            
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string() &&
-                    callsign.is_string() &&
-                    gridSquare.is_string() &&
-                    version.is_string() &&
-                    rxOnly.is_boolean())
-                {
-                    onUserConnectFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        callsign.template get<std::string>(),
-                        gridSquare.template get<std::string>(),
-                        version.template get<std::string>(),
-                        rxOnly.template get<bool>()
-                    );
-                }
+                onUserConnectFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    version.template get<std::string>(),
+                    rxOnly.template get<bool>()
+                );
             }
-        });
-        fnQueueConditionVariable_.notify_one();
+        }
     });
 
     sioClient_->on("connection_successful", [&](nlohmann::json) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&]() {
-            isFullyConnected_ = true;
-        
-            if (onConnectionSuccessfulFn_)
-            {
-                onConnectionSuccessfulFn_();
-            }
-       
-            // Send initial data now that we're fully connected to the server.
-            // This was originally done right on socket.io connect, but on some
-            // machines this caused the built-in FreeDV Reporter client to be
-            // unhappy. 	
-            if (hidden_)
-            {
-                hideFromView();
-            }
-            else
-            {
-                freqChangeImpl_(lastFrequency_);
-                transmitImpl_(mode_, tx_);
-                sendMessageImpl_(message_);
-            }
-        });
-        fnQueueConditionVariable_.notify_one();
+        std::unique_lock<std::mutex> lk(objMutex_);
+        isFullyConnected_ = true;
+    
+        if (onConnectionSuccessfulFn_)
+        {
+            onConnectionSuccessfulFn_();
+        }
+   
+        // Send initial data now that we're fully connected to the server.
+        // This was originally done right on socket.io connect, but on some
+        // machines this caused the built-in FreeDV Reporter client to be
+        // unhappy. 	
+        if (hidden_)
+        {
+            hideFromViewImpl_();
+        }
+        else
+        {
+            freqChangeImpl_(lastFrequency_);
+            transmitImpl_(mode_, tx_);
+            sendMessageImpl_(message_);
+        }
     });
 
     sioClient_->on("remove_connection", [&](nlohmann::json msgParams) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {
-            if (onUserDisconnectFn_)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        if (onUserDisconnectFn_)
+        {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto version = msgParams["version"];
+            auto rxOnly = msgParams["rx_only"];
+        
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                version.is_string() &&
+                rxOnly.is_boolean())
             {
-                auto sid = msgParams["sid"];
-                auto lastUpdate = msgParams["last_update"];
-                auto callsign = msgParams["callsign"];
-                auto gridSquare = msgParams["grid_square"];
-                auto version = msgParams["version"];
-                auto rxOnly = msgParams["rx_only"];
-            
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string() &&
-                    callsign.is_string() &&
-                    gridSquare.is_string() &&
-                    version.is_string() &&
-                    rxOnly.is_boolean())
-                {
-                    onUserDisconnectFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        callsign.template get<std::string>(),
-                        gridSquare.template get<std::string>(),
-                        version.template get<std::string>(),
-                        rxOnly.template get<bool>()
-                    );
-                }
+                onUserDisconnectFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    version.template get<std::string>(),
+                    rxOnly.template get<bool>()
+                );
             }
-        });
-        fnQueueConditionVariable_.notify_one();
+        }
     });
 
     sioClient_->on("tx_report", [&](nlohmann::json msgParams) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {
-            if (onTransmitUpdateFn_)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        if (onTransmitUpdateFn_)
+        {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto lastTx = msgParams["last_tx"];
+            auto mode = msgParams["mode"];
+            auto transmitting = msgParams["transmitting"];
+        
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                mode.is_string() &&
+                transmitting.is_boolean())
             {
-                auto sid = msgParams["sid"];
-                auto lastUpdate = msgParams["last_update"];
-                auto callsign = msgParams["callsign"];
-                auto gridSquare = msgParams["grid_square"];
-                auto lastTx = msgParams["last_tx"];
-                auto mode = msgParams["mode"];
-                auto transmitting = msgParams["transmitting"];
-            
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string() &&
-                    callsign.is_string() &&
-                    gridSquare.is_string() &&
-                    mode.is_string() &&
-                    transmitting.is_boolean())
-                {
-                    onTransmitUpdateFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        callsign.template get<std::string>(),
-                        gridSquare.template get<std::string>(),
-                        mode.template get<std::string>(),
-                        transmitting.template get<bool>(),
-                        lastTx.is_null() ? "" : lastTx.template get<std::string>()
-                    );
-                }
+                onTransmitUpdateFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    mode.template get<std::string>(),
+                    transmitting.template get<bool>(),
+                    lastTx.is_null() ? "" : lastTx.template get<std::string>()
+                );
             }
-        });
-        fnQueueConditionVariable_.notify_one();
+        }
     });
 
     sioClient_->on("rx_report", [&](nlohmann::json msgParams) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto receiverCallsign = msgParams["receiver_callsign"];
-            auto receiverGridSquare = msgParams["receiver_grid_square"];
-            auto callsign = msgParams["callsign"];
-            auto snr = msgParams["snr"];
-            auto mode = msgParams["mode"];
-        
-            if (onReceiveUpdateFn_)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        auto sid = msgParams["sid"];
+        auto lastUpdate = msgParams["last_update"];
+        auto receiverCallsign = msgParams["receiver_callsign"];
+        auto receiverGridSquare = msgParams["receiver_grid_square"];
+        auto callsign = msgParams["callsign"];
+        auto snr = msgParams["snr"];
+        auto mode = msgParams["mode"];
+    
+        if (onReceiveUpdateFn_)
+        {
+            bool snrInteger =  snr.is_number_integer();
+            bool snrFloat =  snr.is_number_float();
+            bool snrValid = snrInteger || snrFloat;
+
+            float snrVal = 0;
+            if (snrInteger)
             {
-                bool snrInteger =  snr.is_number_integer();
-                bool snrFloat =  snr.is_number_float();
-                bool snrValid = snrInteger || snrFloat;
-
-                float snrVal = 0;
-                if (snrInteger)
-                {
-                    snrVal = snr.template get<int>();
-                }
-                else if (snrFloat)
-                {
-                    snrVal = snr.template get<double>();
-                }
-
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string() &&
-                    callsign.is_string() &&
-                    receiverCallsign.is_string() &&
-                    receiverGridSquare.is_string() &&
-                    mode.is_string() &&
-                    snrValid)
-                {
-                    onReceiveUpdateFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        receiverCallsign.template get<std::string>(),
-                        receiverGridSquare.template get<std::string>(),
-                        callsign.template get<std::string>(),
-                        snrVal,
-                        mode.template get<std::string>()
-                    );
-                }
+                snrVal = snr.template get<int>();
             }
-        });
-        fnQueueConditionVariable_.notify_one();
+            else if (snrFloat)
+            {
+                snrVal = snr.template get<double>();
+            }
+
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                receiverCallsign.is_string() &&
+                receiverGridSquare.is_string() &&
+                mode.is_string() &&
+                snrValid)
+            {
+                onReceiveUpdateFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    receiverCallsign.template get<std::string>(),
+                    receiverGridSquare.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    snrVal,
+                    mode.template get<std::string>()
+                );
+            }
+        }
     });
 
     sioClient_->on("freq_change", [&](nlohmann::json msgParams) {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {
-            if (onFrequencyChangeFn_)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        if (onFrequencyChangeFn_)
+        {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto frequency = msgParams["freq"];
+        
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                frequency.is_number())
             {
-                auto sid = msgParams["sid"];
-                auto lastUpdate = msgParams["last_update"];
-                auto callsign = msgParams["callsign"];
-                auto gridSquare = msgParams["grid_square"];
-                auto frequency = msgParams["freq"];
-            
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string() &&
-                    callsign.is_string() &&
-                    gridSquare.is_string() &&
-                    frequency.is_number())
-                {
-                    onFrequencyChangeFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        callsign.template get<std::string>(),
-                        gridSquare.template get<std::string>(),
-                        frequency.template get<uint64_t>()
-                    );
-                }
+                onFrequencyChangeFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    frequency.template get<uint64_t>()
+                );
             }
-        });
-        fnQueueConditionVariable_.notify_one();
+        }
     });
 
     sioClient_->on("message_update", [&](nlohmann::json msgParams) {  
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {  
-            if (onMessageUpdateFn_)
-            {
-                auto sid = msgParams["sid"];
-                auto lastUpdate = msgParams["last_update"];
-                auto message = msgParams["message"];
-
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (sid.is_string() &&
-                    lastUpdate.is_string()&&
-                    message.is_string())
-                {
-                    onMessageUpdateFn_(
-                        sid.template get<std::string>(),
-                        lastUpdate.template get<std::string>(),
-                        message.template get<std::string>()
-                    );
-                }
-            }
-        });
-        fnQueueConditionVariable_.notify_one();
-    });
-    
-    sioClient_->on("qsy_request", [&](nlohmann::json msgParams) {    
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, msgParams]() {  
-            auto callsign = msgParams["callsign"];
-            auto frequency = msgParams["frequency"];
-            auto message = msgParams["message"];
-        
-            if (onQsyRequestFn_)
-            {
-                // Only call event handler if we received the correct data types
-                // for the items in the message.
-                if (callsign.is_string() &&
-                    frequency.is_number() &&
-                    message.is_string())
-                {
-                    onQsyRequestFn_(
-                        callsign.template get<std::string>(),
-                        frequency.template get<uint64_t>(),
-                        message.template get<std::string>()
-                    );
-                }
-            }
-        });
-        fnQueueConditionVariable_.notify_one();
-    });
-}
-
-void FreeDVReporter::threadEntryPoint_()
-{    
-    connect_();
-    
-    while (!isExiting_)
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueueConditionVariable_.wait_for(
-            lk, 
-            100ms,
-            [&]() { return isExiting_ || (fnQueue_.size() > 0); });
-        
-        // Execute queued method
-        while (!isExiting_ && fnQueue_.size() > 0)
+        std::unique_lock<std::mutex> lk(objMutex_);
+        if (onMessageUpdateFn_)
         {
-            auto fn = fnQueue_.front();
-            fnQueue_.erase(fnQueue_.begin());
-            
-            lk.unlock();
-            fn();
-            lk.lock();
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto message = msgParams["message"];
+
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid.is_string() &&
+                lastUpdate.is_string()&&
+                message.is_string())
+            {
+                onMessageUpdateFn_(
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    message.template get<std::string>()
+                );
+            }
         }
-    }
+    });
+    
+    sioClient_->on("qsy_request", [&](nlohmann::json msgParams) {
+        std::unique_lock<std::mutex> lk(objMutex_);
+        auto callsign = msgParams["callsign"];
+        auto frequency = msgParams["frequency"];
+        auto message = msgParams["message"];
+    
+        if (onQsyRequestFn_)
+        {
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (callsign.is_string() &&
+                frequency.is_number() &&
+                message.is_string())
+            {
+                onQsyRequestFn_(
+                    callsign.template get<std::string>(),
+                    frequency.template get<uint64_t>(),
+                    message.template get<std::string>()
+                );
+            }
+        }
+    });
 }
 
 void FreeDVReporter::freqChangeImpl_(uint64_t frequency)

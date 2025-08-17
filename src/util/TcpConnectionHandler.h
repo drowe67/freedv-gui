@@ -51,7 +51,7 @@ protected:
     virtual void onReceive_(char* buf, int length) = 0;
     
 private:
-    ThreadedTimer recvTimer_;
+    std::thread receiveThread_;
     ThreadedTimer reconnectTimer_;
     int socket_;
     std::atomic<bool> ipv4Complete_;
