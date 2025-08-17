@@ -989,10 +989,18 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
 #ifdef _USE_TIMER
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
-    m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
+    m_plotWaterfallTimer.SetOwner(this, ID_TIMER_WATERFALL);
+    m_plotSpectrumTimer.SetOwner(this, ID_TIMER_SPECTRUM);
+    m_plotScatterTimer.SetOwner(this, ID_TIMER_SCATTER);
+    m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
+    m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
+    m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
+    m_plotTimeOffsetTimer.SetOwner(this, ID_TIMER_TIME_OFFSET);
+    m_plotFreqOffsetTimer.SetOwner(this, ID_TIMER_FREQ_OFFSET);
+
+    m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
-    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
-    //m_panelWaterfall->Refresh();
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  
 #endif
     
     // Create voice keyer popup menu.
@@ -1275,6 +1283,14 @@ MainFrame::~MainFrame()
     if(m_plotTimer.IsRunning())
     {
         m_plotTimer.Stop();
+        m_plotWaterfallTimer.Stop();
+        m_plotSpectrumTimer.Stop();
+        m_plotScatterTimer.Stop();
+        m_plotSpeechInTimer.Stop();
+        m_plotSpeechOutTimer.Stop();
+        m_plotDemodInTimer.Stop();
+        m_plotTimeOffsetTimer.Stop();
+        m_plotFreqOffsetTimer.Stop();
         Unbind(wxEVT_TIMER, &MainFrame::OnTimer, this);
     }
 #endif //_USE_TIMER
@@ -1320,6 +1336,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     {
         return;
     }
+    
+    short speechInPlotSamples[WAVEFORM_PLOT_BUF];
+    short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
+    short demodInPlotSamples[WAVEFORM_PLOT_BUF];
+    bool txState = false;
+    int syncState = 0;
+
+    // Most plots don't need TX/sync state.
+    if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
+    {
+        txState = g_tx.load(std::memory_order_relaxed);
+        syncState_ = freedvInterface.getSync();
+    }
+    syncState = syncState_;
 
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
@@ -1338,11 +1368,124 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
+     else if (evt.GetTimer().GetId() == ID_TIMER_WATERFALL)
+      {
+          if (m_panelWaterfall->checkDT()) {
+              if (g_mode == FREEDV_MODE_RADE)
+              {
+                  m_panelWaterfall->setRxFreq(0);
+              }
+              else
+              {
+                  m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+              }
+              m_panelWaterfall->m_newdata = true;
+              m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
+              m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+              m_panelWaterfall->setSync(syncState ? true : false);
+              m_panelWaterfall->Refresh();
+          }
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
+      {
+          if (g_mode == FREEDV_MODE_RADE)
+          {
+              m_panelSpectrum->setRxFreq(0);
+          }
+          else
+          {
+              m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+          }
+    
+          // Note: each element in this combo box is a numeric value starting from 1,
+          // so just incrementing the selected index should get us the correct results.
+          m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
+          m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+          m_panelSpectrum->setSync(syncState ? true : false);
+          m_panelSpectrum->m_newdata = true;
+          m_panelSpectrum->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
+      {
+          if (freedvInterface.isRunning()) {
+              int currentMode = freedvInterface.getCurrentMode();
+              if (currentMode != wxGetApp().m_prevMode)
+              {
+                  // Force recreation of EQ filters.
+                  m_newMicInFilter = true;
+                  m_newSpkOutFilter = true;
+
+                  // The receive mode changed, so the previous samples are no longer valid.
+                  m_panelScatter->clearCurrentSamples();
+              }
+              wxGetApp().m_prevMode = currentMode;
+    
+              // Reset g_Nc accordingly.
+              switch(currentMode)
+              {
+                  case FREEDV_MODE_1600:
+                      g_Nc = 16;
+                      m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+                      break;
+                  case FREEDV_MODE_700D:
+                  case FREEDV_MODE_700E:
+                      g_Nc = 17; 
+                      m_panelScatter->setNc(g_Nc);
+                      break;
+              }
+    
+              /* PSK Modes - scatter plot -------------------------------------------------------*/
+              for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
+
+                  if ((currentMode == FREEDV_MODE_1600) ||
+                      (currentMode == FREEDV_MODE_700D) ||
+                      (currentMode == FREEDV_MODE_700E)
+                  ) {
+                      m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
+                  }
+              }
+          }
+
+          m_panelScatter->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+      {
+          if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+              memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          }
+          m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechIn->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
+      {
+          if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+              memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechOut->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+      {
+          if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+              memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          }
+          m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelDemodIn->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
+      {
+          m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
+          m_panelTimeOffset->Refresh();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
+      {
+          m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
+          m_panelFreqOffset->Refresh();
+      }
      else
      {
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
-         if (g_tx)
+         if (txState)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
          }
@@ -1361,115 +1504,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
              // Sync Filter dialog as well
              m_filterDialog->syncVolumes();
          }
-         
-        int r;
-
-        if (m_panelWaterfall->checkDT()) {
-            if (g_mode == FREEDV_MODE_RADE)
-            {
-                m_panelWaterfall->setRxFreq(0);
-            }
-            else
-            {
-                m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-            }
-            m_panelWaterfall->m_newdata = true;
-            m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
-            m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-            m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
-            m_panelWaterfall->Refresh();
-        }
-        
-        if (g_mode == FREEDV_MODE_RADE)
-        {
-            m_panelSpectrum->setRxFreq(0);
-        }
-        else
-        {
-            m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-        }
-        
-        // Note: each element in this combo box is a numeric value starting from 1,
-        // so just incrementing the selected index should get us the correct results.
-        m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
-        m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-        m_panelSpectrum->setSync(freedvInterface.getSync() ? true : false);
-        m_panelSpectrum->m_newdata = true;
-        m_panelSpectrum->Refresh();
-
-        /* update scatter/eye plot ------------------------------------------------------------*/
-
-        if (freedvInterface.isRunning()) {
-            int currentMode = freedvInterface.getCurrentMode();
-            if (currentMode != wxGetApp().m_prevMode)
-            {
-                // Force recreation of EQ filters.
-                m_newMicInFilter = true;
-                m_newSpkOutFilter = true;
-
-                // The receive mode changed, so the previous samples are no longer valid.
-                m_panelScatter->clearCurrentSamples();
-            }
-            wxGetApp().m_prevMode = currentMode;
-        
-            // Reset g_Nc accordingly.
-            switch(currentMode)
-            {
-                case FREEDV_MODE_1600:
-                    g_Nc = 16;
-                    m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                    break;
-                case FREEDV_MODE_700D:
-                case FREEDV_MODE_700E:
-                    g_Nc = 17; 
-                    m_panelScatter->setNc(g_Nc);
-                    break;
-            }
-        
-            /* PSK Modes - scatter plot -------------------------------------------------------*/
-            for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
-
-                if ((currentMode == FREEDV_MODE_1600) ||
-                    (currentMode == FREEDV_MODE_700D) ||
-                    (currentMode == FREEDV_MODE_700E)
-                ) {
-                    m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                }
-
-            }
-        }
-
-        m_panelScatter->Refresh();
-
-        // Oscilloscope type speech plots -------------------------------------------------------
-
-        short speechInPlotSamples[WAVEFORM_PLOT_BUF];
-        if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
-            memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-        }
-        m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelSpeechIn->Refresh();
-
-        short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
-        if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
-            memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-        m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelSpeechOut->Refresh();
-
-        short demodInPlotSamples[WAVEFORM_PLOT_BUF];
-        if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
-            memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-        }
-        m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelDemodIn->Refresh();
-
-        // Demod states -----------------------------------------------------------------------
-
-        m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-        m_panelTimeOffset->Refresh();
-
-        m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-        m_panelFreqOffset->Refresh();
 
         // SNR text box and gauge ------------------------------------------------------------
 
@@ -1483,7 +1517,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && freedvInterface.getSync()) {
+        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
@@ -1492,7 +1526,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char snr[15];
         snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
 
-        if (freedvInterface.getSync())
+        if (syncState)
         {
             wxString snr_string(snr);
             m_textSNR->SetLabel(snr_string);
@@ -1503,51 +1537,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_textSNR->SetLabel("--");
             m_gaugeSNR->SetValue(0);
         }
-
-        // Level Gauge -----------------------------------------------------------------------
-
-        float tooHighThresh;
-        if (!g_tx && m_RxRunning)
-        {
-            // receive mode - display From Radio peaks
-            // peak from this DT sampling period
-            int maxDemodIn = 0;
-            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (maxDemodIn < abs(demodInPlotSamples[i]))
-                    maxDemodIn = abs(demodInPlotSamples[i]);
-
-            // peak from last second
-            if (maxDemodIn > m_maxLevel)
-                m_maxLevel = maxDemodIn;
-
-            tooHighThresh = FROM_RADIO_MAX;
-        }
-        else
-        {
-            // transmit mode - display From Mic peaks
-
-            // peak from this DT sampling period
-            int maxSpeechIn = 0;
-            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (maxSpeechIn < abs(speechInPlotSamples[i]))
-                    maxSpeechIn = abs(speechInPlotSamples[i]);
-
-            // peak from last second
-            if (maxSpeechIn > m_maxLevel)
-                m_maxLevel = maxSpeechIn;
-
-           tooHighThresh = FROM_MIC_MAX;
-        }
-
-        // Peak Reading meter: updates peaks immediately, then slowly decays
-        int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
-        m_gaugeLevel->SetValue(maxScaled);
-        if (((float)maxScaled/100) > tooHighThresh)
-            m_textLevel->SetLabel("Too High");
-        else
-            m_textLevel->SetLabel("");
-
-        m_maxLevel *= LEVEL_BETA;
 
         // sync LED (Colours don't work on Windows) ------------------------
 
@@ -1747,7 +1736,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else if (
                 wxGetApp().m_sharedReporterObject && 
                 freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
-                freedvInterface.getSync())
+                syncState)
             {               
                 // Special case for RADE--report '--' for callsign so we can
                 // at least report that we're receiving *something*.
@@ -1946,6 +1935,61 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
+    }
+    
+    if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN ||
+        evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+    {
+        // Level Gauge -----------------------------------------------------------------------
+
+        bool updated = false;
+        float tooHighThresh;
+        if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        {
+            // receive mode - display From Radio peaks
+            // peak from this DT sampling period
+            int maxDemodIn = 0;
+            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+                if (maxDemodIn < abs(demodInPlotSamples[i]))
+                    maxDemodIn = abs(demodInPlotSamples[i]);
+
+            // peak from last second
+            if (maxDemodIn > m_maxLevel)
+                m_maxLevel = maxDemodIn;
+
+            tooHighThresh = FROM_RADIO_MAX;
+            updated = true;
+        }
+        else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+        {
+            // transmit mode - display From Mic peaks
+
+            // peak from this DT sampling period
+            int maxSpeechIn = 0;
+            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+                if (maxSpeechIn < abs(speechInPlotSamples[i]))
+                    maxSpeechIn = abs(speechInPlotSamples[i]);
+
+            // peak from last second
+            if (maxSpeechIn > m_maxLevel)
+                m_maxLevel = maxSpeechIn;
+
+           tooHighThresh = FROM_MIC_MAX;
+           updated = true;
+        }
+
+        if (updated)
+        {
+            // Peak Reading meter: updates peaks immediately, then slowly decays
+            int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
+            m_gaugeLevel->SetValue(maxScaled);
+            if (((float)maxScaled/100) > tooHighThresh)
+                m_textLevel->SetLabel("Too High");
+            else
+                m_textLevel->SetLabel("");
+
+            m_maxLevel *= LEVEL_BETA;
+        }
     }
 }
 #endif
@@ -2322,6 +2366,14 @@ void MainFrame::performFreeDVOn_()
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotSpectrumTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotScatterTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotTimeOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotFreqOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
@@ -2353,6 +2405,15 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_plotTimer.Stop();
+        m_plotWaterfallTimer.Stop();
+        m_plotSpectrumTimer.Stop();
+        m_plotScatterTimer.Stop();
+        m_plotSpeechInTimer.Stop();
+        m_plotSpeechOutTimer.Stop();
+        m_plotDemodInTimer.Stop();
+        m_plotTimeOffsetTimer.Stop();
+        m_plotFreqOffsetTimer.Stop();
+        m_pskReporterTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
