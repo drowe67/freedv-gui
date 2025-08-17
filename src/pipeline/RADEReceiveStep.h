@@ -78,7 +78,7 @@ private:
     float* eooOut_;
     std::unique_ptr<short[]> outputSamples_;
     
-    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE> utFeatures_;
+    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
