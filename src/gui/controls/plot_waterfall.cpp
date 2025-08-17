@@ -420,7 +420,7 @@ void PlotWaterfall::plotPixelData()
         wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
-        if (waterfallSlices_.size() >= (m_imgHeight / dy))
+        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
         {
             tmpBmp = waterfallSlices_[waterfallSlices_.size() - 1];
             waterfallSlices_.pop_back();
