@@ -87,7 +87,7 @@ if [ "$FREEDV_TEST" == "tx" ]; then
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
     else
-        sox --buffer 4096 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav &
+        sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav &
     fi
     RECORD_PID=$!
 fi
