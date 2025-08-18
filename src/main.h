@@ -453,6 +453,8 @@ class MainFrame : public TopFrame
         void OnSetMonitorVKAudioVol( wxCommandEvent& event );
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
+        void OnResetMicSpkrLevel(wxMouseEvent& event) override;
+        
     private:
         friend class MainApp; // needed for unit tests
         
