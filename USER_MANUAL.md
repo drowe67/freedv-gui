@@ -848,6 +848,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
     * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
+    * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
+    * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)
 
