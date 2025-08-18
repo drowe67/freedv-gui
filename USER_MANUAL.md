@@ -852,6 +852,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)
+    * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
 
 ## V2.0.1 July 2025
 
