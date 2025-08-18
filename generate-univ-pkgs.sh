@@ -29,22 +29,18 @@ cd pkg-tmp
 ../Python.framework/Versions/Current/bin/python3 -m venv pkg-venv
 . ./pkg-venv/bin/activate
 
-pip3 install --upgrade pip
 pip3 install delocate 
 cp ../delocating.py.patched pkg-venv/lib/python3.12/site-packages/delocate/delocating.py # >0.10.7 has bugs with numpy, see https://github.com/matthew-brett/delocate/issues/229
 
 # Download RADE dependencies appropriate for both architectures (x86_64 and arm64)
+# Note: PyTorch 2.2.2 is the last one with binaries for both x86 and ARM.
 
 mkdir arm64
-pip3 download --platform macosx_11_0_arm64 --python-version 3.12 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy matplotlib
-wget -O arm64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/20250806/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl
+pip3 download --platform macosx_11_0_arm64 --python-version 3.12 --only-binary=:all: numpy==1.26.4 torch==2.2.2 torchaudio==2.2.2 matplotlib --extra-index-url https://download.pytorch.org/whl/cpu
 mv *arm64.whl arm64
 
 mkdir x86_64
-pip3 download --platform macosx_11_0_x86_64 --python-version 3.12 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum matplotlib
-wget -O x86_64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/20250806/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl
-rm numpy*
-wget -O x86_64/numpy-2.3.2-cp312-cp312-macosx_11_0_x86_64.whl https://k6aq.net/freedv-build/numpy-2.3.2-cp312-cp312-macosx_11_0_x86_64.whl
+pip3 download --platform macosx_11_0_x86_64 --python-version 3.12 --only-binary=:all: numpy==1.26.4 torch==2.2.2 torchaudio==2.2.2 matplotlib --extra-index-url https://download.pytorch.org/whl/cpu
 mv *x86_64.whl x86_64
 
 delete_pkg_if_universal2_downloaded "x86_64"
