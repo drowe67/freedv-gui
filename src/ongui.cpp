@@ -1410,3 +1410,8 @@ void MainFrame::updateReportingFreqList_()
         m_freqBox->SetLabel(_("Report Freq. (MHz)"));
     }
 }
+
+void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
+{
+    m_sliderMicSpkrLevel->SetValue(0);
+}

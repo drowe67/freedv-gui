@@ -218,6 +218,8 @@ class TopFrame : public wxFrame
         
         virtual void OnNotebookPageChanging(wxAuiNotebookEvent& event) { event.Skip(); }
         
+        virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
+        
         void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:
