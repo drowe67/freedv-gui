@@ -427,17 +427,18 @@ void PlotWaterfall::plotPixelData()
             destBmp = tmpBmp;
             
             tmpBmp = new wxBitmap(*tmpImage);
-            
-            wxMemoryDC sourceDC;
-            sourceDC.SelectObjectAsSource(*tmpBmp);
-            wxMemoryDC destDC(*destBmp);
-            
-            destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         }
         else
         {
-            destBmp = new wxBitmap(*tmpImage);
+            destBmp = new wxBitmap(m_imgWidth, dy);
+            tmpBmp = new wxBitmap(*tmpImage);
         }
+
+        wxMemoryDC sourceDC;
+        sourceDC.SelectObjectAsSource(*tmpBmp);
+        wxMemoryDC destDC(*destBmp);
+        
+        destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         waterfallSlices_.push_front(destBmp);
         
         delete tmpImage;
