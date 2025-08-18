@@ -68,7 +68,7 @@ sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
 else
-    sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav >/dev/null 2>&1 &
+    sox --buffer 4096 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
@@ -96,7 +96,7 @@ kill $RECORD_PID
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
 else
-    sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
+    sox --buffer 4096 -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
 fi
 PLAY_PID=$!
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
