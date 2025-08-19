@@ -1413,5 +1413,14 @@ void MainFrame::updateReportingFreqList_()
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
 {
-    m_sliderMicSpkrLevel->SetValue(0);
+    bool txState = g_tx.load(std::memory_order_relaxed);
+
+    if (txState)
+    {
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+    }
+    else
+    {
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = 0;
+    }
 }
