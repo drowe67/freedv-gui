@@ -228,7 +228,9 @@ void MacAudioDevice::start()
             // Set maxFrameSize to something reasonable for further down.
             maxFrameSize = 4096;
         }
-        
+
+        chosenFrameSize_ = desiredFrameSize;
+
         // Create AUHAL object
         AudioComponent comp;
         AudioComponentDescription desc;
