@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <cmath>
 #include "dlg_filter.h"
 #include "gui/util/LabelOverrideAccessible.h"
 
@@ -816,7 +817,8 @@ void FilterDlg::sliderToFreq(EQ *eq, bool micIn)
 void FilterDlg::setGain(EQ *eq)
 {
     wxString buf;
-    buf.Printf(wxT("%3.1f"), eq->gaindB);
+    // Anzeige in ganzen dB
+    buf.Printf(wxT("%d dB"), (int)std::lround(eq->gaindB));
     eq->valueGain->SetLabel(buf);
     int slider = (int)(((eq->gaindB-MIN_GAIN)/(MAX_GAIN-MIN_GAIN))*SLIDER_MAX_GAIN + 0.5);
     eq->sliderGain->SetValue(slider);
@@ -827,6 +829,8 @@ void FilterDlg::sliderToGain(EQ *eq, bool micIn)
     float range = MAX_GAIN-MIN_GAIN;
 
     eq->gaindB = MIN_GAIN + range*((float)eq->sliderGain->GetValue()/SLIDER_MAX_GAIN);
+    // auf ganze dB rasten
+    eq->gaindB = std::round(eq->gaindB);
     setGain(eq);
     if (micIn) {
         plotMicInFilterSpectrum();

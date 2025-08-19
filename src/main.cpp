@@ -662,10 +662,14 @@ void MainFrame::loadConfiguration_()
         SetSize(w, h);
     });
     
-    // TX
-    g_txLevel = wxGetApp().appConfiguration.transmitLevel;
-    m_sliderTxLevel->SetValue(g_txLevel);
-    m_txtTxLevelNum->SetLabel(wxString::Format("%d dB", g_txLevel));
+    // TX (intern 0,1 dB -> Slider in dB)
+    g_txLevel = wxGetApp().appConfiguration.transmitLevel; // [-300..+200] in 0,1 dB
+    int dB = (g_txLevel >= 0 ? g_txLevel + 5 : g_txLevel - 5) / 10; // auf ganze dB runden
+    // sicher im Sliderbereich klemmen:
+    if (dB < m_sliderTxLevel->GetMin()) dB = m_sliderTxLevel->GetMin();
+    else if (dB > m_sliderTxLevel->GetMax()) dB = m_sliderTxLevel->GetMax();
+    m_sliderTxLevel->SetValue(dB);
+    m_txtTxLevelNum->SetLabel(wxString::Format("%d dB", dB));
 
     // Mic/Spkr (SpkOut at Start)
     int spk = (int)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;

@@ -657,10 +657,15 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 0, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
-    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("Mod Level TX"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
-    
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -30, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+
+   // g_txLevel ist in 0,1 dB -> Startwert in dB (gerundet) und auf [-30..20] klemmen
+   int dBInit = (g_txLevel >= 0 ? (g_txLevel + 5) : (g_txLevel - 5)) / 10; // rundet ohne <cmath>
+   if (dBInit < -30) dBInit = -30;
+   else if (dBInit > 20) dBInit = 20;
+
+    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, dBInit, -30, 20, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderTxLevel->SetLineSize(1);  // optional
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
@@ -673,7 +678,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->SetAccessible(txSliderAccessibility);
 #endif // wxUSE_ACCESSIBILITY
  
-    m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, wxString::Format("%d dB", dBInit), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
