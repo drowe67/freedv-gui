@@ -230,7 +230,7 @@ void MacAudioDevice::start()
         }
         
         chosenFrameSize_ = desiredFrameSize;
-        
+
         // Create AUHAL object
         AudioComponent comp;
         AudioComponentDescription desc;
