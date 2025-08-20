@@ -2364,6 +2364,8 @@ void MainFrame::performFreeDVOn_()
 
                 executeOnUiThreadAndWait_([&]() 
                 {
+                    m_sliderMicSpkrLevel->Enable(true);
+
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
@@ -2404,6 +2406,8 @@ void MainFrame::performFreeDVOff_()
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
     {
+        m_sliderMicSpkrLevel->Enable(false);
+
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
