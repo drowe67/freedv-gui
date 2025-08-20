@@ -687,6 +687,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
     micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    m_sliderMicSpkrLevel->Enable(false);
 
 #if wxUSE_ACCESSIBILITY 
     // Add accessibility class so that the values are read back correctly.
