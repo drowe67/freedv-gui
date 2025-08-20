@@ -144,10 +144,39 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
         m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
+bool PlotScalar::repaintAll_(wxPaintEvent& evt)
+{
+    if (m_mini) return true;
+
+    wxRegionIterator upd(GetUpdateRegion());
+    while (upd)
+    {
+        wxRect rect(upd.GetRect());
+        if (!m_rGrid.Contains(rect))
+        {
+            return true;
+        }
+        upd++;
+    }
+    return false;
+}
+
+void PlotScalar::refreshData()
+{
+    if (!m_mini)
+    {
+        RefreshRect(GetClientRect());
+    }
+    else
+    {
+        Refresh();
+    }
+}
+
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScalar::draw(wxGraphicsContext* ctx)
+void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     float index_to_px;
     float a_to_py;
@@ -277,13 +306,13 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
         }
     } 
 
-    drawGraticule(ctx);
+    drawGraticuleFast(ctx, repaintDataOnly);
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
+void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     const int STR_LENGTH = 15;
     
@@ -321,7 +350,7 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
             x += PLOT_BORDER + XLEFT_OFFSET;
             ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
         }
-        if (!m_mini) {
+        if (!m_mini && !repaintDataOnly) {
             snprintf(buf, STR_LENGTH, "%2.1fs", t);
             GetTextExtent(buf, &text_w, &text_h);
             ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
@@ -347,7 +376,7 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
         }
-        if (!m_mini) {
+        if (!m_mini && !repaintDataOnly) {
             snprintf(buf, STR_LENGTH, m_a_fmt, a);
             GetTextExtent(buf, &text_w, &text_h);
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);

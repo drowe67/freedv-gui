@@ -113,7 +113,7 @@ void PlotSpectrum::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotSpectrum::draw(wxGraphicsContext* ctx)
+void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     m_rCtrl  = GetClientRect();
 

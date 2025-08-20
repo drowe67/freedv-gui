@@ -1387,7 +1387,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
               m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
               m_panelWaterfall->setSync(syncState ? true : false);
-              m_panelWaterfall->Refresh();
+              m_panelWaterfall->refreshData();
           }
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
@@ -1407,7 +1407,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
           m_panelSpectrum->setSync(syncState ? true : false);
           m_panelSpectrum->m_newdata = true;
-          m_panelSpectrum->Refresh();
+          m_panelSpectrum->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
       {
@@ -1450,7 +1450,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               }
           }
 
-          m_panelScatter->Refresh();
+          m_panelScatter->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
       {
@@ -1458,14 +1458,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-          m_panelSpeechIn->Refresh();
+          m_panelSpeechIn->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
       {
           if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-          m_panelSpeechOut->Refresh();
+          m_panelSpeechOut->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
       {
@@ -1473,17 +1473,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-          m_panelDemodIn->Refresh();
+          m_panelDemodIn->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
       {
           m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-          m_panelTimeOffset->Refresh();
+          m_panelTimeOffset->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
       {
           m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-          m_panelFreqOffset->Refresh();
+          m_panelFreqOffset->refreshData();
       }
      else
      {

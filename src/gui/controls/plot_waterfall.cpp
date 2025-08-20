@@ -181,7 +181,7 @@ bool PlotWaterfall::checkDT(void)
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotWaterfall::draw(wxGraphicsContext* gc)
+void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
 {
     m_rCtrl  = GetClientRect();
 
@@ -219,7 +219,11 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     }    
 
     m_dT = DT;
-    drawGraticule(gc);
+
+    if (!repaintDataOnly)
+    {
+        drawGraticule(gc);
+    }
 }
 
 //-------------------------------------------------------------------------
