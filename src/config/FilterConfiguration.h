@@ -89,6 +89,7 @@ public:
     ConfigurationDataElement<float> codec2LPCPostFilterBeta;
     
     ConfigurationDataElement<bool> speexppEnable;
+    ConfigurationDataElement<bool> agcEnabled;
     ConfigurationDataElement<bool> enable700CEqualizer;
     
     virtual void load(wxConfigBase* config) override;

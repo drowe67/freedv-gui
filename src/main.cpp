@@ -106,6 +106,7 @@ std::atomic<int>   g_tx;
 float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
+std::atomic<bool>  g_agcEnabled;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -659,6 +660,9 @@ void MainFrame::loadConfiguration_()
     {
         SetSize(w, h);
     });
+    
+    // Load AGC state
+    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     char fmt[15];
