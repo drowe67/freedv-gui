@@ -78,9 +78,9 @@ $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.l
 
 FDV_PID=$!
 
-if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
-fi
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
+#fi
 
 #sleep 30 
 #screencapture ../screenshot.png
@@ -96,9 +96,9 @@ kill $RECORD_PID
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
 FDV_PID=$!
 
-if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
-fi
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
+#fi
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
 cat tmp.log
