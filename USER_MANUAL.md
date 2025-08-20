@@ -845,6 +845,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter/macOS: Fix issue causing entire table to be redrawn on user disconnect. (PR #993)
     * Fix compile failure when compiling from tarball.(PR #985)
     * Fix failing macOS tests on CI environment. (PR #1006)
+    * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
@@ -853,6 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Various GUI and FreeDV Reporter performance improvements. (PR #1002)
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)
+    * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
 
 ## V2.0.1 July 2025
 

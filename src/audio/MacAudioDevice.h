@@ -83,7 +83,8 @@ private:
     AudioComponentInstance auHAL_;
     AudioBufferList* bufferList_;
     bool running_;
-    
+    int chosenFrameSize_;
+
     void joinWorkgroup_();
     void leaveWorkgroup_();
     
