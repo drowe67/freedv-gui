@@ -279,14 +279,15 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
+}
 
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
+{
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
-}
-void PulseAudioDevice::stopRealTimeWork(bool fastMode)
-{
+
     if (sleepFallback_)
     {
         // Fallback to simple sleep.

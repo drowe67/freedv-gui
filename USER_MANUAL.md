@@ -845,6 +845,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter/macOS: Fix issue causing entire table to be redrawn on user disconnect. (PR #993)
     * Fix compile failure when compiling from tarball.(PR #985)
     * Fix failing macOS tests on CI environment. (PR #1006)
+    * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
