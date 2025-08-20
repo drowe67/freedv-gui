@@ -680,11 +680,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
     
     // Mic/Speaker Level slider
-    wxStaticBox* micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
-    wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
+    m_micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
+    wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(m_micSpeakerBox, wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderMicSpkrLevel = new wxSlider(m_micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
     micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
     m_sliderMicSpkrLevel->Enable(false);
@@ -697,7 +697,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->SetAccessible(micSpkrSliderAccessibility);
 #endif // wxUSE_ACCESSIBILITY
  
-    m_txtMicSpkrLevelNum = new wxStaticText(micSpeakerBox, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_txtMicSpkrLevelNum = new wxStaticText(m_micSpeakerBox, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtMicSpkrLevelNum->SetMinSize(wxSize(100,-1));
     micSpeakerLevelSizer->Add(m_txtMicSpkrLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
@@ -886,7 +886,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
-    m_sliderMicSpkrLevel->Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
+    m_micSpeakerBox->Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
     
     m_cboReportFrequency->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
@@ -977,7 +977,7 @@ TopFrame::~TopFrame()
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
-    m_sliderMicSpkrLevel->Disconnect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
+    m_micSpeakerBox->Disconnect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
     
     m_cboReportFrequency->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
