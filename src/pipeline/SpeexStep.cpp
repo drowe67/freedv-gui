@@ -125,10 +125,10 @@ void SpeexStep::updateAgcState_()
     {
         // Experimentally determined to be such that normal speaking creates peaks +/- ~0.4.
         // Used MacBook Pro built-in microphone for tests.
-        float newAgcLevel = 24000;
+        float newAgcLevel = 12000;
         speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_LEVEL, &newAgcLevel);
 
-        uint32_t maxGainDb = 20;
+        uint32_t maxGainDb = 40;
         speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_MAX_GAIN, &maxGainDb);
     }
 }
