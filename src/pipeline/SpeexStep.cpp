@@ -20,12 +20,15 @@
 //
 //=========================================================================
 
+#include <atomic>
 
 #include "SpeexStep.h"
 #include "../defines.h"
 
 #include <assert.h>
 #include "codec2_fifo.h"
+
+extern std::atomic<bool> g_agcEnabled;
 
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
@@ -37,6 +40,8 @@ SpeexStep::SpeexStep(int sampleRate)
                 numSamplesPerSpeexRun_,
                 sampleRate_);
     assert(speexStateObj_ != nullptr);
+    
+    updateAgcState_();
     
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(numSamplesPerSpeexRun_ * 2);
@@ -69,6 +74,8 @@ int SpeexStep::getOutputSampleRate() const
 
 std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    updateAgcState_();
+    
     *numOutputSamples = 0;
     
     int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
@@ -106,5 +113,22 @@ void SpeexStep::reset()
     while (codec2_fifo_used(inputSampleFifo_) > 0)
     {
         codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+}
+
+void SpeexStep::updateAgcState_()
+{
+    int32_t newAgcState = g_agcEnabled ? 1 : 0;
+    
+    speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC, &newAgcState);
+    if (newAgcState)
+    {
+        // Experimentally determined to be such that normal speaking creates peaks +/- ~0.4.
+        // Used MacBook Pro built-in microphone for tests.
+        float newAgcLevel = 12000;
+        speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_LEVEL, &newAgcLevel);
+
+        uint32_t maxGainDb = 40;
+        speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_MAX_GAIN, &maxGainDb);
     }
 }
