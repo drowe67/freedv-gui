@@ -32,6 +32,7 @@
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
+#include <wx/uilocale.h>
 
 #include "git_version.h"
 #include "main.h"
@@ -515,7 +516,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 bool MainApp::OnInit()
 {
     // Initialize locale.
-    m_locale.Init();
+    wxUILocale::UseDefault();
 
     m_reporters.clear();
     m_reportCounter = 0;
