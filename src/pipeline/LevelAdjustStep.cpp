@@ -23,6 +23,7 @@
 #include "LevelAdjustStep.h"
 
 #include <assert.h>
+#include <cmath>
 
 LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<double()> scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)
@@ -57,10 +58,8 @@ std::shared_ptr<short> LevelAdjustStep::execute(std::shared_ptr<short> inputSamp
 
     for (int index = 0; index < numInputSamples; index++)
     {
-        // outputSamples_.get()[index] = inputSamples.get()[index] * scaleFactor;
         double y = inputSamples.get()[index] * scaleFactor;
-        if (y > 32767.0) y = 32767.0;
-        else if (y < -32768.0) y = -32768.0;
+        y = 32767.0 * std::tanh(y / 32767.0);  // Soft-Clip statt hartem Clipping
         outputSamples_.get()[index] = static_cast<short>(y);
     }
     
