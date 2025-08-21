@@ -516,8 +516,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 bool MainApp::OnInit()
 {
     // Initialize locale.
-    // m_locale.Init();
-    std::setlocale(LC_ALL, "C");   // POSIX-Locale global
+    m_locale.Init();
 
     m_reporters.clear();
     m_reportCounter = 0;
