@@ -106,7 +106,6 @@ class TopFrame : public wxFrame
 
         wxStaticText* m_txtTxLevelNum;
         wxSlider* m_sliderTxLevel;
-        wxStaticBox* m_micSpeakerBox;
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
