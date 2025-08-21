@@ -178,6 +178,29 @@ bool PlotWaterfall::checkDT(void)
         return true;
 }
 
+bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
+{
+    wxRect waterfallRegion(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    wxRegionIterator upd(GetUpdateRegion());
+    while (upd)
+    {   
+        wxRect rect(upd.GetRect());
+        if (!waterfallRegion.Contains(rect))
+        {
+            return true;
+        }       
+        upd++;
+    }
+    return false;
+}               
+    
+void PlotWaterfall::refreshData()
+{
+    int screenX = PLOT_BORDER + XLEFT_OFFSET;
+    int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
+    RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight));
+}   
+
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------

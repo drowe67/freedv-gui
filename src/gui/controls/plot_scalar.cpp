@@ -148,11 +148,16 @@ bool PlotScalar::repaintAll_(wxPaintEvent& evt)
 {
     if (m_mini) return true;
 
+    wxRect plotRegion(
+        PLOT_BORDER + XLEFT_OFFSET, 
+        PLOT_BORDER,
+        m_rGrid.GetWidth(),
+        m_rGrid.GetHeight());
     wxRegionIterator upd(GetUpdateRegion());
     while (upd)
     {
         wxRect rect(upd.GetRect());
-        if (!m_rGrid.Contains(rect))
+        if (!plotRegion.Contains(rect))
         {
             return true;
         }
@@ -165,7 +170,12 @@ void PlotScalar::refreshData()
 {
     if (!m_mini)
     {
-        RefreshRect(GetClientRect());
+        wxRect plotRegion(
+            PLOT_BORDER + XLEFT_OFFSET, 
+            PLOT_BORDER,
+            m_rGrid.GetWidth(),
+            m_rGrid.GetHeight());
+        RefreshRect(plotRegion);
     }
     else
     {
