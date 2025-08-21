@@ -657,17 +657,25 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 0, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
-    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("Mod Level TX"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("Modulation Level TX"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
 
-   // g_txLevel ist in 0,1 dB -> Startwert in dB (gerundet) und auf [-30..20] klemmen
+   // g_txLevel ist in 0,1 dB -> Startwert in dB (gerundet) und auf [-30..10] klemmen
    int dBInit = (g_txLevel >= 0 ? (g_txLevel + 5) : (g_txLevel - 5)) / 10; // rundet ohne <cmath>
    if (dBInit < -30) dBInit = -30;
-   else if (dBInit > 20) dBInit = 20;
+   else if (dBInit > 10) dBInit = 10;
 
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, dBInit, -30, 20, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, dBInit, -30, 10, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel->SetFocus();
     m_sliderTxLevel->SetLineSize(1);  // optional
+    m_sliderTxLevel->SetPageSize(1);  // optional
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
+    m_sliderTxLevel->SetToolTip(
+        "Under normal conditions, set TX modulation level not higher than 0 dB.\n"
+        "Only in special cases use more than 0 dB.\n"
+        "Always monitor your current ALC when transmitting."
+    );
+
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
 #if wxUSE_ACCESSIBILITY 
