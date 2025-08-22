@@ -974,7 +974,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
         {
             auto textSize = m_listSpots->GetTextExtent(tempUserMessage_);
             rect = m_listSpots->GetItemRect(item, col);
-            if (tipWindow_ == nullptr && textSize.GetWidth() > col->GetWidth())
+            if (tipWindow_ == nullptr)
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();
