@@ -6,9 +6,15 @@ if(LINUX)
     set(UTIL_LINUX_FILES timespec.c)
 endif(LINUX)
 
+if(APPLE)
+    set(THREADED_OBJECT_FILES ThreadedObject.mm)
+else(APPLE)
+    set(THREADED_OBJECT_FILES ThreadedObject.cpp)
+endif(APPLE)
+
 add_library(fdv_util STATIC
     SocketIoClient.cpp
-    ThreadedObject.cpp
+    ${THREADED_OBJECT_FILES}
     ThreadedTimer.cpp
     TcpConnectionHandler.cpp
     logging/ulog.c

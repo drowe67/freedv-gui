@@ -217,14 +217,19 @@ void PlotPanel::OnPaint(wxPaintEvent & evt)
 {
     wxAutoBufferedPaintDC dc(this);
 
-    // TBD -- move to wxGraphicsContext?
-    dc.Clear();
-    
-    wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
-    gc->SetInterpolationQuality(wxINTERPOLATION_NONE);
-    
-    draw(gc);
-    
-    delete gc;
+    bool repaintDataOnly = !repaintAll_(evt);
+    if (!repaintDataOnly)
+    {
+        // TBD -- move to wxGraphicsContext?
+        dc.Clear();
+    }
+ 
+    wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+    if (gc != nullptr)
+    {
+        gc->SetInterpolationQuality(wxINTERPOLATION_NONE);
+        draw(gc, repaintDataOnly);
+        delete gc;
+    }
 }
 
