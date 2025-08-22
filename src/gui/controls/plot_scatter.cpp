@@ -76,7 +76,7 @@ void PlotScatter::clearCurrentSamples() {
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScatter::draw(wxGraphicsContext* ctx)
+void PlotScatter::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     float x_scale;
     float y_scale;

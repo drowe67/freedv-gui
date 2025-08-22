@@ -53,7 +53,17 @@ class PlotScalar: public PlotPanel
          void setLogY(int logy) { m_logy = logy; }
 
          void clearSamples();
-         
+         virtual void refreshData() override;
+
+    private:
+        struct MinMaxPoints
+        {
+            int y1;
+            int y2;
+        };
+
+        MinMaxPoints* lineMap_;
+ 
     protected:
 
          int      m_channels;
@@ -70,10 +80,12 @@ class PlotScalar: public PlotPanel
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
          
-         void draw(wxGraphicsContext* ctx);
-         void drawGraticule(wxGraphicsContext* ctx);
+         void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false);
+         void drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
          void OnSize(wxSizeEvent& event);
          void OnShow(wxShowEvent& event);
+
+         virtual bool repaintAll_(wxPaintEvent& evt) override;
 
          DECLARE_EVENT_TABLE()
 };

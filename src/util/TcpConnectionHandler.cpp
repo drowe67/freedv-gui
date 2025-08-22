@@ -55,9 +55,6 @@ using namespace std::chrono_literals;
 
 TcpConnectionHandler::TcpConnectionHandler()
     : enableReconnect_(false)
-    , recvTimer_(RX_ATTEMPT_INTERVAL_MS, [&](ThreadedTimer&) {
-        enqueue_(std::bind(&TcpConnectionHandler::receiveImpl_, this));
-    }, true)
     , reconnectTimer_(RECONNECT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)
@@ -80,10 +77,10 @@ TcpConnectionHandler::~TcpConnectionHandler()
 {
     // Make sure we're disconnected before destroying.
     enableReconnect_ = false;
-#if 0
+
     auto fut = disconnect();
     fut.wait();
-#endif // 0
+
 #if defined(WIN32)
     WSACleanup();
 #endif // defined(WIN32)
@@ -431,8 +428,8 @@ next_fd:
         log_info("connection succeeded to %s", buf);
         enqueue_(std::bind(&TcpConnectionHandler::onConnect_, this));
         
-        // Start receive timer.
-        recvTimer_.start();
+        // Start receive thread
+        receiveThread_ = std::thread(std::bind(&TcpConnectionHandler::receiveImpl_, this));
     }
     else if (enableReconnect_)
     {
@@ -471,13 +468,19 @@ void TcpConnectionHandler::disconnectImpl_()
 {
     if (socket_ > 0)
     {
-        recvTimer_.stop();
-#if defined(WIN32)
-        closesocket(socket_);
-#else
-        close(socket_);
-#endif // defined(WIN32)
+        auto tmp = socket_;
         socket_ = -1;
+
+#if defined(WIN32)
+        closesocket(tmp);
+#else
+        close(tmp);
+#endif // defined(WIN32)
+
+        if (receiveThread_.joinable())
+        {
+            receiveThread_.join();
+        }
 
         onDisconnect_();
         
@@ -553,15 +556,14 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 void TcpConnectionHandler::receiveImpl_()
 {
     char buf[1024];
-    if (socket_ > 0)
+    while (socket_ > 0)
     {
-        struct timeval tv = {0, 0};
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(socket_, &readSet);
 
 again:        
-        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
+        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, nullptr);
         if (rv > 0)
         {
 #if defined(WIN32)
@@ -603,7 +605,7 @@ again:
                 });
             }
         }
-        else if (rv < 0)
+        else if (rv < 0 && socket_ > 0)
         {
 #if defined(WIN32)
             log_warn("read failed (errno=%d)", WSAGetLastError());

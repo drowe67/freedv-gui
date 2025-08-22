@@ -701,6 +701,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->SetLineSize(1);  // optional
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
     micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    m_sliderMicSpkrLevel->Enable(false);
 
 #if wxUSE_ACCESSIBILITY 
     // Add accessibility class so that the values are read back correctly.
@@ -897,6 +898,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
+    m_sliderMicSpkrLevel->Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
     
     m_cboReportFrequency->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
@@ -987,6 +989,7 @@ TopFrame::~TopFrame()
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
+    m_sliderMicSpkrLevel->Disconnect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
     
     m_cboReportFrequency->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
