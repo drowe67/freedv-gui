@@ -306,8 +306,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             auto item = &lineMap_[index];
             int x = index + PLOT_BORDER + XLEFT_OFFSET;
-            if (item->y1 == INT_MAX || item->y2 == INT_MIN) continue;
-
             ctx->StrokeLine(x, item->y1 + PLOT_BORDER, x, item->y2 + PLOT_BORDER);
         }
     } 
@@ -350,58 +348,68 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     // Vertical gridlines
 
     ctx->SetPen(m_penShortDash);
-    for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
-    x = t*sec_to_px;
-    if (m_mini) {
+    for(t=0; t<=m_t_secs; t+=m_graticule_t_step)
+    {
+        x = t*sec_to_px;
+        if (m_mini) 
+        {
             ctx->StrokeLine(x, plotHeight, x, 0);
         }
-        else {
+        else 
+        {
             x += PLOT_BORDER + XLEFT_OFFSET;
             ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
-        }
-        if (!m_mini && !repaintDataOnly) {
-            snprintf(buf, STR_LENGTH, "%2.1fs", t);
-            GetTextExtent(buf, &text_w, &text_h);
-            ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            if (!repaintDataOnly) 
+            {
+                snprintf(buf, STR_LENGTH, "%2.1fs", t);
+                GetTextExtent(buf, &text_w, &text_h);
+                ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            }
         }
     }
 
     // Horizontal gridlines
 
     ctx->SetPen(m_penDotDash);
-    for(a=m_a_min; a<m_a_max; ) {
-        if (m_logy) {
+    for(a=m_a_min; a<m_a_max; ) 
+    {
+        if (m_logy) 
+        {
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
             y = plotHeight*(1.0 - norm);
         }
-    else {
+        else 
+        {
             y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
-    if (m_mini) {
+        if (m_mini) 
+        {
             ctx->StrokeLine(0, y, plotWidth, y);
         }
-        else {
+        else 
+        {
             y += PLOT_BORDER;
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
+            if (!repaintDataOnly) 
+            {
+                snprintf(buf, STR_LENGTH, m_a_fmt, a);
+                GetTextExtent(buf, &text_w, &text_h);
+                ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            }
         }
-        if (!m_mini && !repaintDataOnly) {
-            snprintf(buf, STR_LENGTH, m_a_fmt, a);
-            GetTextExtent(buf, &text_w, &text_h);
-            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
-        }
-
-        if (m_logy) {
+ 
+        if (m_logy) 
+        {
             // m_graticule_a_step ==  0.1 means 10 steps/decade
             float log10_step_size = floor(log10(a));
             a += pow(10,log10_step_size);
         }
-        else {
+        else 
+        {
             a += m_graticule_a_step;
         }
    }
-
-
 }
 
 void PlotScalar::clearSamples()
