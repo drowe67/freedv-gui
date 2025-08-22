@@ -25,7 +25,7 @@
 
 #include "IPipelineStep.h"
 
-#include <samplerate.h>
+#include <speex/speex_resampler.h>
 
 class ResampleStep : public IPipelineStep
 {
@@ -40,7 +40,7 @@ public:
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    SRC_STATE* resampleState_;
+    SpeexResamplerState* resampleState_;
 
     float* tempInput_;
     float* tempOutput_;
