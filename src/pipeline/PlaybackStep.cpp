@@ -24,6 +24,8 @@
 
 #include <cassert>
 #include <chrono>
+#include <cmath>
+#include <algorithm>
 #include "wx/thread.h"
 
 #include "../util/logging/ulog.h"
@@ -53,7 +55,10 @@ PlaybackStep::PlaybackStep(
     outputFifo_ = codec2_fifo_create(maxSamples);
     assert(outputFifo_ != nullptr);
     
-    // Create non-RT thread to perform audio I/O
+    
+    
+    limiterInit_();
+// Create non-RT thread to perform audio I/O
     nonRtThread_ = std::thread(std::bind(&PlaybackStep::nonRtThreadEntry_, this));
 }
 
@@ -138,15 +143,16 @@ void PlaybackStep::nonRtThreadEntry_()
                     {
                         int outSamples = 0;
                         auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
-                        //log_info("Resampled %u samples and created %d samples", numRead, outSamples);
+                        if (limiterEnabled_) limiterProcess_(outBuf.get(), outSamples);
                         if (codec2_fifo_write(outputFifo_, outBuf.get(), outSamples) != 0)
                         {
-                            log_warn("Could not write %d samples to buffer, dropping", outSamples);
+                           log_warn("Could not write %d samples to buffer, dropping", outSamples);
                         }
                     }
                     else
                     {
                         //log_info("Writing %u samples to FIFO", numRead);
+                        if (limiterEnabled_) limiterProcess_(buf.get(), (int)numRead);
                         if (codec2_fifo_write(outputFifo_, buf.get(), numRead) != 0)
                         {
                             log_warn("Could not write %d samples to buffer, dropping", numRead);
@@ -179,5 +185,50 @@ void PlaybackStep::reset()
     while (codec2_fifo_used(outputFifo_) > 0)
     {
         codec2_fifo_read(outputFifo_, &buf, 1);
+    }
+    // Limiter state reset
+    limiterGain_ = 1.0f;
+    limW_ = limR_ = 0;
+    std::fill(limiterDL_.begin(), limiterDL_.end(), 0.0f);
+}
+
+
+// ---------- Limiter impl ----------
+static inline float clamp1f(float x) {
+    return x < -1.0f ? -1.0f : (x > 1.0f ? 1.0f : x);
+}
+
+void PlaybackStep::limiterInit_() {
+    // Defaults: threshold -1 dBFS, look-ahead 5 ms, attack 1 ms, release 50 ms
+    const float lookahead_ms = 5.0f;
+    const float attack_ms    = 1.0f;
+    const float release_ms   = 50.0f;
+    limiterDelayN_ = std::max(1, (int)std::lround(lookahead_ms * getInputSampleRate() / 1000.0));
+    limiterDL_.assign((size_t)limiterDelayN_, 0.0f);
+    limW_ = limR_ = 0;
+    limiterGain_ = 1.0f;
+    auto ms2a = [&](float ms){
+        float denom = std::max(1.0f, ms) * getInputSampleRate() / 1000.0f;
+        return std::exp(-1.0f / denom);
+    };
+    limiterAttackA_  = ms2a(attack_ms);
+    limiterReleaseA_ = ms2a(release_ms);
+}
+
+void PlaybackStep::limiterProcess_(short* buf, int n) {
+    for (int i = 0; i < n; ++i) {
+        // write current sample into delay
+        float x = (float)buf[i] * (1.0f / 32768.0f);
+        limiterDL_[limW_] = x;
+
+        // detector on current sample
+        float pk = std::fabs(x);
+        float gT = std::min(1.0f, limiterThr_ / std::max(pk, 1e-12f));
+        limiterGain_ = (gT < limiterGain_) ? (limiterAttackA_ * limiterGain_ + (1.0f - limiterAttackA_) * gT)
+                                           : (limiterReleaseA_ * limiterGain_ + (1.0f - limiterReleaseA_) * gT);
+        float y = clamp1f(limiterDL_[limR_] * limiterGain_);
+        buf[i] = (short)std::lround(y * 32767.0f);
+        limW_ = (limW_ + 1) % (size_t)limiterDelayN_;
+        limR_ = (limR_ + 1) % (size_t)limiterDelayN_;
     }
 }

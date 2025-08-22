@@ -26,6 +26,7 @@
 #include "IPipelineStep.h"
 #include "ResampleStep.h"
 
+#include <vector>
 #include <functional>
 #include <thread>
 #include <sndfile.h>
@@ -56,7 +57,20 @@ private:
 
     ResampleStep* playbackResampler_;
     
-    void nonRtThreadEntry_();
+    
+    
+    // ---- Output Look-Ahead Limiter (mono/int16) ----
+    bool  limiterEnabled_ = true;
+    float limiterThr_ = 0.89125094f;   // -1 dBFS linear
+    float limiterAttackA_ = 0.0f;      // set in limiterInit_()
+    float limiterReleaseA_ = 0.0f;     // set in limiterInit_()
+    float limiterGain_ = 1.0f;
+    int   limiterDelayN_ = 1;
+    std::vector<float> limiterDL_;
+    size_t limW_ = 0, limR_ = 0;
+    void limiterInit_();
+    void limiterProcess_(short* buf, int n);
+void nonRtThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__PLAYBACK_STEP_H
