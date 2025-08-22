@@ -229,11 +229,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     // x -> (y1, y2)
     if (lineMap_ != nullptr)
     {
-        lineMap_ = new MinMaxPoints[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
+        lineMap_ = new MinMaxPoints[plotWidth];
         assert(lineMap_ != nullptr);
     }
 
-    for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+    for (int index = 0; index < plotWidth; index++)
     {
         lineMap_[index].y1 = INT_MAX;
         lineMap_[index].y2 = INT_MIN;
@@ -257,11 +257,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
             // put inside plot window
 
-            if (!m_mini) {
-                x += PLOT_BORDER + XLEFT_OFFSET;
-                y += PLOT_BORDER;
-            }
-            
             if (m_bar_graph) {
 
                 if (m_logy) {
@@ -307,12 +302,13 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
    
     if (!m_bar_graph)
     {
-        for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+        for (int index = 0; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
+            int x = index + PLOT_BORDER + XLEFT_OFFSET;
             if (item->y1 == INT_MAX || item->y2 == INT_MIN) continue;
 
-            ctx->StrokeLine(index, item->y1, index, item->y2);
+            ctx->StrokeLine(x, item->y1 + PLOT_BORDER, x, item->y2 + PLOT_BORDER);
         }
     } 
 
@@ -320,7 +316,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 }
 
 //-------------------------------------------------------------------------
-// drawGraticule()
+// drawGraticuleFast()
 //-------------------------------------------------------------------------
 void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
@@ -338,9 +334,12 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
-    
+    if (!repaintDataOnly)
+    {
+        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+        ctx->SetFont(tmpFont);
+    }
+ 
     sec_to_px = (float)plotWidth/m_t_secs;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
