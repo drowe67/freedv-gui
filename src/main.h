@@ -220,7 +220,9 @@ class MainApp : public wxApp
         
         std::shared_ptr<LinkStep> linkStep;
 
+#if !wxCHECK_VERSION(3,2,0)
         wxLocale m_locale;
+#endif // !wxCHECK_VERSION(3,2,0)
 
         int m_reportCounter;
     protected:
