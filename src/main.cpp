@@ -1508,11 +1508,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
          }
-         char fmt[16];
-         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-         wxString fmtString(fmt);
-         m_txtMicSpkrLevelNum->SetLabel(fmtString);
+        // 1 dB Schritte: Slider-Wert = ganze dB
+        int sliderInt = (int)std::lround(sliderVal);
+        if (m_sliderMicSpkrLevel->GetValue() != sliderInt) {
+            m_sliderMicSpkrLevel->SetValue(sliderInt);
+            m_txtMicSpkrLevelNum->SetLabel(wxString::Format("%d dB", sliderInt));
+        }
          
          if (m_filterDialog != nullptr)
          {
