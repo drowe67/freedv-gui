@@ -142,16 +142,22 @@ void SocketIoClient::onReceive_(char* buf, int length)
 
 void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
 {
-    nlohmann::json msgEmit = {eventName, params};
-    std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
-    connection_->send(msgToSend);
+    if (connection_)
+    {
+        nlohmann::json msgEmit = {eventName, params};
+        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
+        connection_->send(msgToSend);
+    }
 }
 
 void SocketIoClient::emitImpl_(std::string eventName)
 {
-    nlohmann::json msgEmit = {eventName};
-    std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
-    connection_->send(msgToSend);
+    if (connection_)
+    {
+        nlohmann::json msgEmit = {eventName};
+        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
+        connection_->send(msgToSend);
+    }
 }
 
 void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
@@ -197,8 +203,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
             // "ping" -- send pong
             connection_->send("3");
-            pingTimer_.stop();
-            pingTimer_.start();
+            pingTimer_.restart();
             break;
         }
         case '4':

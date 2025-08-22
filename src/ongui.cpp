@@ -1410,3 +1410,17 @@ void MainFrame::updateReportingFreqList_()
         m_freqBox->SetLabel(_("Report Freq. (MHz)"));
     }
 }
+
+void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
+{
+    bool txState = g_tx.load(std::memory_order_relaxed);
+
+    if (txState)
+    {
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+    }
+    else
+    {
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = 0;
+    }
+}

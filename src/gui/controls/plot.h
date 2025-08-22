@@ -124,7 +124,7 @@ class PlotPanel : public wxPanel
         //void OnUpdateUI( wxUpdateUIEvent& event ){ event.Skip(); }
 
         void            paintEvent(wxPaintEvent & evt);
-        virtual void    draw(wxGraphicsContext* ctx) = 0;
+        virtual void    draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) = 0;
         virtual void    drawGraticule(wxGraphicsContext* ctx);
         virtual double  SetZoomFactor(double zf);
         virtual double  GetZoomFactor(double zf);
@@ -142,6 +142,8 @@ class PlotPanel : public wxPanel
                 rxOffsets_.pop_front();
             }
         }
+
+        virtual void refreshData() { Refresh(); }
 
     protected:
         int             m_x;
@@ -163,6 +165,8 @@ class PlotPanel : public wxPanel
         
         std::deque<float> rxOffsets_;
         bool        sync_;
+
+        virtual bool repaintAll_(wxPaintEvent& evt) { return true; }
         
     DECLARE_EVENT_TABLE()
 };

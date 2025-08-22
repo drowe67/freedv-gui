@@ -44,7 +44,7 @@ class PlotSpectrum : public PlotPanel
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
         void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* ctx);
+        void        draw(wxGraphicsContext* ctx, bool repaintDataOnly = false);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseWheelMoved(wxMouseEvent& event);
