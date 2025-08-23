@@ -698,8 +698,8 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeTxLevel(wxScrollEvent& event)
 {
-    int dB = m_sliderTxLevel->GetValue();  // now [-30..20] dB
-    g_txLevel = dB * 10;                   // -> [-300..200] in 0,1 dB
+    int dB = m_sliderTxLevel->GetValue();  // now [-30..3] dB
+    g_txLevel = dB * 10;                   // -> [-300..30] in 0,1 dB
     m_txtTxLevelNum->SetLabel(wxString::Format("%d dB", dB));
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
 }

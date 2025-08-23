@@ -29,7 +29,6 @@
 #include <random>
 #include <chrono>
 #include <climits>
-#include <clocale>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
@@ -674,9 +673,8 @@ void MainFrame::loadConfiguration_()
     g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
 
     // TX (intern 0,1 dB -> Slider in dB)
-    g_txLevel = wxGetApp().appConfiguration.transmitLevel; // [-300..+200] in 0,1 dB
-    int dB = (g_txLevel >= 0 ? g_txLevel + 5 : g_txLevel - 5) / 10; // auf ganze dB runden
-    // sicher im Sliderbereich klemmen:
+    g_txLevel = wxGetApp().appConfiguration.transmitLevel; // [-300..+30] in 0,1 dB
+    int dB = (g_txLevel >= 0 ? g_txLevel + 5 : g_txLevel - 5) / 10; // round to full dB
     if (dB < m_sliderTxLevel->GetMin()) dB = m_sliderTxLevel->GetMin();
     else if (dB > m_sliderTxLevel->GetMax()) dB = m_sliderTxLevel->GetMax();
     m_sliderTxLevel->SetValue(dB);
