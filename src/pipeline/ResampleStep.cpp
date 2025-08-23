@@ -34,7 +34,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
 {
     int src_error;
     
-    resampleState_ = speex_resampler_init(1, inputSampleRate_, outputSampleRate_, forPlotsOnly ? 5 : 8, &src_error);
+    resampleState_ = speex_resampler_init(1, inputSampleRate_, outputSampleRate_, forPlotsOnly ? 5 : 6, &src_error);
     assert(resampleState_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
