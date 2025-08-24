@@ -149,15 +149,24 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake wget
+$ sudo port install automake git libtool sox +universal cmake wget pkgconf
 ```
 
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake wget
+$ brew install automake libtool git sox cmake wget pkgconf
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
 FreeDV and associated libraries (codec2, hamlib). A FreeDV.app app bundle will be created inside the build_osx/src
 folder which can be copied to your system's Applications folder.
+
+*Note: for distribution, code signing is required. The following commands can be run to enable this:*
+
+```
+CODESIGN_IDENTITY=[identity in your keychain] UNIV_BUILD=1 ./build_osx.sh
+cd build_osx
+make release
+```
+
