@@ -47,7 +47,7 @@
 #include <wx/regex.h>
 #include <wx/socket.h>
 
-#include <samplerate.h>
+#include <speex/speex_resampler.h>
 
 #include <stdint.h>
 #include <speex/speex_preprocess.h>
@@ -536,7 +536,7 @@ class MainFrame : public TopFrame
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);
 
-int resample(SRC_STATE *src,
+int resample(SpeexResamplerState *src,
              short      output_short[],
              short      input_short[],
              int        output_sample_rate,

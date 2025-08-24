@@ -839,7 +839,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
     m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
-        SRC_STATE          *src;
+        SpeexResamplerState *src = nullptr;
         FIFO               *fifo, *callbackFifo;
         int src_error;
         
@@ -850,7 +850,6 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         });
         
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
@@ -860,6 +859,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                src = speex_resampler_init(1, sampleRate, 8000, 5, &src_error);
+                assert(src != nullptr);
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_IN, 
@@ -939,7 +940,10 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         }
 
         codec2_fifo_destroy(fifo);
-        src_delete(src);
+        if (src != nullptr)
+        {
+            speex_resampler_destroy(src);
+        }
 
         CallAfter([&]() {
             m_audioPlotThread->join();
@@ -969,7 +973,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
     m_btnTxOutTest->Enable(false);
     
     m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
-        SRC_STATE          *src;
+        SpeexResamplerState          *src = nullptr;
         FIFO               *fifo, *callbackFifo;
         int src_error, n = 0;
         
@@ -980,7 +984,6 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         });
         
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
@@ -990,6 +993,9 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                src = speex_resampler_init(1, sampleRate, 8000, 5, &src_error);
+                assert(src != nullptr);
+
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_OUT, 
@@ -1077,7 +1083,10 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         }
         
         codec2_fifo_destroy(fifo);
-        src_delete(src);
+        if (src != nullptr)
+        {
+            speex_resampler_destroy(src);
+        }
         
         CallAfter([&]() {
             m_audioPlotThread->join();
