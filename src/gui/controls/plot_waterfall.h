@@ -47,6 +47,8 @@ class PlotWaterfall : public PlotPanel
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
+
+        virtual void refreshData() override;
         
     protected:
         unsigned    m_heatmap_lut[256];
@@ -56,13 +58,15 @@ class PlotWaterfall : public PlotPanel
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
         void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* gc);
+        void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false);
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseMiddleDown(wxMouseEvent& event);
         void        OnMouseWheelMoved(wxMouseEvent& event);
         void        OnKeyDown(wxKeyEvent& event);
+
+        virtual bool repaintAll_(wxPaintEvent& evt) override;
 
     private:
         float       m_dT;

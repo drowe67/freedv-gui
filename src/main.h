@@ -225,7 +225,9 @@ class MainApp : public wxApp
         
         std::shared_ptr<LinkStep> linkStep;
 
+#if !wxCHECK_VERSION(3,2,0)
         wxLocale m_locale;
+#endif // !wxCHECK_VERSION(3,2,0)
 
         int m_reportCounter;
     protected:
@@ -322,7 +324,7 @@ class MainFrame : public TopFrame
         // Not sure why we have the option to disable timers. TBD?
         wxTimer                 m_pskReporterTimer;
         wxTimer                 m_updFreqStatusTimer; //[UP]
-
+        
         wxTimer                 m_plotWaterfallTimer;
         wxTimer                 m_plotSpectrumTimer;
         wxTimer                 m_plotScatterTimer;
@@ -331,7 +333,6 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotDemodInTimer;
         wxTimer                 m_plotTimeOffsetTimer;
         wxTimer                 m_plotFreqOffsetTimer;
-
 #endif
 
     void destroy_fifos(void);
@@ -510,7 +511,7 @@ class MainFrame : public TopFrame
         bool terminating_; // used for terminating FreeDV
         bool realigned_; // used to inhibit resize hack once already done
         bool syncState_; // GUI copy of current sync state
-
+        
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
         

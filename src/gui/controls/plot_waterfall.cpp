@@ -178,10 +178,33 @@ bool PlotWaterfall::checkDT(void)
         return true;
 }
 
+bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
+{
+    wxRect waterfallRegion(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    wxRegionIterator upd(GetUpdateRegion());
+    while (upd)
+    {   
+        wxRect rect(upd.GetRect());
+        if (!waterfallRegion.Contains(rect))
+        {
+            return true;
+        }       
+        upd++;
+    }
+    return false;
+}               
+    
+void PlotWaterfall::refreshData()
+{
+    int screenX = PLOT_BORDER + XLEFT_OFFSET;
+    int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
+    RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight));
+}   
+
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotWaterfall::draw(wxGraphicsContext* gc)
+void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
 {
     m_rCtrl  = GetClientRect();
 
@@ -219,7 +242,11 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     }    
 
     m_dT = DT;
-    drawGraticule(gc);
+
+    if (!repaintDataOnly)
+    {
+        drawGraticule(gc);
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -420,24 +447,25 @@ void PlotWaterfall::plotPixelData()
         wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
-        if (waterfallSlices_.size() >= (m_imgHeight / dy))
+        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
         {
             tmpBmp = waterfallSlices_[waterfallSlices_.size() - 1];
             waterfallSlices_.pop_back();
             destBmp = tmpBmp;
             
             tmpBmp = new wxBitmap(*tmpImage);
-            
-            wxMemoryDC sourceDC;
-            sourceDC.SelectObjectAsSource(*tmpBmp);
-            wxMemoryDC destDC(*destBmp);
-            
-            destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         }
         else
         {
-            destBmp = new wxBitmap(*tmpImage);
+            destBmp = new wxBitmap(m_imgWidth, dy);
+            tmpBmp = new wxBitmap(*tmpImage);
         }
+
+        wxMemoryDC sourceDC;
+        sourceDC.SelectObjectAsSource(*tmpBmp);
+        wxMemoryDC destDC(*destBmp);
+        
+        destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         waterfallSlices_.push_front(destBmp);
         
         delete tmpImage;

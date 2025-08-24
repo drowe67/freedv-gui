@@ -560,6 +560,7 @@ void TcpConnectionHandler::receiveImpl_()
     constexpr int READ_SIZE_BYTES = 1024;
 
     char buf[READ_SIZE_BYTES];
+
     while (socket_ > 0)
     {
         fd_set readSet;

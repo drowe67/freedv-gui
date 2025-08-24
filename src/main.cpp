@@ -33,6 +33,10 @@
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
 
+#if wxCHECK_VERSION(3,2,0)
+#include <wx/uilocale.h>
+#endif // wxCHECK_VERSION(3,2,0)
+
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -107,6 +111,7 @@ std::atomic<int>   g_tx;
 float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
+std::atomic<bool>  g_agcEnabled;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -526,7 +531,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 bool MainApp::OnInit()
 {
     // Initialize locale.
+#if wxCHECK_VERSION(3,2,0)
+    wxUILocale::UseDefault();
+#else
     m_locale.Init();
+#endif // wxCHECK_VERSION(3,2,0)
 
     m_reporters.clear();
     m_reportCounter = 0;
@@ -677,6 +686,9 @@ void MainFrame::loadConfiguration_()
     {
         SetSize(w, h);
     });
+    
+    // Load AGC state
+    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
@@ -1022,8 +1034,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
-    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
-    //m_panelWaterfall->Refresh();
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  
 #endif
     
     // Create voice keyer popup menu.
@@ -1361,6 +1372,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     bool txState = false;
     int syncState = 0;
 
+    if (!m_RxRunning)
+    {
+        return;
+    }
+    
     // Most plots don't need TX/sync state.
     if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
     {
@@ -1368,11 +1384,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         syncState_ = freedvInterface.getSync();
     }
     syncState = syncState_;
-
-    if (!m_RxRunning)
-    {
-        return;
-    }
 
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
@@ -1393,117 +1404,117 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else if (evt.GetTimer().GetId() == ID_TIMER_WATERFALL)
      {
-         if (m_panelWaterfall->checkDT()) {
-             if (g_mode == FREEDV_MODE_RADE)
-             {
-                 m_panelWaterfall->setRxFreq(0);
-             }
-             else
-             {
-                 m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-             }
-             m_panelWaterfall->m_newdata = true;
-             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
-             m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-             m_panelWaterfall->setSync(syncState ? true : false);
-             m_panelWaterfall->Refresh();
-         }
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
-     {
-         if (g_mode == FREEDV_MODE_RADE)
-         {
-             m_panelSpectrum->setRxFreq(0);
-         }
-         else
-         {
-             m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-         }
-        
-         // Note: each element in this combo box is a numeric value starting from 1,
-         // so just incrementing the selected index should get us the correct results.
-         m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
-         m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-         m_panelSpectrum->setSync(syncState ? true : false);
-         m_panelSpectrum->m_newdata = true;
-         m_panelSpectrum->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
-     {
-         if (freedvInterface.isRunning()) {
-             int currentMode = freedvInterface.getCurrentMode();
-             if (currentMode != wxGetApp().m_prevMode)
-             {
-                 // Force recreation of EQ filters.
-                 m_newMicInFilter = true;
-                 m_newSpkOutFilter = true;
+          if (m_panelWaterfall->checkDT()) {
+              if (g_mode == FREEDV_MODE_RADE)
+              {
+                  m_panelWaterfall->setRxFreq(0);
+              }
+              else
+              {
+                  m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+              }
+              m_panelWaterfall->m_newdata = true;
+              m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
+              m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+              m_panelWaterfall->setSync(syncState ? true : false);
+              m_panelWaterfall->refreshData();
+          }
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
+      {
+          if (g_mode == FREEDV_MODE_RADE)
+          {
+              m_panelSpectrum->setRxFreq(0);
+          }
+          else
+          {
+              m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+          }
+    
+          // Note: each element in this combo box is a numeric value starting from 1,
+          // so just incrementing the selected index should get us the correct results.
+          m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
+          m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+          m_panelSpectrum->setSync(syncState ? true : false);
+          m_panelSpectrum->m_newdata = true;
+          m_panelSpectrum->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
+      {
+          if (freedvInterface.isRunning()) {
+              int currentMode = freedvInterface.getCurrentMode();
+              if (currentMode != wxGetApp().m_prevMode)
+              {
+                  // Force recreation of EQ filters.
+                  m_newMicInFilter = true;
+                  m_newSpkOutFilter = true;
 
-                 // The receive mode changed, so the previous samples are no longer valid.
-                 m_panelScatter->clearCurrentSamples();
-             }
-             wxGetApp().m_prevMode = currentMode;
-        
-             // Reset g_Nc accordingly.
-             switch(currentMode)
-             {
-                 case FREEDV_MODE_1600:
-                     g_Nc = 16;
-                     m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                     break;
-                 case FREEDV_MODE_700D:
-                 case FREEDV_MODE_700E:
-                     g_Nc = 17; 
-                     m_panelScatter->setNc(g_Nc);
-                     break;
-             }
-        
-             /* PSK Modes - scatter plot -------------------------------------------------------*/
-             for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
+                  // The receive mode changed, so the previous samples are no longer valid.
+                  m_panelScatter->clearCurrentSamples();
+              }
+              wxGetApp().m_prevMode = currentMode;
+    
+              // Reset g_Nc accordingly.
+              switch(currentMode)
+              {
+                  case FREEDV_MODE_1600:
+                      g_Nc = 16;
+                      m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+                      break;
+                  case FREEDV_MODE_700D:
+                  case FREEDV_MODE_700E:
+                      g_Nc = 17; 
+                      m_panelScatter->setNc(g_Nc);
+                      break;
+              }
+    
+              /* PSK Modes - scatter plot -------------------------------------------------------*/
+              for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
 
-                 if ((currentMode == FREEDV_MODE_1600) ||
-                     (currentMode == FREEDV_MODE_700D) ||
-                     (currentMode == FREEDV_MODE_700E)
-                 ) {
-                     m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                 }
-             }
-         }
+                  if ((currentMode == FREEDV_MODE_1600) ||
+                      (currentMode == FREEDV_MODE_700D) ||
+                      (currentMode == FREEDV_MODE_700E)
+                  ) {
+                      m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
+                  }
+              }
+          }
 
-         m_panelScatter->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
-     {
-         if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
-             memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-         }
-         m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-         m_panelSpeechIn->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
-     {
-         if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
-             memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-         m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-         m_panelSpeechOut->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
-     {
-         if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
-             memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-         }
-         m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-         m_panelDemodIn->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
-     {
-         m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-         m_panelTimeOffset->Refresh();
-     }
-     else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
-     {
-         m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-         m_panelFreqOffset->Refresh();
-     }
+          m_panelScatter->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+      {
+          if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+              memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          }
+          m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechIn->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
+      {
+          if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+              memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechOut->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+      {
+          if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+              memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          }
+          m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelDemodIn->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
+      {
+          m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
+          m_panelTimeOffset->refreshData();
+      }
+      else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
+      {
+          m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
+          m_panelFreqOffset->refreshData();
+      }
      else
      {
          // Synchronize changes with Filter dialog
@@ -1527,7 +1538,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
              // Sync Filter dialog as well
              m_filterDialog->syncVolumes();
          }
-         
+
         // SNR text box and gauge ------------------------------------------------------------
 
         // LP filter freedvInterface.getCurrentRxModemStats()->snr_est some more to stabilise the
@@ -1959,7 +1970,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
     }
-
+    
     if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN ||
         evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
     {

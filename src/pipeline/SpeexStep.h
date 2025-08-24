@@ -45,8 +45,9 @@ private:
     SpeexPreprocessState* speexStateObj_;
     int numSamplesPerSpeexRun_;
     GenericFIFO<short> inputSampleFifo_;
-
     std::unique_ptr<short[]> outputSamples_;
+    
+    void updateAgcState_();
 };
 
 

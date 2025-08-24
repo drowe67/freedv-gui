@@ -144,10 +144,49 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
         m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
+bool PlotScalar::repaintAll_(wxPaintEvent& evt)
+{
+    if (m_mini) return true;
+
+    wxRect plotRegion(
+        PLOT_BORDER + XLEFT_OFFSET, 
+        PLOT_BORDER,
+        m_rGrid.GetWidth(),
+        m_rGrid.GetHeight());
+    wxRegionIterator upd(GetUpdateRegion());
+    while (upd)
+    {
+        wxRect rect(upd.GetRect());
+        if (!plotRegion.Contains(rect))
+        {
+            return true;
+        }
+        upd++;
+    }
+    return false;
+}
+
+void PlotScalar::refreshData()
+{
+    if (!m_mini)
+    {
+        wxRect plotRegion(
+            PLOT_BORDER + XLEFT_OFFSET, 
+            PLOT_BORDER,
+            m_rGrid.GetWidth(),
+            m_rGrid.GetHeight());
+        RefreshRect(plotRegion);
+    }
+    else
+    {
+        Refresh();
+    }
+}
+
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScalar::draw(wxGraphicsContext* ctx)
+void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     float index_to_px;
     float a_to_py;
@@ -190,11 +229,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     // x -> (y1, y2)
     if (lineMap_ != nullptr)
     {
-        lineMap_ = new MinMaxPoints[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
+        lineMap_ = new MinMaxPoints[plotWidth];
         assert(lineMap_ != nullptr);
     }
 
-    for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+    for (int index = 0; index < plotWidth; index++)
     {
         lineMap_[index].y1 = INT_MAX;
         lineMap_[index].y2 = INT_MIN;
@@ -218,11 +257,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
             // put inside plot window
 
-            if (!m_mini) {
-                x += PLOT_BORDER + XLEFT_OFFSET;
-                y += PLOT_BORDER;
-            }
-            
             if (m_bar_graph) {
 
                 if (m_logy) {
@@ -268,22 +302,21 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
    
     if (!m_bar_graph)
     {
-        for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+        for (int index = 0; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
-            if (item->y1 == INT_MAX || item->y2 == INT_MIN) continue;
-
-            ctx->StrokeLine(index, item->y1, index, item->y2);
+            int x = index + PLOT_BORDER + XLEFT_OFFSET;
+            ctx->StrokeLine(x, item->y1 + PLOT_BORDER, x, item->y2 + PLOT_BORDER);
         }
     } 
 
-    drawGraticule(ctx);
+    drawGraticuleFast(ctx, repaintDataOnly);
 }
 
 //-------------------------------------------------------------------------
-// drawGraticule()
+// drawGraticuleFast()
 //-------------------------------------------------------------------------
-void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
+void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     const int STR_LENGTH = 15;
     
@@ -299,9 +332,12 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 
     ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
-    
+    if (!repaintDataOnly)
+    {
+        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+        ctx->SetFont(tmpFont);
+    }
+ 
     sec_to_px = (float)plotWidth/m_t_secs;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
@@ -312,58 +348,68 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     // Vertical gridlines
 
     ctx->SetPen(m_penShortDash);
-    for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
-    x = t*sec_to_px;
-    if (m_mini) {
+    for(t=0; t<=m_t_secs; t+=m_graticule_t_step)
+    {
+        x = t*sec_to_px;
+        if (m_mini) 
+        {
             ctx->StrokeLine(x, plotHeight, x, 0);
         }
-        else {
+        else 
+        {
             x += PLOT_BORDER + XLEFT_OFFSET;
             ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
-        }
-        if (!m_mini) {
-            snprintf(buf, STR_LENGTH, "%2.1fs", t);
-            GetTextExtent(buf, &text_w, &text_h);
-            ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            if (!repaintDataOnly) 
+            {
+                snprintf(buf, STR_LENGTH, "%2.1fs", t);
+                GetTextExtent(buf, &text_w, &text_h);
+                ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            }
         }
     }
 
     // Horizontal gridlines
 
     ctx->SetPen(m_penDotDash);
-    for(a=m_a_min; a<m_a_max; ) {
-        if (m_logy) {
+    for(a=m_a_min; a<m_a_max; ) 
+    {
+        if (m_logy) 
+        {
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
             y = plotHeight*(1.0 - norm);
         }
-    else {
+        else 
+        {
             y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
-    if (m_mini) {
+        if (m_mini) 
+        {
             ctx->StrokeLine(0, y, plotWidth, y);
         }
-        else {
+        else 
+        {
             y += PLOT_BORDER;
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
+            if (!repaintDataOnly) 
+            {
+                snprintf(buf, STR_LENGTH, m_a_fmt, a);
+                GetTextExtent(buf, &text_w, &text_h);
+                ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            }
         }
-        if (!m_mini) {
-            snprintf(buf, STR_LENGTH, m_a_fmt, a);
-            GetTextExtent(buf, &text_w, &text_h);
-            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
-        }
-
-        if (m_logy) {
+ 
+        if (m_logy) 
+        {
             // m_graticule_a_step ==  0.1 means 10 steps/decade
             float log10_step_size = floor(log10(a));
             a += pow(10,log10_step_size);
         }
-        else {
+        else 
+        {
             a += m_graticule_a_step;
         }
    }
-
-
 }
 
 void PlotScalar::clearSamples()
