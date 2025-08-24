@@ -13,9 +13,6 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
 
-permissions:
-  pull-requests: write
-
 jobs:
   test:
     strategy:
@@ -26,14 +23,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Collect Workflow Telemetry
-      uses: catchpoint/workflow-telemetry-action@v2
-
-    - name: Print current sysctl values (debug)
-      shell: bash
-      run: |
-          sysctl -a
-
     - uses: actions/checkout@v4
 
     - uses: gerlero/brew-install@v1
