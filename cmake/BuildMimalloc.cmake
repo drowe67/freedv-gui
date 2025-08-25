@@ -2,6 +2,8 @@ if(WIN32)
 message(FATAL_ERROR "mimalloc is only supported on Linux and macOS")
 endif(WIN32)
 
+set(MI_BUILD_TESTS FALSE)
+
 include(FetchContent)
 FetchContent_Declare(
     mimalloc
