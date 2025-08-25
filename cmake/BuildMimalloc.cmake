@@ -17,6 +17,6 @@ FetchContent_Declare(
 FetchContent_GetProperties(mimalloc)
 if(NOT mimalloc_POPULATED)
   FetchContent_Populate(mimalloc)
-  add_subdirectory(${mimalloc_SOURCE_DIR} ${mimalloc_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(${mimalloc_SOURCE_DIR} ${mimalloc_BINARY_DIR})
   include_directories(${mimalloc_SOURCE_DIR}/include)
 endif()
