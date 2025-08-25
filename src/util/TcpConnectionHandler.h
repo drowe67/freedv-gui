@@ -25,6 +25,7 @@
 
 #include "ThreadedObject.h"
 #include "ThreadedTimer.h"
+#include "GenericFIFO.h"
 
 #include <vector>
 #include <future>
@@ -57,6 +58,7 @@ private:
     std::atomic<bool> ipv4Complete_;
     std::atomic<bool> ipv6Complete_;
     std::atomic<bool> cancelConnect_;
+    GenericFIFO<char> receiveBuffer_;
     
     void connectImpl_();
     void disconnectImpl_();

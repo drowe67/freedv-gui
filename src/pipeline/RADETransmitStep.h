@@ -31,6 +31,12 @@
 #include "rade_api.h"
 #include "lpcnet.h"
 #include "../util/GenericFIFO.h"
+#include "../util/Semaphore.h"
+
+// Number of features to store. This is set to be close to the 
+// typical size for RX/TX features for the rade_loss ctest to
+// avoid contention with normal RADE operation.
+#define NUM_FEATURES_TO_STORE (256 * 1024)
 
 class RADETransmitStep : public IPipelineStep
 {
@@ -40,7 +46,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
     // For triggering EOO
@@ -49,23 +55,26 @@ public:
 private:
     struct rade* dv_;
     LPCNetEncState* encState_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE> inputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE> outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
     int arch_;
 
     FILE* featuresFile_;
 
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     RADE_COMP* radeOut_;
     short* radeOutShort_;
     RADE_COMP* eooOut_;
     short* eooOutShort_;
     
-    GenericFIFO<float> utFeatures_;
+    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
+    Semaphore featuresAvailableSem_;
+
+    void utFeatureThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H

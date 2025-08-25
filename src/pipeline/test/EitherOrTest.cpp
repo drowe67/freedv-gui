@@ -4,49 +4,60 @@
 class FalseStep : public IPipelineStep
 {
 public:
+    FalseStep()
+    {
+        result_ = std::make_unique<short[]>(1);
+        result_[0] = 0;
+    }
+
     virtual int getInputSampleRate() const { return 8000; }
     virtual int getOutputSampleRate() const { return 8000; }
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
     {
         *numOutputSamples = 1;
-        short* result = new short[1];
-        result[0] = 0;
-        
-        return std::shared_ptr<short>(result, std::default_delete<short[]>());
+        return result_.get();
     }
+
+private:
+    std::unique_ptr<short[]> result_;
 };
 
 class TrueStep : public IPipelineStep
 {
 public:
+    TrueStep()
+    {
+        result_ = std::make_unique<short[]>(1);
+        result_[0] = 1;
+    }
+
     virtual int getInputSampleRate() const { return 8000; }
     virtual int getOutputSampleRate() const { return 8000; }
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
     {
         *numOutputSamples = 1;
-        short* result = new short[1];
-        result[0] = 1;
-        
-        return std::shared_ptr<short>(result, std::default_delete<short[]>());
+        return result_.get();
     }
+
+private:
+    std::unique_ptr<short[]> result_;
 };
 
 bool eitherOrCommon(bool val)
 {
     EitherOrStep eitherOrStep([&]() {
         return val;
-    }, std::shared_ptr<IPipelineStep>(new TrueStep()),
-    std::shared_ptr<IPipelineStep>(new FalseStep()));
+    }, new TrueStep(), new FalseStep());
     
     int outputSamples = 0;
-    auto result = eitherOrStep.execute(std::shared_ptr<short>(nullptr), 0, &outputSamples);
+    auto result = eitherOrStep.execute(nullptr, 0, &outputSamples);
     if (outputSamples != 1)
     {
         std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
         return false;
     }
     
-    if (result.get()[0] != (val ? 1 : 0))
+    if (result[0] != (val ? 1 : 0))
     {
         std::cerr << "[result != " << (val ? 1 : 0) << "]...";
         return false;

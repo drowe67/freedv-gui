@@ -1,4 +1,9 @@
+if((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+set(MIMALLOC_SOURCE_FILE ${mimalloc_SOURCE_DIR}/src/static.c)
+endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+
 set(FREEDV_SOURCES
+    ${MIMALLOC_SOURCE_FILE}
     main.cpp
     topFrame.cpp
     sox_biquad.c

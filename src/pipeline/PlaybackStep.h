@@ -29,7 +29,8 @@
 #include <functional>
 #include <thread>
 #include <sndfile.h>
-#include "codec2_fifo.h"
+#include "../util/GenericFIFO.h"
+#include "../util/Semaphore.h"
 
 class PlaybackStep : public IPipelineStep
 {
@@ -41,7 +42,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
 private:
@@ -49,13 +50,13 @@ private:
     std::function<int()> fileSampleRateFn_;
     std::function<SNDFILE*()> getSndFileFn_;
     std::function<void()> fileCompleteFn_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     std::thread nonRtThread_;
     bool nonRtThreadEnding_;
-    FIFO* outputFifo_;
-
+    Semaphore fileIoThreadSem_;
     ResampleStep* playbackResampler_;
-    
+    GenericFIFO<short> outputFifo_;
+
     void nonRtThreadEntry_();
 };
 

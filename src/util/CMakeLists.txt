@@ -13,6 +13,7 @@ else(APPLE)
 endif(APPLE)
 
 add_library(fdv_util STATIC
+    Semaphore.cpp
     SocketIoClient.cpp
     ${THREADED_OBJECT_FILES}
     ThreadedTimer.cpp
