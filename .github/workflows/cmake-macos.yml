@@ -57,11 +57,12 @@ jobs:
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
 
-    - name: Make sure iCloud isn't running
+    - name: Make sure resource hogs aren't running
       shell: bash
       run: |
           sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
-          ps ax
+          sudo mdutil -a -i off
+          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
 
     - name: Execute unit tests
       shell: bash
