@@ -49,7 +49,7 @@ public:
     
     void setSigPwrAvg(float newVal) { sigPwrAvg_ = newVal; }
     float getSigPwrAvg() const { return sigPwrAvg_; }
-    int getSync() const { return syncState_.load(); }
+    int getSync() const { return syncState_.load(std::memory_order_acquire); }
     void setChannelNoiseEnable(bool enabled, int snr) 
     { 
         channelNoiseEnabled_ = enabled; 
