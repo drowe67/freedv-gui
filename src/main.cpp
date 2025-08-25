@@ -3204,7 +3204,6 @@ void MainFrame::startRxStream()
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
-                    log_warn("TX Out FIFO empty");
                     g_outfifo1_empty++;
                 }
 
