@@ -535,6 +535,11 @@ else()
     include(cmake/BuildSpeex.cmake)
 endif()
 
+# On Linux/macOS, build mimalloc for a bit more performance
+if ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+include(cmake/BuildMimalloc.cmake)
+endif ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+
 #
 # Find libdl for dlopen/dlclose
 #
