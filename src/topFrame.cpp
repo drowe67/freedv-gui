@@ -657,12 +657,25 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 0, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
-    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("Modulation Level TX"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
-    
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+
+   // g_txLevel ist in 0,1 dB -> Startwert in dB (gerundet) und auf [-30..+3] klemmen
+   int dBInit = (g_txLevel >= 0 ? (g_txLevel + 5) : (g_txLevel - 5)) / 10; // rundet ohne <cmath>
+   if (dBInit < -30) dBInit = -30;
+   else if (dBInit > 3) dBInit = 3;
+
+    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, dBInit, -30, 3, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel->SetFocus();
+    m_sliderTxLevel->SetLineSize(1);  // optional
+    m_sliderTxLevel->SetPageSize(1);  // optional
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
+    m_sliderTxLevel->SetToolTip(
+        _("Under normal conditions, set TX modulation level not higher than 0 dB.\n"
+        "Only in special cases use more than 0 dB.\n"
+        "Always monitor your current ALC when transmitting.")
+    );
+
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
 #if wxUSE_ACCESSIBILITY 
@@ -673,7 +686,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->SetAccessible(txSliderAccessibility);
 #endif // wxUSE_ACCESSIBILITY
  
-    m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, wxString::Format("%d dB", dBInit), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
@@ -683,8 +696,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
     
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    // NEU (1 dB Schritte, keine *10-Skalierung)
+    m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -20, 20, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderMicSpkrLevel->SetLineSize(1);  // optional
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
     micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
     m_sliderMicSpkrLevel->Enable(false);
@@ -703,8 +717,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     rightSizer->Add(micSpeakerLevelSizer, 0, wxALL | wxEXPAND, 2);
     
-    /* new --- */
-
     //------------------------------
     // Mode box
     //------------------------------

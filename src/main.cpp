@@ -671,19 +671,20 @@ void MainFrame::loadConfiguration_()
     
     // Load AGC state
     g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
-    
-    g_txLevel = wxGetApp().appConfiguration.transmitLevel;
-    char fmt[15];
-    m_sliderTxLevel->SetValue(g_txLevel);
-    snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
-    wxString fmtString(fmt);
-    m_txtTxLevelNum->SetLabel(fmtString);
-    
-    m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-    snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
-    fmtString = fmt;
-    m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
+    // TX (intern 0,1 dB -> Slider in dB)
+    g_txLevel = wxGetApp().appConfiguration.transmitLevel; // [-300..+30] in 0,1 dB
+    int dB = (g_txLevel >= 0 ? g_txLevel + 5 : g_txLevel - 5) / 10; // round to full dB
+    if (dB < m_sliderTxLevel->GetMin()) dB = m_sliderTxLevel->GetMin();
+    else if (dB > m_sliderTxLevel->GetMax()) dB = m_sliderTxLevel->GetMax();
+    m_sliderTxLevel->SetValue(dB);
+    m_txtTxLevelNum->SetLabel(wxString::Format("%d dB", dB));
+
+    // Mic/Spkr (SpkOut at Start)
+    int spk = (int)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+    m_sliderMicSpkrLevel->SetValue(spk);
+    m_txtMicSpkrLevelNum->SetLabel(wxString::Format("%d dB", spk));
+    
     // Adjust frequency entry labels
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
@@ -1505,11 +1506,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
          }
-         char fmt[16];
-         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-         wxString fmtString(fmt);
-         m_txtMicSpkrLevelNum->SetLabel(fmtString);
+        // 1 dB Schritte: Slider-Wert = ganze dB
+        int sliderInt = (int)std::lround(sliderVal);
+        if (m_sliderMicSpkrLevel->GetValue() != sliderInt) {
+            m_sliderMicSpkrLevel->SetValue(sliderInt);
+            m_txtMicSpkrLevelNum->SetLabel(wxString::Format("%d dB", sliderInt));
+        }
          
          if (m_filterDialog != nullptr)
          {
