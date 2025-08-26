@@ -847,6 +847,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix failing macOS tests on CI environment. (PR #1006)
     * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
     * macOS: Fix spurious error on startup when changing locales. (PR #1010)
+    * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)

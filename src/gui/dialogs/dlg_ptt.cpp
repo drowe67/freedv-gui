@@ -48,6 +48,8 @@ extern wxConfigBase *pConfig;
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    isTesting_ = false;
+    
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
@@ -635,6 +637,9 @@ void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent& event)
 
 void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
+    std::shared_ptr<std::mutex> mtx = std::make_shared<std::mutex>();
+    std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
+    
     /* Tone PTT */
 
     if (m_ckLeftChannelVoxTone->GetValue()) {
@@ -642,6 +647,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                      wxT("Error"), wxOK | wxICON_ERROR, this);
     }
 
+    isTesting_ = true;
+    updateControlState();
+    
     /* Hamlib PTT */
 
     if (m_ckUseHamlibPTT->GetValue()) {
@@ -679,23 +687,20 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
                     (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8) );
 
-            std::mutex mtx;
-            std::condition_variable cv;
-
-            hamlib->onRigError += [&](IRigController*, std::string error) {
-                CallAfter([&]() {
+            hamlib->onRigError += [=, this](IRigController*, std::string error) {
+                CallAfter([=, this]() {
                     wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
 
-                    cv.notify_one();
+                    cv->notify_one();
                 });
             };
 
-            hamlib->onRigConnected += [&](IRigController*) {
+            hamlib->onRigConnected += [=, this](IRigController*) {
                 hamlib->ptt(true);
             };
 
-            hamlib->onPttChange += [&](IRigController*, bool state) {
+            hamlib->onPttChange += [=, this](IRigController*, bool state) {
                 if (state)
                 {
                     std::this_thread::sleep_for(1s);
@@ -703,16 +708,29 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 }
                 else
                 {
-                    cv.notify_one();
+                    cv->notify_one();
                 }
             };
 
-            hamlib->connect();
+            std::thread hamlibThread([=, this]() {
+                hamlib->connect();
             
-            std::unique_lock<std::mutex> lk(mtx);
-            cv.wait(lk);
+                std::unique_lock<std::mutex> lk(*mtx);
+                cv->wait(lk);
             
-            hamlib->disconnect();
+                hamlib->disconnect();
+                
+                CallAfter([this]() {
+                    isTesting_ = false;
+                    updateControlState();
+                });
+            });
+            hamlibThread.detach();
+        }
+        else
+        {
+            isTesting_ = false;
+            updateControlState();
         }
     }
     else if (m_ckUseSerialPTT->IsChecked()) 
@@ -733,40 +751,50 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 m_rbUseDTR->GetValue(),
                 m_ckDTRPos->IsChecked());
 
-            std::mutex mtx;
-            std::condition_variable cv;
-
-            serialPort->onRigError += [&](IRigController*, std::string error)
+            serialPort->onRigError += [=, this](IRigController*, std::string error)
             {
-                CallAfter([&]() {
+                CallAfter([=, this]() {
                     wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
                     wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
 
-                cv.notify_one();
+                cv->notify_one();
             };
 
-            serialPort->onRigConnected += [&](IRigController*) {
+            serialPort->onRigConnected += [=, this](IRigController*) {
                 log_debug("serial port open");
-                cv.notify_one();
+                cv->notify_one();
             };
 
-            serialPort->connect();
+            std::thread serialPortThread([=, this]() {
+                serialPort->connect();
             
-            std::unique_lock<std::mutex> lk(mtx);
-            cv.wait(lk);
+                std::unique_lock<std::mutex> lk(*mtx);
+                cv->wait(lk);
 
-            if (serialPort->isConnected())
-            {
-                // assert PTT port for 1 sec
-                serialPort->ptt(true);
-                wxSleep(1);
-                serialPort->ptt(false);
+                if (serialPort->isConnected())
+                {
+                    // assert PTT port for 1 sec
+                    serialPort->ptt(true);
+                    wxSleep(1);
+                    serialPort->ptt(false);
 
-                log_debug("closing serial port");
-                serialPort->disconnect();
-                log_debug("serial port closed");
-            }
+                    log_debug("closing serial port");
+                    serialPort->disconnect();
+                    log_debug("serial port closed");
+                }
+                
+                CallAfter([this]() {
+                    isTesting_ = false;
+                    updateControlState();
+                });
+            });
+            serialPortThread.detach();
+        }
+        else
+        {
+            isTesting_ = false;
+            updateControlState();
         }
     }
     
@@ -778,23 +806,20 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             std::make_shared<OmniRigController>(
                 m_cbOmniRigRigId->GetCurrentSelection());
 
-        std::mutex mtx;
-        std::condition_variable cv;
-
-        rig->onRigError += [&](IRigController*, std::string error) {
-            CallAfter([&]() {
+        rig->onRigError += [=, this](IRigController*, std::string error) {
+            CallAfter([=, this]() {
                 wxMessageBox("Couldn't connect to Radio with OmniRig.  Make sure the rig ID and OmniRig configuration is correct.", 
                     wxT("Error"), wxOK | wxICON_ERROR, this);
 
-                cv.notify_one();
+                cv->notify_one();
             });
         };
 
-        rig->onRigConnected += [&](IRigController*) {
+        rig->onRigConnected += [=, this](IRigController*) {
             rig->ptt(true);
         };
 
-        rig->onPttChange += [&](IRigController*, bool state) {
+        rig->onPttChange += [=, this](IRigController*, bool state) {
             if (state)
             {
                 std::this_thread::sleep_for(1s);
@@ -802,16 +827,23 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             }
             else
             {
-                cv.notify_one();
+                cv->notify_one();
             }
         };
 
-        rig->connect();
+        std::thread omniRigThread([=, this]() {
+            rig->connect();
 
-        std::unique_lock<std::mutex> lk(mtx);
-        cv.wait(lk);
+            std::unique_lock<std::mutex> lk(*mtx);
+            cv->wait(lk);
         
-        rig->disconnect();
+            rig->disconnect();
+            
+            CallAfter([this]() {
+                isTesting_ = false;
+                updateControlState();
+            });
+        });
     }  
 #endif // defined(WIN32)
 }
@@ -904,31 +936,42 @@ void ComPortsDlg::OnOK(wxCommandEvent& event)
 
 void ComPortsDlg::updateControlState()
 {
-    m_cbRigName->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
-    m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbPttMethod->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbPttSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
-
-    m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
-    m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
-    m_ckRTSPos->Enable(m_ckUseSerialPTT->GetValue());
-    m_rbUseRTS->Enable(m_ckUseSerialPTT->GetValue());
-    m_ckDTRPos->Enable(m_ckUseSerialPTT->GetValue());
-    
-    m_cbCtlDevicePathPttIn->Enable(m_ckUsePTTInput->GetValue());
-    m_ckCTSPos->Enable(m_ckUsePTTInput->GetValue());
-    
+    m_ckLeftChannelVoxTone->Enable(!isTesting_);
+    m_ckUseHamlibPTT->Enable(!isTesting_);
+    m_ckUseSerialPTT->Enable(!isTesting_);
+    m_ckUsePTTInput->Enable(!isTesting_);
 #if defined(WIN32)
-    m_cbOmniRigRigId->Enable(m_ckUseOmniRig->GetValue());
+    m_ckUseOmniRig->Enable(!isTesting_);
 #endif // defined(WIN32)
     
-    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue()
+    m_cbRigName->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbSerialPort->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbSerialRate->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_tcIcomCIVHex->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbPttMethod->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbPttSerialPort->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+
+    m_cbCtlDevicePath->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_rbUseDTR->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_ckRTSPos->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_rbUseRTS->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_ckDTRPos->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    
+    m_cbCtlDevicePathPttIn->Enable(!isTesting_ && m_ckUsePTTInput->GetValue());
+    m_ckCTSPos->Enable(!isTesting_ && m_ckUsePTTInput->GetValue());
+    
+#if defined(WIN32)
+    m_cbOmniRigRigId->Enable(!isTesting_ && m_ckUseOmniRig->GetValue());
+#endif // defined(WIN32)
+    
+    m_buttonTest->Enable(!isTesting_ && (m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue()
 #if defined(WIN32)
          || m_ckUseOmniRig->GetValue()
 #endif // defined(WIN32)
-    );    
+    ));
+    m_buttonOK->Enable(!isTesting_);
+    m_buttonCancel->Enable(!isTesting_);
+    m_buttonApply->Enable(!isTesting_);
     
     if (m_cbPttMethod->GetValue() == _("CAT") || m_cbPttMethod->GetValue() == _("None"))
     {
