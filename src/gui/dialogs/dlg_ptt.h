@@ -117,6 +117,8 @@ protected:
         
 private:
         void updateControlState();
+        
+        bool isTesting_;
     
 };
 
