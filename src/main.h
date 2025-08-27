@@ -538,6 +538,9 @@ class MainFrame : public TopFrame
         static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
         static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
         static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+
+        // QSY request handling
+        void onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);

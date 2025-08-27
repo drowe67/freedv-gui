@@ -61,6 +61,7 @@
 #include "rade_api.h"
 
 using namespace std::chrono_literals;
+using namespace std::placeholders;
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -2138,9 +2139,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     txModeChangeMutex.Unlock();
     
     // Report TX change to registered reporters
+    auto txStatus = g_tx.load(std::memory_order_acquire);
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
     }
     
     // Disable controls not supported by RADE
@@ -3429,50 +3431,7 @@ void MainFrame::initializeFreeDVReporter_()
     m_reporterDialog->refreshLayout();
     
     // Set up QSY request handler
-    wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
-        double freqFactor = 1000.0;
-        std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
-        
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-        {
-            freqFactor *= 1000.0;
-            fmtMsg = "%s has requested that you QSY to %.04f MHz.";
-        }
-        
-        double frequencyReadable = freqHz / freqFactor;
-        wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
-        int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
-        
-        if (wxGetApp().rigFrequencyController != nullptr && 
-            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
-        {
-            fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
-            dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
-        }
-        
-        CallAfter([&, fullMessage, dialogStyle, frequencyReadable]() {
-            wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
-
-            if (dialogStyle & wxYES_NO)
-            {
-                messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
-            }
-
-            auto answer = messageDialog.ShowModal();
-            if (answer == wxID_YES)
-            {
-                // This will implicitly cause Hamlib to change the frequency and mode.
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-                }
-                else
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-                }
-            }
-        });
-    });
+    wxGetApp().m_sharedReporterObject->setOnQSYRequestFn(std::bind(&MainFrame::onQsyRequest_, this, _1, _2, _3));
     
     auto txStatus = g_tx.load(std::memory_order_acquire);
     if (!freedvInterface.isRunning())
@@ -3485,6 +3444,52 @@ void MainFrame::initializeFreeDVReporter_()
         wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
     wxGetApp().m_sharedReporterObject->connect();
+}
+
+void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message)
+{
+    double freqFactor = 1000.0;
+    std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
+        
+    if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqFactor *= 1000.0;
+        fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+    }
+        
+    double frequencyReadable = freqHz / freqFactor;
+    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
+    int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
+        
+    if (wxGetApp().rigFrequencyController != nullptr && 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
+    {
+        fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
+        dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
+    }
+        
+    CallAfter([&, fullMessage, dialogStyle, frequencyReadable]() {
+        wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+
+        if (dialogStyle & wxYES_NO)
+        {
+            messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
+        }
+
+        auto answer = messageDialog.ShowModal();
+        if (answer == wxID_YES)
+        {
+            // This will implicitly cause Hamlib to change the frequency and mode.
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+            {
+                m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
+            }
+            else
+            {
+                m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
+            }
+        }
+    });
 }
 
 void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
