@@ -1537,17 +1537,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
          }
-         char fmt[16];
-         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-         wxString fmtString(fmt);
-         m_txtMicSpkrLevelNum->SetLabel(fmtString);
-         
-         if (m_filterDialog != nullptr)
+
+         if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
-             // Sync Filter dialog as well
-             m_filterDialog->syncVolumes();
-         }
+             char fmt[16];
+             m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+             snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
+             m_txtMicSpkrLevelNum->SetLabel(fmt);
+         
+             if (m_filterDialog != nullptr)
+             {
+                 // Sync Filter dialog as well
+                 m_filterDialog->syncVolumes();
+             }
+        }
 
         // SNR text box and gauge ------------------------------------------------------------
 
@@ -1572,8 +1575,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (syncState)
         {
-            wxString snr_string(snr);
-            m_textSNR->SetLabel(snr_string);
+            m_textSNR->SetLabel(snr);
             m_gaugeSNR->SetValue((int)(snr_limited+5));
         }
         else
@@ -1898,16 +1900,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else
         {
-            snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-            snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+            snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); m_textBits->SetLabel(bits);
+            snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); m_textErrors->SetLabel(errors);
             float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            snprintf(ber, STR_LENGTH, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-            snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+            snprintf(ber, STR_LENGTH, "BER: %4.3f", b); m_textBER->SetLabel(ber);
+            snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); m_textResyncs->SetLabel(resyncs);
 
             snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
-            wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+            m_textFreqOffset->SetLabel(freqoffset);
             snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
-            wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+            m_textSyncMetric->SetLabel(syncmetric);
 
             // Codec 2 700D/E "auto EQ" equaliser variance
             auto var = freedvInterface.getVariance();
@@ -1924,7 +1926,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else
             {
                 snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-                wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+                m_textClockOffset->SetLabel(clockoffset);
             }
             
             // update error pattern plots if supported
@@ -2889,24 +2891,7 @@ void MainFrame::startRxStream()
                         wxGetApp().appConfiguration.save(pConfig);
                     });
                 }, nullptr);
-                txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                    short* audioData = static_cast<short*>(data);
-                    short* tmpInput = cbData->tmpReadBuffer_.get();
-
-                    if (!endingTx) 
-                    {
-                        auto numChannels = dev.getNumChannels();
-                        for(size_t i = 0; i < size; i++, audioData += numChannels)
-                        {
-                            tmpInput[i] = audioData[0];
-                        }
-                        if (cbData->infifo2->write(tmpInput, size)) 
-                        {
-                            g_infifo2_full++;
-                        }
-                    }
-                }, g_rxUserdata);
+                txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
                 {
@@ -2940,40 +2925,7 @@ void MainFrame::startRxStream()
                         wxGetApp().appConfiguration.save(pConfig);
                     });
                 }, nullptr);
-                txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
-                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                    short* audioData = static_cast<short*>(data);
-                    short* tmpOutput = cbData->tmpWriteBuffer_.get();
-
-                    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
-                    if (toRead < size)
-                    {
-                        g_outfifo1_empty++;
-                    }
-
-                    cbData->outfifo1->read(tmpOutput, toRead);
-                    auto numChannels = dev.getNumChannels();
-                    for (size_t count = 0; count < size; count++, audioData += numChannels)
-                    {
-                        auto output = (count < toRead) ? tmpOutput[count] : 0;
-
-                        // write signal to all channels to start. This is so that
-                        // the compiler can optimize for the most common case.
-                        for (auto j = 0; j < numChannels; j++)
-                        {
-                            audioData[j] = output;
-                        }
-                    
-                        // If VOX tone is enabled, go back through and add the VOX tone
-                        // on the left channel.
-                        if (cbData->leftChannelVoxTone)
-                        {
-                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                        }
-                    }
-                }, g_rxUserdata);
+                txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
                 txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
                 {
@@ -3139,23 +3091,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->voxTonePhase = 0;
 
         // Set sound card callbacks
-        rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-            paCallBackData* cbData = static_cast<paCallBackData*>(state);
-            short* audioData = static_cast<short*>(data);
-            short* tmpInput = cbData->tmpReadBuffer_.get();
-
-            auto numChannels = dev.getNumChannels();
-            for (size_t i = 0; i < size; i++, audioData += numChannels)
-            {
-                tmpInput[i] = audioData[0];
-            }
-            if (cbData->infifo1->write(tmpInput, size)) 
-            {
-                log_warn("RX FIFO full");
-                g_infifo1_full++;
-                return;
-            }
-        }, g_rxUserdata);
+        rxInSoundDevice->setOnAudioData(&OnRxInAudioData_, g_rxUserdata);
         
         rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
         {
@@ -3172,27 +3108,7 @@ void MainFrame::startRxStream()
         
         if (txInSoundDevice && txOutSoundDevice)
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
-                paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                short* audioData = static_cast<short*>(data);
-                short* tmpOutput = cbData->tmpWriteBuffer_.get();
-
-                auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
-                if (toRead < size)
-                {
-                    g_outfifo2_empty++;
-                }
-
-                cbData->outfifo2->read(tmpOutput, toRead);
-                auto numChannels = dev.getNumChannels();
-                for (size_t count = 0; count < size; count++)
-                {
-                    for (int j = 0; j < numChannels; j++)
-                    {
-                        *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
-                    }
-                }
-            }, g_rxUserdata);
+            rxOutSoundDevice->setOnAudioData(&OnRxOutAudioData_, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
@@ -3570,3 +3486,101 @@ void MainFrame::initializeFreeDVReporter_()
     }
     wxGetApp().m_sharedReporterObject->connect();
 }
+
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpInput = cbData->tmpReadBuffer_.get();
+
+    if (!endingTx) 
+    {
+        auto numChannels = dev.getNumChannels();
+        for(size_t i = 0; i < size; i++, audioData += numChannels)
+        {
+            tmpInput[i] = audioData[0];
+        }
+        if (cbData->infifo2->write(tmpInput, size)) 
+        {
+            g_infifo2_full++;
+        }
+    }
+}
+
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+
+    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+    if (toRead < size)
+    {
+        g_outfifo1_empty++;
+    }
+
+    cbData->outfifo1->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++, audioData += numChannels)
+    {
+        auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+        // write signal to all channels to start. This is so that
+        // the compiler can optimize for the most common case.
+        for (auto j = 0; j < numChannels; j++)
+        {
+            audioData[j] = output;
+        }
+                    
+        // If VOX tone is enabled, go back through and add the VOX tone
+        // on the left channel.
+        if (cbData->leftChannelVoxTone)
+        {
+            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
+            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+        }
+    }
+}
+
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpInput = cbData->tmpReadBuffer_.get();
+
+    auto numChannels = dev.getNumChannels();
+    for (size_t i = 0; i < size; i++, audioData += numChannels)
+    {
+        tmpInput[i] = audioData[0];
+    }
+    if (cbData->infifo1->write(tmpInput, size)) 
+    {
+        log_warn("RX FIFO full");
+        g_infifo1_full++;
+    }
+}
+
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+
+    auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
+    if (toRead < size)
+    {
+        g_outfifo2_empty++;
+    }
+
+    cbData->outfifo2->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++)
+    {
+        for (int j = 0; j < numChannels; j++)
+        {
+            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+        }
+    }
+}
+

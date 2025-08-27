@@ -532,6 +532,12 @@ class MainFrame : public TopFrame
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
         void onRadioDisconnected_(IRigController* ptr);
+
+        // Audio device data handlers
+        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);

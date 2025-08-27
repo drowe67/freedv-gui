@@ -37,7 +37,7 @@ using namespace std::chrono_literals;
 class IAudioDevice : public IRealtimeHelper
 {
 public:
-    typedef std::function<void(IAudioDevice&, void*, size_t, void*)> AudioDataCallbackFn;
+    typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*);
     typedef std::function<void(IAudioDevice&, void*)> AudioUnderflowCallbackFn;
     typedef std::function<void(IAudioDevice&, void*)> AudioOverflowCallbackFn;
     typedef std::function<void(IAudioDevice&, std::string, void*)> AudioErrorCallbackFn;

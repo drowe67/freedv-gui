@@ -46,7 +46,7 @@ extern FreeDVInterface freedvInterface;
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
-#define UNKNOWN_STR ""
+const wxString UNKNOWN_STR("");
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
@@ -1393,7 +1393,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
     else
     {
         timeObj = wxDateTime();
-        return _(UNKNOWN_STR);
+        return UNKNOWN_STR;
     }
 }
 
