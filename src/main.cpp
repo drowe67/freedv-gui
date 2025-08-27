@@ -922,7 +922,7 @@ setDefaultMode:
     }
 
     // Initialize FreeDV Reporter as required
-    CallAfter([&]() { initializeFreeDVReporter_(); });
+    CallAfter(&MainFrame::initializeFreeDVReporter_);
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
@@ -1545,9 +1545,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
          if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
-             char fmt[16];
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
+             wxString fmt = wxString::Format(wxT("%0.1f dB"), (double)sliderVal);
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
@@ -1575,17 +1574,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
-        char snr[15];
-        snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
+        wxString snrString = wxString::Format("%d dB", (int)(g_snr + 0.5));
 
         if (syncState)
         {
-            m_textSNR->SetLabel(snr);
+            m_textSNR->SetLabel(snrString);
             m_gaugeSNR->SetValue((int)(snr_limited+5));
         }
         else
         {
-            m_textSNR->SetLabel("--");
+            m_textSNR->SetLabel(wxT("--"));
             m_gaugeSNR->SetValue(0);
         }
 
@@ -1634,7 +1632,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                    m_textSync->SetLabel("Modem");
+                m_textSync->SetLabel(wxT("Modem"));
                 m_textSync->Refresh();
             }
         }
@@ -1731,7 +1729,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
-                        wxString currentTimeAsString = "";
+                        wxString currentTimeAsString = wxT("");
                         
                         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
@@ -1862,11 +1860,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        const int STR_LENGTH = 80;
-        char 
-            mode[STR_LENGTH], bits[STR_LENGTH], errors[STR_LENGTH], ber[STR_LENGTH], 
-            resyncs[STR_LENGTH], clockoffset[STR_LENGTH], freqoffset[STR_LENGTH], syncmetric[STR_LENGTH];
-        snprintf(mode, STR_LENGTH, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); 
+        wxString modeString = wxString::Format(wxT("Mode: %s"), freedvInterface.getCurrentModeStr());
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -1896,42 +1890,50 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_mode == FREEDV_MODE_RADE)
         {
-            m_textBits->SetLabel("Bits: unk");
-            m_textErrors->SetLabel("Errs: unk");
-            m_textBER->SetLabel("BER: unk");
-            m_textFreqOffset->SetLabel("FrqOff: unk");
-            m_textSyncMetric->SetLabel("Sync: unk");
-            m_textCodec2Var->SetLabel("Var: unk");
+            m_textBits->SetLabel(wxT("Bits: unk"));
+            m_textErrors->SetLabel(wxT("Errs: unk"));
+            m_textBER->SetLabel(wxT("BER: unk"));
+            m_textFreqOffset->SetLabel(wxT("FrqOff: unk"));
+            m_textSyncMetric->SetLabel(wxT("Sync: unk"));
+            m_textCodec2Var->SetLabel(wxT("Var: unk"));
         }
         else
         {
-            snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); m_textBits->SetLabel(bits);
-            snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); m_textErrors->SetLabel(errors);
-            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            snprintf(ber, STR_LENGTH, "BER: %4.3f", b); m_textBER->SetLabel(ber);
-            snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); m_textResyncs->SetLabel(resyncs);
+            wxString bits = wxString::Format(wxT("Bits: %d"), freedvInterface.getTotalBits()); 
+            m_textBits->SetLabel(bits);
 
-            snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
-            m_textFreqOffset->SetLabel(freqoffset);
-            snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
-            m_textSyncMetric->SetLabel(syncmetric);
+            wxString errors = wxString::Format(wxT("Errs: %d"), freedvInterface.getTotalBitErrors()); 
+            m_textErrors->SetLabel(errors);
+
+            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
+            wxString ber = wxString::Format(wxT("BER: %4.3f"), b); 
+            m_textBER->SetLabel(ber);
+
+            wxString resyncs = wxString::Format(wxT("Resyncs: %d"), g_resyncs); 
+            m_textResyncs->SetLabel(resyncs);
+
+            wxString freqOffset = wxString::Format(wxT("FrqOff: %3.1f"), freedvInterface.getCurrentRxModemStats()->foff);
+            m_textFreqOffset->SetLabel(freqOffset);
+
+            wxString syncMetric = wxString::Format(wxT("Sync: %3.2f"), freedvInterface.getCurrentRxModemStats()->sync_metric);
+            m_textSyncMetric->SetLabel(syncMetric);
 
             // Codec 2 700D/E "auto EQ" equaliser variance
             auto var = freedvInterface.getVariance();
-            char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
-            wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+            wxString var_string = wxString::Format(wxT("Var: %4.1f"), var);
+            m_textCodec2Var->SetLabel(var_string);
         }
 
         if (g_State) {
 
             if (g_mode == FREEDV_MODE_RADE)
             {
-                m_textClockOffset->SetLabel("ClkOff: unk");
+                m_textClockOffset->SetLabel(wxT("ClkOff: unk"));
             }
             else
             {
-                snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-                m_textClockOffset->SetLabel(clockoffset);
+                wxString clockOffset = wxString::Format(wxT("ClkOff: %+-d"), (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+                m_textClockOffset->SetLabel(clockOffset);
             }
             
             // update error pattern plots if supported
@@ -2035,9 +2037,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
             if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel("Too High");
+                m_textLevel->SetLabel(wxT("Too High"));
             else
-                m_textLevel->SetLabel("");
+                m_textLevel->SetLabel(wxT(""));
 
             m_maxLevel *= LEVEL_BETA;
         }
@@ -2811,8 +2813,8 @@ void MainFrame::startRxStream()
             else
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                rxInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([this, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -2830,7 +2832,7 @@ void MainFrame::startRxStream()
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                    CallAfter([newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -2884,7 +2886,7 @@ void MainFrame::startRxStream()
             {
                 txInSoundDevice->setDescription("Mic to FreeDV");
                 txInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                    CallAfter([newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -2918,7 +2920,7 @@ void MainFrame::startRxStream()
             {
                 txOutSoundDevice->setDescription("FreeDV to Radio");
                 txOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                    CallAfter([newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -2954,7 +2956,7 @@ void MainFrame::startRxStream()
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
                 rxInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                    CallAfter([newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -2972,7 +2974,7 @@ void MainFrame::startRxStream()
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
+                    CallAfter([newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
                     });
@@ -3444,6 +3446,25 @@ void MainFrame::initializeFreeDVReporter_()
 
 void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message)
 {
+    // A separate object needs to be created here since wxWidgets doesn't support more
+    // than two arguments for CallAfter().
+    QsyRequestArgs* args = new QsyRequestArgs;
+    assert(args != nullptr);
+    args->callsign = callsign;
+    args->freqHz = freqHz;
+    args->message = message;
+
+    CallAfter(&MainFrame::onQsyRequestUIThread_, args);
+}
+
+void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
+{
+    // Copy passed-in args and delete args carrier object.
+    std::string callsign = args->callsign;
+    uint64_t freqHz = args->freqHz;
+    std::string message = args->message;
+    delete args;
+
     double freqFactor = 1000.0;
     std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
         
@@ -3464,28 +3485,26 @@ void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string
         dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
     }
         
-    CallAfter([&, fullMessage, dialogStyle, frequencyReadable]() {
-        wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+    wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
 
-        if (dialogStyle & wxYES_NO)
-        {
-            messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
-        }
+    if (dialogStyle & wxYES_NO)
+    {
+        messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
+    }
 
-        auto answer = messageDialog.ShowModal();
-        if (answer == wxID_YES)
+    auto answer = messageDialog.ShowModal();
+    if (answer == wxID_YES)
+    {
+        // This will implicitly cause Hamlib to change the frequency and mode.
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            // This will implicitly cause Hamlib to change the frequency and mode.
-            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-            {
-                m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-            }
-            else
-            {
-                m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-            }
+            m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
         }
-    });
+        else
+        {
+            m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
+        }
+    }
 }
 
 void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void* state)
@@ -3501,7 +3520,7 @@ void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* stat
 {
     MainFrame* castedState = (MainFrame*)state;
     log_error("%s", error.c_str());
-    castedState->CallAfter([&, error]() {
+    castedState->CallAfter([error]() {
         wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
     });
 }

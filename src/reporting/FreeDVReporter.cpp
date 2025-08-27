@@ -299,7 +299,7 @@ void FreeDVReporter::connect_()
         onReporterConnectFn_();
     }
     
-    sioClient_->on("new_connection", [&](nlohmann::json msgParams) {
+    sioClient_->on("new_connection", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserConnectFn_)
         {
@@ -331,7 +331,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("connection_successful", [&](nlohmann::json) {
+    sioClient_->on("connection_successful", [&](const nlohmann::json&) {
         std::unique_lock<std::mutex> lk(objMutex_);
         isFullyConnected_ = true;
     
@@ -356,7 +356,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("remove_connection", [&](nlohmann::json msgParams) {
+    sioClient_->on("remove_connection", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserDisconnectFn_)
         {
@@ -388,7 +388,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("tx_report", [&](nlohmann::json msgParams) {
+    sioClient_->on("tx_report", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onTransmitUpdateFn_)
         {
@@ -422,7 +422,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("rx_report", [&](nlohmann::json msgParams) {
+    sioClient_->on("rx_report", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         auto sid = msgParams["sid"];
         auto lastUpdate = msgParams["last_update"];
@@ -471,7 +471,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("freq_change", [&](nlohmann::json msgParams) {
+    sioClient_->on("freq_change", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onFrequencyChangeFn_)
         {
@@ -500,7 +500,7 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("message_update", [&](nlohmann::json msgParams) {  
+    sioClient_->on("message_update", [&](const nlohmann::json& msgParams) {  
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onMessageUpdateFn_)
         {
@@ -523,7 +523,7 @@ void FreeDVReporter::connect_()
         }
     });
     
-    sioClient_->on("qsy_request", [&](nlohmann::json msgParams) {
+    sioClient_->on("qsy_request", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         auto callsign = msgParams["callsign"];
         auto frequency = msgParams["frequency"];

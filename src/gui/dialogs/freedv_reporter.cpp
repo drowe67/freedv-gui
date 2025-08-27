@@ -1325,11 +1325,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
 {    
-    wxRegEx millisecondsRemoval(_("\\.[^+-]+"));
+    wxRegEx millisecondsRemoval(wxT("\\.[^+-]+"));
     wxString tmp = timeStr;
-    millisecondsRemoval.Replace(&tmp, _(""));
+    millisecondsRemoval.Replace(&tmp, wxT(""));
     
-    wxRegEx timezoneRgx(_("([+-])([0-9]+):([0-9]+)$"));
+    wxRegEx timezoneRgx(wxT("([+-])([0-9]+):([0-9]+)$"));
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {
@@ -1340,12 +1340,12 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         int tzMinutes = wxAtoi(hours) * 60;
         tzMinutes += wxAtoi(minutes);
         
-        if (tzOffset == "-")
+        if (tzOffset == wxT("-"))
         {
             tzMinutes = -tzMinutes;
         }
         
-        timezoneRgx.Replace(&tmp, _(""));
+        timezoneRgx.Replace(&tmp, wxT(""));
         
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
@@ -1364,7 +1364,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
         
-        wxString formatStr = "%x %X";
+        wxString formatStr = wxT("%x %X");
         
 #if __APPLE__
         // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
