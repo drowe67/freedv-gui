@@ -379,9 +379,16 @@ void MainApp::UnitTest_()
             g_loopPlayFileFromRadio = false;
             g_playFileFromRadio = true;
 
+            auto sync = 0;
             while (g_playFileFromRadio)
             {
                 std::this_thread::sleep_for(100ms);
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
             }
         }
         else
