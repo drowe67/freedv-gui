@@ -533,6 +533,10 @@ class MainFrame : public TopFrame
         void onRadioConnected_(IRigController* ptr);
         void onRadioDisconnected_(IRigController* ptr);
 
+        // Audio error handlers
+        void onAudioEngineError_(IAudioEngine&, std::string error, void* state);
+        static void OnAudioDeviceError_(IAudioDevice&, std::string error, void* state);
+
         // Audio device data handlers
         static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
         static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);

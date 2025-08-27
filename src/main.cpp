@@ -186,9 +186,6 @@ float               g_TxFreqOffsetHz;
 
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
-// TX mode change mutex
-wxMutex txModeChangeMutex;
-
 // End of TX state control
 bool endingTx;
 
@@ -2114,50 +2111,51 @@ void MainFrame::OnExit(wxCommandEvent& event)
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
     auto eventObject = (wxRadioButton*)event.GetEventObject();
-    txModeChangeMutex.Lock();
-    
+    auto newMode = g_mode;
     if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
     {
-        g_mode = FREEDV_MODE_1600;
+        newMode = FREEDV_MODE_1600;
     }
     else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
     {
-        g_mode = FREEDV_MODE_RADE;
+        newMode = FREEDV_MODE_RADE;
     }
     else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
-        g_mode = FREEDV_MODE_700D;
+        newMode = FREEDV_MODE_700D;
     }
     else if (eventObject == m_rb700e || (eventObject == nullptr && m_rb700e->GetValue())) 
     {
-        g_mode = FREEDV_MODE_700E;
+        newMode = FREEDV_MODE_700E;
     }
-    
-    if (freedvInterface.isRunning())
+
+    if (newMode != g_mode)
     {
-        // Need to change the TX interface live.
-        freedvInterface.changeTxMode(g_mode);
+        g_mode = newMode; 
+        if (freedvInterface.isRunning())
+        {
+            // Need to change the TX interface live.
+            freedvInterface.changeTxMode(g_mode);
+        }
+    
+        // Force recreation of EQ filters.
+        m_newMicInFilter = true;
+        m_newSpkOutFilter = true;
+    
+        // Report TX change to registered reporters
+        auto txStatus = g_tx.load(std::memory_order_acquire);
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
+        }
+    
+        // Disable controls not supported by RADE
+        bool isEnabled = g_mode != FREEDV_MODE_RADE;
+        m_sliderSQ->Enable(isEnabled);
+        m_ckboxSQ->Enable(isEnabled);
+        m_textSQ->Enable(isEnabled);
+        m_btnCenterRx->Enable(isEnabled);
     }
-    
-    // Force recreation of EQ filters.
-    m_newMicInFilter = true;
-    m_newSpkOutFilter = true;
-    
-    txModeChangeMutex.Unlock();
-    
-    // Report TX change to registered reporters
-    auto txStatus = g_tx.load(std::memory_order_acquire);
-    for (auto& obj : wxGetApp().m_reporters)
-    {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
-    }
-    
-    // Disable controls not supported by RADE
-    bool isEnabled = g_mode != FREEDV_MODE_RADE;
-    m_sliderSQ->Enable(isEnabled);
-    m_ckboxSQ->Enable(isEnabled);
-    m_textSQ->Enable(isEnabled);
-    m_btnCenterRx->Enable(isEnabled);
 }
 
 void MainFrame::performFreeDVOn_()
@@ -2723,22 +2721,13 @@ void MainFrame::startRxStream()
         m_RxRunning = true;
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-            executeOnUiThreadAndWait_([&, error]() {
-                wxMessageBox(wxString::Format(
-                             "Error encountered while initializing the audio engine: %s.", 
-                             error), wxT("Error"), wxOK, this); 
-            });
-        }, nullptr);
+        engine->setOnEngineError([](IAudioEngine& dev, std::string error, void* state) { 
+            MainFrame* castedThis = (MainFrame*)state;
+            castedThis->onAudioEngineError_(dev, error, state); 
+        }, this);
         engine->start();
-        
-        auto errorCallback = [&](IAudioDevice&, std::string error, void*)
-        {
-            log_error("%s", error.c_str());
-            CallAfter([&, error]() {
-                wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-            });
-        };
+
+        IAudioDevice::AudioErrorCallbackFn errorCallback = &MainFrame::OnAudioDeviceError_;
         
         // Init call back data structure ----------------------------------------------
 
@@ -2840,7 +2829,7 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
                     CallAfter([&, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
@@ -2894,7 +2883,7 @@ void MainFrame::startRxStream()
             else
             {
                 txInSoundDevice->setDescription("Mic to FreeDV");
-                txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                txInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
                     CallAfter([&, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
@@ -2912,7 +2901,7 @@ void MainFrame::startRxStream()
                     g_AEstatus2[0]++;
                 }, nullptr);
                 
-                txInSoundDevice->setOnAudioError(errorCallback, nullptr);                
+                txInSoundDevice->setOnAudioError(errorCallback, this);                
                 txInSoundDevice->start();
             }
 
@@ -2928,7 +2917,7 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 txOutSoundDevice->setDescription("FreeDV to Radio");
-                txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                txOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
                     CallAfter([&, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
@@ -2946,7 +2935,7 @@ void MainFrame::startRxStream()
                     g_AEstatus1[2]++;
                 }, nullptr);
             
-                txOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+                txOutSoundDevice->setOnAudioError(errorCallback, this);
                 txOutSoundDevice->start();
             }
             
@@ -2964,7 +2953,7 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                rxInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
                     CallAfter([&, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
@@ -2982,7 +2971,7 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
                     CallAfter([&, newDeviceName]() {
                         wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                         wxGetApp().appConfiguration.save(pConfig);
@@ -3112,8 +3101,8 @@ void MainFrame::startRxStream()
             g_AEstatus1[0]++;
         }, nullptr);
         
-        rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
-        rxOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+        rxInSoundDevice->setOnAudioError(errorCallback, this);
+        rxOutSoundDevice->setOnAudioError(errorCallback, this);
         
         if (txInSoundDevice && txOutSoundDevice)
         {
@@ -3496,6 +3485,24 @@ void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string
                 m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
             }
         }
+    });
+}
+
+void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void* state)
+{
+     executeOnUiThreadAndWait_([&, error]() {
+         wxMessageBox(wxString::Format(
+                          "Error encountered while initializing the audio engine: %s.", 
+                          error), wxT("Error"), wxOK, this); 
+     });
+}
+
+void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* state)
+{
+    MainFrame* castedState = (MainFrame*)state;
+    log_error("%s", error.c_str());
+    castedState->CallAfter([&, error]() {
+        wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
     });
 }
 
