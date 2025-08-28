@@ -299,7 +299,7 @@ void MainApp::UnitTest_()
     while (true)
     {
         bool isRunning = false;
-        frame->executeOnUiThreadAndWait_([this]() {
+        frame->executeOnUiThreadAndWait_([&]() {
             isRunning = frame->m_togBtnOnOff->IsEnabled();
         });
         if (isRunning) break;
