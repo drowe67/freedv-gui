@@ -223,6 +223,35 @@ static void LogLockFunction_(bool lock, void *lock_arg)
     }
 }
 
+template<int soundCardId, bool isOut>
+void MainFrame::handleAudioDeviceChange_(std::string newDeviceName)
+{
+    wxString devName = wxString::FromUTF8(newDeviceName.c_str());
+    if (soundCardId == 1)
+    {
+        if (isOut)
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = devName;
+        }
+        else
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = devName;
+        }
+    }
+    else if (soundCardId == 2)
+    {
+        if (isOut)
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = devName;
+        }
+        else
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = devName;
+        }
+    }
+    wxGetApp().appConfiguration.save(pConfig);
+}
+
 void MainApp::UnitTest_()
 {
     // List audio devices
@@ -2813,12 +2842,10 @@ void MainFrame::startRxStream()
             else
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                }, this);
             }
             
             if (!rxOutSoundDevice && !failed)
@@ -2831,12 +2858,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                }, this);
             }
  
             if (failed)
@@ -2885,11 +2910,9 @@ void MainFrame::startRxStream()
             else
             {
                 txInSoundDevice->setDescription("Mic to FreeDV");
-                txInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
+                txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, newDeviceName);
                 }, nullptr);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
@@ -2919,12 +2942,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 txOutSoundDevice->setDescription("FreeDV to Radio");
-                txOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                txOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                }, this);
                 txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
                 txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -2955,12 +2976,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                }, this);
             }
  
             if (!rxOutSoundDevice && !failed)
@@ -2973,12 +2992,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([this](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, newDeviceName);
+                }, this);
             }
  
             if (failed)
@@ -3516,13 +3533,16 @@ void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void* stat
      });
 }
 
+void MainFrame::onAudioDeviceError_(std::string error)
+{
+    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+}
+
 void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* state)
 {
     MainFrame* castedState = (MainFrame*)state;
     log_error("%s", error.c_str());
-    castedState->CallAfter([error]() {
-        wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-    });
+    castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
 }
 
 void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)

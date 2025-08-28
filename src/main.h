@@ -535,7 +535,12 @@ class MainFrame : public TopFrame
 
         // Audio error handlers
         void onAudioEngineError_(IAudioEngine&, std::string error, void* state);
+        void onAudioDeviceError_(std::string error);
         static void OnAudioDeviceError_(IAudioDevice&, std::string error, void* state);
+
+        // Audio device change handling
+        template<int soundCardId, bool isOut>
+        void handleAudioDeviceChange_(std::string newDeviceName);
 
         // Audio device data handlers
         static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);

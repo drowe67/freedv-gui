@@ -1412,16 +1412,19 @@ void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
-    wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
-    m_textFifos->SetLabel(fifo_counters);
+    if (IsShownOnScreen())
+    {
+        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+        m_textFifos->SetLabel(fifo_counters);
 
-    // input: underflow overflow output: underflow overflow
-    wxString pa_counters_1 = wxString::Format(wxT("Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
-    m_textPA1->SetLabel(pa_counters_1);
+        // input: underflow overflow output: underflow overflow
+        wxString pa_counters_1 = wxString::Format(wxT("Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
+        m_textPA1->SetLabel(pa_counters_1);
 
-    // input: underflow overflow output: underflow overflow
-    wxString pa_counters_2 = wxString::Format(wxT("Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
-    m_textPA2->SetLabel(pa_counters_2);
+        // input: underflow overflow output: underflow overflow
+        wxString pa_counters_2 = wxString::Format(wxT("Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+        m_textPA2->SetLabel(pa_counters_2);
+    }
 }
 
 void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
