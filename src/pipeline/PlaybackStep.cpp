@@ -103,6 +103,7 @@ void PlaybackStep::nonRtThreadEntry_()
 #endif // defined(__APPLE__)
 
     bool readComplete = false;
+    SNDFILE* oldPlayFile = nullptr;
     while (!nonRtThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
@@ -169,12 +170,13 @@ void PlaybackStep::nonRtThreadEntry_()
                 }
             }
         }
-        else if (playFile == nullptr)
+        else if (playFile != oldPlayFile)
         {
             readComplete = false;
         }
         g_mutexProtectingCallbackData.Unlock();
         
+        oldPlayFile = playFile;
         fileIoThreadSem_.wait();
     }
 
