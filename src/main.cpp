@@ -239,7 +239,7 @@ void MainApp::UnitTest_()
     engine->stop();
 
     // Bring window to the front
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->Iconize(false);
         frame->SetFocus();
         frame->Raise();
@@ -273,7 +273,7 @@ void MainApp::UnitTest_()
         log_info("Firing mode change");
         /*sim.MouseMove(modeBtn->GetScreenPosition());
         sim.MouseClick();*/
-        CallAfter([&]() {
+        CallAfter([this, modeBtn]() {
             modeBtn->SetValue(true);
             wxCommandEvent* modeEvent = new wxCommandEvent(wxEVT_RADIOBUTTON, modeBtn->GetId());
             modeEvent->SetEventObject(modeBtn);
@@ -283,7 +283,7 @@ void MainApp::UnitTest_()
     
     // Fire event to start FreeDV
     log_info("Firing start");
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->m_togBtnOnOff->SetValue(true);
         wxCommandEvent* onEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         onEvent->SetEventObject(frame->m_togBtnOnOff);
@@ -299,7 +299,7 @@ void MainApp::UnitTest_()
     while (true)
     {
         bool isRunning = false;
-        frame->executeOnUiThreadAndWait_([&]() {
+        frame->executeOnUiThreadAndWait_([this]() {
             isRunning = frame->m_togBtnOnOff->IsEnabled();
         });
         if (isRunning) break;
@@ -315,7 +315,7 @@ void MainApp::UnitTest_()
             //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             //sim.MouseClick();
             log_info("Firing PTT");
-            CallAfter([&]() {
+            CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(true);
                 wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
                 txEvent->SetEventObject(frame->m_btnTogPTT);
@@ -348,7 +348,7 @@ void MainApp::UnitTest_()
             // Stop transmitting
             log_info("Firing PTT");
             std::this_thread::sleep_for(1s);
-            CallAfter([&]() {
+            CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(false);
                 endingTx = true;
                 wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
@@ -410,7 +410,7 @@ void MainApp::UnitTest_()
  
     // Fire event to stop FreeDV
     log_info("Firing stop");
-    CallAfter([&]() {
+    CallAfter([this]() {
         wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         offEvent->SetEventObject(frame->m_togBtnOnOff);
         frame->m_togBtnOnOff->SetValue(false);
@@ -427,7 +427,7 @@ void MainApp::UnitTest_()
     if (frame->m_reporterDialog)
     {
         // Force deletion of FreeDV Reporter linkage to avoid spurious asan errors.
-        CallAfter([&]() {
+        CallAfter([this]() {
             frame->m_reporterDialog->setReporter(nullptr);
             wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
         });
@@ -436,7 +436,7 @@ void MainApp::UnitTest_()
     }
     
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->Destroy();
     });
 }
