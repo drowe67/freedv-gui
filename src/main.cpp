@@ -571,6 +571,7 @@ bool MainApp::OnInit()
 #if defined(USING_MIMALLOC)
     // Decrease purge interval to 100ms to improve performance (default = 10ms).
     mi_option_set(mi_option_purge_delay, 100);
+    mi_option_set(mi_option_purge_extend_delay, 10);
     //mi_option_enable(mi_option_verbose);
 #endif // defined(USING_MIMALLOC)
 
