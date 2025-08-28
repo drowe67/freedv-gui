@@ -63,14 +63,14 @@ void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
 
 void SocketIoClient::emit(std::string eventName, nlohmann::json params)
 {
-    enqueue_([&, eventName, params]() {
+    enqueue_([this, eventName, params]() {
         emitImpl_(eventName, params);
     });
 }
 
 void SocketIoClient::emit(std::string eventName)
 {
-    enqueue_([&, eventName]() {
+    enqueue_([this, eventName]() {
         emitImpl_(eventName);
     });
 }

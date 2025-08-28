@@ -303,12 +303,12 @@ void FreeDVReporter::connect_()
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserConnectFn_)
         {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto callsign = msgParams["callsign"];
-            auto gridSquare = msgParams["grid_square"];
-            auto version = msgParams["version"];
-            auto rxOnly = msgParams["rx_only"];
+            auto& sid = msgParams["sid"];
+            auto& lastUpdate = msgParams["last_update"];
+            auto& callsign = msgParams["callsign"];
+            auto& gridSquare = msgParams["grid_square"];
+            auto& version = msgParams["version"];
+            auto& rxOnly = msgParams["rx_only"];
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -360,12 +360,12 @@ void FreeDVReporter::connect_()
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserDisconnectFn_)
         {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto callsign = msgParams["callsign"];
-            auto gridSquare = msgParams["grid_square"];
-            auto version = msgParams["version"];
-            auto rxOnly = msgParams["rx_only"];
+            auto& sid = msgParams["sid"];
+            auto& lastUpdate = msgParams["last_update"];
+            auto& callsign = msgParams["callsign"];
+            auto& gridSquare = msgParams["grid_square"];
+            auto& version = msgParams["version"];
+            auto& rxOnly = msgParams["rx_only"];
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -392,13 +392,13 @@ void FreeDVReporter::connect_()
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onTransmitUpdateFn_)
         {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto callsign = msgParams["callsign"];
-            auto gridSquare = msgParams["grid_square"];
-            auto lastTx = msgParams["last_tx"];
-            auto mode = msgParams["mode"];
-            auto transmitting = msgParams["transmitting"];
+            auto& sid = msgParams["sid"];
+            auto& lastUpdate = msgParams["last_update"];
+            auto& callsign = msgParams["callsign"];
+            auto& gridSquare = msgParams["grid_square"];
+            auto& lastTx = msgParams["last_tx"];
+            auto& mode = msgParams["mode"];
+            auto& transmitting = msgParams["transmitting"];
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -424,13 +424,13 @@ void FreeDVReporter::connect_()
 
     sioClient_->on("rx_report", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto sid = msgParams["sid"];
-        auto lastUpdate = msgParams["last_update"];
-        auto receiverCallsign = msgParams["receiver_callsign"];
-        auto receiverGridSquare = msgParams["receiver_grid_square"];
-        auto callsign = msgParams["callsign"];
-        auto snr = msgParams["snr"];
-        auto mode = msgParams["mode"];
+        auto& sid = msgParams["sid"];
+        auto& lastUpdate = msgParams["last_update"];
+        auto& receiverCallsign = msgParams["receiver_callsign"];
+        auto& receiverGridSquare = msgParams["receiver_grid_square"];
+        auto& callsign = msgParams["callsign"];
+        auto& snr = msgParams["snr"];
+        auto& mode = msgParams["mode"];
     
         if (onReceiveUpdateFn_)
         {
@@ -475,11 +475,11 @@ void FreeDVReporter::connect_()
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onFrequencyChangeFn_)
         {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto callsign = msgParams["callsign"];
-            auto gridSquare = msgParams["grid_square"];
-            auto frequency = msgParams["freq"];
+            auto& sid = msgParams["sid"];
+            auto& lastUpdate = msgParams["last_update"];
+            auto& callsign = msgParams["callsign"];
+            auto& gridSquare = msgParams["grid_square"];
+            auto& frequency = msgParams["freq"];
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -504,9 +504,9 @@ void FreeDVReporter::connect_()
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onMessageUpdateFn_)
         {
-            auto sid = msgParams["sid"];
-            auto lastUpdate = msgParams["last_update"];
-            auto message = msgParams["message"];
+            auto& sid = msgParams["sid"];
+            auto& lastUpdate = msgParams["last_update"];
+            auto& message = msgParams["message"];
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -525,9 +525,9 @@ void FreeDVReporter::connect_()
     
     sioClient_->on("qsy_request", [&](const nlohmann::json& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto callsign = msgParams["callsign"];
-        auto frequency = msgParams["frequency"];
-        auto message = msgParams["message"];
+        auto& callsign = msgParams["callsign"];
+        auto& frequency = msgParams["frequency"];
+        auto& message = msgParams["message"];
     
         if (onQsyRequestFn_)
         {
