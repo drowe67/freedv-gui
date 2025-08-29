@@ -1007,7 +1007,12 @@ void MainFrame::togglePTT(void) {
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        
+        for (int index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+        {
+            auto page = m_auiNbookCtrl->GetPage(index);
+            page->Refresh();
+        }
+
         // enable sync text
 
         m_textSync->Enable();
@@ -1032,6 +1037,7 @@ void MainFrame::togglePTT(void) {
             if (page == (wxWindow *)m_panelSpeechIn)
             {
                 m_auiNbookCtrl->ChangeSelection(index);
+                page->Refresh();
                 break;
             }
         }
