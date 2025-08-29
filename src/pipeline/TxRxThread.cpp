@@ -112,7 +112,7 @@ extern FreeDVInterface freedvInterface;
 extern wxWindow* g_parent;
 
 #include <sndfile.h>
-extern SNDFILE* g_sfPlayFile;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
@@ -166,10 +166,10 @@ void TxRxThread::initializePipeline_()
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfTxFs; },
-            []() { return g_sfPlayFile; },
+            []() { return g_sfPlayFile.load(std::memory_order_acquire); },
             []() {
                 if (g_loopPlayFileToMicIn)
-                    sf_seek(g_sfPlayFile, 0, SEEK_SET);
+                    sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);

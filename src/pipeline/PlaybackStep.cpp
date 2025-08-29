@@ -116,7 +116,7 @@ void PlaybackStep::nonRtThreadEntry_()
                 playbackResampler_->getInputSampleRate() != fileSampleRate ||
                 playbackResampler_->getOutputSampleRate() != getInputSampleRate()))
             {
-                //log_info("Create SR (in = %d, out = %d)", fileSampleRate, inputSampleRate_);
+                log_info("Create SR (in = %d, out = %d)", fileSampleRate, inputSampleRate_);
                 if (playbackResampler_ != nullptr)
                 {
                     delete playbackResampler_;
@@ -163,7 +163,7 @@ void PlaybackStep::nonRtThreadEntry_()
 
                 if ((int)numRead == 0 && outputFifo_.numUsed() == 0)
                 {
-                    //log_info("file read complete");
+                    log_info("file read complete");
                     buf = nullptr;
                     fileCompleteFn_();
                     readComplete = true;
@@ -172,11 +172,12 @@ void PlaybackStep::nonRtThreadEntry_()
         }
         else if (playFile != oldPlayFile)
         {
+            log_info("Resetting read for next round");
             readComplete = false;
         }
+        oldPlayFile = playFile;
         g_mutexProtectingCallbackData.Unlock();
         
-        oldPlayFile = playFile;
         fileIoThreadSem_.wait();
     }
 
