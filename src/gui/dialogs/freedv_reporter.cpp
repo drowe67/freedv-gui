@@ -972,7 +972,6 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     
         if (col->GetModelColumn() == desiredCol)
         {
-            auto textSize = m_listSpots->GetTextExtent(tempUserMessage_);
             rect = m_listSpots->GetItemRect(item, col);
             if (tipWindow_ == nullptr)
             {
@@ -1444,7 +1443,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquar
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
     wxString optionalSegment = gridSquare.Mid(4, 2);
-    wxRegEx allLetters(_("^[A-Z]{2}$"));
+    const wxRegEx allLetters(_("^[A-Z]{2}$"));
     if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
@@ -2451,18 +2450,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 return;
             }
 
+            wxString receivedCallsignWx(receivedCallsign);
+            wxString rxModeWx(rxMode);
+
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsign) ||
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxMode);
+                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
+                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
             bool isDataChanged =
-                iter->second->lastRxCallsign != receivedCallsign ||
-                iter->second->lastRxMode != rxMode;
+                iter->second->lastRxCallsign != receivedCallsignWx ||
+                iter->second->lastRxMode != rxModeWx;
             
-            iter->second->lastRxCallsign = receivedCallsign;
-            iter->second->lastRxMode = rxMode;
+            iter->second->lastRxCallsign = receivedCallsignWx;
+            iter->second->lastRxMode = rxModeWx;
         
-            wxString snrString = wxString::Format(_("%.01f"), snr);
+            wxString snrString = wxString::Format(wxT("%.01f"), snr);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
