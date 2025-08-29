@@ -166,7 +166,7 @@ void TxRxThread::initializePipeline_()
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfTxFs; },
-            []() { return g_sfPlayFile; },
+            []() { return g_playFileToMicIn ? g_sfPlayFile : nullptr; },
             []() {
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
