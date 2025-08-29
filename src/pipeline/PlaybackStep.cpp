@@ -102,13 +102,11 @@ void PlaybackStep::nonRtThreadEntry_()
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
 
-    bool readComplete = false;
-    SNDFILE* oldPlayFile = nullptr;
     while (!nonRtThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
         auto playFile = getSndFileFn_();
-        if (playFile != nullptr && !readComplete)
+        if (playFile != nullptr)
         {
             auto fileSampleRate = fileSampleRateFn_();
             if (getInputSampleRate() != fileSampleRate && (
@@ -165,18 +163,17 @@ void PlaybackStep::nonRtThreadEntry_()
                 {
                     //log_info("file read complete");
                     buf = nullptr;
+
+                    // Unlock prior to calling completion function just in case
+                    // something in here causes the lock to be taken.
+                    g_mutexProtectingCallbackData.Unlock();
                     fileCompleteFn_();
-                    readComplete = true;
+                    g_mutexProtectingCallbackData.Lock();
                 }
             }
         }
-        else if (playFile != oldPlayFile)
-        {
-            readComplete = false;
-        }
+
         g_mutexProtectingCallbackData.Unlock();
-        
-        oldPlayFile = playFile;
         fileIoThreadSem_.wait();
     }
 

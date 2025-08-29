@@ -172,7 +172,7 @@ void TxRxThread::initializePipeline_()
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
+                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlayFileToMicIn();});
                 }
             }
             );
@@ -317,7 +317,7 @@ void TxRxThread::initializePipeline_()
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
+                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlaybackFileFromRadio();});
                 }
             }
         );

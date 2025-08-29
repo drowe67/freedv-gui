@@ -458,7 +458,8 @@ class MainFrame : public TopFrame
         
     private:
         friend class MainApp; // needed for unit tests
-        
+        friend class TxRxThread; // XXX - needed for execOnUiThreadAndWait_().
+
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
         std::shared_ptr<IAudioDevice> txInSoundDevice;
