@@ -200,7 +200,7 @@ void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
     popup->Popup();
 }
 
-extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern SNDFILE *g_sfPlayFile;
 extern bool g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
@@ -235,7 +235,7 @@ int MainFrame::VoiceKeyerStartTx(void)
             return VK_IDLE;
         }
         
-        g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
+        g_sfPlayFile = tmpPlayFile;
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_.c_str()) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;

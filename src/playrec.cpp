@@ -5,11 +5,10 @@
     Playing and recording files.
 */
 
-#include <atomic>
 #include "main.h"
 
 extern wxMutex g_mutexProtectingCallbackData;
-std::atomic<SNDFILE*> g_sfPlayFile;
+SNDFILE            *g_sfPlayFile;
 bool                g_playFileToMicIn;
 bool                g_loopPlayFileToMicIn;
 int                 g_playFileToMicInEventId;
@@ -60,11 +59,9 @@ void MainFrame::StopPlayFileToMicIn(void)
     g_mutexProtectingCallbackData.Lock();
     if (g_playFileToMicIn)
     {
-        auto tmpPlayFile = g_sfPlayFile.load(std::memory_order_acquire);
-        g_sfPlayFile.store(nullptr, std::memory_order_release);
-
         g_playFileToMicIn = false;
-        sf_close(tmpPlayFile);
+        sf_close(g_sfPlayFile);
+        g_sfPlayFile = nullptr;
         SetStatusText(wxT(""));
         VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }

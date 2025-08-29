@@ -149,7 +149,7 @@ int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
-extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern SNDFILE            *g_sfPlayFile;
 extern bool                g_playFileToMicIn;
 extern bool                g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -358,8 +358,8 @@ void MainApp::UnitTest_()
                 // Transmit until file has finished playing
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
+                g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
                 g_sfTxFs = sfInfo.samplerate;
-                g_sfPlayFile.store(sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn = true;
 
@@ -1150,7 +1150,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
 
-    g_sfPlayFile.store(nullptr, std::memory_order_release);
+    g_sfPlayFile = NULL;
     g_playFileToMicIn = false;
     g_loopPlayFileToMicIn = false;
 
@@ -1339,11 +1339,10 @@ MainFrame::~MainFrame()
     } 
     sox_biquad_finish();
 
-    auto tmpPlayFile = g_sfPlayFile.load(std::memory_order_acquire);
-    if (tmpPlayFile != NULL)
+    if (g_sfPlayFile != NULL)
     {
-        sf_close(tmpPlayFile);
-        g_sfPlayFile.store(nullptr, std::memory_order_release);
+        sf_close(g_sfPlayFile);
+        g_sfPlayFile = NULL;
     }
     if (g_sfRecFile != NULL)
     {
