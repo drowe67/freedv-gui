@@ -30,9 +30,14 @@
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
-#include "codec2_fifo.h"
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
+#include "../util/Semaphore.h"
+
+// Number of features to store. This is set to be close to the
+// typical size for RX/TX features for the rade_loss ctest to
+// avoid contention with normal RADE operation.
+#define NUM_FEATURES_TO_STORE (256 * 1024)
 
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C" 
@@ -48,17 +53,19 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    int getSync() const { return syncState_.load(); }
+    int getSync() const { return syncState_.load(std::memory_order_acquire); }
+    int getSnr() const { return snr_.load(std::memory_order_acquire); }
     
 private:
     std::atomic<int> syncState_;
+    std::atomic<int> snr_;
     struct rade* dv_;
     FARGANState* fargan_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE> inputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE> outputSampleFifo_;
     float* pendingFeatures_;
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
@@ -69,11 +76,14 @@ private:
     short* inputBuf_;
     float* featuresOut_;
     float* eooOut_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     
-    GenericFIFO<float> utFeatures_;
+    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
+    Semaphore featuresAvailableSem_;
+    
+    void utFeatureThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__RADE_RECEIVE_STEP_H

@@ -37,6 +37,10 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
+#if defined(USING_MIMALLOC)
+#include <mimalloc.h>
+#endif // defined(USING_MIMALLOC)
+
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -57,6 +61,7 @@
 #include "rade_api.h"
 
 using namespace std::chrono_literals;
+using namespace std::placeholders;
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -101,6 +106,7 @@ float               g_avmag[MODEM_STATS_NSPEC];
 
 // TX level for attenuation
 int g_txLevel = 0;
+std::atomic<float> g_txLevelScale;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -180,9 +186,6 @@ float               g_TxFreqOffsetHz;
 
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
-// TX mode change mutex
-wxMutex txModeChangeMutex;
-
 // End of TX state control
 bool endingTx;
 
@@ -220,6 +223,35 @@ static void LogLockFunction_(bool lock, void *lock_arg)
     }
 }
 
+template<int soundCardId, bool isOut>
+void MainFrame::handleAudioDeviceChange_(std::string newDeviceName)
+{
+    wxString devName = wxString::FromUTF8(newDeviceName.c_str());
+    if (soundCardId == 1)
+    {
+        if (isOut)
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = devName;
+        }
+        else
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = devName;
+        }
+    }
+    else if (soundCardId == 2)
+    {
+        if (isOut)
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = devName;
+        }
+        else
+        {
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = devName;
+        }
+    }
+    wxGetApp().appConfiguration.save(pConfig);
+}
+
 void MainApp::UnitTest_()
 {
     // List audio devices
@@ -236,7 +268,7 @@ void MainApp::UnitTest_()
     engine->stop();
 
     // Bring window to the front
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->Iconize(false);
         frame->SetFocus();
         frame->Raise();
@@ -270,7 +302,7 @@ void MainApp::UnitTest_()
         log_info("Firing mode change");
         /*sim.MouseMove(modeBtn->GetScreenPosition());
         sim.MouseClick();*/
-        CallAfter([&]() {
+        CallAfter([this, modeBtn]() {
             modeBtn->SetValue(true);
             wxCommandEvent* modeEvent = new wxCommandEvent(wxEVT_RADIOBUTTON, modeBtn->GetId());
             modeEvent->SetEventObject(modeBtn);
@@ -280,7 +312,7 @@ void MainApp::UnitTest_()
     
     // Fire event to start FreeDV
     log_info("Firing start");
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->m_togBtnOnOff->SetValue(true);
         wxCommandEvent* onEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         onEvent->SetEventObject(frame->m_togBtnOnOff);
@@ -312,7 +344,7 @@ void MainApp::UnitTest_()
             //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             //sim.MouseClick();
             log_info("Firing PTT");
-            CallAfter([&]() {
+            CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(true);
                 wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
                 txEvent->SetEventObject(frame->m_btnTogPTT);
@@ -333,7 +365,7 @@ void MainApp::UnitTest_()
 
                 while (g_playFileToMicIn)
                 {
-                    std::this_thread::sleep_for(20ms);
+                    std::this_thread::sleep_for(100ms);
                 } 
             }
             else
@@ -345,7 +377,7 @@ void MainApp::UnitTest_()
             // Stop transmitting
             log_info("Firing PTT");
             std::this_thread::sleep_for(1s);
-            CallAfter([&]() {
+            CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(false);
                 endingTx = true;
                 wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
@@ -373,9 +405,16 @@ void MainApp::UnitTest_()
             g_loopPlayFileFromRadio = false;
             g_playFileFromRadio = true;
 
+            auto sync = 0;
             while (g_playFileFromRadio)
             {
-                std::this_thread::sleep_for(20ms);
+                std::this_thread::sleep_for(100ms);
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
             }
         }
         else
@@ -400,7 +439,7 @@ void MainApp::UnitTest_()
  
     // Fire event to stop FreeDV
     log_info("Firing stop");
-    CallAfter([&]() {
+    CallAfter([this]() {
         wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         offEvent->SetEventObject(frame->m_togBtnOnOff);
         frame->m_togBtnOnOff->SetValue(false);
@@ -414,8 +453,19 @@ void MainApp::UnitTest_()
     // Wait 5 seconds for FreeDV to stop
     std::this_thread::sleep_for(5s);
     
+    if (frame->m_reporterDialog)
+    {
+        // Force deletion of FreeDV Reporter linkage to avoid spurious asan errors.
+        CallAfter([this]() {
+            frame->m_reporterDialog->setReporter(nullptr);
+            wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        });
+        
+        std::this_thread::sleep_for(5s);
+    }
+    
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
-    CallAfter([&]() {
+    CallAfter([this]() {
         frame->Destroy();
     });
 }
@@ -518,6 +568,13 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if defined(USING_MIMALLOC)
+    // Decrease purge interval to 100ms to improve performance (default = 10ms).
+    mi_option_set(mi_option_purge_delay, 100);
+    mi_option_set(mi_option_purge_extend_delay, 10);
+    //mi_option_enable(mi_option_verbose);
+#endif // defined(USING_MIMALLOC)
+
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
@@ -541,7 +598,10 @@ bool MainApp::OnInit()
     // improving performance.
     wxSetEnv("OMP_NUM_THREADS", "1");
     wxSetEnv("OPENBLAS_NUM_THREADS", "1");
-  
+ 
+    // Enable maximum optimization for Python.
+    wxSetEnv("PYTHONOPTIMIZE", "2");
+ 
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
@@ -566,6 +626,9 @@ bool MainApp::OnInit()
     wxGetEnv("PYTHONPATH", &ppath);
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
+
+    // Turn on optimization for Python code
+    wxSetEnv("PYTHONOPTIMIZE", "2");
 
 #endif // _WIN32 || __APPLE__ 
 
@@ -673,6 +736,10 @@ void MainFrame::loadConfiguration_()
     g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
+    float dbLoss = g_txLevel / 10.0;
+    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
@@ -885,7 +952,7 @@ setDefaultMode:
     }
 
     // Initialize FreeDV Reporter as required
-    CallAfter([&]() { initializeFreeDVReporter_(); });
+    CallAfter(&MainFrame::initializeFreeDVReporter_);
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
@@ -1109,7 +1176,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_TxFreqOffsetHz = 0.0;
 
-    g_tx = 0;
+    g_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
@@ -1344,17 +1411,17 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
-    if (!m_RxRunning)
-    {
-        return;
-    }
-    
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
     bool txState = false;
     int syncState = 0;
 
+    if (!m_RxRunning || !evt.GetTimer().IsRunning())
+    {
+        return;
+    }
+    
     // Most plots don't need TX/sync state.
     if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
     {
@@ -1381,7 +1448,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
      }
      else if (evt.GetTimer().GetId() == ID_TIMER_WATERFALL)
-      {
+     {
           if (m_panelWaterfall->checkDT()) {
               if (g_mode == FREEDV_MODE_RADE)
               {
@@ -1505,17 +1572,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
          }
-         char fmt[16];
-         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-         wxString fmtString(fmt);
-         m_txtMicSpkrLevelNum->SetLabel(fmtString);
-         
-         if (m_filterDialog != nullptr)
+
+         if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
-             // Sync Filter dialog as well
-             m_filterDialog->syncVolumes();
-         }
+             m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+             wxString fmt = wxString::Format(wxT("%0.1f dB"), (double)sliderVal);
+             m_txtMicSpkrLevelNum->SetLabel(fmt);
+         
+             if (m_filterDialog != nullptr)
+             {
+                 // Sync Filter dialog as well
+                 m_filterDialog->syncVolumes();
+             }
+        }
 
         // SNR text box and gauge ------------------------------------------------------------
 
@@ -1535,18 +1604,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
-        char snr[15];
-        snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
+        wxString snrString = wxString::Format("%d dB", (int)(g_snr + 0.5));
 
         if (syncState)
         {
-            wxString snr_string(snr);
-            m_textSNR->SetLabel(snr_string);
+            m_textSNR->SetLabel(snrString);
             m_gaugeSNR->SetValue((int)(snr_limited+5));
         }
         else
         {
-            m_textSNR->SetLabel("--");
+            m_textSNR->SetLabel(wxT("--"));
             m_gaugeSNR->SetValue(0);
         }
 
@@ -1595,7 +1662,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                    m_textSync->SetLabel("Modem");
+                m_textSync->SetLabel(wxT("Modem"));
                 m_textSync->Refresh();
             }
         }
@@ -1692,7 +1759,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
-                        wxString currentTimeAsString = "";
+                        wxString currentTimeAsString = wxT("");
                         
                         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
@@ -1823,11 +1890,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        const int STR_LENGTH = 80;
-        char 
-            mode[STR_LENGTH], bits[STR_LENGTH], errors[STR_LENGTH], ber[STR_LENGTH], 
-            resyncs[STR_LENGTH], clockoffset[STR_LENGTH], freqoffset[STR_LENGTH], syncmetric[STR_LENGTH];
-        snprintf(mode, STR_LENGTH, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); 
+        wxString modeString = wxString::Format(wxT("Mode: %s"), freedvInterface.getCurrentModeStr());
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -1857,42 +1920,50 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_mode == FREEDV_MODE_RADE)
         {
-            m_textBits->SetLabel("Bits: unk");
-            m_textErrors->SetLabel("Errs: unk");
-            m_textBER->SetLabel("BER: unk");
-            m_textFreqOffset->SetLabel("FrqOff: unk");
-            m_textSyncMetric->SetLabel("Sync: unk");
-            m_textCodec2Var->SetLabel("Var: unk");
+            m_textBits->SetLabel(wxT("Bits: unk"));
+            m_textErrors->SetLabel(wxT("Errs: unk"));
+            m_textBER->SetLabel(wxT("BER: unk"));
+            m_textFreqOffset->SetLabel(wxT("FrqOff: unk"));
+            m_textSyncMetric->SetLabel(wxT("Sync: unk"));
+            m_textCodec2Var->SetLabel(wxT("Var: unk"));
         }
         else
         {
-            snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-            snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            snprintf(ber, STR_LENGTH, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-            snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+            wxString bits = wxString::Format(wxT("Bits: %d"), freedvInterface.getTotalBits()); 
+            m_textBits->SetLabel(bits);
 
-            snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
-            wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-            snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
-            wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+            wxString errors = wxString::Format(wxT("Errs: %d"), freedvInterface.getTotalBitErrors()); 
+            m_textErrors->SetLabel(errors);
+
+            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
+            wxString ber = wxString::Format(wxT("BER: %4.3f"), b); 
+            m_textBER->SetLabel(ber);
+
+            wxString resyncs = wxString::Format(wxT("Resyncs: %d"), g_resyncs); 
+            m_textResyncs->SetLabel(resyncs);
+
+            wxString freqOffset = wxString::Format(wxT("FrqOff: %3.1f"), freedvInterface.getCurrentRxModemStats()->foff);
+            m_textFreqOffset->SetLabel(freqOffset);
+
+            wxString syncMetric = wxString::Format(wxT("Sync: %3.2f"), freedvInterface.getCurrentRxModemStats()->sync_metric);
+            m_textSyncMetric->SetLabel(syncMetric);
 
             // Codec 2 700D/E "auto EQ" equaliser variance
             auto var = freedvInterface.getVariance();
-            char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
-            wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+            wxString var_string = wxString::Format(wxT("Var: %4.1f"), var);
+            m_textCodec2Var->SetLabel(var_string);
         }
 
         if (g_State) {
 
             if (g_mode == FREEDV_MODE_RADE)
             {
-                m_textClockOffset->SetLabel("ClkOff: unk");
+                m_textClockOffset->SetLabel(wxT("ClkOff: unk"));
             }
             else
             {
-                snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-                wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+                wxString clockOffset = wxString::Format(wxT("ClkOff: %+-d"), (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+                m_textClockOffset->SetLabel(clockOffset);
             }
             
             // update error pattern plots if supported
@@ -1996,9 +2067,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
             if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel("Too High");
+                m_textLevel->SetLabel(wxT("Too High"));
             else
-                m_textLevel->SetLabel("");
+                m_textLevel->SetLabel(wxT(""));
 
             m_maxLevel *= LEVEL_BETA;
         }
@@ -2072,49 +2143,51 @@ void MainFrame::OnExit(wxCommandEvent& event)
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
     auto eventObject = (wxRadioButton*)event.GetEventObject();
-    txModeChangeMutex.Lock();
-    
+    auto newMode = g_mode;
     if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
     {
-        g_mode = FREEDV_MODE_1600;
+        newMode = FREEDV_MODE_1600;
     }
     else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
     {
-        g_mode = FREEDV_MODE_RADE;
+        newMode = FREEDV_MODE_RADE;
     }
     else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
-        g_mode = FREEDV_MODE_700D;
+        newMode = FREEDV_MODE_700D;
     }
     else if (eventObject == m_rb700e || (eventObject == nullptr && m_rb700e->GetValue())) 
     {
-        g_mode = FREEDV_MODE_700E;
+        newMode = FREEDV_MODE_700E;
     }
-    
-    if (freedvInterface.isRunning())
+
+    if (newMode != g_mode)
     {
-        // Need to change the TX interface live.
-        freedvInterface.changeTxMode(g_mode);
+        g_mode = newMode; 
+        if (freedvInterface.isRunning())
+        {
+            // Need to change the TX interface live.
+            freedvInterface.changeTxMode(g_mode);
+        }
+    
+        // Force recreation of EQ filters.
+        m_newMicInFilter = true;
+        m_newSpkOutFilter = true;
+    
+        // Report TX change to registered reporters
+        auto txStatus = g_tx.load(std::memory_order_acquire);
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
+        }
+    
+        // Disable controls not supported by RADE
+        bool isEnabled = g_mode != FREEDV_MODE_RADE;
+        m_sliderSQ->Enable(isEnabled);
+        m_ckboxSQ->Enable(isEnabled);
+        m_textSQ->Enable(isEnabled);
+        m_btnCenterRx->Enable(isEnabled);
     }
-    
-    // Force recreation of EQ filters.
-    m_newMicInFilter = true;
-    m_newSpkOutFilter = true;
-    
-    txModeChangeMutex.Unlock();
-    
-    // Report TX change to registered reporters
-    for (auto& obj : wxGetApp().m_reporters)
-    {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-    }
-    
-    // Disable controls not supported by RADE
-    bool isEnabled = g_mode != FREEDV_MODE_RADE;
-    m_sliderSQ->Enable(isEnabled);
-    m_ckboxSQ->Enable(isEnabled);
-    m_textSQ->Enable(isEnabled);
-    m_btnCenterRx->Enable(isEnabled);
 }
 
 void MainFrame::performFreeDVOn_()
@@ -2249,7 +2322,7 @@ void MainFrame::performFreeDVOn_()
 
     g_State = g_prev_State = 0;
     g_snr = 0.0;
-    g_half_duplex = wxGetApp().appConfiguration.halfDuplexMode;
+    g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, sizeof(m_callsign));
@@ -2359,7 +2432,7 @@ void MainFrame::performFreeDVOn_()
                         // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                         for (auto& obj : wxGetApp().m_reporters)
                         {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
                             obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                         }
                     }
@@ -2429,7 +2502,6 @@ void MainFrame::performFreeDVOff_()
         m_plotDemodInTimer.Stop();
         m_plotTimeOffsetTimer.Stop();
         m_plotFreqOffsetTimer.Stop();
-        m_pskReporterTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
@@ -2599,12 +2671,13 @@ void MainFrame::stopRxStream()
 
     if(m_RxRunning)
     {
+        StopLowLatencyActivity();
+
         m_RxRunning = false;
 
         if (m_txThread)
         {
-            m_txThread->terminateThread();
-            m_txThread->Wait();
+            m_txThread->stop();
             
             if (txInSoundDevice)
             {
@@ -2624,8 +2697,7 @@ void MainFrame::stopRxStream()
 
         if (m_rxThread)
         {
-            m_rxThread->terminateThread();
-            m_rxThread->Wait();
+            m_rxThread->stop();
             
             if (rxInSoundDevice)
             {
@@ -2660,19 +2732,15 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
-    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
-    if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
-    if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
-    codec2_fifo_destroy(g_rxUserdata->rxinfifo);
-    codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    if (g_rxUserdata->infifo1) delete g_rxUserdata->infifo1;
+    if (g_rxUserdata->outfifo1) delete g_rxUserdata->outfifo1;
+    if (g_rxUserdata->infifo2) delete g_rxUserdata->infifo2;
+    if (g_rxUserdata->outfifo2) delete g_rxUserdata->outfifo2;
     
     g_rxUserdata->infifo1 = nullptr;
     g_rxUserdata->infifo2 = nullptr;
     g_rxUserdata->outfifo1 = nullptr;
     g_rxUserdata->outfifo2 = nullptr;
-    g_rxUserdata->rxinfifo = nullptr;
-    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -2685,22 +2753,13 @@ void MainFrame::startRxStream()
         m_RxRunning = true;
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-            executeOnUiThreadAndWait_([&, error]() {
-                wxMessageBox(wxString::Format(
-                             "Error encountered while initializing the audio engine: %s.", 
-                             error), wxT("Error"), wxOK, this); 
-            });
-        }, nullptr);
+        engine->setOnEngineError([](IAudioEngine& dev, std::string error, void* state) { 
+            MainFrame* castedThis = (MainFrame*)state;
+            castedThis->onAudioEngineError_(dev, error, state); 
+        }, this);
         engine->start();
-        
-        auto errorCallback = [&](IAudioDevice&, std::string error, void*)
-        {
-            log_error("%s", error.c_str());
-            CallAfter([&, error]() {
-                wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-            });
-        };
+
+        IAudioDevice::AudioErrorCallbackFn errorCallback = &MainFrame::OnAudioDeviceError_;
         
         // Init call back data structure ----------------------------------------------
 
@@ -2719,28 +2778,35 @@ void MainFrame::startRxStream()
         // all. Without a very large FIFO size (or a way to dynamically change
         // FIFO sizes, which isn't recommended for real-time operation), we will
         // definitely lose audio.
+        constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = 30 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+        int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (g_nSoundCards == 2)
         {
-            int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            int soundCard2InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
-            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = new GenericFIFO<short>(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = new GenericFIFO<short>(soundCard2OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+
+            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
         }
         else
         {
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
+
+            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -2777,17 +2843,15 @@ void MainFrame::startRxStream()
             else
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                }, this);
             }
             
             if (!rxOutSoundDevice && !failed)
             {
-                executeOnUiThreadAndWait_([&]() {
+                executeOnUiThreadAndWait_([]() {
                     wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
@@ -2795,12 +2859,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                }, this);
             }
  
             if (failed)
@@ -2841,7 +2903,7 @@ void MainFrame::startRxStream()
             
             if (!txInSoundDevice)
             {
-                executeOnUiThreadAndWait_([&]() {
+                executeOnUiThreadAndWait_([]() {
                     wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
@@ -2849,29 +2911,11 @@ void MainFrame::startRxStream()
             else
             {
                 txInSoundDevice->setDescription("Mic to FreeDV");
-                txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
+                txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, newDeviceName);
                 }, nullptr);
-                txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                    short* audioData = static_cast<short*>(data);
-                
-                    if (!endingTx) 
-                    {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
-                        {
-                            if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
-                            {
-                                g_infifo2_full++;
-                            }
-                        }
-                    }
-
-                    m_txThread->notify();
-                }, g_rxUserdata);
+                txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
                 {
@@ -2883,7 +2927,7 @@ void MainFrame::startRxStream()
                     g_AEstatus2[0]++;
                 }, nullptr);
                 
-                txInSoundDevice->setOnAudioError(errorCallback, nullptr);                
+                txInSoundDevice->setOnAudioError(errorCallback, this);                
                 txInSoundDevice->start();
             }
 
@@ -2891,7 +2935,7 @@ void MainFrame::startRxStream()
             
             if (!txOutSoundDevice && !failed)
             {
-                executeOnUiThreadAndWait_([&]() {
+                executeOnUiThreadAndWait_([]() {
                     wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
@@ -2899,44 +2943,11 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 txOutSoundDevice->setDescription("FreeDV to Radio");
-                txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
-                txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
-                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                    short* audioData = static_cast<short*>(data);
-                    short outdata = 0;
-               
-                    if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
-                    {
-                        g_outfifo1_empty++;
-                        return;
-                    }
-
-                    for (; size > 0; size--, audioData += dev.getNumChannels())
-                    {
-                        codec2_fifo_read(cbData->outfifo1, &outdata, 1);
-
-                        // write signal to all channels to start. This is so that
-                        // the compiler can optimize for the most common case.
-                        for (auto j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            audioData[j] = outdata;
-                        }
-                    
-                        // If VOX tone is enabled, go back through and add the VOX tone
-                        // on the left channel.
-                        if (cbData->leftChannelVoxTone)
-                        {
-                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                        }
-                    }
-                }, g_rxUserdata);
+                txOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                }, this);
+                txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
                 txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
                 {
@@ -2948,7 +2959,7 @@ void MainFrame::startRxStream()
                     g_AEstatus1[2]++;
                 }, nullptr);
             
-                txOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+                txOutSoundDevice->setOnAudioError(errorCallback, this);
                 txOutSoundDevice->start();
             }
             
@@ -2958,7 +2969,7 @@ void MainFrame::startRxStream()
             
             if (!rxInSoundDevice && !failed)
             {
-                executeOnUiThreadAndWait_([&]() {
+                executeOnUiThreadAndWait_([]() {
                     wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
@@ -2966,17 +2977,15 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxInSoundDevice->setDescription("Radio to FreeDV");
-                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                }, this);
             }
  
             if (!rxOutSoundDevice && !failed)
             {
-                executeOnUiThreadAndWait_([&]() {
+                executeOnUiThreadAndWait_([]() {
                     wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
@@ -2984,12 +2993,10 @@ void MainFrame::startRxStream()
             else if (!failed)
             {
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
-                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                    CallAfter([&, newDeviceName]() {
-                        wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                        wxGetApp().appConfiguration.save(pConfig);
-                    });
-                }, nullptr);
+                rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
+                    MainFrame* castedThis = (MainFrame*)state;
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, newDeviceName);
+                }, this);
             }
  
             if (failed)
@@ -3063,9 +3070,6 @@ void MainFrame::startRxStream()
         rxInFifoSizeSamples += 0.04*modem_samplerate;
         rxOutFifoSizeSamples += 0.04*modem_samplerate;
 
-        g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
-
         log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
@@ -3105,22 +3109,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->voxTonePhase = 0;
 
         // Set sound card callbacks
-        rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-            paCallBackData* cbData = static_cast<paCallBackData*>(state);
-            short* audioData = static_cast<short*>(data);
-
-            for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
-            {
-                if (codec2_fifo_write(cbData->infifo1, &audioData[0], 1)) 
-                {
-                    log_warn("RX FIFO full");
-                    g_infifo1_full++;
-                    break;
-                }
-            }
-
-            m_rxThread->notify();
-        }, g_rxUserdata);
+        rxInSoundDevice->setOnAudioData(&OnRxInAudioData_, g_rxUserdata);
         
         rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
         {
@@ -3132,31 +3121,12 @@ void MainFrame::startRxStream()
             g_AEstatus1[0]++;
         }, nullptr);
         
-        rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
-        rxOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+        rxInSoundDevice->setOnAudioError(errorCallback, this);
+        rxOutSoundDevice->setOnAudioError(errorCallback, this);
         
         if (txInSoundDevice && txOutSoundDevice)
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
-                paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                short* audioData = static_cast<short*>(data);
-                short outdata = 0;
-
-                if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
-                {
-                    g_outfifo2_empty++;
-                    return;
-                }
-
-                for (; size > 0; size--)
-                {
-                    codec2_fifo_read(cbData->outfifo2, &outdata, 1);
-                    for (int j = 0; j < dev.getNumChannels(); j++)
-                    {
-                        *audioData++ = outdata;
-                    }
-                }
-            }, g_rxUserdata);
+            rxOutSoundDevice->setOnAudioData(&OnRxOutAudioData_, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
@@ -3173,20 +3143,21 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short outdata = 0;
+                short* tmpOutput = cbData->tmpWriteBuffer_.get();
 
-                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+                if (toRead < size)
                 {
                     g_outfifo1_empty++;
-                    return;
                 }
 
-                for (; size > 0; size--)
+                cbData->outfifo1->read(tmpOutput, toRead);
+                auto numChannels = dev.getNumChannels();
+                for (size_t count = 0; count < size; count++)
                 {
-                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
-                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    for (int j = 0; j < numChannels; j++)
                     {
-                        *audioData++ = outdata;
+                        *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
                     }
                 }
             }, g_rxUserdata);
@@ -3209,13 +3180,6 @@ void MainFrame::startRxStream()
         if (txInSoundDevice && txOutSoundDevice)
         {
             m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
-            if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
-            {
-                wxLogError(wxT("Can't create TX thread!"));
-            }
-            if (wxGetApp().m_txRxThreadHighPriority) {
-                m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
-            }
             
             if (!txInSoundDevice->isRunning())
             {
@@ -3238,22 +3202,11 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-            
-            if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
-            {
-                wxLogError(wxT("Can't start TX thread!"));
-            }
+
+            m_txThread->start();
         }
 
         m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
-        if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
-        {
-            wxLogError(wxT("Can't create RX thread!"));
-        }
-
-        if (wxGetApp().m_txRxThreadHighPriority) {
-            m_rxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
-        }
 
         rxInSoundDevice->start();
         if (!rxInSoundDevice->isRunning())
@@ -3284,11 +3237,22 @@ void MainFrame::startRxStream()
             return;
         }
 
-        if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
-        {
-            wxLogError(wxT("Can't start RX thread!"));
-        }
+        m_rxThread->start();
 
+        // Logic to ensure that both TX/RX threads start work at the 
+        // same time. This makes sure there are no dropouts at the beginning
+        // of full duplex TX.
+        m_rxThread->waitForReady();
+        if (m_txThread != nullptr)
+        {
+            m_txThread->waitForReady();
+        }
+        m_rxThread->signalToStart();
+        if (m_txThread != nullptr)
+        {
+            m_txThread->signalToStart();
+        }
+    
         log_debug("starting tx/rx processing thread");
 
         // Work around an issue where the buttons stay disabled even if there
@@ -3300,6 +3264,11 @@ void MainFrame::startRxStream()
             (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
             (rxOutSoundDevice && rxOutSoundDevice->isRunning());
         m_RxRunning = txDevicesRunning && rxDevicesRunning;
+    }
+
+    if (m_RxRunning)
+    {
+        StartLowLatencyActivity();
     }
 }
 
@@ -3478,50 +3447,7 @@ void MainFrame::initializeFreeDVReporter_()
     m_reporterDialog->refreshLayout();
     
     // Set up QSY request handler
-    wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
-        double freqFactor = 1000.0;
-        std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
-        
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-        {
-            freqFactor *= 1000.0;
-            fmtMsg = "%s has requested that you QSY to %.04f MHz.";
-        }
-        
-        double frequencyReadable = freqHz / freqFactor;
-        wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
-        int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
-        
-        if (wxGetApp().rigFrequencyController != nullptr && 
-            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
-        {
-            fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
-            dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
-        }
-        
-        CallAfter([&, fullMessage, dialogStyle, frequencyReadable]() {
-            wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
-
-            if (dialogStyle & wxYES_NO)
-            {
-                messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
-            }
-
-            auto answer = messageDialog.ShowModal();
-            if (answer == wxID_YES)
-            {
-                // This will implicitly cause Hamlib to change the frequency and mode.
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-                }
-                else
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-                }
-            }
-        });
-    });
+    wxGetApp().m_sharedReporterObject->setOnQSYRequestFn(std::bind(&MainFrame::onQsyRequest_, this, _1, _2, _3));
     
     auto txStatus = g_tx.load(std::memory_order_acquire);
     if (!freedvInterface.isRunning())
@@ -3535,3 +3461,185 @@ void MainFrame::initializeFreeDVReporter_()
     }
     wxGetApp().m_sharedReporterObject->connect();
 }
+
+void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message)
+{
+    // A separate object needs to be created here since wxWidgets doesn't support more
+    // than two arguments for CallAfter().
+    QsyRequestArgs* args = new QsyRequestArgs;
+    assert(args != nullptr);
+    args->callsign = callsign;
+    args->freqHz = freqHz;
+    args->message = message;
+
+    CallAfter(&MainFrame::onQsyRequestUIThread_, args);
+}
+
+void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
+{
+    // Copy passed-in args and delete args carrier object.
+    std::string callsign = args->callsign;
+    uint64_t freqHz = args->freqHz;
+    std::string message = args->message;
+    delete args;
+
+    double freqFactor = 1000.0;
+    std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
+        
+    if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqFactor *= 1000.0;
+        fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+    }
+        
+    double frequencyReadable = freqHz / freqFactor;
+    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
+    int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
+        
+    if (wxGetApp().rigFrequencyController != nullptr && 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
+    {
+        fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
+        dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
+    }
+        
+    wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+
+    if (dialogStyle & wxYES_NO)
+    {
+        messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
+    }
+
+    auto answer = messageDialog.ShowModal();
+    if (answer == wxID_YES)
+    {
+        // This will implicitly cause Hamlib to change the frequency and mode.
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
+        }
+        else
+        {
+            m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
+        }
+    }
+}
+
+void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void* state)
+{
+     executeOnUiThreadAndWait_([&, error]() {
+         wxMessageBox(wxString::Format(
+                          "Error encountered while initializing the audio engine: %s.", 
+                          error), wxT("Error"), wxOK, this); 
+     });
+}
+
+void MainFrame::onAudioDeviceError_(std::string error)
+{
+    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+}
+
+void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* state)
+{
+    MainFrame* castedState = (MainFrame*)state;
+    log_error("%s", error.c_str());
+    castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
+}
+
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpInput = cbData->tmpReadBuffer_.get();
+
+    if (!endingTx) 
+    {
+        auto numChannels = dev.getNumChannels();
+        for(size_t i = 0; i < size; i++, audioData += numChannels)
+        {
+            tmpInput[i] = audioData[0];
+        }
+        if (cbData->infifo2->write(tmpInput, size)) 
+        {
+            g_infifo2_full++;
+        }
+    }
+}
+
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+
+    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+    if (toRead < size)
+    {
+        g_outfifo1_empty++;
+    }
+
+    cbData->outfifo1->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++, audioData += numChannels)
+    {
+        auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+        // write signal to all channels to start. This is so that
+        // the compiler can optimize for the most common case.
+        for (auto j = 0; j < numChannels; j++)
+        {
+            audioData[j] = output;
+        }
+                    
+        // If VOX tone is enabled, go back through and add the VOX tone
+        // on the left channel.
+        if (cbData->leftChannelVoxTone)
+        {
+            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
+            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+        }
+    }
+}
+
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpInput = cbData->tmpReadBuffer_.get();
+
+    auto numChannels = dev.getNumChannels();
+    for (size_t i = 0; i < size; i++, audioData += numChannels)
+    {
+        tmpInput[i] = audioData[0];
+    }
+    if (cbData->infifo1->write(tmpInput, size)) 
+    {
+        log_warn("RX FIFO full");
+        g_infifo1_full++;
+    }
+}
+
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+{
+    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+    short* audioData = static_cast<short*>(data);
+    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+
+    auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
+    if (toRead < size)
+    {
+        g_outfifo2_empty++;
+    }
+
+    cbData->outfifo2->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++)
+    {
+        for (int j = 0; j < numChannels; j++)
+        {
+            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+        }
+    }
+}
+

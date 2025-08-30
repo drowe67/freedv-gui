@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <future>
+
 #include "SerialPortRigController.h"
 
 #include "../util/logging/ulog.h"
@@ -34,20 +36,18 @@ SerialPortRigController::SerialPortRigController(std::string serialPort)
 SerialPortRigController::~SerialPortRigController()
 {
     // Disconnect in a synchronous fashion before killing our thread.
-    std::condition_variable cv;
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lk(mtx);
-    
-    enqueue_([&]() {
-        std::unique_lock<std::mutex> innerLock(mtx);
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+
+    enqueue_([this, prom]() {
         if (serialPortHandle_ != COM_HANDLE_INVALID)
         {
             disconnectImpl_();
         }
-        cv.notify_one();
+        prom->set_value();
     });
     
-    cv.wait(lk);
+    fut.wait();
 }
 
 void SerialPortRigController::connect()

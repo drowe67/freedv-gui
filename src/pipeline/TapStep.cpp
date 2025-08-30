@@ -24,17 +24,50 @@
 
 #include <assert.h>
 #include <future>
+#include <chrono>
+
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
+using namespace std::chrono_literals;
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     : tapStep_(tapStep)
     , sampleRate_(sampleRate)
+    , endingTapThread_(false)
+    , tapThreadInput_(sampleRate)
 {
-    // empty
+    tapThread_ = std::thread([&]() {
+        const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
+        short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
+        assert(fifoInput != nullptr);
+
+#if defined(__APPLE__)
+        // Downgrade thread QoS to Utility to avoid thread contention issues.        
+        pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
+
+        while (!endingTapThread_)
+        {
+            while (tapThreadInput_.numUsed() >= SAMPLE_RATE_AT_10MS)
+            {
+                int temp = 0;
+                tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
+                tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
+            }
+            sem_.wait();
+        }
+
+        delete[] fifoInput;
+    });
 }
 
 TapStep::~TapStep()
 {
-    // empty
+    endingTapThread_ = true;
+    sem_.signal();
+    tapThread_.join();
 }
 
 int TapStep::getInputSampleRate() const
@@ -47,13 +80,16 @@ int TapStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
-    int temp = 0;
-    tapStep_->execute(inputSamples, numInputSamples, &temp);
-    
+    tapThreadInput_.write(inputSamples, numInputSamples);
+    if (tapThreadInput_.numUsed() > (100 * sampleRate_ / 1000))
+    {
+        sem_.signal();
+    }
+ 
     *numOutputSamples = numInputSamples;
     return inputSamples;
 }

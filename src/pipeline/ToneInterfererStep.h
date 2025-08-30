@@ -38,14 +38,14 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     int sampleRate_;
     std::function<float()> toneFrequencyFn_;
     std::function<float()> toneAmplitudeFn_;
     std::function<float*()> tonePhaseFn_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__TONE_INTERFERER_STEP_H

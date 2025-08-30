@@ -47,6 +47,14 @@ using namespace std::chrono_literals;
 
 extern wxConfigBase *pConfig;
 
+struct AudioDeviceCapture
+{
+    FIFO* fifo;
+    std::condition_variable* cv;
+    bool* running;
+    int* n;
+};
+
 void AudioOptsDialog::audioEngineInit(void)
 {
     m_isPaInitialized = true;
@@ -871,16 +879,19 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     bool running = true;
                     callbackFifo = codec2_fifo_create(sampleRate);
                     assert(callbackFifo != nullptr);
-                    
-                    device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
-                        if (running && data != nullptr)
+
+                    AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running };
+                    device->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                        AudioDeviceCapture* castedState = (AudioDeviceCapture*)state;
+
+                        if (*castedState->running && data != nullptr)
                         {
                             short* in48k_short = static_cast<short*>(data);
-                            codec2_fifo_write(callbackFifo, in48k_short, numSamples);
+                            codec2_fifo_write(castedState->fifo, in48k_short, numSamples);
                         }
-                        callbackFifoCV.notify_one();
-                    }, nullptr);
-                    
+                        castedState->cv->notify_one();
+                    }, &capture);
+                   
                     device->setDescription("Device Input Test");
                     device->start();
 
@@ -1004,21 +1015,24 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
  
                     callbackFifo = codec2_fifo_create(sampleRate);
                     assert(callbackFifo != nullptr);
-                    
-                    device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
-                        if (running && data != nullptr)
+                   
+                    AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running, .n = &n };
+                    device->setOnAudioData([](IAudioDevice& dev, void* data, size_t numSamples, void* state) {
+                        AudioDeviceCapture* castedState = (AudioDeviceCapture*)state;
+
+                        if (*castedState->running && data != nullptr)
                         {
                             short* out48k_short = static_cast<short*>(data);
-                            for(size_t j = 0; j < numSamples; j++, n++) 
+                            for(size_t j = 0; j < numSamples; j++, (*castedState->n)++) 
                             {
-                                out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
+                                out48k_short[j] = 2000.0*cos(6.2832*(*castedState->n)*400.0/dev.getSampleRate());
                             }
                     
-                            codec2_fifo_write(callbackFifo, out48k_short, numSamples);
+                            codec2_fifo_write(castedState->fifo, out48k_short, numSamples);
                         }
-                        callbackFifoCV.notify_one();
-                    }, nullptr);
-                
+                        castedState->cv->notify_one();
+                    }, &capture);
+
                     device->setDescription("Device Output Test");
                     device->start();
                     

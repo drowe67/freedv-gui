@@ -458,7 +458,8 @@ class MainFrame : public TopFrame
         
     private:
         friend class MainApp; // needed for unit tests
-        
+        friend class TxRxThread; // XXX - needed for execOnUiThreadAndWait_().
+
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
         std::shared_ptr<IAudioDevice> txInSoundDevice;
@@ -532,6 +533,31 @@ class MainFrame : public TopFrame
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
         void onRadioDisconnected_(IRigController* ptr);
+
+        // Audio error handlers
+        void onAudioEngineError_(IAudioEngine&, std::string error, void* state);
+        void onAudioDeviceError_(std::string error);
+        static void OnAudioDeviceError_(IAudioDevice&, std::string error, void* state);
+
+        // Audio device change handling
+        template<int soundCardId, bool isOut>
+        void handleAudioDeviceChange_(std::string newDeviceName);
+
+        // Audio device data handlers
+        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+
+        // QSY request handling
+        struct QsyRequestArgs {
+            std::string callsign;
+            uint64_t freqHz;
+            std::string message;
+        };
+
+        void onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message);
+        void onQsyRequestUIThread_(QsyRequestArgs* args);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);

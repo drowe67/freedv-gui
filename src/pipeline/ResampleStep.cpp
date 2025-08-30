@@ -76,11 +76,9 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     
     resampleState_ = src_new(forPlotsOnly ? SRC_LINEAR : SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
-
+    
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::shared_ptr<short>(
-        new short[outputSampleRate], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(outputSampleRate);
     assert(outputSamples_ != nullptr);
     
     tempInput_ = new float[inputSampleRate * 10 / 1000];
@@ -93,7 +91,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
 ResampleStep::~ResampleStep()
 {
     src_delete(resampleState_);
-
+    
     delete[] tempInput_;
     delete[] tempOutput_;
 }
@@ -108,8 +106,15 @@ int ResampleStep::getOutputSampleRate() const
     return outputSampleRate_;
 }
 
-std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    if (numInputSamples == 0)
+    {
+        // Not generating any samples if we haven't gotten any.
+        *numOutputSamples = 0;
+        return inputSamples;
+    }
+
     if (inputSampleRate_ == outputSampleRate_)
     {
         // shortcut - just return what we got.
@@ -119,7 +124,7 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
     
     *numOutputSamples = 0;
 
-    auto inputPtr = inputSamples.get();
+    auto inputPtr = inputSamples;
     auto outputPtr = outputSamples_.get();
     while (numInputSamples > 0)
     {
@@ -135,6 +140,6 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
         numInputSamples -= inputSize;
         *numOutputSamples += numSamples;
     }
- 
-    return outputSamples_;
+    
+    return outputSamples_.get();
 }

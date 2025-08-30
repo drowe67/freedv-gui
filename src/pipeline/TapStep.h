@@ -24,6 +24,9 @@
 #define AUDIO_PIPELINE__TAP_STEP_H
 
 #include <memory>
+#include <thread>
+#include "../util/GenericFIFO.h"
+#include "../util/Semaphore.h"
 
 #include "IPipelineStep.h"
 
@@ -35,11 +38,15 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
-    std::shared_ptr<IPipelineStep> tapStep_;
+    std::unique_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
+    std::thread tapThread_;
+    bool endingTapThread_;
+    GenericFIFO<short> tapThreadInput_;
+    Semaphore sem_;
 };
 
 #endif // AUDIO_PIPELINE__TAP_STEP_H

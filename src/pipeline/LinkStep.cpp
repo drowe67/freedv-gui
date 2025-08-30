@@ -26,42 +26,30 @@
 
 LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
     : sampleRate_(outputSampleRate)
+    , fifo_(numSamples)
 {
-    fifo_ = codec2_fifo_create(numSamples);
-    assert(fifo_ != nullptr);
-    
-    // Create pipeline steps
-    inputPipelineStep_ = std::make_shared<InputStep>(this);
-    outputPipelineStep_ = std::make_shared<OutputStep>(this);
-
     tmpBuffer_ = new short[numSamples];
     assert(tmpBuffer_ != nullptr);
 }
 
 LinkStep::~LinkStep()
 {
-    codec2_fifo_destroy(fifo_);
-    fifo_ = nullptr;
-
     delete[] tmpBuffer_;
 }
 
 void LinkStep::clearFifo()
 {    
-    // Read data and then promptly throw it out.
-    while (codec2_fifo_used(fifo_) > 0)
-    {
-        codec2_fifo_read(fifo_, tmpBuffer_, 1);
-    }
+    fifo_.reset();
 }
 
-std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* LinkStep::InputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto fifo = parent_->getFifo();
-    auto samplePtr = inputSamples.get();
+    auto& fifo = parent_->getFifo();
+    auto samplePtr = inputSamples;
+    
     if (numInputSamples > 0 && samplePtr != nullptr)
     {
-        codec2_fifo_write(fifo, samplePtr, numInputSamples);
+        fifo.write(samplePtr, numInputSamples);
     }
 
     // Since we short circuited to the output step, don't return any samples here.
@@ -69,15 +57,15 @@ std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> input
     return nullptr;
 }
 
-std::shared_ptr<short> LinkStep::OutputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* LinkStep::OutputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto fifo = parent_->getFifo();
-    *numOutputSamples = std::min(codec2_fifo_used(fifo), numInputSamples);
+    auto& fifo = parent_->getFifo();
+    *numOutputSamples = numInputSamples > 0 ? std::min(fifo.numUsed(), numInputSamples) : fifo.numUsed();
     
     if (*numOutputSamples > 0)
     {
-        codec2_fifo_read(fifo, outputSamples_.get(), *numOutputSamples);
-        return outputSamples_;
+        fifo.read(outputSamples_.get(), *numOutputSamples);
+        return outputSamples_.get();
     }
     else
     {

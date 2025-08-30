@@ -302,11 +302,18 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
    
     if (!m_bar_graph)
     {
+        int offsetX = 0;
+        int offsetY = 0;
+        if (!m_mini)
+        {
+            offsetX = PLOT_BORDER + XLEFT_OFFSET;
+            offsetY = PLOT_BORDER;
+        }
         for (int index = 0; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
-            int x = index + PLOT_BORDER + XLEFT_OFFSET;
-            ctx->StrokeLine(x, item->y1 + PLOT_BORDER, x, item->y2 + PLOT_BORDER);
+            int x = index + offsetX;
+            ctx->StrokeLine(x, item->y1 + offsetY, x, item->y2 + offsetY);
         }
     } 
 

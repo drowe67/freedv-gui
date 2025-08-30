@@ -52,6 +52,7 @@ using namespace std::chrono_literals;
 
 #define RX_ATTEMPT_INTERVAL_MS (50)
 #define RECONNECT_INTERVAL_MS (5000)
+#define RX_BUFFER_SIZE (128 * 1024)
 
 TcpConnectionHandler::TcpConnectionHandler()
     : enableReconnect_(false)
@@ -60,6 +61,7 @@ TcpConnectionHandler::TcpConnectionHandler()
     }, false)
     , socket_(-1)
     , cancelConnect_(false)
+    , receiveBuffer_(RX_BUFFER_SIZE)
 {
 #if defined(WIN32)
     // Initialize Winsock in case it hasn't already been done.
@@ -555,7 +557,10 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 
 void TcpConnectionHandler::receiveImpl_()
 {
-    char buf[1024];
+    constexpr int READ_SIZE_BYTES = 1024;
+
+    char buf[READ_SIZE_BYTES];
+
     while (socket_ > 0)
     {
         fd_set readSet;
@@ -566,21 +571,34 @@ again:
         int rv = select(socket_ + 1, &readSet, nullptr, nullptr, nullptr);
         if (rv > 0)
         {
+            int numRead = 0;
+            int numHaveRead = 0;
 #if defined(WIN32)
-            int numRead = recv(socket_, buf, 1024, 0);
+            while ((numRead = recv(socket_, buf, READ_SIZE_BYTES, 0)) > 0)
 #else
-            int numRead = read(socket_, buf, 1024);
+            while ((numRead = read(socket_, buf, READ_SIZE_BYTES)) > 0)
 #endif // defined(WIN32)
-            
-            if (numRead > 0)
             {
                 // Queue RX handler
-                char* allocBuf = new char[numRead];
-                assert(allocBuf != nullptr);
-                memcpy(allocBuf, buf, numRead);
-                enqueue_([&, allocBuf, numRead]() {
-                    onReceive_(allocBuf, numRead);
-                    delete[] allocBuf;
+                numHaveRead += numRead;
+                receiveBuffer_.write(buf, numRead);
+
+                if (numRead < READ_SIZE_BYTES)
+                {
+                    break;
+                }
+            }
+            if (numHaveRead > 0)
+            {
+                enqueue_([&]() {
+                    char tmp[READ_SIZE_BYTES];
+                    int toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
+                    while (toRead > 0)
+                    {
+                        receiveBuffer_.read(tmp, toRead);
+                        onReceive_(tmp, toRead);
+                        toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
+                    }
                 });
             
                 // See if there's any other data waiting to be read.

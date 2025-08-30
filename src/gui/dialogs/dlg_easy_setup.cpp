@@ -915,16 +915,20 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 }
             
                 sineWaveSampleNumber_ = 0;
-                txTestAudioDevice_->setOnAudioData([&, radioOutSampleRate](IAudioDevice& dev, void* data, size_t size, void* state) {
+
+                txTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                    auto sr = dev.getSampleRate();
+                    EasySetupDialog* castedThis = (EasySetupDialog*)state;
                     short* audioData = static_cast<short*>(data);
     
                     for (unsigned long index = 0; index < size; index++)
                     {
-                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * sineWaveSampleNumber_ / radioOutSampleRate);
-                        sineWaveSampleNumber_ = (sineWaveSampleNumber_ + 1) % radioOutSampleRate;
+                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * castedThis->sineWaveSampleNumber_ / sr);
+                        castedThis->sineWaveSampleNumber_ = (castedThis->sineWaveSampleNumber_ + 1) % sr;
                     }
 
                 }, this);
+
                 txTestAudioDevice_->start();
             }
         

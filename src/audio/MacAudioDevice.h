@@ -84,6 +84,7 @@ private:
     AudioBufferList* bufferList_;
     bool running_;
     int chosenFrameSize_;
+    std::atomic<int> numRealTimeWorkers_;
 
     void joinWorkgroup_();
     void leaveWorkgroup_();

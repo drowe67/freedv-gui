@@ -23,8 +23,6 @@
 #ifndef AUDIO_PIPELINE__I_PIPELINE_STEP_H
 #define AUDIO_PIPELINE__I_PIPELINE_STEP_H
 
-#include <memory>
-
 class IPipelineStep
 {
 public:
@@ -42,7 +40,7 @@ public:
     //     numInputSamples: Number of samples in the input array.
     //     numOutputSamples: Location to store number of output samples.
     // Returns: Array of int16 values corresponding to result audio.
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) = 0;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) = 0;
     
     // Resets internal state of the pipeline step.
     virtual void reset() { /* empty */ }

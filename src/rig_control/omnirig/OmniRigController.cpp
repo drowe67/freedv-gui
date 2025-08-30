@@ -24,6 +24,7 @@
 #include <sstream>
 #include <chrono>
 #include <cassert>
+#include <future>
 #include "OmniRigController.h"
 
 #include "../../util/logging/ulog.h"
@@ -44,27 +45,28 @@ OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool f
     , writableParams_(0)
     , freqOnly_(freqOnly)
     , rigResponseTime_(0)
+    , destroying_(false)
 {
     // empty
 }
 
 OmniRigController::~OmniRigController()
 {
-    // Disconnect in a synchronous fashion before killing our thread.
-    std::condition_variable cv;
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lk(mtx);
+    destroying_ = true;
 
-    enqueue_([&]() {
-        std::unique_lock<std::mutex> innerLock(mtx);
+    // Disconnect in a synchronous fashion before killing our thread.
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+
+    enqueue_([this, prom]() {
         if (rig_ != nullptr)
         {
             disconnectImpl_();
         }
-        cv.notify_one();
+        prom->set_value();
     });
 
-    cv.wait(lk);
+    fut.wait();
 }
 
 void OmniRigController::connect()
@@ -264,7 +266,10 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
         if (result == S_OK)
         {
             currFreq_ = frequencyHz;
-            requestCurrentFrequencyMode();
+            if (!destroying_)
+            {
+                requestCurrentFrequencyMode();
+            }
         }
         else
         {
@@ -320,7 +325,10 @@ void OmniRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // Note: wait required to ensure that change takes effect.
             std::this_thread::sleep_for(OMNI_RIG_WAIT_TIME);
 
-            requestCurrentFrequencyMode();
+            if (!destroying_)
+            {
+                requestCurrentFrequencyMode();
+            }
         }
         else
         {
