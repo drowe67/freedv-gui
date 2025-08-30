@@ -54,8 +54,6 @@ extern "C"
 
 #include "util/IRealtimeHelper.h"
 
-#include <samplerate.h>
-
 class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
