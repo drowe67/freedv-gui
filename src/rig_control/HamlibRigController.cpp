@@ -469,14 +469,16 @@ void HamlibRigController::pttImpl_(bool state)
     }
     else
     {
+        bool changed = false;
         if (pttSet_ != state)
         {
+            changed = true;
             onPttChange(this, state);
         }
         
         pttSet_ = state;
         
-        if (!state)
+        if (changed && !state && !destroying_)
         {
             requestCurrentFrequencyMode();
         }
