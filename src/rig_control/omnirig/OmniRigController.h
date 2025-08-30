@@ -56,6 +56,7 @@ private:
     long writableParams_; // used to help determine VFO
     bool freqOnly_;
     int rigResponseTime_;
+    bool destroying_;
 
     void connectImpl_();
     void disconnectImpl_();
