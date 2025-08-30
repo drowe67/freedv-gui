@@ -63,8 +63,8 @@ void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
 
 void SocketIoClient::emit(std::string eventName, nlohmann::json params)
 {
-    enqueue_([this, eventName, params]() {
-        emitImpl_(eventName, params);
+    enqueue_([this, eventName, params = std::move(params)]() {
+        emitImpl_(eventName, std::move(params));
     });
 }
 
@@ -144,7 +144,7 @@ void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
 {
     if (connection_)
     {
-        nlohmann::json msgEmit = {eventName, params};
+        nlohmann::json msgEmit = {eventName, std::move(params)};
         std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
         connection_->send(msgToSend);
     }

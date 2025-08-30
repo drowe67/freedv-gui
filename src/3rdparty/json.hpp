@@ -5090,6 +5090,7 @@ inline void from_json_array_impl(const BasicJsonType& j, ConstructibleArrayType&
     using std::end;
 
     ConstructibleArrayType ret;
+    ret.reserve(j.size());
     std::transform(
         j.begin(), j.end(), std::inserter(ret, end(ret)),
         [](const BasicJsonType & i)
@@ -5434,6 +5435,7 @@ template<typename StringType>
 StringType to_string(std::size_t value)
 {
     StringType result;
+    result.reserve(16);
     int_to_string(result, value);
     return result;
 }
