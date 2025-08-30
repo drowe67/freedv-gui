@@ -24,15 +24,10 @@
 #define AUDIO_PIPELINE__SPEEX_STEP_H
 
 #include "IPipelineStep.h"
+#include "../util/GenericFIFO.h"
 
 #include <memory>
 #include <speex/speex_preprocess.h>
-
-// Forward definition of struct FIFO from Codec2.
-extern "C"
-{
-    struct FIFO;
-}
 
 class SpeexStep : public IPipelineStep
 {
@@ -42,15 +37,15 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
 private:
     int sampleRate_;
     SpeexPreprocessState* speexStateObj_;
     int numSamplesPerSpeexRun_;
-    struct FIFO* inputSampleFifo_;
-    std::shared_ptr<short> outputSamples_;
+    GenericFIFO<short> inputSampleFifo_;
+    std::unique_ptr<short[]> outputSamples_;
     
     void updateAgcState_();
 };

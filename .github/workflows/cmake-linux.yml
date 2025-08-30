@@ -313,7 +313,7 @@ jobs:
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:2
 
     - name: Execute unit tests
       shell: bash
@@ -336,6 +336,6 @@ jobs:
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:2
 
 

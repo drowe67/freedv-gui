@@ -36,11 +36,9 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     
     resampleState_ = speex_resampler_init(1, inputSampleRate_, outputSampleRate_, forPlotsOnly ? 5 : 7, &src_error);
     assert(resampleState_ != nullptr);
-
+    
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::shared_ptr<short>(
-        new short[outputSampleRate], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(outputSampleRate);
     assert(outputSamples_ != nullptr);
     
     tempInput_ = new float[inputSampleRate * 10 / 1000];
@@ -68,7 +66,7 @@ int ResampleStep::getOutputSampleRate() const
     return outputSampleRate_;
 }
 
-std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     if (numInputSamples == 0)
     {
@@ -84,7 +82,7 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
         return inputSamples;
     }
     
-    auto inputPtr = inputSamples.get();
+    auto inputPtr = inputSamples;
     auto outputPtr = outputSamples_.get();
 
     uint32_t inSampleSize = numInputSamples;
@@ -92,5 +90,5 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
     speex_resampler_process_int(resampleState_, 0, inputPtr, &inSampleSize, outputPtr, &outSampleSize);
     *numOutputSamples = outSampleSize;
  
-    return outputSamples_;
+    return outputSamples_.get();
 }

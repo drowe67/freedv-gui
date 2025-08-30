@@ -26,14 +26,14 @@
 #include "../defines.h"
 
 #include <assert.h>
-#include "codec2_fifo.h"
 
 extern std::atomic<bool> g_agcEnabled;
 
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
+    , numSamplesPerSpeexRun_((FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC)
+    , inputSampleFifo_(sampleRate / 2)
 {
-    numSamplesPerSpeexRun_ = (FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC;
     assert(numSamplesPerSpeexRun_ > 0);
     
     speexStateObj_ = speex_preprocess_state_init(
@@ -43,15 +43,8 @@ SpeexStep::SpeexStep(int sampleRate)
     
     updateAgcState_();
     
-    // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(numSamplesPerSpeexRun_ * 2);
-    assert(inputSampleFifo_ != nullptr);
-
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(sampleRate);
     assert(outputSamples_ != nullptr);
 }
 
@@ -59,7 +52,6 @@ SpeexStep::~SpeexStep()
 {
     outputSamples_ = nullptr;
     speex_preprocess_state_destroy(speexStateObj_);
-    codec2_fifo_destroy(inputSampleFifo_);
 }
 
 int SpeexStep::getInputSampleRate() const
@@ -72,48 +64,40 @@ int SpeexStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     updateAgcState_();
     
     *numOutputSamples = 0;
-    
-    int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
+
+    short* outputSamples = outputSamples_.get();
+
+    int numSpeexRuns = (inputSampleFifo_.numUsed() + numInputSamples) / numSamplesPerSpeexRun_;
     if (numSpeexRuns > 0)
     {
         *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
         
-        short* tmpOutput = outputSamples_.get();
-        short* tmpInput = inputSamples.get();
+        short* tmpOutput = outputSamples;
         
-        while (numInputSamples > 0 && tmpInput != nullptr)
+        inputSampleFifo_.write(inputSamples, numInputSamples);
+        while (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
         {
-            codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
-            numInputSamples--;
-            
-            if (codec2_fifo_used(inputSampleFifo_) >= numSamplesPerSpeexRun_)
-            {
-                codec2_fifo_read(inputSampleFifo_, tmpOutput, numSamplesPerSpeexRun_);
-                speex_preprocess_run(speexStateObj_, tmpOutput);
-                tmpOutput += numSamplesPerSpeexRun_;
-            }
+            inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
+            speex_preprocess_run(speexStateObj_, tmpOutput);
+            tmpOutput += numSamplesPerSpeexRun_;
         }
     }
-    else if (numInputSamples > 0 && inputSamples.get() != nullptr)
+    else if (numInputSamples > 0 && inputSamples != nullptr)
     {
-        codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
+        inputSampleFifo_.write(inputSamples, numInputSamples);
     }
     
-    return outputSamples_;
+    return outputSamples;
 }
 
 void SpeexStep::reset()
 {
-    short buf;
-    while (codec2_fifo_used(inputSampleFifo_) > 0)
-    {
-        codec2_fifo_read(inputSampleFifo_, &buf, 1);
-    }
+    inputSampleFifo_.reset();
 }
 
 void SpeexStep::updateAgcState_()

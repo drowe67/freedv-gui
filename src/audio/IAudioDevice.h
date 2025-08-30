@@ -37,11 +37,11 @@ using namespace std::chrono_literals;
 class IAudioDevice : public IRealtimeHelper
 {
 public:
-    typedef std::function<void(IAudioDevice&, void*, size_t, void*)> AudioDataCallbackFn;
-    typedef std::function<void(IAudioDevice&, void*)> AudioUnderflowCallbackFn;
-    typedef std::function<void(IAudioDevice&, void*)> AudioOverflowCallbackFn;
-    typedef std::function<void(IAudioDevice&, std::string, void*)> AudioErrorCallbackFn;
-    typedef std::function<void(IAudioDevice&, std::string, void*)> AudioDeviceChangedCallbackFn;
+    typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*);
+    typedef void (*AudioUnderflowCallbackFn)(IAudioDevice&, void*);
+    typedef void (*AudioOverflowCallbackFn)(IAudioDevice&, void*);
+    typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string, void*);
+    typedef void (*AudioDeviceChangedCallbackFn)(IAudioDevice&, std::string, void*);
     
     virtual int getNumChannels() = 0;
     virtual int getSampleRate() const = 0;

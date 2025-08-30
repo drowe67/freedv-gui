@@ -40,9 +40,7 @@ ToneInterfererStep::ToneInterfererStep(
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 }
 
@@ -61,12 +59,11 @@ int ToneInterfererStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> ToneInterfererStep::execute(
-    std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ToneInterfererStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     *numOutputSamples = numInputSamples;
     
-    memcpy(outputSamples_.get(), inputSamples.get(), numInputSamples * sizeof(short));
+    memcpy(outputSamples_.get(), inputSamples, numInputSamples * sizeof(short));
     
     auto toneFrequency = toneFrequencyFn_();
     auto toneAmplitude = toneAmplitudeFn_();
@@ -80,5 +77,5 @@ std::shared_ptr<short> ToneInterfererStep::execute(
     }
     *tonePhase -= 2.0 * M_PI * floor(*tonePhase / (2.0 * M_PI));
     
-    return outputSamples_;
+    return outputSamples_.get();
 }

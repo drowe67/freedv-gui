@@ -33,7 +33,7 @@
 class SocketIoClient : public TcpConnectionHandler
 {
 public:
-    using SioMessageReceivedFn = std::function<void(nlohmann::json)>;
+    using SioMessageReceivedFn = std::function<void(const nlohmann::json&)>;
     using OnConnectionStateChangeFn = std::function<void()>;
     
     SocketIoClient();

@@ -30,18 +30,18 @@
 class EitherOrStep : public IPipelineStep
 {
 public:
-    EitherOrStep(std::function<bool()> conditionalFn, std::shared_ptr<IPipelineStep> trueStep, std::shared_ptr<IPipelineStep> falseStep);
+    EitherOrStep(std::function<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep);
     virtual ~EitherOrStep();
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
 private:
     std::function<bool()> conditionalFn_;
-    std::shared_ptr<IPipelineStep> falseStep_;
-    std::shared_ptr<IPipelineStep> trueStep_;
+    std::unique_ptr<IPipelineStep> falseStep_;
+    std::unique_ptr<IPipelineStep> trueStep_;
 };
 
 #endif // AUDIO_PIPELINE__EITHER_OR_STEP_H

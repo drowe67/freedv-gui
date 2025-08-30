@@ -1412,26 +1412,19 @@ void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
-    const int STR_LENGTH = 256;
-    
-    char fifo_counters[STR_LENGTH];
+    if (IsShownOnScreen())
+    {
+        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+        m_textFifos->SetLabel(fifo_counters);
 
-    snprintf(fifo_counters, STR_LENGTH, "Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
-    wxString fifo_counters_string(fifo_counters);
-    m_textFifos->SetLabel(fifo_counters_string);
+        // input: underflow overflow output: underflow overflow
+        wxString pa_counters_1 = wxString::Format(wxT("Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
+        m_textPA1->SetLabel(pa_counters_1);
 
-    char pa_counters1[STR_LENGTH];
-
-    // input: underflow overflow output: underflow overflow
-    snprintf(pa_counters1, STR_LENGTH, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
-    wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
-
-    char pa_counters2[STR_LENGTH];
-
-    // input: underflow overflow output: underflow overflow
-    snprintf(pa_counters2, STR_LENGTH, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
-    wxString pa_counters2_string(pa_counters2);
-    m_textPA2->SetLabel(pa_counters2_string);
+        // input: underflow overflow output: underflow overflow
+        wxString pa_counters_2 = wxString::Format(wxT("Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+        m_textPA2->SetLabel(pa_counters_2);
+    }
 }
 
 void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)

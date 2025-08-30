@@ -1,7 +1,7 @@
 #ifndef AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 #define AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 
-#include "codec2_fifo.h"
+#include "../util/GenericFIFO.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // paCallBackData
@@ -13,8 +13,6 @@ typedef struct paCallBackData
         , outfifo1(nullptr)
         , infifo2(nullptr)
         , outfifo2(nullptr)
-        , rxinfifo(nullptr)
-        , rxoutfifo(nullptr)
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
@@ -32,16 +30,12 @@ typedef struct paCallBackData
     }
 
     // FIFOs attached to first sound card
-    struct FIFO    *infifo1;
-    struct FIFO    *outfifo1;
+    GenericFIFO<short>    *infifo1;
+    GenericFIFO<short>    *outfifo1;
 
     // FIFOs attached to second sound card
-    struct FIFO    *infifo2;
-    struct FIFO    *outfifo2;
-
-    // FIFOs for rx process
-    struct FIFO    *rxinfifo;
-    struct FIFO    *rxoutfifo;
+    GenericFIFO<short>    *infifo2;
+    GenericFIFO<short>    *outfifo2;
 
     // EQ filter states
     std::shared_ptr<void> sbqMicInBass;
@@ -59,6 +53,10 @@ typedef struct paCallBackData
     // optional loud tone on left channel to reliably trigger vox
     bool            leftChannelVoxTone;
     float           voxTonePhase;
+
+    // Temporary buffers for reading and writing
+    std::unique_ptr<short[]> tmpReadBuffer_;
+    std::unique_ptr<short[]> tmpWriteBuffer_;
 } paCallBackData;
 
 #endif // AUDIO_PIPELINE_PA_CALLBACK_DATA_H

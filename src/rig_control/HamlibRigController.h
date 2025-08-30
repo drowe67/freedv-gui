@@ -87,6 +87,7 @@ private:
     uint64_t origFreq_;
     rmode_t origMode_;
     bool freqOnly_;
+    bool destroying_;
     
     int rigResponseTime_;
     

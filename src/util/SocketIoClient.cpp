@@ -63,14 +63,14 @@ void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
 
 void SocketIoClient::emit(std::string eventName, nlohmann::json params)
 {
-    enqueue_([&, eventName, params]() {
+    enqueue_([this, eventName, params]() {
         emitImpl_(eventName, params);
     });
 }
 
 void SocketIoClient::emit(std::string eventName)
 {
-    enqueue_([&, eventName]() {
+    enqueue_([this, eventName]() {
         emitImpl_(eventName);
     });
 }
@@ -245,6 +245,8 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
         case '2':
         {
             // event received from server
+            const nlohmann::json emptyEvent = {};
+
             nlohmann::json parsedEvent = nlohmann::json::parse(ptr + 1);
             std::string eventName = parsedEvent[0];
             if (eventFnMap_[eventName])
@@ -255,7 +257,7 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
                 }
                 else   
                 {
-                    (eventFnMap_[eventName])({});
+                    (eventFnMap_[eventName])(emptyEvent);
                 }
             }
             break;

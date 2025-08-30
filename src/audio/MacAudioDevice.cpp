@@ -228,7 +228,7 @@ void MacAudioDevice::start()
             // Set maxFrameSize to something reasonable for further down.
             maxFrameSize = 4096;
         }
-
+        
         chosenFrameSize_ = desiredFrameSize;
 
         // Create AUHAL object
@@ -629,6 +629,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
 
 void MacAudioDevice::setHelperRealTime()
 {
+    numRealTimeWorkers_.fetch_add(1, std::memory_order_release);
+
     // Set thread QoS to "user interactive"
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
 
@@ -750,8 +752,12 @@ OSStatus MacAudioDevice::InputProc_(
             
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
-        
-        dispatch_semaphore_signal(thisObj->sem_);
+       
+        auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);
+        for (; numWorkers > 0; numWorkers--)
+        { 
+            dispatch_semaphore_signal(thisObj->sem_);
+        }
     }
     else
     {
@@ -771,8 +777,6 @@ OSStatus MacAudioDevice::OutputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
 
-    memset(thisObj->inputFrames_, 0, sizeof(short) * thisObj->numChannels_ * inNumberFrames);
-    
     if (thisObj->onAudioDataFunction)
     {
         thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
@@ -875,6 +879,7 @@ void MacAudioDevice::stopRealTimeWork(bool fastMode)
 
 void MacAudioDevice::clearHelperRealTime()
 {
+    numRealTimeWorkers_.fetch_sub(1, std::memory_order_release);
     leaveWorkgroup_();
 }
 

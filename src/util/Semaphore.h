@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            ThreadedObject.mm
-// Purpose:         macOS-specific implementation of ThreadedObject using GCD.
+// Name:            Semaphore.h
+// Purpose:         Implements a semaphore.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,37 +20,34 @@
 //
 //=========================================================================
 
-#include <cassert>
+#ifndef UTIL_SEMAPHORE_H
+#define UTIL_SEMAPHORE_H
 
-#include "ThreadedObject.h"
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore.h>
+#endif // defined(_WIN32) || defined(__APPLE__)
 
-ThreadedObject::ThreadedObject(ThreadedObject* parent)
-    : parent_(parent)
+class Semaphore
 {
-    dispatch_queue_t parentQueue;
+public:
+    Semaphore();
+    virtual ~Semaphore();
     
-    if (parent_ != nullptr)
-    {
-        parentQueue = parent_->queue_;
-    }
-    else
-    {
-        parentQueue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
-    }
+    void wait();
+    void signal();
     
-    queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
-    assert(queue_ != nil);
-}
+private:
+#if defined(_WIN32)
+    HANDLE sem_;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t sem_;
+#else
+    sem_t sem_;
+#endif // defined(_WIN32) || defined(__APPLE__)
+};
 
-ThreadedObject::~ThreadedObject()
-{
-    dispatch_release(queue_);
-}
-
-void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
-{
-    // note: timeout not implemented
-    dispatch_async(queue_, ^() {
-        fn();
-    });
-}
+#endif // UTIL_SEMAPHORE_H

@@ -85,7 +85,7 @@ if [ "$2" == "mpp" ]; then
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 
@@ -115,7 +115,7 @@ if [ "$1" != "" ]; then
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 fi
 
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
 FDV_PID=$!
 
 #if [ "$OPERATING_SYSTEM" != "Linux" ]; then

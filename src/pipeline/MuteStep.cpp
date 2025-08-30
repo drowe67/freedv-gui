@@ -30,9 +30,7 @@ MuteStep::MuteStep(int outputSampleRate)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
     memset(outputSamples_.get(), 0, sizeof(short) * maxSamples);
@@ -44,13 +42,13 @@ MuteStep::MuteStep(int outputSampleRate)
 //     numInputSamples: Number of samples in the input array.
 //     numOutputSamples: Location to store number of output samples.
 // Returns: Array of int16 values corresponding to result audio.
-std::shared_ptr<short> MuteStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* MuteStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     *numOutputSamples = numInputSamples;
     
     if (*numOutputSamples > 0)
     {
-        return outputSamples_;
+        return outputSamples_.get();
     }
     else
     {

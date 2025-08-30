@@ -38,6 +38,8 @@ extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
+extern std::atomic<float> g_txLevelScale;
+
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
@@ -701,6 +703,10 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     char fmt[15];
     
     g_txLevel = m_sliderTxLevel->GetValue();
+    float dbLoss = g_txLevel / 10.0;
+    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
     snprintf(fmt, 15, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
@@ -717,7 +723,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
     
     auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
     
-    if (g_tx)
+    if (g_tx.load(std::memory_order_acquire))
     {
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
         m_newMicInFilter = true;
@@ -847,7 +853,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
         // on Windows. Just to be sure, we force the correct state
         // here (similar to what's already done for ending TX while
         // using the voice keyer).
-        m_btnTogPTT->SetValue(!g_tx);
+        m_btnTogPTT->SetValue(!g_tx.load(std::memory_order_acquire));
         m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
         
         togglePTT();
@@ -860,7 +866,7 @@ void MainFrame::togglePTT(void) {
 
     // Change tabbed page in centre panel depending on PTT state
 
-    if (g_tx)
+    if (g_tx.load(std::memory_order_acquire))
     {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
@@ -990,7 +996,7 @@ void MainFrame::togglePTT(void) {
                 wxGetApp().Yield(true);
             }
         }
-        g_tx = false;
+        g_tx.store(false, std::memory_order_release);
         endingTx = false;
 
         char fmt[16];
@@ -1001,7 +1007,12 @@ void MainFrame::togglePTT(void) {
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        
+        for (int index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+        {
+            auto page = m_auiNbookCtrl->GetPage(index);
+            page->Refresh();
+        }
+
         // enable sync text
 
         m_textSync->Enable();
@@ -1026,6 +1037,7 @@ void MainFrame::togglePTT(void) {
             if (page == (wxWindow *)m_panelSpeechIn)
             {
                 m_auiNbookCtrl->ChangeSelection(index);
+                page->Refresh();
                 break;
             }
         }
@@ -1099,7 +1111,7 @@ void MainFrame::togglePTT(void) {
 
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
-        g_tx = true;
+        g_tx.store(true, std::memory_order_release);
         
         char fmt[16];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);

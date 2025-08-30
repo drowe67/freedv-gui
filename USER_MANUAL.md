@@ -847,9 +847,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix failing macOS tests on CI environment. (PR #1006)
     * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
     * macOS: Fix spurious error on startup when changing locales. (PR #1010)
+    * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
+    * Further audio performance improvements. (PR #975)
     * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
@@ -857,6 +859,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)
     * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
+4. Documentation:
+    * Add pkgconf dependency for macOS instructions. (PR #1013)
 
 ## V2.0.1 July 2025
 
