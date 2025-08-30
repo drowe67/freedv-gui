@@ -613,6 +613,11 @@ void TxRxThread::clearFifos_()
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         outFifo->reset();
     }
+
+    if (equalizedMicAudioLink_)
+    {
+        equalizedMicAudioLink_->getFifo().reset();
+    }
 }
 
 //---------------------------------------------------------------------------------------------
