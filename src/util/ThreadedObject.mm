@@ -44,7 +44,7 @@ ThreadedObject::ThreadedObject(ThreadedObject* parent)
 
 ThreadedObject::~ThreadedObject()
 {
-    // empty
+    dispatch_release(queue_);
 }
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)

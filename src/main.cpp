@@ -1417,7 +1417,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     bool txState = false;
     int syncState = 0;
 
-    if (!m_RxRunning)
+    if (!m_RxRunning || !evt.GetTimer().IsRunning())
     {
         return;
     }

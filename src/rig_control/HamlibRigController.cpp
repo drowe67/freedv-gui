@@ -23,6 +23,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include <future>
 #include <sstream>
 #include <algorithm>
 #include <cstring>
@@ -77,6 +78,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
+    , destroying_(false)
     , rigResponseTime_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
@@ -99,6 +101,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
+    , destroying_(false)
     , rigResponseTime_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
@@ -107,21 +110,21 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
 
 HamlibRigController::~HamlibRigController()
 {
+    destroying_ = true;
+
     // Disconnect in a synchronous fashion before killing our thread.
-    std::condition_variable cv;
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lk(mtx);
-    
-    enqueue_([&]() {
-        std::unique_lock<std::mutex> innerLock(mtx);
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+
+    enqueue_([this, prom]() {
         if (rig_ != nullptr)
         {
             disconnectImpl_();
         }
-        cv.notify_one();
+        prom->set_value();
     });
     
-    cv.wait(lk);
+    fut.wait();
 }
 
 static int LogHamlibErrors_(
@@ -741,7 +744,10 @@ freqAttempt:
     if (setOkay)
     {
         currFreq_ = frequencyHz;
-        requestCurrentFrequencyMode();
+        if (!destroying_)
+        {
+            requestCurrentFrequencyMode();
+        }
     }
 }
 
@@ -780,6 +786,9 @@ modeAttempt:
     if (setOkay)
     {
         currMode_ = mode;
-        requestCurrentFrequencyMode();
+        if (!destroying_)
+        {
+            requestCurrentFrequencyMode();
+        }
     }
 }
