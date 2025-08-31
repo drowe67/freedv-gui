@@ -91,7 +91,7 @@ cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
-#cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
+cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
 FDV_PID=$!
