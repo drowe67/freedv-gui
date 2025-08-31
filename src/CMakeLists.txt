@@ -40,6 +40,9 @@ add_subdirectory(rig_control)
 add_subdirectory(sox)
 add_subdirectory(util)
 
+# Compile FreeDV rig integrations
+add_subdirectory(flex)
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
