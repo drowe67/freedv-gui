@@ -7,6 +7,6 @@ set(PIPELINE_SUBSET
     ../pipeline/AudioPipeline.cpp
     ../pipeline/rade_text.c)
 
-add_executable(freedv-flex main.cpp FlexTxRxThread.cpp $<TARGET_OBJECTS:mimalloc-obj> ${PIPELINE_SUBSET})
+add_executable(freedv-flex main.cpp FlexTxRxThread.cpp FlexKeyValueParser.cpp $<TARGET_OBJECTS:mimalloc-obj> ${PIPELINE_SUBSET})
 target_compile_definitions(freedv-flex PRIVATE -DDISABLE_UNIT_TEST)
 target_link_libraries(freedv-flex PRIVATE fdv_util rade opus codec2 samplerate)
