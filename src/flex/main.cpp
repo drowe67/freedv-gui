@@ -25,6 +25,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <stdlib.h>
 
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
@@ -50,6 +51,15 @@ bool endingTx;
 
 int main(int argc, char** argv)
 {
+    // Environment setup -- make sure we don't use more threads than needed.
+    // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
+    // improving performance.
+    setenv("OMP_NUM_THREADS", "1", 1);
+    setenv("OPENBLAS_NUM_THREADS", "1", 1);
+ 
+    // Enable maximum optimization for Python.
+    setenv("PYTHONOPTIMIZE", "2", 1);
+    
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
