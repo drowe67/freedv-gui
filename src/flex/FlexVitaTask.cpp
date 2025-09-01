@@ -110,6 +110,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         return;
     }*/
 
+#if 0
     if (isTransmitting_ && (
         timeSinceLastPacketSend >= (VITA_IO_TIME_INTERVAL_US + MAX_JITTER_US) ||
         timeSinceLastPacketSend <= (VITA_IO_TIME_INTERVAL_US - MAX_JITTER_US)))
@@ -120,6 +121,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
             VITA_IO_TIME_INTERVAL_US - MAX_JITTER_US,
             VITA_IO_TIME_INTERVAL_US + MAX_JITTER_US);
     }
+#endif
 
     // Determine the number of extra packets we need to send this go-around.
     // This is since it can take a bit longer than the timer interval to 
@@ -137,8 +139,8 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
     }
     else
     {
-        //ESP_LOGI(CURRENT_LOG_TAG, "In the previous interval, %" PRIu64 " packets should have gone out (time since last send = %" PRIu64 ")", packetsToSend, timeSinceLastPacketSend);
-        minPacketsRequired_ += packetsToSend;
+        //log_info("In the previous interval, %" PRIu64 " packets should have gone out (time since last send = %" PRIu64 ")", packetsToSend, timeSinceLastPacketSend);
+        minPacketsRequired_ = packetsToSend;
         timeBeyondExpectedUs_ += timeSinceLastPacketSend % VITA_IO_TIME_INTERVAL_US;
     }
 
@@ -155,7 +157,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         timeBeyondExpectedUs_ = 0;
     }
 
-    //ESP_LOGI(CURRENT_LOG_TAG, "Packets to be sent this time: %d", minPacketsRequired_);
+    //log_info("Packets to be sent this time: %d", minPacketsRequired_);
     int ctr = MAX_VITA_PACKETS_TO_SEND;
     while(minPacketsRequired_ > 0 && ctr > 0 && fifo->read(inputBuffer, MAX_VITA_SAMPLES) == 0)
     {
