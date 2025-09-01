@@ -324,7 +324,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                 {
                     if (sliceId != activeSlice_)
                     {
-                        log_info("Swtiching slice %d to FreeDV mode", sliceId);
+                        log_info("Switching slice %d to FreeDV mode", sliceId);
                         
                         if (activeSlice_ == -1)
                         {
