@@ -12,7 +12,10 @@ add_executable(freedv-flex
     FlexTxRxThread.cpp 
     FlexKeyValueParser.cpp 
     FlexVitaTask.cpp
-    $<TARGET_OBJECTS:mimalloc-obj> 
+    
+    # TBD - freedv-flex faults on startup if mimalloc is included
+    #$<TARGET_OBJECTS:mimalloc-obj> 
+    
     ${PIPELINE_SUBSET})
     
 target_compile_definitions(freedv-flex PRIVATE -DDISABLE_UNIT_TEST)
