@@ -33,7 +33,7 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask()
+FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
     : packetReadTimer_(VITA_IO_TIME_INTERVAL_US / US_TO_MS, std::bind(&FlexVitaTask::readPendingPackets_, this, _1), true)
     , packetWriteTimer_(VITA_IO_TIME_INTERVAL_US / US_TO_MS, std::bind(&FlexVitaTask::sendAudioOut_, this, _1), true)
     , socket_(-1)
@@ -49,6 +49,9 @@ FlexVitaTask::FlexVitaTask()
     , minPacketsRequired_(0)
     , timeBeyondExpectedUs_(0)
 {
+    // Go into semi-real time priority
+    helper->setHelperRealTime();
+
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
     assert(packetArray_ != nullptr);
     packetIndex_ = 0;

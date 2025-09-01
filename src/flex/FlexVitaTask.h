@@ -28,6 +28,7 @@
 
 #include "../util/ThreadedObject.h"
 #include "../util/ThreadedTimer.h"
+#include "../util/IRealtimeHelper.h"
 #include "vita.h"
 
 #include "../pipeline/paCallbackData.h"
@@ -40,7 +41,7 @@ public:
     
     enum { VITA_PORT = 4992 }; // Hardcoding VITA port because we can only handle one slice at a time.
     
-    FlexVitaTask();
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.

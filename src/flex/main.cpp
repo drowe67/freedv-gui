@@ -90,7 +90,8 @@ int main(int argc, char** argv)
     assert(lpcnetEncState != nullptr);
     
     // Start up VITA task so we can get the list of available radios.
-    FlexVitaTask vitaTask;
+    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
+    FlexVitaTask vitaTask(realtimeHelper);
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
@@ -106,7 +107,6 @@ int main(int argc, char** argv)
     }, nullptr);
     
     // Initialize audio pipelines
-    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
     auto callbackObj = vitaTask.getCallbackData();
     FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
     FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
