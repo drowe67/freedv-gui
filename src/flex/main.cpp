@@ -30,6 +30,7 @@
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
 #include "FlexTxRxThread.h"
+#include "FlexRealtimeHelper.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 
@@ -91,9 +92,10 @@ int main(int argc, char** argv)
     }, nullptr);
     
     // Initialize audio pipelines
+    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
     auto callbackObj = vitaTask.getCallbackData();
-    FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, nullptr, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, nullptr, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
     
     log_info("Starting TX/RX threads");
     txThread.start();
