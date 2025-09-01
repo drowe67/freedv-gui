@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     log_info("Creating RADE object");
     char modelFile[1];
     modelFile[0] = 0;
-    struct rade* radeObj = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER);
+    struct rade* radeObj = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_VERBOSE_0);
     assert(radeObj != nullptr);
     
     log_info("Creating RADE text object");
