@@ -135,6 +135,7 @@ int main(int argc, char** argv)
     FlexTcpTask tcpTask;
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
+        vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
     tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, bool tx, void*) {
         vitaTask.setTransmit(tx);
