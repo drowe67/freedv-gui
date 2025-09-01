@@ -29,15 +29,36 @@
 class FlexTcpTask : public TcpConnectionHandler
 {
 public:
+    using WaveformConnectedFn = std::function<void(FlexTcpTask&, void*)>;
+    using WaveformTransmitFn = std::function<void(FlexTcpTask&, bool, void*)>;
+    
     FlexTcpTask();
     virtual ~FlexTcpTask();
-        
+    
+    void setWaveformConnectedFn(WaveformConnectedFn fn, void* state)
+    {
+        waveformConnectedFn_ = fn;
+        waveformConnectedState_ = state;
+    }
+    
+    void setWaveformTransmitFn(WaveformTransmitFn fn, void* state)
+    {
+        waveformTransmitFn_ = fn;
+        waveformTransmitState_ = state;
+    }
+    
 protected:
     virtual void onConnect_() override;
     virtual void onDisconnect_() override;
     virtual void onReceive_(char* buf, int length) override;
     
 private:
+    WaveformConnectedFn waveformConnectedFn_;
+    void* waveformConnectedState_;
+    
+    WaveformTransmitFn waveformTransmitFn_;
+    void* waveformTransmitState_;
+    
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;
     ThreadedTimer pingTimer_;

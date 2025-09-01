@@ -105,8 +105,11 @@ void FlexTcpTask::onConnect_()
         sequenceNumber_ = 0;
     
         // Report successful connection
-        log_info("TBD - report successful connection");
-
+        if (waveformConnectedFn_)
+        {
+            waveformConnectedFn_(*this, waveformConnectedState_);
+        }
+        
         // Start ping timer
         pingTimer_.start();
     });
@@ -369,7 +372,12 @@ void FlexTcpTask::processCommand_(std::string& command)
                 // Going into transmit mode
                 log_info("Radio went into transmit");
                 isTransmitting_ = true;
-                sendRadioCommand_("xmit 1");
+                
+                if (waveformTransmitFn_)
+                {
+                    waveformTransmitFn_(*this, isTransmitting_, waveformTransmitState_);
+                }
+                //sendRadioCommand_("xmit 1");
                 
                 log_info("TBD - report TX request");
             }
@@ -378,7 +386,12 @@ void FlexTcpTask::processCommand_(std::string& command)
                 // Going back into receive
                 log_info("Radio went out of transmit");
                 isTransmitting_ = false;
-                sendRadioCommand_("xmit 0");
+                if (waveformTransmitFn_)
+                {
+                    waveformTransmitFn_(*this, isTransmitting_, waveformTransmitState_);
+                }
+                
+                //sendRadioCommand_("xmit 0");
                 
                 log_info("TBD - report RX request");
             }

@@ -84,11 +84,15 @@ int main(int argc, char** argv)
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
+    bool enableRadioLookup = true;
     vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void* state)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
-        log_info("Got discovery callback (radio %s, IP %s)", friendlyName.c_str(), ip.c_str());
-        radioList[ip] = friendlyName;
+        if (enableRadioLookup)
+        {
+            log_info("Got discovery callback (radio %s, IP %s)", friendlyName.c_str(), ip.c_str());
+            radioList[ip] = friendlyName;
+        }
     }, nullptr);
     
     // Initialize audio pipelines
@@ -114,10 +118,18 @@ int main(int argc, char** argv)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         radioIp = radioList.begin()->first;
+        enableRadioLookup = false;
     }
     
     log_info("Connecting to radio at IP %s", radioIp.c_str());
     FlexTcpTask tcpTask;
+    tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
+        vitaTask.enableAudio(true);
+    }, nullptr);
+    tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, bool tx, void*) {
+        vitaTask.setTransmit(tx);
+        g_tx.store(tx, std::memory_order_release);
+    }, nullptr);
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         
     for(;;)
