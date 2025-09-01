@@ -203,15 +203,13 @@ void FlexTxRxThread::clearFifos_()
 {
     if (m_tx)
     {
+        cbData_->infifo1->reset();
         cbData_->outfifo1->reset();
-        cbData_->infifo2->reset();
     }
     else
     {
-        cbData_->infifo1->reset();
-
-        auto outFifo = cbData_->outfifo2;
-        outFifo->reset();
+        cbData_->infifo2->reset();
+        cbData_->outfifo2->reset();
     }
 }
 
@@ -279,7 +277,7 @@ void FlexTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             auto inputPtr = inputSamples_.get();
-            int nread = cbData_->infifo2->read(inputPtr, nsam_in_48);            
+            int nread = cbData_->infifo1->read(inputPtr, nsam_in_48);            
             if (nread != 0)
             {
                 inputPtr = inputSamplesZeros_.get();
@@ -367,7 +365,7 @@ void FlexTxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
     auto outFifo = cbData_->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData_->infifo1->read(inputSamples_.get(), nsam) == 0) {
+    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData_->infifo2->read(inputSamples_.get(), nsam) == 0) {
         
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
