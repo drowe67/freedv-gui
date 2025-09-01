@@ -1,6 +1,7 @@
 #ifndef FLEX_DEFINES_H
 #define FLEX_DEFINES_H
 
+#define FLEX_TCP_PORT (4992)
 #define FLEX_SAMPLE_RATE (24000)
 #define MAX_VITA_PACKETS (200)
 #define MAX_VITA_SAMPLES (42) /* 5.25ms/block @ 8000 Hz */
