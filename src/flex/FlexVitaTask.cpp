@@ -417,7 +417,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 inFifo = getAudioInput_(true);
             }
             
-            // Downconvert to 8K sample rate.
+            // Convert to int16 samples
             unsigned int num_samples = payload_length >> 2; // / sizeof(uint32_t);
             unsigned int half_num_samples = num_samples >> 1;
 
