@@ -14,4 +14,8 @@
 #define CODEC2_REAL_TIME_MEMORY_SIZE (512*1024)
 #endif // !CODEC2_REAL_TIME_MEMORY_SIZE
 
+#ifndef FIFO_SIZE
+#define FIFO_SIZE           640                            // default fifo size in ms
+#endif // !FIFO_SIZE
+
 #endif // PIPELINE_DEFINES_H

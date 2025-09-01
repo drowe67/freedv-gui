@@ -21,12 +21,22 @@
 //=========================================================================
 
 #include <atomic>
+#include "FlexVitaTask.h"
+#include "../util/logging/ulog.h"
 
 std::atomic<int> g_tx;
 bool endingTx;
 
 int main(int argc, char** argv)
 {
+    FlexVitaTask vitaTask;
+    
+    vitaTask.setOnRadioDiscoveredFn([](FlexVitaTask&, std::string friendlyName, std::string ip, void* state)
+    {
+        log_info("Got discovery callback (radio %s, IP %s)", friendlyName.c_str(), ip.c_str());
+    }, nullptr);
+    
+    // Add discovery callback so that we can be aware of radios on the network.
     // TBD 
     return 0;
 }
