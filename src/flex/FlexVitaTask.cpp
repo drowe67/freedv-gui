@@ -19,6 +19,7 @@
 #include <cmath>
 #include <unistd.h>
 #include <inttypes.h>
+#include <fcntl.h>
 
 #include "../pipeline/pipeline_defines.h"
 #include "flex_defines.h"

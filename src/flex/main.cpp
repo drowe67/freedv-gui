@@ -20,9 +20,13 @@
 //
 //=========================================================================
 
+#include <chrono>
+#include <thread>
 #include <atomic>
 #include "FlexVitaTask.h"
 #include "../util/logging/ulog.h"
+
+using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
 bool endingTx;
@@ -35,6 +39,8 @@ int main(int argc, char** argv)
     {
         log_info("Got discovery callback (radio %s, IP %s)", friendlyName.c_str(), ip.c_str());
     }, nullptr);
+    
+    std::this_thread::sleep_for(3600s);
     
     // Add discovery callback so that we can be aware of radios on the network.
     // TBD 
