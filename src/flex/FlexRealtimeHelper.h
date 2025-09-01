@@ -37,7 +37,7 @@ public:
     
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.
-    virtual void setHelperRealTime() override { /* empty */ }
+    virtual void setHelperRealTime() override;
     
     // Lets audio system know that we're beginning to do work with the
     // received audio.
