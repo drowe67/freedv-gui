@@ -4,7 +4,7 @@
 #define FLEX_TCP_PORT (4992)
 #define FLEX_SAMPLE_RATE (24000)
 #define MAX_VITA_PACKETS (200)
-#define MAX_VITA_SAMPLES (42) /* 5.25ms/block @ 8000 Hz */
+#define MAX_VITA_SAMPLES (126) /* 5.25ms/block @ 24000 Hz */
 #define VITA_SAMPLES_TO_SEND MAX_VITA_SAMPLES
 #define MIN_VITA_PACKETS_TO_SEND (4)
 #define MAX_VITA_PACKETS_TO_SEND (10)
