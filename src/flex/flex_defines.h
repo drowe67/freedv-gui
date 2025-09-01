@@ -12,5 +12,6 @@
 #define VITA_IO_TIME_INTERVAL_US (US_OF_AUDIO_PER_VITA_PACKET * MIN_VITA_PACKETS_TO_SEND) /* Time interval between subsequent sends or receives */
 #define MAX_JITTER_US (500) /* Corresponds to +/- the maximum amount VITA_IO_TIME_INTERVAL_US should vary by. */
 #define US_TO_MS (1000)
+#define FIFO_SIZE_SAMPLES (FIFO_SIZE * FLEX_SAMPLE_RATE / 1000)
 
 #endif // FLEX_DEFINES_H

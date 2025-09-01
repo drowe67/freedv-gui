@@ -54,13 +54,13 @@ FlexVitaTask::FlexVitaTask()
     packetIndex_ = 0;
     
     // Allocate FIFOs for use by pipelines.
-    callbackData_.infifo1 = new GenericFIFO<short>(FIFO_SIZE);
+    callbackData_.infifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackData_.infifo1 != nullptr);
-    callbackData_.infifo2 = new GenericFIFO<short>(FIFO_SIZE);
+    callbackData_.infifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackData_.infifo1 != nullptr);
-    callbackData_.outfifo1 = new GenericFIFO<short>(FIFO_SIZE);
+    callbackData_.outfifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackData_.infifo1 != nullptr);
-    callbackData_.outfifo2 = new GenericFIFO<short>(FIFO_SIZE);
+    callbackData_.outfifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackData_.infifo1 != nullptr);
     
     openSocket_();
