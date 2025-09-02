@@ -75,6 +75,6 @@ cd -
 
 # Include version number in AppImage filename
 FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`
-mv FreeDV-FlexRadio-aarch64.AppImage FreeDV-$FREEDV_VERSION-aarch64.AppImage
+mv FreeDV-aarch64.AppImage FreeDV-FlexRadio-$FREEDV_VERSION-aarch64.AppImage
 
 echo "Done"
