@@ -122,7 +122,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
-          FREEDV_BINARY=../build_linux/src/flex/freedv-flex ./make-appimage.sh 
+          ./make-appimage-waveform.sh 
     
     - name: Calculate AppImage filename
       shell: bash
