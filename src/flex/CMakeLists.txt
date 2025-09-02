@@ -14,6 +14,7 @@ set(RTKIT_FILES
 endif()
 
 add_executable(freedv-flex
+    EXCLUDE_FROM_ALL         # Don't build by default
     main.cpp 
     FlexRealtimeHelper.cpp
     FlexTxRxThread.cpp 
