@@ -41,7 +41,7 @@ extern std::atomic<int> g_tx;
 extern bool endingTx;
 bool g_eoo_enqueued;
 
-static const float TxScaleFactor_ = std::exp(9.0f/20.0f * std::log(10.0f));
+static const float TxScaleFactor_ = 2.0;
 
 int FlexTxRxThread::getTxNNomModemSamples() const
 {
