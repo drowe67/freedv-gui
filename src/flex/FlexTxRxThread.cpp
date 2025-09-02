@@ -41,6 +41,8 @@ extern std::atomic<int> g_tx;
 extern bool endingTx;
 bool g_eoo_enqueued;
 
+static const float TxScaleFactor_ = std::exp(9.0f/20.0f * std::log(10.0f));
+
 int FlexTxRxThread::getTxNNomModemSamples() const
 {
     const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
@@ -70,6 +72,9 @@ void FlexTxRxThread::initializePipeline_()
     {
         txStep_ = new RADETransmitStep(rade_, encState_);
         pipeline_->appendPipelineStep(txStep_);
+        
+        auto levelAdjustStep = new LevelAdjustStep(outputSampleRate_, []() { return TxScaleFactor_; });
+        pipeline_->appendPipelineStep(levelAdjustStep);
     }
     else
     {

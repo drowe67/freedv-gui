@@ -5,6 +5,7 @@ set(PIPELINE_SUBSET
     ../pipeline/RADETransmitStep.cpp
     ../pipeline/ResampleStep.cpp
     ../pipeline/AudioPipeline.cpp
+    ../pipeline/LevelAdjustStep.cpp
     ../pipeline/rade_text.c)
 
 if(LINUX AND DBUS_FOUND)

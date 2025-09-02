@@ -27,7 +27,6 @@
 #include "FlexKeyValueParser.h"
 #include "../util/logging/ulog.h"
 
-static float tx_scale_factor = std::exp(9.0f/20.0f * std::log(10.0f));
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 
