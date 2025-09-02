@@ -394,7 +394,7 @@ void HamlibRigController::connectImpl_()
     }
     else
     {
-        std::string errMsg = std::string("Could not connect to radio: ") + rigerror(result);
+        std::string errMsg = std::string("Could not connect to radio: ") + rigerror2(result);
         onRigError(this, errMsg);
     }
     log_debug("hamlib: rig_open() failed: %s", rigerror(result));
@@ -464,7 +464,7 @@ void HamlibRigController::pttImpl_(bool state)
     {
         log_debug("rig_set_ptt: error = %s ", rigerror(result));
         
-        std::string errMsg = "Cannot set PTT: " + std::string(rigerror(result));
+        std::string errMsg = "Cannot set PTT: " + std::string(rigerror2(result));
         onRigError(this, errMsg);
     }
     else
@@ -507,7 +507,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
 
-            std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + rigerror(result);
+            std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + rigerror2(result);
             onRigError(this, errMsg);
             
             return;
@@ -527,7 +527,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after frequency change: ") + rigerror(result);
+            std::string errMsg = std::string("Could not enable PTT after frequency change: ") + rigerror2(result);
             onRigError(this, errMsg);
         }
     }
@@ -580,7 +580,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + rigerror(result);
+            std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + rigerror2(result);
             onRigError(this, errMsg);
 
             return;
@@ -600,7 +600,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after mode change: ") + rigerror(result);
+            std::string errMsg = std::string("Could not enable PTT after mode change: ") + rigerror2(result);
             onRigError(this, errMsg);
         }
     }
