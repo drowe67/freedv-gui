@@ -365,7 +365,7 @@ void FlexVitaTask::radioConnected(const char* ip)
 void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
 {
     // Make sure packet is long enough to inspect for VITA header info.
-    if (length < VITA_PACKET_HEADER_SIZE)
+    if ((unsigned)length < VITA_PACKET_HEADER_SIZE)
         return;
 
     // Make sure packet is from the radio.
@@ -420,12 +420,16 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             unsigned int num_samples = payload_length >> 2; // / sizeof(uint32_t);
             unsigned int half_num_samples = num_samples >> 1;
 
-            int i = 0;
+            unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
             while (inFifo != nullptr && i < half_num_samples)
             {
-                uint32_t temp = ntohl(packet->if_samples[i << 1]);
-                audioInput[i] = *(float*)&temp * FLOAT_TO_SHORT_MULTIPLIER;
+                union {
+                    uint32_t intVal;
+                    float floatVal;
+                } temp;
+                temp.intVal = ntohl(packet->if_samples[i << 1]);
+                audioInput[i] = temp.floatVal * FLOAT_TO_SHORT_MULTIPLIER;
                 i++;
             }
             inFifo->write(audioInput, half_num_samples); // audio pipeline will resample

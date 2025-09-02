@@ -19,6 +19,7 @@
 #include <future>
 #include <string>
 #include <sstream>
+#include <inttypes.h>
 #include <unistd.h>
 #include <sys/socket.h>
 
@@ -302,7 +303,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                     // Frequency reported by Flex is in MHz but reporters expect
                     // it in Hz.
                     uint64_t freqHz = atof(rfFrequency->second.c_str()) * 1000000;
-                    log_info("TBD - report frequency change");
+                    log_info("TBD - report frequency change to %" PRIu64 " Hz", freqHz);
                 }
             }
             
@@ -342,7 +343,7 @@ void FlexTcpTask::processCommand_(std::string& command)
 
                         // Ensure that we connect to any reporting services as appropriate
                         uint64_t freqHz = atof(sliceFrequencies_[activeSlice_].c_str()) * 1000000;
-                        log_info("TBD - Report frequency change");
+                        log_info("TBD - Report frequency change to %" PRIu64 " Hz", freqHz);
                     }
                     
                     // Set the filter corresponding to the current mode.
