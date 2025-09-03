@@ -1576,6 +1576,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+             m_sliderMicSpkrLevel->Refresh();
              wxString fmt = wxString::Format(wxT("%0.1f%s"), (double)sliderVal, _("dB"));
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
