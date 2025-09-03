@@ -742,12 +742,12 @@ void MainFrame::loadConfiguration_()
 
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
-    snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
+    snprintf(fmt, 15, "%0.1f%s", (double)g_txLevel / 10.0, "dB");
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-    snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
+    snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, "dB");
     fmtString = fmt;
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
@@ -1576,7 +1576,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             wxString fmt = wxString::Format(wxT("%0.1f dB"), (double)sliderVal);
+             wxString fmt = wxString::Format(wxT("%0.1f%s"), (double)sliderVal, _("dB"));
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
