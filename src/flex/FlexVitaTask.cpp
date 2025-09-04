@@ -33,13 +33,10 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 using namespace std::placeholders;
 
 FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
-    : packetReadTimer_(VITA_IO_TIME_INTERVAL_US / US_TO_MS, std::bind(&FlexVitaTask::readPendingPackets_, this, _1), true)
-    , packetWriteTimer_(VITA_IO_TIME_INTERVAL_US / US_TO_MS, std::bind(&FlexVitaTask::sendAudioOut_, this, _1), true)
-    , socket_(-1)
+    : socket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
     , audioSeqNum_(0)
-    , currentTime_(0)
     , timeFracSeq_(0)
     , audioEnabled_(false)
     , isTransmitting_(false)
@@ -192,18 +189,28 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         packet->packet_type = VITA_PACKET_TYPE_IF_DATA_WITH_STREAM_ID;
         packet->stream_id = streamId;
         packet->class_id = AUDIO_CLASS_ID;
-        packet->timestamp_type = audioSeqNum_++;
+        packet->timestamp_type = ((audioSeqNum_++) & 0x0F) << 4;
 
         size_t packet_len = VITA_PACKET_HEADER_SIZE + VITA_SAMPLES_TO_SEND * 2 * sizeof(float);
 
-        //  XXX Lots of magic numbers here!
-        packet->timestamp_type = 0x50u | (packet->timestamp_type & 0x0Fu);
+        constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
+        constexpr uint8_t INTEGER_TIMESTAMP_UTC = 0x01;
+        packet->timestamp_type = (FRACTIONAL_TIMESTAMP_REAL_TIME << 2) | INTEGER_TIMESTAMP_UTC;
+
         assert((packet_len & 0x3) == 0); // equivalent to packet_len / 4
+        
         packet->length = htons(packet_len >> 2); // Length is in 32-bit words, note there are two channels
 
-        packet->timestamp_int = htonl(time(NULL));
-        packet->timestamp_frac = __builtin_bswap64(audioSeqNum_ - 1);
-        currentTime_ = packet->timestamp_int;
+        struct timespec currentTime = {0};
+        if (clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
+        {
+            log_warn("Could not get current time");
+            currentTime.tv_sec = 0;
+            currentTime.tv_nsec = 0;
+        }
+           
+        packet->timestamp_int = htonl(currentTime.tv_sec);
+        packet->timestamp_frac = __builtin_bswap64(currentTime.tv_nsec);
         
         int rv = sendto(socket_, (char*)packet, packet_len, 0, (struct sockaddr*)&radioAddress_, sizeof(radioAddress_));
         if (rv < 0)
@@ -263,9 +270,9 @@ void FlexVitaTask::openSocket_()
     auto currentTimeInMicroseconds =  std::chrono::duration_cast<std::chrono::microseconds>(curTime).count();
     lastVitaGenerationTime_ = currentTimeInMicroseconds;
 
-    packetReadTimer_.start();
-    packetWriteTimer_.start();
-
+    rxTxThreadRunning_ = true;
+    rxTxThread_ = std::thread(std::bind(&FlexVitaTask::rxTxThreadEntry_, this));
+    
     inputCtr_ = 0;
 }
 
@@ -273,80 +280,97 @@ void FlexVitaTask::disconnect_()
 {
     if (socket_ > 0)
     {
-        packetReadTimer_.stop();
-        packetWriteTimer_.stop();
+        rxTxThreadRunning_ = false;
+        rxTxThread_.join();
+        
         close(socket_);
         socket_ = -1;
         
         rxStreamId_ = 0;
         txStreamId_ = 0;
         audioSeqNum_ = 0;
-        currentTime_ = 0;
         timeFracSeq_ = 0;
         inputCtr_ = 0;
         packetIndex_ = 0;
     }
 }
 
-void FlexVitaTask::readPendingPackets_(ThreadedTimer&)
-{ 
-    // Process if there are pending datagrams in the buffer
-    enqueue_([this]() {
-        int ctr = MAX_VITA_PACKETS_TO_SEND;
-        while (ctr-- > 0)
-        {
-            vita_packet* packet = &packetArray_[packetIndex_++];
-            assert(packet != nullptr);
-
-            if (packetIndex_ == MAX_VITA_PACKETS)
-            {
-                packetIndex_ = 0;
-            }
+void FlexVitaTask::rxTxThreadEntry_()
+{
+    while (rxTxThreadRunning_)
+    {
+        fd_set fds;
+        struct timeval timeout;
         
-            auto rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
-            if (rv > 0)
-            {
-                // Queue up packet for future processing.
-                onReceiveVitaMessage_(packet, rv);
-            }
-            else
-            {
-                break;
-            }
+        timeout.tv_sec = 0;
+        timeout.tv_usec = VITA_IO_TIME_INTERVAL_US;
+        
+        FD_ZERO(&fds);
+        FD_SET(socket_, &fds);
+        
+        if (select(socket_ + 1, &fds, nullptr, nullptr, &timeout) > 0)
+        {
+            readPendingPackets_();
+            sendAudioOut_();
         }
-    });
+    }
 }
 
-void FlexVitaTask::sendAudioOut_(ThreadedTimer&)
-{
-    enqueue_([this]() {
-        // Generate packets for both RX and TX.
-        if (rxStreamId_ && !isTransmitting_)
+void FlexVitaTask::readPendingPackets_()
+{ 
+    // Process if there are pending datagrams in the buffer
+    int ctr = MAX_VITA_PACKETS_TO_SEND;
+    while (ctr-- > 0)
+    {
+        vita_packet* packet = &packetArray_[packetIndex_++];
+        assert(packet != nullptr);
+
+        if (packetIndex_ == MAX_VITA_PACKETS)
         {
-            generateVitaPackets_(false, rxStreamId_);
-        }
-        else if (rxStreamId_)
-        {
-            // Clear FIFO if we're not in the right state. This is so that we
-            // don't end up with audio packets going to the wrong place
-            // (i.e. UI beeps being transmitted along with the FreeDV signal).
-            auto fifo = getAudioOutput_(false);
-            fifo->reset();
+            packetIndex_ = 0;
         }
     
-        if (txStreamId_ && isTransmitting_)
+        auto rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
+        if (rv > 0)
         {
-            generateVitaPackets_(true, txStreamId_);
+            // Queue up packet for future processing.
+            onReceiveVitaMessage_(packet, rv);
         }
-        else if (txStreamId_)
+        else
         {
-            // Clear FIFO if we're not in the right state. This is so that we
-            // don't end up with audio packets going to the wrong place
-            // (i.e. UI beeps being transmitted along with the FreeDV signal).
-            auto fifo = getAudioOutput_(true);
-            fifo->reset();
+            break;
         }
-    });
+    }
+}
+
+void FlexVitaTask::sendAudioOut_()
+{
+    // Generate packets for both RX and TX.
+    if (rxStreamId_ && !isTransmitting_)
+    {
+        generateVitaPackets_(false, rxStreamId_);
+    }
+    else if (rxStreamId_)
+    {
+        // Clear FIFO if we're not in the right state. This is so that we
+        // don't end up with audio packets going to the wrong place
+        // (i.e. UI beeps being transmitted along with the FreeDV signal).
+        auto fifo = getAudioOutput_(false);
+        fifo->reset();
+    }
+
+    if (txStreamId_ && isTransmitting_)
+    {
+        generateVitaPackets_(true, txStreamId_);
+    }
+    else if (txStreamId_)
+    {
+        // Clear FIFO if we're not in the right state. This is so that we
+        // don't end up with audio packets going to the wrong place
+        // (i.e. UI beeps being transmitted along with the FreeDV signal).
+        auto fifo = getAudioOutput_(true);
+        fifo->reset();
+    }
 }
 
 void FlexVitaTask::radioConnected(const char* ip)
@@ -461,7 +485,5 @@ void FlexVitaTask::setTransmit(bool tx)
         minPacketsRequired_ = MIN_VITA_PACKETS_TO_SEND;
         timeBeyondExpectedUs_ = 0;
         lastVitaGenerationTime_ = currentTimeInMicroseconds;
-        packetWriteTimer_.stop();
-        packetWriteTimer_.start();
     });
 }

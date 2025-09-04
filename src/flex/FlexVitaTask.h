@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <functional>
+#include <thread>
 #include <string>
 #include <ctime>
 #include <sys/socket.h>
@@ -27,7 +28,6 @@
 #include <arpa/inet.h>
 
 #include "../util/ThreadedObject.h"
-#include "../util/ThreadedTimer.h"
 #include "../util/IRealtimeHelper.h"
 #include "vita.h"
 
@@ -67,14 +67,11 @@ public:
 private:    
     paCallBackData callbackData_;
     struct sockaddr_in radioAddress_;
-    ThreadedTimer packetReadTimer_;
-    ThreadedTimer packetWriteTimer_;
     int socket_;
     std::string ip_;
     uint32_t rxStreamId_;
     uint32_t txStreamId_;
     uint32_t audioSeqNum_;
-    time_t currentTime_;
     int timeFracSeq_;
     bool audioEnabled_;
     bool isTransmitting_;
@@ -82,6 +79,8 @@ private:
     int64_t lastVitaGenerationTime_;
     int minPacketsRequired_;
     int64_t timeBeyondExpectedUs_;
+    std::thread rxTxThread_;
+    bool rxTxThreadRunning_;
 
     // vita packet cache -- preallocate on startup
     // to reduce the amount of latency when sending packets 
@@ -99,8 +98,9 @@ private:
     void openSocket_();
     void disconnect_();
     
-    void readPendingPackets_(ThreadedTimer&);
-    void sendAudioOut_(ThreadedTimer&);
+    void rxTxThreadEntry_();
+    void readPendingPackets_();
+    void sendAudioOut_();
     
     void generateVitaPackets_(bool tx, uint32_t streamId);
     
