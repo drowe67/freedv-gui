@@ -79,6 +79,7 @@ private:
     int64_t lastVitaGenerationTime_;
     int minPacketsRequired_;
     int64_t timeBeyondExpectedUs_;
+    std::shared_ptr<IRealtimeHelper> helper_;
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
 
