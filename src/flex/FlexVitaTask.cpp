@@ -32,7 +32,7 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<FlexRealtimeHelper> helper)
     : socket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
@@ -462,6 +462,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 i++;
             }
             inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
+            helper_->signalRealtimeThreads();
             break;
         }
         default:
