@@ -196,14 +196,24 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
 
         size_t packet_len = VITA_PACKET_HEADER_SIZE + VITA_SAMPLES_TO_SEND * 2 * sizeof(float);
 
-        // XXX Lots of magic numbers here!
-        packet->timestamp_type = 0x50u | (packet->timestamp_type & 0x0Fu);
+        constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
+        constexpr uint8_t INTEGER_TIMESTAMP_UTC = 0x01;
+        packet->timestamp_type = (((FRACTIONAL_TIMESTAMP_REAL_TIME << 2) | INTEGER_TIMESTAMP_UTC) << 4) | (packet->timestamp_type & 0x0Fu);
+
         assert((packet_len & 0x3) == 0); // equivalent to packet_len / 4
         
         packet->length = htons(packet_len >> 2); // Length is in 32-bit words, note there are two channels
 
-        packet->timestamp_int = htonl(time(NULL));
-        packet->timestamp_frac = __builtin_bswap64(audioSeqNum_ - 1);
+        struct timespec currentTime = {0};
+        if (clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
+        {
+            log_warn("Could not get current time");
+            currentTime.tv_sec = 0;
+            currentTime.tv_nsec = 0;
+        }
+
+        packet->timestamp_int = htonl(currentTime.tv_sec);
+        packet->timestamp_frac = __builtin_bswap64(currentTime.tv_nsec);
         
         int rv = sendto(socket_, (char*)packet, packet_len, 0, (struct sockaddr*)&radioAddress_, sizeof(radioAddress_));
         if (rv < 0)
