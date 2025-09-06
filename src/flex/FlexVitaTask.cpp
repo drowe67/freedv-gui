@@ -155,11 +155,8 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
 
     //log_info("Packets to be sent this time: %d", minPacketsRequired_);
     int ctr = MAX_VITA_PACKETS_TO_SEND;
-    while(minPacketsRequired_ > 0 && ctr > 0)
+    while(minPacketsRequired_ > 0 && ctr > 0 && fifo->read(inputBuffer, MAX_VITA_SAMPLES) == 0)
     {
-        memset(inputBuffer, 0, sizeof(short) * MAX_VITA_SAMPLES);
-        fifo->read(inputBuffer, MAX_VITA_SAMPLES);
-
         minPacketsRequired_--;
         ctr--;
 
