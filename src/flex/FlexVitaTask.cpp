@@ -205,7 +205,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         packet->timestamp_int = htonl(time(NULL));
         packet->timestamp_frac = __builtin_bswap64(audioSeqNum_ - 1);
         
-        int rv = sendto(socket_, (char*)packet, packet_len, 0, (struct sockaddr*)&radioAddress_, sizeof(radioAddress_));
+        int rv = send(socket_, (char*)packet, packet_len, 0);
         if (rv < 0)
         {
             // TBD: close and reopen socket
@@ -379,8 +379,15 @@ void FlexVitaTask::radioConnected(const char* ip)
         radioAddress_.sin_addr.s_addr = inet_addr(ip_.c_str());
         radioAddress_.sin_family = AF_INET;
         radioAddress_.sin_port = htons(4993); // hardcoded as per Flex documentation
-    
-        log_info("Connected to radio successfully");
+   
+        if (connect(socket_, (struct sockaddr*)&radioAddress_, sizeof(radioAddress_)) < 0)
+        {
+            log_error("Could not connect socket to radio's IP (errno = %d)", errno);
+        }
+        else
+        {
+            log_info("Connected to radio successfully");
+        }
     });
 }
 
