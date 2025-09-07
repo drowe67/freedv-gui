@@ -857,6 +857,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
     * Various GUI and FreeDV Reporter performance improvements. (PR #1002)
+    * Use rigerror2() for friendlier Hamlib errors. (PR #1020)
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)
     * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
