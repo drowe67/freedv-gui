@@ -28,7 +28,7 @@
 #include <arpa/inet.h>
 
 #include "../util/ThreadedObject.h"
-#include "FlexRealtimeHelper.h"
+#include "../util/IRealtimeHelper.h"
 #include "vita.h"
 
 #include "../pipeline/paCallbackData.h"
@@ -41,7 +41,7 @@ public:
     
     enum { VITA_PORT = 4992 }; // Hardcoding VITA port because we can only handle one slice at a time.
     
-    FlexVitaTask(std::shared_ptr<FlexRealtimeHelper> helper);
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.
@@ -79,7 +79,7 @@ private:
     int64_t lastVitaGenerationTime_;
     int minPacketsRequired_;
     int64_t timeBeyondExpectedUs_;
-    std::shared_ptr<FlexRealtimeHelper> helper_;
+    std::shared_ptr<IRealtimeHelper> helper_;
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
 
