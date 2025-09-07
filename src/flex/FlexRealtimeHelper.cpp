@@ -59,4 +59,19 @@ void FlexRealtimeHelper::setHelperRealTime()
         dbus_connection_unref(bus);
     }
 #endif // defined(USE_RTKIT)
+    numRealtimeThreads_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void FlexRealtimeHelper::clearHelperRealTime()
+{
+    numRealtimeThreads_.fetch_sub(1, std::memory_order_relaxed);
+}
+
+void FlexRealtimeHelper::signalRealtimeThreads()
+{
+    int numThreads = numRealtimeThreads_.load(std::memory_order_relaxed);
+    for (; numThreads > 0; numThreads--)
+    {
+        sem_.signal();
+    }
 }

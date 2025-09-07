@@ -25,7 +25,9 @@
 
 #include <thread>
 #include <chrono>
+#include <atomic>
 #include "../util/IRealtimeHelper.h"
+#include "../util/Semaphore.h"
 
 using namespace std::chrono_literals;
 
@@ -45,14 +47,20 @@ public:
     
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork(bool fastMode = false) override { std::this_thread::sleep_for(10ms); }
+    virtual void stopRealTimeWork(bool fastMode = false) override { sem_.wait(); }
     
     // Reverts real-time priority for current thread.
-    virtual void clearHelperRealTime() override { /* empty */ }
+    virtual void clearHelperRealTime() override;
 
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
     virtual bool mustStopWork() override { return false; }
+
+    void signalRealtimeThreads();
+
+private:
+    std::atomic<int> numRealtimeThreads_;
+    Semaphore sem_;
 };
 
 #endif // FLEX_REALTIME_HELPER_H

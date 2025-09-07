@@ -32,7 +32,7 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<FlexRealtimeHelper> helper)
     : socket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
@@ -154,13 +154,10 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
 #endif
 
     //log_info("Packets to be sent this time: %d", minPacketsRequired_);
-    int ctr = MAX_VITA_PACKETS_TO_SEND;
-    while(minPacketsRequired_ > 0 && ctr > 0)
+    int ctr = 1; //MAX_VITA_PACKETS_TO_SEND;
+    while(/*minPacketsRequired_ > 0 && */ctr > 0 && fifo->read(inputBuffer, minPacketsRequired_) == 0)
     {
-        memset(inputBuffer, 0, sizeof(short) * MAX_VITA_SAMPLES);
-        fifo->read(inputBuffer, MAX_VITA_SAMPLES);
-
-        minPacketsRequired_--;
+        //minPacketsRequired_--;
         ctr--;
 
         if (!audioEnabled_)
@@ -179,7 +176,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
         // Convert short to float samples and save to packet
-        for (int index = 0; index < MAX_VITA_SAMPLES; index++)
+        for (int index = 0; index < minPacketsRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
@@ -194,16 +191,26 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         packet->class_id = AUDIO_CLASS_ID;
         packet->timestamp_type = audioSeqNum_++;
 
-        size_t packet_len = VITA_PACKET_HEADER_SIZE + VITA_SAMPLES_TO_SEND * 2 * sizeof(float);
+        size_t packet_len = VITA_PACKET_HEADER_SIZE + minPacketsRequired_ * 2 * sizeof(float);
 
-        // XXX Lots of magic numbers here!
-        packet->timestamp_type = 0x50u | (packet->timestamp_type & 0x0Fu);
+        constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
+        constexpr uint8_t INTEGER_TIMESTAMP_UTC = 0x01;
+        packet->timestamp_type = (((FRACTIONAL_TIMESTAMP_REAL_TIME << 2) | INTEGER_TIMESTAMP_UTC) << 4) | (packet->timestamp_type & 0x0Fu);
+
         assert((packet_len & 0x3) == 0); // equivalent to packet_len / 4
         
         packet->length = htons(packet_len >> 2); // Length is in 32-bit words, note there are two channels
 
-        packet->timestamp_int = htonl(time(NULL));
-        packet->timestamp_frac = __builtin_bswap64(audioSeqNum_ - 1);
+        struct timespec currentTime = {0};
+        if (clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
+        {
+            log_warn("Could not get current time");
+            currentTime.tv_sec = 0;
+            currentTime.tv_nsec = 0;
+        }
+
+        packet->timestamp_int = htonl(currentTime.tv_sec);
+        packet->timestamp_frac = __builtin_bswap64(currentTime.tv_nsec * 1000);
         
         int rv = send(socket_, (char*)packet, packet_len, 0);
         if (rv < 0)
@@ -306,7 +313,6 @@ void FlexVitaTask::rxTxThreadEntry_()
         if (select(socket_ + 1, &fds, nullptr, nullptr, &timeout) > 0)
         {
             readPendingPackets_();
-            sendAudioOut_();
         }
     }
 
@@ -331,7 +337,6 @@ void FlexVitaTask::readPendingPackets_()
         if (rv > 0)
         {
             // Queue up packet for future processing.
-            minPacketsRequired_++;
             onReceiveVitaMessage_(packet, rv);
         }
         else
@@ -462,6 +467,9 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 i++;
             }
             inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
+            helper_->signalRealtimeThreads();
+	    minPacketsRequired_ = half_num_samples;
+            sendAudioOut_();
             break;
         }
         default:
