@@ -1001,7 +1001,7 @@ void MainFrame::togglePTT(void) {
 
         char fmt[15];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-        m_sliderMicSpkrLevel->Refresh();
+        CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
         snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, "dB");
         wxString fmtString(fmt);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
