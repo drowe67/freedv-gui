@@ -335,6 +335,7 @@ void MainApp::UnitTest_()
         std::this_thread::sleep_for(20ms);
     }
     
+    constexpr int MAX_TIME_AS_COUNTER = 300 / 10; // 5 minutes
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
@@ -363,7 +364,8 @@ void MainApp::UnitTest_()
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn = true;
 
-                while (g_playFileToMicIn)
+                int counter = 0;
+                while (g_playFileToMicIn && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(100ms);
                 } 
@@ -406,7 +408,8 @@ void MainApp::UnitTest_()
             g_playFileFromRadio = true;
 
             auto sync = 0;
-            while (g_playFileFromRadio)
+            int counter = 0;
+            while (g_playFileFromRadio && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
