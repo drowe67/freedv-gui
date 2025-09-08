@@ -473,7 +473,10 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             {
                 audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
             }
-            inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
+            if (!pendingEndTx_)
+            {
+                inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
+            }
 	    minPacketsRequired_ = half_num_samples;
             sendAudioOut_();
             break;

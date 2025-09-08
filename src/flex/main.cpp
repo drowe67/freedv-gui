@@ -133,13 +133,34 @@ int main(int argc, char** argv)
     
     log_info("Connecting to radio at IP %s", radioIp.c_str());
     FlexTcpTask tcpTask;
+    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
+        // TBD - start FreeDV Reporter connection
+        // For now, add callsign to EOO so others can report us
+        log_info("Setting EOO bits");
+        int nsyms = rade_n_eoo_bits(radeObj);
+        float* eooSyms = new float[nsyms];
+        assert(eooSyms);
+                
+        rade_text_generate_tx_string(radeTextPtr, callsign.c_str(), callsign.size(), eooSyms, nsyms);
+        rade_tx_set_eoo_bits(radeObj, eooSyms);
+    }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
-    tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, bool tx, void*) {
-        vitaTask.setTransmit(tx);
-        g_tx.store(tx, std::memory_order_release);
+    tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState tx, void*) {
+        if (tx == FlexTcpTask::ENDING_TX)
+        {
+            endingTx = true; // EOO should then queue out
+            vitaTask.setEndingTx(true);
+        }
+        else
+        {
+            bool txFlag = tx == FlexTcpTask::TRANSMITTING;
+            vitaTask.setEndingTx(false);
+            vitaTask.setTransmit(txFlag);
+            g_tx.store(txFlag, std::memory_order_release);
+        }
     }, nullptr);
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         

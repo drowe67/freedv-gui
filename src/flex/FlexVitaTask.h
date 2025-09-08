@@ -63,6 +63,11 @@ public:
     
     void enableAudio(bool enabled);
     void setTransmit(bool tx);
+
+    void setEndingTx(bool endingTx)
+    {
+        pendingEndTx_ = endingTx;
+    }
     
 private:    
     paCallBackData callbackData_;
@@ -82,6 +87,7 @@ private:
     std::shared_ptr<IRealtimeHelper> helper_;
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
+    bool pendingEndTx_;
 
     // vita packet cache -- preallocate on startup
     // to reduce the amount of latency when sending packets 

@@ -29,9 +29,11 @@
 class FlexTcpTask : public TcpConnectionHandler
 {
 public:
+    enum TxState { RECEIVING, TRANSMITTING, ENDING_TX };
     using WaveformConnectedFn = std::function<void(FlexTcpTask&, void*)>;
-    using WaveformTransmitFn = std::function<void(FlexTcpTask&, bool, void*)>;
-    
+    using WaveformTransmitFn = std::function<void(FlexTcpTask&, TxState, void*)>;
+    using WaveformCallsignRxFn = std::function<void(FlexTcpTask&, std::string, void*)>;
+
     FlexTcpTask();
     virtual ~FlexTcpTask();
     
@@ -46,6 +48,12 @@ public:
         waveformTransmitFn_ = fn;
         waveformTransmitState_ = state;
     }
+
+    void setWaveformCallsignRxFn(WaveformCallsignRxFn fn, void* state)
+    {
+        waveformCallsignRxFn_ = fn;
+        waveformCallsignRxState_ = state;
+    }
     
 protected:
     virtual void onConnect_() override;
@@ -58,7 +66,10 @@ private:
     
     WaveformTransmitFn waveformTransmitFn_;
     void* waveformTransmitState_;
-    
+
+    WaveformCallsignRxFn waveformCallsignRxFn_;
+    void* waveformCallsignRxState_;
+
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;
     ThreadedTimer pingTimer_;

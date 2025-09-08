@@ -376,7 +376,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                 
                 if (waveformTransmitFn_)
                 {
-                    waveformTransmitFn_(*this, isTransmitting_, waveformTransmitState_);
+                    waveformTransmitFn_(*this, TRANSMITTING, waveformTransmitState_);
                 }
                 //sendRadioCommand_("xmit 1");
                 
@@ -384,17 +384,40 @@ void FlexTcpTask::processCommand_(std::string& command)
             }
             else if (state != parameters.end() && state->second == "UNKEY_REQUESTED")
             {
-                // Going back into receive
+                // Going back into receive, but not there yet. TX FIFO needs to be empty for 10ms
+                // for radio to switch back to READY.
                 log_info("Radio went out of transmit");
-                isTransmitting_ = false;
                 if (waveformTransmitFn_)
                 {
-                    waveformTransmitFn_(*this, isTransmitting_, waveformTransmitState_);
+                    waveformTransmitFn_(*this, ENDING_TX, waveformTransmitState_);
                 }
                 
                 //sendRadioCommand_("xmit 0");
                 
                 log_info("TBD - report RX request");
+            }
+            else if (state != parameters.end() && state->second == "READY")
+            {
+                isTransmitting_ = false;
+                if (waveformTransmitFn_)
+                {
+                    waveformTransmitFn_(*this, RECEIVING, waveformTransmitState_);
+                }
+            }
+        }
+        else if (statusName == "radio")
+        {
+            log_info("Detected radio update");
+            auto parameters = FlexKeyValueParser::GetCommandParameters(ss);
+            auto callsign = parameters.find("callsign");
+            if (callsign != parameters.end())
+            {
+                std::string callsignStr = callsign->second;
+                log_info("Got callsign %s", callsignStr.c_str());
+                if (waveformCallsignRxFn_)
+                {
+                    waveformCallsignRxFn_(*this, callsignStr, waveformCallsignRxState_);
+                }
             }
         }
         else
