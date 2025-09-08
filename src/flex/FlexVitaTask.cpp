@@ -450,12 +450,14 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 inFifo = getAudioInput_(true);
             }
             
-            // Convert to int16 samples
+            // Convert to int16 samples, normalizing to +/- 1.0 beforehand.
             unsigned int num_samples = payload_length >> 2; // / sizeof(uint32_t);
             unsigned int half_num_samples = num_samples >> 1;
 
             unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
+            float audioInputFloat[MAX_VITA_SAMPLES];
+            float maxSampleValue = 1.0;
             while (inFifo != nullptr && i < half_num_samples)
             {
                 union {
@@ -463,8 +465,13 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                     float floatVal;
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
-                audioInput[i] = temp.floatVal * FLOAT_TO_SHORT_MULTIPLIER;
-                i++;
+                audioInputFloat[i++] = temp.floatVal;
+                maxSampleValue = std::max((float)fabs(temp.floatVal), maxSampleValue);
+            }
+            float multiplier = (1.0 / maxSampleValue);
+            for (i = 0; i < half_num_samples; i++)
+            {
+                audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
             }
             inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
 	    minPacketsRequired_ = half_num_samples;
