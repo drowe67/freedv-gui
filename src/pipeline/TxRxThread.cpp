@@ -23,6 +23,10 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
+// WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
+// first.
+#include "AgcStep.h"
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -101,6 +105,7 @@ extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern bool g_eoo_enqueued;
+extern std::atomic<bool> g_agcEnabled;
 
 #include <speex/speex_preprocess.h>
 
@@ -196,7 +201,20 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessSpeex,
             eitherOrBypassSpeex);
         pipeline_->appendPipelineStep(eitherOrSpeexStep);
-       
+
+        // AGC step (optional)
+        auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+
+        auto agcStep = new AgcStep(inputSampleRate_);
+        eitherOrProcessAgc->appendPipelineStep(agcStep);
+  
+        auto eitherOrAgcStep = new EitherOrStep(
+            []() { return g_agcEnabled.load(std::memory_order_acquire); },
+            eitherOrProcessAgc,
+            eitherOrBypassAgc);
+        pipeline_->appendPipelineStep(eitherOrAgcStep); 
+
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             inputSampleRate_, 

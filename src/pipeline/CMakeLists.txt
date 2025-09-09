@@ -1,4 +1,5 @@
 add_library(fdv_audio_pipeline STATIC
+    AgcStep.cpp
     AudioPipeline.cpp
     ComputeRfSpectrumStep.cpp
     EitherOrStep.cpp
@@ -23,6 +24,7 @@ add_library(fdv_audio_pipeline STATIC
     rade_text.c
 )
 
+target_link_libraries(fdv_audio_pipeline PRIVATE agc)
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 
 add_dependencies(fdv_audio_pipeline rade opus codec2)
