@@ -112,7 +112,7 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
         inputSampleFifo_.write(inputSamples, numInputSamples);
         while (inputSampleFifo_.numUsed() >= numSamplesPerRun_)
         {
-            int inMicLevel = -1;
+            int inMicLevel = 0;
             int outMicLevel = -1;
             short echo = 0;
             unsigned char saturationWarning = 1;
