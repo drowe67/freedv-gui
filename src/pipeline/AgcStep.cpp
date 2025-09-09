@@ -35,10 +35,10 @@ constexpr int MAX_AGC_LEVEL = 255;
 constexpr int NUM_AGC_BANDS = 1; // number of audio channels?
 
 AgcStep::AgcStep(int sampleRate)
-    : sampleRate_(sampleRate)
-    , numSamplesPerRun_(std::min(MAX_AGC_SAMPLES, sampleRate / 100)) // 10ms blocks, 160 max samples
+    : sampleRate_(sampleRate == 8000 || sampleRate == 16000 || sampleRate == 32000 || sampleRate == 48000 ? sampleRate : 48000)
     , inputSampleFifo_(sampleRate / 2)
 {
+    numSamplesPerRun_ = std::min(MAX_AGC_SAMPLES, sampleRate_ / 100); // 10ms blocks, 160 max samples
     assert(numSamplesPerRun_ > 0);
    
     agcState_ = WebRtcAgc_Create();
