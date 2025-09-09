@@ -306,6 +306,11 @@ void FlexTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
                 }
                 else
                 {
+                    if (!g_eoo_enqueued)
+                    {
+                        // Add 40ms of additional silence as Flex will otherwise cut off EOO.
+                        cbData_->outfifo1->write(inputSamplesZeros_.get(), 40 * outputSampleRate_ / 1000);
+                    }
                     g_eoo_enqueued = true;
                 }
                 break;
