@@ -707,7 +707,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    snprintf(fmt, 15, "%0.1f dB", (double)(g_txLevel)/10.0);
+    snprintf(fmt, 15, "%0.1f%s", (double)(g_txLevel)/10.0, "dB");
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
@@ -734,7 +734,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
         m_newSpkOutFilter = true;
     }
     
-    snprintf(fmt, 15, "%0.1f dB", (double)(sliderLevel));
+    snprintf(fmt, 15, "%0.1f%s", (double)(sliderLevel), "dB");
     wxString fmtString(fmt);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
@@ -999,9 +999,10 @@ void MainFrame::togglePTT(void) {
         g_tx.store(false, std::memory_order_release);
         endingTx = false;
 
-        char fmt[16];
+        char fmt[15];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-        snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
+        CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
+        snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, "dB");
         wxString fmtString(fmt);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
         
@@ -1115,7 +1116,7 @@ void MainFrame::togglePTT(void) {
         
         char fmt[16];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
-        snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB);
+        snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, "dB");
         wxString fmtString(fmt);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
