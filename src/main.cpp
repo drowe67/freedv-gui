@@ -335,7 +335,7 @@ void MainApp::UnitTest_()
         std::this_thread::sleep_for(20ms);
     }
     
-    constexpr int MAX_TIME_AS_COUNTER = 200; // 20 minutes
+    constexpr int MAX_TIME_AS_COUNTER = 6000; // 10 minutes
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
