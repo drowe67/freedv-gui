@@ -84,7 +84,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     radeOutShort_ = new short[numOutputSamples];
     assert(radeOutShort_ != nullptr);
 
-    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    const int NUM_SAMPLES_SILENCE = 100 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
     eooOut_ = new RADE_COMP[numEOOSamples];
@@ -213,7 +213,7 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
 void RADETransmitStep::restartVocoder()
 {
     // Queues up EOO for return on the next call to this pipeline step.
-    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    const int NUM_SAMPLES_SILENCE = 100 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
 #if defined(__clang__)
