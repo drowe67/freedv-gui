@@ -56,7 +56,7 @@ AgcStep::AgcStep(int sampleRate)
     // Set AGC configuration
     agcConfig_.compressionGaindB = 21; // default 9 dB
     agcConfig_.limiterEnable = 1; // default kAgcTrue (on)
-    agcConfig_.targetLevelDbfs = 3; // default 3 (-3 dBOv)
+    agcConfig_.targetLevelDbfs = 7; // default 3 (-3 dBOv)
     status = WebRtcAgc_set_config(agcState_, agcConfig_);
     if (status != 0)
     {
@@ -118,14 +118,7 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             unsigned char saturationWarning = 1;
 
             inputSampleFifo_.read(tmpInput, numSamplesPerRun_);
-            auto /*status = WebRtcAgc_VirtualMic(
-                agcState_, const_cast<int16_t *const *>(&tmpInput), NUM_AGC_BANDS, numSamplesPerRun_, micLevel_, &micLevel_);
-            if (status != 0)
-            {
-                // XXX - not RT-safe
-                log_error("Failed processing AGC AddMic (err = %d)", status);
-            }*/
-            status = WebRtcAgc_Process(
+            auto status = WebRtcAgc_Process(
                 agcState_, const_cast<const int16_t *const *>(&tmpInput), NUM_AGC_BANDS, numSamplesPerRun_, 
                 const_cast<int16_t *const *>(&tmpOutput), micLevel_, &outMicLevel, echo, &saturationWarning);
             if (status != 0)
