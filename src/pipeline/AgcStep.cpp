@@ -56,7 +56,7 @@ AgcStep::AgcStep(int sampleRate)
     // Set AGC configuration
     agcConfig_.compressionGaindB = 21; // default 9 dB
     agcConfig_.limiterEnable = 1; // default kAgcTrue (on)
-    agcConfig_.targetLevelDbfs = 7; // default 3 (-3 dBOv)
+    agcConfig_.targetLevelDbfs = 9; // default 3 (-3 dBOv)
     status = WebRtcAgc_set_config(agcState_, agcConfig_);
     if (status != 0)
     {
