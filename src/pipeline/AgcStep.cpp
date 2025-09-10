@@ -31,7 +31,7 @@
 // Constants from example WebRTC AGC program
 constexpr int MAX_AGC_SAMPLES = 160;
 constexpr int MIN_AGC_LEVEL = 0;
-constexpr int MAX_AGC_LEVEL = 255;
+constexpr int MAX_AGC_LEVEL = 1024;
 constexpr int NUM_AGC_BANDS = 1; // number of audio channels?
 
 AgcStep::AgcStep(int sampleRate)
@@ -45,7 +45,7 @@ AgcStep::AgcStep(int sampleRate)
     agcState_ = WebRtcAgc_Create();
     assert(agcState_ != nullptr);
 
-    auto status = WebRtcAgc_Init(agcState_, MIN_AGC_LEVEL, MAX_AGC_LEVEL, kAgcModeAdaptiveDigital, sampleRate_);
+    auto status = WebRtcAgc_Init(agcState_, MIN_AGC_LEVEL, MAX_AGC_LEVEL, kAgcModeAdaptiveAnalog, sampleRate_);
     if (status != 0)
     {
         log_error("Could not initialize WebRTC AGC (err = %d)", status);
@@ -54,7 +54,7 @@ AgcStep::AgcStep(int sampleRate)
     }
 
     // Set AGC configuration
-    agcConfig_.compressionGaindB = 9; // default 9 dB
+    agcConfig_.compressionGaindB = 21; // default 9 dB
     agcConfig_.limiterEnable = 1; // default kAgcTrue (on)
     agcConfig_.targetLevelDbfs = 3; // default 3 (-3 dBOv)
     status = WebRtcAgc_set_config(agcState_, agcConfig_);
@@ -118,13 +118,13 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             unsigned char saturationWarning = 1;
 
             inputSampleFifo_.read(tmpInput, numSamplesPerRun_);
-            auto status = WebRtcAgc_VirtualMic(
+            auto /*status = WebRtcAgc_VirtualMic(
                 agcState_, const_cast<int16_t *const *>(&tmpInput), NUM_AGC_BANDS, numSamplesPerRun_, micLevel_, &micLevel_);
             if (status != 0)
             {
                 // XXX - not RT-safe
                 log_error("Failed processing AGC AddMic (err = %d)", status);
-            }
+            }*/
             status = WebRtcAgc_Process(
                 agcState_, const_cast<const int16_t *const *>(&tmpInput), NUM_AGC_BANDS, numSamplesPerRun_, 
                 const_cast<int16_t *const *>(&tmpOutput), micLevel_, &outMicLevel, echo, &saturationWarning);
