@@ -44,6 +44,7 @@ private:
     int sampleRate_;
     WebRtcAgcConfig agcConfig_;
     void* agcState_;
+    int micLevel_;
 
     int numSamplesPerRun_;
     GenericFIFO<short> inputSampleFifo_;
