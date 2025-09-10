@@ -34,6 +34,7 @@
 #include "FlexRealtimeHelper.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
+#include "../reporting/FreeDVReporter.h"
 
 #include "rade_api.h"
 
@@ -49,8 +50,16 @@ using namespace std::chrono_literals;
 std::atomic<int> g_tx;
 bool endingTx;
 
+// FreeDV Reporter constants
+#define SOFTWARE_NAME "freedv-flex 1.0-devel"
+#define SOFTWARE_GRID_SQUARE "AA00"
+#define MODE_STRING "RADEV1"
+
 int main(int argc, char** argv)
 {
+    FreeDVReporter* reporterConnection = nullptr;
+    std::string radioCallsign;
+
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -133,6 +142,7 @@ int main(int argc, char** argv)
     
     log_info("Connecting to radio at IP %s", radioIp.c_str());
     FlexTcpTask tcpTask;
+
     tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
         // TBD - start FreeDV Reporter connection
         // For now, add callsign to EOO so others can report us
@@ -143,10 +153,39 @@ int main(int argc, char** argv)
                 
         rade_text_generate_tx_string(radeTextPtr, callsign.c_str(), callsign.size(), eooSyms, nsyms);
         rade_tx_set_eoo_bits(radeObj, eooSyms);
+
+        radioCallsign = callsign;
+        if (reporterConnection != nullptr)
+        {
+            delete reporterConnection;
+            reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false);
+            reporterConnection->connect();
+        }
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
+    }, nullptr);
+    tcpTask.setWaveformUserConnectedFn([&](FlexTcpTask&, void*) {
+        if (reporterConnection != nullptr)
+        {
+            delete reporterConnection;
+        }
+        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false);
+        reporterConnection->connect();
+    }, nullptr);
+    tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
+        if (reporterConnection != nullptr)
+        {
+            delete reporterConnection;
+            reporterConnection = nullptr;
+        }
+    }, nullptr);
+    tcpTask.setWaveformFreqChangeFn([&](FlexTcpTask&, uint64_t freq, void*) {
+        if (reporterConnection != nullptr)
+        {
+            reporterConnection->freqChange(freq);
+        }
     }, nullptr);
     tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState tx, void*) {
         if (tx == FlexTcpTask::ENDING_TX)
@@ -160,6 +199,10 @@ int main(int argc, char** argv)
             vitaTask.setEndingTx(false);
             vitaTask.setTransmit(txFlag);
             g_tx.store(txFlag, std::memory_order_release);
+            if (reporterConnection != nullptr)
+            {
+                reporterConnection->transmit(MODE_STRING, txFlag);
+            }
         }
     }, nullptr);
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);

@@ -130,6 +130,9 @@ void FlexTcpTask::initializeWaveform_()
     
     // subscribe to slice updates, needed to detect when we enter FDVU/FDVL mode
     sendRadioCommand_("sub slice all");
+
+    // subscribe to GPS updates, needed for FreeDV Reporter
+    sendRadioCommand_("sub gps all");
 }
 
 void FlexTcpTask::cleanupWaveform_()
@@ -303,7 +306,10 @@ void FlexTcpTask::processCommand_(std::string& command)
                     // Frequency reported by Flex is in MHz but reporters expect
                     // it in Hz.
                     uint64_t freqHz = atof(rfFrequency->second.c_str()) * 1000000;
-                    log_info("TBD - report frequency change to %" PRIu64 " Hz", freqHz);
+                    if (waveformFreqChangeFn_)
+                    {
+                        waveformFreqChangeFn_(*this, freqHz, waveformFreqChangeState_);
+                    }
                 }
             }
             
@@ -313,7 +319,10 @@ void FlexTcpTask::processCommand_(std::string& command)
                 activeSlices_[sliceId] = isActive->second == "1" ? true : false;
                 if (sliceId == activeSlice_ && !activeSlices_[sliceId])
                 {
-                    log_info("TBD - disable FreeDV Reporter");
+                    if (waveformUserDisconnectedFn_)
+                    {
+                        waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
+                    }
                     activeSlice_ = -1;
                 }
             }
@@ -329,9 +338,10 @@ void FlexTcpTask::processCommand_(std::string& command)
                         
                         if (activeSlice_ == -1)
                         {
-                            // Don't enable reporting if we've already done so.
-                            log_info("TBD - Enabling FreeDV reporting for slice %d", sliceId);
-                            
+                            if (waveformUserConnectedFn_)
+                            {
+                                waveformUserConnectedFn_(*this, waveformUserConnectedState_);
+                            }
                         }
                         else 
                         {
@@ -343,7 +353,10 @@ void FlexTcpTask::processCommand_(std::string& command)
 
                         // Ensure that we connect to any reporting services as appropriate
                         uint64_t freqHz = atof(sliceFrequencies_[activeSlice_].c_str()) * 1000000;
-                        log_info("TBD - Report frequency change to %" PRIu64 " Hz", freqHz);
+                        if (waveformFreqChangeFn_)
+                        {
+                            waveformFreqChangeFn_(*this, freqHz, waveformFreqChangeState_);
+                        }
                     }
                     
                     // Set the filter corresponding to the current mode.
@@ -353,7 +366,10 @@ void FlexTcpTask::processCommand_(std::string& command)
                 else if (sliceId == activeSlice_)
                 {
                     // Ensure that we disconnect from any reporting services as appropriate
-                    log_info("TBD - disable FreeDV Reporter");
+                    if (waveformUserDisconnectedFn_)
+                    {
+                        waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
+                    }
 
                     activeSlice_ = -1;
                 }
@@ -378,9 +394,6 @@ void FlexTcpTask::processCommand_(std::string& command)
                 {
                     waveformTransmitFn_(*this, TRANSMITTING, waveformTransmitState_);
                 }
-                //sendRadioCommand_("xmit 1");
-                
-                log_info("TBD - report TX request");
             }
             else if (state != parameters.end() && state->second == "UNKEY_REQUESTED")
             {
@@ -391,10 +404,6 @@ void FlexTcpTask::processCommand_(std::string& command)
                 {
                     waveformTransmitFn_(*this, ENDING_TX, waveformTransmitState_);
                 }
-                
-                //sendRadioCommand_("xmit 0");
-                
-                log_info("TBD - report RX request");
             }
             else if (state != parameters.end() && state->second == "READY")
             {

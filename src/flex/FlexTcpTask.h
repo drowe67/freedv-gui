@@ -33,6 +33,9 @@ public:
     using WaveformConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformTransmitFn = std::function<void(FlexTcpTask&, TxState, void*)>;
     using WaveformCallsignRxFn = std::function<void(FlexTcpTask&, std::string, void*)>;
+    using WaveformFreqChangeFn = std::function<void(FlexTcpTask&, uint64_t, void*)>;
+    using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
+    using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
 
     FlexTcpTask();
     virtual ~FlexTcpTask();
@@ -55,6 +58,24 @@ public:
         waveformCallsignRxState_ = state;
     }
     
+    void setWaveformFreqChangeFn(WaveformFreqChangeFn fn, void* state)
+    {
+        waveformFreqChangeFn_ = fn;
+        waveformFreqChangeState_ = state;
+    }
+    
+    void setWaveformUserConnectedFn(WaveformUserConnectedFn fn, void* state)
+    {
+        waveformUserConnectedFn_ = fn;
+        waveformUserConnectedState_ = state;
+    }
+    
+    void setWaveformUserDisconnectedFn(WaveformUserDisconnectedFn fn, void* state)
+    {
+        waveformUserDisconnectedFn_ = fn;
+        waveformUserDisconnectedState_ = state;
+    }
+    
 protected:
     virtual void onConnect_() override;
     virtual void onDisconnect_() override;
@@ -69,6 +90,15 @@ private:
 
     WaveformCallsignRxFn waveformCallsignRxFn_;
     void* waveformCallsignRxState_;
+
+    WaveformUserConnectedFn waveformUserConnectedFn_;
+    void* waveformUserConnectedState_;
+
+    WaveformUserDisconnectedFn waveformUserDisconnectedFn_;
+    void* waveformUserDisconnectedState_;
+
+    WaveformFreqChangeFn waveformFreqChangeFn_;
+    void* waveformFreqChangeState_;
 
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;
