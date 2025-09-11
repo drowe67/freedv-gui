@@ -109,6 +109,8 @@ public:
     int getTxNNomModemSamples() const;
     int getRxNumSpeechSamples() const;
 
+    signed char getSnr() { return snr_; }
+
 private:
     struct rade* rade_;
     LPCNetEncState* encState_;
@@ -127,6 +129,7 @@ private:
     rade_text_t radeText_;
     std::thread thread_;
     RADETransmitStep* txStep_;
+    signed char snr_;
 
     Semaphore readySem_;
     Semaphore startSem_;

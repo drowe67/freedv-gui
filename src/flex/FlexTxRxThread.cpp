@@ -78,7 +78,7 @@ void FlexTxRxThread::initializePipeline_()
     }
     else
     {
-        auto radeRxStep = new RADEReceiveStep(rade_, farganState_, radeText_, [](RADEReceiveStep*) { });
+        auto radeRxStep = new RADEReceiveStep(rade_, farganState_, radeText_, [this](RADEReceiveStep* step) { snr_ = step->getSnr(); });
         pipeline_->appendPipelineStep(radeRxStep);
         
         // Clear anything in the FIFO before resuming decode.

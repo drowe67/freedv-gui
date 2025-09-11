@@ -30,7 +30,7 @@
 
 using namespace std::chrono_literals;
 
-FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
+FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly)
     : isConnecting_(false)
     , hostname_(hostname)
     , callsign_(callsign)
@@ -40,6 +40,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , tx_(false)
     , rxOnly_(rxOnly)
     , hidden_(false)
+    , writeOnly_(writeOnly)
 {
     if (hostname_ == "")
     {
@@ -248,7 +249,7 @@ void FreeDVReporter::connect_()
     else
     {
         authData = {
-            {"role", "report"},
+            {"role", writeOnly_ ? "report_wo" : "report"},
             {"callsign", callsign_},
             {"grid_square", gridSquare_},
             {"version", software_},

@@ -75,7 +75,9 @@ public:
         waveformUserDisconnectedFn_ = fn;
         waveformUserDisconnectedState_ = state;
     }
-    
+
+    void addSpot(std::string callsign);
+
 protected:
     virtual void onConnect_() override;
     virtual void onDisconnect_() override;

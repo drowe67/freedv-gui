@@ -440,17 +440,17 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-/*
-TBD - add spotting
-void FlexTcpTask::onFreeDVReceivedCallsignMessage_(DVTask* origin, audio::FreeDVReceivedCallsignMessage* message)
+void FlexTcpTask::addSpot(std::string callsign)
 {
-    if (activeSlice_ >= 0 && strlen(message->callsign) > 0)
-    {
-        std::stringstream ss;
-        ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << message->callsign << " mode=FREEDV timestamp=" << time(NULL); //lifetime_seconds=300";
-        sendRadioCommand_(ss.str());
-    }
-}*/
+    enqueue_([=, this]() {
+        if (activeSlice_ >= 0)
+        {
+            std::stringstream ss;
+            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV timestamp=" << time(NULL); //lifetime_seconds=300";
+            sendRadioCommand_(ss.str());
+        }
+    });
+}
 
 void FlexTcpTask::setFilter_(int low, int high)
 {

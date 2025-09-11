@@ -55,6 +55,27 @@ bool endingTx;
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
+struct CallsignReporting
+{
+    FreeDVReporter** reporter;
+    FlexTcpTask* tcpTask;
+    FlexTxRxThread* rxThread;
+};
+uint64_t currentFreq;
+
+void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
+{
+    CallsignReporting* reportObj = (CallsignReporting*)state;
+    std::string callsign(txt_ptr, length);
+
+    if (*reportObj->reporter != nullptr)
+    {
+        (*reportObj->reporter)->addReceiveRecord(callsign, MODE_STRING, currentFreq, reportObj->rxThread->getSnr());
+    }
+
+    reportObj->tcpTask->addSpot(callsign);
+}
+
 int main(int argc, char** argv)
 {
     FreeDVReporter* reporterConnection = nullptr;
@@ -82,7 +103,7 @@ int main(int argc, char** argv)
     log_info("Creating RADE text object");
     auto radeTextPtr = rade_text_create();
     assert(radeTextPtr != nullptr);
-    
+
     log_info("Creating FARGAN objects");
     FARGANState fargan;
     LPCNetEncState *lpcnetEncState = nullptr;
@@ -143,9 +164,15 @@ int main(int argc, char** argv)
     log_info("Connecting to radio at IP %s", radioIp.c_str());
     FlexTcpTask tcpTask;
 
+    CallsignReporting reportData;
+    reportData.tcpTask = &tcpTask;
+    reportData.reporter = &reporterConnection;
+    reportData.rxThread = &rxThread;
+
+    rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
+
     tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
-        // TBD - start FreeDV Reporter connection
-        // For now, add callsign to EOO so others can report us
+        // Add callsign to EOO so others can report us
         log_info("Setting EOO bits");
         int nsyms = rade_n_eoo_bits(radeObj);
         float* eooSyms = new float[nsyms];
@@ -186,6 +213,7 @@ int main(int argc, char** argv)
         {
             reporterConnection->freqChange(freq);
         }
+        currentFreq = freq;
     }, nullptr);
     tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState tx, void*) {
         if (tx == FlexTcpTask::ENDING_TX)
