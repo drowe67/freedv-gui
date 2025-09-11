@@ -208,9 +208,6 @@ void TxRxThread::initializePipeline_()
 
         auto agcStep = new AgcStep(inputSampleRate_);
         eitherOrProcessAgc->appendPipelineStep(agcStep);
-  
-        auto agcPadStep = new LevelAdjustStep(inputSampleRate_, []() { return 0.63; });
-        eitherOrProcessAgc->appendPipelineStep(agcPadStep);
 
         auto eitherOrAgcStep = new EitherOrStep(
             []() { return g_agcEnabled.load(std::memory_order_acquire); },
