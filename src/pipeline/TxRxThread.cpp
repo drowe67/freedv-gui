@@ -72,7 +72,7 @@ extern std::atomic<bool> g_half_duplex;
 extern std::atomic<int> g_tx;
 extern int g_dump_fifo_state;
 extern bool endingTx;
-extern bool g_playFileToMicIn;
+extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
 extern float g_TxFreqOffsetHz;
@@ -88,7 +88,7 @@ extern bool g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
-extern bool g_playFileFromRadio;
+extern std::atomic<bool> g_playFileFromRadio;
 extern int g_sfFs;
 extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
@@ -166,7 +166,7 @@ void TxRxThread::initializePipeline_()
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfTxFs; },
-            []() { return g_playFileToMicIn ? g_sfPlayFile : nullptr; },
+            []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile : nullptr; },
             []() {
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
@@ -179,7 +179,7 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayMicIn->appendPipelineStep(playMicIn);
         
         auto eitherOrPlayStep = new EitherOrStep(
-            []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
+            []() { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile != NULL); },
             eitherOrPlayMicIn,
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
@@ -325,7 +325,7 @@ void TxRxThread::initializePipeline_()
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
-                auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
+                auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio != NULL);
                 return result;
             },
             eitherOrPlayRadio,
