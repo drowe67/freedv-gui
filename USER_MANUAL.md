@@ -848,6 +848,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
     * macOS: Fix spurious error on startup when changing locales. (PR #1010)
     * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
+    * Linux: fix rendering bug for mic/speaker slider when transitioning from TX to RX. (PR #1021)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
@@ -855,7 +856,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
-    * Various GUI and FreeDV Reporter performance improvements. (PR #1002)
+    * Various GUI and FreeDV Reporter performance improvements. (PR #1002, #1026)
     * Use rigerror2() for friendlier Hamlib errors. (PR #1020)
 3. Build system:
     * Update Hamlib to v4.6.4. (PR #989)

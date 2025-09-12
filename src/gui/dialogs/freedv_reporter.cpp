@@ -2528,18 +2528,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = false;
-            bool isDataChanged = false;
             if (message.size() == 0)
             {
                 isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != UNKNOWN_STR);
-                isDataChanged |= iter->second->userMessage != UNKNOWN_STR;
                 iter->second->userMessage = UNKNOWN_STR;
             }
             else
             {
                 auto msgAsWxString = wxString::FromUTF8(message.c_str());
                 isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
-                isDataChanged |= iter->second->userMessage != msgAsWxString;
                 iter->second->userMessage = msgAsWxString;
             }
         
@@ -2562,7 +2559,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
        
             if (iter->second->isVisible)
             {
-                iter->second->isPendingUpdate = isDataChanged;
+                iter->second->isPendingUpdate = true;
                 sortOnNextTimerInterval |= isChanged;
             }
         }
