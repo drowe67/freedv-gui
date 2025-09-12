@@ -185,7 +185,7 @@ int main(int argc, char** argv)
         if (reporterConnection != nullptr)
         {
             delete reporterConnection;
-            reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false);
+            reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false, true);
             reporterConnection->connect();
         }
     }, nullptr);
@@ -198,7 +198,7 @@ int main(int argc, char** argv)
         {
             delete reporterConnection;
         }
-        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false);
+        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false, true);
         reporterConnection->connect();
     }, nullptr);
     tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
