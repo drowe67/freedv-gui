@@ -167,7 +167,10 @@ void FlexTcpTask::cleanupWaveform_()
 void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::string underlyingMode)
 {
     log_info("Creating waveform %s (abbreviated %s in SmartSDR)", name.c_str(), shortName.c_str());
-    
+
+    // Unregister waveform in case we didn't shut down cleanly.
+    sendRadioCommand_(std::string("waveform remove ") + name);
+
     // Actually create the waveform.
     std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=2.0.0";
     std::string setPrefix = "waveform set " + name + " ";
