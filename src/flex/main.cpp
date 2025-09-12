@@ -223,6 +223,7 @@ int main(int argc, char** argv)
         }
         else
         {
+            endingTx = false;
             bool txFlag = tx == FlexTcpTask::TRANSMITTING;
             vitaTask.setEndingTx(false);
             vitaTask.setTransmit(txFlag);
