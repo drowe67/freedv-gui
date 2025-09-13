@@ -80,10 +80,10 @@ class PlotScalar: public PlotPanel
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
          
-         void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false);
+         void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
          void drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
-         void OnSize(wxSizeEvent& event);
-         void OnShow(wxShowEvent& event);
+         void OnSize(wxSizeEvent& event) override;
+         void OnShow(wxShowEvent& event) override;
 
          virtual bool repaintAll_(wxPaintEvent& evt) override;
 

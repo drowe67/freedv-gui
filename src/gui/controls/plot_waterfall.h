@@ -55,15 +55,15 @@ class PlotWaterfall : public PlotPanel
 
         unsigned    heatmap(float val, float min, float max);
 
-        void        OnSize(wxSizeEvent& event);
-        void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false);
+        void        OnSize(wxSizeEvent& event) override;
+        void        OnShow(wxShowEvent& event) override;
+        void        drawGraticule(wxGraphicsContext* ctx) override;
+        void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false) override;
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseMiddleDown(wxMouseEvent& event);
-        void        OnMouseWheelMoved(wxMouseEvent& event);
+        void        OnMouseWheelMoved(wxMouseEvent& event) override;
         void        OnKeyDown(wxKeyEvent& event);
 
         virtual bool repaintAll_(wxPaintEvent& evt) override;

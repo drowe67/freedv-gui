@@ -766,8 +766,7 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
 
 void FilterDlg::updateControlState()
 {
-    // AGC currently requires Speex.
-    m_ckboxAgcEnabled->Enable(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
+    m_ckboxAgcEnabled->Enable(true);
     
     m_MicInBass.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     m_MicInBass.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
