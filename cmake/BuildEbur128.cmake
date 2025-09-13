@@ -7,7 +7,6 @@ if(CMAKE_CROSSCOMPILING)
     set(EBUR128_CMAKE_ARGS ${EBUR128_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
-message(STATUS "architectures: ${CMAKE_OSX_ARCHITECTURES}")
 # Build ebur128 library 
 include(ExternalProject)
 ExternalProject_Add(build_ebur128
