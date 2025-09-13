@@ -1,0 +1,35 @@
+set(EBUR128_VERSION "1.2.6")
+
+# Static libraries on some platforms need PIC
+set(EBUR128_CMAKE_ARGS -DWITH_STATIC_PIC=1 -DBUILD_SHARED_LIBS=0)
+
+if(CMAKE_CROSSCOMPILING)
+    set(EBUR128_CMAKE_ARGS ${EBUR128_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+endif()
+
+message(STATUS "architectures: ${CMAKE_OSX_ARCHITECTURES}")
+# Build ebur128 library 
+include(ExternalProject)
+ExternalProject_Add(build_ebur128
+   SOURCE_DIR ebur128_src
+   BINARY_DIR ebur128_build
+   GIT_REPOSITORY https://github.com/jiixyj/libebur128.git
+   GIT_TAG "v${EBUR128_VERSION}"
+   CMAKE_ARGS ${EBUR128_CMAKE_ARGS}
+   CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET} -DCMAKE_OSX_ARCHITECTURES:STRING="${CMAKE_OSX_ARCHITECTURES}"
+   INSTALL_COMMAND ""
+)
+
+ExternalProject_Get_Property(build_ebur128 BINARY_DIR)
+ExternalProject_Get_Property(build_ebur128 SOURCE_DIR)
+add_library(ebur128 STATIC IMPORTED)
+add_dependencies(ebur128 build_ebur128)
+
+set_target_properties(ebur128 PROPERTIES
+    IMPORTED_LOCATION "${BINARY_DIR}/libebur128${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${BINARY_DIR}/libebur128${CMAKE_IMPORT_LIBRARY_SUFFIX}"
+)
+
+set(EBUR128_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/ebur128_src/ebur128 ${CMAKE_BINARY_DIR}/ebur128_build)
+list(APPEND FREEDV_LINK_LIBS ebur128)
+include_directories(${EBUR128_INCLUDE_DIRS})

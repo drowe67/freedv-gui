@@ -25,9 +25,9 @@
 
 #include "IPipelineStep.h"
 #include "../util/GenericFIFO.h"
+#include "agc.h"
 
 #include <memory>
-#include "agc.h" // from 3rdparty/WebRTC_AGC
 
 class AgcStep : public IPipelineStep
 {
@@ -42,9 +42,12 @@ public:
     
 private:
     int sampleRate_;
+    float targetGainDb_;
+    float currentGainDb_;
     WebRtcAgcConfig agcConfig_;
     void* agcState_;
-    int micLevel_;
+
+    void* ebur128State_;
 
     int numSamplesPerRun_;
     GenericFIFO<short> inputSampleFifo_;
