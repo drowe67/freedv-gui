@@ -1426,14 +1426,21 @@ void MainFrame::updateReportingFreqList_()
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
 {
-    bool txState = g_tx.load(std::memory_order_relaxed);
-
-    if (txState)
+    char fmt[15];
+    
+    auto sliderLevel = 0;
+    if (g_tx.load(std::memory_order_acquire))
     {
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
+        m_newMicInFilter = true;
     }
     else
     {
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = 0;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
+        m_newSpkOutFilter = true;
     }
+    
+    snprintf(fmt, 15, "%0.1f%s", (double)(sliderLevel), "dB");
+    wxString fmtString(fmt);
+    m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
