@@ -32,7 +32,7 @@
 // AGC settings
 constexpr float AGC_LOUDNESS_TARGET_LUFS = -23.0;
 constexpr float AGC_MAX_GAIN_DB = 12.0;
-constexpr float AGC_MIN_GAIN_DB = -20;
+constexpr float AGC_MIN_GAIN_DB = -20.0;
 constexpr float AGC_ATTACK_TIME_SEC = 0.5;
 constexpr float AGC_RELEASE_TIME_SEC = 6.0;
 constexpr int TEN_MS_DIVIDER = 100;
@@ -144,6 +144,10 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
                     agcInterval = AGC_RELEASE_TIME_SEC;
                 }
                 currentGainDb_ += ((targetGainDb_ - currentGainDb_) / agcInterval) * ((float)numSamplesPerRun_ / sampleRate_);
+                if (fabs(currentGainDb_) > fabs(targetGainDb_))
+                {
+                    currentGainDb_ = targetGainDb_;
+                }
 
                 //log_info("LUFS: %f, targetGain: %f, currentGain: %f", lufs, targetGainDb_, currentGainDb_);
             }
