@@ -2620,7 +2620,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 if (m_RxRunning)
                 {
-                    m_togBtnOnOff->SetLabel(wxT("&Stop"));
+                    m_togBtnOnOff->SetLabel(wxT("&Stop Modem"));
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
@@ -2651,7 +2651,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_btnTogPTT->Enable(m_RxRunning);
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
-                m_togBtnOnOff->SetLabel(wxT("&Start"));
+                m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
                 if (terminating_)
