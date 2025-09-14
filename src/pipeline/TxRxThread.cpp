@@ -188,28 +188,6 @@ void TxRxThread::initializePipeline_()
             eitherOrPlayMicIn,
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
-
-        // Equalizer step (optional based on filter state)
-        auto equalizerStep = new EqualizerStep(
-            inputSampleRate_, 
-            &g_rxUserdata->micInEQEnable,
-            &g_rxUserdata->sbqMicInBass,
-            &g_rxUserdata->sbqMicInMid,
-            &g_rxUserdata->sbqMicInTreble,
-            &g_rxUserdata->sbqMicInVol);
-        pipeline_->appendPipelineStep(equalizerStep);
-
-        // Resample for plot step
-        auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
-        auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(resampleForPlotResampler);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
-
-        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
-        pipeline_->appendPipelineStep(resampleForPlotTap);
         
         // Speex step (optional)
         auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -236,6 +214,16 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessAgc,
             eitherOrBypassAgc);
         pipeline_->appendPipelineStep(eitherOrAgcStep); 
+
+        // Equalizer step (optional based on filter state)
+        auto equalizerStep = new EqualizerStep(
+            inputSampleRate_, 
+            &g_rxUserdata->micInEQEnable,
+            &g_rxUserdata->sbqMicInBass,
+            &g_rxUserdata->sbqMicInMid,
+            &g_rxUserdata->sbqMicInTreble,
+            &g_rxUserdata->sbqMicInVol);
+        pipeline_->appendPipelineStep(equalizerStep);
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
@@ -246,6 +234,18 @@ void TxRxThread::initializePipeline_()
             auto micAudioTap = new TapStep(inputSampleRate_, micAudioPipeline);
             pipeline_->appendPipelineStep(micAudioTap);
         }
+                
+        // Resample for plot step
+        auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
+        auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotResampler);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
+
+        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
+        pipeline_->appendPipelineStep(resampleForPlotTap);
       
         // FreeDV TX step (analog leg)
         auto doubleLevelStep = new LevelAdjustStep(inputSampleRate_, []() { return 2.0; });
