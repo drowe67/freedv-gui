@@ -169,14 +169,14 @@ if(APPLE)
             COMMAND xcrun stapler staple ./FreeDV.app
             COMMAND mkdir dist_tmp
             COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
             COMMAND rm -rf dist_tmp
             DEPENDS FreeDV)
     else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
             COMMAND mkdir dist_tmp
             COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
             COMMAND rm -rf dist_tmp
             DEPENDS FreeDV)
     endif (MACOS_CODESIGN_KEYCHAIN_PROFILE)
