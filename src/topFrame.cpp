@@ -746,7 +746,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
-    m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Start Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
     sbSizer5->Add(m_togBtnVoiceKeyer, 0, wxALL | wxEXPAND, 5);
 
@@ -989,7 +989,7 @@ TopFrame::~TopFrame()
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
 {
-    wxString vkLabel = _("Start Voice Keyer");
+    wxString vkLabel = _("Start Voice &Keyer");
     int vkLabelWidth = 0;
     int filenameWidth = 0;
     int tmp = 0;

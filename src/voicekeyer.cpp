@@ -261,6 +261,15 @@ int MainFrame::VoiceKeyerStartTx(void)
     return next_state;
 }
 
+void MainFrame::updateVoiceKeyerButtonLabel_()
+{
+    if (!m_togBtnVoiceKeyer->GetValue())
+    {
+        auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
+        currentLabel.Replace(_("Stop Voice &Keyer"), _("Start Voice &Keyer"), false);
+        m_togBtnVoiceKeyer->SetLabel(currentLabel);
+    }
+}
 
 void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     int next_state = vk_state;
@@ -293,6 +302,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
             CallAfter([&]() { StopPlayFileToMicIn(); });
         }
@@ -306,6 +316,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+                updateVoiceKeyerButtonLabel_();
                 next_state = VK_IDLE;
             }
             else {
@@ -338,6 +349,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
         }
 
@@ -352,6 +364,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
         }
 
@@ -369,6 +382,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+                updateVoiceKeyerButtonLabel_();
                 next_state = VK_IDLE;
             }
         }
@@ -383,17 +397,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+        updateVoiceKeyerButtonLabel_();
         next_state = VK_IDLE;
         g_voice_keyer_tx.store(false, std::memory_order_release);
     }
     
     vk_state = next_state;
-
-    if (!m_togBtnVoiceKeyer->GetValue())
-    {
-        auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
-        currentLabel.Replace(_("Stop Voice Keyer"), _("Start Voice Keyer"), false);
-        m_togBtnVoiceKeyer->SetLabel(currentLabel);
-    }
 }
 

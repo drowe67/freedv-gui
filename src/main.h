@@ -529,6 +529,7 @@ class MainFrame : public TopFrame
         void updateReportingFreqList_();
         
         void initializeFreeDVReporter_();
+        void updateVoiceKeyerButtonLabel_();
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
