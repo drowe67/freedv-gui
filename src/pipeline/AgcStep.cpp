@@ -35,8 +35,10 @@ constexpr float AGC_MAX_GAIN_DB = 12.0;
 constexpr float AGC_MIN_GAIN_DB = -20.0;
 constexpr float AGC_ATTACK_TIME_SEC = 0.5;
 constexpr float AGC_RELEASE_TIME_SEC = 6.0;
-constexpr int TEN_MS_DIVIDER = 100;
 constexpr float SILENCE_THRESHOLD_LUFS = -70.0; // from https://en.wikipedia.org/wiki/EBU_R_128
+constexpr int LIMITER_LEVEL_DB = -1;
+
+constexpr int TEN_MS_DIVIDER = 100;
 constexpr int MAX_AGC_SAMPLES = 160;
 
 AgcStep::AgcStep(int sampleRate)
@@ -63,7 +65,7 @@ AgcStep::AgcStep(int sampleRate)
     // Set AGC configuration
     agcConfig_.compressionGaindB = 0; // default 9 dB
     agcConfig_.limiterEnable = 1; // default kAgcTrue (on)
-    agcConfig_.targetLevelDbfs = 3; // default 3 (-3 dBOv)
+    agcConfig_.targetLevelDbfs = -LIMITER_LEVEL_DB; // default 3 (-3 dBOv)
     status = WebRtcAgc_set_config(agcState_, agcConfig_);
     if (status != 0)
     {
