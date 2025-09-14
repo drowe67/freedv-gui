@@ -72,7 +72,7 @@ RECORD_PID=$!
 
 # Start "radio"
 if [ "$2" == "mpp" ]; then
-    TIMES_BEFORE_KILL=5
+    TIMES_BEFORE_KILL=3
 else
     TIMES_BEFORE_KILL=1
 fi
@@ -81,11 +81,11 @@ RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
-    TX_ARGS="-txtime 1 -txattempts 6 "
+    TX_ARGS="-txtime 1 -txattempts 4 "
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 
