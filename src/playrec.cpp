@@ -9,7 +9,7 @@
 
 extern wxMutex g_mutexProtectingCallbackData;
 SNDFILE            *g_sfPlayFile;
-bool                g_playFileToMicIn;
+std::atomic<bool>                g_playFileToMicIn;
 bool                g_loopPlayFileToMicIn;
 int                 g_playFileToMicInEventId;
 
@@ -22,7 +22,7 @@ SNDFILE            *g_sfRecMicFile;
 bool                g_recFileFromMic;
 
 SNDFILE            *g_sfPlayFileFromRadio;
-bool                g_playFileFromRadio;
+std::atomic<bool>                g_playFileFromRadio;
 int                 g_sfFs;
 int                 g_sfTxFs;
 bool                g_loopPlayFileFromRadio;
@@ -57,9 +57,9 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
 void MainFrame::StopPlayFileToMicIn(void)
 {
     g_mutexProtectingCallbackData.Lock();
-    if (g_playFileToMicIn)
+    if (g_playFileToMicIn.load(std::memory_order_acquire))
     {
-        g_playFileToMicIn = false;
+        g_playFileToMicIn.store(false, std::memory_order_release);
         sf_close(g_sfPlayFile);
         g_sfPlayFile = nullptr;
         SetStatusText(wxT(""));
@@ -71,7 +71,7 @@ void MainFrame::StopPlayFileToMicIn(void)
 void MainFrame::StopPlaybackFileFromRadio()
 {
     g_mutexProtectingCallbackData.Lock();
-    g_playFileFromRadio = false;
+    g_playFileFromRadio.store(false, std::memory_order_release);
     sf_close(g_sfPlayFileFromRadio);
     g_sfPlayFileFromRadio = nullptr;
     SetStatusText(wxT(""));
@@ -88,8 +88,8 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    log_debug("OnPlayFileFromRadio:: %d", (int)g_playFileFromRadio);
-    if (g_playFileFromRadio)
+    log_debug("OnPlayFileFromRadio:: %d", (int)g_playFileFromRadio.load(std::memory_order_acquire));
+    if (g_playFileFromRadio.load(std::memory_order_acquire))
     {
         log_debug("OnPlayFileFromRadio:: Stop");
         StopPlaybackFileFromRadio();
@@ -161,7 +161,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         SetStatusText(statusText, 0);
         log_debug("OnPlayFileFromRadio:: Playing File Fs = %d", (int)sfInfo.samplerate);
         m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
-        g_playFileFromRadio = true;
+        g_playFileFromRadio.store(true, std::memory_order_release);
     }
 }
 

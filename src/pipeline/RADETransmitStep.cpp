@@ -134,7 +134,7 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
     if (numInputSamples == 0)
     {
         // Special case logic for EOO
-        *numOutputSamples = std::min(outputSampleFifo_.numUsed(), (FRAME_DURATION_MS * getOutputSampleRate()) / MS_TO_SEC);
+        *numOutputSamples = outputSampleFifo_.numUsed();
         if (*numOutputSamples > 0)
         {
             outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
