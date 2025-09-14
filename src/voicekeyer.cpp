@@ -53,6 +53,11 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
             }
             
             m_togBtnVoiceKeyer->SetValue(true);
+
+            auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
+            currentLabel.Replace(_("Start Voice Keyer"), _("Stop Voice Keyer"), false);
+            m_togBtnVoiceKeyer->SetLabel(currentLabel);
+
             VoiceKeyerProcessEvent(VK_START);
         }
         else
@@ -383,5 +388,12 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     }
     
     vk_state = next_state;
+
+    if (!m_togBtnVoiceKeyer->GetValue())
+    {
+        auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
+        currentLabel.Replace(_("Stop Voice Keyer"), _("Start Voice Keyer"), false);
+        m_togBtnVoiceKeyer->SetLabel(currentLabel);
+    }
 }
 

@@ -989,7 +989,7 @@ TopFrame::~TopFrame()
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
 {
-    wxString vkLabel = _("Voice Keyer");
+    wxString vkLabel = _("Start Voice Keyer");
     int vkLabelWidth = 0;
     int filenameWidth = 0;
     int tmp = 0;
