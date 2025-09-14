@@ -144,11 +144,6 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
                     agcInterval = AGC_RELEASE_TIME_SEC;
                 }
                 currentGainDb_ += ((targetGainDb_ - currentGainDb_) / agcInterval) * ((float)numSamplesPerRun_ / sampleRate_);
-                if (fabs(currentGainDb_) > fabs(targetGainDb_))
-                {
-                    currentGainDb_ = targetGainDb_;
-                }
-
                 //log_info("LUFS: %f, targetGain: %f, currentGain: %f", lufs, targetGainDb_, currentGainDb_);
             }
 
