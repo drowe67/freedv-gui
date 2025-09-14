@@ -851,7 +851,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Linux: fix rendering bug for mic/speaker slider when transitioning from TX to RX. (PR #1021)
     * Various unit test fixes to reduce failure rate in CI environment. (PR #1023)
 2. Enhancements:
-    * Add Mic/Speaker volume control to main window. (PR #980)
+    * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
     * Further audio performance improvements. (PR #975)
     * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
