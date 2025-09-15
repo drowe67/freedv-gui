@@ -736,7 +736,7 @@ void MainFrame::loadConfiguration_()
     });
     
     // Load AGC state
-    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
+    g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
