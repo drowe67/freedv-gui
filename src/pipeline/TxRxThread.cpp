@@ -406,6 +406,18 @@ void TxRxThread::initializePipeline_()
             helper_
         );
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
+
+        // Resample for plot step (speech out)
+        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
+        auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutResampler);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutStep);
+
+        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
+        rfDemodulationPipeline->appendPipelineStep(resampleForPlotOutTap);
         
         // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
         if (equalizedMicAudioLink_ != nullptr)
@@ -463,18 +475,6 @@ void TxRxThread::initializePipeline_()
         );
 
         pipeline_->appendPipelineStep(eitherOrRfDemodulationStep);
-
-        // Resample for plot step (speech out)
-        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
-        auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutResampler);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutStep);
-
-        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
-        pipeline_->appendPipelineStep(resampleForPlotOutTap);
 
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
