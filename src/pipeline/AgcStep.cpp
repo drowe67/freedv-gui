@@ -35,7 +35,7 @@ constexpr float AGC_MAX_GAIN_DB = 12.0;
 constexpr float AGC_MIN_GAIN_DB = -20.0;
 constexpr float AGC_ATTACK_TIME_SEC = 0.5;
 constexpr float AGC_RELEASE_TIME_SEC = 6.0;
-constexpr float SILENCE_THRESHOLD_LUFS = -70.0; // from https://en.wikipedia.org/wiki/EBU_R_128
+constexpr float SILENCE_THRESHOLD_LUFS = -33.0;
 constexpr int LIMITER_LEVEL_DB = -1;
 
 constexpr int TEN_MS_DIVIDER = 100;
