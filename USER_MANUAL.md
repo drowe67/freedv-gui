@@ -868,7 +868,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Various GUI and FreeDV Reporter performance improvements. (PR #1002, #1026)
     * Use rigerror2() for friendlier Hamlib errors. (PR #1020)
 3. Build system:
-    * Update Hamlib to v4.6.4. (PR #989)
+    * Update Hamlib to v4.6.5. (PR #1030)
     * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
 4. Documentation:
     * Add pkgconf dependency for macOS instructions. (PR #1013)
