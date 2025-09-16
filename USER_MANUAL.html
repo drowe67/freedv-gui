@@ -991,23 +991,34 @@ signal. You may also have squelch set too high. In some modes the
 from the SSB radio.</p>
 <p>Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.</p>
-<h2 data-number="15.8"
+<h2 data-number="15.8" id="hearing-myself-whenever-i-transmit"><span
+class="header-section-number">15.8</span> Hearing myself whenever I
+transmit</h2>
+<p>Verify audio device settings in FreeDV. If your audio settings are
+correct, there are a few other possibilities:</p>
+<ol type="1">
+<li>If on Windows, make sure all audio effects are disabled on all
+devices used with FreeDV.</li>
+<li>Turn off TX monitoring (right-click on PTT button and make sure
+“Monitor transmitted audio” is unchecked).</li>
+</ol>
+<h2 data-number="15.9"
 id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span
-class="header-section-number">15.8</span> The signal is strong but
+class="header-section-number">15.9</span> The signal is strong but
 FreeDV won’t get sync and decode</h2>
 <p>Do you have the correct sideband? See USB or LSB section.</p>
 <p>Is it a FreeDV signal? SSTV uses similar frequencies. To understand
 what FreeDV sounds like, see the Test Wave Files section.</p>
-<h2 data-number="15.9" id="trouble-getting-sync-with-700d"><span
-class="header-section-number">15.9</span> Trouble getting Sync with
+<h2 data-number="15.10" id="trouble-getting-sync-with-700d"><span
+class="header-section-number">15.10</span> Trouble getting Sync with
 700D</h2>
 <p>You need to be within +/- 60 Hz on the transmit signal. It helps if
 both the TX and RX stations tune to known, exact frequencies such as
 exactly 7.177MHz. On channels with fast fading sync may take a few
 seconds.</p>
-<h2 data-number="15.10"
+<h2 data-number="15.11"
 id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span
-class="header-section-number">15.10</span> PTT doesn’t work. It works
+class="header-section-number">15.11</span> PTT doesn’t work. It works
 with Fldigi and other Hamlib applications.</h2>
 <p>Many people struggle with initial CAT control and PTT setup:</p>
 <ol type="1">
@@ -1023,9 +1034,9 @@ you a member of the <code>dialout</code> group?</p></li>
 hardware, what you have tried, and the exact nature of the
 problem.</p></li>
 </ol>
-<h2 data-number="15.11"
+<h2 data-number="15.12"
 id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span
-class="header-section-number">15.11</span> I’m on Windows and serial
+class="header-section-number">15.12</span> I’m on Windows and serial
 port PTT doesn’t work with my USB to serial adapter.</h2>
 <p>Please verify that you are running the correct drivers for the USB to
 serial adapter that you’re using. Information and download links for the
@@ -1045,22 +1056,22 @@ for instructions on doing so in Windows 10. For Windows 8:</p>
 <li>Check the “automatically get the device app” option, then click Save
 changes to save the settings you just chose.</li>
 </ol>
-<h2 data-number="15.12"
+<h2 data-number="15.13"
 id="i-installed-a-new-version-and-freedv-stopped-working"><span
-class="header-section-number">15.12</span> I installed a new version and
+class="header-section-number">15.13</span> I installed a new version and
 FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools -
 Restore Defaults. Set up your sound cards again with Tools - Audio
 Config.</p>
-<h2 data-number="15.13" id="freedv-crashes-when-i-press-start"><span
-class="header-section-number">15.13</span> FreeDV crashes when I press
+<h2 data-number="15.14" id="freedv-crashes-when-i-press-start"><span
+class="header-section-number">15.14</span> FreeDV crashes when I press
 Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB
 audio devices without pressing Tools - Audio Config, FreeDV may crash.
 See Changing Audio Devices above.</p>
-<h2 data-number="15.14"
+<h2 data-number="15.15"
 id="freedv-cant-be-opened-on-macos-because-the-developer-cannot-be-verified"><span
-class="header-section-number">15.14</span> FreeDV can’t be opened on
+class="header-section-number">15.15</span> FreeDV can’t be opened on
 macOS because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all macOS
 applications. The FreeDV developers do not wish to operate within the
@@ -1082,9 +1093,9 @@ Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
-<h2 data-number="15.15"
+<h2 data-number="15.16"
 id="im-on-a-mac-and-my-preferred-audio-device-isnt-appearing"><span
-class="header-section-number">15.15</span> I’m on a Mac and my preferred
+class="header-section-number">15.16</span> I’m on a Mac and my preferred
 audio device isn’t appearing</h2>
 <p>macOS has a longstanding issue that prevents certain audio devices
 from appearing. More info <a
@@ -1158,7 +1169,8 @@ from TX to RX. (PR #1021)</li>
 <li>Move less used Spectrum plot configuration to free up space on main
 window. (PR #996)</li>
 <li>Further audio performance improvements. (PR #975)</li>
-<li>Add Automatic Gain Control (AGC) to microphone input. (PR #997)</li>
+<li>Add Automatic Gain Control (AGC) to microphone input. (PR #997,
+#1024)</li>
 <li>Linux: Search for and list serial devices from /dev/serial for PTT
 config. (PR #999)</li>
 <li>Add RADEV1 sample file and remove samples for unsupported modes. (PR
