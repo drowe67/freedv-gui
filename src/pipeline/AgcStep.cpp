@@ -21,9 +21,9 @@
 //=========================================================================
 
 #include <atomic>
+#include <cmath>
 
 #include "AgcStep.h"
-#include "../defines.h"
 #include "../util/logging/ulog.h"
 #include "ebur128.h" // from libebur128
 
