@@ -23,6 +23,10 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
+// WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
+// first.
+#include "AgcStep.h"
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -72,7 +76,7 @@ extern std::atomic<bool> g_half_duplex;
 extern std::atomic<int> g_tx;
 extern int g_dump_fifo_state;
 extern bool endingTx;
-extern bool g_playFileToMicIn;
+extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
 extern float g_TxFreqOffsetHz;
@@ -88,7 +92,7 @@ extern bool g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
-extern bool g_playFileFromRadio;
+extern std::atomic<bool> g_playFileFromRadio;
 extern int g_sfFs;
 extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
@@ -101,6 +105,7 @@ extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern bool g_eoo_enqueued;
+extern std::atomic<bool> g_agcEnabled;
 
 #include <speex/speex_preprocess.h>
 
@@ -166,7 +171,7 @@ void TxRxThread::initializePipeline_()
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfTxFs; },
-            []() { return g_playFileToMicIn ? g_sfPlayFile : nullptr; },
+            []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile : nullptr; },
             []() {
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
@@ -179,7 +184,7 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayMicIn->appendPipelineStep(playMicIn);
         
         auto eitherOrPlayStep = new EitherOrStep(
-            []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
+            []() { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile != NULL); },
             eitherOrPlayMicIn,
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
@@ -196,7 +201,20 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessSpeex,
             eitherOrBypassSpeex);
         pipeline_->appendPipelineStep(eitherOrSpeexStep);
-       
+
+        // AGC step (optional)
+        auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+
+        auto agcStep = new AgcStep(inputSampleRate_);
+        eitherOrProcessAgc->appendPipelineStep(agcStep);
+
+        auto eitherOrAgcStep = new EitherOrStep(
+            []() { return g_agcEnabled.load(std::memory_order_acquire); },
+            eitherOrProcessAgc,
+            eitherOrBypassAgc);
+        pipeline_->appendPipelineStep(eitherOrAgcStep); 
+
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             inputSampleRate_, 
@@ -325,7 +343,7 @@ void TxRxThread::initializePipeline_()
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
-                auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
+                auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio != NULL);
                 return result;
             },
             eitherOrPlayRadio,
@@ -388,6 +406,18 @@ void TxRxThread::initializePipeline_()
             helper_
         );
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
+
+        // Resample for plot step (speech out)
+        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
+        auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutResampler);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutStep);
+
+        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
+        rfDemodulationPipeline->appendPipelineStep(resampleForPlotOutTap);
         
         // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
         if (equalizedMicAudioLink_ != nullptr)
@@ -455,18 +485,6 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol);
         pipeline_->appendPipelineStep(equalizerStep);
-        
-        // Resample for plot step (speech out)
-        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
-        auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutResampler);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutStep);
-
-        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
-        pipeline_->appendPipelineStep(resampleForPlotOutTap);
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();

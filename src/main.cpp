@@ -150,7 +150,7 @@ int                 g_AEstatus2[4];
 // playing and recording from sound files
 
 extern SNDFILE            *g_sfPlayFile;
-extern bool                g_playFileToMicIn;
+extern std::atomic<bool>                g_playFileToMicIn;
 extern bool                g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
 
@@ -160,7 +160,7 @@ extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 
 extern SNDFILE            *g_sfPlayFileFromRadio;
-extern bool                g_playFileFromRadio;
+extern std::atomic<bool>                g_playFileFromRadio;
 extern int                 g_sfFs;
 extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
@@ -335,6 +335,7 @@ void MainApp::UnitTest_()
         std::this_thread::sleep_for(20ms);
     }
     
+    constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
@@ -361,9 +362,10 @@ void MainApp::UnitTest_()
                 g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
                 g_sfTxFs = sfInfo.samplerate;
                 g_loopPlayFileToMicIn = false;
-                g_playFileToMicIn = true;
+                g_playFileToMicIn.store(true, std::memory_order_release);
 
-                while (g_playFileToMicIn)
+                int counter = 0;
+                while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(100ms);
                 } 
@@ -403,10 +405,11 @@ void MainApp::UnitTest_()
             g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
             g_sfFs = sfInfo.samplerate;
             g_loopPlayFileFromRadio = false;
-            g_playFileFromRadio = true;
+            g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
-            while (g_playFileFromRadio)
+            int counter = 0;
+            while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
@@ -733,7 +736,7 @@ void MainFrame::loadConfiguration_()
     });
     
     // Load AGC state
-    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
+    g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
@@ -1034,7 +1037,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
     g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
     
     // Add Scatter Plot window
@@ -1151,14 +1154,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 #endif //_USE_ONIDLE
 
     g_sfPlayFile = NULL;
-    g_playFileToMicIn = false;
+    g_playFileToMicIn.store(false, std::memory_order_release);
     g_loopPlayFileToMicIn = false;
 
     g_sfRecFile = NULL;
     g_recFileFromRadio = false;
 
     g_sfPlayFileFromRadio = NULL;
-    g_playFileFromRadio = false;
+    g_playFileFromRadio.store(false, std::memory_order_release);
     g_loopPlayFileFromRadio = false;
 
     g_sfRecFileFromModulator = NULL;
@@ -1799,7 +1802,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             pendingSnr,
                             freqLongLong);
         
-                        if (!g_playFileFromRadio)
+                        if (!g_playFileFromRadio.load(std::memory_order_acquire))
                         {
                             for (auto& obj : wxGetApp().m_reporters)
                             {
@@ -1828,7 +1831,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if (freq > 0 && wxGetApp().m_reportCounter == 0)
                 {
                     wxGetApp().m_reportCounter = 0;
-                    if (!g_playFileFromRadio)
+                    if (!g_playFileFromRadio.load(std::memory_order_acquire))
                     {                
                         wxGetApp().m_sharedReporterObject->addReceiveRecord(
                             "",
@@ -2617,7 +2620,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 if (m_RxRunning)
                 {
-                    m_togBtnOnOff->SetLabel(wxT("&Stop"));
+                    m_togBtnOnOff->SetLabel(wxT("&Stop Modem"));
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
@@ -2648,7 +2651,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_btnTogPTT->Enable(m_RxRunning);
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
-                m_togBtnOnOff->SetLabel(wxT("&Start"));
+                m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
                 if (terminating_)

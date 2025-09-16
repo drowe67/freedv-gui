@@ -1158,14 +1158,14 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
         m_panelWaterfall->setFs(FS);
         
-        m_togBtnAnalog->SetLabel(wxT("Di&gital"));
+        m_togBtnAnalog->SetLabel(wxT("Switch to Di&gital"));
     }
     else {
         g_analog = 0;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
         
-        m_togBtnAnalog->SetLabel(wxT("A&nalog"));
+        m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
     }
 
     // Report analog change to registered reporters
@@ -1426,14 +1426,21 @@ void MainFrame::updateReportingFreqList_()
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
 {
-    bool txState = g_tx.load(std::memory_order_relaxed);
-
-    if (txState)
+    char fmt[15];
+    
+    auto sliderLevel = 0;
+    if (g_tx.load(std::memory_order_acquire))
     {
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
+        m_newMicInFilter = true;
     }
     else
     {
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = 0;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
+        m_newSpkOutFilter = true;
     }
+    
+    snprintf(fmt, 15, "%0.1f%s", (double)(sliderLevel), "dB");
+    wxString fmtString(fmt);
+    m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }

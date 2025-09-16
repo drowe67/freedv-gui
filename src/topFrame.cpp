@@ -732,21 +732,21 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------------------
     // Stop/Stop signal processing (rx and tx)
     //-------------------------------
-    m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start Modem"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
     sbSizer5->Add(m_togBtnOnOff, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
-    m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("Switch to A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
     sbSizer5->Add(m_togBtnAnalog, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
-    m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Start Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
     sbSizer5->Add(m_togBtnVoiceKeyer, 0, wxALL | wxEXPAND, 5);
 
@@ -989,7 +989,7 @@ TopFrame::~TopFrame()
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
 {
-    wxString vkLabel = _("Voice Keyer");
+    wxString vkLabel = _("Start Voice &Keyer");
     int vkLabelWidth = 0;
     int filenameWidth = 0;
     int tmp = 0;
