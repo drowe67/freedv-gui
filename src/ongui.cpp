@@ -1158,14 +1158,14 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
         m_panelWaterfall->setFs(FS);
         
-        m_togBtnAnalog->SetLabel(wxT("Di&gital"));
+        m_togBtnAnalog->SetLabel(wxT("Switch to Di&gital"));
     }
     else {
         g_analog = 0;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
         
-        m_togBtnAnalog->SetLabel(wxT("A&nalog"));
+        m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
     }
 
     // Report analog change to registered reporters

@@ -736,7 +736,7 @@ void MainFrame::loadConfiguration_()
     });
     
     // Load AGC state
-    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
+    g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
@@ -1037,7 +1037,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
     g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
     
     // Add Scatter Plot window
@@ -2620,7 +2620,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 if (m_RxRunning)
                 {
-                    m_togBtnOnOff->SetLabel(wxT("&Stop"));
+                    m_togBtnOnOff->SetLabel(wxT("&Stop Modem"));
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
@@ -2651,7 +2651,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_btnTogPTT->Enable(m_RxRunning);
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
-                m_togBtnOnOff->SetLabel(wxT("&Start"));
+                m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
                 if (terminating_)

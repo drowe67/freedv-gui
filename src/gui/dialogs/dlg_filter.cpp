@@ -752,7 +752,7 @@ void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
 
 void FilterDlg::OnAgcEnable(wxScrollEvent& event) {
     wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
-    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled; // forces immediate change at pipeline level
+    g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
@@ -766,8 +766,7 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
 
 void FilterDlg::updateControlState()
 {
-    // AGC currently requires Speex.
-    m_ckboxAgcEnabled->Enable(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
+    m_ckboxAgcEnabled->Enable(true);
     
     m_MicInBass.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     m_MicInBass.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);

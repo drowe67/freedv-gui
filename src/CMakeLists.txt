@@ -23,8 +23,9 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
-# Include third party headers
+# Include third party headers and components
 include_directories(3rdparty)
+add_subdirectory(3rdparty)
 
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)

@@ -734,6 +734,14 @@ button will let you hear the received signal from the SSB radio.
 Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.
 
+## Hearing myself whenever I transmit
+
+Verify audio device settings in FreeDV. If your audio settings are correct,
+there are a few other possibilities:
+
+1. If on Windows, make sure all audio effects are disabled on all devices used with FreeDV.
+2. Turn off TX monitoring (right-click on PTT button and make sure "Monitor transmitted audio" is unchecked).
+
 ## The signal is strong but FreeDV won't get sync and decode
 
 Do you have the correct sideband? See USB or LSB section.
@@ -854,7 +862,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
     * Further audio performance improvements. (PR #975)
-    * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
+    * Add Automatic Gain Control (AGC) to microphone input. (PR #997, #1024)
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
     * Various GUI and FreeDV Reporter performance improvements. (PR #1002, #1026)
