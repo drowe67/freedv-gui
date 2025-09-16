@@ -26,6 +26,7 @@ using namespace std::chrono_literals;
 #include "FlexTxRxThread.h"
 #include "../pipeline/paCallbackData.h"
 
+#include "../pipeline/AgcStep.h"
 #include "../pipeline/ResampleStep.h"
 #include "../pipeline/LevelAdjustStep.h"
 #include "../pipeline/RADEReceiveStep.h"
@@ -71,6 +72,8 @@ void FlexTxRxThread::initializePipeline_()
     if (m_tx)
     {
         txStep_ = new RADETransmitStep(rade_, encState_);
+        auto agcStep = new AgcStep(txStep_->getInputSampleRate());
+        pipeline_->appendPipelineStep(agcStep);
         pipeline_->appendPipelineStep(txStep_);
         
         auto levelAdjustStep = new LevelAdjustStep(outputSampleRate_, []() { return TxScaleFactor_; });

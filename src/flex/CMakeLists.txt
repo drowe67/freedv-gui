@@ -1,11 +1,12 @@
 # Only include subset of the pipeline code to avoid unnecessary dependencies (like wxWidgets)
 set(PIPELINE_SUBSET 
+    ../pipeline/AgcStep.cpp
+    ../pipeline/AudioPipeline.cpp
     ../pipeline/IPipelineStep.cpp
+    ../pipeline/LevelAdjustStep.cpp
     ../pipeline/RADEReceiveStep.cpp
     ../pipeline/RADETransmitStep.cpp
     ../pipeline/ResampleStep.cpp
-    ../pipeline/AudioPipeline.cpp
-    ../pipeline/LevelAdjustStep.cpp
     ../pipeline/rade_text.c)
 
 if(LINUX AND DBUS_FOUND)
