@@ -435,6 +435,21 @@ void FlexTcpTask::processCommand_(std::string& command)
                 }
             }
         }
+        else if (statusName == "gps")
+        {
+            log_info("Detected GPS update");
+            auto parameters = FlexKeyValueParser::GetCommandParameters(ss);
+            auto gridSquare = parameters.find("grid");
+            if (gridSquare != parameters.end())
+            {
+                std::string gridSquareStr = gridSquare->second;
+                log_info("Got grid square %s", gridSquareStr.c_str());
+                if (waveformGridSquareUpdateFn_)
+                {
+                    waveformGridSquareUpdateFn_(*this, gridSquareStr, waveformGridSquareUpdateState_);
+                }
+            }
+        }
         else
         {
             log_warn("Unknown status update type %s", statusName.c_str());

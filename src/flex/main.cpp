@@ -78,7 +78,7 @@ void updateReporterState()
 
     if (reporterConnection == nullptr && !userHidden)
     {
-        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, GetVersionString(), false, true);
+        reporterConnection = new FreeDVReporter("", radioCallsign, currentGridSquare, GetVersionString(), false, true);
         reporterConnection->connect();
     }
 }
@@ -87,6 +87,21 @@ void updateRadioCallsign(std::string newCallsign)
 {
     bool changed = newCallsign != radioCallsign;
     radioCallsign = newCallsign;
+    if (changed)
+    {
+        if (reporterConnection != nullptr)
+        {
+            delete reporterConnection;
+            reporterConnection = nullptr;
+        }
+        updateReporterState();
+    }
+}
+
+void updateRadioGridSquare(std::string newGridSquare)
+{
+    bool changed = newGridSquare != currentGridSquare;
+    currentGridSquare = newGridSquare;
     if (changed)
     {
         if (reporterConnection != nullptr)
@@ -230,6 +245,9 @@ int main(int argc, char** argv)
         rade_tx_set_eoo_bits(radeObj, eooSyms);
 
         updateRadioCallsign(callsign);
+    }, nullptr);
+    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
+        updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
