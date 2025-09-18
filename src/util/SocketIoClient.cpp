@@ -249,13 +249,13 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
             const ujson::value emptyEvent = ujson::object{};
 
 	    ujson::value parsedEvent = ujson::parse(ptr + 1, strlen(ptr + 1));
-            ujson::array arry = array_cast(std::move(parsedEvent));
-	    std::string eventName = string_cast(std::move(arry[0]));
+            ujson::array eventArray = array_cast(std::move(parsedEvent));
+	    std::string eventName = string_cast(std::move(eventArray[0]));
             if (eventFnMap_[eventName])
             {
-                if (arry.size() > 1)
+                if (eventArray.size() > 1)
                 {
-                    (eventFnMap_[eventName])(arry[1]);
+                    (eventFnMap_[eventName])(eventArray[1]);
                 }
                 else   
                 {
