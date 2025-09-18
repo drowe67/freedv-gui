@@ -108,9 +108,6 @@ int main(int argc, char** argv)
     FARGANState fargan;
     LPCNetEncState *lpcnetEncState = nullptr;
 
-    // TBD - reporting
-    //rade_text_set_rx_callback(radeTextPtr_, &FreeDVInterface::OnRadeTextRx_, this);
-
     float zeros[320] = {0};
     float in_features[5*NB_TOTAL_FEATURES] = {0};
     fargan_init(&fargan);
@@ -151,12 +148,17 @@ int main(int argc, char** argv)
     txThread.signalToStart();
     rxThread.signalToStart();
     
-    log_info("Sleeping 2 seconds to get available radios");
-    std::this_thread::sleep_for(2s);
+    log_info("Sleeping while we get available radios");
     
     std::string radioIp;
+    while (radioIp == "")
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
+        if (radioList.count() == 0)
+        {
+            std::this_thread::sleep_for(1s);
+            continue;
+        }
         radioIp = radioList.begin()->first;
         enableRadioLookup = false;
     }
