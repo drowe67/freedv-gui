@@ -25,8 +25,10 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <sstream>
 #include <stdlib.h>
 
+#include "git_version.h"
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
@@ -50,10 +52,51 @@ using namespace std::chrono_literals;
 std::atomic<int> g_tx;
 bool endingTx;
 
-// FreeDV Reporter constants
-#define SOFTWARE_NAME "freedv-flex 1.0-devel"
+// FreeDV Reporter constants and helpers
+#define SOFTWARE_NAME "freedv-flex"
+std::string GetVersionString()
+{
+    std::stringstream ss;
+    ss << SOFTWARE_NAME << " " << GetFreeDVVersion();
+    return ss.str();
+}
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
+
+FreeDVReporter* reporterConnection = nullptr;
+std::string currentGridSquare = SOFTWARE_GRID_SQUARE;
+std::string radioCallsign;
+bool userHidden = true;
+
+void updateReporterState()
+{
+    if (reporterConnection != nullptr && userHidden)
+    {
+        delete reporterConnection;
+        reporterConnection = nullptr;
+    }
+
+    if (reporterConnection == nullptr && !userHidden)
+    {
+        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, GetVersionString(), false, true);
+        reporterConnection->connect();
+    }
+}
+
+void updateRadioCallsign(std::string newCallsign)
+{
+    bool changed = newCallsign != radioCallsign;
+    radioCallsign = newCallsign;
+    if (changed)
+    {
+        if (reporterConnection != nullptr)
+        {
+            delete reporterConnection;
+            reporterConnection = nullptr;
+        }
+        updateReporterState();
+    }
+}
 
 struct CallsignReporting
 {
@@ -78,9 +121,6 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
 
 int main(int argc, char** argv)
 {
-    FreeDVReporter* reporterConnection = nullptr;
-    std::string radioCallsign;
-
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -189,32 +229,19 @@ int main(int argc, char** argv)
         rade_text_generate_tx_string(radeTextPtr, callsign.c_str(), callsign.size(), eooSyms, nsyms);
         rade_tx_set_eoo_bits(radeObj, eooSyms);
 
-        radioCallsign = callsign;
-        if (reporterConnection != nullptr)
-        {
-            delete reporterConnection;
-            reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false, true);
-            reporterConnection->connect();
-        }
+        updateRadioCallsign(callsign);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
     tcpTask.setWaveformUserConnectedFn([&](FlexTcpTask&, void*) {
-        if (reporterConnection != nullptr)
-        {
-            delete reporterConnection;
-        }
-        reporterConnection = new FreeDVReporter("", radioCallsign, SOFTWARE_GRID_SQUARE, SOFTWARE_NAME, false, true);
-        reporterConnection->connect();
+        userHidden = false;
+        updateReporterState();
     }, nullptr);
     tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
-        if (reporterConnection != nullptr)
-        {
-            delete reporterConnection;
-            reporterConnection = nullptr;
-        }
+        userHidden = true;
+        updateReporterState();
     }, nullptr);
     tcpTask.setWaveformFreqChangeFn([&](FlexTcpTask&, uint64_t freq, void*) {
         if (reporterConnection != nullptr)
