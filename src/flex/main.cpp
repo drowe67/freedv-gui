@@ -116,7 +116,13 @@ int main(int argc, char** argv)
     lpcnetEncState = lpcnet_encoder_create();
     assert(lpcnetEncState != nullptr);
     
-    std::string radioIp = getenv("SSDR_RADIO_ADDRESS");
+    std::string radioIp = "";
+    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS");
+    if (radioAddrEnv != nullptr)
+    {
+        radioIp = radioAddrEnv;
+        log_info("Got radio address from environment, likely executing on radio itself");
+    }
 
     // Start up VITA task so we can get the list of available radios.
     auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
@@ -154,7 +160,7 @@ int main(int argc, char** argv)
     while (radioIp == "")
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
-        if (radioList.count() == 0)
+        if (radioList.size() == 0)
         {
             std::this_thread::sleep_for(1s);
             continue;

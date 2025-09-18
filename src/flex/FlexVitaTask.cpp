@@ -234,15 +234,15 @@ void FlexVitaTask::openSocket_()
     }
     assert(socket_ != -1);
 
-    // Listen on our hardcoded VITA port
+    // Listen on our hardcoded VITA port (or a random one if we already know the radio's IP)
+    struct sockaddr_in ourSocketAddress;
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    ourSocketAddress.sin_family = AF_INET;
+    ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+
     if (!randomUdpPort_)
     {
-        struct sockaddr_in ourSocketAddress;
-        memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
-
-        ourSocketAddress.sin_family = AF_INET;
         ourSocketAddress.sin_port = htons(VITA_PORT);
-        ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
         
         auto rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
         if (rv == -1)
@@ -256,16 +256,11 @@ void FlexVitaTask::openSocket_()
     }
     else
     {
-        struct sockaddr_in bind_addr = {
-            .sin_family = AF_INET,
-            .sin_addr.s_addr = htonl(INADDR_ANY),
-            .sin_port = 0,
-        };
-        socklen_t bind_addr_len = sizeof(bind_addr);
-        auto rv = getsockname(socket_, (struct sockaddr*) &bind_addr, &bind_addr_len);
+        socklen_t bindAddrLen = sizeof(ourSocketAddress);
+        auto rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
         assert(rv != -1);
 
-        udpPort_ = ntohl(bind_addr.sin_port);
+        udpPort_ = ntohl(ourSocketAddress.sin_port);
     }
 
     fcntl (socket_, F_SETFL , O_NONBLOCK);
