@@ -41,9 +41,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
     , audioEnabled_(false)
     , isTransmitting_(false)
     , inputCtr_(0)
-    , lastVitaGenerationTime_(0)
-    , minPacketsRequired_(0)
-    , timeBeyondExpectedUs_(0)
+    , samplesRequired_(0)
     , helper_(helper)
     , randomUdpPort_(randomUdpPort)
 {
@@ -90,75 +88,9 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
     
     auto fifo = getAudioOutput_(transmitChannel);
 
-    auto curTime = std::chrono::high_resolution_clock::now().time_since_epoch();
-    auto currentTimeInMicroseconds =  std::chrono::duration_cast<std::chrono::microseconds>(curTime).count();
-    auto timeSinceLastPacketSend = currentTimeInMicroseconds - lastVitaGenerationTime_;
-    lastVitaGenerationTime_ = currentTimeInMicroseconds;
-
-    // If we're starved of audio, don't even bother going through the rest of the logic right now
-    // and reset state back to the point right when we started.
-    /*if (codec2_fifo_used(fifo) < MAX_VITA_SAMPLES_TO_RESAMPLE * minPacketsRequired_)
+    int ctr = 1; 
+    while(ctr > 0 && fifo->read(inputBuffer, samplesRequired_) == 0)
     {
-        if (isTransmitting_) ESP_LOGW(CURRENT_LOG_TAG, "Not enough audio samples to process/send packets (minimum packets needed: %d)!", minPacketsRequired_);
-        minPacketsRequired_ = 0;
-        timeBeyondExpectedUs_ = 0;
-        return;
-    }*/
-
-#if 0
-    if (isTransmitting_ && (
-        timeSinceLastPacketSend >= (VITA_IO_TIME_INTERVAL_US + MAX_JITTER_US) ||
-        timeSinceLastPacketSend <= (VITA_IO_TIME_INTERVAL_US - MAX_JITTER_US)))
-    {
-        log_warn( 
-            "Packet TX jitter is a bit high (time = %" PRIu64 ", expected: %d-%d)", 
-            timeSinceLastPacketSend,
-            VITA_IO_TIME_INTERVAL_US - MAX_JITTER_US,
-            VITA_IO_TIME_INTERVAL_US + MAX_JITTER_US);
-    }
-#endif
-
-#if 0
-    // Determine the number of extra packets we need to send this go-around.
-    // This is since it can take a bit longer than the timer interval to 
-    // actually enter this method (depending on what else is going on in the
-    // system at the time).
-    int addedExtra = 0;
-    auto packetsToSend = MIN_VITA_PACKETS_TO_SEND * timeSinceLastPacketSend / VITA_IO_TIME_INTERVAL_US;
-    if (packetsToSend == 0 && minPacketsRequired_ == 0)
-    {
-        // We're executing too quickly (or there are a bunch of events piled up that
-        // need to be worked through). We'll wait until the next time we're actually
-        // supposed to execute.
-        log_warn("Executing send handler too quickly!");
-        return;
-    }
-    else
-    {
-        //log_info("In the previous interval, %" PRIu64 " packets should have gone out (time since last send = %" PRIu64 ")", packetsToSend, timeSinceLastPacketSend);
-        minPacketsRequired_ = packetsToSend;
-        timeBeyondExpectedUs_ += timeSinceLastPacketSend % VITA_IO_TIME_INTERVAL_US;
-    }
-
-    while (timeBeyondExpectedUs_ >= (US_OF_AUDIO_PER_VITA_PACKET >> 1))
-    {
-        addedExtra = 1;
-        minPacketsRequired_++;
-        timeBeyondExpectedUs_ -= US_OF_AUDIO_PER_VITA_PACKET;
-    }
-
-    if (minPacketsRequired_ <= 0)
-    {
-        minPacketsRequired_ = 0;
-        timeBeyondExpectedUs_ = 0;
-    }
-#endif
-
-    //log_info("Packets to be sent this time: %d", minPacketsRequired_);
-    int ctr = 1; //MAX_VITA_PACKETS_TO_SEND;
-    while(/*minPacketsRequired_ > 0 && */ctr > 0 && fifo->read(inputBuffer, minPacketsRequired_) == 0)
-    {
-        //minPacketsRequired_--;
         ctr--;
 
         if (!audioEnabled_)
@@ -177,7 +109,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
         // Convert short to float samples and save to packet
-        for (int index = 0; index < minPacketsRequired_; index++)
+        for (int index = 0; index < samplesRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
@@ -192,7 +124,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         packet->class_id = AUDIO_CLASS_ID;
         packet->timestamp_type = audioSeqNum_++;
 
-        size_t packet_len = VITA_PACKET_HEADER_SIZE + minPacketsRequired_ * 2 * sizeof(float);
+        size_t packet_len = VITA_PACKET_HEADER_SIZE + samplesRequired_ * 2 * sizeof(float);
 
         constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
         constexpr uint8_t INTEGER_TIMESTAMP_UTC = 0x01;
@@ -220,8 +152,6 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
             log_error("Got socket error %d (%s) while sending", errno, strerror(errno));
         }
     }
-
-    //minPacketsRequired_ -= addedExtra;
 }
 
 void FlexVitaTask::openSocket_()
@@ -264,25 +194,6 @@ void FlexVitaTask::openSocket_()
     }
 
     fcntl (socket_, F_SETFL , O_NONBLOCK);
-
-    // The below tells ESP-IDF to transmit on this socket using Wi-Fi voice priority.
-    // This also implicitly disables TX AMPDU for this socket. In testing, not having
-    // this worked a lot better than having it, so it's disabled for now. Perhaps in
-    // the future we can play with this again (perhaps with a lower priority level that
-    // will in fact use AMPDU?)
-#if 0
-    const int precedenceVI = 6;
-    const int precedenceOffset = 7;
-    int priority = (precedenceVI << precedenceOffset);
-    setsockopt(socket_, IPPROTO_IP, IP_TOS, &priority, sizeof(priority));
-#endif // 0
-
-    minPacketsRequired_ = MIN_VITA_PACKETS_TO_SEND;
-    timeBeyondExpectedUs_ = 0;
-    
-    auto curTime = std::chrono::high_resolution_clock::now().time_since_epoch();
-    auto currentTimeInMicroseconds =  std::chrono::duration_cast<std::chrono::microseconds>(curTime).count();
-    lastVitaGenerationTime_ = currentTimeInMicroseconds;
 
     rxTxThreadRunning_ = true;
     rxTxThread_ = std::thread(std::bind(&FlexVitaTask::rxTxThreadEntry_, this));
@@ -444,11 +355,6 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
         case STREAM_BITS_WAVEFORM | STREAM_BITS_IN:
         {
             unsigned long payload_length = ((htons(packet->length) * sizeof(uint32_t)) - VITA_PACKET_HEADER_SIZE);
-            /*if(payload_length != packet->length - VITA_PACKET_HEADER_SIZE) 
-            {
-                ESP_LOGW(CURRENT_LOG_TAG, "VITA header size doesn't match bytes read from network (%lu != %u - %u) -- %u\n", payload_length, packet->length, VITA_PACKET_HEADER_SIZE, sizeof(struct vita_packet));
-                goto cleanup;
-            }*/
 
             GenericFIFO<short>* inFifo = nullptr;
             if (!(htonl(packet->stream_id) & 0x0001u)) 
@@ -491,7 +397,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             {
                 inFifo->write(audioInput, half_num_samples); // audio pipeline will resample
             }
-	    minPacketsRequired_ = half_num_samples;
+	    samplesRequired_ = half_num_samples;
             sendAudioOut_();
             break;
         }
@@ -512,14 +418,5 @@ void FlexVitaTask::setTransmit(bool tx)
 {
     enqueue_([this, tx]() {
         isTransmitting_ = tx;
-        
-        // Reset packet timing parameters so we can redetermine how quickly we need to be
-        // sending packets.
-        auto curTime = std::chrono::high_resolution_clock::now().time_since_epoch();
-        auto currentTimeInMicroseconds =  std::chrono::duration_cast<std::chrono::microseconds>(curTime).count();
-        
-        minPacketsRequired_ = MIN_VITA_PACKETS_TO_SEND;
-        timeBeyondExpectedUs_ = 0;
-        lastVitaGenerationTime_ = currentTimeInMicroseconds;
     });
 }

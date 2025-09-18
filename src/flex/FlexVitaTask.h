@@ -83,9 +83,7 @@ private:
     bool audioEnabled_;
     bool isTransmitting_;
     int inputCtr_;
-    int64_t lastVitaGenerationTime_;
-    int minPacketsRequired_;
-    int64_t timeBeyondExpectedUs_;
+    int samplesRequired_;
     std::shared_ptr<IRealtimeHelper> helper_;
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
