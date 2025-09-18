@@ -211,13 +211,16 @@ int main(int argc, char** argv)
     txThread.signalToStart();
     rxThread.signalToStart();
     
-    log_info("Sleeping while we get available radios");
+    log_info("Getting available radios from network");
     while (radioIp == "")
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         if (radioList.size() == 0)
         {
+            log_info("No radios found yet, sleeping 1s");
+            lk.unlock();
             std::this_thread::sleep_for(1s);
+            lk.lock();
             continue;
         }
         radioIp = radioList.begin()->first;
