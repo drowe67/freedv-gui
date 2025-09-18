@@ -29,6 +29,7 @@
 #endif // defined(__APPLE__)
 
 using namespace std::chrono_literals;
+using namespace ujson;
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
     : isConnecting_(false)
@@ -68,10 +69,10 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     
     if (isValidForReporting())
     {
-        nlohmann::json qsyMsg = {
+        ujson::object qsyMsg {
             {"dest_sid", sid},
             {"message", message},
-            {"frequency", frequencyHz}
+            {"frequency", (double)frequencyHz}
         };
 
         sioClient_->emit("qsy_request", qsyMsg);
@@ -149,7 +150,7 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
     
     if (isValidForReporting() && isFullyConnected_)
     {
-        nlohmann::json rxData = {
+        ujson::object rxData = {
             {"callsign", callsign},
             {"mode", mode},
             {"snr", (int)snr}
@@ -238,16 +239,16 @@ bool FreeDVReporter::isValidForReporting()
 void FreeDVReporter::connect_()
 {        
     // Connect and send initial info.
-    nlohmann::json authData;
+    ujson::value authData;
     if (!isValidForReporting())
     {
-        authData = {
+        authData = ujson::object {
             {"role", "view"}
         };
     }
     else
     {
-        authData = {
+        authData = ujson::object {
             {"role", "report"},
             {"callsign", callsign_},
             {"grid_square", gridSquare_},
@@ -299,16 +300,17 @@ void FreeDVReporter::connect_()
         onReporterConnectFn_();
     }
     
-    sioClient_->on("new_connection", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("new_connection", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserConnectFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& version = msgParams["version"];
-            auto& rxOnly = msgParams["rx_only"];
+            auto obj = object_cast(msgParams);
+            auto& sid = find(obj, "sid")->second;
+            auto& lastUpdate = find(obj, "last_update")->second;
+            auto& callsign = find(obj, "callsign")->second;
+            auto& gridSquare = find(obj, "grid_square")->second;
+            auto& version = find(obj, "version")->second;
+            auto& rxOnly = find(obj, "rx_only")->second;
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -320,18 +322,18 @@ void FreeDVReporter::connect_()
                 rxOnly.is_boolean())
             {
                 onUserConnectFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    version.template get<std::string>(),
-                    rxOnly.template get<bool>()
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(callsign),
+                    string_cast(gridSquare),
+                    string_cast(version),
+                    bool_cast(rxOnly)
                 );
             }
         }
     });
 
-    sioClient_->on("connection_successful", [&](const nlohmann::json&) {
+    sioClient_->on("connection_successful", [&](const ujson::value&) {
         std::unique_lock<std::mutex> lk(objMutex_);
         isFullyConnected_ = true;
     
@@ -356,16 +358,17 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("remove_connection", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("remove_connection", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserDisconnectFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& version = msgParams["version"];
-            auto& rxOnly = msgParams["rx_only"];
+            auto obj = object_cast(msgParams);
+            auto& sid = find(obj, "sid")->second;
+            auto& lastUpdate = find(obj, "last_update")->second;
+            auto& callsign = find(obj, "callsign")->second;
+            auto& gridSquare = find(obj, "grid_square")->second;
+            auto& version = find(obj, "version")->second;
+            auto& rxOnly = find(obj, "rx_only")->second;
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -377,28 +380,29 @@ void FreeDVReporter::connect_()
                 rxOnly.is_boolean())
             {
                 onUserDisconnectFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    version.template get<std::string>(),
-                    rxOnly.template get<bool>()
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(callsign),
+                    string_cast(gridSquare),
+                    string_cast(version),
+                    bool_cast(rxOnly)
                 );
             }
         }
     });
 
-    sioClient_->on("tx_report", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("tx_report", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onTransmitUpdateFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& lastTx = msgParams["last_tx"];
-            auto& mode = msgParams["mode"];
-            auto& transmitting = msgParams["transmitting"];
+            auto obj = object_cast(msgParams);
+            auto& sid = find(obj, "sid")->second;
+            auto& lastUpdate = find(obj, "last_update")->second;
+            auto& callsign = find(obj, "callsign")->second;
+            auto& gridSquare = find(obj, "grid_square")->second;
+            auto& lastTx = find(obj, "last_tx")->second;
+            auto& mode = find(obj, "mode")->second;
+            auto& transmitting = find(obj, "transmitting")->second;
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -410,43 +414,32 @@ void FreeDVReporter::connect_()
                 transmitting.is_boolean())
             {
                 onTransmitUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    mode.template get<std::string>(),
-                    transmitting.template get<bool>(),
-                    lastTx.is_null() ? "" : lastTx.template get<std::string>()
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(callsign),
+                    string_cast(gridSquare),
+                    string_cast(mode),
+                    bool_cast(transmitting),
+                    lastTx.is_null() ? std::string("") : std::string(string_cast(lastTx))
                 );
             }
         }
     });
 
-    sioClient_->on("rx_report", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("rx_report", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto& sid = msgParams["sid"];
-        auto& lastUpdate = msgParams["last_update"];
-        auto& receiverCallsign = msgParams["receiver_callsign"];
-        auto& receiverGridSquare = msgParams["receiver_grid_square"];
-        auto& callsign = msgParams["callsign"];
-        auto& snr = msgParams["snr"];
-        auto& mode = msgParams["mode"];
+        auto obj = object_cast(msgParams);
+        auto& sid = find(obj, "sid")->second;
+        auto& lastUpdate = find(obj, "last_update")->second;
+        auto& receiverCallsign = find(obj, "receiver_callsign")->second;
+        auto& receiverGridSquare = find(obj, "receiver_grid_square")->second;
+        auto& callsign = find(obj, "callsign")->second;
+        auto& snr = find(obj, "snr")->second;
+        auto& mode = find(obj, "mode")->second;
     
         if (onReceiveUpdateFn_)
         {
-            bool snrInteger =  snr.is_number_integer();
-            bool snrFloat =  snr.is_number_float();
-            bool snrValid = snrInteger || snrFloat;
-
-            float snrVal = 0;
-            if (snrInteger)
-            {
-                snrVal = snr.template get<int>();
-            }
-            else if (snrFloat)
-            {
-                snrVal = snr.template get<double>();
-            }
+            float snrVal = double_cast(snr);
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -455,31 +448,31 @@ void FreeDVReporter::connect_()
                 callsign.is_string() &&
                 receiverCallsign.is_string() &&
                 receiverGridSquare.is_string() &&
-                mode.is_string() &&
-                snrValid)
+                mode.is_string())
             {
                 onReceiveUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    receiverCallsign.template get<std::string>(),
-                    receiverGridSquare.template get<std::string>(),
-                    callsign.template get<std::string>(),
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(receiverCallsign),
+                    string_cast(receiverGridSquare),
+                    string_cast(callsign),
                     snrVal,
-                    mode.template get<std::string>()
+                    string_cast(mode)
                 );
             }
         }
     });
 
-    sioClient_->on("freq_change", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("freq_change", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onFrequencyChangeFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& frequency = msgParams["freq"];
+            auto obj = object_cast(msgParams);
+            auto& sid = find(obj, "sid")->second;
+            auto& lastUpdate = find(obj, "last_update")->second;
+            auto& callsign = find(obj, "callsign")->second;
+            auto& gridSquare = find(obj, "grid_square")->second;
+            auto& frequency = find(obj, "freq")->second;
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -490,23 +483,24 @@ void FreeDVReporter::connect_()
                 frequency.is_number())
             {
                 onFrequencyChangeFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    frequency.template get<uint64_t>()
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(callsign),
+                    string_cast(gridSquare),
+                    double_cast(frequency)
                 );
             }
         }
     });
 
-    sioClient_->on("message_update", [&](const nlohmann::json& msgParams) {  
+    sioClient_->on("message_update", [&](const ujson::value& msgParams) {  
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onMessageUpdateFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& message = msgParams["message"];
+            auto obj = object_cast(msgParams);
+            auto& sid = find(obj, "sid")->second;
+            auto& lastUpdate = find(obj, "last_update")->second;
+            auto& message = find(obj, "message")->second;
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -515,19 +509,20 @@ void FreeDVReporter::connect_()
                 message.is_string())
             {
                 onMessageUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    message.template get<std::string>()
+                    string_cast(sid),
+                    string_cast(lastUpdate),
+                    string_cast(message)
                 );
             }
         }
     });
     
-    sioClient_->on("qsy_request", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("qsy_request", [&](const ujson::value& msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto& callsign = msgParams["callsign"];
-        auto& frequency = msgParams["frequency"];
-        auto& message = msgParams["message"];
+        auto obj = object_cast(msgParams);
+        auto& callsign = find(obj, "callsign")->second;
+        auto& frequency = find(obj, "frequency")->second;
+        auto& message = find(obj, "message")->second;
     
         if (onQsyRequestFn_)
         {
@@ -538,9 +533,9 @@ void FreeDVReporter::connect_()
                 message.is_string())
             {
                 onQsyRequestFn_(
-                    callsign.template get<std::string>(),
-                    frequency.template get<uint64_t>(),
-                    message.template get<std::string>()
+                    string_cast(callsign),
+                    double_cast(frequency),
+                    string_cast(message)
                 );
             }
         }
@@ -551,8 +546,8 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json freqData = {
-            {"freq", frequency}
+        ujson::object freqData {
+            {"freq", (double)frequency}
         };
         sioClient_->emit("freq_change", freqData);
     }
@@ -565,7 +560,7 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json txData = {
+        ujson::object txData {
             {"mode", mode},
             {"transmitting", tx}
         };
@@ -581,7 +576,7 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json txData = {
+        ujson::object txData  {
             {"message", message}
         };
         sioClient_->emit("message_update", txData);
