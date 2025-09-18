@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
     // Start up VITA task so we can get the list of available radios.
     auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper, radioIp != "" ? true : false);
+    FlexVitaTask vitaTask(realtimeHelper, false /*radioIp != "" ? true : false*/); // TBD - our VITA port must be 4992 despite Flex documentation
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
