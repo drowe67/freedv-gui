@@ -31,7 +31,7 @@
 using namespace std::placeholders;
 using namespace std::chrono_literals;
 
-FlexTcpTask::FlexTcpTask()
+FlexTcpTask::FlexTcpTask(int vitaPort)
     : commandHandlingTimer_(500, std::bind(&FlexTcpTask::commandResponseTimeout_, this, _1), true) /* time out waiting for command response after 0.5 second */
     , pingTimer_(10000, std::bind(&FlexTcpTask::pingRadio_, this, _1), true) /* pings radio every 10 seconds to verify connectivity */
     , sequenceNumber_(0)
@@ -39,9 +39,10 @@ FlexTcpTask::FlexTcpTask()
     , txSlice_(-1)
     , isTransmitting_(false)
     , isConnecting_(false)
+    , vitaPort_(vitaPort)
 {    
     // Initialize filter widths. These are sent to SmartSDR on mode changes.
-    filterWidths_.push_back(FilterPair_(150, 2850)); // RADEV1
+    filterWidths_.push_back(FilterPair_(750, 2250)); // RADEV1
     
     // Default to RADEV1.
     currentWidth_ = filterWidths_[0];
@@ -183,7 +184,9 @@ void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::
             sendRadioCommand_(setPrefix + "tx_filter depth=256");
 
             // Link waveform to our UDP audio stream.
-            sendRadioCommand_(setPrefix + "udpport=4992");
+            std::stringstream ss;
+            ss << "udpport=" << vitaPort_;
+            sendRadioCommand_(setPrefix + ss.str().c_str());
         }
     });
 }

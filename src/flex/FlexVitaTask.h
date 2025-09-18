@@ -39,9 +39,9 @@ class FlexVitaTask : public ThreadedObject
 public:
     using RadioDiscoveredFn = std::function<void(FlexVitaTask&, std::string, std::string, void*)>;
     
-    enum { VITA_PORT = 4992 }; // Hardcoding VITA port because we can only handle one slice at a time.
+    enum { VITA_PORT = 4992 }; // Default VITA port if we're discovering other radios on the network.
     
-    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.
@@ -68,6 +68,8 @@ public:
     {
         pendingEndTx_ = endingTx;
     }
+
+    int getPort() const { return udpPort_; }
     
 private:    
     paCallBackData callbackData_;
@@ -88,6 +90,8 @@ private:
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
     bool pendingEndTx_;
+    bool randomUdpPort_;
+    int udpPort_;
 
     // vita packet cache -- preallocate on startup
     // to reduce the amount of latency when sending packets 

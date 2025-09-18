@@ -116,9 +116,11 @@ int main(int argc, char** argv)
     lpcnetEncState = lpcnet_encoder_create();
     assert(lpcnetEncState != nullptr);
     
+    std::string radioIp = getenv("SSDR_RADIO_ADDRESS");
+
     // Start up VITA task so we can get the list of available radios.
     auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper);
+    FlexVitaTask vitaTask(realtimeHelper, radioIp != "" ? true : false);
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
@@ -149,8 +151,6 @@ int main(int argc, char** argv)
     rxThread.signalToStart();
     
     log_info("Sleeping while we get available radios");
-    
-    std::string radioIp;
     while (radioIp == "")
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
     }
     
     log_info("Connecting to radio at IP %s", radioIp.c_str());
-    FlexTcpTask tcpTask;
+    FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
     reportData.tcpTask = &tcpTask;

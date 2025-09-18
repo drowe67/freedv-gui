@@ -37,7 +37,7 @@ public:
     using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
 
-    FlexTcpTask();
+    FlexTcpTask(int vitaPort);
     virtual ~FlexTcpTask();
     
     void setWaveformConnectedFn(WaveformConnectedFn fn, void* state)
@@ -112,6 +112,7 @@ private:
     int txSlice_;
     bool isTransmitting_;
     bool isConnecting_;
+    int vitaPort_;
 
     std::map<int, std::string> sliceFrequencies_;
     std::map<int, bool> activeSlices_;
