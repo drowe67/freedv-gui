@@ -23,7 +23,7 @@
 #include <atomic>
 
 #include "SpeexStep.h"
-#include "../defines.h"
+#include "pipeline_defines.h"
 
 #include <assert.h>
 
