@@ -32,7 +32,7 @@ fi
 
 # create the virtual environment (copied from Brian's build script)
 cd FreeDV-FlexRadio.AppDir
-python3.11 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
+python3.12 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
 # Activate it
 source rade-venv/bin/activate # || { echo "ERROR: activate venv failed"; exit 1; }
 
@@ -50,13 +50,13 @@ cd "$APPDIR/rade-venv/bin"
 echo "Now in $(pwd)"
 ln -s -f ../../usr/bin/python3 python
 ln -s -f ../../usr/bin/python3 python3
-ln -s -f ../../usr/bin/python3 python3.11
+ln -s -f ../../usr/bin/python3 python3.12
 cd - # back to the previous directory
 echo "### Now in $(pwd)"
 
-# Copy /usr/lib/python3.11 to image
+# Copy /usr/lib/python3.12 to image
 cd $APPDIR/usr
-cp -a /usr/lib/python3.11 lib/
+cp -a /usr/lib/python3.12 lib/
 cd -
 
 # Copy the models and symlink
