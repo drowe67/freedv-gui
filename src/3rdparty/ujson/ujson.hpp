@@ -49,7 +49,6 @@ enum { sso_max_length = 15 }; // 15 bytes on both 32/64 bit
 #elif defined __GLIBCXX__
 enum { sso_max_length = 15 }; // 22 bytes on 64 bit
 #define UJSON_SHORT_STRING_OPTIMIZATION // libc++
-//#define UJSON_REF_COUNTED_STRING // libstdc++
 #else
 #error Unrecognized STL library.
 #endif
