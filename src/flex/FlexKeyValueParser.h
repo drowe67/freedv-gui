@@ -24,7 +24,7 @@
 class FlexKeyValueParser
 {
 public:
-    static std::map<std::string, std::string> GetCommandParameters(std::stringstream& ss);
+    static std::map<std::string, std::string> GetCommandParameters(std::stringstream& ss, char delimiter = ' ');
 };
 
 #endif // FLEX_KEY_VALUE_PARSER_H

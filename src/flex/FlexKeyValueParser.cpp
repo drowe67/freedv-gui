@@ -17,12 +17,12 @@
 
 #include "FlexKeyValueParser.h"
 
-std::map<std::string, std::string> FlexKeyValueParser::GetCommandParameters(std::stringstream& ss)
+std::map<std::string, std::string> FlexKeyValueParser::GetCommandParameters(std::stringstream& ss, char delimiter)
 {
     std::string word = "";
     std::map<std::string, std::string> ret;
 
-    while (std::getline(ss, word, ' ')) 
+    while (std::getline(ss, word, delimiter)) 
     {
         std::stringstream wordStream(word);
         std::string parameter = "";

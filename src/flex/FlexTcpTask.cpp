@@ -438,7 +438,7 @@ void FlexTcpTask::processCommand_(std::string& command)
         else if (statusName == "gps")
         {
             log_info("Detected GPS update");
-            auto parameters = FlexKeyValueParser::GetCommandParameters(ss);
+            auto parameters = FlexKeyValueParser::GetCommandParameters(ss, '#'); // XXX - different delimiter than other update types
             auto gridSquare = parameters.find("grid");
             if (gridSquare != parameters.end())
             {
