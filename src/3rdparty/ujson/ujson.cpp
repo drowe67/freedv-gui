@@ -2992,6 +2992,7 @@ static ujson::value parse_value(parser &parser) {
     case ujson_array_begin: {
         parser.read_token();
         ujson::array array;
+        array.reserve(4);
         bool first = true;
         while (parser.peek_token() != ujson_array_end) {
             if (!first)
@@ -3006,6 +3007,7 @@ static ujson::value parse_value(parser &parser) {
     case ujson_object_begin: {
         parser.read_token();
         ujson::object object;
+        object.reserve(8);
         bool first = true;
         while (parser.peek_token() != ujson_object_end) {
             if (!first)

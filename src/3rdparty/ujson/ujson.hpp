@@ -518,7 +518,9 @@ template <typename T>
 inline value::value(const std::vector<T> &a,
                     const typename std::enable_if<
                         std::is_convertible<T, value>::value>::type *p) {
-    array tmp(a.begin(), a.end());
+    array tmp;
+    tmp.reserve(a.size());
+    tmp.insert(tmp.begin(), a.begin(), a.end());
     new (m_storage) array_impl_t{ std::move(tmp) };
 }
 
@@ -539,7 +541,9 @@ template <typename T>
 inline value::value(const std::map<std::string, T> &o,
                     const typename std::enable_if<
                         std::is_convertible<T, value>::value>::type *p) {
-    object tmp(o.begin(), o.end());
+    object tmp;
+    tmp.reserve(o.size());
+    tmp.insert(tmp.begin(), o.begin(), o.end());
     new (m_storage) object_impl_t{ std::move(tmp), validate_utf8::yes };
 }
 
@@ -550,6 +554,7 @@ inline value::value(
         value, decltype(to_json(std::declval<T>()))>::value>::type *
         p) {
     object tmp;
+    tmp.reserve(o.size());
     for (auto it = o.begin(); it != o.end(); ++it)
         tmp.push_back({ it->first, to_json(it->second) });
     new (m_storage) object_impl_t{ std::move(tmp), validate_utf8::yes };
