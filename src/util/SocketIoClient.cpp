@@ -51,7 +51,7 @@ SocketIoClient::~SocketIoClient()
     fut.wait();
 }
 
-void SocketIoClient::setAuthDictionary(ujson::value authJson)
+void SocketIoClient::setAuthDictionary(nlohmann::json authJson)
 {
     jsonAuthObj_ = authJson;
 }
@@ -61,7 +61,7 @@ void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
     eventFnMap_[eventName] = fn;
 }
 
-void SocketIoClient::emit(std::string eventName, ujson::value params)
+void SocketIoClient::emit(std::string eventName, nlohmann::json params)
 {
     enqueue_([this, eventName, params]() {
         emitImpl_(eventName, params);
@@ -98,9 +98,11 @@ void SocketIoClient::onConnect_()
     
     // Register open handler
     client_.set_open_handler([&](websocketpp::connection_hdl) {
-        std::stringstream ss;
-	ss << "40" << jsonAuthObj_;
-        connection_->send(ss.str());
+        std::string namespaceOpen = "40";
+        auto tmp = jsonAuthObj_.dump();
+        namespaceOpen += tmp;
+        
+        connection_->send(namespaceOpen);
     });
     
     // Register fail handler
@@ -138,13 +140,12 @@ void SocketIoClient::onReceive_(char* buf, int length)
     connection_->read_some(buf, length);
 }
 
-void SocketIoClient::emitImpl_(std::string eventName, ujson::value params)
+void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
 {
     if (connection_)
     {
-        ujson::array arrayEmit { eventName, params };
-        ujson::value msgEmit = std::move(arrayEmit);
-        std::string msgToSend = SOCKET_IO_TX_PREFIX + to_string(msgEmit);
+        nlohmann::json msgEmit = {eventName, params};
+        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
         connection_->send(msgToSend);
     }
 }
@@ -153,9 +154,8 @@ void SocketIoClient::emitImpl_(std::string eventName)
 {
     if (connection_)
     {
-        ujson::array arrayEmit { eventName };
-        ujson::value msgEmit = std::move(arrayEmit);
-        std::string msgToSend = SOCKET_IO_TX_PREFIX + to_string(msgEmit);
+        nlohmann::json msgEmit = {eventName};
+        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
         connection_->send(msgToSend);
     }
 }
@@ -181,11 +181,10 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
             // "open" -- ready to receive socket.io messages
             // Grab ping timings and start ping timer
-	    ujson::value sessionInfo = ujson::parse(ptr + 1);
-            auto obj = object_cast(sessionInfo);
-	    pingTimer_.setTimeout(
-                int32_cast(find(obj, "pingInterval")->second) + 
-                int32_cast(find(obj, "pingTimeout")->second));
+            nlohmann::json sessionInfo = nlohmann::json::parse(ptr + 1);
+            pingTimer_.setTimeout(
+                sessionInfo["pingInterval"].template get<int>() + 
+                sessionInfo["pingTimeout"].template get<int>());
             pingTimer_.start();
             
             break;
@@ -246,16 +245,15 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
         case '2':
         {
             // event received from server
-            const ujson::value emptyEvent = ujson::object{};
+            const nlohmann::json emptyEvent = {};
 
-	    ujson::value parsedEvent = ujson::parse(ptr + 1, strlen(ptr + 1));
-            ujson::array eventArray = array_cast(std::move(parsedEvent));
-	    std::string eventName = string_cast(std::move(eventArray[0]));
+            nlohmann::json parsedEvent = nlohmann::json::parse(ptr + 1);
+            std::string eventName = parsedEvent[0];
             if (eventFnMap_[eventName])
             {
-                if (eventArray.size() > 1)
+                if (parsedEvent.size() > 1)
                 {
-                    (eventFnMap_[eventName])(eventArray[1]);
+                    (eventFnMap_[eventName])(parsedEvent[1]);
                 }
                 else   
                 {

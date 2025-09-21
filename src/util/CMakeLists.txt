@@ -22,4 +22,3 @@ add_library(fdv_util STATIC
     ${UTIL_LINUX_FILES}
     ${UTIL_WIN32_FILES}
 )
-target_link_libraries(fdv_util PUBLIC ujson)
