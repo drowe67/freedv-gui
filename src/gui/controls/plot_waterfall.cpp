@@ -225,7 +225,9 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight); 
+
+        auto alreadyDrawnPx = (dy * waterfallSlices_.size());
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + alreadyDrawnPx, m_imgWidth, m_imgHeight - alreadyDrawnPx); 
     }
     
     if(m_newdata)
