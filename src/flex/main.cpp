@@ -185,6 +185,8 @@ void ReportingController::reportCallsign(std::string callsign, char snr)
 void ReportingController::updateRadioGridSquare(std::string newGridSquare)
 {
     enqueue_([&, newGridSquare]() {
+        if (newGridSquare == "") return;
+
         log_info("Grid square updated to %s", newGridSquare.c_str());
         bool changed = newGridSquare != currentGridSquare_;
         currentGridSquare_ = newGridSquare;
