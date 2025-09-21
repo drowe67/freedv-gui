@@ -26,6 +26,7 @@
 #include <mutex>
 #include <atomic>
 #include <sstream>
+#include <cinttypes>
 #include <stdlib.h>
 
 #include "git_version.h"
@@ -37,6 +38,7 @@
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 #include "../reporting/FreeDVReporter.h"
+#include "../util/logging/ulog.h"
 
 #include "rade_api.h"
 
@@ -63,72 +65,156 @@ std::string GetVersionString()
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
-FreeDVReporter* reporterConnection = nullptr;
-std::string currentGridSquare = SOFTWARE_GRID_SQUARE;
-std::string radioCallsign;
-bool userHidden = true;
-
-void updateReporterState()
+class ReportingController : public ThreadedObject
 {
-    if (reporterConnection != nullptr && userHidden)
+public:
+    ReportingController()
+        : reporterConnection_(nullptr)
+        , currentGridSquare_(SOFTWARE_GRID_SQUARE)
+        , radioCallsign_("")
+        , userHidden_(true)
+        , currentFreq_(0)
     {
-        delete reporterConnection;
-        reporterConnection = nullptr;
+        // empty
+    }
+    virtual ~ReportingController() = default;
+
+    void updateRadioCallsign(std::string newCallsign);
+    void updateRadioGridSquare(std::string newGridSquare);
+    void reportCallsign(std::string callsign, char snr);
+    void showSelf();
+    void hideSelf();
+    void changeFrequency(uint64_t freqHz);
+    void transmit(bool transmit);
+
+private:
+    FreeDVReporter* reporterConnection_;
+    std::string currentGridSquare_;
+    std::string radioCallsign_;
+    bool userHidden_;
+    uint64_t currentFreq_;
+
+    void updateReporterState_();
+};
+
+void ReportingController::transmit(bool transmit)
+{
+    enqueue_([&, transmit]() {
+        log_info("Reporting TX state %d", (int)transmit);
+        if (reporterConnection_ != nullptr)
+        {
+            reporterConnection_->transmit(MODE_STRING, transmit);
+        }
+    });
+}
+
+void ReportingController::changeFrequency(uint64_t freqHz)
+{
+    enqueue_([&, freqHz]() {
+        log_info("Reporting frequency %" PRIu64, freqHz);
+        if (reporterConnection_ != nullptr)
+        {
+            reporterConnection_->freqChange(freqHz);
+        }
+        currentFreq_ = freqHz;
+    });
+}
+
+void ReportingController::showSelf()
+{
+    enqueue_([&]() {
+        log_info("Showing ourselves on FreeDV Reporter");
+        userHidden_ = false;
+        updateReporterState_();
+    });
+}
+
+void ReportingController::hideSelf()
+{
+    enqueue_([&]() {
+        log_info("Hiding ourselves on FreeDV Reporter");
+        userHidden_ = true;
+        updateReporterState_();
+    });
+}
+
+void ReportingController::updateReporterState_()
+{
+    if (reporterConnection_ != nullptr && userHidden_)
+    {
+        log_info("Disconnecting from FreeDV Reporter");
+        delete reporterConnection_;
+        reporterConnection_ = nullptr;
     }
 
-    if (reporterConnection == nullptr && !userHidden)
+    if (reporterConnection_ == nullptr && !userHidden_)
     {
-        reporterConnection = new FreeDVReporter("", radioCallsign, currentGridSquare, GetVersionString(), false, true);
-        reporterConnection->connect();
+        log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), GetVersionString().c_str());
+        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, GetVersionString(), false, true);
+        reporterConnection_->connect();
     }
 }
 
-void updateRadioCallsign(std::string newCallsign)
+void ReportingController::updateRadioCallsign(std::string newCallsign)
 {
-    bool changed = newCallsign != radioCallsign;
-    radioCallsign = newCallsign;
-    if (changed)
-    {
-        if (reporterConnection != nullptr)
+    enqueue_([&, newCallsign]() {
+        log_info("Updating callsign to %s", newCallsign.c_str());
+        bool changed = newCallsign != radioCallsign_;
+        radioCallsign_ = newCallsign;
+        if (changed)
         {
-            delete reporterConnection;
-            reporterConnection = nullptr;
+            if (reporterConnection_ != nullptr)
+            {
+                log_info("Disconnecting from FreeDV Reporter");
+                delete reporterConnection_;
+                reporterConnection_ = nullptr;
+            }
+            updateReporterState_();
         }
-        updateReporterState();
-    }
+    });
 }
 
-void updateRadioGridSquare(std::string newGridSquare)
+void ReportingController::reportCallsign(std::string callsign, char snr)
 {
-    bool changed = newGridSquare != currentGridSquare;
-    currentGridSquare = newGridSquare;
-    if (changed)
-    {
-        if (reporterConnection != nullptr)
+    enqueue_([&, callsign, snr]() {
+        log_info("Reporting RX callsign %s (SNR %d) to FreeDV Reporter", callsign.c_str(), (int)snr);
+        reporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
+    });
+}
+
+void ReportingController::updateRadioGridSquare(std::string newGridSquare)
+{
+    enqueue_([&]() {
+        log_info("Grid square updated to %s", newGridSquare.c_str());
+        bool changed = newGridSquare != currentGridSquare_;
+        currentGridSquare_ = newGridSquare;
+        if (changed)
         {
-            delete reporterConnection;
-            reporterConnection = nullptr;
+            if (reporterConnection_ != nullptr)
+            {
+                delete reporterConnection_;
+                reporterConnection_ = nullptr;
+            }
+            updateReporterState_();
         }
-        updateReporterState();
-    }
+    });
 }
 
 struct CallsignReporting
 {
-    FreeDVReporter** reporter;
+    ReportingController* reporter;
     FlexTcpTask* tcpTask;
     FlexTxRxThread* rxThread;
 };
-uint64_t currentFreq;
 
 void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
 {
     CallsignReporting* reportObj = (CallsignReporting*)state;
     std::string callsign(txt_ptr, length);
 
-    if (*reportObj->reporter != nullptr)
+    if (reportObj->reporter != nullptr)
     {
-        (*reportObj->reporter)->addReceiveRecord(callsign, MODE_STRING, currentFreq, reportObj->rxThread->getSnr());
+        reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
     }
 
     reportObj->tcpTask->addSpot(callsign);
@@ -231,8 +317,9 @@ int main(int argc, char** argv)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
+    ReportingController reportController;
     reportData.tcpTask = &tcpTask;
-    reportData.reporter = &reporterConnection;
+    reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 
     rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
@@ -247,29 +334,23 @@ int main(int argc, char** argv)
         rade_text_generate_tx_string(radeTextPtr, callsign.c_str(), callsign.size(), eooSyms, nsyms);
         rade_tx_set_eoo_bits(radeObj, eooSyms);
 
-        updateRadioCallsign(callsign);
+        reportController.updateRadioCallsign(callsign);
     }, nullptr);
     tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
-        updateRadioGridSquare(gridSquare);
+        reportController.updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
     tcpTask.setWaveformUserConnectedFn([&](FlexTcpTask&, void*) {
-        userHidden = false;
-        updateReporterState();
+        reportController.showSelf();
     }, nullptr);
     tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
-        userHidden = true;
-        updateReporterState();
+        reportController.hideSelf();
     }, nullptr);
     tcpTask.setWaveformFreqChangeFn([&](FlexTcpTask&, uint64_t freq, void*) {
-        if (reporterConnection != nullptr)
-        {
-            reporterConnection->freqChange(freq);
-        }
-        currentFreq = freq;
+        reportController.changeFrequency(freq);
     }, nullptr);
     tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState tx, void*) {
         if (tx == FlexTcpTask::ENDING_TX)
@@ -284,10 +365,7 @@ int main(int argc, char** argv)
             vitaTask.setEndingTx(false);
             vitaTask.setTransmit(txFlag);
             g_tx.store(txFlag, std::memory_order_release);
-            if (reporterConnection != nullptr)
-            {
-                reporterConnection->transmit(MODE_STRING, txFlag);
-            }
+            reportController.transmit(txFlag);
         }
     }, nullptr);
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
