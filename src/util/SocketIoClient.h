@@ -56,7 +56,7 @@ private:
     using WebSocketClient = websocketpp::client<websocketpp::config::custom_config>;
     using message_ptr = WebSocketClient::message_ptr;
     
-    yyjson_mut_doc* jsonAuthObj_;
+    std::string authObj_;
     WebSocketClient client_;
     WebSocketClient::connection_ptr connection_;
     std::map<std::string, SioMessageReceivedFn> eventFnMap_;

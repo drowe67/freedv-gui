@@ -34,8 +34,7 @@ using websocketpp::lib::bind;
 #define DEFAULT_PING_TIMER_INTERVAL_MS (30000)
 
 SocketIoClient::SocketIoClient()
-    : jsonAuthObj_(nullptr)
-    , pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
+    : pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
         log_warn("did not receive ping from server in time");
         disconnect();
     }, true)
@@ -50,20 +49,14 @@ SocketIoClient::~SocketIoClient()
     enableReconnect_ = false;
     auto fut = disconnect();
     fut.wait();
-
-    if (jsonAuthObj_ != nullptr)
-    {
-        yyjson_mut_doc_free(jsonAuthObj_);
-    }
 }
 
 void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
 {
-    if (jsonAuthObj_ != nullptr)
-    {
-        yyjson_mut_doc_free(jsonAuthObj_);
-    }
-    jsonAuthObj_ = authJson;
+    auto tmp = yyjson_mut_write(authJson, 0, nullptr);
+    authObj_ = tmp;
+    free(tmp);
+    yyjson_mut_doc_free(authJson);
 }
 
 void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
@@ -136,11 +129,9 @@ void SocketIoClient::onConnect_()
     // Register open handler
     client_.set_open_handler([&](websocketpp::connection_hdl) {
         std::string namespaceOpen = "40";
-        auto tmp = yyjson_mut_write(jsonAuthObj_, 0, nullptr);
-        namespaceOpen += tmp;
+        namespaceOpen += authObj_;
         
         connection_->send(namespaceOpen);
-        free(tmp);
     });
     
     // Register fail handler

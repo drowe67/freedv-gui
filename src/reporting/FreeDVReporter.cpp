@@ -247,6 +247,7 @@ void FreeDVReporter::connect_()
     yyjson_mut_val* authData = yyjson_mut_obj(authDoc);
     yyjson_mut_doc_set_root(authDoc, authData);
 
+    auto osString = GetOperatingSystemString();
     if (!isValidForReporting())
     {
         yyjson_mut_obj_add_str(authDoc, authData, "role", "view");
@@ -258,7 +259,7 @@ void FreeDVReporter::connect_()
         yyjson_mut_obj_add_str(authDoc, authData, "grid_square", gridSquare_.c_str());
         yyjson_mut_obj_add_str(authDoc, authData, "version", software_.c_str());
         yyjson_mut_obj_add_bool(authDoc, authData, "rx_only", rxOnly_);
-        yyjson_mut_obj_add_str(authDoc, authData, "os", GetOperatingSystemString().c_str());
+        yyjson_mut_obj_add_str(authDoc, authData, "os", osString.c_str());
     }
 
     // Reconnect listener should re-report frequency so that "unknown"
@@ -295,7 +296,7 @@ void FreeDVReporter::connect_()
     {
         port = atoi(portStr.c_str());
     }
-    sioClient_->setAuthDictionary(authDoc);
+    sioClient_->setAuthDictionary(authDoc); // frees authDoc
     sioClient_->connect(host.c_str(), port, true);
     
     if (onReporterConnectFn_)
