@@ -8,13 +8,12 @@ endif(LINUX)
 
 if(APPLE)
     set(THREADED_OBJECT_FILES ThreadedObject.mm)
-else(APPLE)
-    set(THREADED_OBJECT_FILES ThreadedObject.cpp)
 endif(APPLE)
 
 add_library(fdv_util STATIC
     Semaphore.cpp
     SocketIoClient.cpp
+    ThreadedObject.cpp
     ${THREADED_OBJECT_FILES}
     ThreadedTimer.cpp
     TcpConnectionHandler.cpp
