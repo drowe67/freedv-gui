@@ -28,20 +28,20 @@
 #include <websocketpp/client.hpp>
 
 #include "TcpConnectionHandler.h"
-#include "json.hpp"
+#include "yyjson.h"
 
 class SocketIoClient : public TcpConnectionHandler
 {
 public:
-    using SioMessageReceivedFn = std::function<void(const nlohmann::json&)>;
+    using SioMessageReceivedFn = std::function<void(yyjson_val*)>;
     using OnConnectionStateChangeFn = std::function<void()>;
     
     SocketIoClient();
     virtual ~SocketIoClient();
     
-    void setAuthDictionary(nlohmann::json authJson);
+    void setAuthDictionary(yyjson_mut_doc* authJson);
     void on(std::string eventName, SioMessageReceivedFn fn);
-    void emit(std::string eventName, nlohmann::json params);
+    void emit(std::string eventName, yyjson_mut_val* params);
     void emit(std::string eventName);
     
     void setOnConnectFn(OnConnectionStateChangeFn fn);
@@ -56,16 +56,13 @@ private:
     using WebSocketClient = websocketpp::client<websocketpp::config::custom_config>;
     using message_ptr = WebSocketClient::message_ptr;
     
-    nlohmann::json jsonAuthObj_;
+    yyjson_mut_doc* jsonAuthObj_;
     WebSocketClient client_;
     WebSocketClient::connection_ptr connection_;
     std::map<std::string, SioMessageReceivedFn> eventFnMap_;
     OnConnectionStateChangeFn onConnectFn_;
     OnConnectionStateChangeFn onDisconnectFn_;
     ThreadedTimer pingTimer_;
-    
-    void emitImpl_(std::string eventName, nlohmann::json params);
-    void emitImpl_(std::string eventName);
     
     void handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg);
     void handleSocketIoMessage_(char* ptr, int length);

@@ -34,7 +34,8 @@ using websocketpp::lib::bind;
 #define DEFAULT_PING_TIMER_INTERVAL_MS (30000)
 
 SocketIoClient::SocketIoClient()
-    : pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
+    : jsonAuthObj_(nullptr)
+    , pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
         log_warn("did not receive ping from server in time");
         disconnect();
     }, true)
@@ -49,10 +50,19 @@ SocketIoClient::~SocketIoClient()
     enableReconnect_ = false;
     auto fut = disconnect();
     fut.wait();
+
+    if (jsonAuthObj_ != nullptr)
+    {
+        yyjson_mut_doc_free(jsonAuthObj_);
+    }
 }
 
-void SocketIoClient::setAuthDictionary(nlohmann::json authJson)
+void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
 {
+    if (jsonAuthObj_ != nullptr)
+    {
+        yyjson_mut_doc_free(jsonAuthObj_);
+    }
     jsonAuthObj_ = authJson;
 }
 
@@ -61,17 +71,44 @@ void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
     eventFnMap_[eventName] = fn;
 }
 
-void SocketIoClient::emit(std::string eventName, nlohmann::json params)
+void SocketIoClient::emit(std::string eventName, yyjson_mut_val* params)
 {
-    enqueue_([this, eventName, params]() {
-        emitImpl_(eventName, params);
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* eventArray = yyjson_mut_arr(doc);
+    yyjson_mut_doc_set_root(doc, eventArray);
+    yyjson_mut_arr_add_str(doc, eventArray, eventName.c_str());
+    yyjson_mut_arr_append(eventArray, params);
+
+    auto outJson = yyjson_mut_write(doc, 0, nullptr);
+    std::string msgToSend = std::string(SOCKET_IO_TX_PREFIX) + outJson;
+    free(outJson);
+    yyjson_mut_doc_free(doc);
+
+    enqueue_([this, msgToSend]() {
+        if (connection_)
+        {
+            connection_->send(msgToSend);
+        }
     });
 }
 
 void SocketIoClient::emit(std::string eventName)
 {
-    enqueue_([this, eventName]() {
-        emitImpl_(eventName);
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* eventArray = yyjson_mut_arr(doc);
+    yyjson_mut_doc_set_root(doc, eventArray);
+    yyjson_mut_arr_add_str(doc, eventArray, eventName.c_str());
+
+    auto outJson = yyjson_mut_write(doc, 0, nullptr);
+    std::string msgToSend = std::string(SOCKET_IO_TX_PREFIX) + outJson;
+    free(outJson);
+    yyjson_mut_doc_free(doc);
+
+    enqueue_([this, msgToSend]() {
+        if (connection_)
+        {
+            connection_->send(msgToSend);
+        }
     });
 }
 
@@ -99,10 +136,11 @@ void SocketIoClient::onConnect_()
     // Register open handler
     client_.set_open_handler([&](websocketpp::connection_hdl) {
         std::string namespaceOpen = "40";
-        auto tmp = jsonAuthObj_.dump();
+        auto tmp = yyjson_mut_write(jsonAuthObj_, 0, nullptr);
         namespaceOpen += tmp;
         
         connection_->send(namespaceOpen);
+        free(tmp);
     });
     
     // Register fail handler
@@ -140,26 +178,6 @@ void SocketIoClient::onReceive_(char* buf, int length)
     connection_->read_some(buf, length);
 }
 
-void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
-{
-    if (connection_)
-    {
-        nlohmann::json msgEmit = {eventName, params};
-        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
-        connection_->send(msgToSend);
-    }
-}
-
-void SocketIoClient::emitImpl_(std::string eventName)
-{
-    if (connection_)
-    {
-        nlohmann::json msgEmit = {eventName};
-        std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
-        connection_->send(msgToSend);
-    }
-}
-
 void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
 {
     if (msg->get_opcode() == websocketpp::frame::opcode::text)
@@ -181,12 +199,18 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
             // "open" -- ready to receive socket.io messages
             // Grab ping timings and start ping timer
-            nlohmann::json sessionInfo = nlohmann::json::parse(ptr + 1);
+            yyjson_doc* sessionInfo = yyjson_read(ptr + 1, strlen(ptr + 1), 0);
+
+            yyjson_val* rootVal = yyjson_doc_get_root(sessionInfo);
+            auto pingInterval = yyjson_obj_get(rootVal, "pingInterval");
+            auto pingTimeout = yyjson_obj_get(rootVal, "pingTimeout");
+
             pingTimer_.setTimeout(
-                sessionInfo["pingInterval"].template get<int>() + 
-                sessionInfo["pingTimeout"].template get<int>());
+                yyjson_get_int(pingInterval) +
+                yyjson_get_int(pingTimeout));
             pingTimer_.start();
-            
+
+            yyjson_doc_free(sessionInfo);
             break;
         }
         case '1':
@@ -245,21 +269,18 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
         case '2':
         {
             // event received from server
-            const nlohmann::json emptyEvent = {};
+            yyjson_doc* eventDoc = yyjson_read(ptr + 1, strlen(ptr + 1), 0);
+            yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
+            yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
+            yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
-            nlohmann::json parsedEvent = nlohmann::json::parse(ptr + 1);
-            std::string eventName = parsedEvent[0];
-            if (eventFnMap_[eventName])
+            std::string eventNameStr = yyjson_get_str(eventName);
+            if (eventFnMap_[eventNameStr])
             {
-                if (parsedEvent.size() > 1)
-                {
-                    (eventFnMap_[eventName])(parsedEvent[1]);
-                }
-                else   
-                {
-                    (eventFnMap_[eventName])(emptyEvent);
-                }
+                (eventFnMap_[eventNameStr])(eventArgs); // eventArgs is nullptr if not provided
             }
+
+            yyjson_doc_free(eventDoc);
             break;
         }
         case '4':
