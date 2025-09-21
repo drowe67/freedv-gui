@@ -649,7 +649,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 {
-    wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
 
     // Buffers re-used by tx and rx processing.  We take samples from
@@ -771,10 +770,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
         // Defer reset until next time we go into TX.
         deferReset_ = true;
     }
-
-    if (g_dump_timing) {
-        log_info("%4ld", sw.Time());
-    }
 }
 
 void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
@@ -784,7 +779,6 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 {
-    wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
 
     // Buffers re-used by tx and rx processing.  We take samples from
