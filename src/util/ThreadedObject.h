@@ -39,7 +39,7 @@ public:
     virtual ~ThreadedObject();
 
 protected:
-    ThreadedObject(ThreadedObject* parent = nullptr, bool forceSeparateThread = false);
+    ThreadedObject(ThreadedObject* parent = nullptr, bool forceSeparateThread = true);
     
     // Enqueues some code to run on a different thread.
     // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
