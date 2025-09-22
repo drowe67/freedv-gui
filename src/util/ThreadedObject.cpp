@@ -21,38 +21,14 @@
 //=========================================================================
 
 #include <chrono>
-#include <cassert>
 #include "ThreadedObject.h"
 
 using namespace std::chrono_literals;
 
-ThreadedObject::ThreadedObject(ThreadedObject* parent, bool forceSeparateThread)
+ThreadedObject::ThreadedObject(ThreadedObject* parent)
     : parent_(parent)
-#if defined(__APPLE__)
-    , queue_(nullptr)
-#endif // defined(__APPLE__)
     , isDestroying_(false)
 {
-#if defined(__APPLE__)
-    if (!forceSeparateThread)
-    {
-        dispatch_queue_t parentQueue;
-    
-        if (parent_ != nullptr)
-        {
-            parentQueue = parent_->queue_;
-        }
-        else
-        {
-            parentQueue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
-        }
-        
-        queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
-        assert(queue_ != nullptr);
-        return;
-    }
-#endif // defined(__APPLE__)
-
     // Instantiate thread here rather than the initializer since otherwise
     // we might not be able to guarantee that the mutex is initialized first.
     if (parent_ == nullptr)
@@ -63,14 +39,6 @@ ThreadedObject::ThreadedObject(ThreadedObject* parent, bool forceSeparateThread)
 
 ThreadedObject::~ThreadedObject()
 {
-#if defined(__APPLE__)
-    if (queue_ != nullptr)
-    {
-        dispatch_release(queue_);
-        return;
-    }
-#endif // defined(__APPLE__)
-
     if (objectThread_.joinable())
     {
         isDestroying_ = true;
@@ -81,14 +49,6 @@ ThreadedObject::~ThreadedObject()
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
-#if defined(__APPLE__)
-    if (queue_ != nullptr)
-    {
-        enqueueDispatch_(fn);
-        return;
-    }
-#endif // defined(__APPLE__)
-
     if (parent_ != nullptr)
     {
         parent_->enqueue_(fn, timeoutMilliseconds);

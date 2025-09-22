@@ -25,12 +25,13 @@
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#endif // defined(__APPLE__)
-
+#else
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#endif // defined(__APPLE__)
+
 #include <functional>
 
 class ThreadedObject
@@ -39,7 +40,7 @@ public:
     virtual ~ThreadedObject();
 
 protected:
-    ThreadedObject(ThreadedObject* parent = nullptr, bool forceSeparateThread = true);
+    ThreadedObject(ThreadedObject* parent = nullptr);
     
     // Enqueues some code to run on a different thread.
     // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
@@ -50,10 +51,7 @@ private:
     
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
-
-    void enqueueDispatch_(std::function<void()> fn);
-#endif // defined(__APPLE__)
-
+#else
     bool isDestroying_;
     std::thread objectThread_;
     std::deque<std::function<void()> > eventQueue_;
@@ -61,6 +59,7 @@ private:
     std::condition_variable_any eventQueueCV_;
 
     void eventLoop_();
+#endif // defined(__APPLE__)
 };
 
 #endif // THREADED_OBJECT_H

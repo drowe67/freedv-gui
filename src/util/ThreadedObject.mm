@@ -24,7 +24,30 @@
 
 #include "ThreadedObject.h"
 
-void ThreadedObject::enqueueDispatch_(std::function<void()> fn)
+ThreadedObject::ThreadedObject(ThreadedObject* parent)
+    : parent_(parent)
+{
+    dispatch_queue_t parentQueue;
+    
+    if (parent_ != nullptr)
+    {
+        parentQueue = parent_->queue_;
+    }
+    else
+    {
+        parentQueue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
+    }
+    
+    queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
+    assert(queue_ != nil);
+}
+
+ThreadedObject::~ThreadedObject()
+{
+    dispatch_release(queue_);
+}
+
+void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
     // note: timeout not implemented
     dispatch_async(queue_, ^() {

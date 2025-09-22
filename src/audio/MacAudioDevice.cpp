@@ -111,8 +111,7 @@ static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
 }
 
 MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
-    : ThreadedObject(nullptr, true)
-    , coreAudioId_(coreAudioId)
+    : coreAudioId_(coreAudioId)
     , direction_(direction)
     , numChannels_(numChannels)
     , sampleRate_(sampleRate)
@@ -874,7 +873,7 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_); // >> (fastMode ? 1 : 0);
+    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
 }
 
