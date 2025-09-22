@@ -1405,19 +1405,6 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 #endif
 
 #ifdef _USE_TIMER
-// Predefined string constants to reduce dynamic allocations during timer execution.
-const wxString SNR_FORMAT_STRING("%d dB");
-const wxString MIC_SPKR_LEVEL_FORMAT_STRING("%0.1f%s");
-const wxString DB_STR("dB");
-const wxString NO_SNR_STR("--");
-const wxString EMPTY_STR("");
-const wxString MODEM_STR("Modem");
-const wxString FREQ_KHZ_FORMAT_STR("%.01f");
-const wxString FREQ_MHZ_FORMAT_STR("%.04f");
-const wxString CURRENT_TIME_FORMAT_STR("%s %s");
-const wxString SNR_DROPDOWN_FORMAT_STR("%0.1f");
-const wxString MODE_FORMAT_STR("Mode: %s");
-
 //----------------------------------------------------------------
 // OnTimer()
 //
@@ -1593,7 +1580,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
              m_sliderMicSpkrLevel->Refresh();
-             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STRING, (double)sliderVal, DB_STR);
+             wxString fmt = wxString::Format(wxT("%0.1f%s"), (double)sliderVal, _("dB"));
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
@@ -1621,7 +1608,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
-        wxString snrString = wxString::Format(SNR_FORMAT_STRING, (int)(g_snr + 0.5));
+        wxString snrString = wxString::Format("%d dB", (int)(g_snr + 0.5));
 
         if (syncState)
         {
@@ -1630,7 +1617,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else
         {
-            m_textSNR->SetLabel(NO_SNR_STR);
+            m_textSNR->SetLabel(wxT("--"));
             m_gaugeSNR->SetValue(0);
         }
 
@@ -1655,8 +1642,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         
                         // Clear RX text to reduce the incidence of incorrect callsigns extracted with
                         // the PSK Reporter callsign extraction logic.
-                        m_txtCtrlCallSign->SetValue(EMPTY_STR);
-                        m_cboLastReportedCallsigns->SetValue(EMPTY_STR);
+                        m_txtCtrlCallSign->SetValue(wxT(""));
+                        m_cboLastReportedCallsigns->SetValue(wxT(""));
                         m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
@@ -1679,7 +1666,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(MODEM_STR);
+                m_textSync->SetLabel(wxT("Modem"));
                 m_textSync->Refresh();
             }
         }
@@ -1740,7 +1727,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // a) The callsign encoder indicates a valid callsign has been received.
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
-        // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.        
+        // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
         if (wxGetApp().m_reporters.size() > 0 && wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             const char* text = freedvInterface.getReliableText();
@@ -1763,12 +1750,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
-                        freqString = wxString::Format(FREQ_KHZ_FORMAT_STR, freq);
+                        freqString = wxString::Format("%.01f", freq);
                     }
                     else
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
-                        freqString = wxString::Format(FREQ_MHZ_FORMAT_STR, freq);
+                        freqString = wxString::Format("%.04f", freq);
                     }
 
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
@@ -1776,13 +1763,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
-                        wxString currentTimeAsString = EMPTY_STR;
+                        wxString currentTimeAsString = wxT("");
                         
                         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
                             currentTime = currentTime.ToUTC();
                         }
-                        currentTimeAsString.Printf(CURRENT_TIME_FORMAT_STR, currentTime.FormatISODate(), currentTime.FormatISOTime());
+                        currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
                         m_lastReportedCallsignListView->SetItem(index, 1, freqString);
@@ -1790,7 +1777,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     wxString snrAsString;
-                    snrAsString.Printf(SNR_DROPDOWN_FORMAT_STR, g_snr);
+                    snrAsString.Printf(wxT("%0.1f"), g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
                     
@@ -1907,7 +1894,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        wxString modeString = wxString::Format(MODE_FORMAT_STR, freedvInterface.getCurrentModeStr());
+        wxString modeString = wxString::Format(wxT("Mode: %s"), freedvInterface.getCurrentModeStr());
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
