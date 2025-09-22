@@ -25,6 +25,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        detached: true
+
     - uses: gerlero/brew-install@v1
       with:
         packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
