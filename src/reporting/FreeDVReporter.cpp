@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include "yyjson.h"
 #include "FreeDVReporter.h"
 #include "../util/SocketIoClient.h"
 #include "../os/os_interface.h"
@@ -68,13 +69,15 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     
     if (isValidForReporting())
     {
-        nlohmann::json qsyMsg = {
-            {"dest_sid", sid},
-            {"message", message},
-            {"frequency", frequencyHz}
-        };
+        yyjson_mut_doc* qsyDoc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* qsyObj = yyjson_mut_obj(qsyDoc);
 
-        sioClient_->emit("qsy_request", qsyMsg);
+        yyjson_mut_obj_add_str(qsyDoc, qsyObj, "dest_sid", sid.c_str());
+        yyjson_mut_obj_add_str(qsyDoc, qsyObj, "message", message.c_str());
+        yyjson_mut_obj_add_uint(qsyDoc, qsyObj, "frequency", frequencyHz);
+
+        sioClient_->emit("qsy_request", qsyObj);
+        yyjson_mut_doc_free(qsyDoc);
     }
 }
 
@@ -149,13 +152,15 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
     
     if (isValidForReporting() && isFullyConnected_)
     {
-        nlohmann::json rxData = {
-            {"callsign", callsign},
-            {"mode", mode},
-            {"snr", (int)snr}
-        };
-    
+        yyjson_mut_doc* rxDoc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* rxData = yyjson_mut_obj(rxDoc);
+
+        yyjson_mut_obj_add_str(rxDoc, rxData, "callsign", callsign.c_str());
+        yyjson_mut_obj_add_str(rxDoc, rxData, "mode", mode.c_str());
+        yyjson_mut_obj_add_int(rxDoc, rxData, "snr", (int)snr);
+
         sioClient_->emit("rx_report", rxData);
+        yyjson_mut_doc_free(rxDoc);
     }
 }
 
@@ -238,23 +243,23 @@ bool FreeDVReporter::isValidForReporting()
 void FreeDVReporter::connect_()
 {        
     // Connect and send initial info.
-    nlohmann::json authData;
+    yyjson_mut_doc* authDoc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* authData = yyjson_mut_obj(authDoc);
+    yyjson_mut_doc_set_root(authDoc, authData);
+
+    auto osString = GetOperatingSystemString();
     if (!isValidForReporting())
     {
-        authData = {
-            {"role", "view"}
-        };
+        yyjson_mut_obj_add_str(authDoc, authData, "role", "view");
     }
     else
     {
-        authData = {
-            {"role", "report"},
-            {"callsign", callsign_},
-            {"grid_square", gridSquare_},
-            {"version", software_},
-            {"rx_only", rxOnly_},
-            {"os", GetOperatingSystemString()}
-        };
+        yyjson_mut_obj_add_str(authDoc, authData, "role", "report");
+        yyjson_mut_obj_add_str(authDoc, authData, "callsign", callsign_.c_str());
+        yyjson_mut_obj_add_str(authDoc, authData, "grid_square", gridSquare_.c_str());
+        yyjson_mut_obj_add_str(authDoc, authData, "version", software_.c_str());
+        yyjson_mut_obj_add_bool(authDoc, authData, "rx_only", rxOnly_);
+        yyjson_mut_obj_add_str(authDoc, authData, "os", osString.c_str());
     }
 
     // Reconnect listener should re-report frequency so that "unknown"
@@ -291,7 +296,7 @@ void FreeDVReporter::connect_()
     {
         port = atoi(portStr.c_str());
     }
-    sioClient_->setAuthDictionary(authData);
+    sioClient_->setAuthDictionary(authDoc); // frees authDoc
     sioClient_->connect(host.c_str(), port, true);
     
     if (onReporterConnectFn_)
@@ -299,39 +304,39 @@ void FreeDVReporter::connect_()
         onReporterConnectFn_();
     }
     
-    sioClient_->on("new_connection", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("new_connection", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserConnectFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& version = msgParams["version"];
-            auto& rxOnly = msgParams["rx_only"];
+            auto sidJson = yyjson_obj_get(msgParams, "sid");
+            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+            auto versionJson = yyjson_obj_get(msgParams, "version");
+            auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string() &&
-                callsign.is_string() &&
-                gridSquare.is_string() &&
-                version.is_string() &&
-                rxOnly.is_boolean())
+            if (yyjson_is_str(sidJson) &&
+                yyjson_is_str(lastUpdateJson) &&
+                yyjson_is_str(callsignJson) &&
+                yyjson_is_str(gridSquareJson) &&
+                yyjson_is_str(versionJson) &&
+                yyjson_is_bool(rxOnlyJson))
             {
                 onUserConnectFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    version.template get<std::string>(),
-                    rxOnly.template get<bool>()
+                    yyjson_get_str(sidJson),
+                    yyjson_get_str(lastUpdateJson),
+                    yyjson_get_str(callsignJson),
+                    yyjson_get_str(gridSquareJson),
+                    yyjson_get_str(versionJson),
+                    yyjson_get_bool(rxOnlyJson)
                 );
             }
         }
     });
 
-    sioClient_->on("connection_successful", [&](const nlohmann::json&) {
+    sioClient_->on("connection_successful", [&](yyjson_val*) {
         std::unique_lock<std::mutex> lk(objMutex_);
         isFullyConnected_ = true;
     
@@ -356,191 +361,191 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_->on("remove_connection", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("remove_connection", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onUserDisconnectFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& version = msgParams["version"];
-            auto& rxOnly = msgParams["rx_only"];
+            auto sidJson = yyjson_obj_get(msgParams, "sid");
+            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+            auto versionJson = yyjson_obj_get(msgParams, "version");
+            auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string() &&
-                callsign.is_string() &&
-                gridSquare.is_string() &&
-                version.is_string() &&
-                rxOnly.is_boolean())
+            if (yyjson_is_str(sidJson) &&
+                yyjson_is_str(lastUpdateJson) &&
+                yyjson_is_str(callsignJson) &&
+                yyjson_is_str(gridSquareJson) &&
+                yyjson_is_str(versionJson) &&
+                yyjson_is_bool(rxOnlyJson))
             {
                 onUserDisconnectFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    version.template get<std::string>(),
-                    rxOnly.template get<bool>()
+                    yyjson_get_str(sidJson),
+                    yyjson_get_str(lastUpdateJson),
+                    yyjson_get_str(callsignJson),
+                    yyjson_get_str(gridSquareJson),
+                    yyjson_get_str(versionJson),
+                    yyjson_get_bool(rxOnlyJson)
                 );
             }
         }
     });
 
-    sioClient_->on("tx_report", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("tx_report", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onTransmitUpdateFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& lastTx = msgParams["last_tx"];
-            auto& mode = msgParams["mode"];
-            auto& transmitting = msgParams["transmitting"];
+            auto sidJson = yyjson_obj_get(msgParams, "sid");
+            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+            auto lastTxJson = yyjson_obj_get(msgParams, "last_tx");
+            auto modeJson = yyjson_obj_get(msgParams, "mode");
+            auto transmittingJson = yyjson_obj_get(msgParams, "transmitting");
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string() &&
-                callsign.is_string() &&
-                gridSquare.is_string() &&
-                mode.is_string() &&
-                transmitting.is_boolean())
+            if (yyjson_is_str(sidJson) &&
+                yyjson_is_str(lastUpdateJson) &&
+                yyjson_is_str(callsignJson) &&
+                yyjson_is_str(gridSquareJson) &&
+                yyjson_is_str(modeJson) &&
+                yyjson_is_bool(transmittingJson))
             {
                 onTransmitUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    mode.template get<std::string>(),
-                    transmitting.template get<bool>(),
-                    lastTx.is_null() ? "" : lastTx.template get<std::string>()
+                    yyjson_get_str(sidJson),
+                    yyjson_get_str(lastUpdateJson),
+                    yyjson_get_str(callsignJson),
+                    yyjson_get_str(gridSquareJson),
+                    yyjson_get_str(modeJson),
+                    yyjson_get_bool(transmittingJson),
+                    yyjson_is_null(lastTxJson) ? "" : yyjson_get_str(lastTxJson)
                 );
             }
         }
     });
 
-    sioClient_->on("rx_report", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("rx_report", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto& sid = msgParams["sid"];
-        auto& lastUpdate = msgParams["last_update"];
-        auto& receiverCallsign = msgParams["receiver_callsign"];
-        auto& receiverGridSquare = msgParams["receiver_grid_square"];
-        auto& callsign = msgParams["callsign"];
-        auto& snr = msgParams["snr"];
-        auto& mode = msgParams["mode"];
+        auto sid = yyjson_obj_get(msgParams, "sid");
+        auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
+        auto receiverCallsign = yyjson_obj_get(msgParams, "receiver_callsign");
+        auto receiverGridSquare = yyjson_obj_get(msgParams, "receiver_grid_square");
+        auto callsign = yyjson_obj_get(msgParams, "callsign");
+        auto snr = yyjson_obj_get(msgParams, "snr");
+        auto mode = yyjson_obj_get(msgParams, "mode");
     
         if (onReceiveUpdateFn_)
         {
-            bool snrInteger =  snr.is_number_integer();
-            bool snrFloat =  snr.is_number_float();
+            bool snrInteger = yyjson_is_int(snr);
+            bool snrFloat = yyjson_is_real(snr);
             bool snrValid = snrInteger || snrFloat;
 
             float snrVal = 0;
             if (snrInteger)
             {
-                snrVal = snr.template get<int>();
+                snrVal = yyjson_get_int(snr);
             }
             else if (snrFloat)
             {
-                snrVal = snr.template get<double>();
+                snrVal = yyjson_get_real(snr);
             }
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string() &&
-                callsign.is_string() &&
-                receiverCallsign.is_string() &&
-                receiverGridSquare.is_string() &&
-                mode.is_string() &&
+            if (yyjson_is_str(sid) &&
+                yyjson_is_str(lastUpdate) &&
+                yyjson_is_str(callsign) &&
+                yyjson_is_str(receiverCallsign) &&
+                yyjson_is_str(receiverGridSquare) &&
+                yyjson_is_str(mode) &&
                 snrValid)
             {
                 onReceiveUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    receiverCallsign.template get<std::string>(),
-                    receiverGridSquare.template get<std::string>(),
-                    callsign.template get<std::string>(),
+                    yyjson_get_str(sid),
+                    yyjson_get_str(lastUpdate),
+                    yyjson_get_str(receiverCallsign),
+                    yyjson_get_str(receiverGridSquare),
+                    yyjson_get_str(callsign),
                     snrVal,
-                    mode.template get<std::string>()
+                    yyjson_get_str(mode)
                 );
             }
         }
     });
 
-    sioClient_->on("freq_change", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("freq_change", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onFrequencyChangeFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& callsign = msgParams["callsign"];
-            auto& gridSquare = msgParams["grid_square"];
-            auto& frequency = msgParams["freq"];
+            auto sid = yyjson_obj_get(msgParams, "sid");
+            auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
+            auto callsign = yyjson_obj_get(msgParams, "callsign");
+            auto gridSquare = yyjson_obj_get(msgParams, "grid_square");
+            auto frequency = yyjson_obj_get(msgParams, "freq");
         
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string() &&
-                callsign.is_string() &&
-                gridSquare.is_string() &&
-                frequency.is_number())
+            if (yyjson_is_str(sid) &&
+                yyjson_is_str(lastUpdate) &&
+                yyjson_is_str(callsign) &&
+                yyjson_is_str(gridSquare) &&
+                yyjson_is_uint(frequency))
             {
                 onFrequencyChangeFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    callsign.template get<std::string>(),
-                    gridSquare.template get<std::string>(),
-                    frequency.template get<uint64_t>()
+                    yyjson_get_str(sid),
+                    yyjson_get_str(lastUpdate),
+                    yyjson_get_str(callsign),
+                    yyjson_get_str(gridSquare),
+                    yyjson_get_uint(frequency)
                 );
             }
         }
     });
 
-    sioClient_->on("message_update", [&](const nlohmann::json& msgParams) {  
+    sioClient_->on("message_update", [&](yyjson_val* msgParams) {  
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onMessageUpdateFn_)
         {
-            auto& sid = msgParams["sid"];
-            auto& lastUpdate = msgParams["last_update"];
-            auto& message = msgParams["message"];
+            auto sid = yyjson_obj_get(msgParams, "sid");
+            auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
+            auto message = yyjson_obj_get(msgParams, "message");
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid.is_string() &&
-                lastUpdate.is_string()&&
-                message.is_string())
+            if (yyjson_is_str(sid) &&
+                yyjson_is_str(lastUpdate) &&
+                yyjson_is_str(message))
             {
                 onMessageUpdateFn_(
-                    sid.template get<std::string>(),
-                    lastUpdate.template get<std::string>(),
-                    message.template get<std::string>()
+                    yyjson_get_str(sid),
+                    yyjson_get_str(lastUpdate),
+                    yyjson_get_str(message)
                 );
             }
         }
     });
     
-    sioClient_->on("qsy_request", [&](const nlohmann::json& msgParams) {
+    sioClient_->on("qsy_request", [&](yyjson_val* msgParams) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        auto& callsign = msgParams["callsign"];
-        auto& frequency = msgParams["frequency"];
-        auto& message = msgParams["message"];
+        auto callsign = yyjson_obj_get(msgParams, "callsign");
+        auto frequency = yyjson_obj_get(msgParams, "frequency");
+        auto message = yyjson_obj_get(msgParams, "message");
     
         if (onQsyRequestFn_)
         {
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (callsign.is_string() &&
-                frequency.is_number() &&
-                message.is_string())
+            if (yyjson_is_str(callsign) &&
+                yyjson_is_uint(frequency) &&
+                yyjson_is_str(message))
             {
                 onQsyRequestFn_(
-                    callsign.template get<std::string>(),
-                    frequency.template get<uint64_t>(),
-                    message.template get<std::string>()
+                    yyjson_get_str(callsign),
+                    yyjson_get_uint(frequency),
+                    yyjson_get_str(message)
                 );
             }
         }
@@ -551,10 +556,13 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json freqData = {
-            {"freq", frequency}
-        };
+        yyjson_mut_doc* freqDoc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* freqData = yyjson_mut_obj(freqDoc);
+
+        yyjson_mut_obj_add_uint(freqDoc, freqData, "freq", frequency);
         sioClient_->emit("freq_change", freqData);
+
+        yyjson_mut_doc_free(freqDoc);
     }
     
     // Save last frequency in case we need to reconnect.
@@ -565,11 +573,13 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json txData = {
-            {"mode", mode},
-            {"transmitting", tx}
-        };
+        yyjson_mut_doc* txDoc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* txData = yyjson_mut_obj(txDoc);
+
+        yyjson_mut_obj_add_str(txDoc, txData, "mode", mode.c_str());
+        yyjson_mut_obj_add_bool(txDoc, txData, "transmitting", tx);
         sioClient_->emit("tx_report", txData);
+        yyjson_mut_doc_free(txDoc);
     }
     
     // Save last mode and TX state in case we have to reconnect.
@@ -581,10 +591,12 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 {
     if (isFullyConnected_)
     {
-        nlohmann::json txData = {
-            {"message", message}
-        };
+        yyjson_mut_doc* txDoc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* txData = yyjson_mut_obj(txDoc);
+
+        yyjson_mut_obj_add_str(txDoc, txData, "message", message.c_str());
         sioClient_->emit("message_update", txData);
+        yyjson_mut_doc_free(txDoc);
     }
     
     // Save last mode and TX state in case we have to reconnect.
