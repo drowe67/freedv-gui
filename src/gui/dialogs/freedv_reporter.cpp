@@ -46,8 +46,16 @@ extern FreeDVInterface freedvInterface;
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
+
 const wxString UNKNOWN_STR("");
 const wxString SNR_FORMAT_STR("%.01f");
+const wxString ALL_LETTERS_RGX("^[A-Z]{2}$");
+const wxString MS_REMOVAL_RGX("\\.[^+-]+");
+const wxString TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$");
+const wxString TZ_OFFSET_STR("-");
+const wxString EMPTY_STR("");
+const wxString TIME_FORMAT_STR("%x %X"); 
+
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
@@ -1332,12 +1340,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
-{    
-    wxRegEx millisecondsRemoval(wxT("\\.[^+-]+"));
+{
+    wxRegEx millisecondsRemoval(MS_REMOVAL_RGX);
     wxString tmp = timeStr;
-    millisecondsRemoval.Replace(&tmp, wxT(""));
+    millisecondsRemoval.Replace(&tmp, EMPTY_STR);
     
-    wxRegEx timezoneRgx(wxT("([+-])([0-9]+):([0-9]+)$"));
+    wxRegEx timezoneRgx(TIMEZONE_RGX);
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {
@@ -1348,12 +1356,12 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         int tzMinutes = wxAtoi(hours) * 60;
         tzMinutes += wxAtoi(minutes);
         
-        if (tzOffset == wxT("-"))
+        if (tzOffset == TZ_OFFSET_STR)
         {
             tzMinutes = -tzMinutes;
         }
         
-        timezoneRgx.Replace(&tmp, wxT(""));
+        timezoneRgx.Replace(&tmp, EMPTY_STR);
         
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
@@ -1371,8 +1379,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
-        
-        wxString formatStr = wxT("%x %X");
+
         
 #if __APPLE__
         // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
@@ -1392,10 +1399,10 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         tmpTm.tm_isdst = -1;
         
         char buf[4096];
-        strftime(buf, sizeof(buf), (const char*)formatStr.ToUTF8(), &tmpTm);
+        strftime(buf, sizeof(buf), (const char*)TIME_FORMAT_STR.ToUTF8(), &tmpTm);
         return buf;
 #else
-        return tmpDate.Format(formatStr, timeZone);
+        return tmpDate.Format(TIME_FORMAT_STR, timeZone);
 #endif // __APPLE__
     }
     else
@@ -1452,7 +1459,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquar
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
     wxString optionalSegment = gridSquare.Mid(4, 2);
-    const wxRegEx allLetters(_("^[A-Z]{2}$"));
+    const wxRegEx allLetters(ALL_LETTERS_RGX);
     if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
