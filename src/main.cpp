@@ -38,7 +38,7 @@
 #endif // wxCHECK_VERSION(3,2,0)
 
 #if defined(USING_MIMALLOC)
-#include <mimalloc.h>
+//#include <mimalloc.h>
 #endif // defined(USING_MIMALLOC)
 
 #include "git_version.h"
@@ -573,8 +573,8 @@ bool MainApp::OnInit()
 {
 #if defined(USING_MIMALLOC)
     // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
+    //mi_option_set(mi_option_purge_delay, 100);
+    //mi_option_set(mi_option_purge_extend_delay, 10);
     //mi_option_enable(mi_option_verbose);
 #endif // defined(USING_MIMALLOC)
 
