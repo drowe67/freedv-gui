@@ -3,7 +3,7 @@ set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
 endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
 set(FREEDV_SOURCES
-    #${MIMALLOC_SOURCE_FILE}
+    ${MIMALLOC_SOURCE_FILE}
     main.cpp
     topFrame.cpp
     sox_biquad.c
