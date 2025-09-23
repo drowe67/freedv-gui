@@ -47,6 +47,7 @@ extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_SNR_VAL (-99)
 const wxString UNKNOWN_STR("");
+const wxString SNR_FORMAT_STR("%.01f");
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
@@ -2135,10 +2136,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string _sid, std::string _lastUpdate, std::string _callsign, std::string _gridSquare, std::string _version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+    fnQueue_.push_back([this, sid = std::move(_sid), lastUpdate = std::move(_lastUpdate), callsign = std::move(_callsign), gridSquare = std::move(_gridSquare), version = std::move(_version), rxOnly]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
 
@@ -2291,7 +2292,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid]() {
+    fnQueue_.push_back([this, sid = std::move(sid)]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
 
@@ -2320,7 +2321,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
 void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, frequencyHz, lastUpdate]() {
+    fnQueue_.push_back([this, sid = std::move(sid), frequencyHz, lastUpdate = std::move(lastUpdate)]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         
         auto iter = allReporterData_.find(sid);
@@ -2387,7 +2388,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
 void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+    fnQueue_.push_back([this, sid = std::move(sid), txMode = std::move(txMode), transmitting, lastTxDate = std::move(lastTxDate), lastUpdate = std::move(lastUpdate)]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     
         auto iter = allReporterData_.find(sid);
@@ -2443,10 +2444,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string _sid, std::string _lastUpdate, std::string _callsign, std::string _gridSquare, std::string _receivedCallsign, float snr, std::string _rxMode)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+    fnQueue_.push_back([this, sid = std::move(_sid), lastUpdate = std::move(_lastUpdate), receivedCallsign = std::move(_receivedCallsign), snr, rxMode = std::move(_rxMode)]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     
         auto iter = allReporterData_.find(sid);
@@ -2471,8 +2472,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
-        
-            wxString snrString = wxString::Format(wxT("%.01f"), snr);
+
+            wxString snrString = wxString::Format(SNR_FORMAT_STR, snr);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
@@ -2522,7 +2523,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
 void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, message]() {
+    fnQueue_.push_back([this, sid = std::move(sid), lastUpdate = std::move(lastUpdate), message = std::move(message)]() {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     
         auto iter = allReporterData_.find(sid);
