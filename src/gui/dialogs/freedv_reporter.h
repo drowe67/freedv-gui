@@ -310,6 +310,12 @@ class FreeDVReporterDialog : public wxFrame
         bool isSelectionPossible_;
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
+        wxColour msgRowBackgroundColor;
+        wxColour msgRowForegroundColor;
+        wxColour txRowBackgroundColor;
+        wxColour txRowForegroundColor;
+        wxColour rxRowBackgroundColor;
+        wxColour rxRowForegroundColor;
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

@@ -502,6 +502,14 @@ bool FreeDVReporterDialog::isTextMessageFieldInFocus()
 
 void FreeDVReporterDialog::refreshLayout()
 {
+    // Update row colors
+    msgRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+    msgRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+    txRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+    txRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+    rxRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+    rxRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+ 
     wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
@@ -807,21 +815,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             // Messaging notifications take highest priority.
             wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
             wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-        
+
             if (isMessaging)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+                backgroundColor = parent_->msgRowBackgroundColor;
+                foregroundColor = parent_->msgRowForegroundColor;
             }
             else if (isTransmitting)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+                backgroundColor = parent_->txRowBackgroundColor;
+                foregroundColor = parent_->rxRowForegroundColor;
             }
             else if (isReceivingValidCallsign || isReceivingNotValidCallsign)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+                backgroundColor = parent_->rxRowBackgroundColor;
+                foregroundColor = parent_->rxRowForegroundColor;
             }
     #if defined(__APPLE__)
             else
