@@ -1405,6 +1405,41 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 #endif
 
 #ifdef _USE_TIMER
+// Create needed strings in advance so we don't need to continually 
+// reallocate memory every time through OnTimer() below. We prioritize
+// the strings that are used when RADE is selected as this mode is not
+// fully optimized for real-time use yet (i.e. it dynamically allocates
+// memory while processing audio).
+const wxString SNR_FORMAT_STR("%ddB");
+const wxString MODE_FORMAT_STR("Mode: %s");
+const wxString MODE_RADE_FORMAT_STR("Mode: RADEV1");
+const wxString NO_SNR_LABEL("--");
+const wxString EMPTY_STR("");
+const wxString MODEM_LABEL("Modem");
+const wxString BITS_UNK_LABEL("Bits: unk");
+const wxString ERRS_UNK_LABEL("Errs: unk");
+const wxString BER_UNK_LABEL("BER: unk");
+const wxString FRQ_OFF_UNK_LABEL("FrqOff: unk");
+const wxString SYNC_UNK_LABEL("Sync: unk");
+const wxString VAR_UNK_LABEL("Var: unk");
+const wxString CLK_OFF_UNK_LABEL("ClkOff: unk");
+const wxString TOO_HIGH_LABEL("Too High");
+const wxString MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s");
+const wxString DECIBEL_STR("dB");
+const wxString FREQ_KHZ_FORMAT_STR("%.01f");
+const wxString FREQ_MHZ_FORMAT_STR("%.04f");
+const wxString CURRENT_TIME_FORMAT_STR("%s %s");
+const wxString SNR_FORMAT_STR_NO_DB("%0.1f");
+const wxString CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+const wxString BITS_FMT("Bits: %d");
+const wxString ERRS_FMT("Errs: %d");
+const wxString BER_FMT("BER: %4.3f");
+const wxString RESYNC_FMT("Resyncs: %d");
+const wxString FRQ_OFF_FMT("FrqOff: %3.1f");
+const wxString SYNC_FMT("Sync: %3.2f");
+const wxString VAR_FMT("Var: %4.1f");
+const wxString CLK_OFF_FMT("ClkOff: %+-d");
+
 //----------------------------------------------------------------
 // OnTimer()
 //
@@ -1580,7 +1615,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
              m_sliderMicSpkrLevel->Refresh();
-             wxString fmt = wxString::Format(wxT("%0.1f%s"), (double)sliderVal, _("dB"));
+             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, (double)sliderVal, DECIBEL_STR);
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
@@ -1608,7 +1643,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
-        wxString snrString = wxString::Format("%d dB", (int)(g_snr + 0.5));
+        wxString snrString = wxString::Format(SNR_FORMAT_STR, (int)(g_snr + 0.5));
 
         if (syncState)
         {
@@ -1617,7 +1652,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else
         {
-            m_textSNR->SetLabel(wxT("--"));
+            m_textSNR->SetLabel(NO_SNR_LABEL);
             m_gaugeSNR->SetValue(0);
         }
 
@@ -1642,8 +1677,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         
                         // Clear RX text to reduce the incidence of incorrect callsigns extracted with
                         // the PSK Reporter callsign extraction logic.
-                        m_txtCtrlCallSign->SetValue(wxT(""));
-                        m_cboLastReportedCallsigns->SetValue(wxT(""));
+                        m_txtCtrlCallSign->SetValue(EMPTY_STR);
+                        m_cboLastReportedCallsigns->SetValue(EMPTY_STR);
                         m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
@@ -1666,7 +1701,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(wxT("Modem"));
+                m_textSync->SetLabel(MODEM_LABEL);
                 m_textSync->Refresh();
             }
         }
@@ -1739,8 +1774,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (wxCallsign.Length() > 0)
             {
                 freedvInterface.resetReliableText();
-                
-                wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+
+                wxRegEx callsignFormat(CALLSIGN_FORMAT_RGX);
                 if (callsignFormat.Matches(wxCallsign))
                 {
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
@@ -1750,12 +1785,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
-                        freqString = wxString::Format("%.01f", freq);
+                        freqString = wxString::Format(FREQ_KHZ_FORMAT_STR, freq);
                     }
                     else
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
-                        freqString = wxString::Format("%.04f", freq);
+                        freqString = wxString::Format(FREQ_MHZ_FORMAT_STR, freq);
                     }
 
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
@@ -1763,13 +1798,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
-                        wxString currentTimeAsString = wxT("");
+                        wxString currentTimeAsString = EMPTY_STR;
                         
                         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
                             currentTime = currentTime.ToUTC();
                         }
-                        currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
+                        currentTimeAsString.Printf(CURRENT_TIME_FORMAT_STR, currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
                         m_lastReportedCallsignListView->SetItem(index, 1, freqString);
@@ -1777,7 +1812,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     wxString snrAsString;
-                    snrAsString.Printf(wxT("%0.1f"), g_snr);
+                    snrAsString.Printf(SNR_FORMAT_STR_NO_DB, g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
                     
@@ -1893,8 +1928,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         g_channel_noise = wxGetApp().m_channel_noise;
 
         // update stats on main page
-
-        wxString modeString = wxString::Format(wxT("Mode: %s"), freedvInterface.getCurrentModeStr());
+        wxString modeString; 
+        if (g_mode == FREEDV_MODE_RADE) modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
+        else modeString = wxString::Format(MODE_FORMAT_STR, freedvInterface.getCurrentModeStr());
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -1924,37 +1960,37 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_mode == FREEDV_MODE_RADE)
         {
-            m_textBits->SetLabel(wxT("Bits: unk"));
-            m_textErrors->SetLabel(wxT("Errs: unk"));
-            m_textBER->SetLabel(wxT("BER: unk"));
-            m_textFreqOffset->SetLabel(wxT("FrqOff: unk"));
-            m_textSyncMetric->SetLabel(wxT("Sync: unk"));
-            m_textCodec2Var->SetLabel(wxT("Var: unk"));
+            m_textBits->SetLabel(BITS_UNK_LABEL);
+            m_textErrors->SetLabel(ERRS_UNK_LABEL);
+            m_textBER->SetLabel(BER_UNK_LABEL);
+            m_textFreqOffset->SetLabel(FRQ_OFF_UNK_LABEL);
+            m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
+            m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
         }
         else
         {
-            wxString bits = wxString::Format(wxT("Bits: %d"), freedvInterface.getTotalBits()); 
+            wxString bits = wxString::Format(BITS_FMT, freedvInterface.getTotalBits()); 
             m_textBits->SetLabel(bits);
 
-            wxString errors = wxString::Format(wxT("Errs: %d"), freedvInterface.getTotalBitErrors()); 
+            wxString errors = wxString::Format(ERRS_FMT, freedvInterface.getTotalBitErrors()); 
             m_textErrors->SetLabel(errors);
 
             float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            wxString ber = wxString::Format(wxT("BER: %4.3f"), b); 
+            wxString ber = wxString::Format(BER_FMT, b); 
             m_textBER->SetLabel(ber);
 
-            wxString resyncs = wxString::Format(wxT("Resyncs: %d"), g_resyncs); 
+            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
             m_textResyncs->SetLabel(resyncs);
 
-            wxString freqOffset = wxString::Format(wxT("FrqOff: %3.1f"), freedvInterface.getCurrentRxModemStats()->foff);
+            wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemStats()->foff);
             m_textFreqOffset->SetLabel(freqOffset);
 
-            wxString syncMetric = wxString::Format(wxT("Sync: %3.2f"), freedvInterface.getCurrentRxModemStats()->sync_metric);
+            wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
             m_textSyncMetric->SetLabel(syncMetric);
 
             // Codec 2 700D/E "auto EQ" equaliser variance
             auto var = freedvInterface.getVariance();
-            wxString var_string = wxString::Format(wxT("Var: %4.1f"), var);
+            wxString var_string = wxString::Format(VAR_FMT, var);
             m_textCodec2Var->SetLabel(var_string);
         }
 
@@ -1962,11 +1998,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             if (g_mode == FREEDV_MODE_RADE)
             {
-                m_textClockOffset->SetLabel(wxT("ClkOff: unk"));
+                m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
             }
             else
             {
-                wxString clockOffset = wxString::Format(wxT("ClkOff: %+-d"), (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+                wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
                 m_textClockOffset->SetLabel(clockOffset);
             }
             
@@ -2071,9 +2107,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
             if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel(wxT("Too High"));
+                m_textLevel->SetLabel(TOO_HIGH_LABEL);
             else
-                m_textLevel->SetLabel(wxT(""));
+                m_textLevel->SetLabel(EMPTY_STR);
 
             m_maxLevel *= LEVEL_BETA;
         }
