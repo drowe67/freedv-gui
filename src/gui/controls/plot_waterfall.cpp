@@ -76,6 +76,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_modem_stats_max_f_hz = MODEM_STATS_MAX_F_HZ;
     dyImageData_ = nullptr;
     dy_ = 0;
+    tmpImage_ = nullptr;
 
     SetLabelSize(10.0);
 
@@ -404,11 +405,15 @@ void PlotWaterfall::plotPixelData()
     {
         delete[] dyImageData_;
 	dyImageData_ = nullptr;
+
+        delete tmpImage_;
     }
     if (dyImageData_ == nullptr)
     {
         dyImageData_ = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
         assert(dyImageData_ != nullptr);
+
+        tmpImage_ = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData_, true);
     }
     dy_ = dy;
 
@@ -457,7 +462,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData_, true);
+        tmpImage_->SetData(dyImageData_, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
         if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
@@ -466,12 +471,12 @@ void PlotWaterfall::plotPixelData()
             waterfallSlices_.pop_back();
             destBmp = tmpBmp;
             
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
         else
         {
             destBmp = new wxBitmap(m_imgWidth, dy);
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
 
         wxMemoryDC sourceDC;
@@ -481,7 +486,6 @@ void PlotWaterfall::plotPixelData()
         destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         waterfallSlices_.push_front(destBmp);
         
-        delete tmpImage;
         if (tmpBmp != nullptr)
         {
             delete tmpBmp;
@@ -610,4 +614,7 @@ void PlotWaterfall::cleanupSlices_()
         delete[] dyImageData_;
         dyImageData_ = nullptr;
     }
+
+    delete tmpImage_;
+    tmpImage_ = nullptr;
 }

@@ -78,6 +78,7 @@ class PlotWaterfall : public PlotPanel
         int         m_modem_stats_max_f_hz;
         unsigned char* dyImageData_;
         int dy_;
+        wxImage* tmpImage_;
 
         int m_imgHeight;
         int m_imgWidth;
