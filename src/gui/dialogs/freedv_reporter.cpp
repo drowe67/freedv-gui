@@ -47,15 +47,6 @@ extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_SNR_VAL (-99)
 
-const wxString FreeDVReporterDialog::UNKNOWN_STR("");
-const wxString FreeDVReporterDialog::SNR_FORMAT_STR("%.01f");
-const wxString FreeDVReporterDialog::ALL_LETTERS_RGX("^[A-Z]{2}$");
-const wxString FreeDVReporterDialog::MS_REMOVAL_RGX("\\.[^+-]+");
-const wxString FreeDVReporterDialog::TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$");
-const wxString FreeDVReporterDialog::TZ_OFFSET_STR("-");
-const wxString FreeDVReporterDialog::EMPTY_STR("");
-const wxString FreeDVReporterDialog::TIME_FORMAT_STR("%x %X"); 
-
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
@@ -69,6 +60,14 @@ using namespace std::placeholders;
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
+    , UNKNOWN_STR("")
+    , SNR_FORMAT_STR("%.01f")
+    , ALL_LETTERS_RGX("^[A-Z]{2}$")
+    , MS_REMOVAL_RGX("\\.[^+-]+")
+    , TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$")
+    , TZ_OFFSET_STR("-")
+    , EMPTY_STR("")
+    , TIME_FORMAT_STR("%x %X")
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -1341,11 +1340,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
 {
-    wxRegEx millisecondsRemoval(MS_REMOVAL_RGX);
+    wxRegEx millisecondsRemoval(parent_->MS_REMOVAL_RGX);
     wxString tmp = timeStr;
-    millisecondsRemoval.Replace(&tmp, EMPTY_STR);
+    millisecondsRemoval.Replace(&tmp, parent_->EMPTY_STR);
     
-    wxRegEx timezoneRgx(TIMEZONE_RGX);
+    wxRegEx timezoneRgx(parent_->TIMEZONE_RGX);
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {
@@ -1356,12 +1355,12 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         int tzMinutes = wxAtoi(hours) * 60;
         tzMinutes += wxAtoi(minutes);
         
-        if (tzOffset == TZ_OFFSET_STR)
+        if (tzOffset == parent_->TZ_OFFSET_STR)
         {
             tzMinutes = -tzMinutes;
         }
         
-        timezoneRgx.Replace(&tmp, EMPTY_STR);
+        timezoneRgx.Replace(&tmp, parent_->EMPTY_STR);
         
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
@@ -1399,16 +1398,16 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         tmpTm.tm_isdst = -1;
         
         char buf[4096];
-        strftime(buf, sizeof(buf), (const char*)TIME_FORMAT_STR.ToUTF8(), &tmpTm);
+        strftime(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm);
         return buf;
 #else
-        return tmpDate.Format(TIME_FORMAT_STR, timeZone);
+        return tmpDate.Format(parent_->TIME_FORMAT_STR, timeZone);
 #endif // __APPLE__
     }
     else
     {
         timeObj = wxDateTime();
-        return UNKNOWN_STR;
+        return parent_->UNKNOWN_STR;
     }
 }
 
@@ -1459,7 +1458,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquar
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
     wxString optionalSegment = gridSquare.Mid(4, 2);
-    const wxRegEx allLetters(ALL_LETTERS_RGX);
+    const wxRegEx allLetters(parent_->ALL_LETTERS_RGX);
     if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
@@ -2177,9 +2176,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             !validCharactersInGridSquare)
         {
             // Invalid grid square means we can't calculate a distance.
-            temp->distance = UNKNOWN_STR;
+            temp->distance = parent_->UNKNOWN_STR;
             temp->distanceVal = 0;
-            temp->heading = UNKNOWN_STR;
+            temp->heading = parent_->UNKNOWN_STR;
             temp->headingVal = 0;
         }
         else
@@ -2198,7 +2197,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
             {
                 temp->headingVal = 0;
-                temp->heading = UNKNOWN_STR;
+                temp->heading = parent_->UNKNOWN_STR;
             }
             else
             {
@@ -2215,27 +2214,27 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         }
 
         temp->version = version;
-        temp->freqString = UNKNOWN_STR;
-        temp->userMessage = UNKNOWN_STR;
+        temp->freqString = parent_->UNKNOWN_STR;
+        temp->userMessage = parent_->UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
         {
             temp->status = RX_ONLY_STATUS;
-            temp->txMode = UNKNOWN_STR;
-            temp->lastTx = UNKNOWN_STR;
+            temp->txMode = parent_->UNKNOWN_STR;
+            temp->lastTx = parent_->UNKNOWN_STR;
         }
         else
         {
-            temp->status = UNKNOWN_STR;
-            temp->txMode = UNKNOWN_STR;
-            temp->lastTx = UNKNOWN_STR;
+            temp->status = parent_->UNKNOWN_STR;
+            temp->txMode = parent_->UNKNOWN_STR;
+            temp->lastTx = parent_->UNKNOWN_STR;
         }
         
-        temp->lastRxCallsign = UNKNOWN_STR;
-        temp->lastRxMode = UNKNOWN_STR;
+        temp->lastRxCallsign = parent_->UNKNOWN_STR;
+        temp->lastRxMode = parent_->UNKNOWN_STR;
         temp->snrVal = UNKNOWN_SNR_VAL;
-        temp->snr = UNKNOWN_STR;
+        temp->snr = parent_->UNKNOWN_STR;
         
         // Default to sane colors for rows. If we need to highlight, the timer will change
         // these later. 
@@ -2480,25 +2479,25 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
 
-            wxString snrString = wxString::Format(SNR_FORMAT_STR, snr);
+            wxString snrString = wxString::Format(parent_->SNR_FORMAT_STR, snr);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=
-                    iter->second->lastRxCallsign != UNKNOWN_STR ||
-                    iter->second->lastRxMode != UNKNOWN_STR ||
-                    iter->second->snr != UNKNOWN_STR ||
+                    iter->second->lastRxCallsign != parent_->UNKNOWN_STR ||
+                    iter->second->lastRxMode != parent_->UNKNOWN_STR ||
+                    iter->second->snr != parent_->UNKNOWN_STR ||
                     iter->second->lastRxDate.IsValid();
                 
-                iter->second->lastRxCallsign = UNKNOWN_STR;
-                iter->second->lastRxMode = UNKNOWN_STR;
+                iter->second->lastRxCallsign = parent_->UNKNOWN_STR;
+                iter->second->lastRxMode = parent_->UNKNOWN_STR;
                 iter->second->snrVal = UNKNOWN_SNR_VAL;
-                iter->second->snr = UNKNOWN_STR;
+                iter->second->snr = parent_->UNKNOWN_STR;
                 iter->second->lastRxDate = wxDateTime();
             }
             else
@@ -2546,8 +2545,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != UNKNOWN_STR);
-                iter->second->userMessage = UNKNOWN_STR;
+                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
+                iter->second->userMessage = parent_->UNKNOWN_STR;
             }
             else
             {

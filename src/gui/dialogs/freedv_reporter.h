@@ -148,14 +148,14 @@ class FreeDVReporterDialog : public wxFrame
         wxTipWindow* tipWindow_;
         
      private:
-        static const wxString UNKNOWN_STR;
-        static const wxString SNR_FORMAT_STR;
-        static const wxString ALL_LETTERS_RGX;
-        static const wxString MS_REMOVAL_RGX;
-        static const wxString TIMEZONE_RGX;
-        static const wxString TZ_OFFSET_STR;
-        static const wxString EMPTY_STR;
-        static const wxString TIME_FORMAT_STR;
+        const wxString UNKNOWN_STR;
+        const wxString SNR_FORMAT_STR;
+        const wxString ALL_LETTERS_RGX;
+        const wxString MS_REMOVAL_RGX;
+        const wxString TIMEZONE_RGX;
+        const wxString TZ_OFFSET_STR;
+        const wxString EMPTY_STR;
+        const wxString TIME_FORMAT_STR;
 
          class FreeDVReporterDataModel : public wxDataViewModel
          {

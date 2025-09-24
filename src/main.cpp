@@ -970,7 +970,42 @@ setDefaultMode:
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()))
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str())),
+
+    // Create needed strings in advance so we don't need to continually 
+    // reallocate memory every time through OnTimer() below. We prioritize
+    // the strings that are used when RADE is selected as this mode is not
+    // fully optimized for real-time use yet (i.e. it dynamically allocates
+    // memory while processing audio).
+    SNR_FORMAT_STR("%ddB"),
+    MODE_FORMAT_STR("Mode: %s"),
+    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
+    NO_SNR_LABEL("--"),
+    EMPTY_STR(""),
+    MODEM_LABEL("Modem"),
+    BITS_UNK_LABEL("Bits: unk"),
+    ERRS_UNK_LABEL("Errs: unk"),
+    BER_UNK_LABEL("BER: unk"),
+    FRQ_OFF_UNK_LABEL("FrqOff: unk"),
+    SYNC_UNK_LABEL("Sync: unk"),
+    VAR_UNK_LABEL("Var: unk"),
+    CLK_OFF_UNK_LABEL("ClkOff: unk"),
+    TOO_HIGH_LABEL("Too High"),
+    MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s"),
+    DECIBEL_STR("dB"),
+    FREQ_KHZ_FORMAT_STR("%.01f"),
+    FREQ_MHZ_FORMAT_STR("%.04f"),
+    CURRENT_TIME_FORMAT_STR("%s %s"),
+    SNR_FORMAT_STR_NO_DB("%0.1f"),
+    CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)"),
+    BITS_FMT("Bits: %d"),
+    ERRS_FMT("Errs: %d"),
+    BER_FMT("BER: %4.3f"),
+    RESYNC_FMT("Resyncs: %d"),
+    FRQ_OFF_FMT("FrqOff: %3.1f"),
+    SYNC_FMT("Sync: %3.2f"),
+    VAR_FMT("Var: %4.1f"),
+    CLK_OFF_FMT("ClkOff: %+-d")
 {
 #if defined(__linux__)
     pthread_setname_np(pthread_self(), "FreeDV GUI");
@@ -1405,41 +1440,6 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 #endif
 
 #ifdef _USE_TIMER
-// Create needed strings in advance so we don't need to continually 
-// reallocate memory every time through OnTimer() below. We prioritize
-// the strings that are used when RADE is selected as this mode is not
-// fully optimized for real-time use yet (i.e. it dynamically allocates
-// memory while processing audio).
-const wxString MainFrame::SNR_FORMAT_STR("%ddB");
-const wxString MainFrame::MODE_FORMAT_STR("Mode: %s");
-const wxString MainFrame::MODE_RADE_FORMAT_STR("Mode: RADEV1");
-const wxString MainFrame::NO_SNR_LABEL("--");
-const wxString MainFrame::EMPTY_STR("");
-const wxString MainFrame::MODEM_LABEL("Modem");
-const wxString MainFrame::BITS_UNK_LABEL("Bits: unk");
-const wxString MainFrame::ERRS_UNK_LABEL("Errs: unk");
-const wxString MainFrame::BER_UNK_LABEL("BER: unk");
-const wxString MainFrame::FRQ_OFF_UNK_LABEL("FrqOff: unk");
-const wxString MainFrame::SYNC_UNK_LABEL("Sync: unk");
-const wxString MainFrame::VAR_UNK_LABEL("Var: unk");
-const wxString MainFrame::CLK_OFF_UNK_LABEL("ClkOff: unk");
-const wxString MainFrame::TOO_HIGH_LABEL("Too High");
-const wxString MainFrame::MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s");
-const wxString MainFrame::DECIBEL_STR("dB");
-const wxString MainFrame::FREQ_KHZ_FORMAT_STR("%.01f");
-const wxString MainFrame::FREQ_MHZ_FORMAT_STR("%.04f");
-const wxString MainFrame::CURRENT_TIME_FORMAT_STR("%s %s");
-const wxString MainFrame::SNR_FORMAT_STR_NO_DB("%0.1f");
-const wxString MainFrame::CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-const wxString MainFrame::BITS_FMT("Bits: %d");
-const wxString MainFrame::ERRS_FMT("Errs: %d");
-const wxString MainFrame::BER_FMT("BER: %4.3f");
-const wxString MainFrame::RESYNC_FMT("Resyncs: %d");
-const wxString MainFrame::FRQ_OFF_FMT("FrqOff: %3.1f");
-const wxString MainFrame::SYNC_FMT("Sync: %3.2f");
-const wxString MainFrame::VAR_FMT("Var: %4.1f");
-const wxString MainFrame::CLK_OFF_FMT("ClkOff: %+-d");
-
 //----------------------------------------------------------------
 // OnTimer()
 //

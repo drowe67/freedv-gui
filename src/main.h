@@ -457,35 +457,35 @@ class MainFrame : public TopFrame
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
         
     private:
-        static const wxString SNR_FORMAT_STR;
-        static const wxString MODE_FORMAT_STR;
-        static const wxString MODE_RADE_FORMAT_STR;
-        static const wxString NO_SNR_LABEL;
-        static const wxString EMPTY_STR;
-        static const wxString MODEM_LABEL;
-        static const wxString BITS_UNK_LABEL;
-        static const wxString ERRS_UNK_LABEL;
-        static const wxString BER_UNK_LABEL;
-        static const wxString FRQ_OFF_UNK_LABEL;
-        static const wxString SYNC_UNK_LABEL;
-        static const wxString VAR_UNK_LABEL;
-        static const wxString CLK_OFF_UNK_LABEL;
-        static const wxString TOO_HIGH_LABEL;
-        static const wxString MIC_SPKR_LEVEL_FORMAT_STR;
-        static const wxString DECIBEL_STR;
-        static const wxString FREQ_KHZ_FORMAT_STR;
-        static const wxString FREQ_MHZ_FORMAT_STR;
-        static const wxString CURRENT_TIME_FORMAT_STR;
-        static const wxString SNR_FORMAT_STR_NO_DB;
-        static const wxString CALLSIGN_FORMAT_RGX;
-        static const wxString BITS_FMT;
-        static const wxString ERRS_FMT;
-        static const wxString BER_FMT;
-        static const wxString RESYNC_FMT;
-        static const wxString FRQ_OFF_FMT;
-        static const wxString SYNC_FMT;
-        static const wxString VAR_FMT;
-        static const wxString CLK_OFF_FMT;
+        const wxString SNR_FORMAT_STR;
+        const wxString MODE_FORMAT_STR;
+        const wxString MODE_RADE_FORMAT_STR;
+        const wxString NO_SNR_LABEL;
+        const wxString EMPTY_STR;
+        const wxString MODEM_LABEL;
+        const wxString BITS_UNK_LABEL;
+        const wxString ERRS_UNK_LABEL;
+        const wxString BER_UNK_LABEL;
+        const wxString FRQ_OFF_UNK_LABEL;
+        const wxString SYNC_UNK_LABEL;
+        const wxString VAR_UNK_LABEL;
+        const wxString CLK_OFF_UNK_LABEL;
+        const wxString TOO_HIGH_LABEL;
+        const wxString MIC_SPKR_LEVEL_FORMAT_STR;
+        const wxString DECIBEL_STR;
+        const wxString FREQ_KHZ_FORMAT_STR;
+        const wxString FREQ_MHZ_FORMAT_STR;
+        const wxString CURRENT_TIME_FORMAT_STR;
+        const wxString SNR_FORMAT_STR_NO_DB;
+        const wxString CALLSIGN_FORMAT_RGX;
+        const wxString BITS_FMT;
+        const wxString ERRS_FMT;
+        const wxString BER_FMT;
+        const wxString RESYNC_FMT;
+        const wxString FRQ_OFF_FMT;
+        const wxString SYNC_FMT;
+        const wxString VAR_FMT;
+        const wxString CLK_OFF_FMT;
 
         friend class MainApp; // needed for unit tests
         friend class TxRxThread; // XXX - needed for execOnUiThreadAndWait_().
