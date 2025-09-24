@@ -1008,7 +1008,7 @@ void MainFrame::togglePTT(void) {
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        for (int index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+        for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
         {
             auto page = m_auiNbookCtrl->GetPage(index);
             page->Refresh();
