@@ -1767,7 +1767,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
-            wxString wxCallsign = text;
+
+            wxString wxCallsign; 
+            if (text != nullptr && strlen(text) > 0) wxCallsign = text;
+
             delete[] text;
         
             auto pendingSnr = (int)(g_snr + 0.5);
