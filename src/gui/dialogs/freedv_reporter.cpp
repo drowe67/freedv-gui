@@ -753,7 +753,8 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
         
         std::vector<std::string> keysToRemove;
@@ -774,23 +775,28 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
         {
             allReporterData_.erase(key);
         }
-    });
+    };
+
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         Resort();
-    });
+    };
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -890,7 +896,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         }
 
         ItemsChanged(itemsChanged);
-    });
+    };
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
@@ -1522,10 +1529,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
     while(size > 0)
     {
         lk.lock();
-        auto fn = fnQueue_[0];
+        auto handler = std::move(fnQueue_[0]);
         lk.unlock();
 
-        fn();
+        handler.fn(handler);
 
         lk.lock();
         fnQueue_.pop_front();
@@ -1683,10 +1690,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
             // actions fully execute before clearing entries.
             log_debug("Reporter object set to null");
             std::unique_lock<std::mutex> lk(fnQueueMtx_);
-            fnQueue_.push_back([this]() {
+            CallbackHandler handler;
+            handler.fn = [this](CallbackHandler&) {
                 clearAllEntries_();
-            });
+            };
 
+            fnQueue_.push_back(std::move(handler));
             parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
         }
     }
@@ -2120,34 +2129,53 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem se
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         log_debug("Connected to server");
         filterSelfMessageUpdates_ = false;
         clearAllEntries_();
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         log_debug("Disconnected from server");
         isConnected_ = false;
         filterSelfMessageUpdates_ = false;
         clearAllEntries_();
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string _sid, std::string _lastUpdate, std::string _callsign, std::string _gridSquare, std::string _version, bool rxOnly)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(_sid), lastUpdate = std::move(_lastUpdate), callsign = std::move(_callsign), gridSquare = std::move(_gridSquare), version = std::move(_version), rxOnly]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.callsign = std::move(callsign);
+    handler.gridSquare = std::move(gridSquare);
+    handler.version = std::move(version);
+    handler.rxOnly = rxOnly;
+
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
+
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate);
+        std::string callsign = std::move(handler.callsign);
+        std::string gridSquare = std::move(handler.gridSquare);
+        std::string version = std::move(handler.version);
+        bool rxOnly = handler.rxOnly;
 
         log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
 
@@ -2275,33 +2303,41 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
             sortOnNextTimerInterval = true;
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
 
         log_debug("Fully connected to server");
 
         // Enable highlighting now that we're fully connected.
         isConnected_ = true;
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(sid)]() {
+
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
 
+        std::string sid = std::move(handler.sid);
         log_debug("User with SID %s disconnected", sid.c_str());
 
         auto iter = allReporterData_.find(sid);
@@ -2319,17 +2355,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(sid), frequencyHz, lastUpdate = std::move(lastUpdate)]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.frequencyHz = frequencyHz;
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-        
+       
+        std::string sid = std::move(handler.sid);
+        uint64_t frequencyHz = handler.frequencyHz;
+        std::string lastUpdate = std::move(handler.lastUpdate);
+ 
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -2386,17 +2431,30 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(sid), txMode = std::move(txMode), transmitting, lastTxDate = std::move(lastTxDate), lastUpdate = std::move(lastUpdate)]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.txMode = std::move(txMode);
+    handler.transmitting = transmitting;
+    handler.lastTxDate = std::move(lastTxDate);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string txMode = std::move(handler.txMode);
+        bool transmitting = handler.transmitting;
+        std::string lastTxDate = std::move(handler.lastTxDate);
+        std::string lastUpdate = std::move(handler.lastUpdate); 
+
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -2445,17 +2503,30 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string _sid, std::string _lastUpdate, std::string _callsign, std::string _gridSquare, std::string _receivedCallsign, float snr, std::string _rxMode)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(_sid), lastUpdate = std::move(_lastUpdate), receivedCallsign = std::move(_receivedCallsign), snr, rxMode = std::move(_rxMode)]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.receivedCallsign = std::move(receivedCallsign);
+    handler.snr = snr;
+    handler.rxMode = std::move(rxMode);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate);
+        std::string receivedCallsign = std::move(handler.receivedCallsign);
+        float snr = handler.snr;
+        std::string rxMode = std::move(handler.rxMode);
+ 
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {            
@@ -2521,17 +2592,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid = std::move(sid), lastUpdate = std::move(lastUpdate), message = std::move(message)]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.message = std::move(message);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate); 
+        std::string message = std::move(handler.message);
+
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {        
@@ -2578,17 +2658,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
-        filterSelfMessageUpdates_ = true;
-    });
 
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
+        filterSelfMessageUpdates_ = true;
+    };
+
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }

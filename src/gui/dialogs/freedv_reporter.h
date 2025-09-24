@@ -276,9 +276,28 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour backgroundColor;
             };
 
+            struct CallbackHandler
+            {
+                std::string sid;
+                std::string lastUpdate;
+                std::string callsign;
+                std::string gridSquare;
+                std::string version;
+                bool rxOnly;
+                uint64_t frequencyHz;
+                std::string txMode;
+                bool transmitting;
+                std::string lastTxDate;
+                std::string receivedCallsign;
+                float snr;
+                std::string rxMode;
+                std::string message;
+                std::function<void(CallbackHandler&)> fn;
+            };
+
             std::shared_ptr<FreeDVReporter> reporter_;
             std::map<std::string, ReporterData*> allReporterData_;
-            std::deque<std::function<void()> > fnQueue_;
+            std::deque<CallbackHandler> fnQueue_;
             std::mutex fnQueueMtx_;
             std::recursive_mutex dataMtx_;
             bool isConnected_;
