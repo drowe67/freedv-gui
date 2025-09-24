@@ -457,6 +457,36 @@ class MainFrame : public TopFrame
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
         
     private:
+        static const wxString SNR_FORMAT_STR;
+        static const wxString MODE_FORMAT_STR;
+        static const wxString MODE_RADE_FORMAT_STR;
+        static const wxString NO_SNR_LABEL;
+        static const wxString EMPTY_STR;
+        static const wxString MODEM_LABEL;
+        static const wxString BITS_UNK_LABEL;
+        static const wxString ERRS_UNK_LABEL;
+        static const wxString BER_UNK_LABEL;
+        static const wxString FRQ_OFF_UNK_LABEL;
+        static const wxString SYNC_UNK_LABEL;
+        static const wxString VAR_UNK_LABEL;
+        static const wxString CLK_OFF_UNK_LABEL;
+        static const wxString TOO_HIGH_LABEL;
+        static const wxString MIC_SPKR_LEVEL_FORMAT_STR;
+        static const wxString DECIBEL_STR;
+        static const wxString FREQ_KHZ_FORMAT_STR;
+        static const wxString FREQ_MHZ_FORMAT_STR;
+        static const wxString CURRENT_TIME_FORMAT_STR;
+        static const wxString SNR_FORMAT_STR_NO_DB;
+        static const wxString CALLSIGN_FORMAT_RGX;
+        static const wxString BITS_FMT;
+        static const wxString ERRS_FMT;
+        static const wxString BER_FMT;
+        static const wxString RESYNC_FMT;
+        static const wxString FRQ_OFF_FMT;
+        static const wxString SYNC_FMT;
+        static const wxString VAR_FMT;
+        static const wxString CLK_OFF_FMT;
+
         friend class MainApp; // needed for unit tests
         friend class TxRxThread; // XXX - needed for execOnUiThreadAndWait_().
 

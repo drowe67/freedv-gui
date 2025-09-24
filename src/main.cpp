@@ -1410,35 +1410,35 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 // the strings that are used when RADE is selected as this mode is not
 // fully optimized for real-time use yet (i.e. it dynamically allocates
 // memory while processing audio).
-const wxString SNR_FORMAT_STR("%ddB");
-const wxString MODE_FORMAT_STR("Mode: %s");
-const wxString MODE_RADE_FORMAT_STR("Mode: RADEV1");
-const wxString NO_SNR_LABEL("--");
-const wxString EMPTY_STR("");
-const wxString MODEM_LABEL("Modem");
-const wxString BITS_UNK_LABEL("Bits: unk");
-const wxString ERRS_UNK_LABEL("Errs: unk");
-const wxString BER_UNK_LABEL("BER: unk");
-const wxString FRQ_OFF_UNK_LABEL("FrqOff: unk");
-const wxString SYNC_UNK_LABEL("Sync: unk");
-const wxString VAR_UNK_LABEL("Var: unk");
-const wxString CLK_OFF_UNK_LABEL("ClkOff: unk");
-const wxString TOO_HIGH_LABEL("Too High");
-const wxString MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s");
-const wxString DECIBEL_STR("dB");
-const wxString FREQ_KHZ_FORMAT_STR("%.01f");
-const wxString FREQ_MHZ_FORMAT_STR("%.04f");
-const wxString CURRENT_TIME_FORMAT_STR("%s %s");
-const wxString SNR_FORMAT_STR_NO_DB("%0.1f");
-const wxString CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-const wxString BITS_FMT("Bits: %d");
-const wxString ERRS_FMT("Errs: %d");
-const wxString BER_FMT("BER: %4.3f");
-const wxString RESYNC_FMT("Resyncs: %d");
-const wxString FRQ_OFF_FMT("FrqOff: %3.1f");
-const wxString SYNC_FMT("Sync: %3.2f");
-const wxString VAR_FMT("Var: %4.1f");
-const wxString CLK_OFF_FMT("ClkOff: %+-d");
+const wxString MainFrame::SNR_FORMAT_STR("%ddB");
+const wxString MainFrame::MODE_FORMAT_STR("Mode: %s");
+const wxString MainFrame::MODE_RADE_FORMAT_STR("Mode: RADEV1");
+const wxString MainFrame::NO_SNR_LABEL("--");
+const wxString MainFrame::EMPTY_STR("");
+const wxString MainFrame::MODEM_LABEL("Modem");
+const wxString MainFrame::BITS_UNK_LABEL("Bits: unk");
+const wxString MainFrame::ERRS_UNK_LABEL("Errs: unk");
+const wxString MainFrame::BER_UNK_LABEL("BER: unk");
+const wxString MainFrame::FRQ_OFF_UNK_LABEL("FrqOff: unk");
+const wxString MainFrame::SYNC_UNK_LABEL("Sync: unk");
+const wxString MainFrame::VAR_UNK_LABEL("Var: unk");
+const wxString MainFrame::CLK_OFF_UNK_LABEL("ClkOff: unk");
+const wxString MainFrame::TOO_HIGH_LABEL("Too High");
+const wxString MainFrame::MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s");
+const wxString MainFrame::DECIBEL_STR("dB");
+const wxString MainFrame::FREQ_KHZ_FORMAT_STR("%.01f");
+const wxString MainFrame::FREQ_MHZ_FORMAT_STR("%.04f");
+const wxString MainFrame::CURRENT_TIME_FORMAT_STR("%s %s");
+const wxString MainFrame::SNR_FORMAT_STR_NO_DB("%0.1f");
+const wxString MainFrame::CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+const wxString MainFrame::BITS_FMT("Bits: %d");
+const wxString MainFrame::ERRS_FMT("Errs: %d");
+const wxString MainFrame::BER_FMT("BER: %4.3f");
+const wxString MainFrame::RESYNC_FMT("Resyncs: %d");
+const wxString MainFrame::FRQ_OFF_FMT("FrqOff: %3.1f");
+const wxString MainFrame::SYNC_FMT("Sync: %3.2f");
+const wxString MainFrame::VAR_FMT("Var: %4.1f");
+const wxString MainFrame::CLK_OFF_FMT("ClkOff: %+-d");
 
 //----------------------------------------------------------------
 // OnTimer()

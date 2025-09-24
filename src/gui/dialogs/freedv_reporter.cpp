@@ -47,14 +47,14 @@ extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_SNR_VAL (-99)
 
-const wxString UNKNOWN_STR("");
-const wxString SNR_FORMAT_STR("%.01f");
-const wxString ALL_LETTERS_RGX("^[A-Z]{2}$");
-const wxString MS_REMOVAL_RGX("\\.[^+-]+");
-const wxString TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$");
-const wxString TZ_OFFSET_STR("-");
-const wxString EMPTY_STR("");
-const wxString TIME_FORMAT_STR("%x %X"); 
+const wxString FreeDVReporterDialog::UNKNOWN_STR("");
+const wxString FreeDVReporterDialog::SNR_FORMAT_STR("%.01f");
+const wxString FreeDVReporterDialog::ALL_LETTERS_RGX("^[A-Z]{2}$");
+const wxString FreeDVReporterDialog::MS_REMOVAL_RGX("\\.[^+-]+");
+const wxString FreeDVReporterDialog::TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$");
+const wxString FreeDVReporterDialog::TZ_OFFSET_STR("-");
+const wxString FreeDVReporterDialog::EMPTY_STR("");
+const wxString FreeDVReporterDialog::TIME_FORMAT_STR("%x %X"); 
 
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
