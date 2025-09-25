@@ -6,7 +6,7 @@ SOX_DRIVER=alsa
 FREEDV_BINARY=src/freedv
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
-    FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
+    FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
 fi
 
 createVirtualAudioCable () {
