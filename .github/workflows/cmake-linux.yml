@@ -141,7 +141,7 @@ jobs:
 
   test-appimage-fedora:
     runs-on: ubuntu-24.04
-    needs: [build, dist]
+    needs: [dist]
     steps:
     - uses: actions/checkout@v4
     
@@ -183,7 +183,7 @@ jobs:
         os: [ubuntu-24.04, ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
-    needs: [build, dist]
+    needs: [dist]
     steps:
     - uses: actions/checkout@v4
 

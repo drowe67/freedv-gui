@@ -74,6 +74,9 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_firstPass     = true;
     m_line_color    = 0;
     m_modem_stats_max_f_hz = MODEM_STATS_MAX_F_HZ;
+    dyImageData_ = nullptr;
+    dy_ = 0;
+    tmpImage_ = nullptr;
 
     SetLabelSize(10.0);
 
@@ -225,7 +228,9 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight); 
+
+        auto alreadyDrawnPx = (dy * waterfallSlices_.size());
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + alreadyDrawnPx, m_imgWidth, m_imgHeight - alreadyDrawnPx); 
     }
     
     if(m_newdata)
@@ -396,8 +401,21 @@ void PlotWaterfall::plotPixelData()
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char* dyImageData = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
-    assert(dyImageData != nullptr);
+    if (dy_ != dy && dyImageData_ != nullptr)
+    {
+        delete[] dyImageData_;
+	dyImageData_ = nullptr;
+
+        delete tmpImage_;
+    }
+    if (dyImageData_ == nullptr)
+    {
+        dyImageData_ = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
+        assert(dyImageData_ != nullptr);
+
+        tmpImage_ = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData_, true);
+    }
+    dy_ = dy;
 
     for(px = 0; px < baseRowWidthPixels; px++)
     {
@@ -412,22 +430,22 @@ void PlotWaterfall::plotPixelData()
             
         switch (m_colour) {
         case 0:
-            dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
-            dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
-            dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
+            dyImageData_[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+            dyImageData_[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+            dyImageData_[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
             break;
         case 1:
-            dyImageData[pixelPos] = intensity;
-            dyImageData[pixelPos + 1] = intensity;
-            dyImageData[pixelPos + 2] = intensity;       
+            dyImageData_[pixelPos] = intensity;
+            dyImageData_[pixelPos + 1] = intensity;
+            dyImageData_[pixelPos + 2] = intensity;       
             break;
         case 2:
-            dyImageData[pixelPos] = intensity;
-            dyImageData[pixelPos + 1] = intensity;
+            dyImageData_[pixelPos] = intensity;
+            dyImageData_[pixelPos + 1] = intensity;
             if (intensity < 127)
-                dyImageData[pixelPos + 2] = intensity*2;
+                dyImageData_[pixelPos + 2] = intensity*2;
             else
-                dyImageData[pixelPos + 2] = 255;
+                dyImageData_[pixelPos + 2] = 255;
                     
             break;
         }
@@ -435,7 +453,7 @@ void PlotWaterfall::plotPixelData()
     
     for (int row = 1; row < dy; row++)
     {
-        memcpy(&dyImageData[row * 3 * baseRowWidthPixels], &dyImageData[0], 3 * baseRowWidthPixels);
+        memcpy(&dyImageData_[row * 3 * baseRowWidthPixels], &dyImageData_[0], 3 * baseRowWidthPixels);
     }
     
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
@@ -444,7 +462,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
+        tmpImage_->SetData(dyImageData_, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
         if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
@@ -453,12 +471,12 @@ void PlotWaterfall::plotPixelData()
             waterfallSlices_.pop_back();
             destBmp = tmpBmp;
             
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
         else
         {
             destBmp = new wxBitmap(m_imgWidth, dy);
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
 
         wxMemoryDC sourceDC;
@@ -468,14 +486,11 @@ void PlotWaterfall::plotPixelData()
         destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         waterfallSlices_.push_front(destBmp);
         
-        delete tmpImage;
         if (tmpBmp != nullptr)
         {
             delete tmpBmp;
         }
     }
-
-    delete[] dyImageData;
 }
 
 //-------------------------------------------------------------------------
@@ -592,4 +607,14 @@ void PlotWaterfall::cleanupSlices_()
         delete bmp;
     }
     waterfallSlices_.clear();
+
+    dy_ = 0;
+    if (dyImageData_ != nullptr)
+    {
+        delete[] dyImageData_;
+        dyImageData_ = nullptr;
+    }
+
+    delete tmpImage_;
+    tmpImage_ = nullptr;
 }
