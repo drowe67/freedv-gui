@@ -46,7 +46,7 @@ extern FreeDVInterface freedvInterface;
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
-const wxString UNKNOWN_STR("");
+
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
@@ -60,6 +60,14 @@ using namespace std::placeholders;
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
+    , UNKNOWN_STR("")
+    , SNR_FORMAT_STR("%.01f")
+    , ALL_LETTERS_RGX("^[A-Z]{2}$")
+    , MS_REMOVAL_RGX("\\.[^+-]+")
+    , TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$")
+    , TZ_OFFSET_STR("-")
+    , EMPTY_STR("")
+    , TIME_FORMAT_STR("%x %X")
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -502,6 +510,14 @@ bool FreeDVReporterDialog::isTextMessageFieldInFocus()
 
 void FreeDVReporterDialog::refreshLayout()
 {
+    // Update row colors
+    msgRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+    msgRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+    txRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+    txRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+    rxRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+    rxRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+ 
     wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
@@ -737,7 +753,8 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
         
         std::vector<std::string> keysToRemove;
@@ -758,23 +775,28 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
         {
             allReporterData_.erase(key);
         }
-    });
+    };
+
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         Resort();
-    });
+    };
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -807,21 +829,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             // Messaging notifications take highest priority.
             wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
             wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-        
+
             if (isMessaging)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+                backgroundColor = parent_->msgRowBackgroundColor;
+                foregroundColor = parent_->msgRowForegroundColor;
             }
             else if (isTransmitting)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+                backgroundColor = parent_->txRowBackgroundColor;
+                foregroundColor = parent_->rxRowForegroundColor;
             }
             else if (isReceivingValidCallsign || isReceivingNotValidCallsign)
             {
-                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+                backgroundColor = parent_->rxRowBackgroundColor;
+                foregroundColor = parent_->rxRowForegroundColor;
             }
     #if defined(__APPLE__)
             else
@@ -874,7 +896,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         }
 
         ItemsChanged(itemsChanged);
-    });
+    };
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
@@ -1323,12 +1346,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
-{    
-    wxRegEx millisecondsRemoval(wxT("\\.[^+-]+"));
+{
+    wxRegEx millisecondsRemoval(parent_->MS_REMOVAL_RGX);
     wxString tmp = timeStr;
-    millisecondsRemoval.Replace(&tmp, wxT(""));
+    millisecondsRemoval.Replace(&tmp, parent_->EMPTY_STR);
     
-    wxRegEx timezoneRgx(wxT("([+-])([0-9]+):([0-9]+)$"));
+    wxRegEx timezoneRgx(parent_->TIMEZONE_RGX);
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {
@@ -1339,12 +1362,12 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         int tzMinutes = wxAtoi(hours) * 60;
         tzMinutes += wxAtoi(minutes);
         
-        if (tzOffset == wxT("-"))
+        if (tzOffset == parent_->TZ_OFFSET_STR)
         {
             tzMinutes = -tzMinutes;
         }
         
-        timezoneRgx.Replace(&tmp, wxT(""));
+        timezoneRgx.Replace(&tmp, parent_->EMPTY_STR);
         
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
@@ -1362,8 +1385,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
-        
-        wxString formatStr = wxT("%x %X");
+
         
 #if __APPLE__
         // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
@@ -1383,16 +1405,16 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         tmpTm.tm_isdst = -1;
         
         char buf[4096];
-        strftime(buf, sizeof(buf), (const char*)formatStr.ToUTF8(), &tmpTm);
+        strftime(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm);
         return buf;
 #else
-        return tmpDate.Format(formatStr, timeZone);
+        return tmpDate.Format(parent_->TIME_FORMAT_STR, timeZone);
 #endif // __APPLE__
     }
     else
     {
         timeObj = wxDateTime();
-        return UNKNOWN_STR;
+        return parent_->UNKNOWN_STR;
     }
 }
 
@@ -1443,7 +1465,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquar
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
     wxString optionalSegment = gridSquare.Mid(4, 2);
-    const wxRegEx allLetters(_("^[A-Z]{2}$"));
+    const wxRegEx allLetters(parent_->ALL_LETTERS_RGX);
     if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
@@ -1507,10 +1529,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
     while(size > 0)
     {
         lk.lock();
-        auto fn = fnQueue_[0];
+        auto handler = std::move(fnQueue_[0]);
         lk.unlock();
 
-        fn();
+        handler.fn(handler);
 
         lk.lock();
         fnQueue_.pop_front();
@@ -1668,10 +1690,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
             // actions fully execute before clearing entries.
             log_debug("Reporter object set to null");
             std::unique_lock<std::mutex> lk(fnQueueMtx_);
-            fnQueue_.push_back([this]() {
+            CallbackHandler handler;
+            handler.fn = [this](CallbackHandler&) {
                 clearAllEntries_();
-            });
+            };
 
+            fnQueue_.push_back(std::move(handler));
             parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
         }
     }
@@ -2105,34 +2129,53 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem se
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         log_debug("Connected to server");
         filterSelfMessageUpdates_ = false;
         clearAllEntries_();
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         log_debug("Disconnected from server");
         isConnected_ = false;
         filterSelfMessageUpdates_ = false;
         clearAllEntries_();
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.callsign = std::move(callsign);
+    handler.gridSquare = std::move(gridSquare);
+    handler.version = std::move(version);
+    handler.rxOnly = rxOnly;
+
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
+
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate);
+        std::string callsign = std::move(handler.callsign);
+        std::string gridSquare = std::move(handler.gridSquare);
+        std::string version = std::move(handler.version);
+        bool rxOnly = handler.rxOnly;
 
         log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
 
@@ -2161,9 +2204,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             !validCharactersInGridSquare)
         {
             // Invalid grid square means we can't calculate a distance.
-            temp->distance = UNKNOWN_STR;
+            temp->distance = parent_->UNKNOWN_STR;
             temp->distanceVal = 0;
-            temp->heading = UNKNOWN_STR;
+            temp->heading = parent_->UNKNOWN_STR;
             temp->headingVal = 0;
         }
         else
@@ -2182,7 +2225,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
             {
                 temp->headingVal = 0;
-                temp->heading = UNKNOWN_STR;
+                temp->heading = parent_->UNKNOWN_STR;
             }
             else
             {
@@ -2199,27 +2242,27 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         }
 
         temp->version = version;
-        temp->freqString = UNKNOWN_STR;
-        temp->userMessage = UNKNOWN_STR;
+        temp->freqString = parent_->UNKNOWN_STR;
+        temp->userMessage = parent_->UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
         {
             temp->status = RX_ONLY_STATUS;
-            temp->txMode = UNKNOWN_STR;
-            temp->lastTx = UNKNOWN_STR;
+            temp->txMode = parent_->UNKNOWN_STR;
+            temp->lastTx = parent_->UNKNOWN_STR;
         }
         else
         {
-            temp->status = UNKNOWN_STR;
-            temp->txMode = UNKNOWN_STR;
-            temp->lastTx = UNKNOWN_STR;
+            temp->status = parent_->UNKNOWN_STR;
+            temp->txMode = parent_->UNKNOWN_STR;
+            temp->lastTx = parent_->UNKNOWN_STR;
         }
         
-        temp->lastRxCallsign = UNKNOWN_STR;
-        temp->lastRxMode = UNKNOWN_STR;
+        temp->lastRxCallsign = parent_->UNKNOWN_STR;
+        temp->lastRxMode = parent_->UNKNOWN_STR;
         temp->snrVal = UNKNOWN_SNR_VAL;
-        temp->snr = UNKNOWN_STR;
+        temp->snr = parent_->UNKNOWN_STR;
         
         // Default to sane colors for rows. If we need to highlight, the timer will change
         // these later. 
@@ -2260,33 +2303,41 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
             sortOnNextTimerInterval = true;
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
+
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
 
         log_debug("Fully connected to server");
 
         // Enable highlighting now that we're fully connected.
         isConnected_ = true;
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid]() {
+
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         assert(wxThread::IsMain());
 
+        std::string sid = std::move(handler.sid);
         log_debug("User with SID %s disconnected", sid.c_str());
 
         auto iter = allReporterData_.find(sid);
@@ -2304,17 +2355,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, frequencyHz, lastUpdate]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.frequencyHz = frequencyHz;
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-        
+       
+        std::string sid = std::move(handler.sid);
+        uint64_t frequencyHz = handler.frequencyHz;
+        std::string lastUpdate = std::move(handler.lastUpdate);
+ 
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -2371,17 +2431,30 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.txMode = std::move(txMode);
+    handler.transmitting = transmitting;
+    handler.lastTxDate = std::move(lastTxDate);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string txMode = std::move(handler.txMode);
+        bool transmitting = handler.transmitting;
+        std::string lastTxDate = std::move(handler.lastTxDate);
+        std::string lastUpdate = std::move(handler.lastUpdate); 
+
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -2430,17 +2503,30 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.receivedCallsign = std::move(receivedCallsign);
+    handler.snr = snr;
+    handler.rxMode = std::move(rxMode);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate);
+        std::string receivedCallsign = std::move(handler.receivedCallsign);
+        float snr = handler.snr;
+        std::string rxMode = std::move(handler.rxMode);
+ 
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {            
@@ -2463,26 +2549,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
-        
-            wxString snrString = wxString::Format(wxT("%.01f"), snr);
+
+            wxString snrString = wxString::Format(parent_->SNR_FORMAT_STR, snr);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=
-                    iter->second->lastRxCallsign != UNKNOWN_STR ||
-                    iter->second->lastRxMode != UNKNOWN_STR ||
-                    iter->second->snr != UNKNOWN_STR ||
+                    iter->second->lastRxCallsign != parent_->UNKNOWN_STR ||
+                    iter->second->lastRxMode != parent_->UNKNOWN_STR ||
+                    iter->second->snr != parent_->UNKNOWN_STR ||
                     iter->second->lastRxDate.IsValid();
                 
-                iter->second->lastRxCallsign = UNKNOWN_STR;
-                iter->second->lastRxMode = UNKNOWN_STR;
+                iter->second->lastRxCallsign = parent_->UNKNOWN_STR;
+                iter->second->lastRxMode = parent_->UNKNOWN_STR;
                 iter->second->snrVal = UNKNOWN_SNR_VAL;
-                iter->second->snr = UNKNOWN_STR;
+                iter->second->snr = parent_->UNKNOWN_STR;
                 iter->second->lastRxDate = wxDateTime();
             }
             else
@@ -2506,17 +2592,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this, sid, lastUpdate, message]() {
+    CallbackHandler handler;
+    handler.sid = std::move(sid);
+    handler.lastUpdate = std::move(lastUpdate);
+    handler.message = std::move(message);
+    handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-    
+   
+        std::string sid = std::move(handler.sid);
+        std::string lastUpdate = std::move(handler.lastUpdate); 
+        std::string message = std::move(handler.message);
+
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {        
@@ -2530,8 +2625,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != UNKNOWN_STR);
-                iter->second->userMessage = UNKNOWN_STR;
+                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
+                iter->second->userMessage = parent_->UNKNOWN_STR;
             }
             else
             {
@@ -2563,17 +2658,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 sortOnNextTimerInterval |= isChanged;
             }
         }
-    });
+    };
 
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_.push_back([this]() {
-        filterSelfMessageUpdates_ = true;
-    });
 
+    CallbackHandler handler;
+    handler.fn = [this](CallbackHandler&) {
+        filterSelfMessageUpdates_ = true;
+    };
+
+    fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
