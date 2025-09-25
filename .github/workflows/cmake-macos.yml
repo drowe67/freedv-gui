@@ -139,8 +139,8 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          open FreeDV.dmg
-          cp -a /Volumes/FreeDV/FreeDV.app .
+          mkdir FreeDV-dmg
+          hdiutil attach FreeDV.dmg -mountpoint FreeDV-dmg
           
     - uses: gerlero/brew-install@v1
       with:
@@ -179,4 +179,4 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       run: |
-          FREEDV_BINARY=./FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1
+          FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1
