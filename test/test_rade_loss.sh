@@ -2,13 +2,14 @@
 
 # Determine sox driver to use for recording/playback
 OPERATING_SYSTEM=`uname`
-SOX_DRIVER=alsa
-FREEDV_BINARY=src/freedv
-PYTHON_BINARY=python3
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
     PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
+else
+    SOX_DRIVER=alsa
+    FREEDV_BINARY=src/freedv
+    PYTHON_BINARY=python3
 fi
 
 createVirtualAudioCable () {
