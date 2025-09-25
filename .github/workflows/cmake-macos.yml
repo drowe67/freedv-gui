@@ -139,7 +139,6 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          unzip FreeDV.zip
           open FreeDV.dmg
           cp -a /Volumes/FreeDV/FreeDV.app .
           
