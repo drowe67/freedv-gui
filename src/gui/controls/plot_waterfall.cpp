@@ -200,10 +200,20 @@ bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
     
 void PlotWaterfall::refreshData()
 {
-    int screenX = PLOT_BORDER + XLEFT_OFFSET;
-    int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
-    RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight), false);
-}   
+    // Force redraw of entire control if not using RADE. This is determined
+    // by rxFreq == 0. We need to do this so that the frequency indicators
+    // redraw properly.
+    if (m_rxFreq == 0)
+    {
+        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
+        RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight), false);
+    }
+    else
+    {
+        Refresh();
+    }   
+}
 
 //----------------------------------------------------------------
 // draw()
