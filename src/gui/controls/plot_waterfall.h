@@ -44,7 +44,19 @@ class PlotWaterfall : public PlotPanel
         ~PlotWaterfall();
         bool checkDT(void);
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
-        void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
+        void setRxFreq(float rxFreq) {
+            bool zeroTransition = 
+                (rxFreq != 0 && m_rxFreq == 0) ||
+                (rxFreq == 0 && m_rxFreq != 0);
+
+            m_rxFreq = rxFreq; 
+            if (zeroTransition)
+            {
+                // Trigger a full redraw when going to/from RADE mode 
+                // to make sure frequency indicator renders properly.
+                Refresh();
+            }
+        }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
 
