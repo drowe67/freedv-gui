@@ -563,12 +563,12 @@ void TcpConnectionHandler::receiveImpl_()
 
     while (socket_ > 0)
     {
+        struct timeval tv = {0, 250000}; // 250ms
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(socket_, &readSet);
 
-again:        
-        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, nullptr);
+        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
         if (rv > 0)
         {
             int numRead = 0;
@@ -600,9 +600,6 @@ again:
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     }
                 });
-            
-                // See if there's any other data waiting to be read.
-                goto again;
             } 
             else if (numRead == 0)
             {
