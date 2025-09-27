@@ -20,12 +20,6 @@
 //
 //=========================================================================
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-#include <sanitizer/rtsan_interface.h>
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
 #include <cstring>
 #include <cassert>
 #include <cmath>
@@ -171,19 +165,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
                 featureListIdx_ = 0;
 
                 // RADE TX handling
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-                rade_tx(dv_, radeOut_, &featureList_[0]);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+		FREEDV_BEGIN_REALTIME_UNSAFE
+                    rade_tx(dv_, radeOut_, &featureList_[0]);
+                FREEDV_END_REALTIME_UNSAFE
 
                 for (int index = 0; index < numSamplesPerTx; index++)
                 {
@@ -211,19 +195,9 @@ void RADETransmitStep::restartVocoder()
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-    rade_tx_eoo(dv_, eooOut_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    FREEDV_BEGIN_REALTIME_UNSAFE
+        rade_tx_eoo(dv_, eooOut_);
+    FREEDV_END_REALTIME_UNSAFE
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
