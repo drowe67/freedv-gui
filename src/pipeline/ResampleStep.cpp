@@ -96,17 +96,17 @@ ResampleStep::~ResampleStep()
     delete[] tempOutput_;
 }
 
-int ResampleStep::getInputSampleRate() const
+int ResampleStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int ResampleStep::getOutputSampleRate() const
+int ResampleStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return outputSampleRate_;
 }
 
-short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     if (numInputSamples == 0)
     {

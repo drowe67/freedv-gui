@@ -91,6 +91,7 @@
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
+#include "util/sanitizers.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -575,10 +576,10 @@ class MainFrame : public TopFrame
         void handleAudioDeviceChange_(std::string newDeviceName);
 
         // Audio device data handlers
-        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
 
         // QSY request handling
         struct QsyRequestArgs {

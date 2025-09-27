@@ -32,6 +32,7 @@
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
 #include "util/Semaphore.h"
+#include "util/sanitizers.h"
 
 // Forward declarations
 class LinkStep;
@@ -126,22 +127,8 @@ private:
 #endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
-    void txProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-    ;
-
-    void rxProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-    ;
-
+    void txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
+    void rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void clearFifos_();
 };
 

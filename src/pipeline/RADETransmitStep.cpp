@@ -114,17 +114,17 @@ RADETransmitStep::~RADETransmitStep()
     }
 }
 
-int RADETransmitStep::getInputSampleRate() const
+int RADETransmitStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_SPEECH_SAMPLE_RATE;
 }
 
-int RADETransmitStep::getOutputSampleRate() const
+int RADETransmitStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_MODEM_SAMPLE_RATE;
 }
 
-short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     int numSamplesPerTx = rade_n_tx_out(dv_);
@@ -237,7 +237,7 @@ void RADETransmitStep::restartVocoder()
     }
 }
 
-void RADETransmitStep::reset()
+void RADETransmitStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     outputSampleFifo_.reset();

@@ -49,17 +49,17 @@ ToneInterfererStep::~ToneInterfererStep()
     // empty
 }
 
-int ToneInterfererStep::getInputSampleRate() const
+int ToneInterfererStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int ToneInterfererStep::getOutputSampleRate() const
+int ToneInterfererStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* ToneInterfererStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ToneInterfererStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     *numOutputSamples = numInputSamples;
     

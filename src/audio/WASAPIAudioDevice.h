@@ -41,8 +41,8 @@ class WASAPIAudioDevice : public Win32COMObject, public IAudioDevice
 public:
     virtual ~WASAPIAudioDevice();
 
-    virtual int getNumChannels() override;
-    virtual int getSampleRate() const override;
+    virtual int getNumChannels() FREEDV_NONBLOCKING override;
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override;
     
     virtual void start() override;
     virtual void stop() override;

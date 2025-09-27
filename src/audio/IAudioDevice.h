@@ -31,6 +31,7 @@
 
 #include "AudioDeviceSpecification.h"
 #include "../util/IRealtimeHelper.h"
+#include "../util/sanitizers.h"
 
 using namespace std::chrono_literals;
 
@@ -43,8 +44,8 @@ public:
     typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string, void*);
     typedef void (*AudioDeviceChangedCallbackFn)(IAudioDevice&, std::string, void*);
     
-    virtual int getNumChannels() = 0;
-    virtual int getSampleRate() const = 0;
+    virtual int getNumChannels() FREEDV_NONBLOCKING = 0;
+    virtual int getSampleRate() const FREEDV_NONBLOCKING = 0;
     
     virtual void start() = 0;
     virtual void stop() = 0;

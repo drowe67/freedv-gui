@@ -107,17 +107,17 @@ RADEReceiveStep::~RADEReceiveStep()
     }
 }
 
-int RADEReceiveStep::getInputSampleRate() const
+int RADEReceiveStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_MODEM_SAMPLE_RATE;
 }
 
-int RADEReceiveStep::getOutputSampleRate() const
+int RADEReceiveStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_SPEECH_SAMPLE_RATE;
 }
 
-short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
@@ -233,7 +233,7 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
     return outputSamples_.get();
 }
 
-void RADEReceiveStep::reset()
+void RADEReceiveStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     outputSampleFifo_.reset();

@@ -50,17 +50,17 @@ SpeexStep::~SpeexStep()
     speex_preprocess_state_destroy(speexStateObj_);
 }
 
-int SpeexStep::getInputSampleRate() const
+int SpeexStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int SpeexStep::getOutputSampleRate() const
+int SpeexStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     *numOutputSamples = 0;
 
@@ -89,7 +89,7 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
     return outputSamples;
 }
 
-void SpeexStep::reset()
+void SpeexStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
 }

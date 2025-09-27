@@ -32,9 +32,9 @@ public:
     EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr<void>* bassFilter, std::shared_ptr<void>* midFilter, std::shared_ptr<void>* trebleFilter, std::shared_ptr<void>* volFilter);
     virtual ~EqualizerStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;    
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;    
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
     int sampleRate_;

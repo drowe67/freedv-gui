@@ -3589,7 +3589,7 @@ void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* stat
     castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
 }
 
-void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3609,7 +3609,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
 }
 
-void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3645,7 +3645,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
 }
 
-void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3663,7 +3663,7 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
 }
 
-void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);

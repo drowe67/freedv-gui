@@ -73,17 +73,17 @@ FreeDVReceiveStep::~FreeDVReceiveStep()
     }
 }
 
-int FreeDVReceiveStep::getInputSampleRate() const
+int FreeDVReceiveStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_modem_sample_rate(dv_);
 }
 
-int FreeDVReceiveStep::getOutputSampleRate() const
+int FreeDVReceiveStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_speech_sample_rate(dv_);
 }
 
-short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     auto maxSpeechSamples = freedv_get_n_max_speech_samples(dv_);
@@ -125,7 +125,7 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
     return outputSamples_.get();
 }
 
-void FreeDVReceiveStep::reset()
+void FreeDVReceiveStep::reset() FREEDV_NONBLOCKING
 {
     while (codec2_fifo_used(inputSampleFifo_) > 0)
     {

@@ -36,19 +36,19 @@ EitherOrStep::~EitherOrStep()
     // empty, shared_ptr will automatically clean up members
 }
 
-int EitherOrStep::getInputSampleRate() const
+int EitherOrStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     assert(falseStep_->getInputSampleRate() == trueStep_->getInputSampleRate());
     return trueStep_->getInputSampleRate();
 }
 
-int EitherOrStep::getOutputSampleRate() const
+int EitherOrStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     assert(falseStep_->getOutputSampleRate() == trueStep_->getOutputSampleRate());
     return trueStep_->getOutputSampleRate();
 }
 
-short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     bool condResult = conditionalFn_();
     if (condResult)
@@ -61,7 +61,7 @@ short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numO
     }
 }
 
-void EitherOrStep::reset()
+void EitherOrStep::reset() FREEDV_NONBLOCKING
 {
     trueStep_->reset();
     falseStep_->reset();

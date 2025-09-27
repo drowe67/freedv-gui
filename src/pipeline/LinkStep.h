@@ -63,10 +63,10 @@ private:
         virtual ~InputStep() = default;
         
         // Returns required input sample rate.
-        virtual int getInputSampleRate() const override { return parent_->getSampleRate(); }
+        virtual int getInputSampleRate() const FREEDV_NONBLOCKING override { return parent_->getSampleRate(); }
     
         // Returns output sample rate after performing the pipeline step.
-        virtual int getOutputSampleRate() const override { return parent_->getSampleRate(); }
+        virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override { return parent_->getSampleRate(); }
     
         // Executes pipeline step.
         // Required parameters:
@@ -74,7 +74,7 @@ private:
         //     numInputSamples: Number of samples in the input array.
         //     numOutputSamples: Location to store number of output samples.
         // Returns: Array of int16 values corresponding to result audio.
-        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
         
     private:
         LinkStep* parent_;
@@ -95,10 +95,10 @@ private:
         virtual ~OutputStep() = default;
         
         // Returns required input sample rate.
-        virtual int getInputSampleRate() const override { return parent_->getSampleRate(); }
+        virtual int getInputSampleRate() const FREEDV_NONBLOCKING override { return parent_->getSampleRate(); }
     
         // Returns output sample rate after performing the pipeline step.
-        virtual int getOutputSampleRate() const override { return parent_->getSampleRate(); }
+        virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override { return parent_->getSampleRate(); }
     
         // Executes pipeline step.
         // Required parameters:
@@ -106,7 +106,7 @@ private:
         //     numInputSamples: Number of samples in the input array.
         //     numOutputSamples: Location to store number of output samples.
         // Returns: Array of int16 values corresponding to result audio.
-        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
         
     private:
         LinkStep* parent_;

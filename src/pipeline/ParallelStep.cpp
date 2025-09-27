@@ -195,17 +195,17 @@ ParallelStep::~ParallelStep()
     parallelSteps_.clear();
 }
 
-int ParallelStep::getInputSampleRate() const
+int ParallelStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int ParallelStep::getOutputSampleRate() const
+int ParallelStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return outputSampleRate_;
 }
 
-short* ParallelStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ParallelStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     // Step 1: determine what steps to execute.
     auto stepToExecute = inputRouteFn_(this);
@@ -288,7 +288,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
     } while (samplesIn > 0 && !threadState->exitingThread);
 }
 
-void ParallelStep::reset()
+void ParallelStep::reset() FREEDV_NONBLOCKING
 {
     for (size_t index = 0; index < threads_.size(); index++)
     {

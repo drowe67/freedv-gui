@@ -642,12 +642,7 @@ void TxRxThread::clearFifos_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
 
@@ -772,12 +767,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
     }
 }
 
-void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
 

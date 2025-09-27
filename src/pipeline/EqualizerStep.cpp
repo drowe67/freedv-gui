@@ -46,17 +46,17 @@ EqualizerStep::~EqualizerStep()
     // empty
 }
 
-int EqualizerStep::getInputSampleRate() const
+int EqualizerStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int EqualizerStep::getOutputSampleRate() const
+int EqualizerStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     bool copiedToOutput = false;
     std::shared_ptr<void> tmpVolFilter = *volFilter_;

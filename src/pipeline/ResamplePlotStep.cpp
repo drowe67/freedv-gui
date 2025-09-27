@@ -38,17 +38,17 @@ ResampleForPlotStep::~ResampleForPlotStep()
     delete[] decSamples_;
 }
 
-int ResampleForPlotStep::getInputSampleRate() const
+int ResampleForPlotStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-int ResampleForPlotStep::getOutputSampleRate() const
+int ResampleForPlotStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-short* ResampleForPlotStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleForPlotStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     resample_for_plot(fifo_, inputSamples, decSamples_, numInputSamples, FS);
     

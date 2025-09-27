@@ -10,9 +10,9 @@ public:
         result_[0] = 0;
     }
 
-    virtual int getInputSampleRate() const { return 8000; }
-    virtual int getOutputSampleRate() const { return 8000; }
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
     {
         *numOutputSamples = 1;
         return result_.get();
@@ -31,9 +31,9 @@ public:
         result_[0] = 1;
     }
 
-    virtual int getInputSampleRate() const { return 8000; }
-    virtual int getOutputSampleRate() const { return 8000; }
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
     {
         *numOutputSamples = 1;
         return result_.get();

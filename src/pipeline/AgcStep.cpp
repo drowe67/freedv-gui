@@ -92,17 +92,17 @@ AgcStep::~AgcStep()
     ebur128_destroy((ebur128_state**)&ebur128State_);
 }
 
-int AgcStep::getInputSampleRate() const
+int AgcStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int AgcStep::getOutputSampleRate() const
+int AgcStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     ebur128_state* state = static_cast<ebur128_state*>(ebur128State_);
 
@@ -180,7 +180,7 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     return outputSamples;
 }
 
-void AgcStep::reset()
+void AgcStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     currentGainDb_ = 0;

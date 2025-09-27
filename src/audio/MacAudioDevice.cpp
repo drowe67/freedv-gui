@@ -136,12 +136,12 @@ MacAudioDevice::~MacAudioDevice()
     dispatch_release(sem_);
 }
     
-int MacAudioDevice::getNumChannels()
+int MacAudioDevice::getNumChannels() FREEDV_NONBLOCKING
 {
     return numChannels_;
 }
 
-int MacAudioDevice::getSampleRate() const
+int MacAudioDevice::getSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
