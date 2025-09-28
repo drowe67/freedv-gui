@@ -466,10 +466,13 @@ void PlotWaterfall::plotPixelData()
     {
         memcpy(&dyImageData_[row * 3 * baseRowWidthPixels], &dyImageData_[0], 3 * baseRowWidthPixels);
     }
-    
+
+#if 0
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
     // on macOS due to how it handles color spaces.
+    // XXX - causes noticable flicker on certain monitors/OS versions, so disabled for now.
     ResetMainWindowColorSpace();
+#endif // 0
 
     if (dy > 0)
     {
