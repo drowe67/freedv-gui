@@ -20,17 +20,12 @@
 //
 //=========================================================================
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-#include <sanitizer/rtsan_interface.h>
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
 #include <cassert>
 #include <functional>
 #include "RADEReceiveStep.h"
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
+#include "../util/realtime_fp.h"
 
 #if defined(__APPLE__)
 #include <pthread.h>
@@ -43,7 +38,7 @@ extern wxString utRxFeatureFile;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , pendingFeatures_(nullptr)

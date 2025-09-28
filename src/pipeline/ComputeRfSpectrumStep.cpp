@@ -24,8 +24,8 @@
 #include "../defines.h"
 
 ComputeRfSpectrumStep::ComputeRfSpectrumStep(
-    std::function<struct MODEM_STATS*()> modemStatsFn,
-    std::function<float*()> getAvMagFn)
+    realtime_fp<struct MODEM_STATS*()> modemStatsFn,
+    realtime_fp<float*()> getAvMagFn)
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {

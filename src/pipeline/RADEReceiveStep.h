@@ -33,6 +33,7 @@
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
+#include "../util/realtime_fp.h"
 
 // Number of features to store. This is set to be close to the
 // typical size for RX/TX features for the rade_loss ctest to
@@ -48,7 +49,7 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -70,7 +71,7 @@ private:
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
-    std::function<void(RADEReceiveStep*)> syncFn_;
+    realtime_fp<void(RADEReceiveStep*)> syncFn_;
 
     RADE_COMP* inputBufCplx_;
     short* inputBuf_;

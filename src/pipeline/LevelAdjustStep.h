@@ -23,15 +23,15 @@
 #ifndef AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
 #define AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
 
-#include <functional>
 #include <memory>
 
 #include "IPipelineStep.h"
+#include "../util/realtime_fp.h"
 
 class LevelAdjustStep : public IPipelineStep
 {
 public:
-    LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn);
+    LevelAdjustStep(int sampleRate, realtime_fp<float()> scaleFactorFn);
     virtual ~LevelAdjustStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -39,7 +39,7 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
-    std::function<float()> scaleFactorFn_;
+    realtime_fp<float()> scaleFactorFn_;
     int sampleRate_;
     std::unique_ptr<short[]> outputSamples_;
 };

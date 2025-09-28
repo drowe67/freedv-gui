@@ -23,7 +23,7 @@
 #include <assert.h>
 #include "EitherOrStep.h"
 
-EitherOrStep::EitherOrStep(std::function<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep)
+EitherOrStep::EitherOrStep(realtime_fp<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep)
     : conditionalFn_(conditionalFn)
     , falseStep_(std::unique_ptr<IPipelineStep>(falseStep))
     , trueStep_(std::unique_ptr<IPipelineStep>(trueStep))
