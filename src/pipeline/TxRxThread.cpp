@@ -23,6 +23,8 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
+#include "../util/sanitizers.h"
+
 // WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
 // first.
 #include "AgcStep.h"
@@ -159,7 +161,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
-            +[]() { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
             recordMicTap,
             bypassRecordMic
         );
@@ -184,7 +186,7 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayMicIn->appendPipelineStep(playMicIn);
         
         auto eitherOrPlayStep = new EitherOrStep(
-            +[]() { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile != NULL); },
             eitherOrPlayMicIn,
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
@@ -197,7 +199,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessSpeex->appendPipelineStep(speexStep);
         
         auto eitherOrSpeexStep = new EitherOrStep(
-            +[]() { return (bool)wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
+            +[]() FREEDV_NONBLOCKING { return (bool)wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
             eitherOrProcessSpeex,
             eitherOrBypassSpeex);
         pipeline_->appendPipelineStep(eitherOrSpeexStep);
@@ -210,7 +212,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessAgc->appendPipelineStep(agcStep);
 
         auto eitherOrAgcStep = new EitherOrStep(
-            +[]() { return g_agcEnabled.load(std::memory_order_acquire); },
+            +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); },
             eitherOrProcessAgc,
             eitherOrBypassAgc);
         pipeline_->appendPipelineStep(eitherOrAgcStep); 
@@ -248,7 +250,7 @@ void TxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(resampleForPlotTap);
       
         // FreeDV TX step (analog leg)
-        auto doubleLevelStep = new LevelAdjustStep(inputSampleRate_, +[]() { return (float)2.0; });
+        auto doubleLevelStep = new LevelAdjustStep(inputSampleRate_, +[]() FREEDV_NONBLOCKING { return (float)2.0; });
         auto analogTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         analogTxPipeline->appendPipelineStep(doubleLevelStep);
         
@@ -261,7 +263,7 @@ void TxRxThread::initializePipeline_()
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
         auto eitherOrDigitalAnalog = new EitherOrStep(
-            +[]() { return g_analog != 0; },
+            +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
             analogTxPipeline,
             digitalTxPipeline);
         pipeline_->appendPipelineStep(eitherOrDigitalAnalog);
@@ -283,13 +285,13 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordModulated = new EitherOrStep(
-            +[]() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
             recordModulatedTapPipeline,
             bypassRecordModulated);
         pipeline_->appendPipelineStep(eitherOrRecordModulated);
         
         // TX attenuation step
-        auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, +[]() {
+        auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, +[]() FREEDV_NONBLOCKING {
             return g_txLevelScale.load(std::memory_order_acquire);
         });
         pipeline_->appendPipelineStep(txAttenuationStep);
@@ -317,7 +319,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
-            +[]() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_recFileFromRadio && (g_sfRecFile != NULL); },
             recordRadioTap,
             bypassRecordRadio
         );
@@ -342,7 +344,7 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayRadio->appendPipelineStep(playRadio);
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
-            +[]() { 
+            +[]() FREEDV_NONBLOCKING { 
                 auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio != NULL);
                 return result;
             },
@@ -366,12 +368,12 @@ void TxRxThread::initializePipeline_()
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto toneInterfererStep = new ToneInterfererStep(
             inputSampleRate_,
-            +[]() { return (float)wxGetApp().m_tone_freq_hz; },
-            +[]() { return (float)wxGetApp().m_tone_amplitude; },
-            +[]() { return (float*)&g_tone_phase; }
+            +[]() FREEDV_NONBLOCKING { return (float)wxGetApp().m_tone_freq_hz; },
+            +[]() FREEDV_NONBLOCKING { return (float)wxGetApp().m_tone_amplitude; },
+            +[]() FREEDV_NONBLOCKING { return (float*)&g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
-            +[]() { return wxGetApp().m_tone; },
+            +[]() FREEDV_NONBLOCKING { return wxGetApp().m_tone; },
             toneInterfererStep,
             bypassToneInterferer
         );
@@ -379,8 +381,8 @@ void TxRxThread::initializePipeline_()
         
         // RF spectrum computation step
         auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
-            +[]() { return freedvInterface.getCurrentRxModemStats(); },
-            +[]() { return &g_avmag[0]; }
+            +[]() FREEDV_NONBLOCKING { return freedvInterface.getCurrentRxModemStats(); },
+            +[]() FREEDV_NONBLOCKING { return &g_avmag[0]; }
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
@@ -428,7 +430,7 @@ void TxRxThread::initializePipeline_()
             auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
             monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
             
-            auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, +[]() {
+            auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, +[]() FREEDV_NONBLOCKING {
                 float volInDb = 0;
                 if (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
                 {
@@ -448,13 +450,13 @@ void TxRxThread::initializePipeline_()
             mutePipeline->appendPipelineStep(muteStep);
             
             auto eitherOrMuteStep = new EitherOrStep(
-                +[]() { return g_recVoiceKeyerFile; },
+                +[]() FREEDV_NONBLOCKING { return g_recVoiceKeyerFile; },
                 mutePipeline,
                 bypassMonitorAudio
             );
 
             auto eitherOrMicMonitorStep = new EitherOrStep(
-                +[]() { return 
+                +[]() FREEDV_NONBLOCKING { return 
                     (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorTxAudio); },
                 monitorPipeline,
@@ -467,7 +469,7 @@ void TxRxThread::initializePipeline_()
         if (equalizedMicAudioLink_ != nullptr)
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() { return g_analog ||
+                +[]() FREEDV_NONBLOCKING { return g_analog ||
                     (
                         (g_recVoiceKeyerFile) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
@@ -479,7 +481,7 @@ void TxRxThread::initializePipeline_()
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() { return g_analog != 0; },
+                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }

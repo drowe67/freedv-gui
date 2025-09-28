@@ -6,7 +6,7 @@ static float LevelAdjustCommonVal;
 bool levelAdjustCommon(float val)
 {
     LevelAdjustCommonVal = val;
-    LevelAdjustStep levelAdjustStep(8000, +[]() { return LevelAdjustCommonVal; });
+    LevelAdjustStep levelAdjustStep(8000, +[]() FREEDV_NONBLOCKING { return LevelAdjustCommonVal; });
     
     int outputSamples = 0;
     std::unique_ptr<short[]> pData = std::make_unique<short[]>(1);

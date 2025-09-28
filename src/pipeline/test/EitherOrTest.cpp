@@ -48,7 +48,7 @@ static bool EitherOrCommonVal_;
 bool eitherOrCommon(bool val)
 {
     EitherOrCommonVal_ = val;
-    EitherOrStep eitherOrStep(+[]() {
+    EitherOrStep eitherOrStep(+[]() FREEDV_NONBLOCKING {
         return EitherOrCommonVal_;
     }, new TrueStep(), new FalseStep());
     
