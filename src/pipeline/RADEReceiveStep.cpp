@@ -135,37 +135,18 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         // RADE processing (input signal->features).
         int hasEooOut = 0;
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-        nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+        FREEDV_BEGIN_REALTIME_UNSAFE
+            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+        FREEDV_END_REALTIME_UNSAFE
 
         if (hasEooOut && textPtr_ != nullptr)
         {
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-            __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+            FREEDV_BEGIN_REALTIME_UNSAFE
 
             // Handle RX of bits from EOO.
             rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-            __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
+            FREEDV_END_REALTIME_UNSAFE
         }
         else if (!hasEooOut)
         {
@@ -208,20 +189,16 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    int sync = 0;
+    int snr = 0;
 
-    syncState_.store(rade_sync(dv_), std::memory_order_release);
-    snr_.store(rade_snrdB_3k_est(dv_), std::memory_order_release);
+    FREEDV_BEGIN_REALTIME_UNSAFE
+        sync = rade_sync(dv_);
+        snr = rade_snrdB_3k_est(dv_);
+    FREEDV_END_REALTIME_UNSAFE
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    syncState_.store(sync, std::memory_order_release);
+    snr_.store(snr, std::memory_order_release);
     
     syncFn_(this);
 

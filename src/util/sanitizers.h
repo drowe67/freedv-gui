@@ -25,12 +25,32 @@
 
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
-#define FREEDV_NONBLOCKING noexcept [[clang::nonblocking]]
+#define RTSAN_IS_ENABLED
 #else
 #define FREEDV_NONBLOCKING noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #else
 #define FREEDV_NONBLOCKING noexcept
 #endif // defined(__clang__)
+
+#if defined(RTSAN_IS_ENABLED)
+#include <sanitizer/rtsan_interface.h>
+#define FREEDV_NONBLOCKING noexcept [[clang::nonblocking]]
+#define FREEDV_BEGIN_REALTIME_UNSAFE                                     \
+    {                                                                    \
+        _Pragma("clang diagnostic push")                                 \
+        _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
+        _Pragma("clang diagnostic ignored \"-Wfunction-effects\"")       \
+        __rtsan_disable();
+#define FREEDV_END_REALTIME_UNSAFE                                       \
+        __rtsan_enable();                                                \
+        _Pragma("clang diagnostic pop")                                  \
+    }
+
+#else
+#define FREEDV_NONBLOCKING noexcept
+#define FREEDV_BEGIN_REALTIME_UNSAFE {
+#define FREEDV_END_REALTIME_UNSAFE }
+#endif // defined(RTSAN_IS_ENABLED)
 
 #endif // SANITIZERS_H
