@@ -71,7 +71,7 @@ public:
 
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
-    virtual bool mustStopWork() override { return false; }
+    virtual bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
 
     // Sets user friendly description of device. Not used by all engines.
     void setDescription(std::string desc);

@@ -325,7 +325,7 @@ void PulseAudioDevice::clearHelperRealTime()
     IAudioDevice::clearHelperRealTime();
 }
 
-bool PulseAudioDevice::mustStopWork()
+bool PulseAudioDevice::mustStopWork() FREEDV_NONBLOCKING
 {
     return MustStopWork_;
 }
