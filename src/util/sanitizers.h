@@ -37,20 +37,32 @@
 #include <sanitizer/rtsan_interface.h>
 #define FREEDV_NONBLOCKING_EXCEPT [[clang::nonblocking]]
 #define FREEDV_NONBLOCKING noexcept [[clang::nonblocking]]
-#define FREEDV_BEGIN_REALTIME_UNSAFE                                     \
-    {                                                                    \
+
+// *_VERIFIED_SAFE are intended for use where the code was manually verified
+// to be RT-safe (i.e. for third party libraries). rtsan run-time checks are
+// still enabled in case this ever changes in a future release of rtsan and/or
+// the library in question.
+#define FREEDV_BEGIN_VERIFIED_SAFE                                       \
         _Pragma("clang diagnostic push")                                 \
         _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
-        _Pragma("clang diagnostic ignored \"-Wfunction-effects\"")       \
+        _Pragma("clang diagnostic ignored \"-Wfunction-effects\"")       
+#define FREEDV_END_VERIFIED_SAFE                                         \
+        _Pragma("clang diagnostic pop")                                  
+
+#define FREEDV_BEGIN_REALTIME_UNSAFE                                     \
+    {                                                                    \
+        FREEDV_BEGIN_VERIFIED_SAFE                                       \
         __rtsan_disable();
 #define FREEDV_END_REALTIME_UNSAFE                                       \
         __rtsan_enable();                                                \
-        _Pragma("clang diagnostic pop")                                  \
+        FREEDV_END_VERIFIED_SAFE                                         \
     }
 
 #else
 #define FREEDV_NONBLOCKING_EXCEPT
 #define FREEDV_NONBLOCKING noexcept
+#define FREEDV_BEGIN_VERIFIED_SAFE
+#define FREEDV_END_VERIFIED_SAFE
 #define FREEDV_BEGIN_REALTIME_UNSAFE {
 #define FREEDV_END_REALTIME_UNSAFE }
 #endif // defined(RTSAN_IS_ENABLED)

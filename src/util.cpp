@@ -300,7 +300,7 @@ int resample(SRC_STATE *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs)
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;

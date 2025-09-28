@@ -3658,7 +3658,6 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
     if (cbData->infifo1->write(tmpInput, size)) 
     {
-        log_warn("RX FIFO full");
         g_infifo1_full++;
     }
 }
