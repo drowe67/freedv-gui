@@ -858,8 +858,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
     * Linux: fix rendering bug for mic/speaker slider when transitioning from TX to RX. (PR #1021)
     * Various unit test fixes to reduce failure rate in CI environment. (PR #1023)
-    * Fix waterfall flicker on macOS. (PR #1037)
+    * Fix waterfall flicker on macOS. (PR #1037, #1040)
     * Add timeout for TCP recv() so that FreeDV doesn't hang on exit. (PR #1038)
+    * Fix various issues with bottom received callsign list. (PR #1040)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
