@@ -129,7 +129,7 @@ private:
     void initializePipeline_();
     void txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
-    void clearFifos_();
+    void clearFifos_() FREEDV_NONBLOCKING;
 };
 
 #endif // AUDIO_PIPELINE__TX_RX_THREAD_H

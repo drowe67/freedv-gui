@@ -48,7 +48,7 @@ public:
     int getSampleRate() const { return sampleRate_; }
     GenericFIFO<short>& getFifo() { return fifo_; }
     
-    void clearFifo();
+    void clearFifo() FREEDV_NONBLOCKING;
     
 private:
     class InputStep : public IPipelineStep

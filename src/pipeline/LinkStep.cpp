@@ -37,7 +37,7 @@ LinkStep::~LinkStep()
     delete[] tmpBuffer_;
 }
 
-void LinkStep::clearFifo()
+void LinkStep::clearFifo() FREEDV_NONBLOCKING
 {    
     fifo_.reset();
 }
