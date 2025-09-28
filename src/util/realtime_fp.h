@@ -33,15 +33,15 @@ class realtime_fp;
 template <typename R, typename... Args>
 class realtime_fp<R(Args...)> {
 public:
-  using impl_t = R (*)(Args...) FREEDV_NONBLOCKING;
+  using impl_t = R (*)(Args...) FREEDV_NONBLOCKING_EXCEPT;
 
 private:
-  impl_t mImpl{ nullptr_t };
+  impl_t mImpl{ nullptr };
 public:
   realtime_fp() = default;
   realtime_fp(impl_t f) : mImpl{ f } {}
 
-  R operator()(Args... args) const FREEDV_NONBLOCKING
+  R operator()(Args... args) const
   {
     return mImpl(std::forward<Args>(args)...);
   }

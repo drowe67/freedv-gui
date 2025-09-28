@@ -43,10 +43,13 @@ private:
     std::unique_ptr<short[]> result_;
 };
 
+static bool EitherOrCommonVal_;
+
 bool eitherOrCommon(bool val)
 {
-    EitherOrStep eitherOrStep([&]() {
-        return val;
+    EitherOrCommonVal_ = val;
+    EitherOrStep eitherOrStep(+[]() {
+        return EitherOrCommonVal_;
     }, new TrueStep(), new FalseStep());
     
     int outputSamples = 0;

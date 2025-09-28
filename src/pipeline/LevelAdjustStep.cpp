@@ -22,7 +22,8 @@
 
 #include "LevelAdjustStep.h"
 
-#include <assert.h>
+#include <functional>
+#include <cassert>
 
 LevelAdjustStep::LevelAdjustStep(int sampleRate, realtime_fp<float()> scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)

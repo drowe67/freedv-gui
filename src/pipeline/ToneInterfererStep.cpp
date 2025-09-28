@@ -23,6 +23,7 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
+#include <functional>
 #include "ToneInterfererStep.h"
 
 // M_PI is not available on some compilers, so define it here just in case.
@@ -31,8 +32,8 @@
 #endif
 
 ToneInterfererStep::ToneInterfererStep(
-        int sampleRate, std::function<float()> toneFrequencyFn, 
-        std::function<float()> toneAmplitudeFn, std::function<float*()> tonePhaseFn)
+        int sampleRate, realtime_fp<float()> toneFrequencyFn, 
+        realtime_fp<float()> toneAmplitudeFn, realtime_fp<float*()> tonePhaseFn)
     : sampleRate_(sampleRate)
     , toneFrequencyFn_(toneFrequencyFn)
     , toneAmplitudeFn_(toneAmplitudeFn)

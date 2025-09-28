@@ -38,7 +38,7 @@ extern wxString utRxFeatureFile;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , pendingFeatures_(nullptr)

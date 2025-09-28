@@ -35,6 +35,7 @@
 
 #if defined(RTSAN_IS_ENABLED)
 #include <sanitizer/rtsan_interface.h>
+#define FREEDV_NONBLOCKING_EXCEPT [[clang::nonblocking]]
 #define FREEDV_NONBLOCKING noexcept [[clang::nonblocking]]
 #define FREEDV_BEGIN_REALTIME_UNSAFE                                     \
     {                                                                    \
@@ -48,6 +49,7 @@
     }
 
 #else
+#define FREEDV_NONBLOCKING_EXCEPT
 #define FREEDV_NONBLOCKING noexcept
 #define FREEDV_BEGIN_REALTIME_UNSAFE {
 #define FREEDV_END_REALTIME_UNSAFE }

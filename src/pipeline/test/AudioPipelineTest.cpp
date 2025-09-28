@@ -40,7 +40,7 @@ bool passthroughDownsample()
 bool resampleBeforeStepCommon(int inputSampleRate, int stepSampleRate, int outputSampleRate)
 {
     AudioPipeline pipeline(inputSampleRate, outputSampleRate);
-    auto levelAdjustStep = new LevelAdjustStep(stepSampleRate, []() { return 1.0; });
+    auto levelAdjustStep = new LevelAdjustStep(stepSampleRate, +[]() { return (float)1.0; });
     assert(levelAdjustStep != nullptr);
     
     pipeline.appendPipelineStep(levelAdjustStep);
