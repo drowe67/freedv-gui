@@ -881,7 +881,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     assert(callbackFifo != nullptr);
 
                     AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running };
-                    device->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                    device->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
                         AudioDeviceCapture* castedState = (AudioDeviceCapture*)state;
 
                         if (*castedState->running && data != nullptr)
@@ -1017,7 +1017,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     assert(callbackFifo != nullptr);
                    
                     AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running, .n = &n };
-                    device->setOnAudioData([](IAudioDevice& dev, void* data, size_t numSamples, void* state) {
+                    device->setOnAudioData([](IAudioDevice& dev, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
                         AudioDeviceCapture* castedState = (AudioDeviceCapture*)state;
 
                         if (*castedState->running && data != nullptr)

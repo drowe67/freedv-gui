@@ -3183,7 +3183,7 @@ void MainFrame::startRxStream()
         }
         else
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short* tmpOutput = cbData->tmpWriteBuffer_.get();
