@@ -29,6 +29,7 @@
 #include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
+#include "../util/sanitizers.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 
@@ -113,7 +114,7 @@ private:
                 const AudioTimeStamp *inTimeStamp,
                 UInt32 inBusNumber,
                 UInt32 inNumberFrames,
-                AudioBufferList * ioData);
+                AudioBufferList * ioData) FREEDV_NONBLOCKING;
                 
     static OSStatus OutputProc_(
                 void *inRefCon,
@@ -121,7 +122,7 @@ private:
                 const AudioTimeStamp *inTimeStamp,
                 UInt32 inBusNumber,
                 UInt32 inNumberFrames,
-                AudioBufferList * ioData);
+                AudioBufferList * ioData) FREEDV_NONBLOCKING;
 };
 
 #endif // MAC_AUDIO_DEVICE_H

@@ -726,7 +726,7 @@ OSStatus MacAudioDevice::InputProc_(
             const AudioTimeStamp *inTimeStamp,
             UInt32 inBusNumber,
             UInt32 inNumberFrames,
-            AudioBufferList * ioData)
+            AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
@@ -752,16 +752,23 @@ OSStatus MacAudioDevice::InputProc_(
             
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
-       
+          
         auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);
         for (; numWorkers > 0; numWorkers--)
         { 
+            // Note: assuming that semaphore signalling is safe. This mechanism will need to revisited
+            // if that turns out not to be the case.
+            FREEDV_BEGIN_VERIFIED_SAFE
             dispatch_semaphore_signal(thisObj->sem_);
+            FREEDV_END_VERIFIED_SAFE
         }
     }
     else
     {
+        // Note: this is definitely unsafe. However, if we get to this point, the audio will likely glitch anyway.
+        FREEDV_BEGIN_VERIFIED_SAFE
         log_warn("Device %d: got error in render func (%d)", thisObj->coreAudioId_, err);
+        FREEDV_END_VERIFIED_SAFE
     }
     
     return err;
@@ -773,7 +780,7 @@ OSStatus MacAudioDevice::OutputProc_(
             const AudioTimeStamp *inTimeStamp,
             UInt32 inBusNumber,
             UInt32 inNumberFrames,
-            AudioBufferList * ioData)
+            AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
 
