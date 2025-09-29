@@ -231,7 +231,8 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInBass,
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
-            &g_rxUserdata->sbqMicInVol);
+            &g_rxUserdata->sbqMicInVol,
+            g_rxUserdata->eqLock);
         pipeline_->appendPipelineStep(equalizerStep);
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
@@ -502,7 +503,8 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutBass,
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
-            &g_rxUserdata->sbqSpkOutVol);
+            &g_rxUserdata->sbqSpkOutVol,
+            g_rxUserdata->eqLock);
         pipeline_->appendPipelineStep(equalizerStep);
         
         // Clear anything in the FIFO before resuming decode.

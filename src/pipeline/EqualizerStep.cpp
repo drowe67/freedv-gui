@@ -27,13 +27,14 @@
 #include "../sox_biquad.h"
 #include <assert.h>
 
-EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr<void>* bassFilter, std::shared_ptr<void>* midFilter, std::shared_ptr<void>* trebleFilter, std::shared_ptr<void>* volFilter)
+EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock)
     : sampleRate_(sampleRate)
     , enableFilter_(enableFilter)
     , bassFilter_(bassFilter)
     , midFilter_(midFilter)
     , trebleFilter_(trebleFilter)
     , volFilter_(volFilter)
+    , filterLock_(filterLock)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
@@ -59,42 +60,45 @@ int EqualizerStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     bool copiedToOutput = false;
-    std::shared_ptr<void> tmpVolFilter = *volFilter_;
 
-    if (tmpVolFilter != nullptr)
+    // Note: if we can't lock, an update is in progress. Just assume no filters enabled
+    // until update completes.
+    if (filterLock_.try_lock())
     {
-        memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
-        copiedToOutput = true;
-        *numOutputSamples = numInputSamples;
-        sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
-    }
-    
-    if (*enableFilter_)
-    {
-        if (!copiedToOutput)
+        if (*volFilter_ != nullptr)
         {
             memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
+            copiedToOutput = true;
+            *numOutputSamples = numInputSamples;
+            sox_biquad_filter(*volFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
+    
+        if (*enableFilter_)
+        {
+            if (!copiedToOutput)
+            {
+                memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
+            }
 
-        std::shared_ptr<void> tmpBassFilter = *bassFilter_;
-        std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
-        std::shared_ptr<void> tmpMidFilter = *midFilter_;
-        if (tmpBassFilter != nullptr)
+            if (*bassFilter_ != nullptr)
+            {
+                sox_biquad_filter(*bassFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            }
+            if (*trebleFilter_ != nullptr)
+            {
+                sox_biquad_filter(*trebleFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            }
+            if (*midFilter_ != nullptr)
+            {
+                sox_biquad_filter(*midFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            }
+        } 
+        else if (!copiedToOutput)
         {
-            sox_biquad_filter(tmpBassFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            filterLock_.unlock();
+            return inputSamples;
         }
-        if (tmpTrebleFilter != nullptr)
-        {
-            sox_biquad_filter(tmpTrebleFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
-        }
-        if (tmpMidFilter != nullptr)
-        {
-            sox_biquad_filter(tmpMidFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
-        }
-    } 
-    else if (!copiedToOutput)
-    {
-        return inputSamples;
+        filterLock_.unlock();
     }
 
     return outputSamples_.get();
