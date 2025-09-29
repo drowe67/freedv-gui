@@ -864,7 +864,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
-    * Further audio performance improvements. (PR #975)
+    * Further audio performance improvements. (PR #975, #1041)
     * Add Automatic Gain Control (AGC) to microphone input. (PR #997, #1024)
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)

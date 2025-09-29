@@ -51,7 +51,7 @@ if(APPLE)
         BUNDLE True
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
         MACOSX_BUNDLE_BUNDLE_NAME FreeDV
-        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2021 FreeDV"
+        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2025 FreeDV"
         MACOSX_BUNDLE_BUNDLE_VERSION "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FreeDV_VERSION}"
@@ -163,14 +163,13 @@ if(APPLE)
 
     if (MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
-            COMMAND /usr/bin/ditto -c -k --keepParent ./FreeDV.app FreeDV-appbundle.zip
-            COMMAND xcrun notarytool submit ./FreeDV-appbundle.zip --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
-            COMMAND rm -rf FreeDV-appbundle.zip
-            COMMAND xcrun stapler staple ./FreeDV.app
             COMMAND mkdir dist_tmp
             COMMAND cp -a FreeDV.app dist_tmp 
             COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
             COMMAND rm -rf dist_tmp
+            COMMAND codesign --timestamp -i org.freedv.freedv --sign ${MACOS_CODESIGN_IDENTITY} FreeDV.dmg
+            COMMAND xcrun notarytool submit ./FreeDV.dmg --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
+            COMMAND xcrun stapler staple ./FreeDV.dmg
             DEPENDS FreeDV)
     else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
