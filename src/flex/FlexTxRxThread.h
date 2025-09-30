@@ -28,6 +28,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include "../pipeline/AudioPipeline.h"
 #include "../util/IRealtimeHelper.h"
@@ -109,7 +110,8 @@ public:
     int getTxNNomModemSamples() const;
     int getRxNumSpeechSamples() const;
 
-    signed char getSnr() { return snr_; }
+    signed char getSnr() { return snr_.load(std::memory_order_acquire); }
+    int getSync() { return sync_.load(std::memory_order_acquire); }
 
 private:
     struct rade* rade_;
@@ -129,7 +131,8 @@ private:
     rade_text_t radeText_;
     std::thread thread_;
     RADETransmitStep* txStep_;
-    signed char snr_;
+    std::atomic<signed char> snr_;
+    std::atomic<int> sync_;
 
     Semaphore readySem_;
     Semaphore startSem_;

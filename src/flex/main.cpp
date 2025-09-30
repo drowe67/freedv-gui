@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     auto callbackObj = vitaTask.getCallbackData();
     FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
     FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    
+
     log_info("Starting TX/RX threads");
     txThread.start();
     rxThread.start();
@@ -176,6 +176,20 @@ int main(int argc, char** argv)
     reportData.rxThread = &rxThread;
 
     rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
+
+    // Set up reporting of actual receive state (prior to getting callsign).
+    int rxCounter = 0;    
+    ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
+        if (rxThread.getSync())
+        {
+            rxCounter = (rxCounter + 1) % 10;
+            if (rxCounter == 0)
+            {
+                reportController.reportCallsign("", rxThread.getSnr());
+            }
+        }
+    }, true);
+    rxNoCallsignReporting.start();
 
     tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
         // Add callsign to EOO so others can report us
