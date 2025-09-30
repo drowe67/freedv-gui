@@ -23,7 +23,8 @@ add_executable(freedv-flex
     FlexKeyValueParser.cpp 
     FlexVitaTask.cpp
     FlexTcpTask.cpp
-    
+    ReportingController.cpp
+
     # TBD - freedv-flex faults on startup if mimalloc is included
     #$<TARGET_OBJECTS:mimalloc-obj> 
     

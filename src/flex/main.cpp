@@ -29,16 +29,15 @@
 #include <cinttypes>
 #include <stdlib.h>
 
-#include "git_version.h"
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
 #include "FlexTxRxThread.h"
 #include "FlexRealtimeHelper.h"
+#include "ReportingController.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 #include "../reporting/FreeDVReporter.h"
-#include "../util/logging/ulog.h"
 
 #include "rade_api.h"
 
@@ -53,154 +52,6 @@ using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
 bool endingTx;
-
-// FreeDV Reporter constants and helpers
-#define SOFTWARE_NAME "freedv-flex"
-std::string GetVersionString()
-{
-    std::stringstream ss;
-    ss << SOFTWARE_NAME << " " << GetFreeDVVersion();
-    return ss.str();
-}
-#define SOFTWARE_GRID_SQUARE "AA00"
-#define MODE_STRING "RADEV1"
-
-class ReportingController : public ThreadedObject
-{
-public:
-    ReportingController()
-        : reporterConnection_(nullptr)
-        , currentGridSquare_(SOFTWARE_GRID_SQUARE)
-        , radioCallsign_("")
-        , userHidden_(true)
-        , currentFreq_(0)
-    {
-        // empty
-    }
-    virtual ~ReportingController() = default;
-
-    void updateRadioCallsign(std::string newCallsign);
-    void updateRadioGridSquare(std::string newGridSquare);
-    void reportCallsign(std::string callsign, char snr);
-    void showSelf();
-    void hideSelf();
-    void changeFrequency(uint64_t freqHz);
-    void transmit(bool transmit);
-
-private:
-    FreeDVReporter* reporterConnection_;
-    std::string currentGridSquare_;
-    std::string radioCallsign_;
-    bool userHidden_;
-    uint64_t currentFreq_;
-
-    void updateReporterState_();
-};
-
-void ReportingController::transmit(bool transmit)
-{
-    enqueue_([&, transmit]() {
-        log_info("Reporting TX state %d", (int)transmit);
-        if (reporterConnection_ != nullptr)
-        {
-            reporterConnection_->transmit(MODE_STRING, transmit);
-        }
-    });
-}
-
-void ReportingController::changeFrequency(uint64_t freqHz)
-{
-    enqueue_([&, freqHz]() {
-        log_info("Reporting frequency %" PRIu64, freqHz);
-        if (reporterConnection_ != nullptr)
-        {
-            reporterConnection_->freqChange(freqHz);
-        }
-        currentFreq_ = freqHz;
-    });
-}
-
-void ReportingController::showSelf()
-{
-    enqueue_([&]() {
-        log_info("Showing ourselves on FreeDV Reporter");
-        userHidden_ = false;
-        updateReporterState_();
-    });
-}
-
-void ReportingController::hideSelf()
-{
-    enqueue_([&]() {
-        log_info("Hiding ourselves on FreeDV Reporter");
-        userHidden_ = true;
-        updateReporterState_();
-    });
-}
-
-void ReportingController::updateReporterState_()
-{
-    if (reporterConnection_ != nullptr && userHidden_)
-    {
-        log_info("Disconnecting from FreeDV Reporter");
-        delete reporterConnection_;
-        reporterConnection_ = nullptr;
-    }
-
-    if (reporterConnection_ == nullptr && !userHidden_)
-    {
-        log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), GetVersionString().c_str());
-        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, GetVersionString(), false, true);
-        reporterConnection_->connect();
-    }
-}
-
-void ReportingController::updateRadioCallsign(std::string newCallsign)
-{
-    enqueue_([&, newCallsign]() {
-        log_info("Updating callsign to %s", newCallsign.c_str());
-        bool changed = newCallsign != radioCallsign_;
-        radioCallsign_ = newCallsign;
-        if (changed)
-        {
-            if (reporterConnection_ != nullptr)
-            {
-                log_info("Disconnecting from FreeDV Reporter");
-                delete reporterConnection_;
-                reporterConnection_ = nullptr;
-            }
-            updateReporterState_();
-        }
-    });
-}
-
-void ReportingController::reportCallsign(std::string callsign, char snr)
-{
-    enqueue_([&, callsign, snr]() {
-        log_info("Reporting RX callsign %s (SNR %d) to FreeDV Reporter", callsign.c_str(), (int)snr);
-        reporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
-    });
-}
-
-void ReportingController::updateRadioGridSquare(std::string newGridSquare)
-{
-    enqueue_([&, newGridSquare]() {
-        if (newGridSquare == "") return;
-
-        log_info("Grid square updated to %s", newGridSquare.c_str());
-        bool changed = newGridSquare != currentGridSquare_;
-        currentGridSquare_ = newGridSquare;
-        if (changed)
-        {
-            if (reporterConnection_ != nullptr)
-            {
-                delete reporterConnection_;
-                reporterConnection_ = nullptr;
-            }
-            updateReporterState_();
-        }
-    });
-}
 
 struct CallsignReporting
 {
