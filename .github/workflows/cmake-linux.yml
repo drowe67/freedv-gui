@@ -108,6 +108,9 @@ jobs:
           pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build Flex waveform
       shell: bash
       working-directory: ${{github.workspace}}
@@ -132,21 +135,19 @@ jobs:
           export FREEDV_VERSION=`cat build_linux/freedv-version.txt`
           echo "APPIMAGE_FILENAME=FreeDV-FlexRadio-${FREEDV_VERSION}-aarch64.AppImage" >> "$GITHUB_OUTPUT"
     
+    - name: Generate waveform file
+      shell: bash
+      working-directory: ${{github.workspace}}/src/flex
+      run: |
+        cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
+        docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.tar.gz --tag=freedv-waveform .
+
     - name: Upload AppImage
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         compression-level: 0
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Generate waveform file
-      shell: bash
-      working-directory: ${{github.workspace}}/src/flex
-      run: |
-        docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.tar.gz --tag=freedv-waveform .
 
     - name: Upload waveform file
       uses: actions/upload-artifact@v4
