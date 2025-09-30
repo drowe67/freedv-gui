@@ -72,6 +72,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_Bufsz         = GetMaxClientSize();
     m_newdata       = false;
     m_firstPass     = true;
+    m_rxFreq = 0;
     m_line_color    = 0;
     m_modem_stats_max_f_hz = MODEM_STATS_MAX_F_HZ;
     dyImageData_ = nullptr;
@@ -199,10 +200,20 @@ bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
     
 void PlotWaterfall::refreshData()
 {
-    int screenX = PLOT_BORDER + XLEFT_OFFSET;
-    int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
-    RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight));
-}   
+    // Force redraw of entire control if not using RADE. This is determined
+    // by rxFreq == 0. We need to do this so that the frequency indicators
+    // redraw properly.
+    if (m_rxFreq == 0)
+    {
+        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
+        RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight), false);
+    }
+    else
+    {
+        Refresh();
+    }   
+}
 
 //----------------------------------------------------------------
 // draw()
@@ -220,19 +231,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     
-    float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y; 
-    float dy = m_dT * px_per_sec;
-    if (dy > 0 && waterfallSlices_.size() < (m_imgHeight / dy))
-    {
-        // Reset waterfall to black
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        gc->SetBrush(ltGraphBkgBrush);
-        gc->SetPen(wxPen(BLACK_COLOR, 0));
-
-        auto alreadyDrawnPx = (dy * waterfallSlices_.size());
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + alreadyDrawnPx, m_imgWidth, m_imgHeight - alreadyDrawnPx); 
-    }
-    
     if(m_newdata)
     {
         m_newdata = false;
@@ -244,7 +242,18 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     {
         gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
         yOffset += bmp->GetHeight();
-    }    
+    }
+
+    if (yOffset < m_imgHeight)
+    {
+        // Reset waterfall to black
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+
+        //log_info("clearing all except %d px of waterfall", alreadyDrawnPx);
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
+    }
 
     m_dT = DT;
 
@@ -263,7 +272,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
-    wxString s;
     float    f, time, freq_hz_to_px;
 
     wxBrush ltGraphBkgBrush;
@@ -337,14 +345,17 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
    {
        sum += f;
    }
-   float averageOffset = sum / rxOffsets_.size();
+   float averageOffset = rxOffsets_.size() == 0 ? -1 : sum / rxOffsets_.size();
    
    if (m_rxFreq != 0.0) {
        // get average offset and draw sync tuning line
-       ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-       x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-       x += PLOT_BORDER + XLEFT_OFFSET;
-       ctx->StrokeLine(x, 0, x, verticalBarLength);
+       if (averageOffset > 0)
+       {
+           ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+           x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+           x += PLOT_BORDER + XLEFT_OFFSET;
+           ctx->StrokeLine(x, 0, x, verticalBarLength);
+       }
    
        // red rx tuning line
        ctx->SetPen(wxPen(RED_COLOR, 3));
@@ -455,10 +466,13 @@ void PlotWaterfall::plotPixelData()
     {
         memcpy(&dyImageData_[row * 3 * baseRowWidthPixels], &dyImageData_[0], 3 * baseRowWidthPixels);
     }
-    
+
+#if 0
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
     // on macOS due to how it handles color spaces.
+    // XXX - causes noticeable flicker on certain monitors/OS versions, so disabled for now.
     ResetMainWindowColorSpace();
+#endif // 0
 
     if (dy > 0)
     {

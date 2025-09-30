@@ -599,7 +599,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboLastReportedCallsigns = new wxComboCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
     m_lastReportedCallsignListView = new wxListViewComboPopup();
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
-    m_cboLastReportedCallsigns->SetSizeHints(wxSize(100,-1));
+    m_cboLastReportedCallsigns->SetSizeHints(wxSize(400,-1));
     m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
     
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 100);

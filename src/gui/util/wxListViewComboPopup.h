@@ -28,6 +28,11 @@ public:
     // On mouse left up, set the value and close the popup
     void OnMouseClick(wxMouseEvent& WXUNUSED(event));
     
+    virtual wxSize GetAdjustedSize(
+        int	minWidth,
+        int	prefHeight,
+        int	maxHeight);
+
 protected:
     int m_value; // current item index
 private:
