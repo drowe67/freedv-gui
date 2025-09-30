@@ -139,6 +139,9 @@ jobs:
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         compression-level: 0
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Generate waveform file
       shell: bash
       working-directory: ${{github.workspace}}/src/flex
