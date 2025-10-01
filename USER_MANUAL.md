@@ -844,7 +844,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.2 TBD 2025
+## V2.0.2 October 2025
 
 1. Bugfixes:
     * FreeDV Reporter: Use numeric sort for SNR. (PR #979)
