@@ -117,7 +117,7 @@ void sox_biquad_destroy(void *sbq) {
     sox_delete_effect(e);
 }
 
-void sox_biquad_filter(void *sbq, short out[], short in[], int n)
+void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOCKING_EXCEPT
 {
     sox_effect_t *e = (sox_effect_t *)sbq;
     sox_sample_t ibuf[n];

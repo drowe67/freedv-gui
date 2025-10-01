@@ -39,6 +39,8 @@
 // This declares a single-precision (float) complex number
 #include "comp.h"
 
+#include "sanitizers.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -212,7 +214,7 @@ int freedv_rawdatapostamblecomptx(struct freedv *f, COMP mod_out[]);
 
 // Receive -------------------------------------------------------------------
 
-int freedv_nin(struct freedv *freedv);
+int freedv_nin(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_rx(struct freedv *freedv, short speech_out[], short demod_in[]);
 int freedv_shortrx(struct freedv *freedv, short speech_out[], short demod_in[],
                    float gain);

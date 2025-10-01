@@ -50,7 +50,7 @@ public:
     virtual void reset() FREEDV_NONBLOCKING override;
     
     // For triggering EOO
-    void restartVocoder();
+    void restartVocoder() FREEDV_NONBLOCKING;
     
 private:
     struct rade* dv_;

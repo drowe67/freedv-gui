@@ -53,6 +53,7 @@ extern "C"
 }
 
 #include "util/IRealtimeHelper.h"
+#include "util/sanitizers.h"
 
 #include <samplerate.h>
 
@@ -94,7 +95,7 @@ public:
     int getErrorPattern(short** outputPattern);
     
     int getSync() const;
-    void setSync(int val);
+    void setSync(int val) FREEDV_NONBLOCKING;
     void setEq(int val);
     void setVerbose(bool val);
     
@@ -102,21 +103,21 @@ public:
     
     void addRxMode(int mode) { enabledModes_.push_back(mode); }
     
-    int getTxModemSampleRate() const;
+    int getTxModemSampleRate() const FREEDV_NONBLOCKING;
     int getTxSpeechSampleRate() const;
     int getTxNumSpeechSamples() const;
-    int getTxNNomModemSamples() const;
+    int getTxNNomModemSamples() const FREEDV_NONBLOCKING;
     
     int getRxModemSampleRate() const;
     int getRxNumModemSamples() const;
-    int getRxNumSpeechSamples() const;
-    int getRxSpeechSampleRate() const;
+    int getRxNumSpeechSamples() const FREEDV_NONBLOCKING;
+    int getRxSpeechSampleRate() const FREEDV_NONBLOCKING;
     
     void setLpcPostFilter(int enable, int bassBoost, float beta, float gamma);
     
     void setTextVaricodeNum(int num);
     
-    void setSquelch(bool enable, float level);
+    void setSquelch(bool enable, float level) FREEDV_NONBLOCKING;
     
     void setCarrierAmplitude(int c, float amp);
     
@@ -141,7 +142,7 @@ public:
         std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
 
-    void restartTxVocoder();
+    void restartTxVocoder() FREEDV_NONBLOCKING;
  
     float getSNREstimate();
     

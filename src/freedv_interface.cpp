@@ -443,7 +443,7 @@ void FreeDVInterface::changeTxMode(int txMode)
     assert(false);
 }
 
-void FreeDVInterface::setSync(int val)
+void FreeDVInterface::setSync(int val) FREEDV_NONBLOCKING
 {
     // Special case for RADE.
     if (currentRxMode_ == nullptr) return;
@@ -505,7 +505,7 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
     }
 }
 
-int FreeDVInterface::getTxModemSampleRate() const
+int FreeDVInterface::getTxModemSampleRate() const FREEDV_NONBLOCKING
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
@@ -538,7 +538,7 @@ int FreeDVInterface::getTxNumSpeechSamples() const
     return freedv_get_n_speech_samples(currentTxMode_);   
 }
 
-int FreeDVInterface::getTxNNomModemSamples() const
+int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
@@ -602,7 +602,7 @@ int FreeDVInterface::getRxNumModemSamples() const
     return result;
 }
 
-int FreeDVInterface::getRxNumSpeechSamples() const
+int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 {
     if (rxMode_ >= FREEDV_MODE_RADE)
     {
@@ -618,7 +618,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const
     return result;
 }
 
-int FreeDVInterface::getRxSpeechSampleRate() const
+int FreeDVInterface::getRxSpeechSampleRate() const FREEDV_NONBLOCKING
 {
     if (rxMode_ >= FREEDV_MODE_RADE)
     {
@@ -634,7 +634,7 @@ int FreeDVInterface::getRxSpeechSampleRate() const
     return result;
 }
 
-void FreeDVInterface::setSquelch(bool enable, float level)
+void FreeDVInterface::setSquelch(bool enable, float level) FREEDV_NONBLOCKING
 {
     int index = 0;
     
@@ -829,7 +829,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     return parallelStep;
 }
 
-void FreeDVInterface::restartTxVocoder() 
+void FreeDVInterface::restartTxVocoder() FREEDV_NONBLOCKING
 { 
     radeTxStep_->restartVocoder(); 
 }

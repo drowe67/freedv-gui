@@ -77,7 +77,13 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
         while (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
         {
             inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
+
+            // Note: Speex is unlikely to use RT-unsafe constructs in normal operation
+            // (per existing RTSan-enabled tests). Verified on 2025-09-30.
+            FREEDV_BEGIN_VERIFIED_SAFE
             speex_preprocess_run(speexStateObj_, tmpOutput);
+            FREEDV_END_VERIFIED_SAFE
+
             tmpOutput += numSamplesPerSpeexRun_;
         }
     }

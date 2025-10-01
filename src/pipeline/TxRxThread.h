@@ -88,7 +88,7 @@ public:
     }
 
     // thread execution starts here
-    void *Entry();
+    void *Entry() noexcept;
 
     void waitForReady() { readySem_.wait(); }
     void signalToStart() { startSem_.signal(); }

@@ -595,7 +595,7 @@ int freedv_data_ntxframes(struct freedv *f) {
   return 0;
 }
 
-int freedv_nin(struct freedv *f) {
+int freedv_nin(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   if (FDV_MODE_ACTIVE(FREEDV_MODE_700C, f->mode))
     // For mode 700C, the input rate is 8000 sps, but the modem rate is 7500 sps
     // For mode 700C, we request a larger number of Rx samples that will be

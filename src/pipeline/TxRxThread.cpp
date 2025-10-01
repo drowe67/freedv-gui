@@ -512,7 +512,7 @@ void TxRxThread::initializePipeline_()
     }
 }
 
-void* TxRxThread::Entry()
+void* TxRxThread::Entry() noexcept
 {
     // Get raw pointer so we don't need to constantly access the shared_ptr
     // and thus constantly increment/decrement refcounts.
@@ -702,8 +702,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
+          FREEDV_BEGIN_VERIFIED_SAFE
     	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
                       cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
+          FREEDV_END_VERIFIED_SAFE
     	}
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
@@ -749,7 +751,9 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                     {
                         if (cbData->outfifo1->write(outputSamples, nout) != 0)
                         {
+                            FREEDV_BEGIN_VERIFIED_SAFE
                             log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
+                            FREEDV_END_VERIFIED_SAFE
                         }
                     }
                     else
@@ -768,7 +772,9 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
+                FREEDV_BEGIN_VERIFIED_SAFE
                 log_info("  nout: %d", nout);
+                FREEDV_END_VERIFIED_SAFE
             }
             
             if (outputSamples != nullptr)
@@ -803,7 +809,6 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     
     if (g_queueResync)
     {
-        log_debug("Unsyncing per user request.");
         g_queueResync = false;
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;

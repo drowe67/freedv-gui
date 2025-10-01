@@ -118,12 +118,17 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
     *numOutputSamples = 0;
     
     inputSampleFifo_.write(inputSamples, numInputSamples);
-        
+
+    FREEDV_BEGIN_VERIFIED_SAFE 
     int   nin = rade_nin(dv_);
+    FREEDV_END_VERIFIED_SAFE 
+
     int   nout = 0;
     while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
     {
+        FREEDV_BEGIN_VERIFIED_SAFE 
         assert(nin <= rade_nin_max(dv_));
+        FREEDV_END_VERIFIED_SAFE 
 
         // demod per frame processing
         for(int i=0; i<nin; i++) 
@@ -169,7 +174,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                     // FARGAN processing (features->analog audio)
                     float fpcm[LPCNET_FRAME_SIZE];
                     short pcm[LPCNET_FRAME_SIZE];
+                    FREEDV_BEGIN_VERIFIED_SAFE 
                     fargan_synthesize(fargan_, fpcm, pendingFeatures_);
+                    FREEDV_END_VERIFIED_SAFE 
                     for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
                     {
                         pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
@@ -181,7 +188,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             }
         }
 
+        FREEDV_BEGIN_VERIFIED_SAFE 
         nin = rade_nin(dv_);
+        FREEDV_END_VERIFIED_SAFE 
     }
   
     if (*numOutputSamples > 0)
