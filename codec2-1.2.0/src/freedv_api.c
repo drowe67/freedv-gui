@@ -1420,7 +1420,7 @@ struct FSK *freedv_get_fsk(struct freedv *f) {
 int freedv_get_protocol_bits(struct freedv *f) { return f->n_protocol_bits; }
 int freedv_get_mode(struct freedv *f) { return f->mode; }
 int freedv_get_test_frames(struct freedv *f) { return f->test_frames; }
-int freedv_get_speech_sample_rate(struct freedv *f) {
+int freedv_get_speech_sample_rate(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->speech_sample_rate;
 }
 int freedv_get_n_speech_samples(struct freedv *f) {
@@ -1497,7 +1497,7 @@ int freedv_set_tuning_range(struct freedv *freedv, float val_fmin,
   }
 }
 
-int freedv_get_n_max_speech_samples(struct freedv *f) {
+int freedv_get_n_max_speech_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   /* When "passing through" demod samples to the speech output
      (e.g. no sync and squelch off) f->nin bounces around with
      timing variations.  So we may return

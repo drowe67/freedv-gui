@@ -297,9 +297,9 @@ void freedv_get_modem_extended_stats(struct freedv *freedv,
                                      struct MODEM_STATS *stats);
 int freedv_get_test_frames(struct freedv *freedv);
 
-int freedv_get_speech_sample_rate(struct freedv *freedv);
+int freedv_get_speech_sample_rate(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_n_speech_samples(struct freedv *freedv);
-int freedv_get_n_max_speech_samples(struct freedv *freedv);
+int freedv_get_n_max_speech_samples(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 
 int freedv_get_modem_sample_rate(struct freedv *freedv);
 int freedv_get_modem_symbol_rate(struct freedv *freedv);
