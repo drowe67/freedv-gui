@@ -54,12 +54,14 @@ extern "C"
 
 #include "util/IRealtimeHelper.h"
 #include "util/sanitizers.h"
+#include "util/realtime_fp.h"
 
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
+class RADEReceiveStep;
 
 // Anything above 255 is a RADE mode. There's only one right now,
 // this is just for future expansion.
@@ -134,7 +136,7 @@ public:
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
-        std::function<int*()> getRxStateFn,
+        realtime_fp<int*()> getRxStateFn,
         std::function<int()> getChannelNoiseFn,
         std::function<int()> getChannelNoiseSnrFn,
         std::function<float()> getFreqOffsetFn,
@@ -210,6 +212,8 @@ private:
     
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
+
+    void radeSyncFn_(RADEReceiveStep* step) FREEDV_NONBLOCKING;
 };
 
 #endif // FREEDV_INTERFACE_H

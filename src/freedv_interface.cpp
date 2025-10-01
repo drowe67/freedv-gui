@@ -769,7 +769,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 
 IPipelineStep* FreeDVInterface::createReceivePipeline(
     int inputSampleRate, int outputSampleRate,
-    std::function<int*()> getRxStateFn,
+    realtime_fp<int*()> getRxStateFn,
     std::function<int()> getChannelNoiseFn,
     std::function<int()> getChannelNoiseSnrFn,
     std::function<float()> getFreqOffsetFn,
@@ -790,13 +790,16 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // special handling for RADE
-        auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, [&, getRxStateFn](RADEReceiveStep* s) {
-            auto finalSync = s->getSync();
-            *getRxStateFn() = finalSync;
-            sync_.store(finalSync, std::memory_order_release);
-            radeSnr_.store(s->getSnr(), std::memory_order_release);
-        });
-        
+        auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING {
+            FreeDVInterface* state = (FreeDVInterface*)step->getStateObj();
+            auto finalSync = step->getSync();
+            *step->getRxStateFn()() = finalSync;
+            state->sync_.store(finalSync, std::memory_order_release);
+            state->radeSnr_.store(step->getSnr(), std::memory_order_release);
+	});
+        rxStep->setStateObj(this);
+        rxStep->setRxStateFn(getRxStateFn);
+
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         pipeline->appendPipelineStep(rxStep);
         return pipeline;

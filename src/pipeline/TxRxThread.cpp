@@ -408,7 +408,7 @@ void TxRxThread::initializePipeline_()
         auto rfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
-            []() { return &g_State; },
+            +[]() FREEDV_NONBLOCKING { return &g_State; },
             []() { return g_channel_noise; },
             []() { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
             []() { return g_RxFreqOffsetHz; },

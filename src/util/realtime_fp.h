@@ -35,16 +35,17 @@ class realtime_fp<R(Args...)> {
 public:
   using impl_t = R (*)(Args...) FREEDV_NONBLOCKING_EXCEPT;
 
-private:
-  impl_t mImpl{ nullptr };
-public:
   realtime_fp() = default;
   realtime_fp(impl_t f) : mImpl{ f } {}
+  virtual ~realtime_fp() = default;
 
-  R operator()(Args... args) const
+  virtual R operator()(Args... args) const FREEDV_NONBLOCKING
   {
     return mImpl(std::forward<Args>(args)...);
   }
+
+protected:
+  impl_t mImpl{ nullptr };
 };
 
 // deduction guide (like std::function's)
