@@ -713,7 +713,7 @@ float FreeDVInterface::getSNREstimate()
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
     int inputSampleRate, 
     int outputSampleRate, 
-    std::function<float()> getFreqOffsetFn,
+    realtime_fp<float()> getFreqOffsetFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;

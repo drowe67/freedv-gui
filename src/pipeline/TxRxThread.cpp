@@ -265,7 +265,7 @@ void TxRxThread::initializePipeline_()
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
             inputSampleRate_, 
             outputSampleRate_, 
-            []() { return g_TxFreqOffsetHz; },
+            +[]() FREEDV_NONBLOCKING { return g_TxFreqOffsetHz; },
             helper_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(digitalTxStep);

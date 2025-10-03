@@ -2004,7 +2004,7 @@ static float randn() {
 \*---------------------------------------------------------------------------*/
 
 void fdmdv_simulate_channel(float *sig_pwr_av, COMP samples[], int nin,
-                            float target_snr) {
+                            float target_snr) FREEDV_NONBLOCKING_EXCEPT {
   float sig_pwr, target_snr_linear, noise_pwr, noise_pwr_1Hz, noise_pwr_4000Hz,
       noise_gain;
   int i;

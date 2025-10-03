@@ -615,6 +615,6 @@ void my_put_next_rx_char(void *callback_state, char c);
 
 // helper complex freq shift function
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 #endif //__FDMDV2_MAIN__

@@ -27,9 +27,9 @@
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
 
-extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
-FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()> getFreqOffsetFn)
+FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> getFreqOffsetFn)
     : dv_(dv)
     , getFreqOffsetFn_(getFreqOffsetFn)
     , inputSampleFifo_(nullptr)
@@ -106,11 +106,17 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
             if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
+                // Legacy modes, marked safe due to use of o1alloc.
+                FREEDV_BEGIN_VERIFIED_SAFE                
                 freedv_tx(dv_, tmpOutput_, codecInput_);
+                FREEDV_END_VERIFIED_SAFE                
             }
             else 
-            {                
+            {
+                // Legacy modes, marked safe due to use of o1alloc.
+                FREEDV_BEGIN_VERIFIED_SAFE                
                 freedv_comptx(dv_, txFdm_, codecInput_);
+                FREEDV_END_VERIFIED_SAFE                
                 
                 freq_shift_coh(txFdmOffset_, txFdm_, getFreqOffsetFn_(), getOutputSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
                 for(int i = 0; i<nfreedv; i++)

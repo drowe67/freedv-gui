@@ -291,20 +291,20 @@ struct MODEM_STATS;
 
 int freedv_get_version(void);
 char *freedv_get_hash(void);
-int freedv_get_mode(struct freedv *freedv);
+int freedv_get_mode(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 void freedv_get_modem_stats(struct freedv *freedv, int *sync, float *snr_est);
 void freedv_get_modem_extended_stats(struct freedv *freedv,
                                      struct MODEM_STATS *stats);
 int freedv_get_test_frames(struct freedv *freedv);
 
 int freedv_get_speech_sample_rate(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
-int freedv_get_n_speech_samples(struct freedv *freedv);
+int freedv_get_n_speech_samples(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_n_max_speech_samples(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 
-int freedv_get_modem_sample_rate(struct freedv *freedv);
+int freedv_get_modem_sample_rate(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_modem_symbol_rate(struct freedv *freedv);
-int freedv_get_n_max_modem_samples(struct freedv *freedv);
-int freedv_get_n_nom_modem_samples(struct freedv *freedv);
+int freedv_get_n_max_modem_samples(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
+int freedv_get_n_nom_modem_samples(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_n_tx_modem_samples(struct freedv *freedv);
 int freedv_get_n_tx_preamble_modem_samples(struct freedv *freedv);
 int freedv_get_n_tx_postamble_modem_samples(struct freedv *freedv);
@@ -320,7 +320,7 @@ int freedv_get_total_packet_errors(struct freedv *freedv);
 int freedv_get_rx_status(struct freedv *freedv);
 void freedv_get_fsk_S_and_N(struct freedv *freedv, float *S, float *N);
 
-int freedv_get_sync(struct freedv *freedv);
+int freedv_get_sync(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_sync_interleaver(struct freedv *freedv);
 
 // access to speech codec states

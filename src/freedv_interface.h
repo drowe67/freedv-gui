@@ -132,7 +132,7 @@ public:
     IPipelineStep* createTransmitPipeline(
         int inputSampleRate, 
         int outputSampleRate, 
-        std::function<float()> getFreqOffsetFn,
+        realtime_fp<float()> getFreqOffsetFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,

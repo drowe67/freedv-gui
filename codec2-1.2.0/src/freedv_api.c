@@ -1418,24 +1418,24 @@ struct FSK *freedv_get_fsk(struct freedv *f) {
 \*---------------------------------------------------------------------------*/
 
 int freedv_get_protocol_bits(struct freedv *f) { return f->n_protocol_bits; }
-int freedv_get_mode(struct freedv *f) { return f->mode; }
+int freedv_get_mode(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT { return f->mode; }
 int freedv_get_test_frames(struct freedv *f) { return f->test_frames; }
 int freedv_get_speech_sample_rate(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->speech_sample_rate;
 }
-int freedv_get_n_speech_samples(struct freedv *f) {
+int freedv_get_n_speech_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_speech_samples;
 }
-int freedv_get_modem_sample_rate(struct freedv *f) {
+int freedv_get_modem_sample_rate(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->modem_sample_rate;
 }
 int freedv_get_modem_symbol_rate(struct freedv *f) {
   return f->modem_symbol_rate;
 }
-int freedv_get_n_max_modem_samples(struct freedv *f) {
+int freedv_get_n_max_modem_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_max_modem_samples;
 }
-int freedv_get_n_nom_modem_samples(struct freedv *f) {
+int freedv_get_n_nom_modem_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_nom_modem_samples;
 }
 int freedv_get_n_tx_modem_samples(struct freedv *f) {
@@ -1455,7 +1455,7 @@ int freedv_get_total_packets(struct freedv *f) { return f->total_packets; }
 int freedv_get_total_packet_errors(struct freedv *f) {
   return f->total_packet_errors;
 }
-int freedv_get_sync(struct freedv *f) { return f->sync; }
+int freedv_get_sync(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT { return f->sync; }
 struct CODEC2 *freedv_get_codec2(struct freedv *f) {
   return f->codec2;
 }
