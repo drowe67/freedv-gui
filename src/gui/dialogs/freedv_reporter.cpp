@@ -595,10 +595,10 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
-    wxColour currentControlBackground = wxTransparentColour;
 
     // TBD - see if this workaround is still necessary
 #if 0
+    wxColour currentControlBackground = wxTransparentColour;
     m_listSpots->SetBackgroundColour(currentControlBackground);
 #if !defined(WIN32)
     ((wxWindow*)m_listSpots->m_headerWin)->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));

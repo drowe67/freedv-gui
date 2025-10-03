@@ -330,7 +330,6 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     float    t, a;
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
-    wxString s;
     float    sec_to_px;
     float    a_to_py;
 
