@@ -63,14 +63,18 @@ struct CallsignReporting
 void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
 {
     CallsignReporting* reportObj = (CallsignReporting*)state;
-    std::string callsign(txt_ptr, length);
 
-    if (reportObj->reporter != nullptr)
+    if (txt_ptr != nullptr && length > 0)
     {
-        reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
-    }
+        std::string callsign(txt_ptr, length);
 
-    reportObj->tcpTask->addSpot(callsign);
+        if (reportObj->reporter != nullptr)
+        {
+            reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
+        }
+
+        reportObj->tcpTask->addSpot(callsign);
+    }
 }
 
 int main(int argc, char** argv)

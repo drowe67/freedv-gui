@@ -128,7 +128,10 @@ void ReportingController::reportCallsign(std::string callsign, char snr)
 {
     enqueue_([&, callsign, snr]() {
         log_info("Reporting RX callsign %s (SNR %d) to FreeDV Reporter", callsign.c_str(), (int)snr);
-        reporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
+        if (reporterConnection_ != nullptr)
+        {
+            reporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
+        }
     });
 }
 
