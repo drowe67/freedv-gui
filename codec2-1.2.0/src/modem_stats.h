@@ -29,6 +29,7 @@
 #define __MODEM_STATS__
 
 #include "comp.h"
+#include "sanitizers.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,7 +82,7 @@ struct MODEM_STATS {
 void modem_stats_open(struct MODEM_STATS *f);
 void modem_stats_close(struct MODEM_STATS *f);
 void modem_stats_get_rx_spectrum(struct MODEM_STATS *f, float mag_spec_dB[],
-                                 COMP rx_fdm[], int nin);
+                                 COMP rx_fdm[], int nin) FREEDV_NONBLOCKING_EXCEPT;
 
 #ifdef __cplusplus
 }

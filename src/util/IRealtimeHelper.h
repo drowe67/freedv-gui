@@ -20,9 +20,10 @@
 //
 //=========================================================================
 
-
 #ifndef I_REALTIME_HELPER_H
 #define I_REALTIME_HELPER_H
+
+#include "sanitizers.h"
 
 class IRealtimeHelper
 {
@@ -45,7 +46,7 @@ public:
 
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
-    virtual bool mustStopWork() = 0;
+    virtual bool mustStopWork() FREEDV_NONBLOCKING = 0;
 };
 
 #endif

@@ -23,7 +23,7 @@
 #include <assert.h>
 #include "EitherOrStep.h"
 
-EitherOrStep::EitherOrStep(std::function<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep)
+EitherOrStep::EitherOrStep(realtime_fp<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep)
     : conditionalFn_(conditionalFn)
     , falseStep_(std::unique_ptr<IPipelineStep>(falseStep))
     , trueStep_(std::unique_ptr<IPipelineStep>(trueStep))
@@ -36,19 +36,19 @@ EitherOrStep::~EitherOrStep()
     // empty, shared_ptr will automatically clean up members
 }
 
-int EitherOrStep::getInputSampleRate() const
+int EitherOrStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     assert(falseStep_->getInputSampleRate() == trueStep_->getInputSampleRate());
     return trueStep_->getInputSampleRate();
 }
 
-int EitherOrStep::getOutputSampleRate() const
+int EitherOrStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     assert(falseStep_->getOutputSampleRate() == trueStep_->getOutputSampleRate());
     return trueStep_->getOutputSampleRate();
 }
 
-short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     bool condResult = conditionalFn_();
     if (condResult)
@@ -61,7 +61,7 @@ short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numO
     }
 }
 
-void EitherOrStep::reset()
+void EitherOrStep::reset() FREEDV_NONBLOCKING
 {
     trueStep_->reset();
     falseStep_->reset();

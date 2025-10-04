@@ -38,8 +38,8 @@ class PulseAudioDevice : public IAudioDevice
 public:
     virtual ~PulseAudioDevice();
     
-    virtual int getNumChannels() override { return numChannels_; }
-    virtual int getSampleRate() const override { return sampleRate_; }
+    virtual int getNumChannels() FREEDV_NONBLOCKING override { return numChannels_; }
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override { return sampleRate_; }
     
     virtual void start() override;
     virtual void stop() override;
@@ -62,10 +62,13 @@ public:
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
 
+#if 0
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
-    virtual bool mustStopWork() override;
-
+    // XXX - disabled as current implementation uses thread_local (not RT safe).
+    virtual bool mustStopWork() FREEDV_NONBLOCKING override;
+#endif // 0
+ 
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;

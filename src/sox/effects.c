@@ -34,7 +34,7 @@ static int default_function(sox_effect_t * effp UNUSED)
 
 /* Pass through samples verbatim */
 int lsx_flow_copy(sox_effect_t * effp UNUSED, const sox_sample_t * ibuf,
-    sox_sample_t * obuf, size_t * isamp, size_t * osamp)
+    sox_sample_t * obuf, size_t * isamp, size_t * osamp) FREEDV_NONBLOCKING_EXCEPT
 {
   *isamp = *osamp = min(*isamp, *osamp);
   memcpy(obuf, ibuf, *isamp * sizeof(*obuf));

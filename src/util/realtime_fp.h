@@ -1,6 +1,7 @@
 //=========================================================================
-// Name:            Semaphore.h
-// Purpose:         Implements a semaphore.
+// Name:            realtime_fp.h
+// Purpose:         RT-safe equivalent to std::function.
+//                  Note: adapted from Clang function effects analysis docs.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -17,39 +18,38 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
-//
+//  
 //=========================================================================
 
-#ifndef UTIL_SEMAPHORE_H
-#define UTIL_SEMAPHORE_H
+#ifndef REALTIME_FP_H
+#define REALTIME_FP_H
 
-#if defined(_WIN32)
-#include <windows.h>
-#elif defined(__APPLE__)
-#include <dispatch/dispatch.h>
-#else
-#include <semaphore.h>
-#endif // defined(_WIN32) || defined(__APPLE__)
-
+#include <utility>
 #include "sanitizers.h"
 
-class Semaphore
-{
+template <typename>
+class realtime_fp;
+
+template <typename R, typename... Args>
+class realtime_fp<R(Args...)> {
 public:
-    Semaphore();
-    virtual ~Semaphore();
-    
-    void wait();
-    void signal() FREEDV_NONBLOCKING;
-    
-private:
-#if defined(_WIN32)
-    HANDLE sem_;
-#elif defined(__APPLE__)
-    dispatch_semaphore_t sem_;
-#else
-    sem_t sem_;
-#endif // defined(_WIN32) || defined(__APPLE__)
+  using impl_t = R (*)(Args...) FREEDV_NONBLOCKING_EXCEPT;
+
+  realtime_fp() = default;
+  realtime_fp(impl_t f) : mImpl{ f } {}
+  virtual ~realtime_fp() = default;
+
+  virtual R operator()(Args... args) const FREEDV_NONBLOCKING
+  {
+    return mImpl(std::forward<Args>(args)...);
+  }
+
+protected:
+  impl_t mImpl{ nullptr };
 };
 
-#endif // UTIL_SEMAPHORE_H
+// deduction guide (like std::function's)
+template< class R, class... ArgTypes >
+realtime_fp( R(*)(ArgTypes...) ) -> realtime_fp<R(ArgTypes...)>;
+
+#endif // REALTIME_FP_H

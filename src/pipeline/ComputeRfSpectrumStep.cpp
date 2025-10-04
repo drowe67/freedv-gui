@@ -24,8 +24,8 @@
 #include "../defines.h"
 
 ComputeRfSpectrumStep::ComputeRfSpectrumStep(
-    std::function<struct MODEM_STATS*()> modemStatsFn,
-    std::function<float*()> getAvMagFn)
+    realtime_fp<struct MODEM_STATS*()> modemStatsFn,
+    realtime_fp<float*()> getAvMagFn)
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {
@@ -42,17 +42,17 @@ ComputeRfSpectrumStep::~ComputeRfSpectrumStep()
     delete[] rxFdm_;
 }
 
-int ComputeRfSpectrumStep::getInputSampleRate() const
+int ComputeRfSpectrumStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-int ComputeRfSpectrumStep::getOutputSampleRate() const
+int ComputeRfSpectrumStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto inputSamplesPtr = inputSamples;
     for (int i = 0; i < numInputSamples; i++)

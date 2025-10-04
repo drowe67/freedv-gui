@@ -1,9 +1,12 @@
 #include "LevelAdjustStep.h"
 #include "PipelineTestCommon.h"
 
+static float LevelAdjustCommonVal;
+
 bool levelAdjustCommon(float val)
 {
-    LevelAdjustStep levelAdjustStep(8000, [val]() { return val; });
+    LevelAdjustCommonVal = val;
+    LevelAdjustStep levelAdjustStep(8000, +[]() FREEDV_NONBLOCKING { return LevelAdjustCommonVal; });
     
     int outputSamples = 0;
     std::unique_ptr<short[]> pData = std::make_unique<short[]>(1);

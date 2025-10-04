@@ -54,7 +54,7 @@ protected:
 private:
     std::thread receiveThread_;
     ThreadedTimer reconnectTimer_;
-    int socket_;
+    std::atomic<int> socket_;
     std::atomic<bool> ipv4Complete_;
     std::atomic<bool> ipv6Complete_;
     std::atomic<bool> cancelConnect_;

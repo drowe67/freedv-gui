@@ -27,6 +27,8 @@
 #include <stdint.h>  // NOLINT(build/include)
 #include <assert.h>
 
+#include "../../util/sanitizers.h"
+
 // allpass filter coefficients.
 static const uint16_t kResampleAllpass1[3] = {3284, 24441, 49528};
 static const uint16_t kResampleAllpass2[3] = {12199, 37471, 60255};
@@ -244,7 +246,7 @@ int WebRtcAgc_Process(void *agcInst,
                       int32_t inMicLevel,
                       int32_t *outMicLevel,
                       int16_t echo,
-                      uint8_t *saturationWarning);
+                      uint8_t *saturationWarning) FREEDV_NONBLOCKING_EXCEPT;
 
 /*
  * This function sets the config parameters (targetLevelDbfs,

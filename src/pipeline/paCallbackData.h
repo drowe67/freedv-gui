@@ -3,6 +3,7 @@
 
 #include <samplerate.h>
 #include "../util/GenericFIFO.h"
+#include "../util/audio_spin_mutex.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // paCallBackData
@@ -39,14 +40,15 @@ typedef struct paCallBackData
     GenericFIFO<short>    *outfifo2;
 
     // EQ filter states
-    std::shared_ptr<void> sbqMicInBass;
-    std::shared_ptr<void> sbqMicInTreble;
-    std::shared_ptr<void> sbqMicInMid;
-    std::shared_ptr<void> sbqMicInVol;
-    std::shared_ptr<void> sbqSpkOutBass;
-    std::shared_ptr<void> sbqSpkOutTreble;
-    std::shared_ptr<void> sbqSpkOutMid;
-    std::shared_ptr<void> sbqSpkOutVol;
+    void* sbqMicInBass;
+    void* sbqMicInTreble;
+    void* sbqMicInMid;
+    void* sbqMicInVol;
+    void* sbqSpkOutBass;
+    void* sbqSpkOutTreble;
+    void* sbqSpkOutMid;
+    void* sbqSpkOutVol;
+    audio_spin_mutex eqLock;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;

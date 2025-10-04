@@ -470,7 +470,7 @@ void TcpConnectionHandler::disconnectImpl_()
 {
     if (socket_ > 0)
     {
-        auto tmp = socket_;
+        auto tmp = socket_.load();
         socket_ = -1;
 
 #if defined(WIN32)

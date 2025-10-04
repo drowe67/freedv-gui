@@ -1281,7 +1281,7 @@ int cohpsk_fs_offset(COMP out[], COMP in[], int n, float sample_rate_ppm) {
 
 \*---------------------------------------------------------------------------*/
 
-void cohpsk_get_demod_stats(struct COHPSK *coh, struct MODEM_STATS *stats) {
+void cohpsk_get_demod_stats(struct COHPSK *coh, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   float new_snr_est;
 
 #ifndef __EMBEDDED__

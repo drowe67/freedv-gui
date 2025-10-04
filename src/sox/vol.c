@@ -108,7 +108,7 @@ static int start(sox_effect_t * effp)
  * Process data.
  */
 static int flow(sox_effect_t * effp, const sox_sample_t *ibuf, sox_sample_t *obuf,
-                size_t *isamp, size_t *osamp)
+                size_t *isamp, size_t *osamp) FREEDV_NONBLOCKING_EXCEPT
 {
     priv_t * vol = (priv_t *) effp->priv;
     register double gain = vol->gain;

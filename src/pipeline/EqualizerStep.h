@@ -25,24 +25,26 @@
 
 #include "IPipelineStep.h"
 #include <memory>
+#include "../util/audio_spin_mutex.h"
 
 class EqualizerStep : public IPipelineStep
 {
 public:
-    EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr<void>* bassFilter, std::shared_ptr<void>* midFilter, std::shared_ptr<void>* trebleFilter, std::shared_ptr<void>* volFilter);
+    EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock);
     virtual ~EqualizerStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;    
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;    
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
     int sampleRate_;
     bool* enableFilter_;
-    std::shared_ptr<void>* bassFilter_;
-    std::shared_ptr<void>* midFilter_;
-    std::shared_ptr<void>* trebleFilter_;
-    std::shared_ptr<void>* volFilter_;
+    void** bassFilter_;
+    void** midFilter_;
+    void** trebleFilter_;
+    void** volFilter_;
+    audio_spin_mutex& filterLock_;
     std::unique_ptr<short[]> outputSamples_;
 };
 

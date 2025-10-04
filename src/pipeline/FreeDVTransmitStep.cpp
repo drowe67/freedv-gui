@@ -27,9 +27,9 @@
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
 
-extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
-FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()> getFreqOffsetFn)
+FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> getFreqOffsetFn)
     : dv_(dv)
     , getFreqOffsetFn_(getFreqOffsetFn)
     , inputSampleFifo_(nullptr)
@@ -74,17 +74,17 @@ FreeDVTransmitStep::~FreeDVTransmitStep()
     }
 }
 
-int FreeDVTransmitStep::getInputSampleRate() const
+int FreeDVTransmitStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_speech_sample_rate(dv_);
 }
 
-int FreeDVTransmitStep::getOutputSampleRate() const
+int FreeDVTransmitStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_modem_sample_rate(dv_);
 }
 
-short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {   
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     int mode = freedv_get_mode(dv_);
@@ -106,11 +106,17 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
             if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
+                // Legacy modes, marked safe due to use of o1alloc.
+                FREEDV_BEGIN_VERIFIED_SAFE                
                 freedv_tx(dv_, tmpOutput_, codecInput_);
+                FREEDV_END_VERIFIED_SAFE                
             }
             else 
-            {                
+            {
+                // Legacy modes, marked safe due to use of o1alloc.
+                FREEDV_BEGIN_VERIFIED_SAFE                
                 freedv_comptx(dv_, txFdm_, codecInput_);
+                FREEDV_END_VERIFIED_SAFE                
                 
                 freq_shift_coh(txFdmOffset_, txFdm_, getFreqOffsetFn_(), getOutputSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
                 for(int i = 0; i<nfreedv; i++)
@@ -125,7 +131,7 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
     return outputSamples_.get();
 }
 
-void FreeDVTransmitStep::reset()
+void FreeDVTransmitStep::reset() FREEDV_NONBLOCKING
 {
     while (codec2_fifo_used(inputSampleFifo_) > 0)
     {

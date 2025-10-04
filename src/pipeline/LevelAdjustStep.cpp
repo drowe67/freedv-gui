@@ -22,9 +22,10 @@
 
 #include "LevelAdjustStep.h"
 
-#include <assert.h>
+#include <functional>
+#include <cassert>
 
-LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn)
+LevelAdjustStep::LevelAdjustStep(int sampleRate, realtime_fp<float()> scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)
     , sampleRate_(sampleRate)
 {
@@ -39,17 +40,17 @@ LevelAdjustStep::~LevelAdjustStep()
     // empty
 }
 
-int LevelAdjustStep::getInputSampleRate() const
+int LevelAdjustStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int LevelAdjustStep::getOutputSampleRate() const
+int LevelAdjustStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     float scaleFactor = scaleFactorFn_();
     short* outPtr = outputSamples_.get();

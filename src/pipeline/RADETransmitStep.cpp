@@ -20,12 +20,6 @@
 //
 //=========================================================================
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-#include <sanitizer/rtsan_interface.h>
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
 #include <cstring>
 #include <cassert>
 #include <cmath>
@@ -114,20 +108,22 @@ RADETransmitStep::~RADETransmitStep()
     }
 }
 
-int RADETransmitStep::getInputSampleRate() const
+int RADETransmitStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_SPEECH_SAMPLE_RATE;
 }
 
-int RADETransmitStep::getOutputSampleRate() const
+int RADETransmitStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_MODEM_SAMPLE_RATE;
 }
 
-short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    FREEDV_BEGIN_VERIFIED_SAFE
     int numSamplesPerTx = rade_n_tx_out(dv_);
+    FREEDV_END_VERIFIED_SAFE
     
     *numOutputSamples = 0;
 
@@ -146,13 +142,18 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
     inputSampleFifo_.write(inputSamples, numInputSamples);
     while ((*numOutputSamples + numSamplesPerTx) < maxSamples && inputSampleFifo_.numUsed() >= LPCNET_FRAME_SIZE)
     {
+        FREEDV_BEGIN_VERIFIED_SAFE
         int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
+        FREEDV_END_VERIFIED_SAFE
+
         short pcm[LPCNET_FRAME_SIZE];
         float features[NB_TOTAL_FEATURES];
 
         // Feature extraction
         inputSampleFifo_.read(pcm, LPCNET_FRAME_SIZE);
+        FREEDV_BEGIN_VERIFIED_SAFE
         lpcnet_compute_single_frame_features(encState_, pcm, features, arch_);
+        FREEDV_END_VERIFIED_SAFE
             
         if (featuresFile_)
         {
@@ -171,19 +172,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
                 featureListIdx_ = 0;
 
                 // RADE TX handling
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-                rade_tx(dv_, radeOut_, &featureList_[0]);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+		FREEDV_BEGIN_REALTIME_UNSAFE
+                    rade_tx(dv_, radeOut_, &featureList_[0]);
+                FREEDV_END_REALTIME_UNSAFE
 
                 for (int index = 0; index < numSamplesPerTx; index++)
                 {
@@ -205,25 +196,17 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
     return outputSamples_.get();
 }
 
-void RADETransmitStep::restartVocoder()
+void RADETransmitStep::restartVocoder() FREEDV_NONBLOCKING
 {
     // Queues up EOO for return on the next call to this pipeline step.
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    FREEDV_BEGIN_VERIFIED_SAFE
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
+    FREEDV_END_VERIFIED_SAFE
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-    rade_tx_eoo(dv_, eooOut_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    FREEDV_BEGIN_REALTIME_UNSAFE
+        rade_tx_eoo(dv_, eooOut_);
+    FREEDV_END_REALTIME_UNSAFE
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
@@ -233,11 +216,13 @@ void RADETransmitStep::restartVocoder()
 
     if (outputSampleFifo_.write(eooOutShort_, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
     {
+        FREEDV_BEGIN_VERIFIED_SAFE
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", outputSampleFifo_.numFree());
+        FREEDV_END_VERIFIED_SAFE
     }
 }
 
-void RADETransmitStep::reset()
+void RADETransmitStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     outputSampleFifo_.reset();

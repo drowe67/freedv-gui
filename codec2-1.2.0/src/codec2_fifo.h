@@ -32,6 +32,8 @@
 #ifndef __FIFO__
 #define __FIFO__
 
+#include "sanitizers.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,14 +43,14 @@ struct FIFO;
 struct FIFO *codec2_fifo_create(int nshort);
 struct FIFO *codec2_fifo_create_buf(int nshort, short *buf);
 void codec2_fifo_destroy(struct FIFO *fifo);
-int codec2_fifo_write(struct FIFO *fifo, short data[], int n);
-int codec2_fifo_read(struct FIFO *fifo, short data[], int n);
+int codec2_fifo_write(struct FIFO *fifo, short data[], int n) FREEDV_NONBLOCKING_EXCEPT;
+int codec2_fifo_read(struct FIFO *fifo, short data[], int n) FREEDV_NONBLOCKING_EXCEPT;
 
 /* Return the number of bytes stored in the FIFO */
-int codec2_fifo_used(const struct FIFO *const fifo);
+int codec2_fifo_used(const struct FIFO *const fifo) FREEDV_NONBLOCKING_EXCEPT;
 
 /* Return the space available in the FIFO */
-int codec2_fifo_free(const struct FIFO *const fifo);
+int codec2_fifo_free(const struct FIFO *const fifo) FREEDV_NONBLOCKING_EXCEPT;
 
 #ifdef __cplusplus
 }

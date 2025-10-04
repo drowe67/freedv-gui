@@ -28,6 +28,7 @@
 #include <functional>
 #include <sndfile.h>
 #include <thread>
+#include <atomic>
 #include "codec2_fifo.h"
 #include "../util/Semaphore.h"
 
@@ -38,10 +39,10 @@ public:
         int inputSampleRate, std::function<SNDFILE*()> getSndFileFn, std::function<void(int)> isFileCompleteFn);
     virtual ~RecordStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
 private:
     int inputSampleRate_;
@@ -50,7 +51,7 @@ private:
     std::function<void(int)> isFileCompleteFn_;
     std::thread fileIoThread_;
     FIFO* inputFifo_;
-    bool fileIoThreadEnding_;
+    std::atomic<bool> fileIoThreadEnding_;
     Semaphore fileIoThreadSem_;
     
     void fileIoThreadEntry_();

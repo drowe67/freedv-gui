@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cassert>
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
 
@@ -35,12 +36,12 @@ AudioPipeline::~AudioPipeline()
     // empty, unique_ptr will automatically deallocate.
 }
 
-int AudioPipeline::getInputSampleRate() const
+int AudioPipeline::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int AudioPipeline::getOutputSampleRate() const
+int AudioPipeline::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return outputSampleRate_;
 }
@@ -69,7 +70,7 @@ void AudioPipeline::dumpSetup() const
     log_debug("End at SR %d", getOutputSampleRate());
 }
 
-short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     short* tempInput = inputSamples;
     short* tempResult = inputSamples;
@@ -83,12 +84,7 @@ short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* num
         auto& step = pipelineSteps_[index];
         if (resampler != nullptr)
         {
-            if (resampler->getOutputSampleRate() != step->getInputSampleRate())
-            {
-                resampler = nullptr;
-                reloadResampler_(index);
-            }
-
+            assert (resampler->getOutputSampleRate() == step->getInputSampleRate());
             tempResult = resampler->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;
@@ -183,7 +179,7 @@ void AudioPipeline::reloadResultResampler_()
     }
 }
 
-void AudioPipeline::reset()
+void AudioPipeline::reset() FREEDV_NONBLOCKING
 {
     for (auto& step : pipelineSteps_)
     {

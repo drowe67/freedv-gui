@@ -3183,7 +3183,7 @@ void MainFrame::startRxStream()
         }
         else
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short* tmpOutput = cbData->tmpWriteBuffer_.get();
@@ -3589,7 +3589,7 @@ void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* stat
     castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
 }
 
-void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3609,7 +3609,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
 }
 
-void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3645,7 +3645,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
 }
 
-void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
@@ -3658,12 +3658,11 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
     if (cbData->infifo1->write(tmpInput, size)) 
     {
-        log_warn("RX FIFO full");
         g_infifo1_full++;
     }
 }
 
-void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);

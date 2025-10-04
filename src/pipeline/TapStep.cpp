@@ -70,17 +70,17 @@ TapStep::~TapStep()
     tapThread_.join();
 }
 
-int TapStep::getInputSampleRate() const
+int TapStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int TapStep::getOutputSampleRate() const
+int TapStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     

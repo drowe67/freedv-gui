@@ -53,13 +53,13 @@ int main()
     rade_text_t txt = rade_text_create();
     assert(txt != nullptr);
     int nsyms = rade_n_eoo_bits(rade);
-    float txSyms[nsyms];
+    float txSyms[1024]; // randomly selected maximum to suppress warning
     rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms, nsyms);
     rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr);
     rade_tx_set_eoo_bits(rade, txSyms);
 
     // Initialize RADE steps
-    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt, [](RADEReceiveStep*) { });
+    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt, +[](RADEReceiveStep*) FREEDV_NONBLOCKING { });
     assert(recvStep != nullptr);
     RADETransmitStep* txStep = new RADETransmitStep(rade, encState);
     assert(txStep != nullptr);

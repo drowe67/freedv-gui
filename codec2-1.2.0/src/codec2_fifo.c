@@ -70,7 +70,7 @@ void codec2_fifo_destroy(struct FIFO *fifo) {
   free(fifo);
 }
 
-int codec2_fifo_write(struct FIFO *fifo, short data[], int n) {
+int codec2_fifo_write(struct FIFO *fifo, short data[], int n) FREEDV_NONBLOCKING_EXCEPT {
   int i;
   short *pdata;
   short *pin = fifo->pin;
@@ -95,7 +95,7 @@ int codec2_fifo_write(struct FIFO *fifo, short data[], int n) {
   return 0;
 }
 
-int codec2_fifo_read(struct FIFO *fifo, short data[], int n) {
+int codec2_fifo_read(struct FIFO *fifo, short data[], int n) FREEDV_NONBLOCKING_EXCEPT {
   int i;
   short *pdata;
   short *pout = fifo->pout;
@@ -120,7 +120,7 @@ int codec2_fifo_read(struct FIFO *fifo, short data[], int n) {
   return 0;
 }
 
-int codec2_fifo_used(const struct FIFO *const fifo) {
+int codec2_fifo_used(const struct FIFO *const fifo) FREEDV_NONBLOCKING_EXCEPT {
   short *pin = fifo->pin;
   short *pout = fifo->pout;
   unsigned int used;
@@ -134,7 +134,7 @@ int codec2_fifo_used(const struct FIFO *const fifo) {
   return used;
 }
 
-int codec2_fifo_free(const struct FIFO *const fifo) {
+int codec2_fifo_free(const struct FIFO *const fifo) FREEDV_NONBLOCKING_EXCEPT {
   // available storage is one less than nshort as prd == pwr
   // is reserved for empty rather than full
 

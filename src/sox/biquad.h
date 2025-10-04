@@ -73,6 +73,6 @@ int lsx_biquad_getopts(sox_effect_t * effp, int n, char **argv,
     char const * allowed_width_types, filter_t filter_type);
 int lsx_biquad_start(sox_effect_t * effp);
 int lsx_biquad_flow(sox_effect_t * effp, const sox_sample_t *ibuf, sox_sample_t *obuf,
-                        size_t *isamp, size_t *osamp);
+                        size_t *isamp, size_t *osamp) FREEDV_NONBLOCKING_EXCEPT;
 
 #endif

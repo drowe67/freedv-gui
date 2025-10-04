@@ -25,14 +25,14 @@
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#else
+#endif // defined(__APPLE__)
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <deque>
-#endif // defined(__APPLE__)
-
 #include <functional>
+#include <atomic>
 
 class ThreadedObject
 {
@@ -52,7 +52,7 @@ private:
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
 #else
-    bool isDestroying_;
+    std::atomic<bool> isDestroying_;
     std::thread objectThread_;
     std::deque<std::function<void()> > eventQueue_;
     std::recursive_mutex eventQueueMutex_;

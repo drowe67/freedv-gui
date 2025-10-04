@@ -35,6 +35,8 @@ octave/fsk_horus.m
 #include "kiss_fftr.h"
 #include "modem_stats.h"
 
+#include "sanitizers.h"
+
 #define MODE_2FSK 2
 #define MODE_4FSK 4
 
@@ -145,7 +147,7 @@ void fsk_clear_estimators(struct FSK *fsk);
 /*
  * Fills MODEM_STATS struct with demod statistics
  */
-void fsk_get_demod_stats(struct FSK *fsk, struct MODEM_STATS *stats);
+void fsk_get_demod_stats(struct FSK *fsk, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT;
 
 /*
  * Destroy an FSK state struct and free it's memory

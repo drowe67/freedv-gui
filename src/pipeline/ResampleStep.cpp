@@ -39,14 +39,18 @@ static int resample_step(SRC_STATE *src,
             int        length_input_short,
             float     *tmpInput,
             float     *tmpOutput
-            )
+            ) FREEDV_NONBLOCKING
 {
     SRC_DATA src_data;
     int      ret;
 
     assert(src != NULL);
 
+    // libsamplerate is unlikely to use RT-unsafe constructs in normal use
+    // (verified with RTsan-enabled automated testing). Verified on 2025-09-30.
+    FREEDV_BEGIN_VERIFIED_SAFE
     src_short_to_float_array(input_short, tmpInput, length_input_short);
+    FREEDV_END_VERIFIED_SAFE
 
     src_data.data_in = tmpInput;
     src_data.data_out = tmpOutput;
@@ -55,15 +59,19 @@ static int resample_step(SRC_STATE *src,
     src_data.end_of_input = 0;
     src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
 
+    // libsamplerate is unlikely to use RT-unsafe constructs in normal use
+    // (verified with RTsan-enabled automated testing). Verified on 2025-09-30.
+    FREEDV_BEGIN_VERIFIED_SAFE
     ret = src_process(src, &src_data);
-    if (ret != 0)
-    {
-        log_warn("Resampling failed: %s", src_strerror(ret));
-    }
     assert(ret == 0);
-
     assert(src_data.output_frames_gen <= length_output_short);
+    FREEDV_END_VERIFIED_SAFE
+
+    // libsamplerate is unlikely to use RT-unsafe constructs in normal use
+    // (verified with RTsan-enabled automated testing). Verified on 2025-09-30.
+    FREEDV_BEGIN_VERIFIED_SAFE
     src_float_to_short_array(tmpOutput, output_short, src_data.output_frames_gen);
+    FREEDV_END_VERIFIED_SAFE
 
     return src_data.output_frames_gen;
 }
@@ -96,17 +104,17 @@ ResampleStep::~ResampleStep()
     delete[] tempOutput_;
 }
 
-int ResampleStep::getInputSampleRate() const
+int ResampleStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int ResampleStep::getOutputSampleRate() const
+int ResampleStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return outputSampleRate_;
 }
 
-short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     if (numInputSamples == 0)
     {

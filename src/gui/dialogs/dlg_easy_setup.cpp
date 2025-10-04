@@ -916,7 +916,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             
                 sineWaveSampleNumber_ = 0;
 
-                txTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                txTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
                     auto sr = dev.getSampleRate();
                     EasySetupDialog* castedThis = (EasySetupDialog*)state;
                     short* audioData = static_cast<short*>(data);

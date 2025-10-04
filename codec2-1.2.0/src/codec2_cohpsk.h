@@ -41,6 +41,7 @@
 
 #include "comp.h"
 #include "modem_stats.h"
+#include "sanitizers.h"
 
 struct COHPSK;
 
@@ -52,7 +53,7 @@ void cohpsk_mod(struct COHPSK *cohpsk, COMP tx_fdm[], int tx_bits[], int nbits);
 void cohpsk_clip(COMP tx_fdm[], float clip_thresh, int n);
 void cohpsk_demod(struct COHPSK *cohpsk, float rx_bits[], int *sync,
                   COMP rx_fdm[], int *nin_frame);
-void cohpsk_get_demod_stats(struct COHPSK *cohpsk, struct MODEM_STATS *stats);
+void cohpsk_get_demod_stats(struct COHPSK *cohpsk, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT;
 void cohpsk_set_verbose(struct COHPSK *coh, int verbose);
 void cohpsk_get_test_bits(struct COHPSK *coh, int rx_bits[]);
 void cohpsk_put_test_bits(struct COHPSK *coh, int *state, short error_pattern[],

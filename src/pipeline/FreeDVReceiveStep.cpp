@@ -27,7 +27,7 @@
 #include "codec2_fdmdv.h"
 #include "../defines.h"
 
-extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     : dv_(dv)
@@ -73,17 +73,17 @@ FreeDVReceiveStep::~FreeDVReceiveStep()
     }
 }
 
-int FreeDVReceiveStep::getInputSampleRate() const
+int FreeDVReceiveStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_modem_sample_rate(dv_);
 }
 
-int FreeDVReceiveStep::getOutputSampleRate() const
+int FreeDVReceiveStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return freedv_get_speech_sample_rate(dv_);
 }
 
-short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     auto maxSpeechSamples = freedv_get_n_max_speech_samples(dv_);
@@ -114,7 +114,12 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
 
             // Optional frequency shifting
             freq_shift_coh(rxFdmOffset_, rxFdm_, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
+
+            // Legacy modes, marked safe due to use of o1alloc().
+            FREEDV_BEGIN_VERIFIED_SAFE
             nout = freedv_comprx(dv_, outputSamples_.get() + *numOutputSamples, rxFdmOffset_);
+            FREEDV_END_VERIFIED_SAFE
+
             *numOutputSamples += nout;
             
             nin = freedv_nin(dv_);
@@ -125,7 +130,7 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
     return outputSamples_.get();
 }
 
-void FreeDVReceiveStep::reset()
+void FreeDVReceiveStep::reset() FREEDV_NONBLOCKING
 {
     while (codec2_fifo_used(inputSampleFifo_) > 0)
     {

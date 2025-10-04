@@ -28,6 +28,7 @@
 
 #include "modem_stats.h"
 #include "IPipelineStep.h"
+#include "../util/realtime_fp.h"
 
 class ComputeRfSpectrumStep : public IPipelineStep
 {
@@ -35,17 +36,17 @@ public:
     // Note: only supports 8 kHz, so needs to be inserted into an AudioPipeline
     // in order to downconvert properly.
     ComputeRfSpectrumStep(
-        std::function<struct MODEM_STATS*()> modemStatsFn,
-        std::function<float*()> getAvMagFn);
+        realtime_fp<struct MODEM_STATS*()> modemStatsFn,
+        realtime_fp<float*()> getAvMagFn);
     virtual ~ComputeRfSpectrumStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
-    std::function<struct MODEM_STATS*()> modemStatsFn_;
-    std::function<float*()> getAvMagFn_;
+    realtime_fp<struct MODEM_STATS*()> modemStatsFn_;
+    realtime_fp<float*()> getAvMagFn_;
     float* rxSpectrum_;
     COMP* rxFdm_;
 };

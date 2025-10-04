@@ -24,6 +24,8 @@ LSX_ and lsx_ symbols should not be used by libSoX-based applications.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "../util/sanitizers.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -1225,7 +1227,7 @@ typedef int (LSX_API * sox_effect_handler_flow)(
     LSX_PARAM_OUT_CAP_POST_COUNT(*osamp,*osamp) sox_sample_t * obuf, /**< Buffer to which samples are written. */
     LSX_PARAM_INOUT size_t *isamp, /**< On entry, contains capacity of ibuf; on exit, contains number of samples consumed. */
     LSX_PARAM_INOUT size_t *osamp /**< On entry, contains capacity of obuf; on exit, contains number of samples written. */
-    );
+    ) FREEDV_NONBLOCKING_EXCEPT;
 
 /**
 Client API:

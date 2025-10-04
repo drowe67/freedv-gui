@@ -59,17 +59,17 @@ RecordStep::~RecordStep()
     codec2_fifo_destroy(inputFifo_);
 }
 
-int RecordStep::getInputSampleRate() const
+int RecordStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int RecordStep::getOutputSampleRate() const
+int RecordStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {    
     codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
     fileIoThreadSem_.signal();
@@ -78,7 +78,7 @@ short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOut
     return nullptr;
 }
 
-void RecordStep::reset()
+void RecordStep::reset() FREEDV_NONBLOCKING
 {
     short buf;
     while (codec2_fifo_used(inputFifo_) > 0)

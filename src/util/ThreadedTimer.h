@@ -28,6 +28,7 @@
 #include <condition_variable>
 #include <vector>
 #include <functional>
+#include <atomic>
 
 class ThreadedTimer
 {
@@ -49,8 +50,8 @@ public:
     bool isRunning();
     
 private:
-    bool isDestroying_;
-    bool isRestarting_;
+    std::atomic<bool> isDestroying_;
+    std::atomic<bool> isRestarting_;
     std::thread objectThread_;
     std::mutex timerMutex_;
     std::condition_variable timerCV_;

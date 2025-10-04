@@ -71,8 +71,10 @@ Semaphore::~Semaphore()
 #endif // defined(_WIN32) || defined(__APPLE__)
 }
 
-void Semaphore::signal()
+void Semaphore::signal() FREEDV_NONBLOCKING
 {
+    FREEDV_BEGIN_VERIFIED_SAFE
+
 #if defined(_WIN32)
     if (sem_ != nullptr)
     {
@@ -86,6 +88,8 @@ void Semaphore::signal()
 #else
     sem_post(&sem_);
 #endif // defined(_WIN32) || defined(__APPLE__)
+
+    FREEDV_END_VERIFIED_SAFE
 }
 
 void Semaphore::wait()
