@@ -1288,7 +1288,7 @@ void freedv_set_test_frames(struct freedv *f, int val) { f->test_frames = val; }
 void freedv_set_test_frames_diversity(struct freedv *f, int val) {
   f->test_frames_diversity = val;
 }
-void freedv_set_squelch_en(struct freedv *f, bool val) { f->squelch_en = val; }
+void freedv_set_squelch_en(struct freedv *f, bool val) FREEDV_NONBLOCKING_EXCEPT { f->squelch_en = val; }
 void freedv_set_total_bit_errors(struct freedv *f, int val) {
   f->total_bit_errors = val;
 }
@@ -1309,7 +1309,7 @@ void freedv_set_varicode_code_num(struct freedv *f, int val) {
   varicode_set_code_num(&f->varicode_dec_states, val);
 }
 void freedv_set_ext_vco(struct freedv *f, int val) { f->ext_vco = val; }
-void freedv_set_snr_squelch_thresh(struct freedv *f, float val) {
+void freedv_set_snr_squelch_thresh(struct freedv *f, float val) FREEDV_NONBLOCKING_EXCEPT {
   f->snr_squelch_thresh = val;
 }
 void freedv_set_tx_amp(struct freedv *f, float amp) { f->tx_amp = amp; }
@@ -1385,7 +1385,7 @@ void freedv_set_carrier_ampl(struct freedv *f, int c, float ampl) {
 
 \*---------------------------------------------------------------------------*/
 
-void freedv_set_sync(struct freedv *freedv, int sync_cmd) {
+void freedv_set_sync(struct freedv *freedv, int sync_cmd) FREEDV_NONBLOCKING_EXCEPT {
   assert(freedv != NULL);
 
   if (freedv->ofdm != NULL) {
@@ -1532,7 +1532,7 @@ int freedv_get_sz_error_pattern(struct freedv *f) {
 
 // Get modem status, scatter/eye diagram for plotting, other goodies
 void freedv_get_modem_extended_stats(struct freedv *f,
-                                     struct MODEM_STATS *stats) {
+                                     struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   if (FDV_MODE_ACTIVE(FREEDV_MODE_1600, f->mode))
     fdmdv_get_demod_stats(f->fdmdv, stats);
 

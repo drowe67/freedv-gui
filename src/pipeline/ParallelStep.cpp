@@ -35,10 +35,11 @@ using namespace std::chrono_literals;
 ParallelStep::ParallelStep(
     int inputSampleRate, int outputSampleRate,
     bool runMultiThreaded,
-    std::function<int(ParallelStep*)> inputRouteFn,
-    std::function<int(ParallelStep*)> outputRouteFn,
+    realtime_fp<int(ParallelStep*)> inputRouteFn,
+    realtime_fp<int(ParallelStep*)> outputRouteFn,
     std::vector<IPipelineStep*> parallelSteps,
     std::shared_ptr<void> state,
+    void* callbackState,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
@@ -47,6 +48,7 @@ ParallelStep::ParallelStep(
     , outputRouteFn_(outputRouteFn)
     , realtimeHelper_(realtimeHelper)
     , state_(state)
+    , callbackState_(callbackState)
 {
     for (auto& step : parallelSteps)
     {
@@ -226,6 +228,7 @@ short* ParallelStep::execute(short* inputSamples, int numInputSamples, int* numO
             else
             {
                 // Wake up thread
+                FREEDV_BEGIN_VERIFIED_SAFE
 #if defined(_WIN32)
                 if (threadInfo->sem != nullptr)
                 {
@@ -239,6 +242,7 @@ short* ParallelStep::execute(short* inputSamples, int numInputSamples, int* numO
 #else
                 sem_post(&threadInfo->sem);
 #endif // defined(_WIN32) || defined(__APPLE__)
+                FREEDV_END_VERIFIED_SAFE
             }
             
             if (stepToExecute != -1) break;

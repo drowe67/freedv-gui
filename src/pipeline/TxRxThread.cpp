@@ -409,10 +409,10 @@ void TxRxThread::initializePipeline_()
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },
-            []() { return g_channel_noise; },
-            []() { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
-            []() { return g_RxFreqOffsetHz; },
-            []() { return &g_sig_pwr_av; },
+            +[]() FREEDV_NONBLOCKING { return g_channel_noise; },
+            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz; },
+            +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
             helper_
         );
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);

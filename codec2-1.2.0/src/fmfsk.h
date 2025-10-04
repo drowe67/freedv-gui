@@ -33,6 +33,7 @@
 
 #include "comp.h"
 #include "modem_stats.h"
+#include "sanitizers.h"
 
 #define FMFSK_SCALE 16383
 
@@ -82,7 +83,7 @@ void fmfsk_destroy(struct FMFSK *fmfsk);
 /*
  * Deposit demod statistics into a MODEM_STATS struct
  */
-void fmfsk_get_demod_stats(struct FMFSK *fmfsk, struct MODEM_STATS *stats);
+void fmfsk_get_demod_stats(struct FMFSK *fmfsk, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT;
 
 /*
  * Returns the number of samples that must be fed to fmfsk_demod the next

@@ -137,10 +137,10 @@ public:
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
         realtime_fp<int*()> getRxStateFn,
-        std::function<int()> getChannelNoiseFn,
-        std::function<int()> getChannelNoiseSnrFn,
-        std::function<float()> getFreqOffsetFn,
-        std::function<float*()> getSigPwrAvgFn,
+        realtime_fp<int()> getChannelNoiseFn,
+        realtime_fp<int()> getChannelNoiseSnrFn,
+        realtime_fp<float()> getFreqOffsetFn,
+        realtime_fp<float*()> getSigPwrAvgFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
 
@@ -151,13 +151,13 @@ public:
 private:
     struct ReceivePipelineState
     {
-        std::function<int*()> getRxStateFn;
-        std::function<int()> getChannelNoiseFn;
-        std::function<int()> getChannelNoiseSnrFn;
-        std::function<float()> getFreqOffsetFn;
-        std::function<float*()> getSigPwrAvgFn;
-        std::function<int(ParallelStep*)> preProcessFn;
-        std::function<int(ParallelStep*)> postProcessFn;
+        realtime_fp<int*()> getRxStateFn;
+        realtime_fp<int()> getChannelNoiseFn;
+        realtime_fp<int()> getChannelNoiseSnrFn;
+        realtime_fp<float()> getFreqOffsetFn;
+        realtime_fp<float*()> getSigPwrAvgFn;
+        realtime_fp<int(ParallelStep*)> preProcessFn;
+        realtime_fp<int(ParallelStep*)> postProcessFn;
     };
 
     struct FreeDVTextFnState
@@ -210,8 +210,8 @@ private:
     std::atomic<int> radeSnr_;
     rade_text_t radeTextPtr_;
     
-    int preProcessRxFn_(ParallelStep* ps);
-    int postProcessRxFn_(ParallelStep* ps);
+    int preProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
+    int postProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
 
     void radeSyncFn_(RADEReceiveStep* step) FREEDV_NONBLOCKING;
 };

@@ -256,9 +256,9 @@ void freedv_set_test_frames(struct freedv *freedv, int test_frames);
 void freedv_set_test_frames_diversity(struct freedv *freedv,
                                       int test_frames_diversity);
 void freedv_set_smooth_symbols(struct freedv *freedv, int smooth_symbols);
-void freedv_set_squelch_en(struct freedv *freedv, bool squelch_en);
+void freedv_set_squelch_en(struct freedv *freedv, bool squelch_en) FREEDV_NONBLOCKING_EXCEPT;
 void freedv_set_snr_squelch_thresh(struct freedv *freedv,
-                                   float snr_squelch_thresh);
+                                   float snr_squelch_thresh) FREEDV_NONBLOCKING_EXCEPT;
 void freedv_set_clip(struct freedv *freedv, bool val);
 void freedv_set_total_bit_errors(struct freedv *freedv, int val);
 void freedv_set_total_bits(struct freedv *freedv, int val);
@@ -272,7 +272,7 @@ void freedv_set_callback_error_pattern(struct freedv *freedv,
 void freedv_set_varicode_code_num(struct freedv *freedv, int val);
 void freedv_set_data_header(struct freedv *freedv, unsigned char *header);
 void freedv_set_carrier_ampl(struct freedv *freedv, int c, float ampl);
-void freedv_set_sync(struct freedv *freedv, int sync_cmd);
+void freedv_set_sync(struct freedv *freedv, int sync_cmd) FREEDV_NONBLOCKING_EXCEPT;
 void freedv_set_verbose(struct freedv *freedv, int verbosity);
 void freedv_set_tx_bpf(struct freedv *freedv, int val);
 void freedv_set_tx_amp(struct freedv *freedv, float amp);
@@ -294,7 +294,7 @@ char *freedv_get_hash(void);
 int freedv_get_mode(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;
 void freedv_get_modem_stats(struct freedv *freedv, int *sync, float *snr_est);
 void freedv_get_modem_extended_stats(struct freedv *freedv,
-                                     struct MODEM_STATS *stats);
+                                     struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT;
 int freedv_get_test_frames(struct freedv *freedv);
 
 int freedv_get_speech_sample_rate(struct freedv *freedv) FREEDV_NONBLOCKING_EXCEPT;

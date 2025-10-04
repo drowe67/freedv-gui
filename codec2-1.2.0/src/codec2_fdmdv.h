@@ -113,7 +113,7 @@ void fdmdv_put_test_bits(struct FDMDV *f, int *sync, short error_pattern[],
                          int *bit_errors, int *ntest_bits, int rx_bits[]);
 
 void fdmdv_get_demod_stats(struct FDMDV *fdmdv_state,
-                           struct MODEM_STATS *stats);
+                           struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT;
 
 void fdmdv_8_to_16(float out16k[], float in8k[], int n);
 void fdmdv_8_to_16_short(short out16k[], short in8k[], int n);
