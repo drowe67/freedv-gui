@@ -200,7 +200,6 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
-    wxString s;
     float    f, mag, freq_hz_to_px, mag_dB_to_py;
 
     wxBrush ltGraphBkgBrush;

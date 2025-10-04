@@ -74,7 +74,7 @@ void AudioOptsDialog::audioEngineInit(void)
 
 
 void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
-                                        wxPanel *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel)
+                                        wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel)
 {
     wxBoxSizer* bSizer1 = new wxBoxSizer(wxVERTICAL);
 
@@ -125,60 +125,62 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Rx In -----------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer2;
-    sbSizer2 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("Input To Computer From Radio")), wxHORIZONTAL);
+    wxStaticBox* panelRxInBox = new wxStaticBox(m_panelRx, wxID_ANY, _("Input To Computer From Radio"));
+    sbSizer2 = new wxStaticBoxSizer(panelRxInBox, wxHORIZONTAL);
 
     wxBoxSizer* bSizer811a = new wxBoxSizer(wxVERTICAL);
 
-    m_listCtrlRxInDevices = new wxListCtrl(m_panelRx, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
+    m_listCtrlRxInDevices = new wxListCtrl(panelRxInBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
     bSizer811a->Add(m_listCtrlRxInDevices, 1, wxALL|wxEXPAND, 1);
 
     wxBoxSizer* bSizer811;
     bSizer811 = new wxBoxSizer(wxHORIZONTAL);
-    m_staticText51 = new wxStaticText(m_panelRx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText51 = new wxStaticText(panelRxInBox, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText51->Wrap(-1);
     bSizer811->Add(m_staticText51, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_textCtrlRxIn = new wxTextCtrl(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_textCtrlRxIn = new wxTextCtrl(panelRxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     bSizer811->Add(m_textCtrlRxIn, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    m_staticText6 = new wxStaticText(m_panelRx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText6 = new wxStaticText(panelRxInBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText6->Wrap(-1);
     bSizer811->Add(m_staticText6, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_cbSampleRateRxIn = new wxComboBox(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateRxIn = new wxComboBox(panelRxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer811->Add(m_cbSampleRateRxIn, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     bSizer811a->Add(bSizer811, 0, wxEXPAND, 5);
 
     sbSizer2->Add(bSizer811a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarRxIn, &m_btnRxInTest, m_panelRx, sbSizer2, _("Record 2 Seconds"));
+    buildTestControls(&m_plotScalarRxIn, &m_btnRxInTest, panelRxInBox, sbSizer2, _("Record 2 Seconds"));
 
     gSizer4->Add(sbSizer2, 1, wxEXPAND, 5);
 
     // Rx Out -----------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer3;
-    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("Output From Computer To Speaker/Headphones")), wxHORIZONTAL);
+    wxStaticBox* panelRxOutBox = new wxStaticBox(m_panelRx, wxID_ANY, _("Output From Computer To Speaker/Headphones"));
+    sbSizer3 = new wxStaticBoxSizer(panelRxOutBox, wxHORIZONTAL);
 
     wxBoxSizer* bSizer81a = new wxBoxSizer(wxVERTICAL);
 
-    m_listCtrlRxOutDevices = new wxListCtrl(m_panelRx, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
+    m_listCtrlRxOutDevices = new wxListCtrl(panelRxOutBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
     bSizer81a->Add(m_listCtrlRxOutDevices, 1, wxALL|wxEXPAND, 1);
 
     wxBoxSizer* bSizer81;
     bSizer81 = new wxBoxSizer(wxHORIZONTAL);
-    m_staticText9 = new wxStaticText(m_panelRx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText9 = new wxStaticText(panelRxOutBox, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText9->Wrap(-1);
     bSizer81->Add(m_staticText9, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_textCtrlRxOut = new wxTextCtrl(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_textCtrlRxOut = new wxTextCtrl(panelRxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     bSizer81->Add(m_textCtrlRxOut, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    m_staticText10 = new wxStaticText(m_panelRx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText10 = new wxStaticText(panelRxOutBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText10->Wrap(-1);
     bSizer81->Add(m_staticText10, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_cbSampleRateRxOut = new wxComboBox(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateRxOut = new wxComboBox(panelRxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer81->Add(m_cbSampleRateRxOut, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     bSizer81a->Add(bSizer81, 0, wxEXPAND, 5);
 
     sbSizer3->Add(bSizer81a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarRxOut, &m_btnRxOutTest, m_panelRx, sbSizer3, _("Play 2 Seconds"));
+    buildTestControls(&m_plotScalarRxOut, &m_btnRxOutTest, panelRxOutBox, sbSizer3, _("Play 2 Seconds"));
  
     gSizer4->Add(sbSizer3, 1, wxEXPAND, 2);
     bSizer20->Add(gSizer4, 1, wxEXPAND, 1);
@@ -198,58 +200,60 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Tx In ----------------------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer22;
-    sbSizer22 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("Input From Microphone To Computer")), wxHORIZONTAL);
+    wxStaticBox* panelTxInBox = new wxStaticBox(m_panelTx, wxID_ANY, _("Input From Microphone To Computer"));
+    sbSizer22 = new wxStaticBoxSizer(panelTxInBox, wxHORIZONTAL);
 
     wxBoxSizer* bSizer83a = new wxBoxSizer(wxVERTICAL);
 
-    m_listCtrlTxInDevices = new wxListCtrl(m_panelTx, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
+    m_listCtrlTxInDevices = new wxListCtrl(panelTxInBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
     bSizer83a->Add(m_listCtrlTxInDevices, 1, wxALL|wxEXPAND, 1);
     wxBoxSizer* bSizer83;
     bSizer83 = new wxBoxSizer(wxHORIZONTAL);
-    m_staticText12 = new wxStaticText(m_panelTx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText12 = new wxStaticText(panelTxInBox, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText12->Wrap(-1);
     bSizer83->Add(m_staticText12, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_textCtrlTxIn = new wxTextCtrl(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_textCtrlTxIn = new wxTextCtrl(panelTxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     bSizer83->Add(m_textCtrlTxIn, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    m_staticText11 = new wxStaticText(m_panelTx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText11 = new wxStaticText(panelTxInBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText11->Wrap(-1);
     bSizer83->Add(m_staticText11, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_cbSampleRateTxIn = new wxComboBox(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateTxIn = new wxComboBox(panelTxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer83->Add(m_cbSampleRateTxIn, 0, wxALL, 1);
 
     bSizer83a->Add(bSizer83, 0, wxEXPAND, 5);
 
     sbSizer22->Add(bSizer83a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarTxIn, &m_btnTxInTest, m_panelTx, sbSizer22, _("Record 2 Seconds"));
+    buildTestControls(&m_plotScalarTxIn, &m_btnTxInTest, panelTxInBox, sbSizer22, _("Record 2 Seconds"));
 
     gSizer2->Add(sbSizer22, 1, wxEXPAND, 5);
 
     // Tx Out ----------------------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer21;
-    sbSizer21 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("Output From Computer To Radio")), wxHORIZONTAL);
+    wxStaticBox* panelTxOutBox = new wxStaticBox(m_panelTx, wxID_ANY, _("Output From Computer To Radio"));
+    sbSizer21 = new wxStaticBoxSizer(panelTxOutBox, wxHORIZONTAL);
 
     wxBoxSizer* bSizer82a = new wxBoxSizer(wxVERTICAL);
 
-    m_listCtrlTxOutDevices = new wxListCtrl(m_panelTx, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
+    m_listCtrlTxOutDevices = new wxListCtrl(panelTxOutBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_HRULES|wxLC_REPORT|wxLC_VRULES);
     bSizer82a->Add(m_listCtrlTxOutDevices, 1, wxALL|wxEXPAND, 2);
     wxBoxSizer* bSizer82;
     bSizer82 = new wxBoxSizer(wxHORIZONTAL);
-    m_staticText81 = new wxStaticText(m_panelTx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText81 = new wxStaticText(panelTxOutBox, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText81->Wrap(-1);
     bSizer82->Add(m_staticText81, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_textCtrlTxOut = new wxTextCtrl(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_textCtrlTxOut = new wxTextCtrl(panelTxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     bSizer82->Add(m_textCtrlTxOut, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    m_staticText71 = new wxStaticText(m_panelTx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText71 = new wxStaticText(panelTxOutBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText71->Wrap(-1);
     bSizer82->Add(m_staticText71, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_cbSampleRateTxOut = new wxComboBox(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateTxOut = new wxComboBox(panelTxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer82->Add(m_cbSampleRateTxOut, 0, wxALL, 1);
 
     bSizer82a->Add(bSizer82, 0, wxEXPAND, 5);
 
     sbSizer21->Add(bSizer82a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarTxOut, &m_btnTxOutTest, m_panelTx, sbSizer21, _("Play 2 Seconds"));
+    buildTestControls(&m_plotScalarTxOut, &m_btnTxOutTest, panelTxOutBox, sbSizer21, _("Play 2 Seconds"));
 
     gSizer2->Add(sbSizer21, 1, wxEXPAND, 5);
     bSizer18->Add(gSizer2, 1, wxEXPAND, 1);
