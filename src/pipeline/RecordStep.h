@@ -28,6 +28,7 @@
 #include <functional>
 #include <sndfile.h>
 #include <thread>
+#include <atomic>
 #include "codec2_fifo.h"
 #include "../util/Semaphore.h"
 
@@ -50,7 +51,7 @@ private:
     std::function<void(int)> isFileCompleteFn_;
     std::thread fileIoThread_;
     FIFO* inputFifo_;
-    bool fileIoThreadEnding_;
+    std::atomic<bool> fileIoThreadEnding_;
     Semaphore fileIoThreadSem_;
     
     void fileIoThreadEntry_();

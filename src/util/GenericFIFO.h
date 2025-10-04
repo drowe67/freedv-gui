@@ -27,6 +27,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <atomic>
 
 template<typename T>
 class GenericFIFO
@@ -47,9 +48,9 @@ public:
     void reset() noexcept;
     
 private:
-    T *buf;
-    T *pin;
-    T *pout;
+    T* buf;
+    std::atomic<T*> pin;
+    std::atomic<T*> pout;
     int nelem;
     bool ownBuffer_;
 };

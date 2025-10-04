@@ -28,6 +28,7 @@
 
 #include <functional>
 #include <thread>
+#include <atomic>
 #include <sndfile.h>
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
@@ -52,7 +53,7 @@ private:
     std::function<void()> fileCompleteFn_;
     std::unique_ptr<short[]> outputSamples_;
     std::thread nonRtThread_;
-    bool nonRtThreadEnding_;
+    std::atomic<bool> nonRtThreadEnding_;
     Semaphore fileIoThreadSem_;
     ResampleStep* playbackResampler_;
     GenericFIFO<short> outputFifo_;

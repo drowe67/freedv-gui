@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <thread>
+#include <atomic>
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
 
@@ -44,7 +45,7 @@ private:
     std::unique_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
     std::thread tapThread_;
-    bool endingTapThread_;
+    std::atomic<bool> endingTapThread_;
     GenericFIFO<short> tapThreadInput_;
     Semaphore sem_;
 };

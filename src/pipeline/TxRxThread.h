@@ -28,6 +28,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
@@ -95,7 +96,7 @@ public:
 
 private:
     bool  m_tx;
-    bool  m_run;
+    std::atomic<bool>  m_run;
     std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
