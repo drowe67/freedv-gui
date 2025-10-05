@@ -54,12 +54,14 @@ typedef struct paCallBackData
     bool            spkOutEQEnable;
 
     // optional loud tone on left channel to reliably trigger vox
-    bool            leftChannelVoxTone;
-    float           voxTonePhase;
+    std::atomic<bool> leftChannelVoxTone;
+    float             voxTonePhase;
 
     // Temporary buffers for reading and writing
-    std::unique_ptr<short[]> tmpReadBuffer_;
-    std::unique_ptr<short[]> tmpWriteBuffer_;
+    std::unique_ptr<short[]> tmpReadRxBuffer_;
+    std::unique_ptr<short[]> tmpReadTxBuffer_;
+    std::unique_ptr<short[]> tmpWriteRxBuffer_;
+    std::unique_ptr<short[]> tmpWriteTxBuffer_;
 } paCallBackData;
 
 #endif // AUDIO_PIPELINE_PA_CALLBACK_DATA_H
