@@ -28,6 +28,8 @@
 class IRealtimeHelper
 {
 public:
+    virtual ~IRealtimeHelper() = default;
+    
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.
     virtual void setHelperRealTime() = 0;
