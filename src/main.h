@@ -225,9 +225,9 @@ class MainApp : public wxApp
         
         std::shared_ptr<LinkStep> linkStep;
 
-#if !wxCHECK_VERSION(3,2,0)
+#if !wxCHECK_VERSION(3,2,0) || !defined(__APPLE__)
         wxLocale m_locale;
-#endif // !wxCHECK_VERSION(3,2,0)
+#endif // !wxCHECK_VERSION(3,2,0) || !defined(__APPLE__)
 
         int m_reportCounter;
     protected:

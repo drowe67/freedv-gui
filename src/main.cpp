@@ -579,11 +579,11 @@ bool MainApp::OnInit()
 #endif // defined(USING_MIMALLOC)
 
     // Initialize locale.
-#if wxCHECK_VERSION(3,2,0)
+#if wxCHECK_VERSION(3,2,0) && defined(__APPLE__)
     wxUILocale::UseDefault();
 #else
     m_locale.Init();
-#endif // wxCHECK_VERSION(3,2,0)
+#endif // wxCHECK_VERSION(3,2,0) && defined(__APPLE__)
 
     m_reporters.clear();
     m_reportCounter = 0;
