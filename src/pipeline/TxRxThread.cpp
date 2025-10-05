@@ -99,7 +99,7 @@ extern int g_SquelchActive;
 extern float g_SquelchLevel;
 extern float g_tone_phase;
 extern float g_avmag[MODEM_STATS_NSPEC];
-extern int g_State;
+extern std::atomic<int> g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;

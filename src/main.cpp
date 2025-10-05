@@ -124,7 +124,7 @@ struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State, g_prev_State;
+std::atomic<int>                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
@@ -1705,7 +1705,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_textSync->Refresh();
             }
         }
-        g_prev_State = g_State;
+        g_prev_State.store(g_State.load());
 
         // send Callsign ----------------------------------------------------
 

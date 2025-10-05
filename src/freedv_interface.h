@@ -136,7 +136,7 @@ public:
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
-        realtime_fp<int*()> getRxStateFn,
+        realtime_fp<std::atomic<int>*()> getRxStateFn,
         realtime_fp<int()> getChannelNoiseFn,
         realtime_fp<int()> getChannelNoiseSnrFn,
         realtime_fp<float()> getFreqOffsetFn,
@@ -151,7 +151,7 @@ public:
 private:
     struct ReceivePipelineState
     {
-        realtime_fp<int*()> getRxStateFn;
+        realtime_fp<std::atomic<int>*()> getRxStateFn;
         realtime_fp<int()> getChannelNoiseFn;
         realtime_fp<int()> getChannelNoiseSnrFn;
         realtime_fp<float()> getFreqOffsetFn;

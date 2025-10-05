@@ -60,8 +60,8 @@ public:
     
     int getSync() const { return syncState_.load(std::memory_order_acquire); }
     int getSnr() const { return snr_.load(std::memory_order_acquire); }
-    realtime_fp<int*()> getRxStateFn() { return rxStateFn_; }
-    void setRxStateFn(realtime_fp<int*()> rxFn) { rxStateFn_ = rxFn; }
+    realtime_fp<std::atomic<int>*()> getRxStateFn() { return rxStateFn_; }
+    void setRxStateFn(realtime_fp<std::atomic<int>*()> rxFn) { rxStateFn_ = rxFn; }
     void* getStateObj() const { return stateObj_; }
     void setStateObj(void* state) { stateObj_ = state; }
 
@@ -88,7 +88,7 @@ private:
     bool exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
    
-    realtime_fp<int*()> rxStateFn_;
+    realtime_fp<std::atomic<int>*()> rxStateFn_;
     void* stateObj_;
 
     void utFeatureThreadEntry_();
