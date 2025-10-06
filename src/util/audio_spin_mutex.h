@@ -69,16 +69,16 @@ struct audio_spin_mutex
     {
         // Test + Test and Set is better than just TAS. More info:
         // https://en.wikipedia.org/wiki/Test_and_test-and-set
-        return flag.load(std::memory_order_relaxed) || !flag.test_and_set(std::memory_order_acquire);
+        return !flag.load(std::memory_order_relaxed) && !flag.exchange(true, std::memory_order_acquire);
     }
 
     void unlock() FREEDV_NONBLOCKING
     {
-        flag.clear(std::memory_order_release);
+        flag.store(false, std::memory_order_release);
     }
 
 private:
-    std::atomic_flag flag = ATOMIC_FLAG_INIT;
+    std::atomic<bool> flag = ATOMIC_FLAG_INIT;
 };
 
 #endif // AUDIO_SPIN_MUTEX
