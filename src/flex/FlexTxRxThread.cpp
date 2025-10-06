@@ -79,15 +79,17 @@ void FlexTxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(agcStep);
         pipeline_->appendPipelineStep(txStep_);
         
-        auto levelAdjustStep = new LevelAdjustStep(outputSampleRate_, []() { return TxScaleFactor_; });
+        auto levelAdjustStep = new LevelAdjustStep(outputSampleRate_, +[]() FREEDV_NONBLOCKING { return TxScaleFactor_; });
         pipeline_->appendPipelineStep(levelAdjustStep);
     }
     else
     {
-        auto radeRxStep = new RADEReceiveStep(rade_, farganState_, radeText_, [this](RADEReceiveStep* step) { 
-            snr_.store(step->getSnr(), std::memory_order_release);
-            sync_.store(step->getSync(), std::memory_order_release); 
+        auto radeRxStep = new RADEReceiveStep(rade_, farganState_, radeText_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING { 
+            FlexTxRxThread* thisObj = (FlexTxRxThread*)step->getStateObj();
+            thisObj->snr_.store(step->getSnr(), std::memory_order_release);
+            thisObj->sync_.store(step->getSync(), std::memory_order_release); 
         });
+        radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
         
         // Clear anything in the FIFO before resuming decode.
