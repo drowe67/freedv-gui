@@ -513,9 +513,11 @@ void MacAudioDevice::stop()
         running_ = false;
         AudioOutputUnitStop(auHAL_);
         
+#if 0
         // XXX - should really use an AudioOutputUnitStopProc to determine when we're actually
         // stopped. For now, we just sleep for a couple of calls to the callback.
         std::this_thread::sleep_for(std::chrono::milliseconds(3 * (10000 * chosenFrameSize_) / sampleRate_));
+#endif // 0
         
         AudioUnitUninitialize(auHAL_);
         if (bufferList_ != nullptr)
