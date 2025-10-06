@@ -26,6 +26,8 @@
 
 #include <future>
 #include <sstream>
+#include <chrono>
+#include <thread>
 
 #include <mach/mach.h>
 #include <mach/mach_time.h>
@@ -35,6 +37,7 @@
 #include <pthread.h>
 
 using namespace std::placeholders;
+using namespace std::chrono_literals;
 
 thread_local void* MacAudioDevice::Workgroup_ = nullptr;
 thread_local void* MacAudioDevice::JoinToken_ = nullptr;
@@ -509,6 +512,11 @@ void MacAudioDevice::stop()
         log_info("Device %d: stopping audio unit", coreAudioId_);
         running_ = false;
         AudioOutputUnitStop(auHAL_);
+        
+        // XXX - should really use an AudioOutputUnitStopProc to determine when we're actually
+        // stopped. For now, we just sleep for a couple of calls to the callback.
+        std::this_thread::sleep_for(std::chrono::milliseconds(3 * (10000 * chosenFrameSize_) / sampleRate_));
+        
         AudioUnitUninitialize(auHAL_);
         if (bufferList_ != nullptr)
         {
