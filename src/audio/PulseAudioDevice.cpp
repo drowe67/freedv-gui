@@ -24,6 +24,7 @@
 #include <cstdio>
 #include <chrono>
 #include <sched.h>
+#include <alloca.h>
 #include <sys/resource.h>
 #include <signal.h>
 
@@ -42,8 +43,10 @@ using namespace std::chrono_literals;
 // TX audio to reach the radio.
 #define PULSE_TARGET_LATENCY_US 20000
 
+#if 0
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
-
+#endif // 0
+ 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
     , mainloop_(mainloop)
@@ -317,7 +320,9 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
         IAudioDevice::stopRealTimeWork();
     }
 
+#if 0
     MustStopWork_ = false;
+#endif // 0
 }
 
 void PulseAudioDevice::clearHelperRealTime()
@@ -325,11 +330,14 @@ void PulseAudioDevice::clearHelperRealTime()
     IAudioDevice::clearHelperRealTime();
 }
 
-bool PulseAudioDevice::mustStopWork()
+// Disabled for now as thread-local variables are apparently not RT-safe.
+#if 0
+bool PulseAudioDevice::mustStopWork() FREEDV_NONBLOCKING
 {
     return MustStopWork_;
 }
-
+#endif // 0
+ 
 void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *userdata)
 {
     const void* data = nullptr;
@@ -358,8 +366,9 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
     {
         // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
         int numSamples = length / sizeof(short);
-        short data[numSamples];
-        memset(data, 0, sizeof(data));
+        short *data = (short*)alloca(length); // auto-freed on exit
+        assert(data != nullptr);
+        memset(data, 0, length);
 
         PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
@@ -435,5 +444,7 @@ void PulseAudioDevice::HandleXCPU_(int signum, siginfo_t *info, void *extra)
 {
     // Notify thread that it has to stop work immediately and sleep.
     log_warn("Taking too much CPU handling real-time tasks, pausing for a bit");
+#if 0
     MustStopWork_ = true;
+#endif // 0
 }

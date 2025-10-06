@@ -27,6 +27,7 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <atomic>
 
 template<typename T>
 class GenericFIFO
@@ -47,9 +48,9 @@ public:
     void reset() noexcept;
     
 private:
-    T *buf;
-    T *pin;
-    T *pout;
+    T* buf;
+    std::atomic<T*> pin;
+    std::atomic<T*> pout;
     int nelem;
     bool ownBuffer_;
 };
@@ -97,8 +98,8 @@ GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
 template<typename T>
 void GenericFIFO<T>::reset() noexcept
 {
-    pin = buf;
-    pout = buf;
+    pin.store(buf, std::memory_order_release);
+    pout.store(buf, std::memory_order_release);
 }
 
 template<typename T>
@@ -109,18 +110,17 @@ int GenericFIFO<T>::write(T* data, int len) noexcept
     if (len > numFree()) {
       return -1;
     } else {
-        auto copyLength = std::min(len, (int)((buf + nelem) - pin));
-        memcpy(pin, data, copyLength * sizeof(T));
-        len -= copyLength;
-        if (len > 0)
+        T* ppin = pin.load(std::memory_order_acquire);
+        while (len > 0)
         {
-            memcpy(buf, data + copyLength, len * sizeof(T));
-            pin = buf + len;
+            *ppin++ = *data++;
+            if (ppin >= (buf + nelem))
+            {
+                ppin = buf;
+            }
+            len--;
         }
-        else
-        {
-            pin += copyLength;
-        }
+        pin.store(ppin, std::memory_order_release);
     }
 
     return 0;
@@ -134,18 +134,17 @@ int GenericFIFO<T>::read(T* result, int len) noexcept
     if (len > numUsed()) {
       return -1;
     } else {
-        auto copyLength = std::min(len, (int)((buf + nelem) - pout));
-        memcpy(result, pout, copyLength * sizeof(T));
-        len -= copyLength;
-        if (len > 0)
+        T* ppout = pout.load(std::memory_order_acquire);
+        while (len > 0)
         {
-            memcpy(result + copyLength, buf, len * sizeof(T));
-            pout = buf + len;
-        }
-        else
-        {
-            pout += copyLength;
-        }
+            *result++ = *ppout++;
+            if (ppout >= (buf + nelem))
+            {
+                ppout = buf;
+            }
+            len--;
+        } 
+        pout.store(ppout, std::memory_order_release);
     }
 
     return 0;
@@ -154,8 +153,8 @@ int GenericFIFO<T>::read(T* result, int len) noexcept
 template<typename T>
 int GenericFIFO<T>::numUsed() const noexcept
 {
-    T *ppin = pin;
-    T *ppout = pout;
+    T *ppin = pin.load(std::memory_order_acquire);
+    T *ppout = pout.load(std::memory_order_acquire);
     unsigned int used;
 
     if (ppin >= ppout)

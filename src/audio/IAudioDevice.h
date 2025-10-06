@@ -31,20 +31,23 @@
 
 #include "AudioDeviceSpecification.h"
 #include "../util/IRealtimeHelper.h"
+#include "../util/sanitizers.h"
 
 using namespace std::chrono_literals;
 
 class IAudioDevice : public IRealtimeHelper
 {
 public:
-    typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*);
+    virtual ~IAudioDevice() = default;
+    
+    typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*) FREEDV_NONBLOCKING;
     typedef void (*AudioUnderflowCallbackFn)(IAudioDevice&, void*);
     typedef void (*AudioOverflowCallbackFn)(IAudioDevice&, void*);
     typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string, void*);
     typedef void (*AudioDeviceChangedCallbackFn)(IAudioDevice&, std::string, void*);
     
-    virtual int getNumChannels() = 0;
-    virtual int getSampleRate() const = 0;
+    virtual int getNumChannels() FREEDV_NONBLOCKING = 0;
+    virtual int getSampleRate() const FREEDV_NONBLOCKING = 0;
     
     virtual void start() = 0;
     virtual void stop() = 0;
@@ -70,7 +73,7 @@ public:
 
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
-    virtual bool mustStopWork() override { return false; }
+    virtual bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
 
     // Sets user friendly description of device. Not used by all engines.
     void setDescription(std::string desc);

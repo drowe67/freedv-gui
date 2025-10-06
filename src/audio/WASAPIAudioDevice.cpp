@@ -73,12 +73,12 @@ WASAPIAudioDevice::~WASAPIAudioDevice()
     fut.wait(); 
 }
 
-int WASAPIAudioDevice::getNumChannels()
+int WASAPIAudioDevice::getNumChannels() FREEDV_NONBLOCKING
 {
     return numChannels_;
 }
 
-int WASAPIAudioDevice::getSampleRate() const
+int WASAPIAudioDevice::getSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }

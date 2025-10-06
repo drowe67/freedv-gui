@@ -49,6 +49,7 @@
 #include "rn.h"
 #include "rxdec_coeff.h"
 #include "test_bits.h"
+#include "sanitizers.h"
 
 static int sync_uw[] = {1, -1, 1, -1, 1, -1};
 
@@ -1709,7 +1710,7 @@ float calc_snr(int Nc, float sig_est[], float noise_est[]) {
 
 \*---------------------------------------------------------------------------*/
 
-void fdmdv_get_demod_stats(struct FDMDV *fdmdv, struct MODEM_STATS *stats) {
+void fdmdv_get_demod_stats(struct FDMDV *fdmdv, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   assert(fdmdv->Nc <= MODEM_STATS_NC_MAX);
 
   stats->Nc = fdmdv->Nc;
@@ -2004,7 +2005,7 @@ static float randn() {
 \*---------------------------------------------------------------------------*/
 
 void fdmdv_simulate_channel(float *sig_pwr_av, COMP samples[], int nin,
-                            float target_snr) {
+                            float target_snr) FREEDV_NONBLOCKING_EXCEPT {
   float sig_pwr, target_snr_linear, noise_pwr, noise_pwr_1Hz, noise_pwr_4000Hz,
       noise_gain;
   int i;

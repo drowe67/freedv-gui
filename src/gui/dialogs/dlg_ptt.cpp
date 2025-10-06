@@ -806,8 +806,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             std::make_shared<OmniRigController>(
                 m_cbOmniRigRigId->GetCurrentSelection());
 
-        rig->onRigError += [=, this](IRigController*, std::string error) {
-            CallAfter([=, this]() {
+        rig->onRigError += [=](IRigController*, std::string error) {
+            CallAfter([=]() {
                 wxMessageBox("Couldn't connect to Radio with OmniRig.  Make sure the rig ID and OmniRig configuration is correct.", 
                     wxT("Error"), wxOK | wxICON_ERROR, this);
 
@@ -815,11 +815,11 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             });
         };
 
-        rig->onRigConnected += [=, this](IRigController*) {
+        rig->onRigConnected += [=](IRigController*) {
             rig->ptt(true);
         };
 
-        rig->onPttChange += [=, this](IRigController*, bool state) {
+        rig->onPttChange += [=](IRigController*, bool state) {
             if (state)
             {
                 std::this_thread::sleep_for(1s);
@@ -831,7 +831,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             }
         };
 
-        std::thread omniRigThread([=, this]() {
+        std::thread omniRigThread([=]() {
             rig->connect();
 
             std::unique_lock<std::mutex> lk(*mtx);

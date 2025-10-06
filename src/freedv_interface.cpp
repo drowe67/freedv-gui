@@ -443,7 +443,7 @@ void FreeDVInterface::changeTxMode(int txMode)
     assert(false);
 }
 
-void FreeDVInterface::setSync(int val)
+void FreeDVInterface::setSync(int val) FREEDV_NONBLOCKING
 {
     // Special case for RADE.
     if (currentRxMode_ == nullptr) return;
@@ -505,7 +505,7 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
     }
 }
 
-int FreeDVInterface::getTxModemSampleRate() const
+int FreeDVInterface::getTxModemSampleRate() const FREEDV_NONBLOCKING
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
@@ -538,12 +538,17 @@ int FreeDVInterface::getTxNumSpeechSamples() const
     return freedv_get_n_speech_samples(currentTxMode_);   
 }
 
-int FreeDVInterface::getTxNNomModemSamples() const
+int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
+
+        // Verified that rade_api.c from librade has no unbounded operations
+        // as of 2025-10-03.
+        FREEDV_BEGIN_VERIFIED_SAFE
         return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
+        FREEDV_END_VERIFIED_SAFE
     }
 
     assert(currentTxMode_ != nullptr);
@@ -602,7 +607,7 @@ int FreeDVInterface::getRxNumModemSamples() const
     return result;
 }
 
-int FreeDVInterface::getRxNumSpeechSamples() const
+int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 {
     if (rxMode_ >= FREEDV_MODE_RADE)
     {
@@ -618,7 +623,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const
     return result;
 }
 
-int FreeDVInterface::getRxSpeechSampleRate() const
+int FreeDVInterface::getRxSpeechSampleRate() const FREEDV_NONBLOCKING
 {
     if (rxMode_ >= FREEDV_MODE_RADE)
     {
@@ -634,7 +639,7 @@ int FreeDVInterface::getRxSpeechSampleRate() const
     return result;
 }
 
-void FreeDVInterface::setSquelch(bool enable, float level)
+void FreeDVInterface::setSquelch(bool enable, float level) FREEDV_NONBLOCKING
 {
     int index = 0;
     
@@ -713,7 +718,7 @@ float FreeDVInterface::getSNREstimate()
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
     int inputSampleRate, 
     int outputSampleRate, 
-    std::function<float()> getFreqOffsetFn,
+    realtime_fp<float()> getFreqOffsetFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -735,17 +740,18 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
     }
     
-    std::function<int(ParallelStep*)> modeFn = 
-        [&](ParallelStep*) {
+    realtime_fp<int(ParallelStep*)> modeFn = 
+        +[](ParallelStep* s) FREEDV_NONBLOCKING {
+            FreeDVInterface* thisObj = (FreeDVInterface*)s->getCallbackState();
             int index = 0;
 
-            auto currentTxMode = currentTxMode_;
-            auto txModeInt = txMode_; 
+            auto currentTxMode = thisObj->currentTxMode_;
+            auto txModeInt = thisObj->txMode_; 
 
             // Special handling for RADE.
             if (txModeInt >= FREEDV_MODE_RADE) return 0;
 
-            for (auto& dv : dvObjects_)
+            for (auto& dv : thisObj->dvObjects_)
             {
                 if (dv == currentTxMode) return index;
                 index++;
@@ -761,6 +767,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         modeFn,
         parallelSteps,
         nullptr,
+        this,
         realtimeHelper
     );
     
@@ -769,11 +776,11 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 
 IPipelineStep* FreeDVInterface::createReceivePipeline(
     int inputSampleRate, int outputSampleRate,
-    std::function<int*()> getRxStateFn,
-    std::function<int()> getChannelNoiseFn,
-    std::function<int()> getChannelNoiseSnrFn,
-    std::function<float()> getFreqOffsetFn,
-    std::function<float*()> getSigPwrAvgFn,
+    realtime_fp<std::atomic<int>*()> getRxStateFn,
+    realtime_fp<int()> getChannelNoiseFn,
+    realtime_fp<int()> getChannelNoiseSnrFn,
+    realtime_fp<float()> getFreqOffsetFn,
+    realtime_fp<float*()> getSigPwrAvgFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -790,13 +797,16 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // special handling for RADE
-        auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, [&, getRxStateFn](RADEReceiveStep* s) {
-            auto finalSync = s->getSync();
-            *getRxStateFn() = finalSync;
-            sync_.store(finalSync, std::memory_order_release);
-            radeSnr_.store(s->getSnr(), std::memory_order_release);
-        });
-        
+        auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING {
+            FreeDVInterface* state = (FreeDVInterface*)step->getStateObj();
+            auto finalSync = step->getSync();
+            *step->getRxStateFn()() = finalSync;
+            state->sync_.store(finalSync, std::memory_order_release);
+            state->radeSnr_.store(step->getSnr(), std::memory_order_release);
+	});
+        rxStep->setStateObj(this);
+        rxStep->setRxStateFn(getRxStateFn);
+
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         pipeline->appendPipelineStep(rxStep);
         return pipeline;
@@ -811,8 +821,14 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             parallelSteps.push_back(recvStep);
         }
 
-        state->preProcessFn = std::bind(&FreeDVInterface::preProcessRxFn_, this, _1);
-        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1);
+        state->preProcessFn = +[](ParallelStep* s) FREEDV_NONBLOCKING {
+            FreeDVInterface* thisObj = (FreeDVInterface*)s->getCallbackState();
+            return thisObj->preProcessRxFn_(s);
+        };
+        state->postProcessFn = +[](ParallelStep* s) FREEDV_NONBLOCKING {
+            FreeDVInterface* thisObj = (FreeDVInterface*)s->getCallbackState();
+            return thisObj->postProcessRxFn_(s);
+        };
     } 
         
     auto parallelStep = new ParallelStep(
@@ -823,21 +839,22 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         state->postProcessFn,
         parallelSteps,
         state,
+        this,
         realtimeHelper
     );
     
     return parallelStep;
 }
 
-void FreeDVInterface::restartTxVocoder() 
+void FreeDVInterface::restartTxVocoder() FREEDV_NONBLOCKING
 { 
     radeTxStep_->restartVocoder(); 
 }
 
-int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
+int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj) FREEDV_NONBLOCKING
 {
     int rxIndex = 0;
-    std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
+    ReceivePipelineState* state = static_cast<ReceivePipelineState*>(stepObj->getState());
 
     if (txMode_ >= FREEDV_MODE_RADE)
     {
@@ -871,9 +888,9 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     return -1;
 };
 
-int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
+int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj) FREEDV_NONBLOCKING
 {
-    std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
+    ReceivePipelineState* state = static_cast<ReceivePipelineState*>(stepObj->getState());
     auto& parallelSteps = stepObj->getParallelSteps();
 
     // If the current RX mode is still sync'd, only let that one out.

@@ -27,10 +27,10 @@ extern FreeDVInterface freedvInterface;
 
 // PortAudio over/underflow counters
 
-extern int                 g_infifo1_full;
-extern int                 g_outfifo1_empty;
-extern int                 g_infifo2_full;
-extern int                 g_outfifo2_empty;
+extern std::atomic<int>    g_infifo1_full;
+extern std::atomic<int>    g_outfifo1_empty;
+extern std::atomic<int>    g_infifo2_full;
+extern std::atomic<int>    g_outfifo2_empty;
 extern int                 g_AEstatus1[4];
 extern int                 g_AEstatus2[4];
 extern wxDatagramSocket    *g_sock;
@@ -1280,7 +1280,10 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
 
 void OptionsDlg::OnFifoReset(wxCommandEvent& event)
 {
-    g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+    g_infifo1_full.store(0, std::memory_order_release);
+    g_outfifo1_empty.store(0, std::memory_order_release);
+    g_infifo2_full.store(0, std::memory_order_release);
+    g_outfifo2_empty.store(0, std::memory_order_release);
     for (int i=0; i<4; i++) {
         g_AEstatus1[i] = g_AEstatus2[i] = 0;
     }
@@ -1414,7 +1417,7 @@ void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
 void OptionsDlg::DisplayFifoPACounters() {
     if (IsShownOnScreen())
     {
-        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full.load(std::memory_order_acquire), g_outfifo1_empty.load(std::memory_order_acquire), g_infifo2_full.load(std::memory_order_acquire), g_outfifo2_empty.load(std::memory_order_acquire));
         m_textFifos->SetLabel(fifo_counters);
 
         // input: underflow overflow output: underflow overflow

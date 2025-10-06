@@ -848,6 +848,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
+2. Enhancements:
+    * Additional cleanup of code that runs in real-time. (PR #1039)
 
 ## V2.0.2 October 2025
 

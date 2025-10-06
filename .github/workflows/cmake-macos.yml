@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-14, macos-15, macos-15-intel, macos-26]  # x86_64, ARM64, ARM64, x86_64, ARM64
+        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
 
@@ -51,13 +51,6 @@ jobs:
       run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
-      if: ${{ matrix.os == 'macos-13' }} 
-      run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
-
-    - name: Workaround macOS permission issues
-      if: ${{ matrix.os != 'macos-13' }}
       run: |
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
@@ -122,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-14, macos-15, macos-15-intel, macos-26]  # x86_64, ARM64, ARM64, x86_64, ARM64
+        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
     needs: dist
@@ -158,13 +151,6 @@ jobs:
       run: ./build_macos_sound_drivers.sh
 
     - name: Workaround macOS permission issues
-      if: ${{ matrix.os == 'macos-13' }} 
-      run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
-
-    - name: Workaround macOS permission issues
-      if: ${{ matrix.os != 'macos-13' }}
       run: |
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
@@ -179,4 +165,5 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1 | tee temp-test.txt
+          grep "Got 1 sync changes" temp-test.txt
