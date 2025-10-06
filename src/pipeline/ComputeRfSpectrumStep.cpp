@@ -22,6 +22,10 @@
 
 #include "ComputeRfSpectrumStep.h"
 #include "../defines.h"
+#include "../util/audio_spin_mutex.h"
+
+// TBD - find a way to not need this mutex
+extern audio_spin_mutex    g_avmag_mtx;
 
 ComputeRfSpectrumStep::ComputeRfSpectrumStep(
     realtime_fp<struct MODEM_STATS*()> modemStatsFn,
@@ -63,10 +67,15 @@ short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, 
     modem_stats_get_rx_spectrum(modemStatsFn_(), rxSpectrum_, rxFdm_, numInputSamples);
     
     // Average rx spectrum data using a simple IIR low pass filter
-    auto avMagPtr = getAvMagFn_();
-    for(int i = 0; i < MODEM_STATS_NSPEC; i++) 
+    if (g_avmag_mtx.try_lock())
     {
-        avMagPtr[i] = BETA * avMagPtr[i] + (1.0 - BETA) * rxSpectrum_[i];
+        auto avMagPtr = getAvMagFn_();
+        for(int i = 0; i < MODEM_STATS_NSPEC; i++) 
+        {
+            avMagPtr[i] = BETA * avMagPtr[i] + (1.0 - BETA) * rxSpectrum_[i];
+        }
+        
+        g_avmag_mtx.unlock();
     }
     
     // Tap only, no output.

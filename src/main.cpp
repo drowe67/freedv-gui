@@ -57,6 +57,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 
 #include "util/logging/ulog.h"
+#include "util/audio_spin_mutex.h"
 
 #include "rade_api.h"
 
@@ -103,6 +104,7 @@ float               g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
+audio_spin_mutex    g_avmag_mtx;
 
 // TX level for attenuation
 int g_txLevel = 0;
