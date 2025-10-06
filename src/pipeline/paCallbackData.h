@@ -48,7 +48,8 @@ typedef struct paCallBackData
     void* sbqSpkOutTreble;
     void* sbqSpkOutMid;
     void* sbqSpkOutVol;
-    audio_spin_mutex eqLock;
+    audio_spin_mutex micEqLock;
+    audio_spin_mutex spkEqLock;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;
