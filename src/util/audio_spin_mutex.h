@@ -67,7 +67,9 @@ struct audio_spin_mutex
 
     bool try_lock() FREEDV_NONBLOCKING
     {
-        return !flag.test_and_set(std::memory_order_acquire);
+        // Test + Test and Set is better than just TAS. More info:
+        // https://en.wikipedia.org/wiki/Test_and_test-and-set
+        return flag.load(std::memory_order_relaxed) || !flag.test_and_set(std::memory_order_acquire);
     }
 
     void unlock() FREEDV_NONBLOCKING
