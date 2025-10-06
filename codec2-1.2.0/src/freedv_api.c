@@ -595,7 +595,7 @@ int freedv_data_ntxframes(struct freedv *f) {
   return 0;
 }
 
-int freedv_nin(struct freedv *f) {
+int freedv_nin(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   if (FDV_MODE_ACTIVE(FREEDV_MODE_700C, f->mode))
     // For mode 700C, the input rate is 8000 sps, but the modem rate is 7500 sps
     // For mode 700C, we request a larger number of Rx samples that will be
@@ -1288,7 +1288,7 @@ void freedv_set_test_frames(struct freedv *f, int val) { f->test_frames = val; }
 void freedv_set_test_frames_diversity(struct freedv *f, int val) {
   f->test_frames_diversity = val;
 }
-void freedv_set_squelch_en(struct freedv *f, bool val) { f->squelch_en = val; }
+void freedv_set_squelch_en(struct freedv *f, bool val) FREEDV_NONBLOCKING_EXCEPT { f->squelch_en = val; }
 void freedv_set_total_bit_errors(struct freedv *f, int val) {
   f->total_bit_errors = val;
 }
@@ -1309,7 +1309,7 @@ void freedv_set_varicode_code_num(struct freedv *f, int val) {
   varicode_set_code_num(&f->varicode_dec_states, val);
 }
 void freedv_set_ext_vco(struct freedv *f, int val) { f->ext_vco = val; }
-void freedv_set_snr_squelch_thresh(struct freedv *f, float val) {
+void freedv_set_snr_squelch_thresh(struct freedv *f, float val) FREEDV_NONBLOCKING_EXCEPT {
   f->snr_squelch_thresh = val;
 }
 void freedv_set_tx_amp(struct freedv *f, float amp) { f->tx_amp = amp; }
@@ -1385,7 +1385,7 @@ void freedv_set_carrier_ampl(struct freedv *f, int c, float ampl) {
 
 \*---------------------------------------------------------------------------*/
 
-void freedv_set_sync(struct freedv *freedv, int sync_cmd) {
+void freedv_set_sync(struct freedv *freedv, int sync_cmd) FREEDV_NONBLOCKING_EXCEPT {
   assert(freedv != NULL);
 
   if (freedv->ofdm != NULL) {
@@ -1418,24 +1418,24 @@ struct FSK *freedv_get_fsk(struct freedv *f) {
 \*---------------------------------------------------------------------------*/
 
 int freedv_get_protocol_bits(struct freedv *f) { return f->n_protocol_bits; }
-int freedv_get_mode(struct freedv *f) { return f->mode; }
+int freedv_get_mode(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT { return f->mode; }
 int freedv_get_test_frames(struct freedv *f) { return f->test_frames; }
-int freedv_get_speech_sample_rate(struct freedv *f) {
+int freedv_get_speech_sample_rate(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->speech_sample_rate;
 }
-int freedv_get_n_speech_samples(struct freedv *f) {
+int freedv_get_n_speech_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_speech_samples;
 }
-int freedv_get_modem_sample_rate(struct freedv *f) {
+int freedv_get_modem_sample_rate(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->modem_sample_rate;
 }
 int freedv_get_modem_symbol_rate(struct freedv *f) {
   return f->modem_symbol_rate;
 }
-int freedv_get_n_max_modem_samples(struct freedv *f) {
+int freedv_get_n_max_modem_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_max_modem_samples;
 }
-int freedv_get_n_nom_modem_samples(struct freedv *f) {
+int freedv_get_n_nom_modem_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   return f->n_nom_modem_samples;
 }
 int freedv_get_n_tx_modem_samples(struct freedv *f) {
@@ -1455,7 +1455,7 @@ int freedv_get_total_packets(struct freedv *f) { return f->total_packets; }
 int freedv_get_total_packet_errors(struct freedv *f) {
   return f->total_packet_errors;
 }
-int freedv_get_sync(struct freedv *f) { return f->sync; }
+int freedv_get_sync(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT { return f->sync; }
 struct CODEC2 *freedv_get_codec2(struct freedv *f) {
   return f->codec2;
 }
@@ -1497,7 +1497,7 @@ int freedv_set_tuning_range(struct freedv *freedv, float val_fmin,
   }
 }
 
-int freedv_get_n_max_speech_samples(struct freedv *f) {
+int freedv_get_n_max_speech_samples(struct freedv *f) FREEDV_NONBLOCKING_EXCEPT {
   /* When "passing through" demod samples to the speech output
      (e.g. no sync and squelch off) f->nin bounces around with
      timing variations.  So we may return
@@ -1532,7 +1532,7 @@ int freedv_get_sz_error_pattern(struct freedv *f) {
 
 // Get modem status, scatter/eye diagram for plotting, other goodies
 void freedv_get_modem_extended_stats(struct freedv *f,
-                                     struct MODEM_STATS *stats) {
+                                     struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   if (FDV_MODE_ACTIVE(FREEDV_MODE_1600, f->mode))
     fdmdv_get_demod_stats(f->fdmdv, stats);
 

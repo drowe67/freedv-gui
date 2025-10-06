@@ -31,7 +31,7 @@ extern int   g_SquelchActive;
 extern float g_SquelchLevel;
 extern int   g_analog;
 extern std::atomic<int>   g_tx;
-extern int   g_State, g_prev_State;
+extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern bool g_queueResync;
 extern short *g_error_hist, *g_error_histn;
@@ -1341,7 +1341,6 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
-    wxColour currentControlBackground = wxTransparentColour;
     TopFrame::OnSystemColorChanged(event);
 }
 

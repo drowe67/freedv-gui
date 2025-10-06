@@ -1936,7 +1936,7 @@ int WebRtcAgc_Process(void *agcInst,
                       int32_t inMicLevel,
                       int32_t *outMicLevel,
                       int16_t echo,
-                      uint8_t *saturationWarning) {
+                      uint8_t *saturationWarning) FREEDV_NONBLOCKING_EXCEPT {
     LegacyAgc *stt;
 
     stt = (LegacyAgc *) agcInst;

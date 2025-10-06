@@ -228,7 +228,7 @@ void my_put_next_rx_char(void *callback_state, char c) {
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING
 {
     COMP  foff_rect;
     float mag;
@@ -300,7 +300,7 @@ int resample(SRC_STATE *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs)
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;

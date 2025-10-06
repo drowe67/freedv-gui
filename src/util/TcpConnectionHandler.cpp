@@ -165,16 +165,17 @@ void TcpConnectionHandler::connectImpl_()
     std::future<struct addrinfo*> ipv6ResultFuture = ipv6ResultPromise->get_future();
     std::future<struct addrinfo*> ipv4ResultFuture = ipv4ResultPromise->get_future();
 
-    std::thread ipv6ResolveThread([&, ipv6ResultPromise]() {
+    std::string portStr = portStream.str();
+    std::thread ipv6ResolveThread([&, portStr, ipv6ResultPromise]() {
         struct addrinfo *result = nullptr;
-        resolveAddresses_(AF_INET6, host_.c_str(), portStream.str().c_str(), &result);
+        resolveAddresses_(AF_INET6, host_.c_str(), portStr.c_str(), &result);
         ipv6ResultPromise->set_value(result);
         ipv6Complete_ = true;
     });
     
-    std::thread ipv4ResolveThread([&, ipv4ResultPromise]() {
+    std::thread ipv4ResolveThread([&, portStr, ipv4ResultPromise]() {
         struct addrinfo *result = nullptr;
-        resolveAddresses_(AF_INET, host_.c_str(), portStream.str().c_str(), &result);
+        resolveAddresses_(AF_INET, host_.c_str(), portStr.c_str(), &result);
         ipv4ResultPromise->set_value(result);
         ipv4Complete_ = true;
     });
@@ -470,7 +471,7 @@ void TcpConnectionHandler::disconnectImpl_()
 {
     if (socket_ > 0)
     {
-        auto tmp = socket_;
+        auto tmp = socket_.load();
         socket_ = -1;
 
 #if defined(WIN32)

@@ -38,6 +38,8 @@ public:
     
     enum AudioDirection { AUDIO_ENGINE_IN, AUDIO_ENGINE_OUT };
     
+    virtual ~IAudioEngine() = default;
+    
     virtual void start() = 0;
     virtual void stop() = 0;
     virtual std::vector<AudioDeviceSpecification> getAudioDeviceList(AudioDirection direction) = 0;

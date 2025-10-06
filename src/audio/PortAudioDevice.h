@@ -33,8 +33,8 @@ class PortAudioDevice : public IAudioDevice
 public:
     virtual ~PortAudioDevice();
     
-    virtual int getNumChannels() override { return numChannels_; }
-    virtual int getSampleRate() const override { return sampleRate_; }
+    virtual int getNumChannels() FREEDV_NONBLOCKING override { return numChannels_; }
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override { return sampleRate_; }
     
     virtual void start() override;
     virtual void stop() override;

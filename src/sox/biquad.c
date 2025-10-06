@@ -143,7 +143,7 @@ int lsx_biquad_start(sox_effect_t * effp)
 
 
 int lsx_biquad_flow(sox_effect_t * effp, const sox_sample_t *ibuf,
-    sox_sample_t *obuf, size_t *isamp, size_t *osamp)
+    sox_sample_t *obuf, size_t *isamp, size_t *osamp) FREEDV_NONBLOCKING_EXCEPT
 {
   priv_t * p = (priv_t *)effp->priv;
   size_t len = *isamp = *osamp = min(*isamp, *osamp);

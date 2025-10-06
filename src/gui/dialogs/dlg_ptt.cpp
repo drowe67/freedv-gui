@@ -687,8 +687,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
                     (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8) );
 
-            hamlib->onRigError += [=, this](IRigController*, std::string error) {
-                CallAfter([=, this]() {
+            hamlib->onRigError += [=](IRigController*, std::string error) {
+                CallAfter([=]() {
                     wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
 
@@ -696,11 +696,11 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 });
             };
 
-            hamlib->onRigConnected += [=, this](IRigController*) {
+            hamlib->onRigConnected += [=](IRigController*) {
                 hamlib->ptt(true);
             };
 
-            hamlib->onPttChange += [=, this](IRigController*, bool state) {
+            hamlib->onPttChange += [=](IRigController*, bool state) {
                 if (state)
                 {
                     std::this_thread::sleep_for(1s);
@@ -712,7 +712,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 }
             };
 
-            std::thread hamlibThread([=, this]() {
+            std::thread hamlibThread([=]() {
                 hamlib->connect();
             
                 std::unique_lock<std::mutex> lk(*mtx);
@@ -751,9 +751,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 m_rbUseDTR->GetValue(),
                 m_ckDTRPos->IsChecked());
 
-            serialPort->onRigError += [=, this](IRigController*, std::string error)
+            serialPort->onRigError += [=](IRigController*, std::string error)
             {
-                CallAfter([=, this]() {
+                CallAfter([=]() {
                     wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
                     wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
@@ -761,12 +761,12 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 cv->notify_one();
             };
 
-            serialPort->onRigConnected += [=, this](IRigController*) {
+            serialPort->onRigConnected += [=](IRigController*) {
                 log_debug("serial port open");
                 cv->notify_one();
             };
 
-            std::thread serialPortThread([=, this]() {
+            std::thread serialPortThread([=]() {
                 serialPort->connect();
             
                 std::unique_lock<std::mutex> lk(*mtx);
@@ -806,8 +806,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             std::make_shared<OmniRigController>(
                 m_cbOmniRigRigId->GetCurrentSelection());
 
-        rig->onRigError += [=, this](IRigController*, std::string error) {
-            CallAfter([=, this]() {
+        rig->onRigError += [=](IRigController*, std::string error) {
+            CallAfter([=]() {
                 wxMessageBox("Couldn't connect to Radio with OmniRig.  Make sure the rig ID and OmniRig configuration is correct.", 
                     wxT("Error"), wxOK | wxICON_ERROR, this);
 
@@ -815,11 +815,11 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             });
         };
 
-        rig->onRigConnected += [=, this](IRigController*) {
+        rig->onRigConnected += [=](IRigController*) {
             rig->ptt(true);
         };
 
-        rig->onPttChange += [=, this](IRigController*, bool state) {
+        rig->onPttChange += [=](IRigController*, bool state) {
             if (state)
             {
                 std::this_thread::sleep_for(1s);
@@ -831,7 +831,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             }
         };
 
-        std::thread omniRigThread([=, this]() {
+        std::thread omniRigThread([=]() {
             rig->connect();
 
             std::unique_lock<std::mutex> lk(*mtx);

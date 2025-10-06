@@ -404,7 +404,7 @@ void kiss_fft_stride(kiss_fft_cfg st, const kiss_fft_cpx *fin,
   }
 }
 
-void kiss_fft(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout) {
+void kiss_fft(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout) FREEDV_NONBLOCKING_EXCEPT {
   kiss_fft_stride(cfg, fin, fout, 1);
 }
 

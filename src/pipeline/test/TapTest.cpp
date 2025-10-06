@@ -4,9 +4,9 @@
 class PassThroughStep : public IPipelineStep
 {
 public:
-    virtual int getInputSampleRate() const { return 8000; }
-    virtual int getOutputSampleRate() const { return 8000; }
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
     {
         lastInputSamples = inputSamples;
         *numOutputSamples = numInputSamples;

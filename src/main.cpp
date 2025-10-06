@@ -57,6 +57,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 
 #include "util/logging/ulog.h"
+#include "util/audio_spin_mutex.h"
 
 #include "rade_api.h"
 
@@ -103,6 +104,7 @@ float               g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
+audio_spin_mutex    g_avmag_mtx;
 
 // TX level for attenuation
 int g_txLevel = 0;
@@ -124,7 +126,7 @@ struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State, g_prev_State;
+std::atomic<int>                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
@@ -140,10 +142,10 @@ int                 g_nSoundCards;
 
 // PortAudio over/underflow counters
 
-int                 g_infifo1_full;
-int                 g_outfifo1_empty;
-int                 g_infifo2_full;
-int                 g_outfifo2_empty;
+std::atomic<int>    g_infifo1_full;
+std::atomic<int>    g_outfifo1_empty;
+std::atomic<int>    g_infifo2_full;
+std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
@@ -1705,7 +1707,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_textSync->Refresh();
             }
         }
-        g_prev_State = g_State;
+        g_prev_State.store(g_State.load());
 
         // send Callsign ----------------------------------------------------
 
@@ -2838,8 +2840,10 @@ void MainFrame::startRxStream()
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
 
-            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
-            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
+            g_rxUserdata->tmpReadRxBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpReadTxBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpWriteRxBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
+            g_rxUserdata->tmpWriteTxBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
         }
         else
         {
@@ -2848,8 +2852,10 @@ void MainFrame::startRxStream()
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
 
-            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
-            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->tmpReadRxBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpReadTxBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpWriteRxBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->tmpWriteTxBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -3087,8 +3093,10 @@ void MainFrame::startRxStream()
 
         // reset debug stats for FIFOs
 
-        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
-        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        g_infifo1_full.store(0, std::memory_order_release);
+        g_outfifo1_empty.store(0, std::memory_order_release);
+        g_infifo2_full.store(0, std::memory_order_release);
+        g_outfifo2_empty.store(0, std::memory_order_release);
         for (int i=0; i<4; i++) {
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
@@ -3183,10 +3191,10 @@ void MainFrame::startRxStream()
         }
         else
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* tmpOutput = cbData->tmpWriteBuffer_.get();
+                short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
@@ -3589,11 +3597,11 @@ void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* stat
     castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
 }
 
-void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpInput = cbData->tmpReadBuffer_.get();
+    short* tmpInput = cbData->tmpReadTxBuffer_.get();
 
     if (!endingTx) 
     {
@@ -3604,21 +3612,21 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         }
         if (cbData->infifo2->write(tmpInput, size)) 
         {
-            g_infifo2_full++;
+            g_infifo2_full.fetch_add(1, std::memory_order_release);
         }
     }
 }
 
-void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+    short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     if (toRead < size)
     {
-        g_outfifo1_empty++;
+        g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
 
     cbData->outfifo1->read(tmpOutput, toRead);
@@ -3645,11 +3653,11 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
 }
 
-void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpInput = cbData->tmpReadBuffer_.get();
+    short* tmpInput = cbData->tmpReadRxBuffer_.get();
 
     auto numChannels = dev.getNumChannels();
     for (size_t i = 0; i < size; i++, audioData += numChannels)
@@ -3658,21 +3666,20 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
     if (cbData->infifo1->write(tmpInput, size)) 
     {
-        log_warn("RX FIFO full");
-        g_infifo1_full++;
+        g_infifo1_full.fetch_add(1, std::memory_order_release);
     }
 }
 
-void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+    short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
     if (toRead < size)
     {
-        g_outfifo2_empty++;
+        g_outfifo2_empty.fetch_add(1, std::memory_order_release);
     }
 
     cbData->outfifo2->read(tmpOutput, toRead);

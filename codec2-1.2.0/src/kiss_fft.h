@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug_alloc.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,8 +31,8 @@ extern "C" {
 #define KISS_FFT_MALLOC(nbytes) _mm_malloc(nbytes, 16)
 #define KISS_FFT_FREE _mm_free
 #else
-#define KISS_FFT_MALLOC malloc
-#define KISS_FFT_FREE free
+#define KISS_FFT_MALLOC codec2_malloc
+#define KISS_FFT_FREE codec2_free
 #endif
 
 #ifdef FIXED_POINT
@@ -46,6 +48,8 @@ extern "C" {
 #define kiss_fft_scalar float
 #endif
 #endif
+
+#include "sanitizers.h"
 
 typedef struct {
   kiss_fft_scalar r;
@@ -90,7 +94,7 @@ kiss_fft_cfg kiss_fft_alloc(int nfft, int inverse_fft, void *mem,
  * Note that each element is complex and can be accessed like
     f[k].r and f[k].i
  * */
-void kiss_fft(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout);
+void kiss_fft(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout) FREEDV_NONBLOCKING_EXCEPT;
 
 /*
  A more generic version of the above function. It reads its input from every Nth

@@ -1012,7 +1012,7 @@ void fsk_clear_estimators(struct FSK *fsk) {
   fsk->nin = fsk->N;
 }
 
-void fsk_get_demod_stats(struct FSK *fsk, struct MODEM_STATS *stats) {
+void fsk_get_demod_stats(struct FSK *fsk, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   /* copy from internal stats, note we can't overwrite stats completely
      as it has other states rqd by caller, also we want a consistent
      interface across modem types for the freedv_api.

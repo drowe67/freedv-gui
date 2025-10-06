@@ -68,17 +68,17 @@ PlaybackStep::~PlaybackStep()
     }
 }
 
-int PlaybackStep::getInputSampleRate() const
+int PlaybackStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-int PlaybackStep::getOutputSampleRate() const
+int PlaybackStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return inputSampleRate_;
 }
 
-short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);
@@ -183,7 +183,7 @@ void PlaybackStep::nonRtThreadEntry_()
     }
 }
 
-void PlaybackStep::reset()
+void PlaybackStep::reset() FREEDV_NONBLOCKING
 {
     outputFifo_.reset();
 }

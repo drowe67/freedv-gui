@@ -24,27 +24,26 @@
 #define AUDIO_PIPELINE__TONE_INTERFERER_STEP_H
 
 #include <memory>
-#include <functional>
-
+#include "../util/realtime_fp.h"
 #include "IPipelineStep.h"
 
 class ToneInterfererStep : public IPipelineStep
 {
 public:
     ToneInterfererStep(
-        int sampleRate, std::function<float()> toneFrequencyFn, 
-        std::function<float()> toneAmplitudeFn, std::function<float*()> tonePhaseFn);
+        int sampleRate, realtime_fp<float()> toneFrequencyFn, 
+        realtime_fp<float()> toneAmplitudeFn, realtime_fp<float*()> tonePhaseFn);
     virtual ~ToneInterfererStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
     int sampleRate_;
-    std::function<float()> toneFrequencyFn_;
-    std::function<float()> toneAmplitudeFn_;
-    std::function<float*()> tonePhaseFn_;
+    realtime_fp<float()> toneFrequencyFn_;
+    realtime_fp<float()> toneAmplitudeFn_;
+    realtime_fp<float*()> tonePhaseFn_;
     std::unique_ptr<short[]> outputSamples_;
 };
 

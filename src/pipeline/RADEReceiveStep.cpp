@@ -20,16 +20,11 @@
 //
 //=========================================================================
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-#include <sanitizer/rtsan_interface.h>
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
 #include <cassert>
 #include <functional>
 #include "RADEReceiveStep.h"
 #include "lpcnet.h" // from Opus source tree
+#include "../util/realtime_fp.h"
 
 #if defined(__APPLE__)
 #include <pthread.h>
@@ -47,7 +42,7 @@ extern wxString utRxFeatureFile;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , pendingFeatures_(nullptr)
@@ -113,28 +108,33 @@ RADEReceiveStep::~RADEReceiveStep()
     }
 }
 
-int RADEReceiveStep::getInputSampleRate() const
+int RADEReceiveStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_MODEM_SAMPLE_RATE;
 }
 
-int RADEReceiveStep::getOutputSampleRate() const
+int RADEReceiveStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return RADE_SPEECH_SAMPLE_RATE;
 }
 
-short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
     
     inputSampleFifo_.write(inputSamples, numInputSamples);
-        
+
+    FREEDV_BEGIN_VERIFIED_SAFE 
     int   nin = rade_nin(dv_);
+    FREEDV_END_VERIFIED_SAFE 
+
     int   nout = 0;
     while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
     {
+        FREEDV_BEGIN_VERIFIED_SAFE 
         assert(nin <= rade_nin_max(dv_));
+        FREEDV_END_VERIFIED_SAFE 
 
         // demod per frame processing
         for(int i=0; i<nin; i++) 
@@ -146,37 +146,18 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         // RADE processing (input signal->features).
         int hasEooOut = 0;
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-        nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+        FREEDV_BEGIN_REALTIME_UNSAFE
+            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+        FREEDV_END_REALTIME_UNSAFE
 
         if (hasEooOut && textPtr_ != nullptr)
         {
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-            __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+            FREEDV_BEGIN_REALTIME_UNSAFE
 
             // Handle RX of bits from EOO.
             rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-            __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
+            FREEDV_END_REALTIME_UNSAFE
         }
         else if (!hasEooOut)
         {
@@ -199,7 +180,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                     // FARGAN processing (features->analog audio)
                     float fpcm[LPCNET_FRAME_SIZE];
                     short pcm[LPCNET_FRAME_SIZE];
+                    FREEDV_BEGIN_VERIFIED_SAFE 
                     fargan_synthesize(fargan_, fpcm, pendingFeatures_);
+                    FREEDV_END_VERIFIED_SAFE 
                     for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
                     {
                         pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
@@ -211,7 +194,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             }
         }
 
+        FREEDV_BEGIN_VERIFIED_SAFE 
         nin = rade_nin(dv_);
+        FREEDV_END_VERIFIED_SAFE 
     }
   
     if (*numOutputSamples > 0)
@@ -219,27 +204,23 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    int sync = 0;
+    int snr = 0;
 
-    syncState_.store(rade_sync(dv_), std::memory_order_release);
-    snr_.store(rade_snrdB_3k_est(dv_), std::memory_order_release);
+    FREEDV_BEGIN_REALTIME_UNSAFE
+        sync = rade_sync(dv_);
+        snr = rade_snrdB_3k_est(dv_);
+    FREEDV_END_REALTIME_UNSAFE
 
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-    __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
+    syncState_.store(sync, std::memory_order_release);
+    snr_.store(snr, std::memory_order_release);
     
     syncFn_(this);
 
     return outputSamples_.get();
 }
 
-void RADEReceiveStep::reset()
+void RADEReceiveStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     outputSampleFifo_.reset();
