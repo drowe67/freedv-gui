@@ -46,6 +46,7 @@
 #include <wx/textdlg.h>
 #include <wx/regex.h>
 #include <wx/socket.h>
+#include <wx/numformatter.h>
 
 #include <samplerate.h>
 

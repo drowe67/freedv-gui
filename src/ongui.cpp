@@ -442,21 +442,18 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
             !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
         {
-            // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
-            std::stringstream ss;
-            std::locale loc("");
-            ss.imbue(loc);
-            
+            // wxString::Format() doesn't respect locale but wxNumberFormatter should. Use the latter instead.
+            wxString freqString;            
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
+                freqString = wxNumberFormatter::ToString(freq / 1000.0, 1);
             }
             else
             {
-                ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+                freqString = wxNumberFormatter::ToString(freq / 1000.0 / 1000.0, 4);
             }
             
-            m_cboReportFrequency->SetValue(ss.str());
+            m_cboReportFrequency->SetValue(freqString);
         }
         m_txtModeStatus->Refresh();
     });
@@ -1252,18 +1249,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     if (freqStr.Length() > 0)
     {
         double tmp = 0;
-        std::stringstream ss(std::string(freqStr.ToUTF8()));
-        std::locale loc("");
-        ss.imbue(loc);
+        wxNumberFormatter::FromString(freqStr, &tmp);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            ss >> std::fixed >> std::setprecision(1) >> tmp;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000);
         }
         else
         {
-            ss >> std::fixed >> std::setprecision(4) >> tmp;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000 * 1000);
         }
 
@@ -1384,20 +1377,15 @@ void MainFrame::updateReportingFreqList_()
         freq /= 1000.0;
     }
 
-    std::stringstream ss;
-    std::locale loc("");
-    ss.imbue(loc);
-    
+    wxString prevSelected;    
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        ss << std::fixed << std::setprecision(1) << freq;
+        prevSelected = wxNumberFormatter::ToString(freq, 1);
     }
     else
     {
-        ss << std::fixed << std::setprecision(4) << freq;
+        prevSelected = wxNumberFormatter::ToString(freq, 4);
     }
-    std::string prevSelected = ss.str();
-
     m_cboReportFrequency->Clear();
     
     for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())

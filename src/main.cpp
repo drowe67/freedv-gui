@@ -815,20 +815,15 @@ void MainFrame::loadConfiguration_()
         
         double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency) / freqFactor;
 
-        std::stringstream ss;
-        std::locale loc("");
-        ss.imbue(loc);
-        
+        wxString sVal;
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            ss << std::fixed << std::setprecision(1) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 1);
         }
         else
         {
-            ss << std::fixed << std::setprecision(4) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 4);
         }
-        
-        std::string sVal = ss.str();
         m_cboReportFrequency->SetValue(sVal);
     }
 
@@ -3535,16 +3530,26 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     delete args;
 
     double freqFactor = 1000.0;
-    std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
+    std::string fmtMsg = "%s has requested that you QSY to %s kHz.";
         
     if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         freqFactor *= 1000.0;
-        fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+        fmtMsg = "%s has requested that you QSY to %s MHz.";
     }
         
     double frequencyReadable = freqHz / freqFactor;
-    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
+    wxString freqString;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 1);
+    }
+    else
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 4);
+    }
+    
+    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, freqString);
     int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
     if (wxGetApp().rigFrequencyController != nullptr && 
@@ -3565,14 +3570,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     if (answer == wxID_YES)
     {
         // This will implicitly cause Hamlib to change the frequency and mode.
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-        }
-        else
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-        }
+        m_cboReportFrequency->SetValue(freqString);
     }
 }
 
