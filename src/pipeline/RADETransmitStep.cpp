@@ -24,9 +24,9 @@
 #include <cassert>
 #include <cmath>
 #include <functional>
-#include "../defines.h"
-#include "codec2_fifo.h"
 #include "RADETransmitStep.h"
+#include "pipeline_defines.h"
+#include "../util/logging/ulog.h"
 
 #if defined(__APPLE__)
 #include <pthread.h>
@@ -39,7 +39,10 @@ using namespace std::chrono_literals;
 
 const int RADE_SCALING_FACTOR = 16383;
 
+#if !defined(DISABLE_UNIT_TEST)
+#include <wx/wx.h>
 extern wxString utTxFeatureFile;
+#endif // !defined(DISABLE_UNIT_TEST)
 
 RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     : dv_(dv)
@@ -49,6 +52,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     , featuresFile_(nullptr)
     , exitingFeatureThread_(false)
 {
+#if !defined(DISABLE_UNIT_TEST)
     if (utTxFeatureFile != "")
     {
         utFeatures_ = new PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>;
@@ -59,6 +63,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         
         utFeatureThread_ = std::thread(std::bind(&RADETransmitStep::utFeatureThreadEntry_, this));
     }
+#endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
