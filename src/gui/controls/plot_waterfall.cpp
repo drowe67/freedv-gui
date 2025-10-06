@@ -27,10 +27,13 @@
 #include "plot_waterfall.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
+#include "../../util/audio_spin_mutex.h"
+
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
 extern float g_avmag[];                 // av mag spec passed in to draw() 
+extern audio_spin_mutex g_avmag_mtx;
 extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -398,6 +401,7 @@ void PlotWaterfall::plotPixelData()
     int min_fft_bin=((float)200/m_modem_stats_max_f_hz)*MODEM_STATS_NSPEC;
     int max_fft_bin=((float)2800/m_modem_stats_max_f_hz)*MODEM_STATS_NSPEC;
 
+    g_avmag_mtx.lock();
     for(int i=min_fft_bin; i<max_fft_bin; i++) 
     {
         if (g_avmag[i] > max_mag)
@@ -415,7 +419,7 @@ void PlotWaterfall::plotPixelData()
     if (dy_ != dy && dyImageData_ != nullptr)
     {
         delete[] dyImageData_;
-	dyImageData_ = nullptr;
+	    dyImageData_ = nullptr;
 
         delete tmpImage_;
     }
@@ -461,6 +465,8 @@ void PlotWaterfall::plotPixelData()
             break;
         }
     }
+    
+    g_avmag_mtx.unlock();
     
     for (int row = 1; row < dy; row++)
     {

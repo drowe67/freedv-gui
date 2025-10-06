@@ -22,6 +22,8 @@
 #ifndef __SOX_BIQUAD__
 #define __SOX_BIQUAD__
 
+#include "util/sanitizers.h"
+
 #ifdef __cplusplus
 extern "C" {
 
@@ -31,7 +33,7 @@ void sox_biquad_start(void);
 void sox_biquad_finish(void);
 void *sox_biquad_create(int argc, const char *argv[]);
 void sox_biquad_destroy(void *sbq);
-void sox_biquad_filter(void *sbq, short out[], short in[], int n);
+void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOCKING_EXCEPT;
 
 #ifdef __cplusplus
 }

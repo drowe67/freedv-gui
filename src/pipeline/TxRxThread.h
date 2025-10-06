@@ -28,10 +28,12 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
 #include "util/Semaphore.h"
+#include "util/sanitizers.h"
 
 // Forward declarations
 class LinkStep;
@@ -87,14 +89,14 @@ public:
     }
 
     // thread execution starts here
-    void *Entry();
+    void *Entry() noexcept;
 
     void waitForReady() { readySem_.wait(); }
     void signalToStart() { startSem_.signal(); }
 
 private:
     bool  m_tx;
-    bool  m_run;
+    std::atomic<bool>  m_run;
     std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
@@ -126,23 +128,9 @@ private:
 #endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
-    void txProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-    ;
-
-    void rxProcessing_(IRealtimeHelper* helper) noexcept
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-[[clang::nonblocking]]
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-    ;
-
-    void clearFifos_();
+    void txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
+    void rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
+    void clearFifos_() FREEDV_NONBLOCKING;
 };
 
 #endif // AUDIO_PIPELINE__TX_RX_THREAD_H

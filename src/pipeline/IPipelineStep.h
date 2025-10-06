@@ -23,16 +23,18 @@
 #ifndef AUDIO_PIPELINE__I_PIPELINE_STEP_H
 #define AUDIO_PIPELINE__I_PIPELINE_STEP_H
 
+#include "../util/sanitizers.h"
+
 class IPipelineStep
 {
 public:
     virtual ~IPipelineStep();
     
     // Returns required input sample rate.
-    virtual int getInputSampleRate() const = 0;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING = 0;
     
     // Returns output sample rate after performing the pipeline step.
-    virtual int getOutputSampleRate() const = 0;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING = 0;
     
     // Executes pipeline step.
     // Required parameters:
@@ -40,11 +42,10 @@ public:
     //     numInputSamples: Number of samples in the input array.
     //     numOutputSamples: Location to store number of output samples.
     // Returns: Array of int16 values corresponding to result audio.
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) = 0;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING = 0;
     
     // Resets internal state of the pipeline step.
-    virtual void reset() { /* empty */ }
+    virtual void reset() FREEDV_NONBLOCKING { /* empty */ }
 };
-
 
 #endif // AUDIO_PIPELINE__I_PIPELINE_STEP_H

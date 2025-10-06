@@ -53,12 +53,15 @@ extern "C"
 }
 
 #include "util/IRealtimeHelper.h"
+#include "util/sanitizers.h"
+#include "util/realtime_fp.h"
 
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
+class RADEReceiveStep;
 
 // Anything above 255 is a RADE mode. There's only one right now,
 // this is just for future expansion.
@@ -94,7 +97,7 @@ public:
     int getErrorPattern(short** outputPattern);
     
     int getSync() const;
-    void setSync(int val);
+    void setSync(int val) FREEDV_NONBLOCKING;
     void setEq(int val);
     void setVerbose(bool val);
     
@@ -102,21 +105,21 @@ public:
     
     void addRxMode(int mode) { enabledModes_.push_back(mode); }
     
-    int getTxModemSampleRate() const;
+    int getTxModemSampleRate() const FREEDV_NONBLOCKING;
     int getTxSpeechSampleRate() const;
     int getTxNumSpeechSamples() const;
-    int getTxNNomModemSamples() const;
+    int getTxNNomModemSamples() const FREEDV_NONBLOCKING;
     
     int getRxModemSampleRate() const;
     int getRxNumModemSamples() const;
-    int getRxNumSpeechSamples() const;
-    int getRxSpeechSampleRate() const;
+    int getRxNumSpeechSamples() const FREEDV_NONBLOCKING;
+    int getRxSpeechSampleRate() const FREEDV_NONBLOCKING;
     
     void setLpcPostFilter(int enable, int bassBoost, float beta, float gamma);
     
     void setTextVaricodeNum(int num);
     
-    void setSquelch(bool enable, float level);
+    void setSquelch(bool enable, float level) FREEDV_NONBLOCKING;
     
     void setCarrierAmplitude(int c, float amp);
     
@@ -129,32 +132,32 @@ public:
     IPipelineStep* createTransmitPipeline(
         int inputSampleRate, 
         int outputSampleRate, 
-        std::function<float()> getFreqOffsetFn,
+        realtime_fp<float()> getFreqOffsetFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
-        std::function<int*()> getRxStateFn,
-        std::function<int()> getChannelNoiseFn,
-        std::function<int()> getChannelNoiseSnrFn,
-        std::function<float()> getFreqOffsetFn,
-        std::function<float*()> getSigPwrAvgFn,
+        realtime_fp<std::atomic<int>*()> getRxStateFn,
+        realtime_fp<int()> getChannelNoiseFn,
+        realtime_fp<int()> getChannelNoiseSnrFn,
+        realtime_fp<float()> getFreqOffsetFn,
+        realtime_fp<float*()> getSigPwrAvgFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
 
-    void restartTxVocoder();
+    void restartTxVocoder() FREEDV_NONBLOCKING;
  
     float getSNREstimate();
     
 private:
     struct ReceivePipelineState
     {
-        std::function<int*()> getRxStateFn;
-        std::function<int()> getChannelNoiseFn;
-        std::function<int()> getChannelNoiseSnrFn;
-        std::function<float()> getFreqOffsetFn;
-        std::function<float*()> getSigPwrAvgFn;
-        std::function<int(ParallelStep*)> preProcessFn;
-        std::function<int(ParallelStep*)> postProcessFn;
+        realtime_fp<std::atomic<int>*()> getRxStateFn;
+        realtime_fp<int()> getChannelNoiseFn;
+        realtime_fp<int()> getChannelNoiseSnrFn;
+        realtime_fp<float()> getFreqOffsetFn;
+        realtime_fp<float*()> getSigPwrAvgFn;
+        realtime_fp<int(ParallelStep*)> preProcessFn;
+        realtime_fp<int(ParallelStep*)> postProcessFn;
     };
 
     struct FreeDVTextFnState
@@ -207,8 +210,10 @@ private:
     std::atomic<int> radeSnr_;
     rade_text_t radeTextPtr_;
     
-    int preProcessRxFn_(ParallelStep* ps);
-    int postProcessRxFn_(ParallelStep* ps);
+    int preProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
+    int postProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
+
+    void radeSyncFn_(RADEReceiveStep* step) FREEDV_NONBLOCKING;
 };
 
 #endif // FREEDV_INTERFACE_H

@@ -23,23 +23,23 @@
 #ifndef AUDIO_PIPELINE__EITHER_OR_STEP_H
 #define AUDIO_PIPELINE__EITHER_OR_STEP_H
 
-#include <functional>
 #include "IPipelineStep.h"
 #include "ResampleStep.h"
+#include "../util/realtime_fp.h"
 
 class EitherOrStep : public IPipelineStep
 {
 public:
-    EitherOrStep(std::function<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep);
+    EitherOrStep(realtime_fp<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep);
     virtual ~EitherOrStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
 private:
-    std::function<bool()> conditionalFn_;
+    realtime_fp<bool()> conditionalFn_;
     std::unique_ptr<IPipelineStep> falseStep_;
     std::unique_ptr<IPipelineStep> trueStep_;
 };

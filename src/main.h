@@ -91,6 +91,7 @@
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
+#include "util/sanitizers.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -517,7 +518,7 @@ class MainFrame : public TopFrame
         bool        m_newMicInFilter;
         bool        m_newSpkOutFilter;
 
-        std::shared_ptr<void>       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
+        void*       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
         void        designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate);
         void        deleteEQFilters(paCallBackData *cb);
 
@@ -575,10 +576,10 @@ class MainFrame : public TopFrame
         void handleAudioDeviceChange_(std::string newDeviceName);
 
         // Audio device data handlers
-        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
 
         // QSY request handling
         struct QsyRequestArgs {
@@ -591,7 +592,7 @@ class MainFrame : public TopFrame
         void onQsyRequestUIThread_(QsyRequestArgs* args);
 };
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
 
 int resample(SRC_STATE *src,
              short      output_short[],
@@ -614,6 +615,6 @@ void my_put_next_rx_char(void *callback_state, char c);
 
 // helper complex freq shift function
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 #endif //__FDMDV2_MAIN__

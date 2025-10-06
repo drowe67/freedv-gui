@@ -103,7 +103,7 @@ void fmfsk_destroy(struct FMFSK *fmfsk) {
  */
 uint32_t fmfsk_nin(struct FMFSK *fmfsk) { return (uint32_t)fmfsk->nin; }
 
-void fmfsk_get_demod_stats(struct FMFSK *fmfsk, struct MODEM_STATS *stats) {
+void fmfsk_get_demod_stats(struct FMFSK *fmfsk, struct MODEM_STATS *stats) FREEDV_NONBLOCKING_EXCEPT {
   /* copy from internal stats, note we can't overwrite stats completely
      as it has other states rqd by caller, also we want a consistent
      interface across modem types for the freedv_api.

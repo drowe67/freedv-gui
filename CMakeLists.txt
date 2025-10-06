@@ -115,7 +115,7 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif(APPLE)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -144,6 +144,8 @@ set(ENABLE_ASAN FALSE CACHE BOOL
     "Instruments the build with AddressSanitizer for memory checks.")
 set(ENABLE_RTSAN FALSE CACHE BOOL
     "Instruments the build with RealtimeSanitizer for RT safety checks.")
+set(ENABLE_TSAN FALSE CACHE BOOL
+    "Instruments the build with ThreadSanitizer for thread checks.")
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
@@ -156,6 +158,12 @@ if(ENABLE_RTSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=realtime")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=realtime")
 endif(ENABLE_RTSAN)
+
+if(ENABLE_TSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=thread")
+endif(ENABLE_TSAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -559,9 +567,9 @@ else()
 endif()
 
 # On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 include(cmake/BuildMimalloc.cmake)
-endif ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
 #
 # Find libdl for dlopen/dlclose

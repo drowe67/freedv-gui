@@ -17,6 +17,9 @@
 
 #include "ulog.h"
 
+#include <stdlib.h>
+#include <assert.h>
+
 #if FEATURE_TOPICS
 #include <string.h>
 #endif
@@ -491,6 +494,7 @@ static void write_formatted_message(ulog_Event *ev, FILE *file, bool full_time, 
     } else {
         print_time_sec(ev, file);
     }
+    free(ev->time);
 #else
     (void) full_time;
 #endif  // FEATURE_TIME
@@ -631,7 +635,14 @@ static void process_callback(ulog_Event *ev, Callback *cb) {
 #if FEATURE_TIME
         if (!ev->time) {
             time_t t = time(NULL);
-            ev->time = localtime(&t);
+            struct tm* buf = malloc(sizeof(struct tm));
+            assert(buf != NULL);
+#if defined(WIN32)
+            ev->time = buf;
+            localtime_s(buf, &t);
+#else
+            ev->time = localtime_r(&t, buf);
+#endif // defined(WIN32)
         }
 #endif  // FEATURE_TIME
 

@@ -92,17 +92,17 @@ AgcStep::~AgcStep()
     ebur128_destroy((ebur128_state**)&ebur128State_);
 }
 
-int AgcStep::getInputSampleRate() const
+int AgcStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int AgcStep::getOutputSampleRate() const
+int AgcStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     ebur128_state* state = static_cast<ebur128_state*>(ebur128State_);
 
@@ -124,9 +124,15 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
 
             // Step 1: feed samples into ebur128 and return current
             // loudness in LUFS.
-            ebur128_add_frames_short(state, tmpInput, numSamplesPerRun_);
             double lufs = 0.0;
+
+            // Note: libebur128 is unlikely to use RT-unsafe constructs in normal operation
+            // (per existing RTSan-enabled tests). Verified on 2025-09-30.
+            FREEDV_BEGIN_VERIFIED_SAFE
+            ebur128_add_frames_short(state, tmpInput, numSamplesPerRun_);
             auto result = ebur128_loudness_momentary(state, &lufs);
+            FREEDV_END_VERIFIED_SAFE
+
             if (result == EBUR128_SUCCESS && lufs != -HUGE_VAL && lufs > SILENCE_THRESHOLD_LUFS)
             {
                 // Returned loudness is valid.
@@ -146,7 +152,6 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
                     agcInterval = AGC_RELEASE_TIME_SEC;
                 }
                 currentGainDb_ += ((targetGainDb_ - currentGainDb_) / agcInterval) * ((float)numSamplesPerRun_ / sampleRate_);
-                //log_info("LUFS: %f, targetGain: %f, currentGain: %f", lufs, targetGainDb_, currentGainDb_);
             }
 
             // Scale samples based on current gain.
@@ -161,14 +166,9 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             int inMicLevel = 0;
             short echo = 0;
             unsigned char saturationWarning = 1;
-            auto status = WebRtcAgc_Process(
+            WebRtcAgc_Process(
                 agcState_, const_cast<const int16_t *const *>(&tmpInput), 1, numSamplesPerRun_, 
                 const_cast<int16_t *const *>(&tmpOutput), inMicLevel, &outMicLevel, echo, &saturationWarning);
-            if (status != 0)
-            {
-                // XXX - not RT-safe
-                log_error("Failed processing AGC (err = %d)", status);
-            }
             tmpOutput += numSamplesPerRun_;
         }
     }
@@ -180,7 +180,7 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     return outputSamples;
 }
 
-void AgcStep::reset()
+void AgcStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     currentGainDb_ = 0;
