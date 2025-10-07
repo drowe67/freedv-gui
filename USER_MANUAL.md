@@ -851,6 +851,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix CAT control and frequency formatting problems on non-English computers. (PR #1050)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039)
+    * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
 
 ## V2.0.2 October 2025
 
