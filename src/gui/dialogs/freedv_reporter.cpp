@@ -2062,12 +2062,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+            frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 1);
         }
         else
         {
             frequencyUserReadable /= 1000.0;
-            frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
+            frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 4);
         }
         
         updated |= kvp.second->freqString != frequencyString;
@@ -2220,7 +2220,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
                 temp->distanceVal *= 0.621371;
             }
 
-            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            temp->distance = wxNumberFormatter::ToString(temp->distanceVal, 0);
 
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
             {
@@ -2389,12 +2389,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+                frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 1);
             }
             else
             {
                 frequencyUserReadable /= 1000.0;
-                frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
+                frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 4);
             }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
 
