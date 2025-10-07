@@ -711,8 +711,6 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
 {
-    char fmt[15];
-    
     auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
     
     if (g_tx.load(std::memory_order_acquire))
