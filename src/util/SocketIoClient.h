@@ -35,7 +35,6 @@ class SocketIoClient : public TcpConnectionHandler
 public:
     using SioMessageReceivedFn = std::function<void(yyjson_val*)>;
     using OnConnectionStateChangeFn = std::function<void()>;
-    using OnRecvEndFn = std::function<void()>;
     
     SocketIoClient();
     virtual ~SocketIoClient();
@@ -47,7 +46,6 @@ public:
     
     void setOnConnectFn(OnConnectionStateChangeFn fn);
     void setOnDisconnectFn(OnConnectionStateChangeFn fn);
-    void setOnRecvEndFn(OnRecvEndFn fn);
     
 protected:
     virtual void onConnect_() override;
@@ -64,7 +62,6 @@ private:
     std::map<std::string, SioMessageReceivedFn> eventFnMap_;
     OnConnectionStateChangeFn onConnectFn_;
     OnConnectionStateChangeFn onDisconnectFn_;
-    OnRecvEndFn onRecvEndFn_;
     ThreadedTimer pingTimer_;
     
     void handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg);

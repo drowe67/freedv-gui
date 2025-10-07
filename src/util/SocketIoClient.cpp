@@ -115,11 +115,6 @@ void SocketIoClient::setOnDisconnectFn(OnConnectionStateChangeFn fn)
     onDisconnectFn_ = fn;
 }
 
-void SocketIoClient::setOnRecvEndFn(OnRecvEndFn fn)
-{
-    onRecvEndFn_ = fn;
-}
-
 void SocketIoClient::onConnect_()
 {
     // websocketpp: initialize logging
@@ -172,10 +167,6 @@ void SocketIoClient::onDisconnect_()
 void SocketIoClient::onReceive_(char* buf, int length)
 {
     connection_->read_some(buf, length);
-    if (onRecvEndFn_)
-    {
-        onRecvEndFn_();
-    }
 }
 
 void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
