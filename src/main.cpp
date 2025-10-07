@@ -745,15 +745,12 @@ void MainFrame::loadConfiguration_()
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
-    snprintf(fmt, 15, "%0.1f%s", (double)g_txLevel / 10.0, "dB");
-    wxString fmtString(fmt);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-    snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, "dB");
-    fmtString = fmt;
+    fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
     // Adjust frequency entry labels
@@ -815,20 +812,15 @@ void MainFrame::loadConfiguration_()
         
         double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency) / freqFactor;
 
-        std::stringstream ss;
-        std::locale loc("");
-        ss.imbue(loc);
-        
+        wxString sVal;
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            ss << std::fixed << std::setprecision(1) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 1);
         }
         else
         {
-            ss << std::fixed << std::setprecision(4) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 4);
         }
-        
-        std::string sVal = ss.str();
         m_cboReportFrequency->SetValue(sVal);
     }
 
@@ -883,10 +875,8 @@ setDefaultMode:
     m_togBtnVoiceKeyer->Disable();
 
     // squelch settings
-    char sqsnr[15];
     m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    snprintf(sqsnr, 15, "%4.1f dB", g_SquelchLevel);
-    wxString sqsnr_string(sqsnr);
+    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB";
     m_textSQ->SetLabel(sqsnr_string);
     m_ckboxSQ->SetValue(g_SquelchActive);
 
@@ -993,10 +983,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
     TOO_HIGH_LABEL("Too High"),
-    MIC_SPKR_LEVEL_FORMAT_STR("%0.1f%s"),
+    MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
-    FREQ_KHZ_FORMAT_STR("%.01f"),
-    FREQ_MHZ_FORMAT_STR("%.04f"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
     SNR_FORMAT_STR_NO_DB("%0.1f"),
     CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)"),
@@ -1617,7 +1605,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
              m_sliderMicSpkrLevel->Refresh();
-             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, (double)sliderVal, DECIBEL_STR);
+             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
@@ -1790,12 +1778,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
-                        freqString = wxString::Format(FREQ_KHZ_FORMAT_STR, freq);
+                        freqString = wxNumberFormatter::ToString(freq, 1);
                     }
                     else
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
-                        freqString = wxString::Format(FREQ_MHZ_FORMAT_STR, freq);
+                        freqString = wxNumberFormatter::ToString(freq, 4);
                     }
 
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
@@ -3535,16 +3523,26 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     delete args;
 
     double freqFactor = 1000.0;
-    std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
+    std::string fmtMsg = "%s has requested that you QSY to %s kHz.";
         
     if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         freqFactor *= 1000.0;
-        fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+        fmtMsg = "%s has requested that you QSY to %s MHz.";
     }
         
     double frequencyReadable = freqHz / freqFactor;
-    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
+    wxString freqString;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 1);
+    }
+    else
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 4);
+    }
+    
+    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, freqString);
     int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
     if (wxGetApp().rigFrequencyController != nullptr && 
@@ -3565,14 +3563,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     if (answer == wxID_YES)
     {
         // This will implicitly cause Hamlib to change the frequency and mode.
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-        }
-        else
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-        }
+        m_cboReportFrequency->SetValue(freqString);
     }
 }
 
