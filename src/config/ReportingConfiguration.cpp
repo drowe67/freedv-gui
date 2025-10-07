@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <wx/tokenzr.h>
+#include <wx/numformatter.h>
 #include <inttypes.h>
 
 #include "../defines.h"
@@ -112,12 +113,12 @@ ReportingConfiguration::ReportingConfiguration()
             if (reportingFrequencyAsKhz)
             {
                 double khzFloat = freq / 1000.0;
-                newList.push_back(wxString::Format("%.01lf", khzFloat));
+                newList.push_back(wxNumberFormatter::ToString(khzFloat, 1));
             }
             else
             {
                 double mhzFloat = freq / 1000000.0;
-                newList.push_back(wxString::Format("%.04lf", mhzFloat));
+                newList.push_back(wxNumberFormatter::ToString(mhzFloat, 4));
             }
         }
 
@@ -131,7 +132,7 @@ ReportingConfiguration::ReportingConfiguration()
             // Frequencies are unfortunately saved in US format (legacy behavior). We need 
             // to manually parse and convert to Hz, then output MHz values in US format.
             double mhz = 0.0;
-            val.ToDouble(&mhz);
+            wxNumberFormatter::FromString(val, &mhz);
             
             if (reportingFrequencyAsKhz)
             {

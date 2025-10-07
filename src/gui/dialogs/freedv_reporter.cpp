@@ -1386,30 +1386,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
 
-        
-#if __APPLE__
-        // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
-        // on the .app in Finder. Running the app from Terminal seems to work fine with .Format for 
-        // some reason. O_o
-        struct tm tmpTm;
-        auto tmpDateTm = tmpDate.GetTm(timeZone);
-        
-        tmpTm.tm_sec = tmpDateTm.sec;
-        tmpTm.tm_min = tmpDateTm.min;
-        tmpTm.tm_hour = tmpDateTm.hour;
-        tmpTm.tm_mday = tmpDateTm.mday;
-        tmpTm.tm_mon = tmpDateTm.mon;
-        tmpTm.tm_year = tmpDateTm.year - 1900;
-        tmpTm.tm_wday = tmpDateTm.GetWeekDay();
-        tmpTm.tm_yday = tmpDateTm.yday;
-        tmpTm.tm_isdst = -1;
-        
-        char buf[4096];
-        strftime(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm);
-        return buf;
-#else
         return tmpDate.Format(parent_->TIME_FORMAT_STR, timeZone);
-#endif // __APPLE__
     }
     else
     {
@@ -2062,12 +2039,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+            frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 1);
         }
         else
         {
             frequencyUserReadable /= 1000.0;
-            frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
+            frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 4);
         }
         
         updated |= kvp.second->freqString != frequencyString;
@@ -2220,7 +2197,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
                 temp->distanceVal *= 0.621371;
             }
 
-            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            temp->distance = wxNumberFormatter::ToString(temp->distanceVal, 0);
 
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
             {
@@ -2389,12 +2366,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+                frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 1);
             }
             else
             {
                 frequencyUserReadable /= 1000.0;
-                frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
+                frequencyString = wxNumberFormatter::ToString(frequencyUserReadable, 4);
             }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
 

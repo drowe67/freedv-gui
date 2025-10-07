@@ -8,14 +8,14 @@
 #include "sanitizers.h"
 
 #if defined(__aarch64__)
-#include <arm_acle.h>
-#define PAUSE_CPU __wfe
+// Some compilers don't have the wfe intrinsic.
+#define PAUSE_CPU __asm__("wfe")
 #elif defined(__x86_64__)
 #include <emmintrin.h>
-#define PAUSE_CPU _mm_pause
+#define PAUSE_CPU _mm_pause()
 #else
 // fall back to yield()
-#define PAUSE_CPU std::this_thread::yield
+#define PAUSE_CPU std::this_thread::yield()
 #endif // defined(__aarch64__) || defined(__x86_64__)
 
 struct audio_spin_mutex 
@@ -37,7 +37,7 @@ struct audio_spin_mutex
             if (try_lock())
                 return;
 
-            PAUSE_CPU();
+            PAUSE_CPU;
         }
 
         while (true) 
@@ -47,16 +47,16 @@ struct audio_spin_mutex
                 if (try_lock())
                     return;
 
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
-                PAUSE_CPU();
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
+                PAUSE_CPU;
             }
 
             // waiting longer than we should, let's give other threads 
@@ -67,16 +67,18 @@ struct audio_spin_mutex
 
     bool try_lock() FREEDV_NONBLOCKING
     {
-        return !flag.test_and_set(std::memory_order_acquire);
+        // Test + Test and Set is better than just TAS. More info:
+        // https://en.wikipedia.org/wiki/Test_and_test-and-set
+        return !flag.load(std::memory_order_relaxed) && !flag.exchange(true, std::memory_order_acquire);
     }
 
     void unlock() FREEDV_NONBLOCKING
     {
-        flag.clear(std::memory_order_release);
+        flag.store(false, std::memory_order_release);
     }
 
 private:
-    std::atomic_flag flag = ATOMIC_FLAG_INIT;
+    std::atomic<bool> flag = ATOMIC_FLAG_INIT;
 };
 
 #endif // AUDIO_SPIN_MUTEX

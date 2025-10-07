@@ -1490,8 +1490,16 @@ void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
 {
     auto val = m_txtCtrlNewFrequency->GetValue();
     
-    double dVal = wxAtof(val);
-    val = wxString::Format(_("%.04f"), dVal);
+    double dVal = 0;
+    wxNumberFormatter::FromString(val, &dVal);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        val = wxNumberFormatter::ToString(dVal, 1);
+    }
+    else
+    {
+        val = wxNumberFormatter::ToString(dVal, 4);
+    }
     m_freqList->Append(val);
     m_txtCtrlNewFrequency->SetValue("");
 }
