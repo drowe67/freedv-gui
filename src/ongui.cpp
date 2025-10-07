@@ -256,12 +256,12 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                 {
                     freqDouble *= 1000.0;
-                    newFreq = wxString::Format("%.01f", freqDouble);
+                    newFreq = wxNumberFormatter::ToString(freqDouble, 1);
                 }
                 else
                 {
                     freqDouble /= 1000.0;
-                    newFreq = wxString::Format("%.04f", freqDouble);
+                    newFreq = wxNumberFormatter::ToString(freqDouble, 4);
                 }
 
                 m_lastReportedCallsignListView->SetItem(index, 1, newFreq);
@@ -683,10 +683,8 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
 //-------------------------------------------------------------------------
 void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
-    char sqsnr[15];
     g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    snprintf(sqsnr, 15, "%4.1f dB", g_SquelchLevel); // 0.5 dB steps
-    wxString sqsnr_string(sqsnr);
+    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
     m_textSQ->SetLabel(sqsnr_string);
 
     event.Skip();
@@ -697,15 +695,12 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 {
-    char fmt[15];
-    
     g_txLevel = m_sliderTxLevel->GetValue();
     float dbLoss = g_txLevel / 10.0;
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    snprintf(fmt, 15, "%0.1f%s", (double)(g_txLevel)/10.0, "dB");
-    wxString fmtString(fmt);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
@@ -731,8 +726,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
         m_newSpkOutFilter = true;
     }
     
-    snprintf(fmt, 15, "%0.1f%s", (double)(sliderLevel), "dB");
-    wxString fmtString(fmt);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
 
@@ -996,11 +990,9 @@ void MainFrame::togglePTT(void) {
         g_tx.store(false, std::memory_order_release);
         endingTx = false;
 
-        char fmt[15];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
         CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
-        snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, "dB");
-        wxString fmtString(fmt);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
         
         // tx-> rx transition, swap to the page we were on for last rx
@@ -1111,10 +1103,8 @@ void MainFrame::togglePTT(void) {
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
         
-        char fmt[16];
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
-        snprintf(fmt, 15, "%0.1f%s", (double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, "dB");
-        wxString fmtString(fmt);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 }
@@ -1413,8 +1403,6 @@ void MainFrame::updateReportingFreqList_()
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
 {
-    char fmt[15];
-    
     auto sliderLevel = 0;
     if (g_tx.load(std::memory_order_acquire))
     {
@@ -1427,7 +1415,6 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
         m_newSpkOutFilter = true;
     }
     
-    snprintf(fmt, 15, "%0.1f%s", (double)(sliderLevel), "dB");
-    wxString fmtString(fmt);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }

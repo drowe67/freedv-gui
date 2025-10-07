@@ -475,8 +475,6 @@ class MainFrame : public TopFrame
         const wxString TOO_HIGH_LABEL;
         const wxString MIC_SPKR_LEVEL_FORMAT_STR;
         const wxString DECIBEL_STR;
-        const wxString FREQ_KHZ_FORMAT_STR;
-        const wxString FREQ_MHZ_FORMAT_STR;
         const wxString CURRENT_TIME_FORMAT_STR;
         const wxString SNR_FORMAT_STR_NO_DB;
         const wxString CALLSIGN_FORMAT_RGX;
