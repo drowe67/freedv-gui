@@ -108,12 +108,12 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
             }
 
             // Optional channel noise
-            if (channelNoiseEnabled_) {
-                fdmdv_simulate_channel(&sigPwrAvg_, rxFdm_, nin, channelNoiseSnr_);
+            if (channelNoiseEnabled_.load(std::memory_order_acquire)) {
+                fdmdv_simulate_channel(&sigPwrAvg_, rxFdm_, nin, channelNoiseSnr_.load(std::memory_order_acquire));
             }
 
             // Optional frequency shifting
-            freq_shift_coh(rxFdmOffset_, rxFdm_, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
+            freq_shift_coh(rxFdmOffset_, rxFdm_, freqOffsetHz_.load(std::memory_order_acquire), freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
 
             // Legacy modes, marked safe due to use of o1alloc().
             FREEDV_BEGIN_VERIFIED_SAFE

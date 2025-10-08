@@ -96,7 +96,7 @@ bool                g_queueResync;
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-int                 g_channel_noise;
+std::atomic<int>    g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
@@ -1920,7 +1920,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             freedvInterface.resetTestFrameStats();
         }
         freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise = wxGetApp().m_channel_noise;
+        g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
         wxString modeString; 

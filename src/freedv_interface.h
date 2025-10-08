@@ -91,7 +91,7 @@ public:
     int getTotalBits();
     int getTotalBitErrors();
     
-    int getCurrentMode() const { return rxMode_; }
+    int getCurrentMode() const { return rxMode_.load(std::memory_order_acquire); }
     float getVariance() const;
     
     int getErrorPattern(short** outputPattern);
@@ -175,7 +175,7 @@ private:
     void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
     int txMode_;
-    int rxMode_;
+    std::atomic<int> rxMode_;
     bool squelchEnabled_;
     std::deque<int> enabledModes_;
     std::deque<struct freedv*> dvObjects_;
@@ -195,7 +195,7 @@ private:
     int modemStatsIndex_;
     
     struct freedv* currentTxMode_;
-    struct freedv* currentRxMode_; 
+    std::atomic<struct freedv*> currentRxMode_; 
     struct freedv* lastSyncRxMode_;
     
     std::deque<reliable_text_t> reliableText_;
