@@ -800,7 +800,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING {
             FreeDVInterface* state = (FreeDVInterface*)step->getStateObj();
             auto finalSync = step->getSync();
-            *step->getRxStateFn()() = finalSync;
+            (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
 	});
@@ -985,7 +985,7 @@ skipSyncCheck:
         finalSync = castedStep->getSync();
     }
 
-    *state->getRxStateFn() = finalSync;
+    (*state->getRxStateFn()).store(finalSync, std::memory_order_release);
     sync_.store(finalSync, std::memory_order_release);
 
     return indexWithSync;

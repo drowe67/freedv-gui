@@ -1167,7 +1167,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
     }
 
-    g_State = g_prev_State = 0;
+    g_State.store(0, std::memory_order_release);
+    g_prev_State.store(0, std::memory_order_release);;
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
 
     event.Skip();

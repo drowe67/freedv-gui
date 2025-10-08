@@ -1648,14 +1648,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // sync LED (Colours don't work on Windows) ------------------------
 
+        auto state = g_State.load(std::memory_order_acquire);
         if (m_textSync->IsEnabled())
         {
             auto oldColor = m_textSync->GetForegroundColour();
-            wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
+            wxColour newColor = state ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
         
-            if (g_State) 
+            if (state) 
             {
-                if (g_prev_State == 0) 
+                if (g_prev_State.load(std::memory_order_acquire) == 0) 
                 {
                     g_resyncs++;
                 
@@ -1695,7 +1696,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_textSync->Refresh();
             }
         }
-        g_prev_State.store(g_State.load());
+        g_prev_State.store(state, std::memory_order_release);
 
         // send Callsign ----------------------------------------------------
 
@@ -1987,7 +1988,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_textCodec2Var->SetLabel(var_string);
         }
 
-        if (g_State) {
+        if (state) {
 
             if (g_mode == FREEDV_MODE_RADE)
             {
@@ -2353,7 +2354,8 @@ void MainFrame::performFreeDVOn_()
         m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
-    g_State = g_prev_State = 0;
+    g_State.store(0, std::memory_order_release);
+    g_prev_State.store(0, std::memory_order_release);;
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -3187,7 +3189,7 @@ void MainFrame::startRxStream()
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
-                    g_outfifo1_empty++;
+                    g_outfifo1_empty.fetch_add(1, std::memory_order_release);
                 }
 
                 cbData->outfifo1->read(tmpOutput, toRead);
