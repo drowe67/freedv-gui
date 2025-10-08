@@ -140,11 +140,17 @@ if(APPLE)
         set(PORTAUDIO_BUNDLE_ARG -s ${portaudio_BINARY_DIR})
     endif(NOT USE_NATIVE_AUDIO)
     
+    # Get folder containing libasan so we don't need to enter it to macdylibbundler.
+    execute_process(
+        COMMAND ${CMAKE_C_COMPILER} -print-file-name=libclang_rt.asan_osx_dynamic.dylib
+        OUTPUT_VARIABLE CLANG_SANITIZER_FILE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR}
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR} -s `dirname ${CLANG_SANITIZER_FILE}`
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
