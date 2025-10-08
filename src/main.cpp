@@ -151,7 +151,7 @@ int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
-extern SNDFILE            *g_sfPlayFile;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<bool>                g_playFileToMicIn;
 extern bool                g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -161,7 +161,7 @@ extern bool                g_recFileFromRadio;
 extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 
-extern SNDFILE            *g_sfPlayFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 extern std::atomic<bool>                g_playFileFromRadio;
 extern int                 g_sfFs;
 extern int                 g_sfTxFs;
@@ -189,7 +189,7 @@ float               g_TxFreqOffsetHz;
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
-bool endingTx;
+std::atomic<bool> endingTx;
 
 // Option test file to log samples
 
@@ -361,7 +361,7 @@ void MainApp::UnitTest_()
                 // Transmit until file has finished playing
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
-                g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
+                g_sfPlayFile.store(sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
                 g_sfTxFs = sfInfo.samplerate;
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn.store(true, std::memory_order_release);
@@ -383,7 +383,7 @@ void MainApp::UnitTest_()
             std::this_thread::sleep_for(1s);
             CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(false);
-                endingTx = true;
+                endingTx.store(true, std::memory_order_release);
                 wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
                 rxEvent->SetEventObject(frame->m_btnTogPTT);
                 frame->OnTogBtnPTT(*rxEvent);
@@ -404,7 +404,7 @@ void MainApp::UnitTest_()
             // Receive until file has finished playing
             SF_INFO     sfInfo;
             sfInfo.format = 0;
-            g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfPlayFileFromRadio.store(sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
             g_sfFs = sfInfo.samplerate;
             g_loopPlayFileFromRadio = false;
             g_playFileFromRadio.store(true, std::memory_order_release);
@@ -1178,14 +1178,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
 
-    g_sfPlayFile = NULL;
+    g_sfPlayFile.store(NULL, std::memory_order_release);
     g_playFileToMicIn.store(false, std::memory_order_release);
     g_loopPlayFileToMicIn = false;
 
     g_sfRecFile = NULL;
     g_recFileFromRadio = false;
 
-    g_sfPlayFileFromRadio = NULL;
+    g_sfPlayFileFromRadio.store(NULL, std::memory_order_release);
     g_playFileFromRadio.store(false, std::memory_order_release);
     g_loopPlayFileFromRadio = false;
 
@@ -1367,10 +1367,11 @@ MainFrame::~MainFrame()
     } 
     sox_biquad_finish();
 
-    if (g_sfPlayFile != NULL)
+    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+    if (playFile != NULL)
     {
-        sf_close(g_sfPlayFile);
-        g_sfPlayFile = NULL;
+        sf_close(playFile);
+        g_sfPlayFile.store(NULL, std::memory_order_release);
     }
     if (g_sfRecFile != NULL)
     {
@@ -2228,7 +2229,7 @@ void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
     g_queueResync = false;
-    endingTx = false;
+    endingTx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -3596,7 +3597,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     short* audioData = static_cast<short*>(data);
     short* tmpInput = cbData->tmpReadTxBuffer_.get();
 
-    if (!endingTx) 
+    if (!endingTx.load(std::memory_order_acquire)) 
     {
         auto numChannels = dev.getNumChannels();
         for(size_t i = 0; i < size; i++, audioData += numChannels)

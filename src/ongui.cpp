@@ -41,8 +41,8 @@ extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 
 extern wxConfigBase *pConfig;
-extern bool endingTx;
-extern int g_outfifo1_empty;
+extern std::atomic<bool> endingTx;
+extern std::atomic<int> g_outfifo1_empty;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern paCallBackData* g_rxUserdata;
 
@@ -55,7 +55,7 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
-bool g_eoo_enqueued;
+std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -881,12 +881,12 @@ void MainFrame::togglePTT(void) {
         if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
         {
             log_info("Waiting for EOO to be queued");
-            endingTx = true;
+            endingTx.store(true, std::memory_order_release);
             
             auto beginTime = std::chrono::high_resolution_clock::now();
             while(true)
             {
-                if (g_eoo_enqueued)
+                if (g_eoo_enqueued.load(std::memory_order_acquire))
                 {
                     log_info("Detected that EOO has been enqueued");
                     break;
@@ -909,9 +909,10 @@ void MainFrame::togglePTT(void) {
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
+            auto tmp = g_outfifo1_empty.load(std::memory_order_acquire);
+            if (diff >= std::chrono::milliseconds(1000) || (tmp != sample))
             {
-                log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), g_outfifo1_empty, sample);
+                log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), tmp, sample);
                 break;
             }
 
@@ -986,7 +987,7 @@ void MainFrame::togglePTT(void) {
             }
         }
         g_tx.store(false, std::memory_order_release);
-        endingTx = false;
+        endingTx.store(false, std::memory_order_release);
 
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
         CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
@@ -1077,7 +1078,7 @@ void MainFrame::togglePTT(void) {
 
     if (newTx)
     {
-        endingTx = false;
+        endingTx.store(false, std::memory_order_release);
             
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {

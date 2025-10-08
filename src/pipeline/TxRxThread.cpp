@@ -75,7 +75,7 @@ extern int g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
 extern std::atomic<int> g_tx;
 extern int g_dump_fifo_state;
-extern bool endingTx;
+extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
@@ -104,7 +104,7 @@ extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
-extern bool g_eoo_enqueued;
+extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
 
 #include <speex/speex_preprocess.h>
@@ -126,11 +126,11 @@ static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
 }
 
 #include <sndfile.h>
-extern SNDFILE* g_sfPlayFile;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
-extern SNDFILE* g_sfPlayFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 
 extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
@@ -180,10 +180,10 @@ void TxRxThread::initializePipeline_()
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfTxFs; },
-            []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile : nullptr; },
+            []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile.load(std::memory_order_acquire) : nullptr; },
             []() {
                 if (g_loopPlayFileToMicIn)
-                    sf_seek(g_sfPlayFile, 0, SEEK_SET);
+                    sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
                     ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlayFileToMicIn();});
@@ -193,7 +193,7 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayMicIn->appendPipelineStep(playMicIn);
         
         auto eitherOrPlayStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile.load(std::memory_order_acquire) != NULL); },
             eitherOrPlayMicIn,
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
@@ -339,10 +339,10 @@ void TxRxThread::initializePipeline_()
         auto playRadio = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfFs; },
-            []() { return g_sfPlayFileFromRadio; },
+            []() { return g_sfPlayFileFromRadio.load(std::memory_order_acquire); },
             []() {
                 if (g_loopPlayFileFromRadio)
-                    sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
+                    sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
                     ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlaybackFileFromRadio();});
@@ -353,7 +353,7 @@ void TxRxThread::initializePipeline_()
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { 
-                auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio != NULL);
+                auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio.load(std::memory_order_acquire) != NULL);
                 return result;
             },
             eitherOrPlayRadio,
@@ -735,7 +735,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             {
                 inputPtr = inputSamplesZeros_.get();
             }
-            if (nread != 0 && endingTx)
+            if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
                 if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
                 {
@@ -758,14 +758,14 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                     }
                     else
                     {
-                        g_eoo_enqueued = true;
+                        g_eoo_enqueued.store(true, std::memory_order_release);
                     }
                 }
                 break;
             }
             else
             {
-                g_eoo_enqueued = false;
+                g_eoo_enqueued.store(false, std::memory_order_release);
                 hasEooBeenSent_ = false;
             }
             
