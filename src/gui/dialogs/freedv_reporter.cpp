@@ -311,10 +311,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     this->SetMinSize(GetBestSize());
     
-    // Trigger auto-layout of window.
-    // ==============================
-    this->SetSizerAndFit(sectionSizer);
-
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
         wxGetApp().appConfiguration.reporterWindowWidth,
@@ -322,11 +318,15 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-
+        
+    // Trigger auto-layout of window.
+    // ==============================
+    this->SetSizerAndFit(sectionSizer);
     this->Layout();
 
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
+#if 0
     auto displayNo = wxDisplay::GetFromWindow(this);
     if (displayNo == wxNOT_FOUND)
     {
@@ -349,6 +349,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     wxGetApp().appConfiguration.reporterWindowLeft = actualPos.x;
     wxGetApp().appConfiguration.reporterWindowTop = actualPos.y;
     SetPosition(actualPos);
+#endif //0
 
     // Set up timers. Highlight clear timer has a slightly longer interval
     // to reduce CPU usage.
