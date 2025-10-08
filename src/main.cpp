@@ -122,7 +122,7 @@ std::atomic<bool>  g_agcEnabled;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
-struct FIFO         *g_txDataInFifo;
+std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
@@ -1207,7 +1207,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_tx.store(false, std::memory_order_release);
 
     // data states
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
     g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
 
     sox_biquad_start();
@@ -1714,13 +1714,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      
             // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
             char* sendBuffer = &callsign[0];
-            if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+            auto txDataFifo = g_txDataInFifo.load(std::memory_order_acquire);
+            if ((unsigned)txDataFifo->numUsed() < strlen(sendBuffer)) {
                 unsigned int  i;
 
                 // write chars to tx data fifo
                 for(i = 0; i < strlen(sendBuffer); i++) {
                     short ashort = (unsigned char)sendBuffer[i];
-                    codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+                    txDataFifo->write(&ashort, 1);
                 }
             }
 
@@ -2512,8 +2513,8 @@ void MainFrame::performFreeDVOn_()
     }
 
     // Clear existing TX text, if any.
-    codec2_fifo_destroy(g_txDataInFifo);
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
+    tmpFifo->reset();
 }
 
 void MainFrame::performFreeDVOff_()
