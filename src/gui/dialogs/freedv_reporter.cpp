@@ -2652,5 +2652,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onRecvEndFn_()
 {
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    if (fnQueue_.size() > 0)
+    {
+        parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+    }
 }
