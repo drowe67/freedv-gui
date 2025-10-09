@@ -311,6 +311,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     this->SetMinSize(GetBestSize());
     
+    // Trigger auto-layout of window.
+    // ==============================
+    this->SetSizerAndFit(sectionSizer);
+    
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
         wxGetApp().appConfiguration.reporterWindowWidth,
@@ -318,38 +322,28 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-        
-    // Trigger auto-layout of window.
-    // ==============================
-    this->SetSizerAndFit(sectionSizer);
-    this->Layout();
 
+    this->Layout();
+    
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
-#if 0
-    auto displayNo = wxDisplay::GetFromWindow(this);
-    if (displayNo == wxNOT_FOUND)
-    {
-        displayNo = 0;
-    }
-    wxDisplay currentDisplay(displayNo);
+    wxDisplay currentDisplay(this);
+    auto displayGeometry = currentDisplay.GetClientArea();
     wxPoint actualPos = GetPosition();
     wxSize actualWindowSize = GetSize();
-    wxRect actualDisplaySize = currentDisplay.GetClientArea();
-    if (actualPos.x < (-0.9 * actualWindowSize.GetWidth()) ||
-        actualPos.x > (0.9 * actualDisplaySize.GetWidth()))
+    if (actualPos.x < (displayGeometry.x - (0.9 * actualWindowSize.GetWidth())) ||
+        actualPos.x > (displayGeometry.x + 0.9 * displayGeometry.width))
     {
-        actualPos.x = 0;
+        actualPos.x = displayGeometry.x;
     }
-    if (actualPos.y < 0 ||
-        actualPos.y > (0.9 * actualDisplaySize.GetHeight()))
+    if (actualPos.y < displayGeometry.y ||
+        actualPos.y > (displayGeometry.y + 0.9 * displayGeometry.height))
     {
         actualPos.y = 0;
     }
     wxGetApp().appConfiguration.reporterWindowLeft = actualPos.x;
     wxGetApp().appConfiguration.reporterWindowTop = actualPos.y;
     SetPosition(actualPos);
-#endif //0
 
     // Set up timers. Highlight clear timer has a slightly longer interval
     // to reduce CPU usage.
