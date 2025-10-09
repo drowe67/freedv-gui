@@ -327,7 +327,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
+#if wxCHECK_VERSION(3,2,0)
     wxDisplay currentDisplay(this);
+#else
+    auto displayNo = wxDisplay::GetFromWindow(this);
+    if (displayNo == wxNOT_FOUND)
+    {
+        displayNo = 0;
+    }
+    wxDisplay currentDisplay(displayNo);
+#endif // wxCHECK_VERSION(3,2,0)
+    
     auto displayGeometry = currentDisplay.GetClientArea();
     wxPoint actualPos = GetPosition();
     wxSize actualWindowSize = GetSize();
