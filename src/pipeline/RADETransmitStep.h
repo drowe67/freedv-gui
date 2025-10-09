@@ -25,6 +25,7 @@
 
 #include <cstdio>
 #include <thread>
+#include <atomic>
 
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
@@ -71,7 +72,7 @@ private:
     
     PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
-    bool exitingFeatureThread_;
+    std::atomic<bool> exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
 
     void utFeatureThreadEntry_();

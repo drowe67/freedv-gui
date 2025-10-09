@@ -11,7 +11,7 @@ extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
-extern bool endingTx;
+extern std::atomic<bool> endingTx;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -205,7 +205,7 @@ void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
     popup->Popup();
 }
 
-extern SNDFILE *g_sfPlayFile;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<bool> g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
@@ -249,7 +249,7 @@ int MainFrame::VoiceKeyerStartTx(void)
             return VK_IDLE;
         }
  
-        g_sfPlayFile = tmpPlayFile;
+        g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_.c_str()) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
@@ -307,7 +307,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            endingTx = true;
+            endingTx.store(true, std::memory_order_release);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
@@ -319,7 +319,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_PLAY_FINISHED) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            endingTx = true;
+            endingTx.store(true, std::memory_order_release);
             CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
@@ -402,7 +402,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         m_btnTogPTT->SetValue(false); 
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
-        endingTx = true;
+        endingTx.store(true, std::memory_order_release);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);

@@ -1639,6 +1639,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
         reporter_->setMessageUpdateFn(FreeDVReporter::MessageUpdateFn());
         reporter_->setConnectionSuccessfulFn(FreeDVReporter::ConnectionSuccessfulFn());
         reporter_->setAboutToShowSelfFn(FreeDVReporter::AboutToShowSelfFn());
+        
+        reporter_->setRecvEndFn(FreeDVReporter::RecvEndFn());
     }
     
     auto isChanged = reporter_ != reporter;
@@ -1660,6 +1662,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
             reporter_->setMessageUpdateFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_, this, _1, _2, _3));
             reporter_->setConnectionSuccessfulFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_, this));
             reporter_->setAboutToShowSelfFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_, this));
+            reporter_->setRecvEndFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onRecvEndFn_, this));
         }
         else
         {
@@ -2284,7 +2287,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
@@ -2302,7 +2304,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
@@ -2336,7 +2337,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
@@ -2412,7 +2412,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
@@ -2484,7 +2483,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
@@ -2573,7 +2571,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
@@ -2639,7 +2636,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
     };
 
     fnQueue_.push_back(std::move(handler));
-    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
@@ -2653,4 +2649,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
 
     fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+}
+
+void FreeDVReporterDialog::FreeDVReporterDataModel::onRecvEndFn_()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    if (fnQueue_.size() > 0)
+    {
+        parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+    }
 }

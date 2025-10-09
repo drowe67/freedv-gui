@@ -31,6 +31,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <atomic>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -72,7 +73,7 @@ private:
     struct ThreadInfo
     {
         std::thread thread;
-        bool exitingThread;
+        std::atomic<bool> exitingThread;
         std::unique_ptr<IPipelineStep> step;
         FIFO* inputFifo;
         FIFO* outputFifo;

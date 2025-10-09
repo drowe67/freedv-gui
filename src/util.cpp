@@ -213,13 +213,14 @@ void MainFrame::ClosePTTInPort(void)
     }
 }
 
-struct FIFO extern  *g_txDataInFifo;
+extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO extern *g_rxDataOutFifo;
 
 char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
 
-    codec2_fifo_read(g_txDataInFifo, &ch, 1);
+    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
+    tmpFifo->read(&ch, 1);
     return (char)ch;
 }
 

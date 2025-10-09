@@ -34,6 +34,8 @@
 class TcpConnectionHandler : public ThreadedObject
 {
 public:
+    using OnRecvEndFn = std::function<void()>;
+
     TcpConnectionHandler();
     virtual ~TcpConnectionHandler();
     
@@ -41,6 +43,8 @@ public:
     std::future<void> disconnect();
     
     std::future<void> send(const char* buf, int length);
+
+    void setOnRecvEndFn(OnRecvEndFn fn);
     
 protected:
     std::string host_;
@@ -59,7 +63,8 @@ private:
     std::atomic<bool> ipv6Complete_;
     std::atomic<bool> cancelConnect_;
     GenericFIFO<char> receiveBuffer_;
-    
+    OnRecvEndFn onRecvEndFn_;
+
     void connectImpl_();
     void disconnectImpl_();
     void sendImpl_(const char* buf, int length);

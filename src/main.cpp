@@ -96,7 +96,7 @@ bool                g_queueResync;
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-int                 g_channel_noise;
+std::atomic<int>    g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
@@ -122,7 +122,7 @@ std::atomic<bool>  g_agcEnabled;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
-struct FIFO         *g_txDataInFifo;
+std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
@@ -151,7 +151,7 @@ int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
-extern SNDFILE            *g_sfPlayFile;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<bool>                g_playFileToMicIn;
 extern bool                g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -161,7 +161,7 @@ extern bool                g_recFileFromRadio;
 extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 
-extern SNDFILE            *g_sfPlayFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 extern std::atomic<bool>                g_playFileFromRadio;
 extern int                 g_sfFs;
 extern int                 g_sfTxFs;
@@ -189,7 +189,7 @@ float               g_TxFreqOffsetHz;
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
-bool endingTx;
+std::atomic<bool> endingTx;
 
 // Option test file to log samples
 
@@ -361,7 +361,7 @@ void MainApp::UnitTest_()
                 // Transmit until file has finished playing
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
-                g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
+                g_sfPlayFile.store(sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
                 g_sfTxFs = sfInfo.samplerate;
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn.store(true, std::memory_order_release);
@@ -383,7 +383,7 @@ void MainApp::UnitTest_()
             std::this_thread::sleep_for(1s);
             CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(false);
-                endingTx = true;
+                endingTx.store(true, std::memory_order_release);
                 wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
                 rxEvent->SetEventObject(frame->m_btnTogPTT);
                 frame->OnTogBtnPTT(*rxEvent);
@@ -404,7 +404,7 @@ void MainApp::UnitTest_()
             // Receive until file has finished playing
             SF_INFO     sfInfo;
             sfInfo.format = 0;
-            g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfPlayFileFromRadio.store(sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
             g_sfFs = sfInfo.samplerate;
             g_loopPlayFileFromRadio = false;
             g_playFileFromRadio.store(true, std::memory_order_release);
@@ -1178,14 +1178,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
 
-    g_sfPlayFile = NULL;
+    g_sfPlayFile.store(NULL, std::memory_order_release);
     g_playFileToMicIn.store(false, std::memory_order_release);
     g_loopPlayFileToMicIn = false;
 
     g_sfRecFile = NULL;
     g_recFileFromRadio = false;
 
-    g_sfPlayFileFromRadio = NULL;
+    g_sfPlayFileFromRadio.store(NULL, std::memory_order_release);
     g_playFileFromRadio.store(false, std::memory_order_release);
     g_loopPlayFileFromRadio = false;
 
@@ -1207,7 +1207,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_tx.store(false, std::memory_order_release);
 
     // data states
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
     g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
 
     sox_biquad_start();
@@ -1367,10 +1367,11 @@ MainFrame::~MainFrame()
     } 
     sox_biquad_finish();
 
-    if (g_sfPlayFile != NULL)
+    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+    if (playFile != NULL)
     {
-        sf_close(g_sfPlayFile);
-        g_sfPlayFile = NULL;
+        sf_close(playFile);
+        g_sfPlayFile.store(NULL, std::memory_order_release);
     }
     if (g_sfRecFile != NULL)
     {
@@ -1648,14 +1649,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // sync LED (Colours don't work on Windows) ------------------------
 
+        auto state = g_State.load(std::memory_order_acquire);
         if (m_textSync->IsEnabled())
         {
             auto oldColor = m_textSync->GetForegroundColour();
-            wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
+            wxColour newColor = state ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
         
-            if (g_State) 
+            if (state) 
             {
-                if (g_prev_State == 0) 
+                if (g_prev_State.load(std::memory_order_acquire) == 0) 
                 {
                     g_resyncs++;
                 
@@ -1695,7 +1697,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_textSync->Refresh();
             }
         }
-        g_prev_State.store(g_State.load());
+        g_prev_State.store(state, std::memory_order_release);
 
         // send Callsign ----------------------------------------------------
 
@@ -1712,13 +1714,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      
             // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
             char* sendBuffer = &callsign[0];
-            if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+            auto txDataFifo = g_txDataInFifo.load(std::memory_order_acquire);
+            if ((unsigned)txDataFifo->numUsed() < strlen(sendBuffer)) {
                 unsigned int  i;
 
                 // write chars to tx data fifo
                 for(i = 0; i < strlen(sendBuffer); i++) {
                     short ashort = (unsigned char)sendBuffer[i];
-                    codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+                    txDataFifo->write(&ashort, 1);
                 }
             }
 
@@ -1918,7 +1921,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             freedvInterface.resetTestFrameStats();
         }
         freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise = wxGetApp().m_channel_noise;
+        g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
         wxString modeString; 
@@ -1987,7 +1990,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_textCodec2Var->SetLabel(var_string);
         }
 
-        if (g_State) {
+        if (state) {
 
             if (g_mode == FREEDV_MODE_RADE)
             {
@@ -2227,7 +2230,7 @@ void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
     g_queueResync = false;
-    endingTx = false;
+    endingTx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -2353,7 +2356,8 @@ void MainFrame::performFreeDVOn_()
         m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
-    g_State = g_prev_State = 0;
+    g_State.store(0, std::memory_order_release);
+    g_prev_State.store(0, std::memory_order_release);;
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -2509,8 +2513,8 @@ void MainFrame::performFreeDVOn_()
     }
 
     // Clear existing TX text, if any.
-    codec2_fifo_destroy(g_txDataInFifo);
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
+    tmpFifo->reset();
 }
 
 void MainFrame::performFreeDVOff_()
@@ -3187,7 +3191,7 @@ void MainFrame::startRxStream()
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
-                    g_outfifo1_empty++;
+                    g_outfifo1_empty.fetch_add(1, std::memory_order_release);
                 }
 
                 cbData->outfifo1->read(tmpOutput, toRead);
@@ -3594,7 +3598,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     short* audioData = static_cast<short*>(data);
     short* tmpInput = cbData->tmpReadTxBuffer_.get();
 
-    if (!endingTx) 
+    if (!endingTx.load(std::memory_order_acquire)) 
     {
         auto numChannels = dev.getNumChannels();
         for(size_t i = 0; i < size; i++, audioData += numChannels)

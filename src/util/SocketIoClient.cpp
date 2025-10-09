@@ -180,8 +180,6 @@ void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::co
 
 void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 {
-    log_debug("got engine.io message %c of length %d", ptr[0], length);
-
     switch(ptr[0])
     {
         case '0':

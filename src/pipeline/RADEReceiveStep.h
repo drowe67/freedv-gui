@@ -85,7 +85,7 @@ private:
     
     PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
-    bool exitingFeatureThread_;
+    std::atomic<bool> exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
    
     realtime_fp<std::atomic<int>*()> rxStateFn_;
