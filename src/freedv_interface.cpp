@@ -151,7 +151,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
         {
             // Special case for RADE.
             // Note: multi-RX not currently supported.
-            rxMode_ = mode;
+            rxMode_.store(mode, std::memory_order_release);
             txMode_ = mode;
             modemStatsIndex_ = 0;
 
@@ -217,8 +217,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
         if (mode == txMode)
         {
             currentTxMode_ = dv;
-            currentRxMode_ = dv;
-            rxMode_ = mode;
+            currentRxMode_.store(dv, std::memory_order_release);
+            rxMode_.store(mode, std::memory_order_release);
             txMode_ = mode;
         }
         
@@ -286,10 +286,10 @@ void FreeDVInterface::stop()
     
     modemStatsList_ = nullptr;
     currentTxMode_ = nullptr;
-    currentRxMode_ = nullptr;
+    currentRxMode_.store(nullptr, std::memory_order_release);
     modemStatsIndex_ = 0;
     txMode_ = 0;
-    rxMode_ = 0;
+    rxMode_.store(0, std::memory_order_release);
 
     if (rade_ != nullptr)
     {
@@ -353,26 +353,32 @@ void FreeDVInterface::setTestFrames(bool testFrames, bool combine)
 
 int FreeDVInterface::getTotalBits()
 {
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
+    
     // Special case for RADE.
-    if (currentRxMode_ == nullptr) return 1;
+    if (tmpMode == nullptr) return 1;
 
-    return freedv_get_total_bits(currentRxMode_);
+    return freedv_get_total_bits(tmpMode);
 }
 
 int FreeDVInterface::getTotalBitErrors()
 {
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
+     
     // Special case for RADE.
-    if (currentRxMode_ == nullptr) return 0;
+    if (tmpMode == nullptr) return 0;
 
-    return freedv_get_total_bit_errors(currentRxMode_);
+    return freedv_get_total_bit_errors(tmpMode);
 }
 
 float FreeDVInterface::getVariance() const
 {
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
+    
     // Special case for RADE.
-    if (currentRxMode_ == nullptr) return 0.0;
+    if (tmpMode == nullptr) return 0.0;
 
-    struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
+    struct CODEC2 *c2 = freedv_get_codec2(tmpMode);
     if (c2 != NULL)
         return codec2_get_var(c2);
     else
@@ -381,10 +387,12 @@ float FreeDVInterface::getVariance() const
 
 int FreeDVInterface::getErrorPattern(short** outputPattern)
 {
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
+    
     // Special case for RADE.
-    if (currentRxMode_ == nullptr) return 0;
+    if (tmpMode == nullptr) return 0;
 
-    int size = freedv_get_sz_error_pattern(currentRxMode_);
+    int size = freedv_get_sz_error_pattern(tmpMode);
     if (size > 0)
     {
         *outputPattern = new short[size];
@@ -445,8 +453,10 @@ void FreeDVInterface::changeTxMode(int txMode)
 
 void FreeDVInterface::setSync(int val) FREEDV_NONBLOCKING
 {
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
+    
     // Special case for RADE.
-    if (currentRxMode_ == nullptr) return;
+    if (tmpMode == nullptr) return;
 
     for (auto& dv : dvObjects_)
     {
@@ -487,7 +497,7 @@ void FreeDVInterface::setVerbose(bool val)
 void FreeDVInterface::FreeDVTextRxFn_(void *callback_state, char c)
 {
     FreeDVTextFnState* fnState = (FreeDVTextFnState*)callback_state;
-    if (fnState->modeObj == fnState->interfaceObj->currentRxMode_)
+    if (fnState->modeObj == fnState->interfaceObj->currentRxMode_.load(std::memory_order_acquire))
     {
         // Only forward text onto RX function if this is the currently sync'd mode.
         fnState->interfaceObj->textRxFunc_(callback_state, c);
@@ -577,7 +587,7 @@ void FreeDVInterface::setTextVaricodeNum(int num)
 
 int FreeDVInterface::getRxModemSampleRate() const
 {
-    if (rxMode_ >= FREEDV_MODE_RADE)
+    if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return RADE_MODEM_SAMPLE_RATE;
     }
@@ -593,7 +603,7 @@ int FreeDVInterface::getRxModemSampleRate() const
 
 int FreeDVInterface::getRxNumModemSamples() const
 {
-    if (rxMode_ >= FREEDV_MODE_RADE)
+    if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return 960;
     }
@@ -609,7 +619,7 @@ int FreeDVInterface::getRxNumModemSamples() const
 
 int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 {
-    if (rxMode_ >= FREEDV_MODE_RADE)
+    if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return 1920;
     }
@@ -625,7 +635,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 
 int FreeDVInterface::getRxSpeechSampleRate() const FREEDV_NONBLOCKING
 {
-    if (rxMode_ >= FREEDV_MODE_RADE)
+    if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return RADE_SPEECH_SAMPLE_RATE;
     }
@@ -800,7 +810,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING {
             FreeDVInterface* state = (FreeDVInterface*)step->getStateObj();
             auto finalSync = step->getSync();
-            *step->getRxStateFn()() = finalSync;
+            (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
 	});
@@ -875,10 +885,11 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj) FREEDV_NONBLOCKING
     }
     
     // If the current RX mode is still sync'd, only process through that one.
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
     for (auto& dv : dvObjects_)
     {
         FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex];
-        if (dv == currentRxMode_ && castedStep->getSync())
+        if (dv == tmpMode && castedStep->getSync())
         {
             return rxIndex;
         }
@@ -892,6 +903,7 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj) FREEDV_NONBLOCKING
 {
     ReceivePipelineState* state = static_cast<ReceivePipelineState*>(stepObj->getState());
     auto& parallelSteps = stepObj->getParallelSteps();
+    auto tmpMode = currentRxMode_.load(std::memory_order_acquire);
 
     // If the current RX mode is still sync'd, only let that one out.
     int rxIndex = 0;
@@ -904,7 +916,7 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj) FREEDV_NONBLOCKING
     for (auto& dv : dvObjects_)
     {
         FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex];
-        if (dv == currentRxMode_ && castedStep->getSync())
+        if (dv == tmpMode && castedStep->getSync())
         {
             dvWithSync = dv;
             indexWithSync = rxIndex;
@@ -972,9 +984,9 @@ skipSyncCheck:
             
         if (finalSync)
         {
-            rxMode_ = enabledModes_[indexWithSync];  
-            currentRxMode_ = dvWithSync;
-            lastSyncRxMode_ = currentRxMode_;
+            rxMode_.store(enabledModes_[indexWithSync], std::memory_order_release);  
+            currentRxMode_.store(dvWithSync, std::memory_order_release);
+            lastSyncRxMode_ = dvWithSync;
         } 
 
         *state->getSigPwrAvgFn() = castedStep->getSigPwrAvg();
@@ -985,7 +997,7 @@ skipSyncCheck:
         finalSync = castedStep->getSync();
     }
 
-    *state->getRxStateFn() = finalSync;
+    (*state->getRxStateFn()).store(finalSync, std::memory_order_release);
     sync_.store(finalSync, std::memory_order_release);
 
     return indexWithSync;

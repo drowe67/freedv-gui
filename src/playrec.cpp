@@ -8,7 +8,7 @@
 #include "main.h"
 
 extern wxMutex g_mutexProtectingCallbackData;
-SNDFILE            *g_sfPlayFile;
+std::atomic<SNDFILE*> g_sfPlayFile;
 std::atomic<bool>                g_playFileToMicIn;
 bool                g_loopPlayFileToMicIn;
 int                 g_playFileToMicInEventId;
@@ -21,7 +21,7 @@ int                 g_recFileFromRadioEventId;
 SNDFILE            *g_sfRecMicFile;
 bool                g_recFileFromMic;
 
-SNDFILE            *g_sfPlayFileFromRadio;
+std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
 int                 g_sfFs;
 int                 g_sfTxFs;
@@ -60,8 +60,8 @@ void MainFrame::StopPlayFileToMicIn(void)
     if (g_playFileToMicIn.load(std::memory_order_acquire))
     {
         g_playFileToMicIn.store(false, std::memory_order_release);
-        sf_close(g_sfPlayFile);
-        g_sfPlayFile = nullptr;
+        sf_close(g_sfPlayFile.load(std::memory_order_acquire));
+        g_sfPlayFile.store(nullptr, std::memory_order_release);
         SetStatusText(wxT(""));
         VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
@@ -72,8 +72,9 @@ void MainFrame::StopPlaybackFileFromRadio()
 {
     g_mutexProtectingCallbackData.Lock();
     g_playFileFromRadio.store(false, std::memory_order_release);
-    sf_close(g_sfPlayFileFromRadio);
-    g_sfPlayFileFromRadio = nullptr;
+    auto tmp = g_sfPlayFileFromRadio.load(std::memory_order_acquire);
+    sf_close(tmp);
+    g_sfPlayFileFromRadio.store(nullptr, std::memory_order_release);
     SetStatusText(wxT(""));
     m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
     g_mutexProtectingCallbackData.Unlock();
@@ -133,9 +134,9 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
                 sfInfo.samplerate = freedvInterface.getRxModemSampleRate();
             }
         }
-        g_sfPlayFileFromRadio = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
+        g_sfPlayFileFromRadio.store(sf_open(soundFile.c_str(), SFM_READ, &sfInfo), std::memory_order_release);
         g_sfFs = sfInfo.samplerate;
-        if(g_sfPlayFileFromRadio == NULL)
+        if(g_sfPlayFileFromRadio.load(std::memory_order_acquire) == NULL)
         {
             wxString strErr = sf_strerror(NULL);
             wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);

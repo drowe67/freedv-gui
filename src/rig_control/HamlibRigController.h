@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "util/ThreadedObject.h"
 #include "IRigFrequencyController.h"
@@ -78,7 +79,7 @@ private:
     const PttType pttType_;
     std::string pttSerialPort_;
     
-    RIG* rig_;
+    std::atomic<RIG*> rig_;
     bool multipleVfos_;
     bool pttSet_;
     uint64_t currFreq_;

@@ -123,7 +123,7 @@ HamlibRigController::~HamlibRigController()
     auto fut = prom->get_future();
 
     enqueue_([this, prom]() {
-        if (rig_ != nullptr)
+        if (rig_.load(std::memory_order_acquire) != nullptr)
         {
             disconnectImpl_();
         }
@@ -215,7 +215,7 @@ void HamlibRigController::disconnect()
 
 bool HamlibRigController::isConnected()
 {
-    return rig_ != nullptr;
+    return rig_.load(std::memory_order_acquire) != nullptr;
 }
 
 void HamlibRigController::ptt(bool state)
@@ -277,7 +277,7 @@ int HamlibRigController::GetNumberSupportedRadios()
 
 void HamlibRigController::connectImpl_()
 {
-    if (rig_ != nullptr)
+    if (rig_.load(std::memory_order_acquire) != nullptr)
     {
         std::string errMsg = "Already connected to radio.";
         onRigError(this, errMsg);
@@ -296,8 +296,8 @@ void HamlibRigController::connectImpl_()
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
 
-    rig_ = rig_init(RigList_[rigIndex]->rig_model);
-    if (!rig_) 
+    auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
+    if (!tmpRig) 
     {
         log_debug("rig_init() failed, returning");
         
@@ -305,6 +305,7 @@ void HamlibRigController::connectImpl_()
         onRigError(this, errMsg);
         return;
     }
+    rig_.store(tmpRig, std::memory_order_release);
     log_debug("rig_init() OK ....");
 
     /* Set CI-V address if necessary. */
@@ -320,7 +321,7 @@ void HamlibRigController::connectImpl_()
         log_debug("hamlib: ignoring CI-V configuration due to non-Icom radio\r");
     }
 
-    rig_set_conf(rig_, rig_token_lookup(rig_, "rig_pathname"), serialPort_.c_str());
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "rig_pathname"), serialPort_.c_str());
 
     if (pttSerialPort_.size() > 0 && 
         pttSerialPort_ != serialPort_ &&
@@ -331,7 +332,7 @@ void HamlibRigController::connectImpl_()
         // WSJT-X logic, not sure it's needed here.
         fixedPttSerialPort = std::string("\\\\.\\") + fixedPttSerialPort;
 #endif // defined(WIN32)
-        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), fixedPttSerialPort.c_str());
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_pathname"), fixedPttSerialPort.c_str());
     }
     
     if (serialRate_ > 0) 
@@ -339,27 +340,27 @@ void HamlibRigController::connectImpl_()
         log_debug("hamlib: setting serial rate: %d", serialRate_);
         std::stringstream ss;
         ss << serialRate_;
-        rig_set_conf(rig_, rig_token_lookup(rig_, "serial_speed"), ss.str().c_str());
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "serial_speed"), ss.str().c_str());
     }
 
     // Set PTT type as needed.
     switch(pttType_)
     {
         case PTT_VIA_RTS:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RTS");
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_type"), "RTS");
             break;
         case PTT_VIA_DTR:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "DTR");
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_type"), "DTR");
             break;
         case PTT_VIA_NONE:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_type"), "RIG");
             break;
         case PTT_VIA_CAT_DATA:
             // Need to explicitly use RIGMICDATA in order for RIG_PTT_ON_DATA to work.
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIGMICDATA");
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_type"), "RIGMICDATA");
             break;
         default:
             break;
@@ -367,28 +368,28 @@ void HamlibRigController::connectImpl_()
     
     if (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR)
     {
-        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_share"), "1");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_share"), "1");
     }
     
     // Icom workaround from WSJT-X. Not sure it's needed here as
     // FreeDV doesn't do split.
-    rig_set_conf(rig_, rig_token_lookup(rig_, "no_xchg"), "1");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "no_xchg"), "1");
 
-    auto result = rig_open(rig_);
+    auto result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
         // Set timeouts so that we don't wait an extremely long time to begin TX.
-        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "500");
-        rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "0");
-        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "0");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), "500");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
             
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
-        if (rig_get_vfo (rig_, &vfo) == RIG_OK && (rig_->state.vfo_list & RIG_VFO_B))
+        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && (tmpRig->state.vfo_list & RIG_VFO_B))
         {
             multipleVfos_ = true;
         }
@@ -405,13 +406,15 @@ void HamlibRigController::connectImpl_()
     }
     log_debug("hamlib: rig_open() failed: %s", rigerror(result));
 
-    rig_cleanup(rig_);
-    rig_ = nullptr;
+    tmpRig = rig_.load(std::memory_order_acquire);
+    rig_.store(nullptr, std::memory_order_release);
+    rig_cleanup(tmpRig);
 }
 
 void HamlibRigController::disconnectImpl_()
 {
-    if (rig_) 
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig) 
     {
         // Stop transmitting.
         if (pttSet_)
@@ -433,9 +436,9 @@ void HamlibRigController::disconnectImpl_()
         origFreq_ = 0;
         origMode_ = RIG_MODE_NONE;
         
-        rig_close(rig_);
-        rig_cleanup(rig_);
-        rig_ = nullptr;
+        rig_.store(nullptr, std::memory_order_release);
+        rig_close(tmpRig);
+        rig_cleanup(tmpRig);
         
         onRigDisconnected(this);
     }
@@ -443,9 +446,10 @@ void HamlibRigController::disconnectImpl_()
 
 void HamlibRigController::pttImpl_(bool state)
 {
+    auto tmpRig = rig_.load(std::memory_order_acquire);
     log_debug("Hamlib::ptt: %d", state);
 
-    if (rig_ == nullptr)
+    if (tmpRig == nullptr)
     {
         return;
     }
@@ -460,7 +464,7 @@ void HamlibRigController::pttImpl_(bool state)
     int result = RIG_OK;
     if (pttType_ != PTT_VIA_NONE)
     {
-        result = rig_set_ptt(rig_, RIG_VFO_CURR, on);
+        result = rig_set_ptt(tmpRig, RIG_VFO_CURR, on);
     }
     auto newTime = std::chrono::steady_clock::now();
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
@@ -493,7 +497,8 @@ void HamlibRigController::pttImpl_(bool state)
 
 void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
 {
-    if (rig_ == nullptr)
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr)
     {
         return;
     }
@@ -506,7 +511,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_OFF);
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, RIG_PTT_OFF);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -526,7 +531,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -571,7 +576,8 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             return;
     }
     
-    if (rig_ == nullptr || currMode_ == hamlibMode)
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr || currMode_ == hamlibMode)
     {
         return;
     }
@@ -579,7 +585,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_OFF);
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, RIG_PTT_OFF);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -599,7 +605,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -614,7 +620,8 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
 
 void HamlibRigController::requestCurrentFrequencyModeImpl_()
 {
-    if (rig_ == nullptr)
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr)
     {
         return;
     }
@@ -624,7 +631,7 @@ void HamlibRigController::requestCurrentFrequencyModeImpl_()
     vfo_t currVfo = getCurrentVfo_();    
 
 modeAttempt:
-    int result = rig_get_mode(rig_, currVfo, &mode, &passband);
+    int result = rig_get_mode(tmpRig, currVfo, &mode, &passband);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_get_mode: error = %s ", rigerror(result));
@@ -641,7 +648,7 @@ modeAttempt:
     {
 freqAttempt:
         freq_t freq = 0;
-        result = rig_get_freq(rig_, currVfo, &freq);
+        result = rig_get_freq(tmpRig, currVfo, &freq);
         if (result != RIG_OK && currVfo == RIG_VFO_CURR)
         {
             log_debug("rig_get_freq: error = %s ", rigerror(result));
@@ -703,9 +710,15 @@ vfo_t HamlibRigController::getCurrentVfo_()
 {
     vfo_t vfo = RIG_VFO_CURR;
     
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr)
+    {
+        return vfo;
+    }
+    
     if (multipleVfos_)
     {
-        int result = rig_get_vfo(rig_, &vfo);
+        int result = rig_get_vfo(tmpRig, &vfo);
         if (result != RIG_OK && result != -RIG_ENAVAIL)
         {
             // Note: we'll still attempt operation using RIG_VFO_CURR just in case.
@@ -720,6 +733,12 @@ vfo_t HamlibRigController::getCurrentVfo_()
 void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz)
 {
     bool setOkay = false;
+    
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr)
+    {
+        return;
+    }
 
     // Avoid setting invalid frequencies as hamlib sometimes doesn't handle this well.
     if (currFreq_ == frequencyHz || frequencyHz == 0)
@@ -728,7 +747,7 @@ void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyH
     }
     
 freqAttempt:
-    int result = rig_set_freq(rig_, currVfo, frequencyHz);
+    int result = rig_set_freq(tmpRig, currVfo, frequencyHz);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_freq: error = %s ", rigerror(result));
@@ -763,6 +782,12 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
     
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr)
+    {
+        return;
+    }
+    
     // Avoid setting invalid mode as hamlib sometimes doesn't handle this well.
     if (currMode_ == mode || mode == RIG_MODE_NONE)
     {
@@ -770,7 +795,7 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
     }
 
 modeAttempt:
-    int result = rig_set_mode(rig_, currVfo, mode, RIG_PASSBAND_NOCHANGE);
+    int result = rig_set_mode(tmpRig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_mode: error = %s ", rigerror(result));

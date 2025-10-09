@@ -99,7 +99,7 @@ RADETransmitStep::~RADETransmitStep()
 
     if (featuresFile_ != nullptr)
     {
-        exitingFeatureThread_ = true;
+        exitingFeatureThread_.store(true, std::memory_order_release);
         featuresAvailableSem_.signal();
         utFeatureThread_.join();
         fclose(featuresFile_);
@@ -242,7 +242,7 @@ void RADETransmitStep::utFeatureThreadEntry_()
     float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);
 
-    while (!exitingFeatureThread_)
+    while (!exitingFeatureThread_.load(std::memory_order_acquire))
     {
         auto numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
         while (numToRead > 0)
