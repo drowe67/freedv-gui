@@ -74,6 +74,8 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
+        
+        void autosizeColumns();
     
     protected:
 
@@ -214,7 +216,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  return reporter_ && reporter_->isValidForReporting();
              }
-
+             
              // Required overrides to implement functionality
              virtual bool HasDefaultCompare() const override;
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;

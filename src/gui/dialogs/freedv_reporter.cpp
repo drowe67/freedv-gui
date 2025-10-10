@@ -923,6 +923,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
+            autosizeColumns();
             model->sortOnNextTimerInterval = false;
         }
     }
@@ -1340,6 +1341,20 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->setBandFilter(freq);
+}
+
+void FreeDVReporterDialog::autosizeColumns()
+{
+    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        if (index != USER_MESSAGE_COL)
+        {
+            // USER_MESSAGE_COL width is preserved and should not be messed with.
+            auto col = m_listSpots->GetColumn(index);
+            col->SetWidth(wxCOL_WIDTH_DEFAULT);
+            col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+        }
+    }
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequency freq)
