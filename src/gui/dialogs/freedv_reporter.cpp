@@ -23,8 +23,12 @@
 #include <wx/datetime.h>
 #include <wx/display.h>
 #include <wx/clipbrd.h>
-#include "freedv_reporter.h"
 
+#if wxCHECK_VERSION(3,2,0)
+#include <wx/uilocale.h>
+#endif // wxCHECK_VERSION(3,2,0)
+
+#include "freedv_reporter.h"
 #include "freedv_interface.h"
 
 extern FreeDVInterface freedvInterface;
@@ -1406,7 +1410,41 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
 
+#if __APPLE__
+        // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
+        // on the .app in Finder. Running the app from Terminal seems to work fine with .Format for 
+        // some reason. O_o
+        struct tm tmpTm;
+        auto tmpDateTm = tmpDate.GetTm(timeZone);
+        
+        tmpTm.tm_sec = tmpDateTm.sec;
+        tmpTm.tm_min = tmpDateTm.min;
+        tmpTm.tm_hour = tmpDateTm.hour;
+        tmpTm.tm_mday = tmpDateTm.mday;
+        tmpTm.tm_mon = tmpDateTm.mon;
+        tmpTm.tm_year = tmpDateTm.year - 1900;
+        tmpTm.tm_wday = tmpDateTm.GetWeekDay();
+        tmpTm.tm_yday = tmpDateTm.yday;
+        tmpTm.tm_isdst = -1;
+        
+        char buf[4096];
+#if wxCHECK_VERSION(3,2,0)
+        wxString sysLocale = wxUILocale::GetCurrent().GetName();
+        auto sysLocaleT = newlocale(LC_TIME_MASK, (const char*)sysLocale.ToUTF8(), NULL);
+        if (sysLocaleT != nullptr)
+        {
+            strftime_l(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm, sysLocaleT);
+            freelocale(sysLocaleT);
+        }
+        else
+#endif // wxCHECK_VERSION(3,2,0)
+        {
+            strftime(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm);
+        }
+        return buf;
+#else
         return tmpDate.Format(parent_->TIME_FORMAT_STR, timeZone);
+#endif // __APPLE__
     }
     else
     {
