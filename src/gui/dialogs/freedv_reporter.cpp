@@ -23,8 +23,12 @@
 #include <wx/datetime.h>
 #include <wx/display.h>
 #include <wx/clipbrd.h>
-#include "freedv_reporter.h"
 
+#if wxCHECK_VERSION(3,2,0)
+#include <wx/uilocale.h>
+#endif // wxCHECK_VERSION(3,2,0)
+
+#include "freedv_reporter.h"
 #include "freedv_interface.h"
 
 extern FreeDVInterface freedvInterface;
@@ -314,7 +318,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
-
+    
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
         wxGetApp().appConfiguration.reporterWindowWidth,
@@ -324,25 +328,30 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         wxGetApp().appConfiguration.reporterWindowTop));
 
     this->Layout();
-
+    
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
+#if wxCHECK_VERSION(3,2,0)
+    wxDisplay currentDisplay(this);
+#else
     auto displayNo = wxDisplay::GetFromWindow(this);
     if (displayNo == wxNOT_FOUND)
     {
         displayNo = 0;
     }
     wxDisplay currentDisplay(displayNo);
+#endif // wxCHECK_VERSION(3,2,0)
+    
+    auto displayGeometry = currentDisplay.GetClientArea();
     wxPoint actualPos = GetPosition();
     wxSize actualWindowSize = GetSize();
-    wxRect actualDisplaySize = currentDisplay.GetClientArea();
-    if (actualPos.x < (-0.9 * actualWindowSize.GetWidth()) ||
-        actualPos.x > (0.9 * actualDisplaySize.GetWidth()))
+    if (actualPos.x < (displayGeometry.x - (0.9 * actualWindowSize.GetWidth())) ||
+        actualPos.x > (displayGeometry.x + 0.9 * displayGeometry.width))
     {
-        actualPos.x = 0;
+        actualPos.x = displayGeometry.x;
     }
-    if (actualPos.y < 0 ||
-        actualPos.y > (0.9 * actualDisplaySize.GetHeight()))
+    if (actualPos.y < displayGeometry.y ||
+        actualPos.y > (displayGeometry.y + 0.9 * displayGeometry.height))
     {
         actualPos.y = 0;
     }
@@ -918,6 +927,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
+            autosizeColumns();
             model->sortOnNextTimerInterval = false;
         }
     }
@@ -1337,6 +1347,20 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     model->setBandFilter(freq);
 }
 
+void FreeDVReporterDialog::autosizeColumns()
+{
+    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        if (index != USER_MESSAGE_COL)
+        {
+            // USER_MESSAGE_COL width is preserved and should not be messed with.
+            auto col = m_listSpots->GetColumn(index);
+            col->SetWidth(wxCOL_WIDTH_DEFAULT);
+            col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+        }
+    }
+}
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequency freq)
 {
     filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -1386,7 +1410,41 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
 
+#if __APPLE__
+        // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
+        // on the .app in Finder. Running the app from Terminal seems to work fine with .Format for 
+        // some reason. O_o
+        struct tm tmpTm;
+        auto tmpDateTm = tmpDate.GetTm(timeZone);
+        
+        tmpTm.tm_sec = tmpDateTm.sec;
+        tmpTm.tm_min = tmpDateTm.min;
+        tmpTm.tm_hour = tmpDateTm.hour;
+        tmpTm.tm_mday = tmpDateTm.mday;
+        tmpTm.tm_mon = tmpDateTm.mon;
+        tmpTm.tm_year = tmpDateTm.year - 1900;
+        tmpTm.tm_wday = tmpDateTm.GetWeekDay();
+        tmpTm.tm_yday = tmpDateTm.yday;
+        tmpTm.tm_isdst = -1;
+        
+        char buf[4096];
+#if wxCHECK_VERSION(3,2,0)
+        wxString sysLocale = wxUILocale::GetCurrent().GetName();
+        auto sysLocaleT = newlocale(LC_TIME_MASK, (const char*)sysLocale.ToUTF8(), NULL);
+        if (sysLocaleT != nullptr)
+        {
+            strftime_l(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm, sysLocaleT);
+            freelocale(sysLocaleT);
+        }
+        else
+#endif // wxCHECK_VERSION(3,2,0)
+        {
+            strftime(buf, sizeof(buf), (const char*)parent_->TIME_FORMAT_STR.ToUTF8(), &tmpTm);
+        }
+        return buf;
+#else
         return tmpDate.Format(parent_->TIME_FORMAT_STR, timeZone);
+#endif // __APPLE__
     }
     else
     {
