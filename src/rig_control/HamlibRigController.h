@@ -65,6 +65,8 @@ public:
     static int RigNameToIndex(std::string rigName);
     static std::string RigIndexToName(unsigned int rigIndex);
     static int GetNumberSupportedRadios();
+    static int GetMinimumSerialBaudRate(unsigned int rigIndex);
+    static int GetMaximumSerialBaudRate(unsigned int rigIndex);
     
     virtual int getRigResponseTimeMicroseconds() override;
 

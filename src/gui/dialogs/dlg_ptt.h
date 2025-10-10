@@ -93,6 +93,7 @@ class ComPortsDlg : public wxDialog
 
 protected:
         void populatePortList();
+        void populateBaudRateList(int min = 0, int max = 0);
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);

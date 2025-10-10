@@ -267,6 +267,18 @@ std::string HamlibRigController::RigIndexToName(unsigned int rigIndex)
     return RigNameList_[rigIndex];
 }
 
+int HamlibRigController::GetMinimumSerialBaudRate(unsigned int rigIndex)
+{
+    InitializeHamlibLibrary();
+    return RigList_[rigIndex]->serial_rate_min;
+}
+
+int HamlibRigController::GetMaximumSerialBaudRate(unsigned int rigIndex)
+{
+    InitializeHamlibLibrary();
+    return RigList_[rigIndex]->serial_rate_max;
+}
+
 int HamlibRigController::GetNumberSupportedRadios()
 {
     InitializeHamlibLibrary();
