@@ -375,7 +375,7 @@ void ComPortsDlg::populateBaudRateList(int min, int max)
         }
         else if (i == 0 && prevSelection == 0)
         {
-            m_cbSerialRate->SetSelection(0, 0);
+            m_cbSerialRate->SetSelection(0);
         }
     }
 }
@@ -560,6 +560,10 @@ void ComPortsDlg::ExchangeData(int inout)
         resetIcomCIVStatus();
         m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
         m_cbPttSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort);
+        
+        auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+        auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+        populateBaudRateList(minBaudRate, maxBaudRate);
 
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
             m_cbSerialRate->SetSelection(0);
