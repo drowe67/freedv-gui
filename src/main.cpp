@@ -746,7 +746,7 @@ void MainFrame::loadConfiguration_()
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
     m_sliderTxLevel->SetValue(g_txLevel);
-    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel, 1), DECIBEL_STR);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
