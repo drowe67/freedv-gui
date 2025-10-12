@@ -916,6 +916,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
         model->updateHighlights();
+        autosizeColumns();
     }
     else if (event.GetTimer().GetId() == m_deleteTimer->GetId())
     {
@@ -927,7 +928,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
-            autosizeColumns();
             model->sortOnNextTimerInterval = false;
         }
     }
