@@ -69,7 +69,7 @@ ParallelStep::ParallelStep(
         threadState->tempOutput = std::make_unique<short[]>(outputSampleRate);
         threadState->tempInput = std::make_unique<short[]>(inputSampleRate);
          
-        threadState->exitingThread = false;
+        threadState->exitingThread.store(false, std::memory_order_release);
         if (runMultiThreaded)
         {
             // Initialize semaphore
@@ -105,7 +105,7 @@ ParallelStep::ParallelStep(
                     realtimeHelper_->setHelperRealTime();
                 }
             
-                while(!s->exitingThread)
+                while(!s->exitingThread.load(std::memory_order_acquire))
                 {
                     bool fallbackToSleep = false;
                     auto beginTime = std::chrono::high_resolution_clock::now();
@@ -158,7 +158,7 @@ ParallelStep::~ParallelStep()
     // Exit all spawned threads, if any.
     for (auto& taskThread : threads_)
     {        
-        taskThread->exitingThread = true;
+        taskThread->exitingThread.store(true, std::memory_order_release);
         if (taskThread->thread.joinable())
         {
             // Destroy semaphore
@@ -289,7 +289,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
             codec2_fifo_write(threadState->outputFifo, output, samplesOut);
         }
         samplesIn = std::min((inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC, codec2_fifo_used(threadState->inputFifo));
-    } while (samplesIn > 0 && !threadState->exitingThread);
+    } while (samplesIn > 0 && !threadState->exitingThread.load(std::memory_order_acquire));
 }
 
 void ParallelStep::reset() FREEDV_NONBLOCKING

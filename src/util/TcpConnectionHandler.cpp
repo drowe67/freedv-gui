@@ -138,6 +138,13 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     return fut;
 }
 
+void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
+{
+    enqueue_([this, fn]() {
+        onRecvEndFn_ = fn;
+    });
+}
+
 void TcpConnectionHandler::connectImpl_()
 {
     // Convert port to string (needed by getaddrinfo() below).
@@ -599,6 +606,10 @@ void TcpConnectionHandler::receiveImpl_()
                         receiveBuffer_.read(tmp, toRead);
                         onReceive_(tmp, toRead);
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
+                    }
+                    if (onRecvEndFn_)
+                    {
+                        onRecvEndFn_();
                     }
                 });
             } 

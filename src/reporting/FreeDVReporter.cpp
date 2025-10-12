@@ -236,6 +236,12 @@ void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
     onAboutToShowSelfFn_ = fn;
 }
 
+void FreeDVReporter::setRecvEndFn(RecvEndFn fn)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    onRecvEndFn_ = fn;
+}
+
 bool FreeDVReporter::isValidForReporting()
 {
     return callsign_ != "" && gridSquare_ != "";
@@ -263,6 +269,13 @@ void FreeDVReporter::connect_()
         yyjson_mut_obj_add_str(authDoc, authData, "os", osString.c_str());
     }
 
+    sioClient_->setOnRecvEndFn([&]() {
+        if (onRecvEndFn_)
+        {
+            onRecvEndFn_();
+        }
+    });
+    
     // Reconnect listener should re-report frequency so that "unknown"
     // doesn't appear.
     sioClient_->setOnConnectFn([&]()

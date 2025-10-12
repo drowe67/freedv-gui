@@ -63,7 +63,7 @@ void* MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
-    cb->eqLock.lock();
+    cb->micEqLock.lock();
 
     // Volume can be adjusted via main window without enabling filters
     if (wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB != 0 && g_nSoundCards > 1)
@@ -89,6 +89,9 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, rxSampleRate);
     }
     
+    cb->micEqLock.unlock();
+    cb->spkEqLock.lock();
+    
     // init Spk Out Equaliser Filters
 
     if (cb->spkOutEQEnable) {
@@ -102,23 +105,26 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         // Note: vol can be a no-op!
         assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
     }
-    cb->eqLock.unlock();
+    cb->spkEqLock.unlock();
 }
 
 #define VERIFY_AND_DESTROY(x) if (x != nullptr) { sox_biquad_destroy(x); x = nullptr; }
 
 void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
-    cb->eqLock.lock();
+    cb->micEqLock.lock();
     VERIFY_AND_DESTROY(cb->sbqMicInBass);
     VERIFY_AND_DESTROY(cb->sbqMicInTreble);
     VERIFY_AND_DESTROY(cb->sbqMicInMid);
     VERIFY_AND_DESTROY(cb->sbqMicInVol);
+    cb->micEqLock.unlock();
+    
+    cb->spkEqLock.lock();
     VERIFY_AND_DESTROY(cb->sbqSpkOutBass);
     VERIFY_AND_DESTROY(cb->sbqSpkOutTreble);
     VERIFY_AND_DESTROY(cb->sbqSpkOutMid);
     VERIFY_AND_DESTROY(cb->sbqSpkOutVol);
-    cb->eqLock.unlock();
+    cb->spkEqLock.unlock();
 }
 
 

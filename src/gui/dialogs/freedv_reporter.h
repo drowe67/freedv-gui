@@ -322,6 +322,8 @@ class FreeDVReporterDialog : public wxFrame
 
             void onConnectionSuccessfulFn_();
             void onAboutToShowSelfFn_();
+            
+            void onRecvEndFn_();
 
             void execQueuedAction_();
 

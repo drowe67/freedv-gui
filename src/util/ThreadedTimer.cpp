@@ -26,9 +26,14 @@
 #include <pthread.h>
 #endif // defined(__APPLE__)
 
+#define PERCENT_TOLERANCE 0.05
+
 ThreadedTimer::ThreadedTimer()
     : isDestroying_(false)
     , isRestarting_(false)
+#if defined(__APPLE__)
+    , internalTimer_(nullptr)
+#endif // defined(__APPLE__)
     , repeat_(false)
     , timeoutMilliseconds_(0)
 {
@@ -37,6 +42,9 @@ ThreadedTimer::ThreadedTimer()
 
 ThreadedTimer::ThreadedTimer(int milliseconds, TimerCallbackFn fn, bool repeat)
     : isDestroying_(false)
+#if defined(__APPLE__)
+    , internalTimer_(nullptr)
+#endif // defined(__APPLE__)
 {
     setTimeout(milliseconds);
     setCallback(fn);
@@ -68,29 +76,64 @@ void ThreadedTimer::setRepeat(bool repeat)
 
 bool ThreadedTimer::isRunning()
 {
+#if defined(__APPLE__)
+    return internalTimer_ != nullptr;
+#else
     return objectThread_.joinable();
+#endif // defined(__APPLE__)
 }
     
 void ThreadedTimer::start()
 {
     stop();
-    
+
+#if defined(__APPLE__)
+    {
+        std::unique_lock<std::mutex> lk(timerMutex_);
+        internalTimer_ =
+            dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
+        if (internalTimer_ != nullptr)
+        {
+            auto timeoutNanoseconds = timeoutMilliseconds_ * NSEC_PER_MSEC;
+            auto leeway = timeoutNanoseconds * PERCENT_TOLERANCE;
+            dispatch_set_context(internalTimer_, this);
+            dispatch_source_set_timer(internalTimer_, dispatch_time(DISPATCH_TIME_NOW, timeoutNanoseconds), timeoutNanoseconds, leeway);
+            dispatch_source_set_event_handler_f(internalTimer_, &ThreadedTimer::OnHandleTimer_);
+            dispatch_resume(internalTimer_);
+        }
+    }
+#else
     isDestroying_ = false;
     objectThread_ = std::thread(std::bind(&ThreadedTimer::eventLoop_, this));
+#endif // defined(__APPLE__)
 }
 
 void ThreadedTimer::stop()
 {
+#if defined(__APPLE__)
+    std::unique_lock<std::mutex> lk(timerMutex_);
+    if (internalTimer_ != nullptr)
+    {
+        dispatch_source_cancel(internalTimer_);
+        dispatch_release(internalTimer_);
+        internalTimer_ = nullptr;
+    }
+#else
     if (objectThread_.joinable())
     {
         isDestroying_ = true;
         timerCV_.notify_one();
         objectThread_.join();
     }
+#endif // defined(__APPLE__)
 }
 
 void ThreadedTimer::restart()
 {
+#if defined(__APPLE__)
+    stop();
+    start();
+#else
     if (objectThread_.joinable())
     {
         isRestarting_ = true;
@@ -100,8 +143,23 @@ void ThreadedTimer::restart()
     {
         start();
     }
+#endif // defined(__APPLE__)
 }
 
+#if defined(__APPLE__)
+void ThreadedTimer::OnHandleTimer_(void* context)
+{
+    ThreadedTimer* thisObj = (ThreadedTimer*)context;
+    if (!thisObj->repeat_)
+    {
+        thisObj->stop();
+    }
+    {
+        std::unique_lock<std::mutex> lk(thisObj->timerMutex_);
+        thisObj->fn_(*thisObj);
+    }
+}
+#else
 void ThreadedTimer::eventLoop_()
 {
 #if defined(__APPLE__)
@@ -119,3 +177,4 @@ void ThreadedTimer::eventLoop_()
         }
     } while (!isDestroying_ && (isRestarting_ || repeat_));
 }
+#endif // !defined(__APPLE__)

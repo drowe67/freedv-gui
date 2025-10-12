@@ -697,8 +697,7 @@ void FilterDlg::OnInitDialog(wxInitDialogEvent& event)
 }
 
 void FilterDlg::setBeta(void) {
-    wxString buf;
-    buf.Printf(wxT("%3.2f"), m_beta);
+    wxString buf = wxNumberFormatter::ToString(m_beta, 2);
     m_staticTextBeta->SetLabel(buf);
     int slider = (int)(m_beta*SLIDER_MAX_BETA_GAMMA + 0.5);
     m_codec2LPCPostFilterBeta->SetValue(slider);
@@ -715,8 +714,7 @@ void FilterDlg::setCodec2(void) {
 }
 
 void FilterDlg::setGamma(void) {
-    wxString buf;
-    buf.Printf(wxT("%3.2f"), m_gamma);
+    wxString buf = wxNumberFormatter::ToString(m_gamma, 2);
     m_staticTextGamma->SetLabel(buf);
     int slider = (int)(m_gamma*SLIDER_MAX_BETA_GAMMA + 0.5);
     m_codec2LPCPostFilterGamma->SetValue(slider);
@@ -812,8 +810,7 @@ void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
 
 void FilterDlg::setFreq(EQ *eq)
 {
-    wxString buf;
-    buf.Printf(wxT("%3.0f"), eq->freqHz);
+    wxString buf = wxNumberFormatter::ToString(eq->freqHz, 0);
     eq->valueFreq->SetLabel(buf);
     int slider = (int)((eq->freqHz/eq->maxFreqHz)*eq->sliderFreq->GetMax() + 0.5);
     eq->sliderFreq->SetValue(slider);
@@ -836,8 +833,7 @@ void FilterDlg::sliderToFreq(EQ *eq, bool micIn)
 
 void FilterDlg::setGain(EQ *eq)
 {
-    wxString buf;
-    buf.Printf(wxT("%3.1f"), eq->gaindB);
+    wxString buf = wxNumberFormatter::ToString(eq->gaindB, 1);
     eq->valueGain->SetLabel(buf);
     int slider = (int)(((eq->gaindB-MIN_GAIN)/(MAX_GAIN-MIN_GAIN))*SLIDER_MAX_GAIN + 0.5);
     eq->sliderGain->SetValue(slider);
@@ -862,8 +858,7 @@ void FilterDlg::sliderToGain(EQ *eq, bool micIn)
 
 void FilterDlg::setQ(EQ *eq)
 {
-    wxString buf;
-    buf.Printf(wxT("%2.1f"), eq->Q);
+    wxString buf = wxNumberFormatter::ToString(eq->Q, 1);
     eq->valueQ->SetLabel(buf);
 
     float log10_range = MAX_LOG10_Q - MIN_LOG10_Q;
