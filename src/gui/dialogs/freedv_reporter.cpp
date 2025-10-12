@@ -641,6 +641,12 @@ void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
     wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
 
     Layout();
+    
+#if defined(WIN32)
+    // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+    // platforms causes excessive CPU usage for no benefit.
+    autosizeColumns();
+#endif // defined(WIN32)
 }
 
 void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
@@ -649,6 +655,14 @@ void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
    
     wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
     wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+    
+    Layout();
+    
+#if defined(WIN32)
+    // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+    // platforms causes excessive CPU usage for no benefit.
+    autosizeColumns();
+#endif // defined(WIN32)
 }
 
 void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
@@ -916,7 +930,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
         model->updateHighlights();
-        autosizeColumns();
     }
     else if (event.GetTimer().GetId() == m_deleteTimer->GetId())
     {
