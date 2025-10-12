@@ -923,9 +923,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.GetSize() > 0)
+        if (itemsChanged.size() > 0)
         {
-            autosizeColumns();
+            parent_->autosizeColumns();
         }
 #endif // defined(WIN32)
     
