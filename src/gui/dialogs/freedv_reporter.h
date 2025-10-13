@@ -74,9 +74,11 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-        
-        void autosizeColumns();
     
+#if defined(WIN32)
+        void autosizeColumns();
+#endif // defined(WIN32)
+            
     protected:
 
         // Handlers for events.

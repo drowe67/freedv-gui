@@ -821,7 +821,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
     CallbackHandler handler;
 
 #if defined(WIN32)
-    bool autosizeColumns = false;
+    bool doAutoSizeColumns = false;
 #endif // define(WIN32)
     
     handler.fn = [this](CallbackHandler&) {
@@ -900,7 +900,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     if (newVisibility)
                     {
                         ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
-                        autosizeColumns = true;
+#if defined(WIN32)
+                        doAutoSizeColumns = true;
+#endif // defined(WIN32)
                     }
                     else
                     {
@@ -929,7 +931,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.size() > 0 || autosizeColumns)
+        if (itemsChanged.size() > 0 || doAutoSizeColumns)
         {
             parent_->autosizeColumns();
         }
@@ -1376,9 +1378,10 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     model->setBandFilter(freq);
 }
 
+#if defined(WIN32)
 void FreeDVReporterDialog::autosizeColumns()
 {
-    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         if (index != USER_MESSAGE_COL)
         {
@@ -1389,6 +1392,7 @@ void FreeDVReporterDialog::autosizeColumns()
         }
     }
 }
+#endif // defined(WIN32)
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequency freq)
 {
@@ -2117,7 +2121,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
 #if defined(WIN32)
-    bool autosizeColumns = false;
+    bool doAutoSizeColumns = false;
 #endif // defined(WIN32)
     
     for (auto& kvp : allReporterData_)
@@ -2169,7 +2173,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             if (newVisibility)
             {
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
-                autosizeColumns = true;
+#if defined(WIN32)
+                doAutoSizeColumns = true;
+#endif // defined(WIN32)
             }
             else
             {
@@ -2184,7 +2190,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     }
     
 #if defined(WIN32)
-    if (autosizeColumns)
+    if (doAutoSizeColumns)
     {
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
