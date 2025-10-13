@@ -819,12 +819,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
-
-#if defined(WIN32)
-    bool doAutoSizeColumns = false;
-#endif // define(WIN32)
     
     handler.fn = [this](CallbackHandler&) {
+#if defined(WIN32)
+        bool doAutoSizeColumns = false;
+#endif // define(WIN32)
+    
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -2194,7 +2194,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     {
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
-        autosizeColumns();
+        parent_->autosizeColumns();
     }
 #endif // defined(WIN32)
 }
@@ -2391,7 +2391,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 #if defined(WIN32)
             // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
             // platforms causes excessive CPU usage for no benefit.
-            autosizeColumns();
+            parent_->autosizeColumns();
 #endif // defined(WIN32)
             sortOnNextTimerInterval = true;
         }
@@ -2510,7 +2510,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
 #if defined(WIN32)
                     // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
                     // platforms causes excessive CPU usage for no benefit.
-                    autosizeColumns();
+                    parent_->autosizeColumns();
 #endif // defined(WIN32)
                 }
                 else
