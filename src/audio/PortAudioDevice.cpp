@@ -167,9 +167,9 @@ void PortAudioDevice::stop()
     }
 }
 
-int PortAudioDevice::getLatencyInMicroseconds()
+int64_t PortAudioDevice::getLatencyInMicroseconds()
 {
-    int latency = 0;
+    int64_t latency = 0;
     if (deviceStream_ != nullptr)
     {
         auto streamInfo = portAudioLibrary_->GetStreamInfo(deviceStream_).get();

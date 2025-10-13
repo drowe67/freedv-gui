@@ -51,6 +51,8 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
 
     sioClient_ = new SocketIoClient();
     assert(sioClient_ != nullptr);
+
+    isFullyConnected_.store(std::memory_order_release);
 }
 
 FreeDVReporter::~FreeDVReporter()
@@ -150,7 +152,7 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     
-    if (isValidForReporting() && isFullyConnected_)
+    if (isValidForReporting() && isFullyConnected_.load(std::memory_order_acquire))
     {
         yyjson_mut_doc* rxDoc = yyjson_mut_doc_new(nullptr);
         yyjson_mut_val* rxData = yyjson_mut_obj(rxDoc);
@@ -286,7 +288,7 @@ void FreeDVReporter::connect_()
     sioClient_->setOnDisconnectFn([&]() {
         std::unique_lock<std::mutex> lk(objMutex_);
         isConnecting_ = false;
-        isFullyConnected_ = false;
+        isFullyConnected_.store(false, std::memory_order_release);
         
         if (onReporterDisconnectFn_)
         {
@@ -295,7 +297,7 @@ void FreeDVReporter::connect_()
     });
     
     isConnecting_ = true;
-    isFullyConnected_ = false;
+    isFullyConnected_.store(false, std::memory_order_release);
     
     std::stringstream ss;
     ss << hostname_;
@@ -351,7 +353,7 @@ void FreeDVReporter::connect_()
 
     sioClient_->on("connection_successful", [&](yyjson_val*) {
         std::unique_lock<std::mutex> lk(objMutex_);
-        isFullyConnected_ = true;
+        isFullyConnected_.store(true, std::memory_order_release);
     
         if (onConnectionSuccessfulFn_)
         {
@@ -567,7 +569,7 @@ void FreeDVReporter::connect_()
 
 void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 {
-    if (isFullyConnected_)
+    if (isFullyConnected_.load(std::memory_order_acquire))
     {
         yyjson_mut_doc* freqDoc = yyjson_mut_doc_new(nullptr);
         yyjson_mut_val* freqData = yyjson_mut_obj(freqDoc);
@@ -584,7 +586,7 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 
 void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 {
-    if (isFullyConnected_)
+    if (isFullyConnected_.load(std::memory_order_acquire))
     {
         yyjson_mut_doc* txDoc = yyjson_mut_doc_new(nullptr);
         yyjson_mut_val* txData = yyjson_mut_obj(txDoc);
@@ -602,7 +604,7 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 
 void FreeDVReporter::sendMessageImpl_(std::string message)
 {
-    if (isFullyConnected_)
+    if (isFullyConnected_.load(std::memory_order_acquire))
     {
         yyjson_mut_doc* txDoc = yyjson_mut_doc_new(nullptr);
         yyjson_mut_val* txData = yyjson_mut_obj(txDoc);
@@ -619,7 +621,7 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 void FreeDVReporter::hideFromViewImpl_()
 {
     hidden_ = true;
-    if (isFullyConnected_)
+    if (isFullyConnected_.load(std::memory_order_acquire))
     {
         sioClient_->emit("hide_self");
     }
@@ -633,7 +635,7 @@ void FreeDVReporter::showOurselvesImpl_()
     }
     
     hidden_ = false;
-    if (isFullyConnected_)
+    if (isFullyConnected_.load(std::memory_order_acquire))
     {
         sioClient_->emit("show_self");
     }
