@@ -819,6 +819,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
+
+#if defined(WIN32)
+    bool autosizeColumns = false;
+#endif // define(WIN32)
+    
     handler.fn = [this](CallbackHandler&) {
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
@@ -895,6 +900,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     if (newVisibility)
                     {
                         ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        autosizeColumns = true;
                     }
                     else
                     {
@@ -923,7 +929,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.size() > 0)
+        if (itemsChanged.size() > 0 || autosizeColumns)
         {
             parent_->autosizeColumns();
         }
@@ -953,12 +959,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
             model->triggerResort();
             model->sortOnNextTimerInterval = false;
         }
-        
-#if defined(WIN32)
-        // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-        // platforms causes excessive CPU usage for no benefit.
-        autosizeColumns();
-#endif // defined(WIN32)
     }
 }
 
@@ -2115,6 +2115,10 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &v
 void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 {
     std::unique_lock<std::recursive_mutex> lk(dataMtx_);
+
+#if defined(WIN32)
+    bool autosizeColumns = false;
+#endif // defined(WIN32)
     
     for (auto& kvp : allReporterData_)
     {
@@ -2165,6 +2169,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             if (newVisibility)
             {
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                autosizeColumns = true;
             }
             else
             {
@@ -2177,6 +2182,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isPendingUpdate = true;
         }
     }
+    
+#if defined(WIN32)
+    if (autosizeColumns)
+    {
+        // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+        // platforms causes excessive CPU usage for no benefit.
+        autosizeColumns();
+    }
+#endif // defined(WIN32)
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText)
@@ -2368,6 +2382,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         if (temp->isVisible)
         {
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
+#if defined(WIN32)
+            // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+            // platforms causes excessive CPU usage for no benefit.
+            autosizeColumns();
+#endif // defined(WIN32)
             sortOnNextTimerInterval = true;
         }
     };
@@ -2482,6 +2501,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 if (newVisibility)
                 {
                     ItemAdded(wxDataViewItem(nullptr), dvi);
+#if defined(WIN32)
+                    // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+                    // platforms causes excessive CPU usage for no benefit.
+                    autosizeColumns();
+#endif // defined(WIN32)
                 }
                 else
                 {
