@@ -41,7 +41,7 @@ public:
 
     virtual bool isRunning() override;
     
-    virtual int getLatencyInMicroseconds() override;
+    virtual int64_t getLatencyInMicroseconds() override;
     
 protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.

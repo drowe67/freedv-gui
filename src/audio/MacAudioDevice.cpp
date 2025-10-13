@@ -555,9 +555,9 @@ bool MacAudioDevice::isRunning()
     return running_;
 }
 
-int MacAudioDevice::getLatencyInMicroseconds()
+int64_t MacAudioDevice::getLatencyInMicroseconds()
 {
-    std::shared_ptr<std::promise<int>> prom = std::make_shared<std::promise<int> >();
+    std::shared_ptr<std::promise<int64_t>> prom = std::make_shared<std::promise<int64_t> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {        
         // Total latency is based on the formula:
@@ -644,8 +644,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
             delete[] streams;
         }
         
-        auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
-        auto frameSize = bufferFrameSize;
+        int64_t ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
+        int64_t frameSize = bufferFrameSize;
         prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
     });
     return fut.get();

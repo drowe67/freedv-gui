@@ -54,7 +54,7 @@ public:
 
     virtual bool isRunning() = 0;
     
-    virtual int getLatencyInMicroseconds() = 0;
+    virtual int64_t getLatencyInMicroseconds() = 0;
     
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.

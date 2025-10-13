@@ -173,7 +173,7 @@ void PulseAudioDevice::stop()
     }
 }
 
-int PulseAudioDevice::getLatencyInMicroseconds()
+int64_t PulseAudioDevice::getLatencyInMicroseconds()
 {
     pa_threaded_mainloop_lock(mainloop_);
     pa_usec_t latency = 0;
@@ -182,7 +182,7 @@ int PulseAudioDevice::getLatencyInMicroseconds()
         pa_stream_get_latency(stream_, &latency, nullptr); // ignore error and assume 0
     }
     pa_threaded_mainloop_unlock(mainloop_);
-    return (int)latency;
+    return latency;
 }
 
 void PulseAudioDevice::setHelperRealTime()
