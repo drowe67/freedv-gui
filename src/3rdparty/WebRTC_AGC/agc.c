@@ -266,6 +266,7 @@ static float fast_sqrt(float x) {
 #else
     s = sqrtf(x);
 #endif
+    if (isnan(s)) s = 0.0f;
     return s;
 }
 

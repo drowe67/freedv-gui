@@ -75,6 +75,10 @@ class FreeDVReporterDialog : public wxFrame
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
     
+#if defined(WIN32)
+        void autosizeColumns();
+#endif // defined(WIN32)
+            
     protected:
 
         // Handlers for events.
@@ -214,7 +218,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  return reporter_ && reporter_->isValidForReporting();
              }
-
+             
              // Required overrides to implement functionality
              virtual bool HasDefaultCompare() const override;
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
