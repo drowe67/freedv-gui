@@ -64,7 +64,7 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
 if [ ! -d "$(pwd)/rade_src" ]; then
-    git clone -b master https://github.com/drowe67/radae.git rade_src
+    git clone -b main https://github.com/drowe67/radae.git rade_src
 fi
 sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
