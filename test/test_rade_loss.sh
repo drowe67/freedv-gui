@@ -9,7 +9,7 @@ if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
 else
     SOX_DRIVER=alsa
     FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
-    PYTHON_BINARY=python3
+    PYTHON_BINARY=${PYTHON_BINARY:-python3}
 fi
 
 createVirtualAudioCable () {
