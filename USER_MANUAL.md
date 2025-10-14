@@ -856,6 +856,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
+    * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
 
 ## V2.0.2 October 2025
 
