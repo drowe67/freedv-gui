@@ -198,8 +198,8 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
-          grep "Got 1 sync changes" tmp.log
+          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh txrx RADEV1 | tee tmp.log
+          grep "PASS" tmp.log
 
   build:
     strategy:

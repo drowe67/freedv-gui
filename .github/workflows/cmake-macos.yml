@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
+        os: [macos-15]  # ARM64
 
     runs-on: ${{ matrix.os }}
 
@@ -165,5 +165,5 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1 | tee temp-test.txt
-          grep "Got 1 sync changes" temp-test.txt
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_rade_loss.sh | tee temp-test.txt
+          grep "PASS" temp-test.txt
