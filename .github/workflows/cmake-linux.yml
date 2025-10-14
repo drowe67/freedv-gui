@@ -188,6 +188,7 @@ jobs:
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           metacity --sm-disable --replace &
           sleep 5
+          . ./rade-venv/bin/activate
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
           FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
@@ -211,6 +212,7 @@ jobs:
           wireplumber &
           metacity --sm-disable --replace &
           sleep 5
+          . ./rade-venv/bin/activate
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
           FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log

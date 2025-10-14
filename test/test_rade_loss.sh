@@ -5,7 +5,7 @@ OPERATING_SYSTEM=`uname`
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
-    PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
+    PYTHON_BINARY=${PYTHON_BINARY:-src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3}
 else
     SOX_DRIVER=alsa
     FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
