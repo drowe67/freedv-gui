@@ -852,6 +852,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clean up ThreadSanitizer warnings in codebase. (PR #1053)
     * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
     * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
+    * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
