@@ -241,11 +241,13 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     } 
     
     int yOffset = 0;
+    gc->BeginLayer(1.0);
     for (auto& bmp : waterfallSlices_)
     {
         gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
         yOffset += bmp->GetHeight();
     }
+    gc->EndLayer();
 
     if (yOffset < m_imgHeight)
     {

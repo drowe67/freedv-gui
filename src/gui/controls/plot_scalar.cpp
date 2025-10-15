@@ -239,6 +239,8 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         lineMap_[index].y2 = INT_MIN;
     }
 
+    ctx->BeginLayer(1.0);
+
     int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
@@ -299,7 +301,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             }
         }
     }
-   
+
     if (!m_bar_graph)
     {
         int offsetX = 0;
@@ -315,7 +317,9 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             int x = index + offsetX;
             ctx->StrokeLine(x, item->y1 + offsetY, x, item->y2 + offsetY);
         }
-    } 
+    }
+ 
+    ctx->EndLayer();
 
     drawGraticuleFast(ctx, repaintDataOnly);
 }
