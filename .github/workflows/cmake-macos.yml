@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15]  # ARM64
-        sanitizer: [WITH_ASAN=0, WITH_ASAN=1]
+        sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_RTSAN=1]
 
     runs-on: ${{ matrix.os }}
 
@@ -33,7 +33,7 @@ jobs:
 
     - uses: gerlero/brew-install@v1
       with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 llvm@20
 
     - name: Install VB-Cable
       shell: bash
@@ -49,7 +49,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       run: |
