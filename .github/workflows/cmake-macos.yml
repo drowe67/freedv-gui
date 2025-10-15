@@ -19,6 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15]  # ARM64
+        sanitizer: [WITH_ASAN=0, WITH_ASAN=1]
 
     runs-on: ${{ matrix.os }}
 
@@ -48,7 +49,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       run: |
