@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-15-intel]  # ARM64, x86_64
+        os: [macos-15]  # ARM64
 
     runs-on: ${{ matrix.os }}
 
@@ -115,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, ARM64
+        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
     needs: dist
@@ -162,17 +162,9 @@ jobs:
           sudo mdutil -a -i off
           sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
 
-    - name: Install needed Python packages
-      shell: bash
-      run: |
-          python3 -m venv rade-venv
-          . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
-          pip3 install matplotlib
-
     - name: Sanity check RADE
       shell: bash
       run: |
           . ./rade-venv/bin/activate
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHON_BINARY=python3 ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHON_BINARY=./FreeDV-dmg/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3 ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           grep "PASS" temp-test.txt
