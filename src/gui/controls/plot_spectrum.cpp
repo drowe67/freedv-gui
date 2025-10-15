@@ -149,6 +149,8 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     prev_x = PLOT_BORDER + XLEFT_OFFSET;
     prev_y = PLOT_BORDER;
+    ctx->BeginLayer(1.0);
+    wxGraphicsPath path = ctx->CreatePath();
     for(index = 0; index < m_n_magdB; index++)
     {
         x = index*index_to_px;
@@ -181,9 +183,14 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         y += PLOT_BORDER;
 
         if (index)
-            ctx->StrokeLine(x, y, prev_x, prev_y);
+        {
+            path.MoveToPoint(prev_x, prev_y);
+            path.AddLineToPoint(x, y);
+        }
         prev_x = x; prev_y = y;
     }
+    ctx->StrokePath(path);
+    ctx->EndLayer();
 
     // and finally draw Graticule
 
