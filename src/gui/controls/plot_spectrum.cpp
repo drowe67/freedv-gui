@@ -184,10 +184,13 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
         if (index)
         {
-            path.MoveToPoint(prev_x, prev_y);
             path.AddLineToPoint(x, y);
         }
         prev_x = x; prev_y = y;
+        if (!index)
+        {
+            path.MoveToPoint(prev_x, prev_y);
+        }
     }
     ctx->StrokePath(path);
     ctx->EndLayer();
