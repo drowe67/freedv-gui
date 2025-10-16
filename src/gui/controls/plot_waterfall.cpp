@@ -27,13 +27,9 @@
 #include "plot_waterfall.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
-#include "../../util/audio_spin_mutex.h"
-
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
-extern float g_avmag[];                 // av mag spec passed in to draw() 
-extern audio_spin_mutex g_avmag_mtx;
 extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -60,7 +56,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): PlotPanel(parent)
+PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int colour): PlotPanel(parent)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -70,6 +66,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     {
         m_heatmap_lut[i] = heatmap((float)i, 0.0, 255.0);
     }
+    m_magDb         = magDb;
     m_graticule     = graticule;
     m_colour        = colour;
     m_Bufsz         = GetMaxClientSize();
@@ -403,12 +400,11 @@ void PlotWaterfall::plotPixelData()
     int min_fft_bin=((float)200/m_modem_stats_max_f_hz)*MODEM_STATS_NSPEC;
     int max_fft_bin=((float)2800/m_modem_stats_max_f_hz)*MODEM_STATS_NSPEC;
 
-    g_avmag_mtx.lock();
     for(int i=min_fft_bin; i<max_fft_bin; i++) 
     {
-        if (g_avmag[i] > max_mag)
+        if (m_magDb[i] > max_mag)
         {
-            max_mag = g_avmag[i];
+            max_mag = m_magDb[i];
         }
     }
 
@@ -439,7 +435,7 @@ void PlotWaterfall::plotPixelData()
         index = px;
         assert(index < MODEM_STATS_NSPEC);
 
-        intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
+        intensity = intensity_per_dB * (m_magDb[index] - m_min_mag);
         if(intensity > 255) intensity = 255;
         if (intensity < 0) intensity = 0;
 
@@ -467,8 +463,6 @@ void PlotWaterfall::plotPixelData()
             break;
         }
     }
-    
-    g_avmag_mtx.unlock();
     
     for (int row = 1; row < dy; row++)
     {

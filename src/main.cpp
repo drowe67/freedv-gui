@@ -104,6 +104,8 @@ float               g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
+float               g_avmag_waterfall[MODEM_STATS_NSPEC];
+float               g_avmag_spectrum[MODEM_STATS_NSPEC];
 audio_spin_mutex    g_avmag_mtx;
 
 // TX level for attenuation
@@ -1037,7 +1039,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     tools->Append(m_menuItemToolsConfigDelete);
     
     // Add Waterfall Plot window
-    m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
+    m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, g_avmag_waterfall, false, 0);
     m_panelWaterfall->SetToolTip(_("Double click to tune, middle click to re-center"));
     m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
@@ -1045,7 +1047,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     wxPanel* spectrumPanel = new wxPanel(m_auiNbookCtrl);
     
     // Actual Spectrum plot
-    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag,
+    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag_spectrum,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
     m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));    
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
@@ -1591,6 +1593,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
      else
      {
+         // Update average magnitudes
+         g_avmag_mtx.lock();
+         memcpy(g_avmag_waterfall, g_avmag, sizeof(g_avmag));
+         memcpy(g_avmag_spectrum, g_avmag, sizeof(g_avmag));
+         g_avmag_mtx.unlock();
+
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
          if (txState)
