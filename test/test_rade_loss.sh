@@ -4,12 +4,12 @@
 OPERATING_SYSTEM=`uname`
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
-    FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
-    PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
+    FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
+    PYTHON_BINARY=${PYTHON_BINARY:-src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3}
 else
     SOX_DRIVER=alsa
-    FREEDV_BINARY=src/freedv
-    PYTHON_BINARY=python3
+    FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
+    PYTHON_BINARY=${PYTHON_BINARY:-python3}
 fi
 
 createVirtualAudioCable () {
@@ -63,6 +63,9 @@ fi
 mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
+if [ ! -d "$(pwd)/rade_src" ]; then
+    git clone -b main https://github.com/drowe67/radae.git rade_src
+fi
 sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording

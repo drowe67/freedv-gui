@@ -525,6 +525,11 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
 
             m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
             resetIcomCIVStatus_();
+            
+            auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+            auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+            updateHamlibSerialRates_(minBaudRate, maxBaudRate);
+            
             m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
@@ -644,6 +649,10 @@ void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent& event)
 void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent& event)
 {
     resetIcomCIVStatus_();
+    
+    auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+    auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+    updateHamlibSerialRates_(minBaudRate, maxBaudRate);
 }
 
 void EasySetupDialog::resetIcomCIVStatus_()
@@ -985,6 +994,43 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
     SetMinSize(GetBestSize());
 }
 
+void EasySetupDialog::updateHamlibSerialRates_(int min, int max)
+{
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+
+    auto prevSelection = m_cbSerialRate->GetCurrentSelection();
+    int oldBaud = 0;
+    if (prevSelection > 0)
+    {
+        oldBaud = wxAtoi(serialRates[prevSelection]);
+    }
+    m_cbSerialRate->Clear();
+
+    unsigned int i;
+    for(i=0; i<WXSIZEOF(serialRates); i++) {
+        auto rateAsInt = wxAtoi(serialRates[i]);
+
+        if (i > 0 && min > 0 && max > 0)
+        {
+            if (min > rateAsInt || rateAsInt > max)
+            {
+                continue;
+            }
+        }
+        m_cbSerialRate->Append(serialRates[i]);
+
+        if (rateAsInt == oldBaud)
+        {
+            auto newSelection = m_cbSerialRate->GetCount() - 1;
+            m_cbSerialRate->SetSelection(newSelection);
+        }
+        else if (i == 0 && prevSelection == 0)
+        {
+            m_cbSerialRate->SetSelection(0);
+        }
+    }
+}
+
 void EasySetupDialog::updateHamlibDevices_()
 {
     auto numHamlibDevices = HamlibRigController::GetNumberSupportedRadios();
@@ -995,12 +1041,7 @@ void EasySetupDialog::updateHamlibDevices_()
     m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
     
     /* populate Hamlib serial rate combo box */
-
-    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
-    unsigned int i;
-    for(i=0; i<WXSIZEOF(serialRates); i++) {
-        m_cbSerialRate->Append(serialRates[i]);
-    }
+    updateHamlibSerialRates_();
     m_cbSerialRate->SetSelection(0);
     m_cbSerialPort->Clear();
     

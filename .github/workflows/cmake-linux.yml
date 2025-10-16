@@ -52,7 +52,7 @@ jobs:
       run: |
           python3.11 -m venv rade-venv
           . ./rade-venv/bin/activate
-          pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Build freedv-gui using PulseAudio
@@ -181,7 +181,7 @@ jobs:
     - name: Install required packages for audio/display
       shell: bash
       run: |
-          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
+          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity python3-matplotlib python3-torch sox
 
     - name: Sanity check RADE
       shell: bash
@@ -190,7 +190,7 @@ jobs:
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
           echo "FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" > tmp.env
           sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
-          grep "Got 1 sync changes" tmp.log
+          grep "PASS" tmp.log
 
   test-appimage-ubuntu:
     strategy:
@@ -230,6 +230,20 @@ jobs:
            sudo apt-get install sox xvfb pulseaudio pulseaudio-utils metacity
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
+    - name: Create Python venv
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          python3 -m venv rade-venv 
+
+    - name: Install Python required modules
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          . ./rade-venv/bin/activate
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install matplotlib
+
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
@@ -246,9 +260,10 @@ jobs:
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           metacity --sm-disable --replace &
           sleep 5
+          . ./rade-venv/bin/activate
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
-          grep "Got 1 sync changes" tmp.log
+          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
+          grep "PASS" tmp.log
 
     - name: Sanity check RADE
       shell: bash
@@ -269,9 +284,10 @@ jobs:
           wireplumber &
           metacity --sm-disable --replace &
           sleep 5
+          . ./rade-venv/bin/activate
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
-          grep "Got 1 sync changes" tmp.log
+          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
+          grep "PASS" tmp.log
 
   build:
     strategy:
@@ -348,7 +364,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Build freedv-gui 

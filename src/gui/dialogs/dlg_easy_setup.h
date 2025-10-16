@@ -129,6 +129,7 @@ class EasySetupDialog : public wxDialog
          void resetIcomCIVStatus_();
          bool canTestRadioSettings_();
          bool canSaveSettings_();
+         void updateHamlibSerialRates_(int min = 0, int max = 0);
          
          std::shared_ptr<HamlibRigController> hamlibTestObject_;
          std::shared_ptr<SerialPortOutRigController> serialPortTestObject_;

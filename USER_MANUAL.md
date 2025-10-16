@@ -850,10 +850,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
     * Fix CAT control and frequency formatting problems on non-English computers. (PR #1050)
     * Clean up ThreadSanitizer warnings in codebase. (PR #1053)
+    * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
     * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
+    * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
+    * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
 
 ## V2.0.2 October 2025
 

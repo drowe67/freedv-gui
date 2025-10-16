@@ -341,20 +341,51 @@ void ComPortsDlg::OnInitDialog(wxInitDialogEvent& event)
     ExchangeData(EXCHANGE_DATA_IN);
 }
 
+void ComPortsDlg::populateBaudRateList(int min, int max)
+{
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+    
+    auto prevSelection = m_cbSerialRate->GetCurrentSelection();
+    int oldBaud = 0;
+    if (prevSelection > 0)
+    {
+        oldBaud = wxAtoi(serialRates[prevSelection]);
+    }
+    m_cbSerialRate->Clear();
+    
+    /* populate Hamlib serial rate combo box */
+
+    unsigned int i;
+    for(i=0; i<WXSIZEOF(serialRates); i++) {
+        auto rateAsInt = wxAtoi(serialRates[i]);
+        
+        if (i > 0 && min > 0 && max > 0)
+        {
+            if (min > rateAsInt || rateAsInt > max)
+            {
+                continue;
+            }
+        }
+        m_cbSerialRate->Append(serialRates[i]);
+        
+        if (rateAsInt == oldBaud)
+        {
+            auto newSelection = m_cbSerialRate->GetCount() - 1;
+            m_cbSerialRate->SetSelection(newSelection);
+        }
+        else if (i == 0 && prevSelection == 0)
+        {
+            m_cbSerialRate->SetSelection(0);
+        }
+    }
+}
+
 //-------------------------------------------------------------------------
 // populatePortList()
 //-------------------------------------------------------------------------
 void ComPortsDlg::populatePortList()
 {
-
-    /* populate Hamlib serial rate combo box */
-
-    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
-    unsigned int i;
-    for(i=0; i<WXSIZEOF(serialRates); i++) {
-        m_cbSerialRate->Append(serialRates[i]);
-    }
-
+    populateBaudRateList();
     m_cbSerialPort->Clear();
     m_cbCtlDevicePath->Clear();
     
@@ -529,6 +560,10 @@ void ComPortsDlg::ExchangeData(int inout)
         resetIcomCIVStatus();
         m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
         m_cbPttSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort);
+        
+        auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+        auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+        populateBaudRateList(minBaudRate, maxBaudRate);
 
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
             m_cbSerialRate->SetSelection(0);
@@ -883,6 +918,10 @@ void ComPortsDlg::PTTUseSerialInputClicked(wxCommandEvent& event)
 void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent& event)
 {
     resetIcomCIVStatus();
+    
+    auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+    auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
+    populateBaudRateList(minBaudRate, maxBaudRate);
 }
 
 void ComPortsDlg::resetIcomCIVStatus()

@@ -18,7 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
+        os: [macos-15]  # ARM64
+        sanitizer: [WITH_ASAN=0, WITH_ASAN=1]
 
     runs-on: ${{ matrix.os }}
 
@@ -48,7 +49,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       run: |
@@ -115,7 +116,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-15-intel, macos-26]  # ARM64, ARM64, x86_64, ARM64
+        os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
     needs: dist
@@ -165,5 +166,5 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_zeros.sh txrx RADEV1 | tee temp-test.txt
-          grep "Got 1 sync changes" temp-test.txt
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHON_BINARY=./FreeDV-dmg/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3 ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
+          grep "PASS" temp-test.txt
