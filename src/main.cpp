@@ -103,10 +103,9 @@ short              *g_error_hist, *g_error_histn;
 float               g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
-float               g_avmag[MODEM_STATS_NSPEC];
+GenericFIFO<float>  g_avmag(MODEM_STATS_NSPEC * 10 / DT); // 1s worth
 float               g_avmag_waterfall[MODEM_STATS_NSPEC];
 float               g_avmag_spectrum[MODEM_STATS_NSPEC];
-audio_spin_mutex    g_avmag_mtx;
 
 // TX level for attenuation
 int g_txLevel = 0;
@@ -1594,10 +1593,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      else
      {
          // Update average magnitudes
-         g_avmag_mtx.lock();
-         memcpy(g_avmag_waterfall, g_avmag, sizeof(g_avmag));
-         memcpy(g_avmag_spectrum, g_avmag, sizeof(g_avmag));
-         g_avmag_mtx.unlock();
+         float rxSpectrum[MODEM_STATS_NSPEC];
+         while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
+         {
+             g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
+             for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+             {
+                 g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
+             }
+             memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+         }
 
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;

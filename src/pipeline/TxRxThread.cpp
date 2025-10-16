@@ -98,7 +98,7 @@ extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
 extern float g_SquelchLevel;
 extern float g_tone_phase;
-extern float g_avmag[MODEM_STATS_NSPEC];
+extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<int> g_channel_noise;
 extern float g_RxFreqOffsetHz;
@@ -390,7 +390,7 @@ void TxRxThread::initializePipeline_()
         // RF spectrum computation step
         auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
             +[]() FREEDV_NONBLOCKING { return freedvInterface.getCurrentRxModemStats(); },
-            +[]() FREEDV_NONBLOCKING { return &g_avmag[0]; }
+            +[]() FREEDV_NONBLOCKING { return &g_avmag; }
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
