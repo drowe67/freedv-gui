@@ -223,7 +223,8 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
     ctx->SetPen(pen);
-    
+    ctx->SetBrush(wxBrush(DARK_GREEN_COLOR));
+
     // plot each channel     
 
     // x -> (y1, y2)
@@ -311,12 +312,22 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             offsetX = PLOT_BORDER + XLEFT_OFFSET;
             offsetY = PLOT_BORDER;
         }
+        wxGraphicsPath path = ctx->CreatePath();
         for (int index = 0; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
             int x = index + offsetX;
-            ctx->StrokeLine(x, item->y1 + offsetY, x, item->y2 + offsetY);
+            if (index == 0) path.MoveToPoint(x, item->y1 + offsetY);
+            else path.AddLineToPoint(x, item->y1 + offsetY);
         }
+        for (int index = plotWidth - 1; index >= 0; index--)
+        {
+            auto item = &lineMap_[index];
+            int x = index + offsetX;
+            path.AddLineToPoint(x, item->y2 + offsetY);
+        }
+        path.AddLineToPoint(offsetX, lineMap_[0].y1 + offsetY);
+        ctx->DrawPath(path);
     }
  
     ctx->EndLayer();
