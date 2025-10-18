@@ -24,7 +24,7 @@
 #include "plot_spectrum.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
-#define HZ_GRANULARITY 10
+#define HZ_GRANULARITY 5
 
 void clickTune(float frequency); // callback to pass new click freq
 extern float           g_RxFreqOffsetHz;
