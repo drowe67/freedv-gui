@@ -24,6 +24,8 @@
 #include "plot_spectrum.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
+#define HZ_GRANULARITY 10
+
 void clickTune(float frequency); // callback to pass new click freq
 extern float           g_RxFreqOffsetHz;
 
@@ -149,6 +151,9 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     prev_x = PLOT_BORDER + XLEFT_OFFSET;
     prev_y = PLOT_BORDER;
+
+    auto freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
+
     ctx->BeginLayer(1.0);
     wxGraphicsPath path = ctx->CreatePath();
     for(index = 0; index < m_n_magdB; index++)
@@ -182,11 +187,11 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         x += PLOT_BORDER + XLEFT_OFFSET;
         y += PLOT_BORDER;
 
-        if (index)
+        if (index && (int)abs(x - prev_y) >= (int)(HZ_GRANULARITY*freq_hz_to_px) && abs(y - prev_y) >= mag_dB_to_py)
         {
             path.AddLineToPoint(x, y);
+            prev_x = x; prev_y = y;
         }
-        prev_x = x; prev_y = y;
         if (!index)
         {
             path.MoveToPoint(prev_x, prev_y);
