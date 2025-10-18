@@ -187,7 +187,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         x += PLOT_BORDER + XLEFT_OFFSET;
         y += PLOT_BORDER;
 
-        if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px) && abs(y - prev_y) >= mag_dB_to_py)
+        if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px))
         {
             path.AddLineToPoint(x, y);
         }
