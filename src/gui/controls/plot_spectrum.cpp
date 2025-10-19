@@ -136,7 +136,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // draw spectrum
 
-    int   x, y, prev_x, prev_y, index;
+    int   x, y, prev_x, index;
     float index_to_px, mag_dB_to_py, mag;
 
     m_newdata = false;
@@ -150,7 +150,6 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
 
     prev_x = PLOT_BORDER + XLEFT_OFFSET;
-    prev_y = PLOT_BORDER;
 
     auto freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
 
@@ -195,7 +194,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             path.MoveToPoint(x, y);
         }
-        prev_x = x; prev_y = y;
+        prev_x = x;
     }
     ctx->StrokePath(path);
     ctx->EndLayer();
