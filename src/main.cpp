@@ -134,9 +134,10 @@ int                 g_dump_fifo_state;
 time_t              g_sync_time;
 
 // FIFOs used for plotting waveforms
-struct FIFO        *g_plotDemodInFifo;
-struct FIFO        *g_plotSpeechOutFifo;
-struct FIFO        *g_plotSpeechInFifo;
+constexpr int PLOT_BUF_MULTIPLIER=8;
+GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
 int                 g_nSoundCards;
@@ -1054,17 +1055,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
-    g_plotDemodInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
-    g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
-    g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
     
     // Add Scatter Plot window
     m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
@@ -1559,7 +1557,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
       {
-          if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+          if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
@@ -1567,14 +1565,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
       {
-          if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+          if (g_plotSpeechOutFifo.read(speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechOut->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
       {
-          if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+          if (g_plotDemodInFifo.read(demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
@@ -2252,6 +2250,11 @@ void MainFrame::performFreeDVOn_()
         // Zero out spectrum plots
         memset(g_avmag_waterfall, 0, sizeof(g_avmag_waterfall));
         memset(g_avmag_spectrum, 0, sizeof(g_avmag_waterfall));
+
+        // Reset plot FIFOs
+        g_plotDemodInFifo.reset();
+        g_plotSpeechOutFifo.reset();
+        g_plotSpeechInFifo.reset();
 
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();

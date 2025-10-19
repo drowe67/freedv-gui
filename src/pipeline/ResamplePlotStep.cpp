@@ -24,9 +24,9 @@
 #include "ResamplePlotStep.h"
 
 // TBD - maybe include code for function here?
-extern void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
+extern void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
 
-ResampleForPlotStep::ResampleForPlotStep(struct FIFO* fifo)
+ResampleForPlotStep::ResampleForPlotStep(GenericFIFO<short>* fifo)
     : fifo_(fifo)
 {
     decSamples_ = new short[FS];
