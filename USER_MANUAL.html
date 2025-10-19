@@ -1100,6 +1100,17 @@ audio device isn’t appearing</h2>
 <p>macOS has a longstanding issue that prevents certain audio devices
 from appearing. More info <a
 href="http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html">here</a>.</p>
+<h2 data-number="15.17"
+id="freedv-doesnt-preserve-window-positions-on-linux"><span
+class="header-section-number">15.17</span> FreeDV doesn’t preserve
+window positions on Linux</h2>
+<p>Many Linux distributions are switching away from X11 and towards a
+new GUI system known as Wayland. Wayland explicitly does not support
+window positioning by applications, instead leaving it to the user’s
+compositor to control window positioning. You can force use of X11 via
+the Xwayland compatibility layer by adding <code>GDK_BACKEND=x11</code>
+to your environment to regain the ability to preserve window positioning
+if desired.</p>
 <h1 data-number="16" id="converting-this-document-to-pdf"><span
 class="header-section-number">16</span> Converting this document to
 PDF</h1>
@@ -1161,6 +1172,8 @@ the correct display. (PR #1055)</li>
 mono one. (PR #1052)</li>
 <li>Hamlib: Add support for automatically displaying only the valid baud
 rates. (PR #1057)</li>
+<li>CPU reductions when rendering plots, especially on X11/Xwayland
+systems. (PR #1064)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v2.0.2-october-2025"><span
