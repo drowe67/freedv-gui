@@ -826,6 +826,14 @@ xattr -d -r com.apple.quarantine FreeDV.app
 
 macOS has a longstanding issue that prevents certain audio devices from appearing. More info [here](http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html).
 
+## FreeDV doesn't preserve window positions on Linux
+
+Many Linux distributions are switching away from X11 and towards a new GUI system known as Wayland.
+Wayland explicitly does not support window positioning by applications, instead leaving it to the user's
+compositor to control window positioning. You can force use of X11 via the Xwayland compatibility layer
+by adding `GDK_BACKEND=x11` to your environment to regain the ability to preserve window positioning
+if desired.
+
 # Converting this document to PDF
 
 For the Linux inclined:
