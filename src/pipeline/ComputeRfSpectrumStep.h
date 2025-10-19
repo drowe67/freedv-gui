@@ -29,6 +29,7 @@
 #include "modem_stats.h"
 #include "IPipelineStep.h"
 #include "../util/realtime_fp.h"
+#include "../util/GenericFIFO.h"
 
 class ComputeRfSpectrumStep : public IPipelineStep
 {
@@ -37,7 +38,7 @@ public:
     // in order to downconvert properly.
     ComputeRfSpectrumStep(
         realtime_fp<struct MODEM_STATS*()> modemStatsFn,
-        realtime_fp<float*()> getAvMagFn);
+        realtime_fp<GenericFIFO<float>*()> getAvMagFn);
     virtual ~ComputeRfSpectrumStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -46,7 +47,7 @@ public:
     
 private:
     realtime_fp<struct MODEM_STATS*()> modemStatsFn_;
-    realtime_fp<float*()> getAvMagFn_;
+    realtime_fp<GenericFIFO<float>*()> getAvMagFn_;
     float* rxSpectrum_;
     COMP* rxFdm_;
 };

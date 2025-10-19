@@ -80,9 +80,9 @@ extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
 extern float g_TxFreqOffsetHz;
-extern struct FIFO* g_plotSpeechInFifo;
-extern struct FIFO* g_plotDemodInFifo;
-extern struct FIFO* g_plotSpeechOutFifo;
+extern GenericFIFO<short> g_plotSpeechInFifo;
+extern GenericFIFO<short> g_plotDemodInFifo;
+extern GenericFIFO<short> g_plotSpeechOutFifo;
 extern int g_mode;
 extern bool g_recFileFromModulator;
 extern int g_txLevel;
@@ -98,7 +98,7 @@ extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
 extern float g_SquelchLevel;
 extern float g_tone_phase;
-extern float g_avmag[MODEM_STATS_NSPEC];
+extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<int> g_channel_noise;
 extern float g_RxFreqOffsetHz;
@@ -246,7 +246,7 @@ void TxRxThread::initializePipeline_()
         }
                 
         // Resample for plot step
-        auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
+        auto resampleForPlotStep = new ResampleForPlotStep(&g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
@@ -361,7 +361,7 @@ void TxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(eitherOrPlayRadioStep);
         
         // Resample for plot step (demod in)
-        auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
+        auto resampleForPlotStep = new ResampleForPlotStep(&g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
@@ -390,7 +390,7 @@ void TxRxThread::initializePipeline_()
         // RF spectrum computation step
         auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
             +[]() FREEDV_NONBLOCKING { return freedvInterface.getCurrentRxModemStats(); },
-            +[]() FREEDV_NONBLOCKING { return &g_avmag[0]; }
+            +[]() FREEDV_NONBLOCKING { return &g_avmag; }
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
@@ -418,7 +418,7 @@ void TxRxThread::initializePipeline_()
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
         // Resample for plot step (speech out)
-        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
+        auto resampleForPlotOutStep = new ResampleForPlotStep(&g_plotSpeechOutFifo);
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations

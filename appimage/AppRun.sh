@@ -2,7 +2,6 @@
 echo "In AppImage AppRun"
 export LD_LIBRARY_PATH="${APPIMAGE_LIBRARY_PATH}:${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
 export PATH="$APPDIR/usr/bin:$APPDIR/rade-venv/bin"
-export GDK_BACKEND=x11
 echo "PATH=$PATH"
 export PYTHONHOME="$APPDIR/usr"
 export PYTHONPATH="$APPDIR/rade_src:$APPDIR/rade-venv/lib/python3.11/site-packages"
