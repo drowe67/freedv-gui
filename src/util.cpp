@@ -301,7 +301,7 @@ int resample(SRC_STATE *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING
+void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;
@@ -323,7 +323,7 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, i
         dec_samples[sample] = max;
         dec_samples[sample+1] = min;
     }
-    codec2_fifo_write(plotFifo, dec_samples, nSamples);
+    plotFifo->write(dec_samples, nSamples);
 }
 
 void MainFrame::executeOnUiThreadAndWait_(std::function<void()> fn)

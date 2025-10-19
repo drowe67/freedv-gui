@@ -25,14 +25,13 @@
 
 #include "IPipelineStep.h"
 
-// Forward declaration
-struct FIFO;
+#include "util/GenericFIFO.h"
 
 class ResampleForPlotStep : public IPipelineStep
 {
 public:
     // Locked to 8Khz. Wrap around AudioPipeline as needed.
-    ResampleForPlotStep(struct FIFO* fifo);
+    ResampleForPlotStep(GenericFIFO<short>* fifo);
     virtual ~ResampleForPlotStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -40,7 +39,7 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
 private:
-    struct FIFO* fifo_;
+    GenericFIFO<short>* fifo_;
     short* decSamples_;
 };
 

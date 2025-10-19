@@ -591,7 +591,7 @@ class MainFrame : public TopFrame
         void onQsyRequestUIThread_(QsyRequestArgs* args);
 };
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
+void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
 
 int resample(SRC_STATE *src,
              short      output_short[],

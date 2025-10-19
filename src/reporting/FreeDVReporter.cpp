@@ -52,7 +52,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     sioClient_ = new SocketIoClient();
     assert(sioClient_ != nullptr);
 
-    isFullyConnected_.store(std::memory_order_release);
+    isFullyConnected_.store(false, std::memory_order_release);
 }
 
 FreeDVReporter::~FreeDVReporter()
