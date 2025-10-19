@@ -1,7 +1,7 @@
 FROM ubuntu:24.04 AS freedv-waveform
 
 # Install prerequisites to allow AppImages to mount
-RUN add-apt-repository universe && apt-get update && apt-get install libfuse2t64
+RUN apt-get update && apt-get install libfuse2t64
 
 COPY FreeDV-FlexRadio.AppImage /app/FreeDV-FlexRadio.AppImage
 
