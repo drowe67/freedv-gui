@@ -200,15 +200,13 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     ctx->EndLayer();
 
     // and finally draw Graticule
-
-    drawGraticule(ctx);
-
+    drawGraticuleFast(ctx, repaintDataOnly);
 }
 
 //-------------------------------------------------------------------------
-// drawGraticule()
+// drawGraticuleFast()
 //-------------------------------------------------------------------------
-void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
+void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
     const int STR_LENGTH = 15;
     
@@ -223,8 +221,11 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(foregroundColor, 1));
     
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
+    if (!repaintDataOnly)
+    { 
+        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+        ctx->SetFont(tmpFont);
+    }
 
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
@@ -246,18 +247,21 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     // Vertical gridlines
 
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) {
-    x = f*freq_hz_to_px;
-    x += PLOT_BORDER + XLEFT_OFFSET;
+        x = f*freq_hz_to_px;
+        x += PLOT_BORDER + XLEFT_OFFSET;
 
         ctx->SetPen(m_penShortDash);
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
         ctx->SetPen(wxPen(foregroundColor, 1));
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
-        snprintf(buf, STR_LENGTH, "%4.0fHz", f);
-        GetTextExtent(buf, &text_w, &text_h);
-        if (!overlappedText)
-            ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+        if (!repaintDataOnly)
+        {
+            snprintf(buf, STR_LENGTH, "%4.0fHz", f);
+            GetTextExtent(buf, &text_w, &text_h);
+            if (!overlappedText)
+                ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+        }
     }
 
     ctx->SetPen(wxPen(foregroundColor, 1));
@@ -276,37 +280,40 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
         y += PLOT_BORDER;
         ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                 (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
-        snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
-        GetTextExtent(buf, &text_w, &text_h);
-        if (!overlappedText)
-            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+        if (!repaintDataOnly)
+        {
+            snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
+            GetTextExtent(buf, &text_w, &text_h);
+            if (!overlappedText)
+                 ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+        }
     }
 
     // red rx tuning line
-    
-    if (m_rxFreq != 0.0) {
-        float verticalBarLength = m_rCtrl.GetHeight() - (m_rGrid.GetHeight()+ PLOT_BORDER);
+    if (!repaintDataOnly)
+    {
+        if (m_rxFreq != 0.0) {
+            float verticalBarLength = m_rCtrl.GetHeight() - (m_rGrid.GetHeight()+ PLOT_BORDER);
+            float sum = 0.0;
+            for (auto& f : rxOffsets_)
+            {
+                sum += f;
+            }
+            float averageOffset = sum / rxOffsets_.size();
    
-        float sum = 0.0;
-        for (auto& f : rxOffsets_)
-        {
-            sum += f;
+            // get average offset and draw sync tuning line
+            ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+            x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+            x += PLOT_BORDER + XLEFT_OFFSET;
+            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
+   
+            // red rx tuning line
+            ctx->SetPen(wxPen(RED_COLOR, 3));
+            x = m_rxFreq*freq_hz_to_px;
+            x += PLOT_BORDER + XLEFT_OFFSET;
+            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
         }
-        float averageOffset = sum / rxOffsets_.size();
-   
-        // get average offset and draw sync tuning line
-        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
-        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
-   
-        // red rx tuning line
-        ctx->SetPen(wxPen(RED_COLOR, 3));
-        x = m_rxFreq*freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
-        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
     }
-
 }
 
 //-------------------------------------------------------------------------
@@ -414,4 +421,41 @@ void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
 void PlotSpectrum::OnMouseMiddleDown(wxMouseEvent& event)
 {
     clickTune(FDMDV_FCENTRE);
+}
+
+void PlotSpectrum::refreshData()
+{
+    // Force redraw of entire control if not using RADE. This is determined
+    // by rxFreq == 0. We need to do this so that the frequency indicators
+    // redraw properly.
+    if (m_rxFreq == 0)
+    {
+        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenY = PLOT_BORDER;
+        RefreshRect(wxRect(screenX, screenY, m_rGrid.GetWidth(), m_rGrid.GetHeight()), false);
+    }
+    else
+    {
+        Refresh();
+    }
+}
+
+bool PlotSpectrum::repaintAll_(wxPaintEvent& evt)
+{       
+    wxRect plotRegion(
+        PLOT_BORDER + XLEFT_OFFSET,
+        PLOT_BORDER,
+        m_rGrid.GetWidth(),
+        m_rGrid.GetHeight());
+    wxRegionIterator upd(GetUpdateRegion());
+    while (upd)
+    {   
+        wxRect rect(upd.GetRect());
+        if (!plotRegion.Contains(rect))
+        {
+            return true;
+        }
+        upd++;
+    }
+    return false;
 }
