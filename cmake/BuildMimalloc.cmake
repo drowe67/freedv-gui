@@ -3,7 +3,12 @@ message(FATAL_ERROR "mimalloc is only supported on Linux and macOS")
 endif(WIN32)
 
 set(MI_BUILD_TESTS FALSE)
+
+if (NOT APPLE)
+# Ensures that we're able to compile/run on e.g. Raspberry Pi 4.
+# For ARM Macs, the compilation flags injected by mimalloc are fine.
 set(MI_NO_OPT_ARCH TRUE)
+endif (NOT APPLE)
 
 include(FetchContent)
 FetchContent_Declare(
