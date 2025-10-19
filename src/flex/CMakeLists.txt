@@ -25,8 +25,7 @@ add_executable(freedv-flex
     FlexTcpTask.cpp
     ReportingController.cpp
 
-    # TBD - freedv-flex faults on startup if mimalloc is included
-    #$<TARGET_OBJECTS:mimalloc-obj> 
+    $<TARGET_OBJECTS:mimalloc-obj> 
     
     ${PIPELINE_SUBSET}
     ${RTKIT_FILES})
