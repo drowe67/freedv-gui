@@ -79,6 +79,9 @@ public:
         inputSamplesZeros_ = std::make_unique<short[]>(numSamples);
         assert(inputSamplesZeros_ != nullptr);
         memset(inputSamplesZeros_.get(), 0, numSamples * sizeof(short));
+
+        // Initialize sync
+        sync_.store(0, std::memory_order_release);
     }
     
     virtual ~FlexTxRxThread()
