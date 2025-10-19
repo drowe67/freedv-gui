@@ -252,8 +252,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-
-        //log_info("clearing all except %d px of waterfall", alreadyDrawnPx);
         gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
     }
 
@@ -426,6 +424,7 @@ void PlotWaterfall::plotPixelData()
         dyImageData_ = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
         assert(dyImageData_ != nullptr);
 
+        memset(dyImageData_, 0, (dy > 0 ? dy : 1) * 3 * baseRowWidthPixels);
         tmpImage_ = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData_, true);
     }
     dy_ = dy;
