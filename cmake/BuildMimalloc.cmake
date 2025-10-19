@@ -9,6 +9,7 @@ if (NOT APPLE)
 # For ARM Macs, the compilation flags injected by mimalloc are fine.
 set(MIMALLOC_CMAKE_ARGS ${MIMALLOC_CMAKE_ARGS} -DMI_NO_OPT_ARCH=1)
 endif (NOT APPLE)
+
 # Build mimalloc library
 include(ExternalProject)
 ExternalProject_Add(build_mimalloc
@@ -18,7 +19,7 @@ ExternalProject_Add(build_mimalloc
     GIT_TAG        v2.2.4
     UPDATE_DISCONNECTED 1
     CMAKE_ARGS ${MIMALLOC_CMAKE_ARGS}
-    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
+    CMAKE_CACHE_ARGS -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES} -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
     INSTALL_COMMAND ""
 )
 
