@@ -417,7 +417,7 @@ void PlotWaterfall::plotPixelData()
     if (dy_ != dy && dyImageData_ != nullptr)
     {
         delete[] dyImageData_;
-	    dyImageData_ = nullptr;
+        dyImageData_ = nullptr;
 
         delete tmpImage_;
     }

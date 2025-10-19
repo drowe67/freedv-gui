@@ -2248,7 +2248,11 @@ void MainFrame::performFreeDVOn_()
     m_timeSinceSyncLoss = 0;
     
     executeOnUiThreadAndWait_([&]() 
-    {        
+    {
+        // Zero out spectrum plots
+        memset(g_avmag_waterfall, 0, sizeof(g_avmag_waterfall));
+        memset(g_avmag_spectrum, 0, sizeof(g_avmag_waterfall));
+
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
