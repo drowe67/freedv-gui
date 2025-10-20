@@ -1,3 +1,8 @@
+# Disable mimalloc if using sanitizers
+if((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
+endif((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+
 # Only include subset of the pipeline code to avoid unnecessary dependencies (like wxWidgets)
 set(PIPELINE_SUBSET 
     ../pipeline/AgcStep.cpp
@@ -25,7 +30,7 @@ add_executable(freedv-flex
     FlexTcpTask.cpp
     ReportingController.cpp
 
-    $<TARGET_OBJECTS:mimalloc-obj> 
+    ${MIMALLOC_SOURCE_FILE}
     
     ${PIPELINE_SUBSET}
     ${RTKIT_FILES})
