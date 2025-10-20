@@ -36,8 +36,8 @@
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
-#include "FlexTxRxThread.h"
-#include "FlexRealtimeHelper.h"
+#include "../common/MinimalTxRxThread.h"
+#include "../common/MinimalRealTimeHelper.h"
 #include "ReportingController.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
@@ -61,7 +61,7 @@ struct CallsignReporting
 {
     ReportingController* reporter;
     FlexTcpTask* tcpTask;
-    FlexTxRxThread* rxThread;
+    MinimalTxRxThread* rxThread;
 };
 
 void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
     }
 
     // Start up VITA task so we can get the list of available radios.
-    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
+    auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
     FlexVitaTask vitaTask(realtimeHelper, false /*radioIp != "" ? true : false*/); // TBD - our VITA port must be 4992 despite Flex documentation
     
     std::map<std::string, std::string> radioList;
@@ -152,8 +152,8 @@ int main(int argc, char** argv)
     
     // Initialize audio pipelines
     auto callbackObj = vitaTask.getCallbackData();
-    FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
 
     log_info("Starting TX/RX threads");
     txThread.start();
