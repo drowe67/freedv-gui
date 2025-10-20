@@ -120,6 +120,7 @@ float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
+std::atomic<bool>  g_bwExpandEnabled;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -741,6 +742,9 @@ void MainFrame::loadConfiguration_()
     
     // Load AGC state
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
+    
+    // Load BW expander state
+    g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release);
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;

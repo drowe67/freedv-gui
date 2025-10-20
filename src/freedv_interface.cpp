@@ -26,6 +26,8 @@
 #endif // defined(__clang__)
 
 #include <future>
+#include <atomic>
+
 #include "main.h"
 #include "codec2_fdmdv.h"
 #include "lpcnet.h"
@@ -35,6 +37,8 @@
 #include "pipeline/RADEReceiveStep.h"
 #include "pipeline/RADETransmitStep.h"
 #include "pipeline/AudioPipeline.h"
+#include "pipeline/BandwidthExpandStep.h"
+#include "pipeline/EitherOrStep.h"
 
 #include "util/logging/ulog.h"
 
@@ -42,6 +46,8 @@ using namespace std::placeholders;
 
 #include <wx/string.h>
 extern wxString utFreeDVMode;
+
+extern std::atomic<bool> g_bwExpandEnabled;
 
 static const char* GetCurrentModeStrImpl_(int mode)
 {
@@ -813,12 +819,23 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
-	});
+	    });
         rxStep->setStateObj(this);
         rxStep->setRxStateFn(getRxStateFn);
 
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         pipeline->appendPipelineStep(rxStep);
+        
+        auto bwExpandStep = new BandwidthExpandStep();
+        auto bwExpandBypass = new AudioPipeline(bwExpandStep->getInputSampleRate(), bwExpandStep->getOutputSampleRate());
+        
+        auto eitherOrBwExpandStep = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING { return g_bwExpandEnabled.load(std::memory_order_acquire); },
+            bwExpandStep,
+            bwExpandBypass
+        );
+        pipeline->appendPipelineStep(eitherOrBwExpandStep);
+            
         return pipeline;
     }
     else

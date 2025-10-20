@@ -30,7 +30,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 
-#include "main.h"
+#include "../../main.h"
 
 using namespace std::chrono_literals;
 

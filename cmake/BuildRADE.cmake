@@ -15,7 +15,7 @@ ExternalProject_Add(build_rade
    SOURCE_DIR rade_src
    BINARY_DIR rade_build
    GIT_REPOSITORY https://github.com/drowe67/radae.git
-   GIT_TAG main
+   GIT_TAG ms-opus-osce
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
    #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
@@ -41,8 +41,10 @@ set(FARGAN_X86_CONFIG_H_FILE "${BINARY_DIR}/build_opus_x86-prefix/src/build_opus
 
 if(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/dnn
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/celt
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/silk
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -51,8 +53,10 @@ set_target_properties(opus PROPERTIES
 set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
 else(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/dnn
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/celt
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/silk
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
