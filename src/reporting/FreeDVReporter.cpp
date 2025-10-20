@@ -31,7 +31,7 @@
 
 using namespace std::chrono_literals;
 
-FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
+FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly)
     : isConnecting_(false)
     , hostname_(hostname)
     , callsign_(callsign)
@@ -41,6 +41,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , tx_(false)
     , rxOnly_(rxOnly)
     , hidden_(false)
+    , writeOnly_(writeOnly)
 {
     if (hostname_ == "")
     {
@@ -262,7 +263,7 @@ void FreeDVReporter::connect_()
     }
     else
     {
-        yyjson_mut_obj_add_str(authDoc, authData, "role", "report");
+        yyjson_mut_obj_add_str(authDoc, authData, "role", writeOnly_ ? "report_wo" : "report");
         yyjson_mut_obj_add_str(authDoc, authData, "callsign", callsign_.c_str());
         yyjson_mut_obj_add_str(authDoc, authData, "grid_square", gridSquare_.c_str());
         yyjson_mut_obj_add_str(authDoc, authData, "version", software_.c_str());

@@ -32,7 +32,7 @@
 #include "gp_interleaver.h"
 #include "ldpc_codes.h"
 #include "ofdm_internal.h"
-#include "util/logging/ulog.h"
+#include "../util/logging/ulog.h"
 
 #define LDPC_TOTAL_SIZE_BITS (112)
 

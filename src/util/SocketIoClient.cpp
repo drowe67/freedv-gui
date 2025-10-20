@@ -155,7 +155,11 @@ void SocketIoClient::onConnect_()
 
 void SocketIoClient::onDisconnect_()
 {
-    connection_->eof();
+    if (connection_)
+    {
+        connection_->eof();
+    }
+
     pingTimer_.stop();
     
     if (onDisconnectFn_)
