@@ -140,6 +140,7 @@ jobs:
       working-directory: ${{github.workspace}}/src/flex
       run: |
         cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
+        ./FreeDV-FlexRadio.AppImage --appimage-extract
         docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.tar.gz --tag=freedv-waveform .
 
     - name: Upload AppImage
