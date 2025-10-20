@@ -5,7 +5,7 @@ endif((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_R
 
 if(LINUX AND DBUS_FOUND)
 set(RTKIT_FILES
-    ../audio/rtkit.c)
+    ../../audio/rtkit.c)
 endif()
 
 add_executable(freedv-flex
