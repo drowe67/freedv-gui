@@ -24,7 +24,7 @@ fi
 
 ./linuxdeploy-aarch64.AppImage \
 --executable /usr/bin/python3 \
---executable ../build_linux/src/flex/freedv-flex \
+--executable ../build_linux/src/integrations/flex/freedv-flex \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
 --custom-apprun=AppRun-FlexRadio.sh \

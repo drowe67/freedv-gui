@@ -3,18 +3,6 @@ if((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSA
 set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
 endif((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
-# Only include subset of the pipeline code to avoid unnecessary dependencies (like wxWidgets)
-set(PIPELINE_SUBSET 
-    ../pipeline/AgcStep.cpp
-    ../pipeline/AudioPipeline.cpp
-    ../pipeline/IPipelineStep.cpp
-    ../pipeline/LevelAdjustStep.cpp
-    ../pipeline/RADEReceiveStep.cpp
-    ../pipeline/RADETransmitStep.cpp
-    ../pipeline/ResampleStep.cpp
-    ../pipeline/SpeexStep.cpp
-    ../pipeline/rade_text.c)
-
 if(LINUX AND DBUS_FOUND)
 set(RTKIT_FILES
     ../audio/rtkit.c)
@@ -31,12 +19,9 @@ add_executable(freedv-flex
     ReportingController.cpp
 
     ${MIMALLOC_SOURCE_FILE}
-    
-    ${PIPELINE_SUBSET}
     ${RTKIT_FILES})
     
-target_compile_definitions(freedv-flex PRIVATE -DDISABLE_UNIT_TEST)
-target_link_libraries(freedv-flex PRIVATE git_version fdv_reporting fdv_util fdv_os_wrapper rade opus codec2 samplerate agc ebur128 speexdsp)
+target_link_libraries(freedv-flex PRIVATE git_version fdv_integ_audio_pipeline fdv_reporting fdv_util fdv_os_wrapper)
 
 if(LINUX AND DBUS_FOUND)
     target_include_directories(freedv-flex PRIVATE ${DBUS_INCLUDE_DIRS})
