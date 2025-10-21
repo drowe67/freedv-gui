@@ -19,4 +19,8 @@ if(WIN32)
     endif(BOOTSTRAP_WXWIDGETS)
 endif(WIN32)
 
+if(APPLE)
+target_link_libraries(fdv_os_wrapper "-framework AppKit -framework CoreGraphics -framework CoreFoundation -framework AVFoundation")
+endif(APPLE)
+
 target_include_directories(fdv_os_wrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)

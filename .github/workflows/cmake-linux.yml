@@ -137,7 +137,7 @@ jobs:
     
     - name: Generate waveform file
       shell: bash
-      working-directory: ${{github.workspace}}/src/flex
+      working-directory: ${{github.workspace}}/src/integrations/flex
       run: |
         cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
         ./FreeDV-FlexRadio.AppImage --appimage-extract
@@ -155,7 +155,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: freedv-waveform.tar.gz
-        path: ${{github.workspace}}/src/flex/freedv-waveform.tar.gz
+        path: ${{github.workspace}}/src/integrations/flex/freedv-waveform.tar.gz
 
   test-appimage-fedora:
     runs-on: ubuntu-24.04

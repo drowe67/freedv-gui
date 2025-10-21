@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            FlexRealtimeHelper.h
-// Purpose:         Realtime helper for Flex waveform.
+// Name:            MinimalRealtimeHelper.h
+// Purpose:         Realtime helper for FreeDV integrations.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,8 +20,8 @@
 //
 //=========================================================================
 
-#ifndef FLEX_REALTIME_HELPER_H
-#define FLEX_REALTIME_HELPER_H
+#ifndef MINIMAL_REALTIME_HELPER_H
+#define MINIMAL_REALTIME_HELPER_H
 
 #include <thread>
 #include <chrono>
@@ -29,11 +29,11 @@
 
 using namespace std::chrono_literals;
 
-class FlexRealtimeHelper : public IRealtimeHelper
+class MinimalRealtimeHelper : public IRealtimeHelper
 {
 public:
-    FlexRealtimeHelper() = default;
-    virtual ~FlexRealtimeHelper() = default;
+    MinimalRealtimeHelper() = default;
+    virtual ~MinimalRealtimeHelper() = default;
     
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.
@@ -55,4 +55,4 @@ public:
     virtual bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
 };
 
-#endif // FLEX_REALTIME_HELPER_H
+#endif // MINIMAL_REALTIME_HELPER_H

@@ -22,7 +22,7 @@ ExternalProject_Add(speex
    INSTALL_COMMAND $(MAKE) install
 )
 
-set(SPEEXDSP_LIBRARIES ${CMAKE_BINARY_DIR}/external/dist/lib/libspeexdsp.a)
+set(SPEEXDSP_LIBRARY ${CMAKE_BINARY_DIR}/external/dist/lib/libspeexdsp.a)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
-list(APPEND FREEDV_LINK_LIBS ${SPEEXDSP_LIBRARIES})
+list(APPEND FREEDV_LINK_LIBS ${SPEEXDSP_LIBRARY})
 list(APPEND FREEDV_STATIC_DEPS speex)

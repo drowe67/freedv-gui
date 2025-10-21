@@ -43,7 +43,7 @@ add_subdirectory(util)
 
 # Compile FreeDV rig integrations
 if((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
-add_subdirectory(flex)
+add_subdirectory(integrations)
 endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.

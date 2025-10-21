@@ -28,7 +28,7 @@ $ docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.ta
 The waveform can be run similarly to the main FreeDV application. From your build folder:
 
 ```
-$ PYTHONPATH=$(pwd)/rade_src src/flex/freedv-flex
+$ PYTHONPATH=$(pwd)/rade_src src/integrations/flex/freedv-flex
 ```
 
 By default, it will listen on the network until it receives a broadcast packet from a supported radio,
@@ -36,7 +36,7 @@ then connect to that radio. This may not be the radio you expect if you have mul
 To override this, use the `SSDR_RADIO_ADDRESS` environment variable with your desired radio's IP address:
 
 ```
-$ SSDR_RADIO_ADDRESS=192.168.1.2 PYTHONPATH=$(pwd)/rade_src src/flex/freedv-flex
+$ SSDR_RADIO_ADDRESS=192.168.1.2 PYTHONPATH=$(pwd)/rade_src src/integrations/flex/freedv-flex
 ```
 
 To ensure proper reporting to FreeDV Reporter by the waveform, make sure that your callsign is properly 

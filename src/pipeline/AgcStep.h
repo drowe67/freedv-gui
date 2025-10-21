@@ -25,7 +25,7 @@
 
 #include "IPipelineStep.h"
 #include "../util/GenericFIFO.h"
-#include "agc.h"
+#include "../3rdparty/WebRTC_AGC/agc.h"
 
 #include <memory>
 
