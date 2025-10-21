@@ -1,6 +1,6 @@
 //=========================================================================
 // Name:            main.cpp
-// Purpose:         Main entry point for Flex waveform.
+// Purpose:         Main entry point for KA9Q integration.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -33,15 +33,15 @@
 #include <mimalloc.h>
 #endif // defined(USING_MIMALLOC)
 
-#include "flex_defines.h"
-#include "FlexVitaTask.h"
-#include "FlexTcpTask.h"
 #include "../common/MinimalTxRxThread.h"
 #include "../common/MinimalRealTimeHelper.h"
 #include "../common/ReportingController.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 #include "../reporting/FreeDVReporter.h"
+#include "../pipeline/paCallbackData.h"
+#include "../../util/ThreadedTimer.h"
+#include "../../src/pipeline/pipeline_defines.h"
 
 #include "rade_api.h"
 
@@ -52,6 +52,11 @@ extern "C"
     #include "lpcnet.h"
 }
 
+constexpr int INPUT_SAMPLE_RATE = 8000;
+constexpr int OUTPUT_SAMPLE_RATE = 16000;
+
+#define FIFO_SIZE_SAMPLES (FIFO_SIZE * OUTPUT_SAMPLE_RATE / 1000)
+
 using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
@@ -60,7 +65,6 @@ bool endingTx;
 struct CallsignReporting
 {
     ReportingController* reporter;
-    FlexTcpTask* tcpTask;
     MinimalTxRxThread* rxThread;
 };
 
@@ -76,13 +80,15 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
         {
             reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
         }
-
-        reportObj->tcpTask->addSpot(callsign);
     }
 }
 
 int main(int argc, char** argv)
 {
+    std::string stationCallsign;
+    std::string stationGridSquare;
+    int64_t stationFrequency = 0;
+
 #if defined(USING_MIMALLOC)
     // Decrease purge interval to 100ms to improve performance (default = 10ms).
     mi_option_set(mi_option_purge_delay, 100);
@@ -125,68 +131,34 @@ int main(int argc, char** argv)
     lpcnetEncState = lpcnet_encoder_create();
     assert(lpcnetEncState != nullptr);
     
-    std::string radioIp = "";
-    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS");
-    if (radioAddrEnv != nullptr)
-    {
-        radioIp = radioAddrEnv;
-        log_info("Got radio address from environment, likely executing on radio itself");
-    }
-
-    // Start up VITA task so we can get the list of available radios.
+    // Set up RT handler
     auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper, false /*radioIp != "" ? true : false*/); // TBD - our VITA port must be 4992 despite Flex documentation
     
-    std::map<std::string, std::string> radioList;
-    std::mutex radioMapMutex;
-    bool enableRadioLookup = true;
-    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void* state)
-    {
-        std::unique_lock<std::mutex> lk(radioMapMutex);
-        if (enableRadioLookup)
-        {
-            log_info("Got discovery callback (radio %s, IP %s)", friendlyName.c_str(), ip.c_str());
-            radioList[ip] = friendlyName;
-        }
-    }, nullptr);
-    
-    // Initialize audio pipelines
-    auto callbackObj = vitaTask.getCallbackData();
-    MinimalTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    MinimalTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    // Initialize audio FIFOs
+    std::unique_ptr<paCallBackData> callbackObj = std::make_unique<paCallBackData>();
+    assert(callbackObj != nullptr);
 
-    log_info("Starting TX/RX threads");
-    txThread.start();
+    callbackObj->infifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    assert(callbackObj->infifo1 != nullptr);
+    callbackObj->infifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    assert(callbackObj->infifo2 != nullptr);
+    callbackObj->outfifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    assert(callbackObj->outfifo1 != nullptr);
+    callbackObj->outfifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    assert(callbackObj->outfifo2 != nullptr);
+
+    // Initialize RX thread
+    MinimalTxRxThread rxThread(false, INPUT_SAMPLE_RATE, OUTPUT_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj.get());
+
+    log_info("Starting RX thread");
     rxThread.start();
     
-    log_info("Synchronizing startup of TX/RX threads");
-    txThread.waitForReady();
+    log_info("Synchronizing startup of RX thread");
     rxThread.waitForReady();
-    txThread.signalToStart();
     rxThread.signalToStart();
     
-    log_info("Getting available radios from network");
-    while (radioIp == "")
-    {
-        std::unique_lock<std::mutex> lk(radioMapMutex);
-        if (radioList.size() == 0)
-        {
-            log_info("No radios found yet, sleeping 1s");
-            lk.unlock();
-            std::this_thread::sleep_for(1s);
-            lk.lock();
-            continue;
-        }
-        radioIp = radioList.begin()->first;
-        enableRadioLookup = false;
-    }
-    
-    log_info("Connecting to radio at IP %s", radioIp.c_str());
-    FlexTcpTask tcpTask(vitaTask.getPort());
-
     CallsignReporting reportData;
     ReportingController reportController;
-    reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 
@@ -206,51 +178,14 @@ int main(int argc, char** argv)
     }, true);
     rxNoCallsignReporting.start();
 
-    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
-        // Add callsign to EOO so others can report us
-        log_info("Setting EOO bits");
-        int nsyms = rade_n_eoo_bits(radeObj);
-        float* eooSyms = new float[nsyms];
-        assert(eooSyms);
-                
-        rade_text_generate_tx_string(radeTextPtr, callsign.c_str(), callsign.size(), eooSyms, nsyms);
-        rade_tx_set_eoo_bits(radeObj, eooSyms);
-
-        reportController.updateRadioCallsign(callsign);
-    }, nullptr);
-    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
-        reportController.updateRadioGridSquare(gridSquare);
-    }, nullptr);
-    tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
-        vitaTask.enableAudio(true);
-        vitaTask.radioConnected(radioIp.c_str());
-    }, nullptr);
-    tcpTask.setWaveformUserConnectedFn([&](FlexTcpTask&, void*) {
+    bool reporterValid = stationCallsign != "" && stationGridSquare != "" && stationFrequency != 0;
+    if (reporterValid)
+    {
+        reportController.updateRadioCallsign(stationCallsign);
+        reportController.updateRadioGridSquare(stationGridSquare);
+        reportController.changeFrequency(stationFrequency);
         reportController.showSelf();
-    }, nullptr);
-    tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
-        reportController.hideSelf();
-    }, nullptr);
-    tcpTask.setWaveformFreqChangeFn([&](FlexTcpTask&, uint64_t freq, void*) {
-        reportController.changeFrequency(freq);
-    }, nullptr);
-    tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState tx, void*) {
-        if (tx == FlexTcpTask::ENDING_TX)
-        {
-            endingTx = true; // EOO should then queue out
-            vitaTask.setEndingTx(true);
-        }
-        else
-        {
-            endingTx = false;
-            bool txFlag = tx == FlexTcpTask::TRANSMITTING;
-            vitaTask.setEndingTx(false);
-            vitaTask.setTransmit(txFlag);
-            g_tx.store(txFlag, std::memory_order_release);
-            reportController.transmit(txFlag);
-        }
-    }, nullptr);
-    tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
+    }
         
     for(;;)
     {

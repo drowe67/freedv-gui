@@ -17,6 +17,7 @@ endif()
 add_library(fdv_integ_audio_pipeline STATIC
     MinimalRealTimeHelper.cpp
     MinimalTxRxThread.cpp
+    ReportingController.cpp
 
     ${RTKIT_FILES}
     ${PIPELINE_SUBSET})
