@@ -51,6 +51,7 @@ using namespace std::chrono_literals;
 #include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
+#include "DebugRecordStep.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
@@ -307,6 +308,15 @@ void TxRxThread::initializePipeline_()
     else
     {
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
+        
+        // XXX - DEBUG ONLY
+        // Record last two minutes of audio from session
+        wxFileName recordFile(NonblockingWxGetApp().appConfiguration.voiceKeyerWaveFilePath, "FreeDVDebugAudio.wav");
+        std::string recordFileStr = (const char*)recordFile.GetFullPath().ToUTF8();
+        
+        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 120, recordFileStr);
+        pipeline_->appendPipelineStep(debugRecordStep);
+        
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             inputSampleRate_, 

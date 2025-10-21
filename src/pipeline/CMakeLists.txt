@@ -2,6 +2,7 @@ add_library(fdv_audio_pipeline STATIC
     AgcStep.cpp
     AudioPipeline.cpp
     ComputeRfSpectrumStep.cpp
+    DebugRecordStep.cpp
     EitherOrStep.cpp
     EqualizerStep.cpp
     FreeDVReceiveStep.cpp
