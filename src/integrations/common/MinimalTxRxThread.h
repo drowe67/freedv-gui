@@ -87,6 +87,7 @@ public:
     virtual ~MinimalTxRxThread()
     {
         // Free allocated buffer
+        stop();
         inputSamples_ = nullptr;
     }
 
