@@ -55,6 +55,7 @@ extern "C"
 constexpr int INPUT_SAMPLE_RATE = 8000;
 constexpr int OUTPUT_SAMPLE_RATE = 16000;
 
+#define SOFTWARE_NAME "freedv-ka9q"
 #define FIFO_SIZE_SAMPLES (FIFO_SIZE * OUTPUT_SAMPLE_RATE / 1000)
 
 using namespace std::chrono_literals;
@@ -158,7 +159,7 @@ int main(int argc, char** argv)
     rxThread.signalToStart();
     
     CallsignReporting reportData;
-    ReportingController reportController;
+    ReportingController reportController(SOFTWARE_NAME);
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 

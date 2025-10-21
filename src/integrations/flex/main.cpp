@@ -52,6 +52,8 @@ extern "C"
     #include "lpcnet.h"
 }
 
+#define SOFTWARE_NAME "freedv-flex"
+
 using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
@@ -185,7 +187,7 @@ int main(int argc, char** argv)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
-    ReportingController reportController;
+    ReportingController reportController(SOFTWARE_NAME);
     reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;

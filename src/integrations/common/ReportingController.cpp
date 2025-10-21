@@ -27,18 +27,18 @@
 #include "../util/logging/ulog.h"
 
 // FreeDV Reporter constants and helpers
-#define SOFTWARE_NAME "freedv-flex"
-std::string GetVersionString()
+std::string ReportingController::getVersionString_()
 {   
     std::stringstream ss;
-    ss << SOFTWARE_NAME << " " << GetFreeDVVersion();
+    ss << softwareName_ << " " << GetFreeDVVersion();
     return ss.str();
 }
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
-ReportingController::ReportingController()
-    : reporterConnection_(nullptr)
+ReportingController::ReportingController(std::string softwareName)
+    : softwareName_(softwareName)
+    , reporterConnection_(nullptr)
     , currentGridSquare_(SOFTWARE_GRID_SQUARE)
     , radioCallsign_("")
     , userHidden_(true)
@@ -99,8 +99,8 @@ void ReportingController::updateReporterState_()
 
     if (reporterConnection_ == nullptr && !userHidden_)
     {
-        log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), GetVersionString().c_str());
-        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, GetVersionString(), false, true);
+        log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
+        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), false, true);
         reporterConnection_->connect();
     }
 }
