@@ -12,4 +12,4 @@ add_executable(freedv-flex
 
     ${MIMALLOC_SOURCE_FILE})
     
-target_link_libraries(freedv-flex PRIVATE git_version fdv_integ_audio_pipeline fdv_reporting fdv_util fdv_os_wrapper)
+target_link_libraries(freedv-flex PRIVATE git_version fdv_integ_audio_pipeline fdv_reporting fdv_util)
