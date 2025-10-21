@@ -29,6 +29,12 @@
 #include <cinttypes>
 #include <stdlib.h>
 
+#ifdef _WIN32
+// For _setmode().
+#include <io.h>
+#include <fcntl.h>
+#endif // _WIN32
+
 #if defined(USING_MIMALLOC)
 #include <mimalloc.h>
 #endif // defined(USING_MIMALLOC)
@@ -139,12 +145,10 @@ int main(int argc, char** argv)
     std::unique_ptr<paCallBackData> callbackObj = std::make_unique<paCallBackData>();
     assert(callbackObj != nullptr);
 
-    callbackObj->infifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
-    assert(callbackObj->infifo1 != nullptr);
+    callbackObj->infifo1 = nullptr;
     callbackObj->infifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackObj->infifo2 != nullptr);
-    callbackObj->outfifo1 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
-    assert(callbackObj->outfifo1 != nullptr);
+    callbackObj->outfifo1 = nullptr;
     callbackObj->outfifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
     assert(callbackObj->outfifo2 != nullptr);
 
@@ -187,10 +191,56 @@ int main(int argc, char** argv)
         reportController.changeFrequency(stationFrequency);
         reportController.showSelf();
     }
-        
-    for(;;)
+
+#ifdef _WIN32
+    // Note: freopen() returns NULL if filename is NULL, so
+    // we have to use setmode() to make it a binary stream instead.
+    _setmode(_fileno(stdin), O_BINARY);
+    _setmode(_fileno(stdout), O_BINARY);
+#endif // _WIN32
+
+    bool exiting = false; 
+    while (!exiting)
     {
-        std::this_thread::sleep_for(3600s);
+        constexpr int NUM_TO_READ = (FRAME_DURATION_MS * INPUT_SAMPLE_RATE / 1000);
+        constexpr int NUM_TO_WRITE = (FRAME_DURATION_MS * OUTPUT_SAMPLE_RATE / 1000);
+        bool waitForMore = false;
+        if (callbackObj->infifo2->numFree() >= NUM_TO_READ)
+        {
+            // Read from standard input and queue on input FIFO
+            short readBuffer[NUM_TO_READ];
+            int numActuallyRead = fread(readBuffer, sizeof(short), NUM_TO_READ, stdin);
+            if (numActuallyRead <= 0) 
+            {
+                // stdin closed, exit
+                exiting = true;
+                break;
+            }
+            callbackObj->infifo2->write(readBuffer, numActuallyRead);
+        }
+        else
+        {
+            waitForMore = true;
+        }
+
+        // If we have anything decoded, output that now
+        while (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
+        {
+            short writeBuffer[NUM_TO_WRITE];
+            callbackObj->outfifo2->read(writeBuffer, NUM_TO_WRITE);
+            int numActuallyWritten = fwrite(writeBuffer, sizeof(short), NUM_TO_WRITE, stdout);
+            if (numActuallyWritten <= 0)
+            {
+                // stdout closed, exit
+                exiting = true;
+                break;
+            }
+        }
+
+        if (!exiting && waitForMore)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
+        }
     }
     
     // TBD - the below isn't called since we're in an infinite loop above.
