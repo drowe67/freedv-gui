@@ -50,11 +50,15 @@ public:
 private:
     T* buf;
 
+#if !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winterference-size"
+#endif // !defined(__clang__)
     alignas(std::hardware_destructive_interference_size) std::atomic<T*> pin;
     alignas(std::hardware_destructive_interference_size) std::atomic<T*> pout;
+#if !defined(__clang__)
 #pragma GCC diagnostic pop
+#endif // !defined(__clang__)
 
     int nelem;
     bool ownBuffer_;
