@@ -49,8 +49,13 @@ public:
     
 private:
     T* buf;
-    std::atomic<T*> pin;
-    std::atomic<T*> pout;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+    alignas(std::hardware_destructive_interference_size) std::atomic<T*> pin;
+    alignas(std::hardware_destructive_interference_size) std::atomic<T*> pout;
+#pragma GCC diagnostic pop
+
     int nelem;
     bool ownBuffer_;
 };
