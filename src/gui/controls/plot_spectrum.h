@@ -42,13 +42,13 @@ class PlotSpectrum : public PlotPanel
         virtual void refreshData() override;
 
     protected:
-        void        OnSize(wxSizeEvent& event);
-        void        OnShow(wxShowEvent& event);
+        void        OnSize(wxSizeEvent& event) override;
+        void        OnShow(wxShowEvent& event) override;
         void        drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
-        void        draw(wxGraphicsContext* ctx, bool repaintDataOnly = false);
+        void        draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
-        void        OnMouseWheelMoved(wxMouseEvent& event);
+        void        OnMouseWheelMoved(wxMouseEvent& event) override;
         void        OnMouseMiddleDown(wxMouseEvent& event);
         void        OnKeyDown(wxKeyEvent& event);
 
