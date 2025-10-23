@@ -310,11 +310,11 @@ void TxRxThread::initializePipeline_()
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
         
         // XXX - DEBUG ONLY
-        // Record last two minutes of audio from session
+        // Record last 10 minutes of audio from session
         wxFileName recordFile(NonblockingWxGetApp().appConfiguration.voiceKeyerWaveFilePath, "FreeDVDebugAudio.wav");
         std::string recordFileStr = (const char*)recordFile.GetFullPath().ToUTF8();
         
-        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 120, recordFileStr);
+        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 600, recordFileStr);
         pipeline_->appendPipelineStep(debugRecordStep);
         
         // Record from radio step (optional)
