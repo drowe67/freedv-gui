@@ -72,7 +72,7 @@ public:
     // Finished receiving multiple messages
     using RecvEndFn = std::function<void()>;
 
-    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
+    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly = false);
     virtual ~FreeDVReporter();
 
     void connect();
@@ -124,6 +124,7 @@ private:
     bool rxOnly_;
     bool hidden_;
     std::string message_;
+    bool writeOnly_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;

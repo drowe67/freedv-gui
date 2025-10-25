@@ -23,7 +23,6 @@
 #include <cassert>
 #include <functional>
 #include "RADEReceiveStep.h"
-#include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
 #include "../util/realtime_fp.h"
 
@@ -32,9 +31,14 @@
 #include <sys/resource.h>
 #endif // defined(__APPLE__)
 
+#include "pipeline_defines.h"
+
 using namespace std::chrono_literals;
 
+#if !defined(DISABLE_UNIT_TEST)
+#include <wx/wx.h>
 extern wxString utRxFeatureFile;
+#endif // !defined(DISABLE_UNIT_TEST)
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
@@ -50,6 +54,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 {
     assert(syncState_.is_lock_free());
 
+#if !defined(DISABLE_UNIT_TEST)
     if (utRxFeatureFile != "")
     {
         utFeatures_ = new PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>();
@@ -60,6 +65,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         
         utFeatureThread_ = std::thread(std::bind(&RADEReceiveStep::utFeatureThreadEntry_, this));
     }
+#endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());

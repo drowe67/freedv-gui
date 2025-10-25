@@ -8,7 +8,7 @@
 #include "sanitizers.h"
 
 #if defined(__aarch64__)
-// Some compilers don't have the wfe intrinsic.
+// Not every compiler has intrinsics for this instruction.
 #define PAUSE_CPU __asm__("wfe")
 #elif defined(__x86_64__)
 #include <emmintrin.h>
