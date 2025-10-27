@@ -8,11 +8,11 @@ if [[ "${TARGET}" == "all" ]]; then
     export APPRUN="AppRun.sh"
 elif [[ "${TARGET}" == "freedv-flex" ]]; then
     export APPNAME="FreeDV-FlexRadio"
-    export APPEXEC=../build_linux/src/integrations/freedv-flex
+    export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
     export APPRUN="AppRun-FlexRadio.sh"
 elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
     export APPNAME="FreeDV-KA9Q"
-    export APPEXEC=../build_linux/src/integrations/freedv-ka9q
+    export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
     export APPRUN="AppRun-KA9Q.sh"
 fi
 
