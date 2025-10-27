@@ -204,7 +204,6 @@ int main(int argc, char** argv)
     {
         constexpr int NUM_TO_READ = (FRAME_DURATION_MS * INPUT_SAMPLE_RATE / 1000);
         constexpr int NUM_TO_WRITE = (FRAME_DURATION_MS * OUTPUT_SAMPLE_RATE / 1000);
-        bool waitForMore = false;
         if (callbackObj->infifo2->numFree() >= NUM_TO_READ)
         {
             // Read from standard input and queue on input FIFO
@@ -217,10 +216,6 @@ int main(int argc, char** argv)
                 break;
             }
             callbackObj->infifo2->write(readBuffer, numActuallyRead);
-        }
-        else
-        {
-            waitForMore = true;
         }
 
         // If we have anything decoded, output that now
@@ -237,7 +232,7 @@ int main(int argc, char** argv)
             }
         }
 
-        if (!exiting && waitForMore)
+        if (!exiting)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
         }
