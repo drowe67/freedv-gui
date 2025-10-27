@@ -41,7 +41,7 @@ fi
 
 ./linuxdeploy-${MACH_ARCH}.AppImage \
 --executable /usr/bin/python3 \
---executable ../build_linux/src/freedv \
+--executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
 --custom-apprun=AppRun.sh \
