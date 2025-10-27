@@ -36,7 +36,7 @@ add_executable(freedv-flex
     ${RTKIT_FILES})
     
 target_compile_definitions(freedv-flex PRIVATE -DDISABLE_UNIT_TEST)
-target_link_libraries(freedv-flex PRIVATE git_version fdv_reporting fdv_util fdv_os_wrapper rade opus codec2 samplerate agc ebur128 speexdsp)
+target_link_libraries(freedv-flex PRIVATE git_version fdv_reporting fdv_util fdv_os_wrapper rade opus codec2 agc ebur128 speexdsp)
 
 if(LINUX AND DBUS_FOUND)
     target_include_directories(freedv-flex PRIVATE ${DBUS_INCLUDE_DIRS})
