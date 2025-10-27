@@ -1101,7 +1101,6 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         }
         
         delete fifo;
-        codec2_fifo_destroy(fifo);
         if (src != nullptr)
         {
             speex_resampler_destroy(src);
