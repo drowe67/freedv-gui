@@ -20,6 +20,9 @@
 //
 //=========================================================================
 
+#include <getopt.h>
+#include <inttypes.h>
+
 #include <map>
 #include <chrono>
 #include <thread>
@@ -49,6 +52,8 @@
 #include "../../util/ThreadedTimer.h"
 #include "../../src/pipeline/pipeline_defines.h"
 
+#include "git_version.h"
+
 #include "rade_api.h"
 
 extern "C" 
@@ -58,11 +63,12 @@ extern "C"
     #include "lpcnet.h"
 }
 
-constexpr int INPUT_SAMPLE_RATE = 8000;
-constexpr int OUTPUT_SAMPLE_RATE = 16000;
+constexpr int DEFAULT_INPUT_SAMPLE_RATE = 8000;
+constexpr int DEFAULT_OUTPUT_SAMPLE_RATE = 16000;
 
 #define SOFTWARE_NAME "freedv-ka9q"
-#define FIFO_SIZE_SAMPLES (FIFO_SIZE * OUTPUT_SAMPLE_RATE / 1000)
+#define INPUT_FIFO_SIZE_SAMPLES (FIFO_SIZE * inputSampleRate / 1000)
+#define OUTPUT_FIFO_SIZE_SAMPLES (FIFO_SIZE * outputSampleRate / 1000)
 
 using namespace std::chrono_literals;
 
@@ -90,8 +96,25 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
     }
 }
 
+void printUsage(char* appName)
+{
+    log_info("Usage: %s [-i|--input-sample-rate RATE] [-o|--output-sample-rate RATE] [-c|--reporting-callsign CALLSIGN] [-l|--reporting-locator LOCATOR] [-f|--reporting-freq-hz FREQUENCY_IN_HERTZ] [-h|--help] [-v|--version]", appName);
+    log_info("    -i|--input-sample-rate: The sample rate for int16 audio samples received over standard input.");
+    log_info("    -o|--output-sample-rate: The sample rate for int16 audio samples output over standard output.");
+    log_info("    -c|--reporting-callsign: The callsign to use for FreeDV Reporter reporting.");
+    log_info("    -l|--reporting-locator: The grid square/locator to use for FreeDV Reporter reporting.");
+    log_info("    -f|--reporting-frequency-hz: The frequency to report for FreeDV Reporter reporting, in hertz. (Example: 14236000 for 14.236MHz)");
+    log_info("    -h|--help: This help message.");
+    log_info("    -v|--version: Prints the application version and exits.");
+    log_info("");
+    log_info("Note: Callsign, locator and frequency must all be provided for the application to connect to FreeDV Reporter.");
+}
+
 int main(int argc, char** argv)
 {
+    int inputSampleRate = DEFAULT_INPUT_SAMPLE_RATE;
+    int outputSampleRate = DEFAULT_OUTPUT_SAMPLE_RATE;
+    
     std::string stationCallsign;
     std::string stationGridSquare;
     int64_t stationFrequency = 0;
@@ -111,6 +134,101 @@ int main(int argc, char** argv)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+    
+    // Print version
+    log_info("%s version %s", SOFTWARE_NAME, GetFreeDVVersion().c_str());
+    
+    // Check command line options
+    static struct option longOptions[] = {
+        {"input-sample-rate",     required_argument, 0,  'i' },
+        {"output-sample-rate",    required_argument, 0,  'o' },
+        {"reporting-callsign",    required_argument, 0,  'c' },
+        {"reporting-locator",     required_argument, 0,  'l' },
+        {"reporting-freq-hz",     required_argument, 0,  'f' },
+        {"help",                  no_argument,       0,  'h' },
+        {"version",               no_argument,       0,  'v' },
+        {0,         0,                 0,  0 }
+    };
+    constexpr char shortOptions[] = "i:o:c:l:f:hv";
+    
+    int optionIndex = 0;
+    int c = 0;
+    while ((c = getopt_long(argc, argv, shortOptions, longOptions, &optionIndex)) != -1)
+    {
+        switch(c)
+        {
+            case 'i':
+            case 'o':
+            {
+                int tmpSampleRate = atoi(optarg);
+                if (tmpSampleRate <= 0)
+                {
+                    log_error("Invalid sample rate provided (%s)", optarg);
+                    printUsage(argv[0]);
+                    exit(-1);
+                }
+                if (c == 'i')
+                {
+                    inputSampleRate = tmpSampleRate;
+                }
+                else
+                {
+                    outputSampleRate = tmpSampleRate;
+                }
+                break;
+            }
+            case 'c':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Callsign required if specifying -c/--reporting-callsign.");
+                    printUsage(argv[0]);
+                    exit(-1);
+                }
+                log_info("Using callsign %s for FreeDV Reporter reporting", optarg);
+                stationCallsign = optarg;
+                break;
+            }
+            case 'l':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Grid square required if specifying -l/--reporting-locator.");
+                    printUsage(argv[0]);
+                    exit(-1);
+                }
+                log_info("Using grid square %s for FreeDV Reporter reporting", optarg);
+                stationGridSquare = optarg;
+                break;
+            }
+            case 'f':
+            {
+                int64_t tmpFrequency = atoll(optarg);
+                if (tmpFrequency <= 0)
+                {
+                    log_error("Invalid frequency provided (%s)", optarg);
+                    printUsage(argv[0]);
+                    exit(-1);
+                }
+                stationFrequency = tmpFrequency;
+                log_info("Using frequency %" PRId64 " for FreeDV Reporter reporting", stationFrequency);
+                break;
+            }
+            case 'v':
+            {
+                // Version already printed above.
+                exit(0);
+            }
+            case 'h':
+            default:
+            {
+                printUsage(argv[0]);
+                exit(-1);
+            }
+        }
+    }
+    
+    log_info("Expecting int16 samples at %d Hz sample rate on stdin and outputting int16 samples at %d Hz on stdout", inputSampleRate, outputSampleRate);
     
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
@@ -146,14 +264,14 @@ int main(int argc, char** argv)
     assert(callbackObj != nullptr);
 
     callbackObj->infifo1 = nullptr;
-    callbackObj->infifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    callbackObj->infifo2 = new GenericFIFO<short>(INPUT_FIFO_SIZE_SAMPLES);
     assert(callbackObj->infifo2 != nullptr);
     callbackObj->outfifo1 = nullptr;
-    callbackObj->outfifo2 = new GenericFIFO<short>(FIFO_SIZE_SAMPLES);
+    callbackObj->outfifo2 = new GenericFIFO<short>(OUTPUT_FIFO_SIZE_SAMPLES);
     assert(callbackObj->outfifo2 != nullptr);
 
     // Initialize RX thread
-    MinimalTxRxThread rxThread(false, INPUT_SAMPLE_RATE, OUTPUT_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj.get());
+    MinimalTxRxThread rxThread(false, inputSampleRate, outputSampleRate, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj.get());
 
     log_info("Starting RX thread");
     rxThread.start();
@@ -183,13 +301,17 @@ int main(int argc, char** argv)
     }, true);
     rxNoCallsignReporting.start();
 
-    bool reporterValid = stationCallsign != "" && stationGridSquare != "" && stationFrequency != 0;
+    bool reporterValid = stationCallsign != "" && stationGridSquare != "" && stationFrequency > 0;
     if (reporterValid)
     {
         reportController.updateRadioCallsign(stationCallsign);
         reportController.updateRadioGridSquare(stationGridSquare);
         reportController.changeFrequency(stationFrequency);
         reportController.showSelf();
+    }
+    else
+    {
+        log_warn("Callsign, frequency and grid square/locator must all be provided to enable FreeDV Reporter reporting. Not connecting to FreeDV Reporter.");
     }
 
 #ifdef _WIN32
@@ -200,14 +322,17 @@ int main(int argc, char** argv)
 #endif // _WIN32
 
     bool exiting = false; 
+    const int NUM_TO_READ = (FRAME_DURATION_MS * inputSampleRate / 1000);
+    const int NUM_TO_WRITE = (FRAME_DURATION_MS * outputSampleRate / 1000);
+    short* readBuffer = new short[NUM_TO_READ];
+    assert(readBuffer != nullptr);
+    short* writeBuffer = new short[NUM_TO_WRITE];
+    assert(writeBuffer != nullptr);
     while (!exiting)
     {
-        constexpr int NUM_TO_READ = (FRAME_DURATION_MS * INPUT_SAMPLE_RATE / 1000);
-        constexpr int NUM_TO_WRITE = (FRAME_DURATION_MS * OUTPUT_SAMPLE_RATE / 1000);
         if (callbackObj->infifo2->numFree() >= NUM_TO_READ)
         {
             // Read from standard input and queue on input FIFO
-            short readBuffer[NUM_TO_READ];
             int numActuallyRead = fread(readBuffer, sizeof(short), NUM_TO_READ, stdin);
             if (numActuallyRead <= 0) 
             {
@@ -221,7 +346,6 @@ int main(int argc, char** argv)
         // If we have anything decoded, output that now
         while (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
         {
-            short writeBuffer[NUM_TO_WRITE];
             callbackObj->outfifo2->read(writeBuffer, NUM_TO_WRITE);
             int numActuallyWritten = fwrite(writeBuffer, sizeof(short), NUM_TO_WRITE, stdout);
             if (numActuallyWritten <= 0)
@@ -237,6 +361,8 @@ int main(int argc, char** argv)
             std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
         }
     }
+    delete[] readBuffer;
+    delete[] writeBuffer;
     
     // TBD - the below isn't called since we're in an infinite loop above.
     rade_close(radeObj);
