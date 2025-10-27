@@ -26,6 +26,7 @@
 #include <atomic>
 #include <cstdio>
 #include <thread>
+#include <functional>
 
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
@@ -33,6 +34,7 @@
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
+#include "../util/realtime_fp.h"
 
 // Number of features to store. This is set to be close to the
 // typical size for RX/TX features for the rade_loss ctest to
@@ -48,17 +50,21 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn);
     virtual ~RADEReceiveStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
     int getSync() const { return syncState_.load(std::memory_order_acquire); }
     int getSnr() const { return snr_.load(std::memory_order_acquire); }
-    
+    realtime_fp<std::atomic<int>*()> getRxStateFn() { return rxStateFn_; }
+    void setRxStateFn(realtime_fp<std::atomic<int>*()> rxFn) { rxStateFn_ = rxFn; }
+    void* getStateObj() const { return stateObj_; }
+    void setStateObj(void* state) { stateObj_ = state; }
+
 private:
     std::atomic<int> syncState_;
     std::atomic<int> snr_;
@@ -70,8 +76,7 @@ private:
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
-    std::function<void(RADEReceiveStep*)> syncFn_;
-
+    realtime_fp<void(RADEReceiveStep*)> syncFn_;
     RADE_COMP* inputBufCplx_;
     short* inputBuf_;
     float* featuresOut_;
@@ -80,9 +85,12 @@ private:
     
     PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
-    bool exitingFeatureThread_;
+    std::atomic<bool> exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
-    
+   
+    realtime_fp<std::atomic<int>*()> rxStateFn_;
+    void* stateObj_;
+
     void utFeatureThreadEntry_();
 };
 

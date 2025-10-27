@@ -33,15 +33,15 @@ class PortAudioDevice : public IAudioDevice
 public:
     virtual ~PortAudioDevice();
     
-    virtual int getNumChannels() override { return numChannels_; }
-    virtual int getSampleRate() const override { return sampleRate_; }
+    virtual int getNumChannels() FREEDV_NONBLOCKING override { return numChannels_; }
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override { return sampleRate_; }
     
     virtual void start() override;
     virtual void stop() override;
 
     virtual bool isRunning() override;
     
-    virtual int getLatencyInMicroseconds() override;
+    virtual int64_t getLatencyInMicroseconds() override;
     
 protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.

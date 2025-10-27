@@ -24,8 +24,8 @@
 #include "../defines.h"
 
 ComputeRfSpectrumStep::ComputeRfSpectrumStep(
-    std::function<struct MODEM_STATS*()> modemStatsFn,
-    std::function<float*()> getAvMagFn)
+    realtime_fp<struct MODEM_STATS*()> modemStatsFn,
+    realtime_fp<GenericFIFO<float>*()> getAvMagFn)
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {
@@ -42,17 +42,17 @@ ComputeRfSpectrumStep::~ComputeRfSpectrumStep()
     delete[] rxFdm_;
 }
 
-int ComputeRfSpectrumStep::getInputSampleRate() const
+int ComputeRfSpectrumStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-int ComputeRfSpectrumStep::getOutputSampleRate() const
+int ComputeRfSpectrumStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return FS;
 }
 
-short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto inputSamplesPtr = inputSamples;
     for (int i = 0; i < numInputSamples; i++)
@@ -64,10 +64,7 @@ short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, 
     
     // Average rx spectrum data using a simple IIR low pass filter
     auto avMagPtr = getAvMagFn_();
-    for(int i = 0; i < MODEM_STATS_NSPEC; i++) 
-    {
-        avMagPtr[i] = BETA * avMagPtr[i] + (1.0 - BETA) * rxSpectrum_[i];
-    }
+    avMagPtr->write(rxSpectrum_, MODEM_STATS_NSPEC);
     
     // Tap only, no output.
     *numOutputSamples = 0;

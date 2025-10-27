@@ -31,6 +31,8 @@
 #include <semaphore.h>
 #endif // defined(_WIN32) || defined(__APPLE__)
 
+#include "sanitizers.h"
+
 class Semaphore
 {
 public:
@@ -38,7 +40,7 @@ public:
     virtual ~Semaphore();
     
     void wait();
-    void signal();
+    void signal() FREEDV_NONBLOCKING;
     
 private:
 #if defined(_WIN32)

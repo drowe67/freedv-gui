@@ -42,7 +42,7 @@ MuteStep::MuteStep(int outputSampleRate)
 //     numInputSamples: Number of samples in the input array.
 //     numOutputSamples: Location to store number of output samples.
 // Returns: Array of int16 values corresponding to result audio.
-short* MuteStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* MuteStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     *numOutputSamples = numInputSamples;
     

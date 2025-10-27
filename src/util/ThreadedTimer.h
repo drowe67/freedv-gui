@@ -23,11 +23,16 @@
 #ifndef THREADED_TIMER_H
 #define THREADED_TIMER_H
 
+#if defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#endif // defined(__APPLE__)
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <vector>
 #include <functional>
+#include <atomic>
 
 class ThreadedTimer
 {
@@ -49,16 +54,26 @@ public:
     bool isRunning();
     
 private:
-    bool isDestroying_;
-    bool isRestarting_;
-    std::thread objectThread_;
     std::mutex timerMutex_;
+    std::atomic<bool> isDestroying_;
+    std::atomic<bool> isRestarting_;
+    
+#if defined(__APPLE__)
+    dispatch_source_t internalTimer_;
+    
+    static void OnHandleTimer_(void* context);
+#else
+    std::thread objectThread_;
     std::condition_variable timerCV_;
+#endif // defined(__APPLE__)
+    
     TimerCallbackFn fn_;
     bool repeat_;
     int timeoutMilliseconds_;
 
+#if !defined(__APPLE__)
     void eventLoop_();
+#endif // !defined(__APPLE__)
 };
 
 #endif // THREADED_TIMER_H

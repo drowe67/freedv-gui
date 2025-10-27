@@ -11,7 +11,7 @@ extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
-extern bool endingTx;
+extern std::atomic<bool> endingTx;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -53,6 +53,11 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
             }
             
             m_togBtnVoiceKeyer->SetValue(true);
+
+            auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
+            currentLabel.Replace(_("Start Voice Keyer"), _("Stop Voice Keyer"), false);
+            m_togBtnVoiceKeyer->SetLabel(currentLabel);
+
             VoiceKeyerProcessEvent(VK_START);
         }
         else
@@ -200,8 +205,8 @@ void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
     popup->Popup();
 }
 
-extern SNDFILE *g_sfPlayFile;
-extern bool g_playFileToMicIn;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::atomic<bool> g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
 extern int g_sfTxFs;
@@ -226,7 +231,7 @@ int MainFrame::VoiceKeyerStartTx(void)
     else {
         g_sfTxFs = sfInfo.samplerate;
         
-        if (g_sfTxFs < 16000)
+        if (g_sfTxFs < freedvInterface.getRxSpeechSampleRate())
         {
             wxMessageBox(wxT("The selected voice keyer file does not have a high enough sample rate to guarantee acceptable audio quality. Please ensure that your file's sample rate is 16 kHz or greater."), wxT("Sample Rate Too Low"), wxOK);
             sf_close(tmpPlayFile);
@@ -234,12 +239,21 @@ int MainFrame::VoiceKeyerStartTx(void)
             m_togBtnVoiceKeyer->SetValue(false);
             return VK_IDLE;
         }
-        
-        g_sfPlayFile = tmpPlayFile;
+       
+        if (sfInfo.channels != 1)
+        {
+            wxMessageBox(wxT("The selected voice keyer file must only contain a single channel. Please use an audio editor to convert the file to a mono file."), wxT("Too Many Channels"), wxOK);
+            sf_close(tmpPlayFile);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            m_togBtnVoiceKeyer->SetValue(false);
+            return VK_IDLE;
+        }
+ 
+        g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_.c_str()) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
-        g_playFileToMicIn = true;
+        g_playFileToMicIn.store(true, std::memory_order_release);
 
         m_btnTogPTT->SetValue(true); togglePTT();
         next_state = VK_TX;
@@ -256,6 +270,15 @@ int MainFrame::VoiceKeyerStartTx(void)
     return next_state;
 }
 
+void MainFrame::updateVoiceKeyerButtonLabel_()
+{
+    if (!m_togBtnVoiceKeyer->GetValue())
+    {
+        auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
+        currentLabel.Replace(_("Stop Voice &Keyer"), _("Start Voice &Keyer"), false);
+        m_togBtnVoiceKeyer->SetLabel(currentLabel);
+    }
+}
 
 void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     int next_state = vk_state;
@@ -284,10 +307,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            endingTx = true;
+            endingTx.store(true, std::memory_order_release);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
             CallAfter([&]() { StopPlayFileToMicIn(); });
         }
@@ -295,12 +319,13 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_PLAY_FINISHED) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            endingTx = true;
+            endingTx.store(true, std::memory_order_release);
             CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+                updateVoiceKeyerButtonLabel_();
                 next_state = VK_IDLE;
             }
             else {
@@ -333,6 +358,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
         }
 
@@ -347,6 +373,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            updateVoiceKeyerButtonLabel_();
             next_state = VK_IDLE;
         }
 
@@ -364,6 +391,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+                updateVoiceKeyerButtonLabel_();
                 next_state = VK_IDLE;
             }
         }
@@ -374,10 +402,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         m_btnTogPTT->SetValue(false); 
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
-        endingTx = true;
+        endingTx.store(true, std::memory_order_release);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+        updateVoiceKeyerButtonLabel_();
         next_state = VK_IDLE;
         g_voice_keyer_tx.store(false, std::memory_order_release);
     }

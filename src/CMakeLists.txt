@@ -1,6 +1,6 @@
-if((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
-endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
 set(FREEDV_SOURCES
     ${MIMALLOC_SOURCE_FILE}
@@ -23,8 +23,9 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
-# Include third party headers
+# Include third party headers and components
 include_directories(3rdparty)
+add_subdirectory(3rdparty)
 
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
@@ -40,6 +41,11 @@ add_subdirectory(rig_control)
 add_subdirectory(sox)
 add_subdirectory(util)
 
+# Compile FreeDV rig integrations
+if((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+add_subdirectory(flex)
+endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
@@ -50,7 +56,7 @@ if(APPLE)
         BUNDLE True
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
         MACOSX_BUNDLE_BUNDLE_NAME FreeDV
-        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2021 FreeDV"
+        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2025 FreeDV"
         MACOSX_BUNDLE_BUNDLE_VERSION "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FreeDV_VERSION}"
@@ -139,11 +145,17 @@ if(APPLE)
         set(PORTAUDIO_BUNDLE_ARG -s ${portaudio_BINARY_DIR})
     endif(NOT USE_NATIVE_AUDIO)
     
+    # Get folder containing libasan so we don't need to enter it to macdylibbundler.
+    execute_process(
+        COMMAND ${CMAKE_C_COMPILER} -print-file-name=libclang_rt.asan_osx_dynamic.dylib
+        OUTPUT_VARIABLE CLANG_SANITIZER_FILE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR}
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR} -s `dirname ${CLANG_SANITIZER_FILE}`
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
@@ -162,20 +174,19 @@ if(APPLE)
 
     if (MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
-            COMMAND /usr/bin/ditto -c -k --keepParent ./FreeDV.app FreeDV-appbundle.zip
-            COMMAND xcrun notarytool submit ./FreeDV-appbundle.zip --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
-            COMMAND rm -rf FreeDV-appbundle.zip
-            COMMAND xcrun stapler staple ./FreeDV.app
             COMMAND mkdir dist_tmp
             COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
             COMMAND rm -rf dist_tmp
+            COMMAND codesign --timestamp -i org.freedv.freedv --sign ${MACOS_CODESIGN_IDENTITY} FreeDV.dmg
+            COMMAND xcrun notarytool submit ./FreeDV.dmg --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
+            COMMAND xcrun stapler staple ./FreeDV.dmg
             DEPENDS FreeDV)
     else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
             COMMAND mkdir dist_tmp
             COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
             COMMAND rm -rf dist_tmp
             DEPENDS FreeDV)
     endif (MACOS_CODESIGN_KEYCHAIN_PROFILE)

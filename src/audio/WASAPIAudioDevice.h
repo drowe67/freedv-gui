@@ -41,15 +41,15 @@ class WASAPIAudioDevice : public Win32COMObject, public IAudioDevice
 public:
     virtual ~WASAPIAudioDevice();
 
-    virtual int getNumChannels() override;
-    virtual int getSampleRate() const override;
+    virtual int getNumChannels() FREEDV_NONBLOCKING override;
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override;
     
     virtual void start() override;
     virtual void stop() override;
 
     virtual bool isRunning() override;
 
-    virtual int getLatencyInMicroseconds() override;
+    virtual int64_t getLatencyInMicroseconds() override;
 
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.

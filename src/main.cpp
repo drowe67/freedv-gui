@@ -57,6 +57,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 
 #include "util/logging/ulog.h"
+#include "util/audio_spin_mutex.h"
 
 #include "rade_api.h"
 
@@ -95,14 +96,16 @@ bool                g_queueResync;
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-int                 g_channel_noise;
+std::atomic<int>    g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
 float               g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
-float               g_avmag[MODEM_STATS_NSPEC];
+GenericFIFO<float>  g_avmag(MODEM_STATS_NSPEC * 10 / DT); // 1s worth
+float               g_avmag_waterfall[MODEM_STATS_NSPEC];
+float               g_avmag_spectrum[MODEM_STATS_NSPEC];
 
 // TX level for attenuation
 int g_txLevel = 0;
@@ -119,37 +122,38 @@ std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
 
 // sending and receiving Call Sign data
-struct FIFO         *g_txDataInFifo;
+std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State, g_prev_State;
+std::atomic<int>                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
 time_t              g_sync_time;
 
 // FIFOs used for plotting waveforms
-struct FIFO        *g_plotDemodInFifo;
-struct FIFO        *g_plotSpeechOutFifo;
-struct FIFO        *g_plotSpeechInFifo;
+constexpr int PLOT_BUF_MULTIPLIER=8;
+GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
 int                 g_nSoundCards;
 
 // PortAudio over/underflow counters
 
-int                 g_infifo1_full;
-int                 g_outfifo1_empty;
-int                 g_infifo2_full;
-int                 g_outfifo2_empty;
+std::atomic<int>    g_infifo1_full;
+std::atomic<int>    g_outfifo1_empty;
+std::atomic<int>    g_infifo2_full;
+std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
-extern SNDFILE            *g_sfPlayFile;
-extern bool                g_playFileToMicIn;
+extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::atomic<bool>                g_playFileToMicIn;
 extern bool                g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
 
@@ -158,8 +162,8 @@ extern bool                g_recFileFromRadio;
 extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 
-extern SNDFILE            *g_sfPlayFileFromRadio;
-extern bool                g_playFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
+extern std::atomic<bool>                g_playFileFromRadio;
 extern int                 g_sfFs;
 extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
@@ -186,7 +190,7 @@ float               g_TxFreqOffsetHz;
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
-bool endingTx;
+std::atomic<bool> endingTx;
 
 // Option test file to log samples
 
@@ -334,6 +338,7 @@ void MainApp::UnitTest_()
         std::this_thread::sleep_for(20ms);
     }
     
+    constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
@@ -357,12 +362,13 @@ void MainApp::UnitTest_()
                 // Transmit until file has finished playing
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
-                g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
+                g_sfPlayFile.store(sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
                 g_sfTxFs = sfInfo.samplerate;
                 g_loopPlayFileToMicIn = false;
-                g_playFileToMicIn = true;
+                g_playFileToMicIn.store(true, std::memory_order_release);
 
-                while (g_playFileToMicIn)
+                int counter = 0;
+                while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(100ms);
                 } 
@@ -378,7 +384,7 @@ void MainApp::UnitTest_()
             std::this_thread::sleep_for(1s);
             CallAfter([this]() {
                 frame->m_btnTogPTT->SetValue(false);
-                endingTx = true;
+                endingTx.store(true, std::memory_order_release);
                 wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
                 rxEvent->SetEventObject(frame->m_btnTogPTT);
                 frame->OnTogBtnPTT(*rxEvent);
@@ -399,13 +405,14 @@ void MainApp::UnitTest_()
             // Receive until file has finished playing
             SF_INFO     sfInfo;
             sfInfo.format = 0;
-            g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfPlayFileFromRadio.store(sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
             g_sfFs = sfInfo.samplerate;
             g_loopPlayFileFromRadio = false;
-            g_playFileFromRadio = true;
+            g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
-            while (g_playFileFromRadio)
+            int counter = 0;
+            while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
@@ -732,22 +739,19 @@ void MainFrame::loadConfiguration_()
     });
     
     // Load AGC state
-    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled;
+    g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
-    snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
-    wxString fmtString(fmt);
+    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-    snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
-    fmtString = fmt;
+    fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
     // Adjust frequency entry labels
@@ -809,20 +813,15 @@ void MainFrame::loadConfiguration_()
         
         double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency) / freqFactor;
 
-        std::stringstream ss;
-        std::locale loc("");
-        ss.imbue(loc);
-        
+        wxString sVal;
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            ss << std::fixed << std::setprecision(1) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 1);
         }
         else
         {
-            ss << std::fixed << std::setprecision(4) << freq;
+            sVal = wxNumberFormatter::ToString(freq, 4);
         }
-        
-        std::string sVal = ss.str();
         m_cboReportFrequency->SetValue(sVal);
     }
 
@@ -877,10 +876,8 @@ setDefaultMode:
     m_togBtnVoiceKeyer->Disable();
 
     // squelch settings
-    char sqsnr[15];
     m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    snprintf(sqsnr, 15, "%4.1f dB", g_SquelchLevel);
-    wxString sqsnr_string(sqsnr);
+    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB";
     m_textSQ->SetLabel(sqsnr_string);
     m_ckboxSQ->SetValue(g_SquelchActive);
 
@@ -966,7 +963,40 @@ setDefaultMode:
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()))
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str())),
+
+    // Create needed strings in advance so we don't need to continually 
+    // reallocate memory every time through OnTimer() below. We prioritize
+    // the strings that are used when RADE is selected as this mode is not
+    // fully optimized for real-time use yet (i.e. it dynamically allocates
+    // memory while processing audio).
+    SNR_FORMAT_STR("%ddB"),
+    MODE_FORMAT_STR("Mode: %s"),
+    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
+    NO_SNR_LABEL("--"),
+    EMPTY_STR(""),
+    MODEM_LABEL("Modem"),
+    BITS_UNK_LABEL("Bits: unk"),
+    ERRS_UNK_LABEL("Errs: unk"),
+    BER_UNK_LABEL("BER: unk"),
+    FRQ_OFF_UNK_LABEL("FrqOff: unk"),
+    SYNC_UNK_LABEL("Sync: unk"),
+    VAR_UNK_LABEL("Var: unk"),
+    CLK_OFF_UNK_LABEL("ClkOff: unk"),
+    TOO_HIGH_LABEL("Too High"),
+    MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
+    DECIBEL_STR("dB"),
+    CURRENT_TIME_FORMAT_STR("%s %s"),
+    SNR_FORMAT_STR_NO_DB("%0.1f"),
+    CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)"),
+    BITS_FMT("Bits: %d"),
+    ERRS_FMT("Errs: %d"),
+    BER_FMT("BER: %4.3f"),
+    RESYNC_FMT("Resyncs: %d"),
+    FRQ_OFF_FMT("FrqOff: %3.1f"),
+    SYNC_FMT("Sync: %3.2f"),
+    VAR_FMT("Var: %4.1f"),
+    CLK_OFF_FMT("ClkOff: %+-d")
 {
 #if defined(__linux__)
     pthread_setname_np(pthread_self(), "FreeDV GUI");
@@ -1008,7 +1038,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     tools->Append(m_menuItemToolsConfigDelete);
     
     // Add Waterfall Plot window
-    m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
+    m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, g_avmag_waterfall, false, 0);
     m_panelWaterfall->SetToolTip(_("Double click to tune, middle click to re-center"));
     m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
@@ -1016,7 +1046,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     wxPanel* spectrumPanel = new wxPanel(m_auiNbookCtrl);
     
     // Actual Spectrum plot
-    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag,
+    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag_spectrum,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
     m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));    
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
@@ -1024,17 +1054,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
-    g_plotDemodInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
-    g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
-    g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
     
     // Add Scatter Plot window
     m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
@@ -1149,15 +1176,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
 
-    g_sfPlayFile = NULL;
-    g_playFileToMicIn = false;
+    g_sfPlayFile.store(NULL, std::memory_order_release);
+    g_playFileToMicIn.store(false, std::memory_order_release);
     g_loopPlayFileToMicIn = false;
 
     g_sfRecFile = NULL;
     g_recFileFromRadio = false;
 
-    g_sfPlayFileFromRadio = NULL;
-    g_playFileFromRadio = false;
+    g_sfPlayFileFromRadio.store(NULL, std::memory_order_release);
+    g_playFileFromRadio.store(false, std::memory_order_release);
     g_loopPlayFileFromRadio = false;
 
     g_sfRecFileFromModulator = NULL;
@@ -1178,7 +1205,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_tx.store(false, std::memory_order_release);
 
     // data states
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
     g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
 
     sox_biquad_start();
@@ -1338,10 +1365,11 @@ MainFrame::~MainFrame()
     } 
     sox_biquad_finish();
 
-    if (g_sfPlayFile != NULL)
+    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+    if (playFile != NULL)
     {
-        sf_close(g_sfPlayFile);
-        g_sfPlayFile = NULL;
+        sf_close(playFile);
+        g_sfPlayFile.store(NULL, std::memory_order_release);
     }
     if (g_sfRecFile != NULL)
     {
@@ -1528,7 +1556,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
       {
-          if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+          if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
@@ -1536,14 +1564,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
       {
-          if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+          if (g_plotSpeechOutFifo.read(speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechOut->refreshData();
       }
       else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
       {
-          if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+          if (g_plotDemodInFifo.read(demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
@@ -1561,6 +1589,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
      else
      {
+         // Update average magnitudes
+         float rxSpectrum[MODEM_STATS_NSPEC];
+         while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
+         {
+             g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
+             for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+             {
+                 g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
+             }
+             memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+         }
+
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
          if (txState)
@@ -1575,7 +1615,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
          {
              m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             wxString fmt = wxString::Format(wxT("%0.1f dB"), (double)sliderVal);
+             m_sliderMicSpkrLevel->Refresh();
+             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
              m_txtMicSpkrLevelNum->SetLabel(fmt);
          
              if (m_filterDialog != nullptr)
@@ -1603,7 +1644,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
-        wxString snrString = wxString::Format("%d dB", (int)(g_snr + 0.5));
+        wxString snrString = wxString::Format(SNR_FORMAT_STR, (int)(g_snr + 0.5));
 
         if (syncState)
         {
@@ -1612,20 +1653,21 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else
         {
-            m_textSNR->SetLabel(wxT("--"));
+            m_textSNR->SetLabel(NO_SNR_LABEL);
             m_gaugeSNR->SetValue(0);
         }
 
         // sync LED (Colours don't work on Windows) ------------------------
 
+        auto state = g_State.load(std::memory_order_acquire);
         if (m_textSync->IsEnabled())
         {
             auto oldColor = m_textSync->GetForegroundColour();
-            wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
+            wxColour newColor = state ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
         
-            if (g_State) 
+            if (state) 
             {
-                if (g_prev_State == 0) 
+                if (g_prev_State.load(std::memory_order_acquire) == 0) 
                 {
                     g_resyncs++;
                 
@@ -1637,8 +1679,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         
                         // Clear RX text to reduce the incidence of incorrect callsigns extracted with
                         // the PSK Reporter callsign extraction logic.
-                        m_txtCtrlCallSign->SetValue(wxT(""));
-                        m_cboLastReportedCallsigns->SetValue(wxT(""));
+                        m_txtCtrlCallSign->SetValue(EMPTY_STR);
+                        m_cboLastReportedCallsigns->SetValue(EMPTY_STR);
                         m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
@@ -1661,11 +1703,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(wxT("Modem"));
+                m_textSync->SetLabel(MODEM_LABEL);
                 m_textSync->Refresh();
             }
         }
-        g_prev_State = g_State;
+        g_prev_State.store(state, std::memory_order_release);
 
         // send Callsign ----------------------------------------------------
 
@@ -1682,13 +1724,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      
             // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
             char* sendBuffer = &callsign[0];
-            if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+            auto txDataFifo = g_txDataInFifo.load(std::memory_order_acquire);
+            if ((unsigned)txDataFifo->numUsed() < strlen(sendBuffer)) {
                 unsigned int  i;
 
                 // write chars to tx data fifo
                 for(i = 0; i < strlen(sendBuffer); i++) {
                     short ashort = (unsigned char)sendBuffer[i];
-                    codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+                    txDataFifo->write(&ashort, 1);
                 }
             }
 
@@ -1727,15 +1770,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
-            wxString wxCallsign = text;
+
+            wxString wxCallsign; 
+            if (text != nullptr && strlen(text) > 0) wxCallsign = text;
+
             delete[] text;
         
             auto pendingSnr = (int)(g_snr + 0.5);
             if (wxCallsign.Length() > 0)
             {
                 freedvInterface.resetReliableText();
-                
-                wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+
+                wxRegEx callsignFormat(CALLSIGN_FORMAT_RGX);
                 if (callsignFormat.Matches(wxCallsign))
                 {
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
@@ -1745,12 +1791,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
-                        freqString = wxString::Format("%.01f", freq);
+                        freqString = wxNumberFormatter::ToString(freq, 1);
                     }
                     else
                     {
                         double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
-                        freqString = wxString::Format("%.04f", freq);
+                        freqString = wxNumberFormatter::ToString(freq, 4);
                     }
 
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
@@ -1758,13 +1804,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
-                        wxString currentTimeAsString = wxT("");
+                        wxString currentTimeAsString = EMPTY_STR;
                         
                         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
                             currentTime = currentTime.ToUTC();
                         }
-                        currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
+                        currentTimeAsString.Printf(CURRENT_TIME_FORMAT_STR, currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
                         m_lastReportedCallsignListView->SetItem(index, 1, freqString);
@@ -1772,7 +1818,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     wxString snrAsString;
-                    snrAsString.Printf(wxT("%0.1f"), g_snr);
+                    snrAsString.Printf(SNR_FORMAT_STR_NO_DB, g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
                     
@@ -1797,7 +1843,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             pendingSnr,
                             freqLongLong);
         
-                        if (!g_playFileFromRadio)
+                        if (!g_playFileFromRadio.load(std::memory_order_acquire))
                         {
                             for (auto& obj : wxGetApp().m_reporters)
                             {
@@ -1826,7 +1872,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if (freq > 0 && wxGetApp().m_reportCounter == 0)
                 {
                     wxGetApp().m_reportCounter = 0;
-                    if (!g_playFileFromRadio)
+                    if (!g_playFileFromRadio.load(std::memory_order_acquire))
                     {                
                         wxGetApp().m_sharedReporterObject->addReceiveRecord(
                             "",
@@ -1885,11 +1931,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             freedvInterface.resetTestFrameStats();
         }
         freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise = wxGetApp().m_channel_noise;
+        g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
-
-        wxString modeString = wxString::Format(wxT("Mode: %s"), freedvInterface.getCurrentModeStr());
+        wxString modeString; 
+        if (g_mode == FREEDV_MODE_RADE) modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
+        else modeString = wxString::Format(MODE_FORMAT_STR, freedvInterface.getCurrentModeStr());
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -1919,49 +1966,49 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_mode == FREEDV_MODE_RADE)
         {
-            m_textBits->SetLabel(wxT("Bits: unk"));
-            m_textErrors->SetLabel(wxT("Errs: unk"));
-            m_textBER->SetLabel(wxT("BER: unk"));
-            m_textFreqOffset->SetLabel(wxT("FrqOff: unk"));
-            m_textSyncMetric->SetLabel(wxT("Sync: unk"));
-            m_textCodec2Var->SetLabel(wxT("Var: unk"));
+            m_textBits->SetLabel(BITS_UNK_LABEL);
+            m_textErrors->SetLabel(ERRS_UNK_LABEL);
+            m_textBER->SetLabel(BER_UNK_LABEL);
+            m_textFreqOffset->SetLabel(FRQ_OFF_UNK_LABEL);
+            m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
+            m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
         }
         else
         {
-            wxString bits = wxString::Format(wxT("Bits: %d"), freedvInterface.getTotalBits()); 
+            wxString bits = wxString::Format(BITS_FMT, freedvInterface.getTotalBits()); 
             m_textBits->SetLabel(bits);
 
-            wxString errors = wxString::Format(wxT("Errs: %d"), freedvInterface.getTotalBitErrors()); 
+            wxString errors = wxString::Format(ERRS_FMT, freedvInterface.getTotalBitErrors()); 
             m_textErrors->SetLabel(errors);
 
             float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            wxString ber = wxString::Format(wxT("BER: %4.3f"), b); 
+            wxString ber = wxString::Format(BER_FMT, b); 
             m_textBER->SetLabel(ber);
 
-            wxString resyncs = wxString::Format(wxT("Resyncs: %d"), g_resyncs); 
+            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
             m_textResyncs->SetLabel(resyncs);
 
-            wxString freqOffset = wxString::Format(wxT("FrqOff: %3.1f"), freedvInterface.getCurrentRxModemStats()->foff);
+            wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemStats()->foff);
             m_textFreqOffset->SetLabel(freqOffset);
 
-            wxString syncMetric = wxString::Format(wxT("Sync: %3.2f"), freedvInterface.getCurrentRxModemStats()->sync_metric);
+            wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
             m_textSyncMetric->SetLabel(syncMetric);
 
             // Codec 2 700D/E "auto EQ" equaliser variance
             auto var = freedvInterface.getVariance();
-            wxString var_string = wxString::Format(wxT("Var: %4.1f"), var);
+            wxString var_string = wxString::Format(VAR_FMT, var);
             m_textCodec2Var->SetLabel(var_string);
         }
 
-        if (g_State) {
+        if (state) {
 
             if (g_mode == FREEDV_MODE_RADE)
             {
-                m_textClockOffset->SetLabel(wxT("ClkOff: unk"));
+                m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
             }
             else
             {
-                wxString clockOffset = wxString::Format(wxT("ClkOff: %+-d"), (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+                wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
                 m_textClockOffset->SetLabel(clockOffset);
             }
             
@@ -2066,9 +2113,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
             if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel(wxT("Too High"));
+                m_textLevel->SetLabel(TOO_HIGH_LABEL);
             else
-                m_textLevel->SetLabel(wxT(""));
+                m_textLevel->SetLabel(EMPTY_STR);
 
             m_maxLevel *= LEVEL_BETA;
         }
@@ -2193,12 +2240,21 @@ void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
     g_queueResync = false;
-    endingTx = false;
+    endingTx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
     executeOnUiThreadAndWait_([&]() 
-    {        
+    {
+        // Zero out spectrum plots
+        memset(g_avmag_waterfall, 0, sizeof(g_avmag_waterfall));
+        memset(g_avmag_spectrum, 0, sizeof(g_avmag_waterfall));
+
+        // Reset plot FIFOs
+        g_plotDemodInFifo.reset();
+        g_plotSpeechOutFifo.reset();
+        g_plotSpeechInFifo.reset();
+
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
@@ -2319,7 +2375,8 @@ void MainFrame::performFreeDVOn_()
         m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
-    g_State = g_prev_State = 0;
+    g_State.store(0, std::memory_order_release);
+    g_prev_State.store(0, std::memory_order_release);;
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -2475,8 +2532,8 @@ void MainFrame::performFreeDVOn_()
     }
 
     // Clear existing TX text, if any.
-    codec2_fifo_destroy(g_txDataInFifo);
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
+    tmpFifo->reset();
 }
 
 void MainFrame::performFreeDVOff_()
@@ -2615,7 +2672,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 if (m_RxRunning)
                 {
-                    m_togBtnOnOff->SetLabel(wxT("&Stop"));
+                    m_togBtnOnOff->SetLabel(wxT("&Stop Modem"));
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
@@ -2646,7 +2703,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_btnTogPTT->Enable(m_RxRunning);
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
-                m_togBtnOnOff->SetLabel(wxT("&Start"));
+                m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
                 if (terminating_)
@@ -2794,8 +2851,10 @@ void MainFrame::startRxStream()
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
 
-            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
-            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
+            g_rxUserdata->tmpReadRxBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpReadTxBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpWriteRxBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
+            g_rxUserdata->tmpWriteTxBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
         }
         else
         {
@@ -2804,8 +2863,10 @@ void MainFrame::startRxStream()
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
 
-            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
-            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->tmpReadRxBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpReadTxBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpWriteRxBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->tmpWriteTxBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -3043,8 +3104,10 @@ void MainFrame::startRxStream()
 
         // reset debug stats for FIFOs
 
-        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
-        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        g_infifo1_full.store(0, std::memory_order_release);
+        g_outfifo1_empty.store(0, std::memory_order_release);
+        g_infifo2_full.store(0, std::memory_order_release);
+        g_outfifo2_empty.store(0, std::memory_order_release);
         for (int i=0; i<4; i++) {
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
@@ -3139,15 +3202,15 @@ void MainFrame::startRxStream()
         }
         else
         {
-            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* tmpOutput = cbData->tmpWriteBuffer_.get();
+                short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
-                    g_outfifo1_empty++;
+                    g_outfifo1_empty.fetch_add(1, std::memory_order_release);
                 }
 
                 cbData->outfifo1->read(tmpOutput, toRead);
@@ -3483,16 +3546,26 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     delete args;
 
     double freqFactor = 1000.0;
-    std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
+    std::string fmtMsg = "%s has requested that you QSY to %s kHz.";
         
     if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         freqFactor *= 1000.0;
-        fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+        fmtMsg = "%s has requested that you QSY to %s MHz.";
     }
         
     double frequencyReadable = freqHz / freqFactor;
-    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
+    wxString freqString;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 1);
+    }
+    else
+    {
+        freqString = wxNumberFormatter::ToString(frequencyReadable, 4);
+    }
+    
+    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, freqString);
     int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
     if (wxGetApp().rigFrequencyController != nullptr && 
@@ -3513,14 +3586,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     if (answer == wxID_YES)
     {
         // This will implicitly cause Hamlib to change the frequency and mode.
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
-        }
-        else
-        {
-            m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
-        }
+        m_cboReportFrequency->SetValue(freqString);
     }
 }
 
@@ -3545,13 +3611,13 @@ void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* stat
     castedState->CallAfter(&MainFrame::onAudioDeviceError_, error);
 }
 
-void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpInput = cbData->tmpReadBuffer_.get();
+    short* tmpInput = cbData->tmpReadTxBuffer_.get();
 
-    if (!endingTx) 
+    if (!endingTx.load(std::memory_order_acquire)) 
     {
         auto numChannels = dev.getNumChannels();
         for(size_t i = 0; i < size; i++, audioData += numChannels)
@@ -3560,21 +3626,21 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         }
         if (cbData->infifo2->write(tmpInput, size)) 
         {
-            g_infifo2_full++;
+            g_infifo2_full.fetch_add(1, std::memory_order_release);
         }
     }
 }
 
-void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+    short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     if (toRead < size)
     {
-        g_outfifo1_empty++;
+        g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
 
     cbData->outfifo1->read(tmpOutput, toRead);
@@ -3601,11 +3667,11 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
 }
 
-void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpInput = cbData->tmpReadBuffer_.get();
+    short* tmpInput = cbData->tmpReadRxBuffer_.get();
 
     auto numChannels = dev.getNumChannels();
     for (size_t i = 0; i < size; i++, audioData += numChannels)
@@ -3614,21 +3680,20 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
     if (cbData->infifo1->write(tmpInput, size)) 
     {
-        log_warn("RX FIFO full");
-        g_infifo1_full++;
+        g_infifo1_full.fetch_add(1, std::memory_order_release);
     }
 }
 
-void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state)
+void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING
 {
     paCallBackData* cbData = static_cast<paCallBackData*>(state);
     short* audioData = static_cast<short*>(data);
-    short* tmpOutput = cbData->tmpWriteBuffer_.get();
+    short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
     if (toRead < size)
     {
-        g_outfifo2_empty++;
+        g_outfifo2_empty.fetch_add(1, std::memory_order_release);
     }
 
     cbData->outfifo2->read(tmpOutput, toRead);

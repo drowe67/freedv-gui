@@ -31,6 +31,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <atomic>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -41,6 +42,7 @@
 #endif // defined(_WIN32) || defined(__APPLE__)
 
 #include "../util/IRealtimeHelper.h"
+#include "../util/realtime_fp.h"
 #include "codec2_fifo.h"
 
 class ParallelStep : public IPipelineStep
@@ -49,27 +51,29 @@ public:
     ParallelStep(
         int inputSampleRate, int outputSampleRate,
         bool runMultiThreaded,
-        std::function<int(ParallelStep*)> inputRouteFn,
-        std::function<int(ParallelStep*)> outputRouteFn,
+        realtime_fp<int(ParallelStep*)> inputRouteFn,
+        realtime_fp<int(ParallelStep*)> outputRouteFn,
         std::vector<IPipelineStep*> parallelSteps,
         std::shared_ptr<void> state,
+        void* callbackState,
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     virtual ~ParallelStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
     const std::vector<IPipelineStep*>& getParallelSteps() const { return parallelSteps_; }
     
-    std::shared_ptr<void> getState() { return state_; }
-    
+    void* getState() { return state_.get(); }
+    void* getCallbackState() const { return callbackState_; }
+
 private:    
     struct ThreadInfo
     {
         std::thread thread;
-        bool exitingThread;
+        std::atomic<bool> exitingThread;
         std::unique_ptr<IPipelineStep> step;
         FIFO* inputFifo;
         FIFO* outputFifo;
@@ -88,12 +92,13 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     bool runMultiThreaded_;
-    std::function<int(ParallelStep*)> inputRouteFn_;
-    std::function<int(ParallelStep*)> outputRouteFn_;
+    realtime_fp<int(ParallelStep*)> inputRouteFn_;
+    realtime_fp<int(ParallelStep*)> outputRouteFn_;
     std::vector<ThreadInfo*> threads_;
     std::shared_ptr<IRealtimeHelper> realtimeHelper_;
     std::shared_ptr<void> state_;
     std::vector<IPipelineStep*> parallelSteps_;
+    void* callbackState_;
 
     void executeRunnerThread_(ThreadInfo* threadState) noexcept
 #if defined(__clang__)

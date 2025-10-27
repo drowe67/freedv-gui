@@ -40,11 +40,23 @@
 class PlotWaterfall : public PlotPanel
 {
     public:
-        PlotWaterfall(wxWindow* parent, bool graticule, int colour);
+        PlotWaterfall(wxWindow* parent, float *magdB, bool graticule, int colour);
         ~PlotWaterfall();
         bool checkDT(void);
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
-        void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
+        void setRxFreq(float rxFreq) {
+            bool zeroTransition = 
+                (rxFreq != 0 && m_rxFreq == 0) ||
+                (rxFreq == 0 && m_rxFreq != 0);
+
+            m_rxFreq = rxFreq; 
+            if (zeroTransition)
+            {
+                // Trigger a full redraw when going to/from RADE mode 
+                // to make sure frequency indicator renders properly.
+                Refresh();
+            }
+        }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
 
@@ -55,20 +67,21 @@ class PlotWaterfall : public PlotPanel
 
         unsigned    heatmap(float val, float min, float max);
 
-        void        OnSize(wxSizeEvent& event);
-        void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false);
+        void        OnSize(wxSizeEvent& event) override;
+        void        OnShow(wxShowEvent& event) override;
+        void        drawGraticule(wxGraphicsContext* ctx) override;
+        void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false) override;
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseMiddleDown(wxMouseEvent& event);
-        void        OnMouseWheelMoved(wxMouseEvent& event);
+        void        OnMouseWheelMoved(wxMouseEvent& event) override;
         void        OnKeyDown(wxKeyEvent& event);
 
         virtual bool repaintAll_(wxPaintEvent& evt) override;
 
     private:
+        float*      m_magDb;
         float       m_dT;
         float       m_rxFreq;
         bool        m_graticule;
@@ -76,6 +89,9 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
+        unsigned char* dyImageData_;
+        int dy_;
+        wxImage* tmpImage_;
 
         int m_imgHeight;
         int m_imgWidth;

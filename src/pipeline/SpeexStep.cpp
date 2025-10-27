@@ -23,11 +23,9 @@
 #include <atomic>
 
 #include "SpeexStep.h"
-#include "../defines.h"
+#include "pipeline_defines.h"
 
 #include <assert.h>
-
-extern std::atomic<bool> g_agcEnabled;
 
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
@@ -41,8 +39,6 @@ SpeexStep::SpeexStep(int sampleRate)
                 sampleRate_);
     assert(speexStateObj_ != nullptr);
     
-    updateAgcState_();
-    
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     outputSamples_ = std::make_unique<short[]>(sampleRate);
     assert(outputSamples_ != nullptr);
@@ -54,20 +50,18 @@ SpeexStep::~SpeexStep()
     speex_preprocess_state_destroy(speexStateObj_);
 }
 
-int SpeexStep::getInputSampleRate() const
+int SpeexStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-int SpeexStep::getOutputSampleRate() const
+int SpeexStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
 
-short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
+short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
-    updateAgcState_();
-    
     *numOutputSamples = 0;
 
     short* outputSamples = outputSamples_.get();
@@ -83,7 +77,13 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
         while (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
         {
             inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
+
+            // Note: Speex is unlikely to use RT-unsafe constructs in normal operation
+            // (per existing RTSan-enabled tests). Verified on 2025-09-30.
+            FREEDV_BEGIN_VERIFIED_SAFE
             speex_preprocess_run(speexStateObj_, tmpOutput);
+            FREEDV_END_VERIFIED_SAFE
+
             tmpOutput += numSamplesPerSpeexRun_;
         }
     }
@@ -95,24 +95,7 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
     return outputSamples;
 }
 
-void SpeexStep::reset()
+void SpeexStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
-}
-
-void SpeexStep::updateAgcState_()
-{
-    int32_t newAgcState = g_agcEnabled ? 1 : 0;
-    
-    speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC, &newAgcState);
-    if (newAgcState)
-    {
-        // Experimentally determined to be such that normal speaking creates peaks +/- ~0.4.
-        // Used MacBook Pro built-in microphone for tests.
-        float newAgcLevel = 12000;
-        speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_LEVEL, &newAgcLevel);
-
-        uint32_t maxGainDb = 40;
-        speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_MAX_GAIN, &maxGainDb);
-    }
 }

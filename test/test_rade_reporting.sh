@@ -2,11 +2,12 @@
 
 # Determine sox driver to use for recording/playback
 OPERATING_SYSTEM=`uname`
-SOX_DRIVER=alsa
-FREEDV_BINARY=src/freedv
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
-    FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
+    FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
+else
+    SOX_DRIVER=alsa
+    FREEDV_BINARY=src/freedv
 fi
 
 createVirtualAudioCable () {
@@ -20,12 +21,17 @@ FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="${FREEDV_MICROPHONE_TO_COMPUTER_DEVICE:-Fr
 FREEDV_COMPUTER_TO_RADIO_DEVICE="${FREEDV_COMPUTER_TO_RADIO_DEVICE:-FreeDV_Computer_To_Radio}"
 
 # Automated script to help find audio dropouts.
-# NOTE: this must be run from "build_linux". Also assumes PulseAudio/pipewire.
+# NOTE: this must be run from "build_*". Also assumes PulseAudio/pipewire or macOS Core Audio,
+# does not work in Windows.
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Radio_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
     DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
+
+    # Make sure cables are actually created before proceeding with looping them back
+    sleep 2
+
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
@@ -72,7 +78,7 @@ RECORD_PID=$!
 
 # Start "radio"
 if [ "$2" == "mpp" ]; then
-    TIMES_BEFORE_KILL=5
+    TIMES_BEFORE_KILL=3
 else
     TIMES_BEFORE_KILL=1
 fi
@@ -81,11 +87,11 @@ RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
-    TX_ARGS="-txtime 1 -txattempts 6 "
+    TX_ARGS="-txtime 1 -txattempts 4 "
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 

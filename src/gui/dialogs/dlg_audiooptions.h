@@ -60,7 +60,7 @@ class AudioOptsDialog : public wxDialog
         bool            m_isPaInitialized;
 
         void buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
-                               wxPanel *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
+                               wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
         void plotDeviceInputForAFewSecs(wxString devName, PlotScalar *plotScalar);
         void plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *plotScalar);
 

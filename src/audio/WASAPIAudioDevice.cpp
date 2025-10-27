@@ -73,12 +73,12 @@ WASAPIAudioDevice::~WASAPIAudioDevice()
     fut.wait(); 
 }
 
-int WASAPIAudioDevice::getNumChannels()
+int WASAPIAudioDevice::getNumChannels() FREEDV_NONBLOCKING
 {
     return numChannels_;
 }
 
-int WASAPIAudioDevice::getSampleRate() const
+int WASAPIAudioDevice::getSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
@@ -505,11 +505,11 @@ bool WASAPIAudioDevice::isRunning()
     return (renderClient_) || (captureClient_);
 }
 
-int WASAPIAudioDevice::getLatencyInMicroseconds()
+int64_t WASAPIAudioDevice::getLatencyInMicroseconds()
 {
     // Note: latencyFrames_ isn't expected to change, so we don't need to 
     // wrap this call in an enqueue_() like with the other public methods.
-    return 1000000 * latencyFrames_ / sampleRate_;
+    return (int64_t)1000000 * (int64_t)latencyFrames_ / sampleRate_;
 }
 
 void WASAPIAudioDevice::setHelperRealTime()

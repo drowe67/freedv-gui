@@ -29,7 +29,9 @@ void wxListViewComboPopup::SetStringValue(const wxString& s)
 wxString wxListViewComboPopup::GetStringValue() const
 {
     if ( m_value >= 0 )
-    return wxListView::GetItemText(m_value);
+    {
+        return wxListView::GetItemText(m_value);
+    }
     return wxEmptyString;
 }
 
@@ -37,14 +39,30 @@ wxString wxListViewComboPopup::GetStringValue() const
 void wxListViewComboPopup::OnMouseMove(wxMouseEvent& event)
 {
     // TODO: Move selection to cursor
+    event.Skip();
 }
 
 // On mouse left up, set the value and close the popup
-void wxListViewComboPopup::OnMouseClick(wxMouseEvent& WXUNUSED(event))
+void wxListViewComboPopup::OnMouseClick(wxMouseEvent& event)
 {
     m_value = wxListView::GetFirstSelected();
-    // TODO: Send event as well
-    Dismiss();
+    if (m_value >= 0)
+    {
+        // TODO: Send event as well
+        Dismiss();
+    }
+    else
+    {
+        event.Skip();
+    }
+}
+
+wxSize wxListViewComboPopup::GetAdjustedSize(
+        int	minWidth,
+        int	prefHeight,
+        int	maxHeight)
+{
+    return wxSize(400 < minWidth ? minWidth : 400, prefHeight);
 }
 
 wxBEGIN_EVENT_TABLE(wxListViewComboPopup, wxListView)

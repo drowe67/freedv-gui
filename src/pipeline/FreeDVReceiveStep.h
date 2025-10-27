@@ -42,20 +42,20 @@ public:
     FreeDVReceiveStep(struct freedv* dv);
     virtual ~FreeDVReceiveStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
     void setSigPwrAvg(float newVal) { sigPwrAvg_ = newVal; }
     float getSigPwrAvg() const { return sigPwrAvg_; }
     int getSync() const { return syncState_.load(std::memory_order_acquire); }
     void setChannelNoiseEnable(bool enabled, int snr) 
     { 
-        channelNoiseEnabled_ = enabled; 
-        channelNoiseSnr_ = snr;
+        channelNoiseEnabled_.store(enabled, std::memory_order_release); 
+        channelNoiseSnr_.store(snr, std::memory_order_release);
     }
-    void setFreqOffset(float freq) { freqOffsetHz_ = freq; }
+    void setFreqOffset(float freq) { freqOffsetHz_.store(freq, std::memory_order_release); }
 
 private:
     std::atomic<int> syncState_;
@@ -63,9 +63,9 @@ private:
     struct FIFO* inputSampleFifo_;
     COMP rxFreqOffsetPhaseRectObjs_;
     float sigPwrAvg_;
-    bool channelNoiseEnabled_;
-    int channelNoiseSnr_;
-    float freqOffsetHz_;
+    std::atomic<bool> channelNoiseEnabled_;
+    std::atomic<int> channelNoiseSnr_;
+    std::atomic<float> freqOffsetHz_;
 
     std::unique_ptr<short[]> outputSamples_;
     short* inputBuf_;

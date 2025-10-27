@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "util/ThreadedObject.h"
 #include "IRigFrequencyController.h"
@@ -64,6 +65,8 @@ public:
     static int RigNameToIndex(std::string rigName);
     static std::string RigIndexToName(unsigned int rigIndex);
     static int GetNumberSupportedRadios();
+    static int GetMinimumSerialBaudRate(unsigned int rigIndex);
+    static int GetMaximumSerialBaudRate(unsigned int rigIndex);
     
     virtual int getRigResponseTimeMicroseconds() override;
 
@@ -78,7 +81,7 @@ private:
     const PttType pttType_;
     std::string pttSerialPort_;
     
-    RIG* rig_;
+    std::atomic<RIG*> rig_;
     bool multipleVfos_;
     bool pttSet_;
     uint64_t currFreq_;

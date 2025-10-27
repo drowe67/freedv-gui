@@ -26,6 +26,8 @@
 
 #include <future>
 #include <sstream>
+#include <chrono>
+#include <thread>
 
 #include <mach/mach.h>
 #include <mach/mach_time.h>
@@ -35,6 +37,7 @@
 #include <pthread.h>
 
 using namespace std::placeholders;
+using namespace std::chrono_literals;
 
 thread_local void* MacAudioDevice::Workgroup_ = nullptr;
 thread_local void* MacAudioDevice::JoinToken_ = nullptr;
@@ -136,12 +139,12 @@ MacAudioDevice::~MacAudioDevice()
     dispatch_release(sem_);
 }
     
-int MacAudioDevice::getNumChannels()
+int MacAudioDevice::getNumChannels() FREEDV_NONBLOCKING
 {
     return numChannels_;
 }
 
-int MacAudioDevice::getSampleRate() const
+int MacAudioDevice::getSampleRate() const FREEDV_NONBLOCKING
 {
     return sampleRate_;
 }
@@ -509,7 +512,28 @@ void MacAudioDevice::stop()
         log_info("Device %d: stopping audio unit", coreAudioId_);
         running_ = false;
         AudioOutputUnitStop(auHAL_);
+        
+        // Wait for audio to stop
+        Boolean isRunning = 1;
+        while (isRunning)
+        {
+            log_info("[Device %d] Waiting for audio unit to stop", coreAudioId_);
+            
+            UInt32 s = sizeof( isRunning );
+            auto err = AudioUnitGetProperty( 
+                auHAL_, 
+                kAudioOutputUnitProperty_IsRunning, 
+                kAudioUnitScope_Global, 
+                0,  &isRunning, &s );
+            if (err != noErr)
+            {
+                log_warn("[Device %d] Could not get kAudioOutputUnitProperty_IsRunning value (err %d)", coreAudioId_, err);
+            }
+            std::this_thread::sleep_for(10ms);
+        }
+        
         AudioUnitUninitialize(auHAL_);
+        AudioComponentInstanceDispose(auHAL_);
         if (bufferList_ != nullptr)
         {
             for(UInt32 i =0; i< bufferList_->mNumberBuffers ; i++) 
@@ -531,9 +555,9 @@ bool MacAudioDevice::isRunning()
     return running_;
 }
 
-int MacAudioDevice::getLatencyInMicroseconds()
+int64_t MacAudioDevice::getLatencyInMicroseconds()
 {
-    std::shared_ptr<std::promise<int>> prom = std::make_shared<std::promise<int> >();
+    std::shared_ptr<std::promise<int64_t>> prom = std::make_shared<std::promise<int64_t> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {        
         // Total latency is based on the formula:
@@ -620,8 +644,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
             delete[] streams;
         }
         
-        auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
-        auto frameSize = bufferFrameSize;
+        int64_t ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
+        int64_t frameSize = bufferFrameSize;
         prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
     });
     return fut.get();
@@ -726,7 +750,7 @@ OSStatus MacAudioDevice::InputProc_(
             const AudioTimeStamp *inTimeStamp,
             UInt32 inBusNumber,
             UInt32 inNumberFrames,
-            AudioBufferList * ioData)
+            AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
@@ -752,16 +776,23 @@ OSStatus MacAudioDevice::InputProc_(
             
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
-       
+          
         auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);
         for (; numWorkers > 0; numWorkers--)
         { 
+            // Note: assuming that semaphore signalling is safe. This mechanism will need to revisited
+            // if that turns out not to be the case.
+            FREEDV_BEGIN_VERIFIED_SAFE
             dispatch_semaphore_signal(thisObj->sem_);
+            FREEDV_END_VERIFIED_SAFE
         }
     }
     else
     {
+        // Note: this is definitely unsafe. However, if we get to this point, the audio will likely glitch anyway.
+        FREEDV_BEGIN_VERIFIED_SAFE
         log_warn("Device %d: got error in render func (%d)", thisObj->coreAudioId_, err);
+        FREEDV_END_VERIFIED_SAFE
     }
     
     return err;
@@ -773,7 +804,7 @@ OSStatus MacAudioDevice::OutputProc_(
             const AudioTimeStamp *inTimeStamp,
             UInt32 inBusNumber,
             UInt32 inNumberFrames,
-            AudioBufferList * ioData)
+            AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
 

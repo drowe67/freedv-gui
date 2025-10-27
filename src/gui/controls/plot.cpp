@@ -173,7 +173,6 @@ void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
     
     int p;
     char buf[STR_LENGTH];
-    wxString s;
 
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);

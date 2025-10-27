@@ -68,8 +68,11 @@ public:
     
     // About to show self -- no arguments
     using AboutToShowSelfFn = std::function<void()>;
+    
+    // Finished receiving multiple messages
+    using RecvEndFn = std::function<void()>;
 
-    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
+    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly = false);
     virtual ~FreeDVReporter();
 
     void connect();
@@ -98,6 +101,8 @@ public:
     void setConnectionSuccessfulFn(ConnectionSuccessfulFn fn);
     void setAboutToShowSelfFn(AboutToShowSelfFn fn);
 
+    void setRecvEndFn(RecvEndFn fn);
+    
     void hideFromView();
     void showOurselves();
 
@@ -119,6 +124,7 @@ private:
     bool rxOnly_;
     bool hidden_;
     std::string message_;
+    bool writeOnly_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;
@@ -133,6 +139,8 @@ private:
     MessageUpdateFn onMessageUpdateFn_;
     ConnectionSuccessfulFn onConnectionSuccessfulFn_;
     AboutToShowSelfFn onAboutToShowSelfFn_;
+    
+    RecvEndFn onRecvEndFn_;
         
     void connect_();
     

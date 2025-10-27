@@ -213,13 +213,14 @@ void MainFrame::ClosePTTInPort(void)
     }
 }
 
-struct FIFO extern  *g_txDataInFifo;
+extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO extern *g_rxDataOutFifo;
 
 char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
 
-    codec2_fifo_read(g_txDataInFifo, &ch, 1);
+    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
+    tmpFifo->read(&ch, 1);
     return (char)ch;
 }
 
@@ -228,7 +229,7 @@ void my_put_next_rx_char(void *callback_state, char c) {
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING
 {
     COMP  foff_rect;
     float mag;
@@ -273,7 +274,7 @@ int resample(SpeexResamplerState *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs)
+void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;
@@ -295,7 +296,7 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, i
         dec_samples[sample] = max;
         dec_samples[sample+1] = min;
     }
-    codec2_fifo_write(plotFifo, dec_samples, nSamples);
+    plotFifo->write(dec_samples, nSamples);
 }
 
 void MainFrame::executeOnUiThreadAndWait_(std::function<void()> fn)

@@ -39,15 +39,16 @@ class PlotSpectrum : public PlotPanel
         void setFreqScale(int n_magdB) { m_n_magdB = n_magdB; }
 
         void setNumAveraging(int n) { m_numSampleAveraging = n; }
-        
+        virtual void refreshData() override;
+
     protected:
-        void        OnSize(wxSizeEvent& event);
-        void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* ctx, bool repaintDataOnly = false);
+        void        OnSize(wxSizeEvent& event) override;
+        void        OnShow(wxShowEvent& event) override;
+        void        drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
+        void        draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
-        void        OnMouseWheelMoved(wxMouseEvent& event);
+        void        OnMouseWheelMoved(wxMouseEvent& event) override;
         void        OnMouseMiddleDown(wxMouseEvent& event);
         void        OnKeyDown(wxKeyEvent& event);
 
@@ -63,6 +64,8 @@ class PlotSpectrum : public PlotPanel
         int         m_numSampleAveraging;
 
         void        OnDoubleClickCommon(wxMouseEvent& event);
+
+        virtual bool repaintAll_(wxPaintEvent& evt) override;
         
         DECLARE_EVENT_TABLE()
 };

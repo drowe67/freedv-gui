@@ -16,4 +16,4 @@ pipewire-pulse &
 wireplumber &
 metacity --sm-disable --replace &
 sleep 5
-./test/test_zeros.sh txrx RADEV1
+./test/test_rade_loss.sh

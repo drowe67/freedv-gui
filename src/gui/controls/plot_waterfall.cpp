@@ -30,7 +30,6 @@
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
-extern float g_avmag[];                 // av mag spec passed in to draw() 
 extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -57,7 +56,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): PlotPanel(parent)
+PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int colour): PlotPanel(parent)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -67,13 +66,18 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     {
         m_heatmap_lut[i] = heatmap((float)i, 0.0, 255.0);
     }
+    m_magDb         = magDb;
     m_graticule     = graticule;
     m_colour        = colour;
     m_Bufsz         = GetMaxClientSize();
     m_newdata       = false;
     m_firstPass     = true;
+    m_rxFreq = 0;
     m_line_color    = 0;
     m_modem_stats_max_f_hz = MODEM_STATS_MAX_F_HZ;
+    dyImageData_ = nullptr;
+    dy_ = 0;
+    tmpImage_ = nullptr;
 
     SetLabelSize(10.0);
 
@@ -196,10 +200,20 @@ bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
     
 void PlotWaterfall::refreshData()
 {
-    int screenX = PLOT_BORDER + XLEFT_OFFSET;
-    int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
-    RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight));
-}   
+    // Force redraw of entire control if not using RADE. This is determined
+    // by rxFreq == 0. We need to do this so that the frequency indicators
+    // redraw properly.
+    if (m_rxFreq == 0)
+    {
+        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
+        RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight), false);
+    }
+    else
+    {
+        Refresh();
+    }   
+}
 
 //----------------------------------------------------------------
 // draw()
@@ -217,17 +231,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     
-    float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y; 
-    float dy = m_dT * px_per_sec;
-    if (dy > 0 && waterfallSlices_.size() < (m_imgHeight / dy))
-    {
-        // Reset waterfall to black
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        gc->SetBrush(ltGraphBkgBrush);
-        gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight); 
-    }
-    
     if(m_newdata)
     {
         m_newdata = false;
@@ -235,11 +238,22 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     } 
     
     int yOffset = 0;
+    gc->BeginLayer(1.0);
     for (auto& bmp : waterfallSlices_)
     {
         gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
         yOffset += bmp->GetHeight();
-    }    
+    }
+    gc->EndLayer();
+
+    if (yOffset < m_imgHeight)
+    {
+        // Reset waterfall to black
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
+    }
 
     m_dT = DT;
 
@@ -258,7 +272,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
-    wxString s;
     float    f, time, freq_hz_to_px;
 
     wxBrush ltGraphBkgBrush;
@@ -332,14 +345,17 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
    {
        sum += f;
    }
-   float averageOffset = sum / rxOffsets_.size();
+   float averageOffset = rxOffsets_.size() == 0 ? -1 : sum / rxOffsets_.size();
    
    if (m_rxFreq != 0.0) {
        // get average offset and draw sync tuning line
-       ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-       x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-       x += PLOT_BORDER + XLEFT_OFFSET;
-       ctx->StrokeLine(x, 0, x, verticalBarLength);
+       if (averageOffset > 0)
+       {
+           ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+           x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+           x += PLOT_BORDER + XLEFT_OFFSET;
+           ctx->StrokeLine(x, 0, x, verticalBarLength);
+       }
    
        // red rx tuning line
        ctx->SetPen(wxPen(RED_COLOR, 3));
@@ -384,9 +400,9 @@ void PlotWaterfall::plotPixelData()
 
     for(int i=min_fft_bin; i<max_fft_bin; i++) 
     {
-        if (g_avmag[i] > max_mag)
+        if (m_magDb[i] > max_mag)
         {
-            max_mag = g_avmag[i];
+            max_mag = m_magDb[i];
         }
     }
 
@@ -396,15 +412,29 @@ void PlotWaterfall::plotPixelData()
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char* dyImageData = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
-    assert(dyImageData != nullptr);
+    if (dy_ != dy && dyImageData_ != nullptr)
+    {
+        delete[] dyImageData_;
+        dyImageData_ = nullptr;
+
+        delete tmpImage_;
+    }
+    if (dyImageData_ == nullptr)
+    {
+        dyImageData_ = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
+        assert(dyImageData_ != nullptr);
+
+        memset(dyImageData_, 0, (dy > 0 ? dy : 1) * 3 * baseRowWidthPixels);
+        tmpImage_ = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData_, true);
+    }
+    dy_ = dy;
 
     for(px = 0; px < baseRowWidthPixels; px++)
     {
         index = px;
         assert(index < MODEM_STATS_NSPEC);
 
-        intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
+        intensity = intensity_per_dB * (m_magDb[index] - m_min_mag);
         if(intensity > 255) intensity = 255;
         if (intensity < 0) intensity = 0;
 
@@ -412,22 +442,22 @@ void PlotWaterfall::plotPixelData()
             
         switch (m_colour) {
         case 0:
-            dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
-            dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
-            dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
+            dyImageData_[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+            dyImageData_[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+            dyImageData_[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
             break;
         case 1:
-            dyImageData[pixelPos] = intensity;
-            dyImageData[pixelPos + 1] = intensity;
-            dyImageData[pixelPos + 2] = intensity;       
+            dyImageData_[pixelPos] = intensity;
+            dyImageData_[pixelPos + 1] = intensity;
+            dyImageData_[pixelPos + 2] = intensity;       
             break;
         case 2:
-            dyImageData[pixelPos] = intensity;
-            dyImageData[pixelPos + 1] = intensity;
+            dyImageData_[pixelPos] = intensity;
+            dyImageData_[pixelPos + 1] = intensity;
             if (intensity < 127)
-                dyImageData[pixelPos + 2] = intensity*2;
+                dyImageData_[pixelPos + 2] = intensity*2;
             else
-                dyImageData[pixelPos + 2] = 255;
+                dyImageData_[pixelPos + 2] = 255;
                     
             break;
         }
@@ -435,16 +465,19 @@ void PlotWaterfall::plotPixelData()
     
     for (int row = 1; row < dy; row++)
     {
-        memcpy(&dyImageData[row * 3 * baseRowWidthPixels], &dyImageData[0], 3 * baseRowWidthPixels);
+        memcpy(&dyImageData_[row * 3 * baseRowWidthPixels], &dyImageData_[0], 3 * baseRowWidthPixels);
     }
-    
+
+#if 0
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
     // on macOS due to how it handles color spaces.
+    // XXX - causes noticeable flicker on certain monitors/OS versions, so disabled for now.
     ResetMainWindowColorSpace();
+#endif // 0
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
+        tmpImage_->SetData(dyImageData_, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
         if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
@@ -453,12 +486,12 @@ void PlotWaterfall::plotPixelData()
             waterfallSlices_.pop_back();
             destBmp = tmpBmp;
             
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
         else
         {
             destBmp = new wxBitmap(m_imgWidth, dy);
-            tmpBmp = new wxBitmap(*tmpImage);
+            tmpBmp = new wxBitmap(*tmpImage_);
         }
 
         wxMemoryDC sourceDC;
@@ -468,14 +501,11 @@ void PlotWaterfall::plotPixelData()
         destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         waterfallSlices_.push_front(destBmp);
         
-        delete tmpImage;
         if (tmpBmp != nullptr)
         {
             delete tmpBmp;
         }
     }
-
-    delete[] dyImageData;
 }
 
 //-------------------------------------------------------------------------
@@ -592,4 +622,14 @@ void PlotWaterfall::cleanupSlices_()
         delete bmp;
     }
     waterfallSlices_.clear();
+
+    dy_ = 0;
+    if (dyImageData_ != nullptr)
+    {
+        delete[] dyImageData_;
+        dyImageData_ = nullptr;
+    }
+
+    delete tmpImage_;
+    tmpImage_ = nullptr;
 }

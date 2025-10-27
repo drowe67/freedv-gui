@@ -13,7 +13,7 @@ extern int g_nSoundCards;
 
 #define SBQ_MAX_ARGS 5
 
-std::shared_ptr<void> MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
+void* MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
 {
     const int STR_LENGTH = 80;
     
@@ -58,11 +58,13 @@ std::shared_ptr<void> MainFrame::designAnEQFilter(const char filterType[], float
 
     assert(argc <= SBQ_MAX_ARGS);
     // Note - the argc count doesn't include the command!
-    return std::shared_ptr<void>(sox_biquad_create(argc-1, (const char **)arg), [](void* p) { if (p != nullptr) sox_biquad_destroy(p); });
+    return sox_biquad_create(argc-1, (const char **)arg);
 }
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
+    cb->micEqLock.lock();
+
     // Volume can be adjusted via main window without enabling filters
     if (wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB != 0 && g_nSoundCards > 1)
     {
@@ -87,6 +89,9 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, rxSampleRate);
     }
     
+    cb->micEqLock.unlock();
+    cb->spkEqLock.lock();
+    
     // init Spk Out Equaliser Filters
 
     if (cb->spkOutEQEnable) {
@@ -100,18 +105,26 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         // Note: vol can be a no-op!
         assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
     }
+    cb->spkEqLock.unlock();
 }
+
+#define VERIFY_AND_DESTROY(x) if (x != nullptr) { sox_biquad_destroy(x); x = nullptr; }
 
 void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
-    cb->sbqMicInBass = nullptr;
-    cb->sbqMicInTreble = nullptr;
-    cb->sbqMicInMid = nullptr;
-    cb->sbqMicInVol = nullptr;
-    cb->sbqSpkOutBass = nullptr;
-    cb->sbqSpkOutTreble = nullptr;
-    cb->sbqSpkOutMid = nullptr;
-    cb->sbqSpkOutVol = nullptr;
+    cb->micEqLock.lock();
+    VERIFY_AND_DESTROY(cb->sbqMicInBass);
+    VERIFY_AND_DESTROY(cb->sbqMicInTreble);
+    VERIFY_AND_DESTROY(cb->sbqMicInMid);
+    VERIFY_AND_DESTROY(cb->sbqMicInVol);
+    cb->micEqLock.unlock();
+    
+    cb->spkEqLock.lock();
+    VERIFY_AND_DESTROY(cb->sbqSpkOutBass);
+    VERIFY_AND_DESTROY(cb->sbqSpkOutTreble);
+    VERIFY_AND_DESTROY(cb->sbqSpkOutMid);
+    VERIFY_AND_DESTROY(cb->sbqSpkOutVol);
+    cb->spkEqLock.unlock();
 }
 
 

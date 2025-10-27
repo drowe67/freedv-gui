@@ -46,6 +46,7 @@
 #include <wx/textdlg.h>
 #include <wx/regex.h>
 #include <wx/socket.h>
+#include <wx/numformatter.h>
 
 #include <speex/speex_resampler.h>
 
@@ -91,6 +92,7 @@
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
+#include "util/sanitizers.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -457,6 +459,34 @@ class MainFrame : public TopFrame
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
         
     private:
+        const wxString SNR_FORMAT_STR;
+        const wxString MODE_FORMAT_STR;
+        const wxString MODE_RADE_FORMAT_STR;
+        const wxString NO_SNR_LABEL;
+        const wxString EMPTY_STR;
+        const wxString MODEM_LABEL;
+        const wxString BITS_UNK_LABEL;
+        const wxString ERRS_UNK_LABEL;
+        const wxString BER_UNK_LABEL;
+        const wxString FRQ_OFF_UNK_LABEL;
+        const wxString SYNC_UNK_LABEL;
+        const wxString VAR_UNK_LABEL;
+        const wxString CLK_OFF_UNK_LABEL;
+        const wxString TOO_HIGH_LABEL;
+        const wxString MIC_SPKR_LEVEL_FORMAT_STR;
+        const wxString DECIBEL_STR;
+        const wxString CURRENT_TIME_FORMAT_STR;
+        const wxString SNR_FORMAT_STR_NO_DB;
+        const wxString CALLSIGN_FORMAT_RGX;
+        const wxString BITS_FMT;
+        const wxString ERRS_FMT;
+        const wxString BER_FMT;
+        const wxString RESYNC_FMT;
+        const wxString FRQ_OFF_FMT;
+        const wxString SYNC_FMT;
+        const wxString VAR_FMT;
+        const wxString CLK_OFF_FMT;
+
         friend class MainApp; // needed for unit tests
         friend class TxRxThread; // XXX - needed for execOnUiThreadAndWait_().
 
@@ -487,7 +517,7 @@ class MainFrame : public TopFrame
         bool        m_newMicInFilter;
         bool        m_newSpkOutFilter;
 
-        std::shared_ptr<void>       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
+        void*       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
         void        designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate);
         void        deleteEQFilters(paCallBackData *cb);
 
@@ -529,6 +559,7 @@ class MainFrame : public TopFrame
         void updateReportingFreqList_();
         
         void initializeFreeDVReporter_();
+        void updateVoiceKeyerButtonLabel_();
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
@@ -544,10 +575,10 @@ class MainFrame : public TopFrame
         void handleAudioDeviceChange_(std::string newDeviceName);
 
         // Audio device data handlers
-        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
-        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state);
+        static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
+        static void OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
 
         // QSY request handling
         struct QsyRequestArgs {
@@ -560,7 +591,7 @@ class MainFrame : public TopFrame
         void onQsyRequestUIThread_(QsyRequestArgs* args);
 };
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);
+void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
 
 int resample(SpeexResamplerState *src,
              short      output_short[],
@@ -583,6 +614,6 @@ void my_put_next_rx_char(void *callback_state, char c);
 
 // helper complex freq shift function
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 #endif //__FDMDV2_MAIN__

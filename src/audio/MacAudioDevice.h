@@ -29,6 +29,7 @@
 #include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
+#include "../util/sanitizers.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 
@@ -39,15 +40,15 @@ class MacAudioDevice : public ThreadedObject, public IAudioDevice
 public:
     virtual ~MacAudioDevice();
     
-    virtual int getNumChannels() override;
-    virtual int getSampleRate() const override;
+    virtual int getNumChannels() FREEDV_NONBLOCKING override;
+    virtual int getSampleRate() const FREEDV_NONBLOCKING override;
     
     virtual void start() override;
     virtual void stop() override;
 
     virtual bool isRunning() override;
     
-    virtual int getLatencyInMicroseconds() override;
+    virtual int64_t getLatencyInMicroseconds() override;
     
     // Configures current thread for real-time priority. This should be
     // called from the thread that will be operating on received audio.
@@ -113,7 +114,7 @@ private:
                 const AudioTimeStamp *inTimeStamp,
                 UInt32 inBusNumber,
                 UInt32 inNumberFrames,
-                AudioBufferList * ioData);
+                AudioBufferList * ioData) FREEDV_NONBLOCKING;
                 
     static OSStatus OutputProc_(
                 void *inRefCon,
@@ -121,7 +122,7 @@ private:
                 const AudioTimeStamp *inTimeStamp,
                 UInt32 inBusNumber,
                 UInt32 inNumberFrames,
-                AudioBufferList * ioData);
+                AudioBufferList * ioData) FREEDV_NONBLOCKING;
 };
 
 #endif // MAC_AUDIO_DEVICE_H

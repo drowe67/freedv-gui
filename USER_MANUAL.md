@@ -734,6 +734,14 @@ button will let you hear the received signal from the SSB radio.
 Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.
 
+## Hearing myself whenever I transmit
+
+Verify audio device settings in FreeDV. If your audio settings are correct,
+there are a few other possibilities:
+
+1. If on Windows, make sure all audio effects are disabled on all devices used with FreeDV.
+2. Turn off TX monitoring (right-click on PTT button and make sure "Monitor transmitted audio" is unchecked).
+
 ## The signal is strong but FreeDV won't get sync and decode
 
 Do you have the correct sideband? See USB or LSB section.
@@ -818,6 +826,14 @@ xattr -d -r com.apple.quarantine FreeDV.app
 
 macOS has a longstanding issue that prevents certain audio devices from appearing. More info [here](http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html).
 
+## FreeDV doesn't preserve window positions on Linux
+
+Many Linux distributions are switching away from X11 and towards a new GUI system known as Wayland.
+Wayland explicitly does not support window positioning by applications, instead leaving it to the user's
+compositor to control window positioning. You can force use of X11 via the Xwayland compatibility layer
+by adding `GDK_BACKEND=x11` to your environment to regain the ability to preserve window positioning
+if desired.
+
 # Converting this document to PDF
 
 For the Linux inclined:
@@ -836,7 +852,23 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.2 TBD 2025
+## V2.0.3 TBD 2025
+
+1. Bugfixes:
+    * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
+    * Fix CAT control and frequency formatting problems on non-English computers. (PR #1050)
+    * Clean up ThreadSanitizer warnings in codebase. (PR #1053)
+    * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
+    * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
+    * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
+2. Enhancements:
+    * Additional cleanup of code that runs in real-time. (PR #1039, #1068)
+    * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
+    * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
+    * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
+    * Added implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
+
+## V2.0.2 October 2025
 
 1. Bugfixes:
     * FreeDV Reporter: Use numeric sort for SNR. (PR #979)
@@ -848,16 +880,22 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
     * macOS: Fix spurious error on startup when changing locales. (PR #1010)
     * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
+    * Linux: fix rendering bug for mic/speaker slider when transitioning from TX to RX. (PR #1021)
+    * Various unit test fixes to reduce failure rate in CI environment. (PR #1023)
+    * Fix waterfall flicker on macOS. (PR #1037, #1040)
+    * Add timeout for TCP recv() so that FreeDV doesn't hang on exit. (PR #1038)
+    * Fix various issues with bottom received callsign list. (PR #1040)
 2. Enhancements:
-    * Add Mic/Speaker volume control to main window. (PR #980)
+    * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
-    * Further audio performance improvements. (PR #975)
-    * Add Automatic Gain Control (AGC) to microphone input. (PR #997)
+    * Further audio performance improvements. (PR #975, #1041)
+    * Add Automatic Gain Control (AGC) to microphone input. (PR #997, #1024)
     * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
     * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
-    * Various GUI and FreeDV Reporter performance improvements. (PR #1002, PR #1011)
+    * Various GUI and FreeDV Reporter performance improvements. (PR #1002, #1026, #1033, #1035)
+    * Use rigerror2() for friendlier Hamlib errors. (PR #1020)
 3. Build system:
-    * Update Hamlib to v4.6.4. (PR #989)
+    * Update Hamlib to v4.6.5. (PR #1030)
     * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
 4. Documentation:
     * Add pkgconf dependency for macOS instructions. (PR #1013)

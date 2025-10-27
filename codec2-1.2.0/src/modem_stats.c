@@ -86,7 +86,7 @@ void modem_stats_close(struct MODEM_STATS *f) {
 
 #ifndef __EMBEDDED__
 void modem_stats_get_rx_spectrum(struct MODEM_STATS *f, float mag_spec_dB[],
-                                 COMP rx_fdm[], int nin) {
+                                 COMP rx_fdm[], int nin) FREEDV_NONBLOCKING_EXCEPT {
   int i, j;
   COMP fft_in[2 * MODEM_STATS_NSPEC];
   COMP fft_out[2 * MODEM_STATS_NSPEC];

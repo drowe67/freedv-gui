@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 2.0.2)
+set(PROJECT_VERSION 2.0.3)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -115,7 +115,7 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif(APPLE)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -142,6 +142,8 @@ set(ENABLE_ASAN FALSE CACHE BOOL
     "Instruments the build with AddressSanitizer for memory checks.")
 set(ENABLE_RTSAN FALSE CACHE BOOL
     "Instruments the build with RealtimeSanitizer for RT safety checks.")
+set(ENABLE_TSAN FALSE CACHE BOOL
+    "Instruments the build with ThreadSanitizer for thread checks.")
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
@@ -154,6 +156,12 @@ if(ENABLE_RTSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=realtime")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=realtime")
 endif(ENABLE_RTSAN)
+
+if(ENABLE_TSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=thread")
+endif(ENABLE_TSAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -351,6 +359,25 @@ include(cmake/BuildRADE.cmake)
 #
 include(cmake/BuildCodec2.cmake)
 
+# Look for libebur128 (loudness measurement)
+if(NOT USE_STATIC_EBUR128)
+    message(STATUS "Looking for ebur128...")
+    find_library(LIBEBR128 ebur128)
+    find_path(LIBEBUR128_INCLUDE_DIR ebur128.h)
+    message(STATUS "  ebur128 library: ${LIBEBUR128}")
+    message(STATUS "  ebur128 headers: ${LIBEBUR128_INCLUDE_DIR}")
+    if(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
+        list(APPEND FREEDV_LINK_LIBS ${LIBEBUR128})
+        include_directories(${LIBEBUR128_INCLUDE_DIR})
+    else(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
+        message(STATUS "Will attempt static build of ebur128.")
+        include(cmake/BuildEbur128.cmake)
+    endif(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
+else(NOT USE_STATIC_LIBEBUR128)
+    message(STATUS "Will attempt static build of ebur128.")
+    include(cmake/BuildEbur128.cmake)
+endif(NOT USE_STATIC_EBUR128)
+
 if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
 endif(NOT USE_NATIVE_AUDIO AND LINUX)
@@ -456,6 +483,10 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
             else()
                 message(STATUS "Found ${HAMLIB_VERSION} - NOT enabling Hamlib 4.6 compile workaround.")
             endif (NOT HAMLIB_VERSION STRLESS "Hamlib 4.6")
+            if (NOT HAMLIB_VERSION STRLESS "Hamlib 4.5")
+                message(STATUS "Hamlib: Using rigerror2() for friendlier errors")
+                add_definitions(-DHAMLIB_USE_FRIENDLY_ERRORS)
+            endif (NOT HAMLIB_VERSION STRLESS "Hamlib 4.5")
         endif (NOT HAMLIB_COMPILE_RESULT OR NOT HAMLIB_RUN_RESULT OR NOT HAMLIB_VERSION)
     endif (NOT CMAKE_CROSSCOMPILING)
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
@@ -513,9 +544,9 @@ else()
 endif()
 
 # On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 include(cmake/BuildMimalloc.cmake)
-endif ((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
 
 #
 # Find libdl for dlopen/dlclose

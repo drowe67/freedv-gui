@@ -25,6 +25,7 @@
 
 #include <cstdio>
 #include <thread>
+#include <atomic>
 
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
@@ -44,13 +45,13 @@ public:
     RADETransmitStep(struct rade* dv, LPCNetEncState* encState);
     virtual ~RADETransmitStep();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
-    virtual void reset() override;
+    virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
+    virtual void reset() FREEDV_NONBLOCKING override;
     
     // For triggering EOO
-    void restartVocoder();
+    void restartVocoder() FREEDV_NONBLOCKING;
     
 private:
     struct rade* dv_;
@@ -71,7 +72,7 @@ private:
     
     PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>* utFeatures_;
     std::thread utFeatureThread_;
-    bool exitingFeatureThread_;
+    std::atomic<bool> exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
 
     void utFeatureThreadEntry_();

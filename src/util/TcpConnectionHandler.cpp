@@ -138,6 +138,13 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     return fut;
 }
 
+void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
+{
+    enqueue_([this, fn]() {
+        onRecvEndFn_ = fn;
+    });
+}
+
 void TcpConnectionHandler::connectImpl_()
 {
     // Convert port to string (needed by getaddrinfo() below).
@@ -165,16 +172,17 @@ void TcpConnectionHandler::connectImpl_()
     std::future<struct addrinfo*> ipv6ResultFuture = ipv6ResultPromise->get_future();
     std::future<struct addrinfo*> ipv4ResultFuture = ipv4ResultPromise->get_future();
 
-    std::thread ipv6ResolveThread([&, ipv6ResultPromise]() {
+    std::string portStr = portStream.str();
+    std::thread ipv6ResolveThread([&, portStr, ipv6ResultPromise]() {
         struct addrinfo *result = nullptr;
-        resolveAddresses_(AF_INET6, host_.c_str(), portStream.str().c_str(), &result);
+        resolveAddresses_(AF_INET6, host_.c_str(), portStr.c_str(), &result);
         ipv6ResultPromise->set_value(result);
         ipv6Complete_ = true;
     });
     
-    std::thread ipv4ResolveThread([&, ipv4ResultPromise]() {
+    std::thread ipv4ResolveThread([&, portStr, ipv4ResultPromise]() {
         struct addrinfo *result = nullptr;
-        resolveAddresses_(AF_INET, host_.c_str(), portStream.str().c_str(), &result);
+        resolveAddresses_(AF_INET, host_.c_str(), portStr.c_str(), &result);
         ipv4ResultPromise->set_value(result);
         ipv4Complete_ = true;
     });
@@ -470,7 +478,7 @@ void TcpConnectionHandler::disconnectImpl_()
 {
     if (socket_ > 0)
     {
-        auto tmp = socket_;
+        auto tmp = socket_.load();
         socket_ = -1;
 
 #if defined(WIN32)
@@ -563,12 +571,12 @@ void TcpConnectionHandler::receiveImpl_()
 
     while (socket_ > 0)
     {
+        struct timeval tv = {0, 250000}; // 250ms
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(socket_, &readSet);
 
-again:        
-        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, nullptr);
+        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
         if (rv > 0)
         {
             int numRead = 0;
@@ -599,10 +607,11 @@ again:
                         onReceive_(tmp, toRead);
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     }
+                    if (onRecvEndFn_)
+                    {
+                        onRecvEndFn_();
+                    }
                 });
-            
-                // See if there's any other data waiting to be read.
-                goto again;
             } 
             else if (numRead == 0)
             {

@@ -75,6 +75,10 @@ class FreeDVReporterDialog : public wxFrame
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
     
+#if defined(WIN32)
+        void autosizeColumns();
+#endif // defined(WIN32)
+            
     protected:
 
         // Handlers for events.
@@ -148,6 +152,15 @@ class FreeDVReporterDialog : public wxFrame
         wxTipWindow* tipWindow_;
         
      private:
+        const wxString UNKNOWN_STR;
+        const wxString SNR_FORMAT_STR;
+        const wxString ALL_LETTERS_RGX;
+        const wxString MS_REMOVAL_RGX;
+        const wxString TIMEZONE_RGX;
+        const wxString TZ_OFFSET_STR;
+        const wxString EMPTY_STR;
+        const wxString TIME_FORMAT_STR;
+
          class FreeDVReporterDataModel : public wxDataViewModel
          {
          public:
@@ -205,7 +218,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  return reporter_ && reporter_->isValidForReporting();
              }
-
+             
              // Required overrides to implement functionality
              virtual bool HasDefaultCompare() const override;
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
@@ -267,9 +280,28 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour backgroundColor;
             };
 
+            struct CallbackHandler
+            {
+                std::string sid;
+                std::string lastUpdate;
+                std::string callsign;
+                std::string gridSquare;
+                std::string version;
+                bool rxOnly;
+                uint64_t frequencyHz;
+                std::string txMode;
+                bool transmitting;
+                std::string lastTxDate;
+                std::string receivedCallsign;
+                float snr;
+                std::string rxMode;
+                std::string message;
+                std::function<void(CallbackHandler&)> fn;
+            };
+
             std::shared_ptr<FreeDVReporter> reporter_;
             std::map<std::string, ReporterData*> allReporterData_;
-            std::deque<std::function<void()> > fnQueue_;
+            std::deque<CallbackHandler> fnQueue_;
             std::mutex fnQueueMtx_;
             std::recursive_mutex dataMtx_;
             bool isConnected_;
@@ -294,6 +326,8 @@ class FreeDVReporterDialog : public wxFrame
 
             void onConnectionSuccessfulFn_();
             void onAboutToShowSelfFn_();
+            
+            void onRecvEndFn_();
 
             void execQueuedAction_();
 
@@ -310,6 +344,12 @@ class FreeDVReporterDialog : public wxFrame
         bool isSelectionPossible_;
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
+        wxColour msgRowBackgroundColor;
+        wxColour msgRowForegroundColor;
+        wxColour txRowBackgroundColor;
+        wxColour txRowForegroundColor;
+        wxColour rxRowBackgroundColor;
+        wxColour rxRowForegroundColor;
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

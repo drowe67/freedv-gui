@@ -2,6 +2,7 @@
 #define AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 
 #include "../util/GenericFIFO.h"
+#include "../util/audio_spin_mutex.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // paCallBackData
@@ -38,25 +39,29 @@ typedef struct paCallBackData
     GenericFIFO<short>    *outfifo2;
 
     // EQ filter states
-    std::shared_ptr<void> sbqMicInBass;
-    std::shared_ptr<void> sbqMicInTreble;
-    std::shared_ptr<void> sbqMicInMid;
-    std::shared_ptr<void> sbqMicInVol;
-    std::shared_ptr<void> sbqSpkOutBass;
-    std::shared_ptr<void> sbqSpkOutTreble;
-    std::shared_ptr<void> sbqSpkOutMid;
-    std::shared_ptr<void> sbqSpkOutVol;
+    void* sbqMicInBass;
+    void* sbqMicInTreble;
+    void* sbqMicInMid;
+    void* sbqMicInVol;
+    void* sbqSpkOutBass;
+    void* sbqSpkOutTreble;
+    void* sbqSpkOutMid;
+    void* sbqSpkOutVol;
+    audio_spin_mutex micEqLock;
+    audio_spin_mutex spkEqLock;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;
 
     // optional loud tone on left channel to reliably trigger vox
-    bool            leftChannelVoxTone;
-    float           voxTonePhase;
+    std::atomic<bool> leftChannelVoxTone;
+    float             voxTonePhase;
 
     // Temporary buffers for reading and writing
-    std::unique_ptr<short[]> tmpReadBuffer_;
-    std::unique_ptr<short[]> tmpWriteBuffer_;
+    std::unique_ptr<short[]> tmpReadRxBuffer_;
+    std::unique_ptr<short[]> tmpReadTxBuffer_;
+    std::unique_ptr<short[]> tmpWriteRxBuffer_;
+    std::unique_ptr<short[]> tmpWriteTxBuffer_;
 } paCallBackData;
 
 #endif // AUDIO_PIPELINE_PA_CALLBACK_DATA_H

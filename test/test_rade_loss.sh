@@ -2,13 +2,14 @@
 
 # Determine sox driver to use for recording/playback
 OPERATING_SYSTEM=`uname`
-SOX_DRIVER=alsa
-FREEDV_BINARY=src/freedv
-PYTHON_BINARY=python3
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
-    FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
-    PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
+    FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
+    PYTHON_BINARY=${PYTHON_BINARY:-src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3}
+else
+    SOX_DRIVER=alsa
+    FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
+    PYTHON_BINARY=${PYTHON_BINARY:-python3}
 fi
 
 createVirtualAudioCable () {
@@ -22,12 +23,17 @@ FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="${FREEDV_MICROPHONE_TO_COMPUTER_DEVICE:-Fr
 FREEDV_COMPUTER_TO_RADIO_DEVICE="${FREEDV_COMPUTER_TO_RADIO_DEVICE:-FreeDV_Computer_To_Radio}"
 
 # Automated script to help find audio dropouts.
-# NOTE: this must be run from "build_linux". Also assumes PulseAudio/pipewire.
+# NOTE: this must be run from "build_*". Also assumes PulseAudio/pipewire or macOS Core Audio,
+# does not work in Windows.
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Radio_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
     DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
+
+    # Make sure cables are actually created before proceeding with looping them back
+    sleep 2
+
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
@@ -62,6 +68,9 @@ fi
 mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
+if [ ! -d "$(pwd)/rade_src" ]; then
+    git clone -b main https://github.com/drowe67/radae.git rade_src
+fi
 sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording
