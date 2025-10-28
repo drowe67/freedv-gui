@@ -137,7 +137,8 @@ jobs:
     
     - uses: actions/download-artifact@v4
       with:
-        glob: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
+        merge-multiple: true
+        pattern: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
 
     - name: Start Fedora container
@@ -183,7 +184,8 @@ jobs:
     
     - uses: actions/download-artifact@v4
       with:
-        glob: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
+        merge-multiple: true
+        pattern: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
         
     - name: Install rtkit for RT threading
