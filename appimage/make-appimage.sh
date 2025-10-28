@@ -16,6 +16,7 @@ elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
     export APPRUN="AppRun-KA9Q.sh"
 fi
 
+DESKTOP_FILE="$APPNAME.desktop"
 APPDIR="$APPNAME.AppDir"
 BUILDDIR="../"
 MACH_ARCH=`uname -m`
@@ -45,7 +46,7 @@ fi
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
 --custom-apprun=AppRun.sh \
---desktop-file FreeDV.desktop
+--desktop-file $DESKTOP_FILE
 
 # create the virtual environment (copied from Brian's build script)
 cd $APPDIR
@@ -86,7 +87,6 @@ ln -s "../../rade_src/model19_check3" "model19_check3"
 cd -
 
 # Create the output
-export LINUXDEPLOY_OUTPUT_APP_NAME=$APPNAME
 if [[ "${TARGET}" == "all" ]]; then
     ./linuxdeploy-${MACH_ARCH}.AppImage \
         --appdir "$APPDIR" \

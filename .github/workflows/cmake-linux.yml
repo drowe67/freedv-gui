@@ -99,8 +99,6 @@ jobs:
       id: appimage-filename
       working-directory: ${{github.workspace}}/appimage
       run: |
-          export FREEDV_VERSION=`cat build_linux/freedv-version.txt`
-          export MACH_ARCH=`uname -m`
           export FREEDV_APPIMAGE_FILENAME=`ls *.AppImage`
           echo "APPIMAGE_FILENAME=${FREEDV_APPIMAGE_FILENAME}" >> "$GITHUB_OUTPUT"
 

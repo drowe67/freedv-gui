@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=FreeDV-FlexRadio
+Exec=freedv-flex
+Icon=freedv256x256
+Type=Application
+Categories=Utility;
