@@ -130,10 +130,14 @@ jobs:
     needs: [build-appimage]
     steps:
     - uses: actions/checkout@v4
+
+    - name: Save correct architecture
+      run: |
+        echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
     
     - uses: actions/download-artifact@v4
       with:
-        name: ${{needs.dist.outputs.APPIMAGE_FILENAME}}
+        glob: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
 
     - name: Start Fedora container
@@ -157,8 +161,8 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          echo "FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" > tmp.env
+          chmod +x *.AppImage
+          echo "FREEDV_BINARY=$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
@@ -166,18 +170,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04]
+        os: [ubuntu-24.04, ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04-arm]
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
     steps:
     - uses: actions/checkout@v4
 
+    - name: Save correct architecture
+      run: |
+        echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
+    
     - uses: actions/download-artifact@v4
       with:
-        name: ${{needs.dist.outputs.APPIMAGE_FILENAME}}
+        glob: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
-
+        
     - name: Install rtkit for RT threading
       shell: bash
       run: |
@@ -231,8 +239,8 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           . ./rade-venv/bin/activate
-          chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
+          chmod +x *.AppImage 
+          FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
 
     - name: Sanity check RADE
@@ -255,8 +263,8 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           . ./rade-venv/bin/activate
-          chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_rade_loss.sh 2>&1 | tee tmp.log
+          chmod +x *.AppImage 
+          FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
 
   build:
