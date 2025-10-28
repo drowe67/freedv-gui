@@ -97,11 +97,11 @@ jobs:
     - name: Calculate AppImage filename
       shell: bash
       id: appimage-filename
-      working-directory: ${{github.workspace}}
+      working-directory: ${{github.workspace}}/appimage
       run: |
           export FREEDV_VERSION=`cat build_linux/freedv-version.txt`
           export MACH_ARCH=`uname -m`
-          export FREEDV_APPIMAGE_FILENAME=`ls FreeDV*-${FREEDV_VERSION}-${MACH_ARCH}.AppImage`
+          export FREEDV_APPIMAGE_FILENAME=`ls *.AppImage`
           echo "APPIMAGE_FILENAME=${FREEDV_APPIMAGE_FILENAME}" >> "$GITHUB_OUTPUT"
 
     - name: Generate waveform file

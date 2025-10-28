@@ -86,6 +86,7 @@ ln -s "../../rade_src/model19_check3" "model19_check3"
 cd -
 
 # Create the output
+export LINUXDEPLOY_OUTPUT_APP_NAME=$APPNAME
 if [[ "${TARGET}" == "all" ]]; then
     ./linuxdeploy-${MACH_ARCH}.AppImage \
         --appdir "$APPDIR" \
