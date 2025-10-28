@@ -32,8 +32,8 @@ frequency for the tool to actually connect to the FreeDV Reporter server. See be
 mooneer@fedora:~/freedv-gui/build_linux$ src/integrations/ka9q/freedv-ka9q -h
 13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:139: freedv-ka9q version 2.0.3-dev-645cd
 13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:101: Usage: src/integrations/ka9q/freedv-ka9q [-i|--input-sample-rate RATE] [-o|--output-sample-rate RATE] [-c|--reporting-callsign CALLSIGN] [-l|--reporting-locator LOCATOR] [-f|--reporting-freq-hz FREQUENCY_IN_HERTZ] [-h|--help] [-v|--version]
-13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:102:     -i|--input-sample-rate: The sample rate for int16 audio samples received over standard input.
-13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:103:     -o|--output-sample-rate: The sample rate for int16 audio samples output over standard output.
+13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:102:     -i|--input-sample-rate: The sample rate for int16 audio samples received over standard input (default 8000 Hz).
+13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:103:     -o|--output-sample-rate: The sample rate for int16 audio samples output over standard output (default 16000 Hz).
 13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:104:     -c|--reporting-callsign: The callsign to use for FreeDV Reporter reporting.
 13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:105:     -l|--reporting-locator: The grid square/locator to use for FreeDV Reporter reporting.
 13:21:37 INFO /home/mooneer/freedv-gui/src/integrations/ka9q/main.cpp:106:     -f|--reporting-frequency-hz: The frequency to report for FreeDV Reporter reporting, in hertz. (Example: 14236000 for 14.236MHz)

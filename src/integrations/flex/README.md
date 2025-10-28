@@ -13,7 +13,7 @@ $ make -j$(nproc) freedv-flex
 
 *Note: freedv-flex is not built by default when running "make" or using `build_linux.sh`.*
 
-To generate the AppImage, you can then change to the top-level `appimage` folder and run `./make-appimage-waveform.sh`.
+To generate the AppImage, you can then change to the top-level `appimage` folder and run `./make-appimage.sh freedv-flex`.
 Note that AppImage generation is a prerequisite for generating the Docker container/waveform file, which can be done by
 executing the following from this folder:
 

@@ -99,8 +99,8 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
 void printUsage(char* appName)
 {
     log_info("Usage: %s [-i|--input-sample-rate RATE] [-o|--output-sample-rate RATE] [-c|--reporting-callsign CALLSIGN] [-l|--reporting-locator LOCATOR] [-f|--reporting-freq-hz FREQUENCY_IN_HERTZ] [-h|--help] [-v|--version]", appName);
-    log_info("    -i|--input-sample-rate: The sample rate for int16 audio samples received over standard input.");
-    log_info("    -o|--output-sample-rate: The sample rate for int16 audio samples output over standard output.");
+    log_info("    -i|--input-sample-rate: The sample rate for int16 audio samples received over standard input (default %d Hz).", DEFAULT_INPUT_SAMPLE_RATE);
+    log_info("    -o|--output-sample-rate: The sample rate for int16 audio samples output over standard output (default %d Hz).", DEFAULT_OUTPUT_SAMPLE_RATE);
     log_info("    -c|--reporting-callsign: The callsign to use for FreeDV Reporter reporting.");
     log_info("    -l|--reporting-locator: The grid square/locator to use for FreeDV Reporter reporting.");
     log_info("    -f|--reporting-frequency-hz: The frequency to report for FreeDV Reporter reporting, in hertz. (Example: 14236000 for 14.236MHz)");
