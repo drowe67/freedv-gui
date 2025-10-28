@@ -330,35 +330,55 @@ int main(int argc, char** argv)
     assert(writeBuffer != nullptr);
     while (!exiting)
     {
-        if (callbackObj->infifo2->numFree() >= NUM_TO_READ)
+        fd_set readSet;
+        struct timeval tv;
+        
+        auto stdinFileNo = fileno(stdin);
+
+        FD_ZERO(&readSet);
+        FD_SET(stdinFileNo, &readSet);
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 10000; // 10ms
+        
+        int rv = select(stdinFileNo + 1, &readSet, nullptr, nullptr, &tv);
+        if (rv > 0 && !exiting)
         {
-            // Read from standard input and queue on input FIFO
-            int numActuallyRead = fread(readBuffer, sizeof(short), NUM_TO_READ, stdin);
-            if (numActuallyRead <= 0) 
+            if (callbackObj->infifo2->numFree() >= NUM_TO_READ)
             {
-                // stdin closed, exit
-                exiting = true;
-                break;
+                // Read from standard input and queue on input FIFO
+                int numActuallyRead = read(stdinFileNo, readBuffer, sizeof(short) * NUM_TO_READ);
+                if (numActuallyRead <= 0) 
+                {
+                    // stdin closed, exit
+                    exiting = true;
+                    break;
+                }
+                callbackObj->infifo2->write(readBuffer, numActuallyRead);
             }
-            callbackObj->infifo2->write(readBuffer, numActuallyRead);
+            else
+            {
+                // Wait a bit for the output FIFO to be processed.
+                std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
+            }
+        }
+        else if (rv < 0)
+        {
+            log_error("Error waiting for input: %s", strerror(errno));
+            break;
         }
 
         // If we have anything decoded, output that now
         while (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
         {
             callbackObj->outfifo2->read(writeBuffer, NUM_TO_WRITE);
-            int numActuallyWritten = fwrite(writeBuffer, sizeof(short), NUM_TO_WRITE, stdout);
+            int numActuallyWritten = write(fileno(stdout), writeBuffer, sizeof(short) * NUM_TO_WRITE);
             if (numActuallyWritten <= 0)
             {
                 // stdout closed, exit
                 exiting = true;
                 break;
             }
-        }
-
-        if (!exiting)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
         }
     }
     delete[] readBuffer;
