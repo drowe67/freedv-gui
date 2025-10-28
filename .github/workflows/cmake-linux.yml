@@ -99,8 +99,7 @@ jobs:
       id: appimage-filename
       working-directory: ${{github.workspace}}/appimage
       run: |
-          export FREEDV_APPIMAGE_FILENAME=`ls *.AppImage`
-          echo "APPIMAGE_FILENAME=${FREEDV_APPIMAGE_FILENAME}" >> "$GITHUB_OUTPUT"
+          echo "APPIMAGE_FILENAME=$(echo -n FreeDV*.AppImage)" >> "$GITHUB_OUTPUT"
 
     - name: Generate waveform file
       shell: bash
