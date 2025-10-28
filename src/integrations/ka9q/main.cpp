@@ -340,7 +340,7 @@ int main(int argc, char** argv)
         FD_SET(stdinFileNo, &readSet);
 
         tv.tv_sec = 0;
-        tv.tv_usec = 10000; // 10ms
+        tv.tv_usec = 0;
         
         int rv = select(stdinFileNo + 1, &readSet, nullptr, nullptr, &tv);
         if (rv > 0 && !exiting)
@@ -358,11 +358,6 @@ int main(int argc, char** argv)
                 }
                 callbackObj->infifo2->write(readBuffer, numActuallyRead);
             }
-            else
-            {
-                // Wait a bit for the output FIFO to be processed.
-                std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
-            }
         }
         else if (rv < 0)
         {
@@ -371,7 +366,7 @@ int main(int argc, char** argv)
         }
 
         // If we have anything decoded, output that now
-        while (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
+        if (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
         {
             callbackObj->outfifo2->read(writeBuffer, NUM_TO_WRITE);
             int numActuallyWritten = write(fileno(stdout), writeBuffer, sizeof(short) * NUM_TO_WRITE);
@@ -382,6 +377,12 @@ int main(int argc, char** argv)
                 exiting = true;
                 break;
             }
+        }
+
+        if (!exiting)
+        {
+            // Wait a bit for the output FIFO to be processed.
+            std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_DURATION_MS));
         }
     }
     delete[] readBuffer;
