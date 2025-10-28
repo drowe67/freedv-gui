@@ -132,13 +132,14 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Save correct architecture
+      id: save-arch
       run: |
         echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
     
     - uses: actions/download-artifact@v4
       with:
         merge-multiple: true
-        pattern: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
+        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
 
     - name: Start Fedora container
@@ -179,13 +180,14 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Save correct architecture
+      id: save-arch
       run: |
         echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
     
     - uses: actions/download-artifact@v4
       with:
         merge-multiple: true
-        pattern: FreeDV-2*-${{ env.APPIMAGE_ARCH }}
+        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}
         path: ${{github.workspace}}
         
     - name: Install rtkit for RT threading
