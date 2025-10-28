@@ -866,7 +866,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
     * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
     * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
-    * Added implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
+    * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
+    * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
 
 ## V2.0.2 October 2025
 
