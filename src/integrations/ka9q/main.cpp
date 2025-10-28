@@ -352,6 +352,7 @@ int main(int argc, char** argv)
                 if (numActuallyRead <= 0) 
                 {
                     // stdin closed, exit
+                    log_warn("stdin pipe closed, exiting");
                     exiting = true;
                     break;
                 }
@@ -377,6 +378,7 @@ int main(int argc, char** argv)
             if (numActuallyWritten <= 0)
             {
                 // stdout closed, exit
+                log_warn("stdout pipe closed, exiting");
                 exiting = true;
                 break;
             }
@@ -384,6 +386,8 @@ int main(int argc, char** argv)
     }
     delete[] readBuffer;
     delete[] writeBuffer;
+
+    rxThread.stop();
     
     // TBD - the below isn't called since we're in an infinite loop above.
     rade_close(radeObj);
