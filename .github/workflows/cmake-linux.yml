@@ -162,7 +162,7 @@ jobs:
     - name: Install required packages for audio/display
       shell: bash
       run: |
-          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity python3-matplotlib python3-torch sox
+          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity python3-matplotlib python3-torch sox git
 
     - name: Sanity check RADE
       shell: bash
@@ -276,7 +276,7 @@ jobs:
           FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
 
-  build:
+  test-application:
     strategy:
       fail-fast: false
       matrix:
@@ -306,7 +306,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install LLVM/Clang >=20.0 (Required for RTSan)
+    - name: Install LLVM/Clang >=20.0 (Required for sanitizers)
       if: ${{ matrix.sanitizer == 'WITH_RTSAN=1' || matrix.sanitizer == 'WITH_TSAN=1' }}
       uses: MorganCaron/latest-clang-action@master
 

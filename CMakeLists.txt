@@ -739,9 +739,9 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+    if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
     set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+    endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 endmacro()
 
 DefineAudioTest(RADEV1)
@@ -751,10 +751,10 @@ if(NOT ENABLE_RTSAN)
 add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
 
-# For AddressSanitizer, we're just seeing if there are any memory leaks or crashes.
-if(NOT ENABLE_ASAN)
+# For sanitizers, we're just seeing if there are any errors from the sanitizer.
+if(NOT ENABLE_ASAN AND NOT ENABLE_TSAN)
 set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
-endif(NOT ENABLE_ASAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_TSAN)
 endif(NOT ENABLE_RTSAN)
 
 DefineAudioTest(700D)
@@ -762,18 +762,18 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
 
 endif(UNITTEST)
