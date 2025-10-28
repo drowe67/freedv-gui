@@ -164,7 +164,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           chmod +x *.AppImage
-          echo "FREEDV_BINARY=$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
+          echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
