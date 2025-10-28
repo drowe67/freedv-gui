@@ -139,7 +139,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         merge-multiple: true
-        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}
+        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
         path: ${{github.workspace}}
 
     - name: Start Fedora container
@@ -187,7 +187,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         merge-multiple: true
-        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}
+        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
         path: ${{github.workspace}}
         
     - name: Install rtkit for RT threading
@@ -201,13 +201,13 @@ jobs:
 
     - name: Install required packages for audio/display
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
            sudo apt-get install sox xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
 
     - name: Install required packages for audio/display
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       run: |
            sudo apt-get install sox xvfb pulseaudio pulseaudio-utils metacity
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
@@ -229,7 +229,7 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
@@ -250,7 +250,7 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
