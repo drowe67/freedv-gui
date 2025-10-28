@@ -126,7 +126,12 @@ jobs:
         path: ${{github.workspace}}/src/integrations/flex/freedv-waveform.tar.gz
 
   test-appimage-fedora:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm, ubuntu-24.04]
+
+    runs-on: ${{ matrix.os }}
     needs: [build-appimage]
     steps:
     - uses: actions/checkout@v4
