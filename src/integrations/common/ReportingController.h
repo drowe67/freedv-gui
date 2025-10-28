@@ -30,7 +30,7 @@
 class ReportingController : public ThreadedObject
 {
 public:
-    ReportingController(std::string softwareName);
+    ReportingController(std::string softwareName, bool rxOnly = false);
     virtual ~ReportingController() = default;
 
     void updateRadioCallsign(std::string newCallsign);
@@ -48,6 +48,7 @@ private:
     std::string radioCallsign_;
     bool userHidden_;
     uint64_t currentFreq_;
+    bool rxOnly_;
 
     void updateReporterState_();
     std::string getVersionString_();

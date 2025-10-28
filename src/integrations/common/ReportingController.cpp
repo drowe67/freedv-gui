@@ -36,13 +36,14 @@ std::string ReportingController::getVersionString_()
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
-ReportingController::ReportingController(std::string softwareName)
+ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     : softwareName_(softwareName)
     , reporterConnection_(nullptr)
     , currentGridSquare_(SOFTWARE_GRID_SQUARE)
     , radioCallsign_("")
     , userHidden_(true)
     , currentFreq_(0)
+    , rxOnly_(rxOnly)
 {   
     // empty
 }
@@ -100,7 +101,7 @@ void ReportingController::updateReporterState_()
     if (reporterConnection_ == nullptr && !userHidden_)
     {
         log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
-        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), false, true);
+        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), rxOnly_, true);
         reporterConnection_->connect();
     }
 }

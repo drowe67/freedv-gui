@@ -282,7 +282,7 @@ int main(int argc, char** argv)
     rxThread.signalToStart();
     
     CallsignReporting reportData;
-    ReportingController reportController(SOFTWARE_NAME);
+    ReportingController reportController(SOFTWARE_NAME, true);
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 
