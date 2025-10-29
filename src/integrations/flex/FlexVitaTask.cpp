@@ -188,6 +188,11 @@ void FlexVitaTask::openSocket_()
     {
         socklen_t bindAddrLen = sizeof(ourSocketAddress);
         auto rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
+        if (rv == -1)
+        {
+            auto err = errno;
+            log_error("Got socket error %d (%s) while calling getsockname", err, strerror(err));
+        }
         assert(rv != -1);
 
         udpPort_ = ntohl(ourSocketAddress.sin_port);

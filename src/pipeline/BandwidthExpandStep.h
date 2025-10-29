@@ -1,6 +1,7 @@
 //=========================================================================
-// Name:            AgcStep.h
-// Purpose:         Describes an AGC step in the audio pipeline.
+// Name:            BandwidthExpandStep.h
+// Purpose:         Implements BBWENet from the Opus project (which expands 
+//                  audio from 16kHz to 48kHz).
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,20 +21,29 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__AGC_STEP_H
-#define AUDIO_PIPELINE__AGC_STEP_H
+#ifndef AUDIO_PIPELINE__BANDWIDTH_EXPAND_STEP_H
+#define AUDIO_PIPELINE__BANDWIDTH_EXPAND_STEP_H
 
 #include "IPipelineStep.h"
 #include "../util/GenericFIFO.h"
-#include "../3rdparty/WebRTC_AGC/agc.h"
 
 #include <memory>
 
-class AgcStep : public IPipelineStep
+// TBD - need to wrap in "extern C" to avoid linker errors
+extern "C" 
+{
+    #include "fargan_config.h"
+    #include "../silk/structs.h"
+    #include "osce_features.h"
+    #include "osce_structs.h"
+    #include "osce.h"
+}
+
+class BandwidthExpandStep : public IPipelineStep
 {
 public:
-    AgcStep(int sampleRate);
-    virtual ~AgcStep();
+    BandwidthExpandStep();
+    virtual ~BandwidthExpandStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
     virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
@@ -41,19 +51,14 @@ public:
     virtual void reset() FREEDV_NONBLOCKING override;
     
 private:
-    int sampleRate_;
-    float targetGainDb_;
-    float currentGainDb_;
-    WebRtcAgcConfig agcConfig_;
-    void* agcState_;
-
-    void* ebur128State_;
-
-    int numSamplesPerRun_;
+    silk_OSCE_BWE_struct *osceBWE_;
+    OSCEModel *osce_;
+    int arch_;
+    
     GenericFIFO<short> inputSampleFifo_;
     std::unique_ptr<short[]> outputSamples_;
     std::unique_ptr<short[]> tmpInput_;
 };
 
 
-#endif // AUDIO_PIPELINE__AGC_STEP_H
+#endif // AUDIO_PIPELINE__BANDWIDTH_EXPAND_STEP_H

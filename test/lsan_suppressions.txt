@@ -11,3 +11,5 @@ leak:__py
 leak:default_malloc
 leak:dtypemeta_wrap_legacy_descriptor
 leak:initialize_and_map_pytypes_to_dtypes
+leak:libfontconfig.so
+leak:libpython3.11.so

@@ -30,7 +30,7 @@
 #include <wx/tipwin.h>
 #include <wx/dataview.h>
 
-#include "main.h"
+#include "../../main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
 #include "../controls/ReportMessageRenderer.h"
