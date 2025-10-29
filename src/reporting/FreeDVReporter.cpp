@@ -272,6 +272,7 @@ void FreeDVReporter::connect_()
     }
 
     sioClient_->setOnRecvEndFn([&]() {
+        std::unique_lock<std::mutex> lk(objMutex_);
         if (onRecvEndFn_)
         {
             onRecvEndFn_();

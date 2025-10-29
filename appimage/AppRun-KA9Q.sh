@@ -9,4 +9,4 @@ echo "PYTHONPATH=$PYTHONPATH"
 echo "PYTHONHOME=$PYTHONHOME"
 cd "$APPDIR"
 echo "#### after import"
-"$APPDIR/usr/bin/freedv" $@
+"$APPDIR/usr/bin/freedv-ka9q" $@

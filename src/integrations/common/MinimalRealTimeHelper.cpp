@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            FlexRealtimeHelper.cpp
+// Name:            MinimalRealTimeHelper.cpp
 // Purpose:         Realtime helper for Flex waveform.
 //
 // Authors:         Mooneer Salem
@@ -20,7 +20,7 @@
 //
 //=========================================================================
 
-#include "FlexRealtimeHelper.h"
+#include "MinimalRealTimeHelper.h"
 
 #if defined(USE_RTKIT)
 #include "../audio/rtkit.h"
@@ -29,7 +29,7 @@
 #include <string.h>
 #include "../util/logging/ulog.h"
 
-void FlexRealtimeHelper::setHelperRealTime()
+void MinimalRealtimeHelper::setHelperRealTime()
 {
 #if defined(USE_RTKIT)
     DBusError error;
