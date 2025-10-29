@@ -1074,22 +1074,16 @@ id="freedv-cant-be-opened-on-macos-because-the-developer-cannot-be-verified"><sp
 class="header-section-number">15.15</span> FreeDV can’t be opened on
 macOS because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all macOS
-applications. The FreeDV developers do not wish to operate within the
-Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
+applications. While official releases of FreeDV are signed, other types
+of builds may not be. This may result in a dialog box similar to the
+below:</p>
 <figure>
 <img src="contrib/osx_notarization1.png" alt="Notarization Error" />
 <figcaption aria-hidden="true">Notarization Error</figcaption>
 </figure>
-<p>Security &amp; Privacy shows the Open Anyway option for FreeDV:</p>
-<figure>
-<img src="contrib/osx_notarization2.png" alt="Security and Privacy" />
-<figcaption aria-hidden="true">Security and Privacy</figcaption>
-</figure>
-<figure>
-<img src="contrib/osx_notarization3.png" alt="Open FreeDV" />
-<figcaption aria-hidden="true">Open FreeDV</figcaption>
-</figure>
-<p>Or you can use command line options:</p>
+<p>(or on later releases of macOS) a message indicating that the FreeDV
+binary is “corrupt”. To override the notarization requirement and
+execute FreeDV, run the following from Terminal:</p>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
@@ -1175,8 +1169,10 @@ mono one. (PR #1052)</li>
 rates. (PR #1057)</li>
 <li>CPU reductions when rendering plots, especially on X11/Xwayland
 systems. (PR #1064)</li>
-<li>Added implementation of Flex waveform for Flex 6000/8000/Aurora
+<li>Add implementation of Flex waveform for Flex 6000/8000/Aurora
 series. (PR #1018)</li>
+<li>Add ka9q-radio integration for use with web-based SDRs and similar.
+(PR #1066)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v2.0.2-october-2025"><span
