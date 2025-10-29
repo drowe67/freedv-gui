@@ -1,6 +1,7 @@
 set(PIPELINE_SUBSET
     ../../pipeline/AgcStep.cpp
     ../../pipeline/AudioPipeline.cpp
+    ../../pipeline/BandwidthExpandStep.cpp
     ../../pipeline/IPipelineStep.cpp
     ../../pipeline/LevelAdjustStep.cpp
     ../../pipeline/RADEReceiveStep.cpp

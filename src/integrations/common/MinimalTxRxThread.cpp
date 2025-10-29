@@ -26,16 +26,17 @@ using namespace std::chrono_literals;
 #include "MinimalTxRxThread.h"
 #include "../pipeline/paCallbackData.h"
 
-#include "../pipeline/AgcStep.h"
-#include "../pipeline/SpeexStep.h"
-#include "../pipeline/ResampleStep.h"
-#include "../pipeline/LevelAdjustStep.h"
-#include "../pipeline/RADEReceiveStep.h"
+#include "../../pipeline/AgcStep.h"
+#include "../../pipeline/SpeexStep.h"
+#include "../../pipeline/ResampleStep.h"
+#include "../../pipeline/LevelAdjustStep.h"
+#include "../../pipeline/RADEReceiveStep.h"
+#include "../../pipeline/BandwidthExpandStep.h"
 
-#include "../util/logging/ulog.h"
-#include "../os/os_interface.h"
+#include "../../util/logging/ulog.h"
+#include "../../os/os_interface.h"
 
-#include "../pipeline/pipeline_defines.h"
+#include "../../pipeline/pipeline_defines.h"
 
 #include "codec2_alloc.h"
 
@@ -92,6 +93,9 @@ void MinimalTxRxThread::initializePipeline_()
         radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
         
+        auto bwExpandStep = new BandwidthExpandStep();
+        pipeline_->appendPipelineStep(bwExpandStep);
+
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
     }
