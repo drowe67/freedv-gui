@@ -118,7 +118,8 @@ void ThreadedObject::eventLoop_()
             {
                 std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
 
-                if (count == 0)
+                count = eventQueue_.size();
+                if (count == 0 && !isDestroying_.load(std::memory_order_acquire))
                 {
                     eventQueueCV_.wait(lk, [&]() {
                         return isDestroying_.load(std::memory_order_acquire) || eventQueue_.size() > 0;
