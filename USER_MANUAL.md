@@ -807,13 +807,8 @@ other types of builds may not be. This may result in a dialog box similar to the
 
 ![Notarization Error](contrib/osx_notarization1.png)
 
-Going to the Security & Privacy setting shows the Open Anyway option for FreeDV:
-
-![Security and Privacy](contrib/osx_notarization2.png)
-
-![Open FreeDV](contrib/osx_notarization3.png)
-
-Or you can run the following from Terminal to override notarization:
+(or on later releases of macOS) a message indicating that the FreeDV binary is "corrupt". To override the notarization requirement
+and execute FreeDV, run the following from Terminal:
 
 ```
 xattr -d com.apple.quarantine FreeDV.app
