@@ -36,9 +36,9 @@
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
-#include "FlexTxRxThread.h"
-#include "FlexRealtimeHelper.h"
-#include "ReportingController.h"
+#include "../common/MinimalTxRxThread.h"
+#include "../common/MinimalRealTimeHelper.h"
+#include "../common/ReportingController.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 #include "../reporting/FreeDVReporter.h"
@@ -52,6 +52,8 @@ extern "C"
     #include "lpcnet.h"
 }
 
+#define SOFTWARE_NAME "freedv-flex"
+
 using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
@@ -61,7 +63,7 @@ struct CallsignReporting
 {
     ReportingController* reporter;
     FlexTcpTask* tcpTask;
-    FlexTxRxThread* rxThread;
+    MinimalTxRxThread* rxThread;
 };
 
 void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
@@ -134,7 +136,7 @@ int main(int argc, char** argv)
     }
 
     // Start up VITA task so we can get the list of available radios.
-    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
+    auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
     FlexVitaTask vitaTask(realtimeHelper, false /*radioIp != "" ? true : false*/); // TBD - our VITA port must be 4992 despite Flex documentation
     
     std::map<std::string, std::string> radioList;
@@ -152,8 +154,8 @@ int main(int argc, char** argv)
     
     // Initialize audio pipelines
     auto callbackObj = vitaTask.getCallbackData();
-    FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
 
     log_info("Starting TX/RX threads");
     txThread.start();
@@ -185,7 +187,7 @@ int main(int argc, char** argv)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
-    ReportingController reportController;
+    ReportingController reportController(SOFTWARE_NAME);
     reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;

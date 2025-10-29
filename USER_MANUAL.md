@@ -802,17 +802,13 @@ Have you removed/changed USB audio devices? If you remove/change USB audio devic
 
 ## FreeDV can't be opened on macOS because the developer cannot be verified
 
-From January 2020 Apple is enforcing notarization for all macOS applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+From January 2020 Apple is enforcing notarization for all macOS applications. While official releases of FreeDV are signed,
+other types of builds may not be. This may result in a dialog box similar to the below:
 
 ![Notarization Error](contrib/osx_notarization1.png)
 
-Security & Privacy shows the Open Anyway option for FreeDV:
-
-![Security and Privacy](contrib/osx_notarization2.png)
-
-![Open FreeDV](contrib/osx_notarization3.png)
-
-Or you can use command line options:
+(or on later releases of macOS) a message indicating that the FreeDV binary is "corrupt". To override the notarization requirement
+and execute FreeDV, run the following from Terminal:
 
 ```
 xattr -d com.apple.quarantine FreeDV.app
@@ -866,7 +862,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
     * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
     * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
-    * Added implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
+    * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
+    * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
 
 ## V2.0.2 October 2025
 

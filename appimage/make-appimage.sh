@@ -1,8 +1,25 @@
 #!/bin/bash -e
 
-APPNAME="FreeDV"
+TARGET=${1:-all}
+
+if [[ "${TARGET}" == "all" ]]; then
+    export APPNAME="FreeDV"
+    export APPEXEC=../build_linux/src/freedv
+    export APPRUN="AppRun.sh"
+elif [[ "${TARGET}" == "freedv-flex" ]]; then
+    export APPNAME="FreeDV-FlexRadio"
+    export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
+    export APPRUN="AppRun-FlexRadio.sh"
+elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
+    export APPNAME="FreeDV-KA9Q"
+    export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
+    export APPRUN="AppRun-KA9Q.sh"
+fi
+
+DESKTOP_FILE="$APPNAME.desktop"
 APPDIR="$APPNAME.AppDir"
 BUILDDIR="../"
+MACH_ARCH=`uname -m`
 
 # Change to the directory where this script is located
 cd "$(dirname "$(realpath "$0")")"
@@ -15,24 +32,24 @@ else
 fi
 
 echo "Bundle dependencies..."
-if test -f linuxdeploy-x86_64.AppImage; then
+if test -f linuxdeploy-${MACH_ARCH}.AppImage; then
   echo "linuxdeploy exists"
 else
     wget -c "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
-    wget https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-x86_64.AppImage
-    chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
+    wget https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-${MACH_ARCH}.AppImage
+    chmod +x linuxdeploy-${MACH_ARCH}.AppImage linuxdeploy-plugin-gtk.sh
 fi
 
-./linuxdeploy-x86_64.AppImage \
+./linuxdeploy-${MACH_ARCH}.AppImage \
 --executable /usr/bin/python3 \
---executable ../build_linux/src/freedv \
+--executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
 --custom-apprun=AppRun.sh \
---desktop-file FreeDV.desktop
+--desktop-file $DESKTOP_FILE
 
 # create the virtual environment (copied from Brian's build script)
-cd FreeDV.AppDir
+cd $APPDIR
 python3.11 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
 # Activate it
 source rade-venv/bin/activate # || { echo "ERROR: activate venv failed"; exit 1; }
@@ -70,13 +87,20 @@ ln -s "../../rade_src/model19_check3" "model19_check3"
 cd -
 
 # Create the output
-./linuxdeploy-x86_64.AppImage \
---appdir "$APPDIR" \
---plugin gtk \
---output appimage
+if [[ "${TARGET}" == "all" ]]; then
+    ./linuxdeploy-${MACH_ARCH}.AppImage \
+        --appdir "$APPDIR" \
+        --plugin gtk \
+        --output appimage
+else
+    # GTK plugin not needed for integrations
+    ./linuxdeploy-${MACH_ARCH}.AppImage \
+        --appdir "$APPDIR" \
+        --output appimage
+fi
 
 # Include version number in AppImage filename
 FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`
-mv FreeDV-x86_64.AppImage FreeDV-$FREEDV_VERSION-x86_64.AppImage
+mv ${APPNAME}-${MACH_ARCH}.AppImage ${APPNAME}-$FREEDV_VERSION-${MACH_ARCH}.AppImage
 
 echo "Done"

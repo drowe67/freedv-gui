@@ -117,6 +117,11 @@ You need to install the codec2 shared libraries, and freedv-gui:
   $ sudo make install
   $ sudo ldconfig
   ```
+
+## Radio integrations
+
+FreeDV supports direct integration with several different types of radios. Please see [this README](./src/integrations/README.md) for
+more information.
  
 ## Testing
 
