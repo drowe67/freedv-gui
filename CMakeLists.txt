@@ -146,6 +146,8 @@ set(ENABLE_RTSAN FALSE CACHE BOOL
     "Instruments the build with RealtimeSanitizer for RT safety checks.")
 set(ENABLE_TSAN FALSE CACHE BOOL
     "Instruments the build with ThreadSanitizer for thread checks.")
+set(ENABLE_UBSAN FALSE CACHE BOOL
+    "Instruments the build with UndefinedBehaviorSanitizer for undefined behavior checks.")
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
@@ -164,6 +166,12 @@ if(ENABLE_TSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=thread")
 endif(ENABLE_TSAN)
+
+if(ENABLE_UBSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=undefined")
+endif(ENABLE_UBSAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -566,10 +574,12 @@ else()
     include(cmake/BuildSpeex.cmake)
 endif()
 
+set(SANITIZERS_ENABLED (ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN))
+
 # On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if ((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 include(cmake/BuildMimalloc.cmake)
-endif ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif ((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 
 #
 # Find libdl for dlopen/dlclose
@@ -739,9 +749,9 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+    if(NOT SANITIZERS_ENABLED)
     set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+    endif(NOT SANITIZERS_ENABLED)
 endmacro()
 
 DefineAudioTest(RADEV1)
@@ -752,9 +762,9 @@ add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
 
 # For sanitizers, we're just seeing if there are any errors from the sanitizer.
-if(NOT ENABLE_ASAN AND NOT ENABLE_TSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_TSAN)
+endif(NOT SANITIZERS_ENABLED)
 endif(NOT ENABLE_RTSAN)
 
 DefineAudioTest(700D)
@@ -762,18 +772,18 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN AND NOT ENABLE_TSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 endif(UNITTEST)
