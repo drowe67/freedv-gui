@@ -116,15 +116,21 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp->Add(m_ckboxAgcEnabled, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxAgcEnabled->SetToolTip(_("Automatic gain control for microphone"));
     
-    m_ckboxBwExpandEnabled = new wxCheckBox(sb_speexpp, wxID_ANY, _("BW Expander"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckboxBwExpandEnabled, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckboxBwExpandEnabled->SetToolTip(_("Expands RADE RX audio to 48kHz"));
-    
     m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
+
+    // Speaker audio post-processing
+    wxStaticBox* sbSpeakerAudio = new wxStaticBox(this, wxID_ANY, _("Speaker Audio Post-Processing"));
+    wxStaticBoxSizer* sbSpeakerAudioSizer = new wxStaticBoxSizer(sbSpeakerAudio, wxHORIZONTAL);
+
+    m_ckboxBwExpandEnabled = new wxCheckBox(sbSpeakerAudio, wxID_ANY, _("BW Expander"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSpeakerAudioSizer->Add(m_ckboxBwExpandEnabled, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckboxBwExpandEnabled->SetToolTip(_("Expands RADE RX audio to 24kHz. Requires speaker or headset capable of >16kHz sample rate."));
+    
+    bSizer30->Add(sbSpeakerAudioSizer, 0, wxALL | wxEXPAND, 5);   
 
     // EQ Filters -----------------------------------------------------------
 
