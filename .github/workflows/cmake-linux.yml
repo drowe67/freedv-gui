@@ -302,7 +302,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 21
+        sudo ./llvm.sh 22
 
     - name: Install rtkit for RT threading
       shell: bash
@@ -359,7 +359,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_RTSAN=1' || matrix.sanitizer == 'WITH_TSAN=1' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
