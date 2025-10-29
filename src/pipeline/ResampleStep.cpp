@@ -64,6 +64,7 @@ static int resample_step(SRC_STATE *src,
     FREEDV_BEGIN_VERIFIED_SAFE
     ret = src_process(src, &src_data);
     assert(ret == 0);
+    (void)ret; // silence compiler warnings on release builds -- can't log in RT code.
     assert(src_data.output_frames_gen <= length_output_short);
     FREEDV_END_VERIFIED_SAFE
 
