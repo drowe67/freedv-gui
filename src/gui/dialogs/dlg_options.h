@@ -24,7 +24,7 @@
 
 #include <wx/clrpicker.h>
 
-#include "main.h"
+#include "../../main.h"
 #include "defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=

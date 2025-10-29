@@ -864,6 +864,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
     * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
     * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
+    * Add support for BBWENet BW expander. (PR #1065)
 
 ## V2.0.2 October 2025
 

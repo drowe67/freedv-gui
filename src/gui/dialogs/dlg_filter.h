@@ -22,7 +22,7 @@
 #ifndef __FILTER_DIALOG__
 #define __FILTER_DIALOG__
 
-#include "main.h"
+#include "../../main.h"
 
 enum {disableQ = false, enableQ = true, disableFreq = false, enableFreq = true};
 
@@ -76,6 +76,7 @@ class FilterDlg : public wxDialog
 
         void    OnSpeexppEnable(wxScrollEvent& event);
         void    OnAgcEnable(wxScrollEvent& event);
+        void    OnBwExpandEnable(wxScrollEvent& event);
         void    On700C_EQ(wxScrollEvent& event);
 
         void    OnMicInBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInBass, true); }
@@ -117,6 +118,7 @@ class FilterDlg : public wxDialog
         wxCheckBox*   m_ckboxSpeexpp;
         wxCheckBox*   m_ckbox700C_EQ;
         wxCheckBox*   m_ckboxAgcEnabled;
+        wxCheckBox*   m_ckboxBwExpandEnabled;
         
         wxStdDialogButtonSizer* m_sdbSizer5;
         wxButton*     m_sdbSizer5OK;

@@ -41,8 +41,10 @@ set(FARGAN_X86_CONFIG_H_FILE "${BINARY_DIR}/build_opus_x86-prefix/src/build_opus
 
 if(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/dnn
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/celt
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/silk
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -51,8 +53,10 @@ set_target_properties(opus PROPERTIES
 set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
 else(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/dnn
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/celt
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/silk
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"

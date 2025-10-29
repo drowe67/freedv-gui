@@ -55,6 +55,7 @@ extern FreeDVInterface freedvInterface;
 extern wxConfigBase *pConfig;
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<bool> g_bwExpandEnabled;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
@@ -120,6 +121,16 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
+
+    // Speaker audio post-processing
+    wxStaticBox* sbSpeakerAudio = new wxStaticBox(this, wxID_ANY, _("Speaker Audio Post-Processing"));
+    wxStaticBoxSizer* sbSpeakerAudioSizer = new wxStaticBoxSizer(sbSpeakerAudio, wxHORIZONTAL);
+
+    m_ckboxBwExpandEnabled = new wxCheckBox(sbSpeakerAudio, wxID_ANY, _("BW Expander"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSpeakerAudioSizer->Add(m_ckboxBwExpandEnabled, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckboxBwExpandEnabled->SetToolTip(_("Expands RADE RX audio to 24kHz. Requires speaker or headset capable of >16kHz sample rate."));
+    
+    bSizer30->Add(sbSpeakerAudioSizer, 0, wxALL | wxEXPAND, 5);   
 
     // EQ Filters -----------------------------------------------------------
 
@@ -256,6 +267,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
     m_ckboxAgcEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
+    m_ckboxBwExpandEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
     int events[] = {
@@ -316,6 +328,7 @@ FilterDlg::~FilterDlg()
 
     m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
     m_ckboxAgcEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
+    m_ckboxBwExpandEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     
     int events[] = {
         wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
@@ -482,6 +495,9 @@ void FilterDlg::ExchangeData(int inout)
         
         // AGC
         m_ckboxAgcEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.agcEnabled);
+        
+        // BW Expand
+        m_ckboxBwExpandEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled);
 
         // Codec 2 700C EQ
         m_ckbox700C_EQ->SetValue(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -570,6 +586,9 @@ void FilterDlg::ExchangeData(int inout)
         
         // AGC
         wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
+        
+        // BW Expand
+        wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
 
         // Codec 2 700C EQ
         wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
@@ -751,6 +770,12 @@ void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
 void FilterDlg::OnAgcEnable(wxScrollEvent& event) {
     wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release); // forces immediate change at pipeline level
+    ExchangeData(EXCHANGE_DATA_OUT);
+}
+
+void FilterDlg::OnBwExpandEnable(wxScrollEvent& event) {
+    wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
+    g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 

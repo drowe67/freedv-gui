@@ -463,7 +463,7 @@ void FlexTcpTask::processCommand_(std::string& command)
 
 void FlexTcpTask::addSpot(std::string callsign)
 {
-    enqueue_([=, this]() {
+    enqueue_([=]() {
         if (activeSlice_ >= 0)
         {
             std::stringstream ss;
