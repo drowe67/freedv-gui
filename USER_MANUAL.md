@@ -802,17 +802,18 @@ Have you removed/changed USB audio devices? If you remove/change USB audio devic
 
 ## FreeDV can't be opened on macOS because the developer cannot be verified
 
-From January 2020 Apple is enforcing notarization for all macOS applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+From January 2020 Apple is enforcing notarization for all macOS applications. While official releases of FreeDV are signed,
+other types of builds may not be. This may result in a dialog box similar to the below:
 
 ![Notarization Error](contrib/osx_notarization1.png)
 
-Security & Privacy shows the Open Anyway option for FreeDV:
+Going to the Security & Privacy setting shows the Open Anyway option for FreeDV:
 
 ![Security and Privacy](contrib/osx_notarization2.png)
 
 ![Open FreeDV](contrib/osx_notarization3.png)
 
-Or you can use command line options:
+Or you can run the following from Terminal to override notarization:
 
 ```
 xattr -d com.apple.quarantine FreeDV.app
