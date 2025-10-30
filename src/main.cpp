@@ -1048,10 +1048,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
     // Add Spectrum Plot window
-    wxPanel* spectrumPanel = new wxPanel(m_auiNbookCtrl);
-    
-    // Actual Spectrum plot
-    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag_spectrum,
+    m_panelSpectrum = new PlotSpectrum((wxFrame*) m_auiNbookCtrl, g_avmag_spectrum,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
     m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));    
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
