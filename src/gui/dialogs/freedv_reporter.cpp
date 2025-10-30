@@ -1429,7 +1429,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
     
-    wxDateTime tmpDate;
+    wxDateTime tmpDate(wxInvalidDateTime);
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
