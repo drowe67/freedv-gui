@@ -642,7 +642,7 @@ bool MainApp::OnInit()
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date
-    wxDateTime buildDate(wxDateTime::Now()); // silence UBSan error on some platforms
+    wxDateTime buildDate(wxInvalidDateTime); // silence UBSan error on some platforms
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     
@@ -1017,7 +1017,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     }
     
 #if defined(UNOFFICIAL_RELEASE)
-    wxDateTime buildDate;
+    wxDateTime buildDate(wxInvalidDateTime)); // silence UBSan warning on some platforms
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     
