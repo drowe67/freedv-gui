@@ -642,7 +642,7 @@ bool MainApp::OnInit()
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date
-    wxDateTime buildDate;
+    wxDateTime buildDate(wxDateTime::Now()); // silence UBSan error on some platforms
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     
