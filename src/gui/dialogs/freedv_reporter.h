@@ -280,7 +280,9 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour backgroundColor;
 
                 ReporterData()
-                    : lastUpdateDate(wxInvalidDateTime)
+                    : lastTxDate(wxInvalidDateTime)
+                    , lastRxDate(wxInvalidDateTime)
+                    , lastUpdateDate(wxInvalidDateTime)
                     , lastUpdateUserMessage(wxInvalidDateTime)
                     , connectTime(wxInvalidDateTime)
                     , deleteTime(wxInvalidDateTime)
