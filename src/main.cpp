@@ -1017,7 +1017,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     }
     
 #if defined(UNOFFICIAL_RELEASE)
-    wxDateTime buildDate;
+    wxDateTime buildDate(wxDateTime::Now()); // silence UBSan warning on some platforms
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     
