@@ -173,6 +173,12 @@ if(ENABLE_UBSAN)
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=undefined")
 endif(ENABLE_UBSAN)
 
+if(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
+set(SANITIZERS_ENABLED TRUE)
+else(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
+set(SANITIZERS_ENABLED FALSE)
+endif(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
+
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
         message(FATAL_ERROR "Signing only makes sense for Windows builds.")
@@ -573,8 +579,6 @@ else()
     message(STATUS "Will attempt static build of speex.")
     include(cmake/BuildSpeex.cmake)
 endif()
-
-set(SANITIZERS_ENABLED (ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN))
 
 # On Linux/macOS, build mimalloc for a bit more performance
 if ((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
