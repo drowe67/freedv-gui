@@ -278,6 +278,13 @@ class FreeDVReporterDialog : public wxFrame
                 // Controls the current highlight color
                 wxColour foregroundColor;
                 wxColour backgroundColor;
+
+                ReporterData()
+                    : lastUpdateDate(wxInvalidDateTime)
+                    , lastUpdateUserMessage(wxInvalidDateTime)
+                    , connectTime(wxInvalidDateTime)
+                    , deleteTime(wxInvalidDateTime)
+                { /* empty */ }
             };
 
             struct CallbackHandler

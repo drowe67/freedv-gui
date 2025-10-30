@@ -25,8 +25,8 @@ void addNoise(short* ptr, int size)
     {
         double noise = 16384 * distribution(generator);
         noise = (noise + (double)ptr[i]) / 0.707;
-        if (noise > INT_MAX) noise = INT_MAX;
-        else if (noise < INT_MIN) noise = INT_MIN;
+        if (noise > SHORT_MAX) noise = SHORT_MAX;
+        else if (noise < SHORT_MIN) noise = SHORT_MIN;
         ptr[i] = noise;
     }
 }
