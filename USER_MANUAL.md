@@ -858,6 +858,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
     * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
     * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
+    * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039, #1068)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
