@@ -857,6 +857,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
     * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
     * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
+    * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
+    * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039, #1068)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
@@ -865,6 +867,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
     * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
     * Add support for BBWENet BW expander. (PR #1065)
+3. Build system:
+    * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
 
 ## V2.0.2 October 2025
 
