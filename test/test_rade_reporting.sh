@@ -78,7 +78,7 @@ RECORD_PID=$!
 
 # Start "radio"
 if [ "$2" == "mpp" ]; then
-    TIMES_BEFORE_KILL=5
+    TIMES_BEFORE_KILL=6
 else
     TIMES_BEFORE_KILL=1
 fi
@@ -87,7 +87,7 @@ RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
-    TX_ARGS="-txtime 1 -txattempts 6 "
+    TX_ARGS="-txtime 1 -txattempts 7 "
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
 fi
