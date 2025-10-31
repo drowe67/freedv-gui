@@ -103,7 +103,7 @@ void ThreadedTimer::start()
         }
     }
 #else
-    isDestroying_ = false;
+    isDestroying_.store(false, std::memory_order_release);
     objectThread_ = std::thread(std::bind(&ThreadedTimer::eventLoop_, this));
 #endif // defined(__APPLE__)
 }
@@ -121,7 +121,7 @@ void ThreadedTimer::stop()
 #else
     if (objectThread_.joinable())
     {
-        isDestroying_ = true;
+        isDestroying_.store(true, std::memory_order_release);
         timerCV_.notify_one();
         objectThread_.join();
     }
@@ -136,7 +136,7 @@ void ThreadedTimer::restart()
 #else
     if (objectThread_.joinable())
     {
-        isRestarting_ = true;
+        isRestarting_.store(true, std::memory_order_release);
         timerCV_.notify_one();
     }
     else
@@ -170,11 +170,15 @@ void ThreadedTimer::eventLoop_()
     do
     {
         std::unique_lock<std::mutex> lk(timerMutex_);
-        isRestarting_ = false;
-        if (!timerCV_.wait_for(lk, std::chrono::milliseconds(timeoutMilliseconds_), [&]() { return isDestroying_ || isRestarting_; }) && fn_)
+        isRestarting_.store(false, std::memory_order_release);
+        if (!timerCV_.wait_for(lk, std::chrono::milliseconds(timeoutMilliseconds_), [&]() { 
+            return 
+                isDestroying_.load(std::memory_order_acquire) || 
+                isRestarting_.load(std::memory_order_acquire);
+            }) && fn_)
         {
             fn_(*this);
         }
-    } while (!isDestroying_ && (isRestarting_ || repeat_));
+    } while (!isDestroying_.load(std::memory_order_acquire) && (isRestarting_.load(std::memory_order_acquire) || repeat_));
 }
 #endif // !defined(__APPLE__)

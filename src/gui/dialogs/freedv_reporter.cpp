@@ -1429,7 +1429,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
         timeZone = wxDateTime::TimeZone(tzMinutes);
     }
     
-    wxDateTime tmpDate;
+    wxDateTime tmpDate(wxInvalidDateTime);
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
@@ -1481,7 +1481,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
     }
     else
     {
-        timeObj = wxDateTime();
+        timeObj = wxDateTime(wxInvalidDateTime);
         return parent_->UNKNOWN_STR;
     }
 }
@@ -2661,7 +2661,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 iter->second->lastRxMode = parent_->UNKNOWN_STR;
                 iter->second->snrVal = UNKNOWN_SNR_VAL;
                 iter->second->snr = parent_->UNKNOWN_STR;
-                iter->second->lastRxDate = wxDateTime();
+                iter->second->lastRxDate = wxDateTime(wxInvalidDateTime);
             }
             else
             {

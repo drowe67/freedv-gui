@@ -1,6 +1,6 @@
-if((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
-endif((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 
 set(FREEDV_SOURCES
     ${MIMALLOC_SOURCE_FILE}
@@ -42,9 +42,9 @@ add_subdirectory(sox)
 add_subdirectory(util)
 
 # Compile FreeDV rig integrations
-if((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+if((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 add_subdirectory(integrations)
-endif((LINUX OR APPLE) AND (NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
+endif((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.

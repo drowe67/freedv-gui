@@ -41,8 +41,16 @@ ThreadedObject::~ThreadedObject()
 {
     if (objectThread_.joinable())
     {
-        isDestroying_ = true;
-        eventQueueCV_.notify_one();
+        // Clear all remaining items from the event queue before ending the thread.
+        // This helps make sure we don't accidentally execute code when this object
+        // is no longer alive.
+        {
+            std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
+            eventQueue_.clear();
+            isDestroying_.store(true, std::memory_order_release);
+            eventQueueCV_.notify_one();
+        }
+
         objectThread_.join();
     }
 }
@@ -99,7 +107,7 @@ void ThreadedObject::eventLoop_()
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
 #endif // defined(__APPLE__)
 
-    while (!isDestroying_)
+    while (!isDestroying_.load(std::memory_order_acquire))
     {
         std::function<void()> fn;
         
@@ -110,16 +118,17 @@ void ThreadedObject::eventLoop_()
             {
                 std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
 
-                if (count == 0)
+                count = eventQueue_.size();
+                if (count == 0 && !isDestroying_.load(std::memory_order_acquire))
                 {
                     eventQueueCV_.wait(lk, [&]() {
-                        return isDestroying_ || eventQueue_.size() > 0;
+                        return isDestroying_.load(std::memory_order_acquire) || eventQueue_.size() > 0;
                     });
                     
                     count = eventQueue_.size();
                 }
 
-                if (isDestroying_ || count == 0)
+                if (isDestroying_.load(std::memory_order_acquire) || count == 0)
                 {
                     break;
                 }
@@ -128,12 +137,12 @@ void ThreadedObject::eventLoop_()
                 eventQueue_.pop_front();
             }
         
-            if (fn)
+            if (!isDestroying_.load(std::memory_order_acquire) && fn)
             {
                 fn();
             }
 
             count--;
-        } while (count > 0);
+        } while (!isDestroying_.load(std::memory_order_acquire) && count > 0);
     }
 }
