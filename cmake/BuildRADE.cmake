@@ -93,7 +93,7 @@ endif (NOT download_pip_POPULATED)
 
 # PyTorch needs the Visual Studio redistributable to be installed.
 FetchContent_Declare(download_vsr
-    URL https://aka.ms/vs/16/release/vc_redist.x64.exe
+    URL https://aka.ms/vs/17/release/vc_redist.x64.exe
     DOWNLOAD_NO_EXTRACT TRUE)
 if (NOT download_vsr_POPULATED)
     FetchContent_Populate(download_vsr)
