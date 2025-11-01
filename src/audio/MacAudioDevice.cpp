@@ -317,7 +317,8 @@ void MacAudioDevice::start()
         
         // Set sample rate of device
         log_info("Device %d: setting stream format", coreAudioId_);
-        AudioStreamBasicDescription deviceFormat = {0};
+        AudioStreamBasicDescription deviceFormat;
+        memset(&deviceFormat, 0, sizeof(deviceFormat));
         size = sizeof(AudioStreamBasicDescription);
 
         deviceFormat.mSampleRate = sampleRate_;
@@ -472,7 +473,7 @@ void MacAudioDevice::start()
         };
 
         AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
-        if (defaultDevice == coreAudioId_)
+        if ((int)defaultDevice == coreAudioId_)
         {
             isDefaultDevice_ = true;
         }
@@ -750,7 +751,7 @@ OSStatus MacAudioDevice::InputProc_(
             const AudioTimeStamp *inTimeStamp,
             UInt32 inBusNumber,
             UInt32 inNumberFrames,
-            AudioBufferList * ioData) FREEDV_NONBLOCKING
+            AudioBufferList *) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
@@ -766,9 +767,9 @@ OSStatus MacAudioDevice::InputProc_(
     {
         if (thisObj->onAudioDataFunction)
         {
-            for (int index = 0; index < inNumberFrames; index++)
+            for (UInt32 index = 0; index < inNumberFrames; index++)
             {
-                for (int chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
+                for (UInt32 chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
                 {
                     thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * 32767;
                 }
@@ -800,9 +801,9 @@ OSStatus MacAudioDevice::InputProc_(
             
 OSStatus MacAudioDevice::OutputProc_(
             void *inRefCon,
-            AudioUnitRenderActionFlags *ioActionFlags,
-            const AudioTimeStamp *inTimeStamp,
-            UInt32 inBusNumber,
+            AudioUnitRenderActionFlags *,
+            const AudioTimeStamp *,
+            UInt32,
             UInt32 inNumberFrames,
             AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
@@ -812,9 +813,9 @@ OSStatus MacAudioDevice::OutputProc_(
     {
         thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         
-        for (int index = 0; index < inNumberFrames; index++)
+        for (UInt32 index = 0; index < inNumberFrames; index++)
         {
-            for (int chan = 0; chan < ioData->mNumberBuffers; chan++)
+            for (UInt32 chan = 0; chan < ioData->mNumberBuffers; chan++)
             {
                 ((float*)ioData->mBuffers[chan].mData)[index] = thisObj->inputFrames_[thisObj->numChannels_ * index + chan] / 32767.0;
             }
@@ -933,11 +934,13 @@ void MacAudioDevice::leaveWorkgroup_()
 }
 
 int MacAudioDevice::DeviceIsAliveCallback_(
-        AudioObjectID                       inObjectID,
-        UInt32                              inNumberAddresses,
+        AudioObjectID,
+        UInt32,
         const AudioObjectPropertyAddress    inAddresses[],
         void*                               inClientData)
 {
+    (void)inAddresses;
+
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
     if (thisObj->isDefaultDevice_)
     {
@@ -979,11 +982,13 @@ int MacAudioDevice::DeviceIsAliveCallback_(
 }
 
 int MacAudioDevice::DeviceOverloadCallback_(
-        AudioObjectID                       inObjectID,
-        UInt32                              inNumberAddresses,
+        AudioObjectID,
+        UInt32,
         const AudioObjectPropertyAddress    inAddresses[],
         void*                               inClientData)
 {
+    (void)inAddresses;
+
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
 
     // Possible GUI stuff really shouldn't be happening on the audio thread.

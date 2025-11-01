@@ -469,9 +469,10 @@ int MacAudioEngine::getNumChannels_(int coreAudioId, AudioDirection direction)
 int MacAudioEngine::OnDeviceListChange_(
     AudioObjectID,
     UInt32,
-    const AudioObjectPropertyAddress,
-    void*,
+    const AudioObjectPropertyAddress inAddresses[],
+    void*)
 {
+    (void)inAddresses;
     #if 0
     MacAudioEngine* thisObj = (MacAudioEngine*)inClientData;
     log_info("Detected device list change--restarting devices to keep audio flowing");
