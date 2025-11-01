@@ -83,7 +83,7 @@ void FlexTcpTask::onReceive_(char* buf, int length)
     }
 }
 
-void FlexTcpTask::socketFinalCleanup_(bool reconnect)
+void FlexTcpTask::socketFinalCleanup_(bool)
 {
     // Report disconnection
     activeSlice_ = -1;
@@ -147,7 +147,7 @@ void FlexTcpTask::cleanupWaveform_()
         if (isLSB_) ss << "LSB";
         else ss << "USB";
         
-        sendRadioCommand_(ss.str().c_str(), [&](unsigned int rv, std::string message) {
+        sendRadioCommand_(ss.str().c_str(), [&](unsigned int, std::string) {
             // Recursively call ourselves again to actually remove the waveform
             // once we get a response for this command.
             activeSlice_ = -1;
@@ -159,7 +159,7 @@ void FlexTcpTask::cleanupWaveform_()
     
     sendRadioCommand_("unsub slice all");
     sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int rv, std::string message) {
+    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
@@ -175,7 +175,7 @@ void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::
     // Actually create the waveform.
     std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=2.0.0";
     std::string setPrefix = "waveform set " + name + " ";
-    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string message) {
+    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string) {
         if (rv == 0)
         {
             // Set the filter-related settings for the just-created waveform.

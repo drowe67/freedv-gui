@@ -335,7 +335,7 @@ ComPortsDlg::~ComPortsDlg()
 //-------------------------------------------------------------------------
 // OnInitDialog()
 //-------------------------------------------------------------------------
-void ComPortsDlg::OnInitDialog(wxInitDialogEvent& event)
+void ComPortsDlg::OnInitDialog(wxInitDialogEvent&)
 {
     populatePortList();
     ExchangeData(EXCHANGE_DATA_IN);
@@ -656,7 +656,7 @@ void ComPortsDlg::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 // PTTUseHamLibClicked()
 //-------------------------------------------------------------------------
-void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent& event)
+void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent&)
 {
     m_ckUseSerialPTT->SetValue(false);
     
@@ -670,7 +670,7 @@ void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent& event)
 
 /* Attempt to toggle PTT for 1 second */
 
-void ComPortsDlg::OnTest(wxCommandEvent& event) {
+void ComPortsDlg::OnTest(wxCommandEvent&) {
 
     std::shared_ptr<std::mutex> mtx = std::make_shared<std::mutex>();
     std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
@@ -724,7 +724,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
             hamlib->onRigError += [=](IRigController*, std::string error) {
                 CallAfter([=]() {
-                    wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                    wxMessageBox(wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
 
                     cv->notify_one();
@@ -789,7 +789,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             serialPort->onRigError += [=](IRigController*, std::string error)
             {
                 CallAfter([=]() {
-                    wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
+                    wxString errorMessage = wxString::Format("Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port.", ctrlport, error);
                     wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
 
@@ -887,7 +887,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 //-------------------------------------------------------------------------
 // PTTUseOmniRigClicked()
 //-------------------------------------------------------------------------
-void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent& event)
+void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent&)
 {
     m_ckUseHamlibPTT->SetValue(false);
     updateControlState();
@@ -897,7 +897,7 @@ void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // PTTUseSerialClicked()
 //-------------------------------------------------------------------------
-void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
+void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent&)
 {
     m_ckUseHamlibPTT->SetValue(false);    
     updateControlState();
@@ -906,7 +906,7 @@ void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // PTTUseSerialClicked()
 //-------------------------------------------------------------------------
-void ComPortsDlg::PTTUseSerialInputClicked(wxCommandEvent& event)
+void ComPortsDlg::PTTUseSerialInputClicked(wxCommandEvent&)
 {
     updateControlState();
 }
@@ -915,7 +915,7 @@ void ComPortsDlg::PTTUseSerialInputClicked(wxCommandEvent& event)
 // ComPortsDlg::HamlibRigNameChanged(): hide/show Icom CI-V hex control
 // depending on the selected radio.
 //-------------------------------------------------------------------------
-void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent& event)
+void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent&)
 {
     resetIcomCIVStatus();
     
@@ -943,7 +943,7 @@ void ComPortsDlg::resetIcomCIVStatus()
 //-------------------------------------------------------------------------
 // OnApply()
 //-------------------------------------------------------------------------
-void ComPortsDlg::OnApply(wxCommandEvent& event)
+void ComPortsDlg::OnApply(wxCommandEvent&)
 {
     ComPortsDlg::savePttSettings();
 }
@@ -951,7 +951,7 @@ void ComPortsDlg::OnApply(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnCancel()
 //-------------------------------------------------------------------------
-void ComPortsDlg::OnCancel(wxCommandEvent& event)
+void ComPortsDlg::OnCancel(wxCommandEvent&)
 {
     this->EndModal(wxID_CANCEL);
 }
@@ -968,7 +968,7 @@ bool ComPortsDlg::savePttSettings()
 //-------------------------------------------------------------------------
 // OnClose()
 //-------------------------------------------------------------------------
-void ComPortsDlg::OnOK(wxCommandEvent& event)
+void ComPortsDlg::OnOK(wxCommandEvent&)
 {
     if (savePttSettings()) this->EndModal(wxID_OK);
 }
@@ -1018,7 +1018,7 @@ void ComPortsDlg::updateControlState()
     }
 }
 
-void ComPortsDlg::OnHamlibSerialPortChanged(wxCommandEvent& event)
+void ComPortsDlg::OnHamlibSerialPortChanged(wxCommandEvent&)
 {
     if (m_cbPttMethod->GetValue() == _("CAT"))
     {
@@ -1027,7 +1027,7 @@ void ComPortsDlg::OnHamlibSerialPortChanged(wxCommandEvent& event)
     }
 }
 
-void ComPortsDlg::OnHamlibPttMethodChanged(wxCommandEvent& event)
+void ComPortsDlg::OnHamlibPttMethodChanged(wxCommandEvent&)
 {
     updateControlState();
 }

@@ -134,7 +134,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         
         packet->length = htons(packet_len >> 2); // Length is in 32-bit words, note there are two channels
 
-        struct timespec currentTime = {0};
+        struct timespec currentTime = { .tv_sec = 0, .tv_nsec = 0 };
         if (clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
         {
             log_warn("Could not get current time");

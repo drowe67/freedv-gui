@@ -66,7 +66,7 @@ struct CallsignReporting
     MinimalTxRxThread* rxThread;
 };
 
-void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
+void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *state)
 {
     CallsignReporting* reportObj = (CallsignReporting*)state;
 
@@ -83,7 +83,7 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
     }
 }
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
 #if defined(USING_MIMALLOC)
     // Decrease purge interval to 100ms to improve performance (default = 10ms).
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
     bool enableRadioLookup = true;
-    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void* state)
+    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void*)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         if (enableRadioLookup)

@@ -144,7 +144,7 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
         m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
-bool PlotScalar::repaintAll_(wxPaintEvent& evt)
+bool PlotScalar::repaintAll_(wxPaintEvent&)
 {
     if (m_mini) return true;
 
@@ -441,7 +441,7 @@ void PlotScalar::clearSamples()
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotScalar::OnSize(wxSizeEvent& event)
+void PlotScalar::OnSize(wxSizeEvent&)
 {
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
@@ -458,6 +458,6 @@ void PlotScalar::OnSize(wxSizeEvent& event)
 //----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
-void PlotScalar::OnShow(wxShowEvent& event)
+void PlotScalar::OnShow(wxShowEvent&)
 {
 }

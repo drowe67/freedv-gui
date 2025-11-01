@@ -46,6 +46,7 @@ void sox_biquad_start(void)
 {
     int r = sox_init();
     assert(r == SOX_SUCCESS);
+    (void)r; // suppress warnings
 }
 
 void sox_biquad_finish(void)

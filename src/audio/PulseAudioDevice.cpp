@@ -392,7 +392,7 @@ void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
     }    
 }
 
-void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)
+void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
@@ -402,7 +402,7 @@ void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)
     }
 }
 
-void PulseAudioDevice::StreamOverflowCallback_(pa_stream *p, void *userdata)
+void PulseAudioDevice::StreamOverflowCallback_(pa_stream *, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
@@ -440,7 +440,7 @@ void PulseAudioDevice::StreamLatencyCallback_(pa_stream *p, void *userdata)
 }
 #endif // 0
 
-void PulseAudioDevice::HandleXCPU_(int signum, siginfo_t *info, void *extra)
+void PulseAudioDevice::HandleXCPU_(int, siginfo_t *, void *)
 {
     // Notify thread that it has to stop work immediately and sleep.
     log_warn("Taking too much CPU handling real-time tasks, pausing for a bit");

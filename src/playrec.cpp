@@ -331,7 +331,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
     }
 }
 
-void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
+void MainFrame::OnTogBtnRecord( wxCommandEvent& )
 {
     if (g_sfRecFile != nullptr) 
     {

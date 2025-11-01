@@ -640,13 +640,13 @@ void EasySetupDialog::ExchangeReportingData(int inout)
     }
 }
 
-void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent& event)
+void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent&)
 {
     m_txt_callsign->Enable(m_ckbox_psk_enable->GetValue());
     m_txt_grid_square->Enable(m_ckbox_psk_enable->GetValue());
 }
 
-void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent& event)
+void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent&)
 {
     resetIcomCIVStatus_();
     
@@ -677,7 +677,7 @@ void EasySetupDialog::resetIcomCIVStatus_()
     Layout();
 }
 
-void EasySetupDialog::OnInitDialog(wxInitDialogEvent& event)
+void EasySetupDialog::OnInitDialog(wxInitDialogEvent&)
 {
     updateAudioDevices_();
     updateHamlibDevices_();
@@ -693,17 +693,17 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
     }
 }
 
-void EasySetupDialog::OnCancel(wxCommandEvent& event)
+void EasySetupDialog::OnCancel(wxCommandEvent&)
 {
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
-void EasySetupDialog::OnClose(wxCloseEvent& event)
+void EasySetupDialog::OnClose(wxCloseEvent&)
 {
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
-void EasySetupDialog::OnApply(wxCommandEvent& event)
+void EasySetupDialog::OnApply(wxCommandEvent&)
 {
     if (canSaveSettings_())
     {
@@ -745,7 +745,7 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
     delete dlg;
 }
 
-void EasySetupDialog::OnTest(wxCommandEvent& event)
+void EasySetupDialog::OnTest(wxCommandEvent&)
 {
     if (canTestRadioSettings_())
     {
@@ -842,7 +842,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 hamlibTestObject_->onRigError += [&](IRigController*, std::string error) {
                     CallAfter([&]() {
                         wxMessageBox(
-                            "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                            wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
                 };
@@ -882,7 +882,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 serialPortTestObject_->onRigError += [&](IRigController*, std::string error) {
                     CallAfter([&]() {
                         wxMessageBox(
-                            "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                            wxString::Format("Couldn't connect to Radio (%s).  Make sure the serial Device and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
                 };
@@ -968,7 +968,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
     }
 }
 
-void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
+void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent&)
 {
     if (m_ckUseHamlibPTT->GetValue())
     {

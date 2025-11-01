@@ -8,4 +8,5 @@ add_executable(freedv-ka9q
     main.cpp 
     ${MIMALLOC_SOURCE_FILE})
     
+target_compile_options(freedv-ka9q PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(freedv-ka9q PRIVATE git_version fdv_integ_audio_pipeline fdv_reporting fdv_util fdv_os_wrapper)

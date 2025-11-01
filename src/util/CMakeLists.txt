@@ -23,4 +23,5 @@ add_library(fdv_util STATIC
     ${UTIL_WIN32_FILES}
 )
 
+target_compile_options(fdv_util PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(fdv_util yyjson)

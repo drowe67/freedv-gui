@@ -33,7 +33,7 @@ public:
     SerialPortInRigController(std::string serialPort, bool ctsPos);
     virtual ~SerialPortInRigController();
 
-    virtual void ptt(bool state) override { /* does not support output */ }
+    virtual void ptt(bool) override { /* does not support output */ }
     virtual int getRigResponseTimeMicroseconds() override { return 0; /* no support for output */ }
 
 private:

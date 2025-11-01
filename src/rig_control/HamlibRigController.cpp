@@ -135,7 +135,7 @@ HamlibRigController::~HamlibRigController()
 
 static int LogHamlibErrors_(
     enum rig_debug_level_e debug_level,
-    rig_ptr_t user_data,
+    rig_ptr_t,
     const char *fmt,
     va_list ap)
 {

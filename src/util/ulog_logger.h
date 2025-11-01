@@ -58,18 +58,18 @@ public:
     ulog(channel_type_hint::value h =
         channel_type_hint::access)
       : m_static_channels(0xffffffff)
-      , m_dynamic_channels(0) {}
+      , m_dynamic_channels(0) { (void)h; }
 
-    ulog(std::ostream * out)
+    ulog(std::ostream *)
       : m_static_channels(0xffffffff)
       , m_dynamic_channels(0) {}
 
     ulog(level c, channel_type_hint::value h =
         channel_type_hint::access)
       : m_static_channels(c)
-      , m_dynamic_channels(0) {}
+      , m_dynamic_channels(0) { (void)h; }
 
-    ulog(level c, std::ostream * out)
+    ulog(level c, std::ostream *)
       : m_static_channels(c)
       , m_dynamic_channels(0) {}
 

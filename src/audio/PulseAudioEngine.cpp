@@ -71,7 +71,7 @@ void PulseAudioEngine::start()
         return;
     }
     
-    pa_context_set_state_callback(context_, [](pa_context* context, void* mainloop) {
+    pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
         pa_threaded_mainloop_signal(threadedML, 0);
     }, mainloop_);
@@ -161,7 +161,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_threaded_mainloop_lock(mainloop_);
     if (direction == AUDIO_ENGINE_OUT)
     {
-        op = pa_context_get_sink_info_list(context_, [](pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
+        op = pa_context_get_sink_info_list(context_, [](pa_context *, const pa_sink_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
             if (eol)
@@ -185,7 +185,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     }
     else
     {
-        op = pa_context_get_source_info_list(context_, [](pa_context *c, const pa_source_info *i, int eol, void *userdata) {
+        op = pa_context_get_source_info_list(context_, [](pa_context *, const pa_source_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
             if (eol)
@@ -217,7 +217,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_operation_unref(op);
     
     // Get list of cards
-    op = pa_context_get_card_info_list(context_, [](pa_context *c, const pa_card_info *i, int eol, void *userdata)
+    op = pa_context_get_card_info_list(context_, [](pa_context *, const pa_card_info *i, int eol, void *userdata)
     {
         PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
         
@@ -294,7 +294,7 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
     tempData.mainloop = mainloop_;
     
     pa_threaded_mainloop_lock(mainloop_);
-    auto op = pa_context_get_server_info(context_, [](pa_context *c, const pa_server_info *i, void *userdata) {
+    auto op = pa_context_get_server_info(context_, [](pa_context *, const pa_server_info *i, void *userdata) {
         PaDefaultAudioDeviceTemp* tempData = static_cast<PaDefaultAudioDeviceTemp*>(userdata);
         
         tempData->defaultSink = i->default_sink_name;

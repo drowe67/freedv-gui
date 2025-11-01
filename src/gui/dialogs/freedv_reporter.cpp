@@ -617,12 +617,12 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
     event.Skip();
 }
 
-void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)
+void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent&)
 {
     // TBD
 }
 
-void FreeDVReporterDialog::OnShow(wxShowEvent& event)
+void FreeDVReporterDialog::OnShow(wxShowEvent&)
 {
     wxGetApp().appConfiguration.reporterWindowVisible = true;
 
@@ -633,7 +633,7 @@ void FreeDVReporterDialog::OnShow(wxShowEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
+void FreeDVReporterDialog::OnSize(wxSizeEvent&)
 {
     auto sz = GetSize();
     
@@ -665,7 +665,7 @@ void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
 #endif // defined(WIN32)
 }
 
-void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
+void FreeDVReporterDialog::OnOK(wxCommandEvent&)
 {
     // Preserve sort column/ordering
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
@@ -687,7 +687,7 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
     Hide();
 }
 
-void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
+void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
 {
     auto selected = m_listSpots->GetSelection();
     if (selected.IsOk())
@@ -702,14 +702,14 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
+void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent&)
 {
     std::string url = std::string("https://") + (const char*)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_str() + "/";
     wxLaunchDefaultBrowser(url);
     DeselectItem();
 }
 
-void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
+void FreeDVReporterDialog::OnClose(wxCloseEvent&)
 {
     // Preserve sort column/ordering
     bool found = false;
@@ -760,7 +760,7 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
+void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent&)
 {
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
         m_bandFilter->GetSelection();
@@ -964,7 +964,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
+void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent&)
 {
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency
         = m_trackFrequency->GetValue();
@@ -1013,7 +1013,7 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
     }
 }
 
-void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
+void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
 {
     const wxPoint pt = wxGetMousePosition();
     int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
@@ -1067,13 +1067,13 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent& event)
+void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
 }
 
-void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
+void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
@@ -1105,7 +1105,7 @@ void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
 #endif // 0
 }
 
-void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent& event)
+void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
 {
     // Make sure item's deselected as it should only be selected on
     // left-click.
@@ -1132,7 +1132,7 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
+void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent&)
 {
     if (wxTheClipboard->Open())
     {
@@ -1144,7 +1144,7 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
     DeselectItem();
 }
 
-void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)
 {
     auto statusMsg = m_statusMessage->GetValue();
     int insertPoint = m_statusMessage->GetInsertionPoint();
@@ -1220,7 +1220,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent&)
 {
     auto statusMsg = m_statusMessage->GetValue(); 
 
@@ -1250,7 +1250,7 @@ void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
     DeselectItem();
 }
 
-void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent& event)
+void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent&)
 {
     DeselectItem();
     m_buttonSend->PopupMenu(setPopupMenu_);
@@ -1262,7 +1262,7 @@ void FreeDVReporterDialog::OnStatusTextSendAndSaveMessage(wxCommandEvent& event)
     OnStatusTextSaveMessage(event);
 }
 
-void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent&)
 {
     auto statusMsg = m_statusMessage->GetValue(); 
     if (statusMsg.size() > 0)
@@ -1294,7 +1294,7 @@ void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent&)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateMessage("");
@@ -1305,12 +1305,12 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
     DeselectItem();
 }
 
-void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent& event)
+void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent&)
 {
     m_buttonClear->PopupMenu(clearPopupMenu_);
 }
 
-void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent&)
 {
     auto statusMsg = m_statusMessage->GetValue(); 
     if (statusMsg.size() > 0)
@@ -1331,7 +1331,7 @@ void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnStatusTextClearAll(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextClearAll(wxCommandEvent&)
 {
     m_statusMessage->Clear();
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
@@ -1972,7 +1972,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     return result;
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const
+bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int, wxDataViewItemAttr &attr) const
 {
     std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     bool result = false;
@@ -2023,7 +2023,7 @@ unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const w
     }
 }
 
-wxDataViewItem FreeDVReporterDialog::FreeDVReporterDataModel::GetParent (const wxDataViewItem &item) const
+wxDataViewItem FreeDVReporterDialog::FreeDVReporterDataModel::GetParent (const wxDataViewItem &) const
 {
     // Return root item
     return wxDataViewItem(nullptr);
@@ -2110,7 +2110,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::IsContainer (const wxDataVie
     return !item.IsOk();
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col)
+bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &, const wxDataViewItem &, unsigned int)
 {
     // I think this can just return false without changing anything as this is read-only (other than what comes from the server).
     return false;
@@ -2199,7 +2199,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 #endif // defined(WIN32)
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText)
+void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t, wxString customText)
 {
     if (reporter_ && selectedItem.IsOk())
     {
@@ -2417,7 +2417,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string, std::string, std::string, std::string, bool)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
 
@@ -2450,7 +2450,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string, std::string, uint64_t frequencyHz)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2530,7 +2530,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string, std::string, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2601,7 +2601,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string, std::string, std::string receivedCallsign, float snr, std::string rxMode)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;

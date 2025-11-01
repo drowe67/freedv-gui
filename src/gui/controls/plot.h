@@ -166,7 +166,7 @@ class PlotPanel : public wxPanel
         std::deque<float> rxOffsets_;
         bool        sync_;
 
-        virtual bool repaintAll_(wxPaintEvent& evt) { return true; }
+        virtual bool repaintAll_(wxPaintEvent&) { return true; }
         
     DECLARE_EVENT_TABLE()
 };
