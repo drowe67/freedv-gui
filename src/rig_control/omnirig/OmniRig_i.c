@@ -18,8 +18,6 @@
 */
 /* @@MIDL_FILE_HEADING(  ) */
 
-#pragma warning( disable: 4049 )  /* more than 64k source lines */
-
 
 #ifdef __cplusplus
 extern "C"{

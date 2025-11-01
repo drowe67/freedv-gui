@@ -62,6 +62,8 @@ ConfigurationDataElement<UnderlyingDataType>::ConfigurationDataElement(const cha
     : elementName_(elementName)
     , data_(defaultVal)
     , default_(defaultVal)
+    , saveProcessor_(nullptr)
+    , loadProcessor_(nullptr)
 {
     // empty
 }
@@ -139,13 +141,13 @@ UnderlyingDataType ConfigurationDataElement<UnderlyingDataType>::get()
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
 {
-    saveProcessor_ = fn;
+    saveProcessor_ = std::move(fn);
 }
 
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
 {
-    loadProcessor_ = fn;
+    loadProcessor_ = std::move(fn);
 }
 
 #endif // CONFIGURATION_DATA_ELEMENT_H
