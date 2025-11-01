@@ -102,7 +102,7 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
     }
     
     // Get audio device IDs.
-    auto deviceCount = propertySize / sizeof(AudioDeviceID);
+    uint32_t deviceCount = propertySize / sizeof(AudioDeviceID);
     AudioDeviceID* ids = new AudioDeviceID[deviceCount];
     assert(ids != nullptr);
 
@@ -125,7 +125,7 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
         return result;
     }
     
-    for (auto index = 0; index < deviceCount; index++)
+    for (uint32_t index = 0; index < deviceCount; index++)
     {
         // Get device ID
         auto deviceID = ids[index];
@@ -458,7 +458,7 @@ int MacAudioEngine::getNumChannels_(int coreAudioId, AudioDirection direction)
     }
     
     int numChannels = 0;
-    for (int index = 0; index < bufferListPointer.mNumberBuffers; index++)
+    for (uint32_t index = 0; index < bufferListPointer.mNumberBuffers; index++)
     {
         numChannels += bufferListPointer.mBuffers[index].mNumberChannels;
     }
@@ -467,10 +467,10 @@ int MacAudioEngine::getNumChannels_(int coreAudioId, AudioDirection direction)
 }
 
 int MacAudioEngine::OnDeviceListChange_(
-    AudioObjectID                       inObjectID,
-    UInt32                              inNumberAddresses,
-    const AudioObjectPropertyAddress    inAddresses[],
-    void*                               inClientData)
+    AudioObjectID,
+    UInt32,
+    const AudioObjectPropertyAddress,
+    void*,
 {
     #if 0
     MacAudioEngine* thisObj = (MacAudioEngine*)inClientData;

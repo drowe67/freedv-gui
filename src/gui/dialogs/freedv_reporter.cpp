@@ -2035,7 +2035,7 @@ unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnCount () co
     return RIGHTMOST_COL;
 }
 
-wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnType (unsigned int col) const
+wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnType (unsigned int) const
 {
     wxVariant tmp("");
     return tmp.GetType();   
