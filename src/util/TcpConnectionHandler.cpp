@@ -82,7 +82,7 @@ TcpConnectionHandler::TcpConnectionHandler()
 TcpConnectionHandler::~TcpConnectionHandler()
 {
     // Make sure we're disconnected before destroying.
-    enableReconnect_ = false;
+    enableReconnect_.store(false, std::memory_order_release);
 
     auto fut = disconnect();
     fut.wait();
@@ -97,7 +97,7 @@ std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool
     cancelConnect_ = false;
     host_ = host;
     port_ = port;
-    enableReconnect_ = enableReconnect;
+    enableReconnect_.store(enableReconnect, std::memory_order_release);
     
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
@@ -447,7 +447,7 @@ next_fd:
         // Start receive thread
         receiveThread_ = std::thread(std::bind(&TcpConnectionHandler::receiveImpl_, this));
     }
-    else if (enableReconnect_)
+    else if (enableReconnect_.load(std::memory_order_acquire))
     {
         // Attempt reconnect
         log_warn("connection failed, waiting to reconnect");
@@ -500,7 +500,7 @@ void TcpConnectionHandler::disconnectImpl_()
 
         onDisconnect_();
         
-        if (enableReconnect_)
+        if (enableReconnect_.load(std::memory_order_acquire))
         {
             reconnectTimer_.start();
         }

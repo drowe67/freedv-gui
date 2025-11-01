@@ -49,7 +49,7 @@ public:
 protected:
     std::string host_;
     int port_;
-    bool enableReconnect_;
+    std::atomic<bool> enableReconnect_;
     
     virtual void onConnect_() = 0;
     virtual void onDisconnect_() = 0;
