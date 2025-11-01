@@ -18,7 +18,60 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
+        os: [macos-15]  # ARM64
+        sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
+
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: ./build_macos_sound_drivers.sh
+
+    - name: Build freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
+
+    - name: Workaround macOS permission issues
+      run: |
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+
+    - name: Make sure resource hogs aren't running
+      shell: bash
+      run: |
+          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
+          sudo mdutil -a -i off
+          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+
+    - name: Execute unit tests
+      shell: bash
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+          if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
+              export MAX_EXECUTION_TIMES=2
+          else
+              export MAX_EXECUTION_TIMES=1
+          fi
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=ignore_noninstrumented_modules=1 FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
     #- name: Zip up traces
     #  shell: bash
