@@ -128,6 +128,9 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOC
     SOX_SAMPLE_LOCALS; 
     int i;
 
+    memset(ibuf, 0, sizeof(ibuf));
+    memset(obuf, 0, sizeof(obuf));
+
     clips = 0;
     for(i=0; i<n; i++)
         ibuf[i] = SOX_SIGNED_16BIT_TO_SAMPLE(in[i], clips);
