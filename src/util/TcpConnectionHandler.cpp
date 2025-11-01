@@ -20,9 +20,6 @@
 //
 //=========================================================================
 
-#include "TcpConnectionHandler.h"
-#include "logging/ulog.h"
-
 #include <chrono>
 #include <cassert>
 #include <cstdlib>
@@ -48,11 +45,18 @@
 #include <fcntl.h>
 #endif // defined(WIN32) || defined(__MINGW32__)
 
+#include "TcpConnectionHandler.h"
+#include "logging/ulog.h"
+
 using namespace std::chrono_literals;
 
 #define RX_ATTEMPT_INTERVAL_MS (50)
 #define RECONNECT_INTERVAL_MS (5000)
 #define RX_BUFFER_SIZE (128 * 1024)
+
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET (-1)
+#endif // INVALID_SOCKET
 
 TcpConnectionHandler::TcpConnectionHandler()
     : enableReconnect_(false)
@@ -242,8 +246,10 @@ void TcpConnectionHandler::connectImpl_()
 
 #if !defined(WIN32)
     int flags = 0;
-#endif // !defined(WIN32)
     std::vector<int> pendingSockets;
+#else
+    std::vector<SOCKET> pendingSockets;
+#endif // !defined(WIN32)
     
     while (!cancelConnect_ && (results[0] || results[1]))
     {
@@ -393,7 +399,7 @@ next_fd:
     }
     
     // Keep checking connections until one connects or we all time out.
-    while (!cancelConnect_ && pendingSockets.size() > 0 && socket_ == -1)
+    while (!cancelConnect_ && pendingSockets.size() > 0 && socket_ == INVALID_SOCKET)
     {
         checkConnections_(pendingSockets);
     }
@@ -411,7 +417,7 @@ next_fd:
         }
     }
     
-    if (socket_ != -1)
+    if (socket_ != INVALID_SOCKET)
     {
         // Call connect handler (defined by child class).
         char buf[256];
@@ -479,7 +485,7 @@ void TcpConnectionHandler::disconnectImpl_()
     if (socket_ > 0)
     {
         auto tmp = socket_.load();
-        socket_ = -1;
+        socket_ = INVALID_SOCKET;
 
 #if defined(WIN32)
         closesocket(tmp);
@@ -646,14 +652,22 @@ void TcpConnectionHandler::receiveImpl_()
     }
 }
 
+#if defined(WIN32)
+void TcpConnectionHandler::checkConnections_(std::vector<SOCKET>& sockets)
+#else
 void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
+#endif // defined(WIN32)
 {
     fd_set writeSet;
     struct timeval tv = {0, 250000}; // 250ms
     int err = 0;
 
     FD_ZERO(&writeSet);
-    int maxSocket = -1;
+#if defined(WIN32)
+    SOCKET maxSocket = INVALID_SOCKET;
+#else
+    int maxSocket = INVALID_SOCKET;
+#endif // defined(WIN32)
     for (auto& sock : sockets)
     {
         FD_SET(sock, &writeSet);

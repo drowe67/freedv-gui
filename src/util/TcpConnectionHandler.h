@@ -58,7 +58,11 @@ protected:
 private:
     std::thread receiveThread_;
     ThreadedTimer reconnectTimer_;
+#if defined(WIN32)
+    std::atomic<SOCKET> socket_;
+#else
     std::atomic<int> socket_;
+#endif // defined(WIN32)
     std::atomic<bool> ipv4Complete_;
     std::atomic<bool> ipv6Complete_;
     std::atomic<bool> cancelConnect_;
@@ -71,7 +75,11 @@ private:
     void receiveImpl_();
     
     void resolveAddresses_(int addressFamily, const char* host, const char* port, struct addrinfo** result);
+#if defined(WIN32)
+    void checkConnections_(std::vector<SOCKET>& sockets);
+#else
     void checkConnections_(std::vector<int>& sockets);
+#endif // defined(WIN32)
 };
 
 #endif // TCP_CONNECTION_HANDLER_H

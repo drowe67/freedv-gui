@@ -417,7 +417,6 @@ void ComPortsDlg::populatePortList()
         wxString key_name;
         long el = 1;
         key.GetFirstValue(key_name, el);
-        wxString valType;
         wxString key_data;
         for(unsigned int i = 0; i < values; i++)
         {
@@ -843,7 +842,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
 
         rig->onRigError += [=](IRigController*, std::string error) {
             CallAfter([=]() {
-                wxMessageBox("Couldn't connect to Radio with OmniRig.  Make sure the rig ID and OmniRig configuration is correct.", 
+                wxMessageBox(wxString::Format("Couldn't connect to Radio with OmniRig (%s).  Make sure the rig ID and OmniRig configuration is correct.", error),
                     wxT("Error"), wxOK | wxICON_ERROR, this);
 
                 cv->notify_one();

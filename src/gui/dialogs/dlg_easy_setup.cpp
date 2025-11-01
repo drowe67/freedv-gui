@@ -1073,7 +1073,6 @@ void EasySetupDialog::updateHamlibDevices_()
         wxString key_name;
         long el = 1;
         key.GetFirstValue(key_name, el);
-        wxString valType;
         wxString key_data;
         for(unsigned int i = 0; i < values; i++)
         {
