@@ -30,7 +30,15 @@ bool AudioDeviceSpecification::isValid() const
 AudioDeviceSpecification AudioDeviceSpecification::GetInvalidDevice()
 {
     AudioDeviceSpecification result = {
-        .deviceId = -1
+        .deviceId = -1,
+        .name = "",
+        .cardName = "",
+        .cardIndex = -1,
+        .portName = "",
+        .apiName = "",
+        .defaultSampleRate = -1,
+        .maxChannels = -1,
+        .minChannels = -1
     };
     
     return result;

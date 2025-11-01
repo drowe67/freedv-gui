@@ -15,6 +15,7 @@ FILE *fmemopen(void *buf, size_t len, const char *type)
 	int * pfd = &fd;
 	int retner = -1;
 	char tfname[] = "MemTF_";
+        (void)type;
 	if (!GetTempPathA(sizeof(tp), tp))
 		return NULL;
 	if (!GetTempFileNameA(tp, tfname, 0, fn))

@@ -102,13 +102,13 @@ PlotSpectrum::~PlotSpectrum()
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotSpectrum::OnSize(wxSizeEvent& event) {
+void PlotSpectrum::OnSize(wxSizeEvent&) {
 }
 
 //----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
-void PlotSpectrum::OnShow(wxShowEvent& event)
+void PlotSpectrum::OnShow(wxShowEvent&)
 {
 }
 
@@ -418,7 +418,7 @@ void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseMiddleDown()
 //-------------------------------------------------------------------------
-void PlotSpectrum::OnMouseMiddleDown(wxMouseEvent& event)
+void PlotSpectrum::OnMouseMiddleDown(wxMouseEvent&)
 {
     clickTune(FDMDV_FCENTRE);
 }
@@ -440,7 +440,7 @@ void PlotSpectrum::refreshData()
     }
 }
 
-bool PlotSpectrum::repaintAll_(wxPaintEvent& evt)
+bool PlotSpectrum::repaintAll_(wxPaintEvent&)
 {       
     wxRect plotRegion(
         PLOT_BORDER + XLEFT_OFFSET,

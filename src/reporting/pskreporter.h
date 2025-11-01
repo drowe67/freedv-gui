@@ -51,9 +51,9 @@ public:
     virtual void send() override;
     
     // The below aren't implemented for PSK Reporter.
-    virtual void freqChange(uint64_t frequency) override { };
-    virtual void transmit(std::string mode, bool tx) override { }
-    virtual void inAnalogMode(bool inAnalog) override { }
+    virtual void freqChange(uint64_t) override { };
+    virtual void transmit(std::string, bool) override { }
+    virtual void inAnalogMode(bool) override { }
 
 private:
     unsigned int currentSequenceNumber_;

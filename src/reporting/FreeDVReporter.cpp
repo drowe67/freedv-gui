@@ -149,7 +149,7 @@ void FreeDVReporter::showOurselves()
     }
 }
     
-void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr)
+void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t, signed char snr)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     

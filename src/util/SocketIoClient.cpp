@@ -46,7 +46,7 @@ SocketIoClient::~SocketIoClient()
 {
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
-    enableReconnect_ = false;
+    enableReconnect_.store(false, std::memory_order_release);
     auto fut = disconnect();
     fut.wait();
 }
@@ -173,7 +173,7 @@ void SocketIoClient::onReceive_(char* buf, int length)
     connection_->read_some(buf, length);
 }
 
-void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
+void SocketIoClient::handleWebsocketRequest_(WebSocketClient*, websocketpp::connection_hdl, message_ptr msg)
 {
     if (msg->get_opcode() == websocketpp::frame::opcode::text)
     {
@@ -243,7 +243,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
     }
 }
 
-void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
+void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
 {
     switch(ptr[0])
     {

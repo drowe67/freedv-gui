@@ -275,7 +275,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 
        // Get list of tab id's and move them to pane
        wxString tab_list = tab_part.AfterFirst(wxT('='));
-       size_t activePage = -1;
+       ssize_t activePage = -1;
        while(1) {
           wxString tab = tab_list.BeforeFirst(wxT(','));
           if (tab.empty()) break;

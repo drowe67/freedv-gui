@@ -40,7 +40,7 @@ using namespace std::chrono_literals;
 const int RADE_SCALING_FACTOR = 16383;
 
 #if !defined(DISABLE_UNIT_TEST)
-#include <wx/wx.h>
+#include <wx/string.h>
 extern wxString utTxFeatureFile;
 #endif // !defined(DISABLE_UNIT_TEST)
 

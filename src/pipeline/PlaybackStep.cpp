@@ -78,7 +78,7 @@ int PlaybackStep::getOutputSampleRate() const FREEDV_NONBLOCKING
     return inputSampleRate_;
 }
 
-short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);

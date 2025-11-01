@@ -68,7 +68,7 @@ end_handling:
     event.Skip();
 }
 
-void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
+void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
 {
     wxFileDialog saveFileDialog(
         this,
@@ -136,7 +136,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
-void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
+void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
 {
     wxFileDialog openFileDialog(
         this,
@@ -179,7 +179,7 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
-void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
+void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 {
     // Only enable VK file selection on idle
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
@@ -199,7 +199,7 @@ void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
     
 }
 
-void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
+void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& )
 {
     auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol);
     popup->Popup();

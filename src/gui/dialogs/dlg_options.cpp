@@ -1152,7 +1152,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 //-------------------------------------------------------------------------
 // OnOK()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnOK(wxCommandEvent& event)
+void OptionsDlg::OnOK(wxCommandEvent&)
 {
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
@@ -1166,7 +1166,7 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnCancel()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnCancel(wxCommandEvent& event)
+void OptionsDlg::OnCancel(wxCommandEvent&)
 {
     //this->EndModal(wxID_CANCEL);
     EndModal(wxCANCEL);
@@ -1179,7 +1179,7 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnApply()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnApply(wxCommandEvent& event)
+void OptionsDlg::OnApply(wxCommandEvent&)
 {
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
     
@@ -1216,24 +1216,24 @@ void OptionsDlg::OnApply(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnInitDialog()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnInitDialog(wxInitDialogEvent& event)
+void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 {
     ExchangeData(EXCHANGE_DATA_IN, false);
 }
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time
 
-void OptionsDlg::OnTestFrame(wxScrollEvent& event) {
+void OptionsDlg::OnTestFrame(wxScrollEvent&) {
     wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 }
 
-void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
+void OptionsDlg::OnChannelNoise(wxScrollEvent&) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
     updateChannelNoiseState();
 }
 
 
-void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event) {
+void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     wxDirDialog pathDialog(
                                 this,
                                 wxT("Voice Keyer file location"),
@@ -1247,7 +1247,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event) {
     m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
+void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent&) {
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
@@ -1260,11 +1260,11 @@ void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
      m_txtCtrlQuickRecordPath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
+void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {
     wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
 }
 
-void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
+void OptionsDlg::OnDebugConsole(wxScrollEvent&) {
     wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #ifdef __WXMSW__
     // somewhere to send printfs while developing, causes conmsole to pop up on Windows
@@ -1278,7 +1278,7 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
 }
 
 
-void OptionsDlg::OnFifoReset(wxCommandEvent& event)
+void OptionsDlg::OnFifoReset(wxCommandEvent&)
 {
     g_infifo1_full.store(0, std::memory_order_release);
     g_outfifo1_empty.store(0, std::memory_order_release);
@@ -1394,22 +1394,22 @@ void OptionsDlg::updateRigControlState()
     }
 }
     
-void OptionsDlg::OnReportingEnable(wxCommandEvent& event)
+void OptionsDlg::OnReportingEnable(wxCommandEvent&)
 {
     updateReportingState();
 }
 
-void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)
+void OptionsDlg::OnToneStateEnable(wxCommandEvent&)
 {
     updateToneState();
 }
 
-void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)
+void OptionsDlg::OnMultipleRxEnable(wxCommandEvent&)
 {
     updateMultipleRxState();
 }
 
-void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
+void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent&)
 {
     updateRigControlState();
 }
@@ -1430,7 +1430,7 @@ void OptionsDlg::DisplayFifoPACounters() {
     }
 }
 
-void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent&)
 {
     auto sel = m_freqList->GetSelection();
     if (sel >= 0)
@@ -1443,7 +1443,7 @@ void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent&)
 {
     double tmpValue = 0.0;
     bool validNumber = wxNumberFormatter::FromString(m_txtCtrlNewFrequency->GetValue(), &tmpValue);
@@ -1486,7 +1486,7 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqAdd(wxCommandEvent&)
 {
     auto val = m_txtCtrlNewFrequency->GetValue();
     
@@ -1504,7 +1504,7 @@ void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue("");
 }
 
-void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqRemove(wxCommandEvent&)
 {
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
     if (idx >= 0)
@@ -1514,7 +1514,7 @@ void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue("");
 }
 
-void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent&)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
@@ -1529,7 +1529,7 @@ void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue(prevStr);
 }
 
-void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent&)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());

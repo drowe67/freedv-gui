@@ -163,7 +163,7 @@ PskReporter::~PskReporter()
 #endif // defined(WIN32)
 }
 
-void PskReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr)
+void PskReporter::addReceiveRecord(std::string callsign, std::string, uint64_t frequency, signed char snr)
 {
     std::unique_lock<std::mutex> lock(recordListMutex_);
     recordList_.push_back(SenderRecord(callsign, frequency, snr));

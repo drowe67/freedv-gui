@@ -635,7 +635,7 @@ float FilterDlg::limit(float value, float min, float max) {
 // OnDefault()
 //-------------------------------------------------------------------------
 
-void FilterDlg::OnLPCPostFilterDefault(wxCommandEvent& event)
+void FilterDlg::OnLPCPostFilterDefault(wxCommandEvent&)
 {
     m_beta = CODEC2_LPC_PF_BETA; setBeta();
     m_gamma = CODEC2_LPC_PF_GAMMA; setGamma();
@@ -644,7 +644,7 @@ void FilterDlg::OnLPCPostFilterDefault(wxCommandEvent& event)
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
-void FilterDlg::OnMicInDefault(wxCommandEvent& event)
+void FilterDlg::OnMicInDefault(wxCommandEvent&)
 {
     m_MicInBass.freqHz = 100.0;
     m_MicInBass.gaindB = 0.0;
@@ -666,7 +666,7 @@ void FilterDlg::OnMicInDefault(wxCommandEvent& event)
     adjRunTimeMicInFilter();
 }
 
-void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
+void FilterDlg::OnSpkOutDefault(wxCommandEvent&)
 {
     m_SpkOutBass.freqHz = 100.0;
     m_SpkOutBass.gaindB = 0.0;
@@ -691,7 +691,7 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnOK()
 //-------------------------------------------------------------------------
-void FilterDlg::OnOK(wxCommandEvent& event)
+void FilterDlg::OnOK(wxCommandEvent&)
 {
     Close();
 }
@@ -699,7 +699,7 @@ void FilterDlg::OnOK(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnClose()
 //-------------------------------------------------------------------------
-void FilterDlg::OnClose(wxCloseEvent& event)
+void FilterDlg::OnClose(wxCloseEvent&)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
     
@@ -710,7 +710,7 @@ void FilterDlg::OnClose(wxCloseEvent& event)
 //-------------------------------------------------------------------------
 // OnInitDialog()
 //-------------------------------------------------------------------------
-void FilterDlg::OnInitDialog(wxInitDialogEvent& event)
+void FilterDlg::OnInitDialog(wxInitDialogEvent&)
 {
     ExchangeData(EXCHANGE_DATA_IN);
 }
@@ -739,47 +739,47 @@ void FilterDlg::setGamma(void) {
     m_codec2LPCPostFilterGamma->SetValue(slider);
 }
 
-void FilterDlg::OnEnable(wxScrollEvent& event) {
+void FilterDlg::OnEnable(wxScrollEvent&) {
     setCodec2();
     updateControlState();
 }
 
-void FilterDlg::OnBassBoost(wxScrollEvent& event) {
+void FilterDlg::OnBassBoost(wxScrollEvent&) {
     setCodec2();
     updateControlState();
 }
 
-void FilterDlg::OnBetaScroll(wxScrollEvent& event) {
+void FilterDlg::OnBetaScroll(wxScrollEvent&) {
     m_beta = (float)m_codec2LPCPostFilterBeta->GetValue()/SLIDER_MAX_BETA_GAMMA;
     setBeta();
     setCodec2();
 }
 
-void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
+void FilterDlg::OnGammaScroll(wxScrollEvent&) {
     m_gamma = (float)m_codec2LPCPostFilterGamma->GetValue()/SLIDER_MAX_BETA_GAMMA;
     setGamma();
     setCodec2();
 }
 
-void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
+void FilterDlg::OnSpeexppEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
     ExchangeData(EXCHANGE_DATA_OUT);
     updateControlState();
 }
 
-void FilterDlg::OnAgcEnable(wxScrollEvent& event) {
+void FilterDlg::OnAgcEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
-void FilterDlg::OnBwExpandEnable(wxScrollEvent& event) {
+void FilterDlg::OnBwExpandEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
-void FilterDlg::On700C_EQ(wxScrollEvent& event) {
+void FilterDlg::On700C_EQ(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
     if (m_running) {
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -825,11 +825,11 @@ void FilterDlg::updateControlState()
     m_LPCPostFilterDefault->Enable(m_codec2LPCPostFilterEnable->GetValue());
 }
 
-void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
+void FilterDlg::OnMicInEnable(wxScrollEvent&) {
     adjRunTimeMicInFilter();
 }
 
-void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
+void FilterDlg::OnSpkOutEnable(wxScrollEvent&) {
     adjRunTimeSpkOutFilter();
 }
 

@@ -216,7 +216,7 @@ long utTxAttempts;
 IMPLEMENT_APP(MainApp);
 
 std::mutex logMutex;
-static void LogLockFunction_(bool lock, void *lock_arg)
+static void LogLockFunction_(bool lock, void *)
 {
     if (lock)
     {
@@ -495,7 +495,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 {
     ulog_set_lock(&LogLockFunction_, nullptr);
-    ulog_set_prefix_fn([](ulog_Event *ev, char *prefix, size_t prefix_size) {
+    ulog_set_prefix_fn([](ulog_Event *, char *prefix, size_t prefix_size) {
         static unsigned int counter = 0;
         snprintf(prefix, prefix_size, " [%u]", ++counter);
     });
@@ -1426,7 +1426,7 @@ MainFrame::~MainFrame()
 
 
 #ifdef _USE_ONIDLE
-void MainFrame::OnIdle(wxIdleEvent &evt) {
+void MainFrame::OnIdle(wxIdleEvent &) {
 }
 #endif
 
@@ -2164,7 +2164,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 //-------------------------------------------------------------------------
 // OnExit()
 //-------------------------------------------------------------------------
-void MainFrame::OnExit(wxCommandEvent& event)
+void MainFrame::OnExit(wxCommandEvent&)
 {
     if (m_RxRunning)
     {
@@ -2630,7 +2630,7 @@ void MainFrame::performFreeDVOff_()
 //-------------------------------------------------------------------------
 // OnTogBtnOnOff()
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
+void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 {
     if (!m_togBtnOnOff->IsEnabled()) return;
 
@@ -2979,12 +2979,12 @@ void MainFrame::startRxStream()
                 }, nullptr);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
-                txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+                txInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
                 {
                     g_AEstatus2[1]++;
                 }, nullptr);
         
-                txInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+                txInSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
                 {
                     g_AEstatus2[0]++;
                 }, nullptr);
@@ -3011,12 +3011,12 @@ void MainFrame::startRxStream()
                 }, this);
                 txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
-                txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+                txOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
                 {
                     g_AEstatus1[3]++;
                 }, nullptr);
         
-                txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+                txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
                 {
                     g_AEstatus1[2]++;
                 }, nullptr);
@@ -3175,12 +3175,12 @@ void MainFrame::startRxStream()
         // Set sound card callbacks
         rxInSoundDevice->setOnAudioData(&OnRxInAudioData_, g_rxUserdata);
         
-        rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+        rxInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
         {
             g_AEstatus1[1]++;
         }, nullptr);
         
-        rxInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+        rxInSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
         {
             g_AEstatus1[0]++;
         }, nullptr);
@@ -3192,12 +3192,12 @@ void MainFrame::startRxStream()
         {
             rxOutSoundDevice->setOnAudioData(&OnRxOutAudioData_, g_rxUserdata);
             
-            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
             {
                 g_AEstatus2[3]++;
             }, nullptr);
         
-            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
             {
                 g_AEstatus2[2]++;
             }, nullptr);
@@ -3226,12 +3226,12 @@ void MainFrame::startRxStream()
                 }
             }, g_rxUserdata);
             
-            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
             {
                 g_AEstatus1[3]++;
             }, nullptr);
         
-            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
             {
                 g_AEstatus1[2]++;
             }, nullptr);
@@ -3342,7 +3342,7 @@ bool MainFrame::validateSoundCardSetup()
     
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
+    engine->setOnEngineError([&](IAudioEngine&, std::string error, void*) {
         CallAfter([&]() {
             wxMessageBox(wxString::Format(
                 "Error encountered while initializing the audio engine: %s.", 
@@ -3592,7 +3592,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     }
 }
 
-void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void* state)
+void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void*)
 {
      executeOnUiThreadAndWait_([&, error]() {
          wxMessageBox(wxString::Format(

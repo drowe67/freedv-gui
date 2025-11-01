@@ -97,7 +97,7 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
 }
 
-void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state) 
+void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int, void* state) 
 {
     log_info("FreeDVInterface::OnReliableTextRx_: received %s", txt_ptr);
     
@@ -111,7 +111,7 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     reliable_text_reset(rt);
 }
 
-void FreeDVInterface::OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state) 
+void FreeDVInterface::OnRadeTextRx_(rade_text_t, const char* txt_ptr, int, void* state) 
 {
     log_info("FreeDVInterface::OnRadeTextRx_: received %s", txt_ptr);
     
@@ -139,7 +139,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
     }
 }
 
-void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
+void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReliableText)
 {
     sync_.store(0, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;

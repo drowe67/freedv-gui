@@ -36,7 +36,7 @@
 using namespace std::chrono_literals;
 
 #if !defined(DISABLE_UNIT_TEST)
-#include <wx/wx.h>
+#include <wx/string.h>
 extern wxString utRxFeatureFile;
 #endif // !defined(DISABLE_UNIT_TEST)
 

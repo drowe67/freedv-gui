@@ -255,7 +255,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
             }
         }
 
-        if (result != S_OK || tmpFreq != frequencyHz)
+        if (result != S_OK || (uint64_t)tmpFreq != frequencyHz)
         {
             // Try VFO-less set in case the first one didn't work.
             log_info("Trying frequency set fallback");

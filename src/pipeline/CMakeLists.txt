@@ -25,6 +25,7 @@ add_library(fdv_audio_pipeline STATIC
     rade_text.c
 )
 
+target_compile_options(fdv_audio_pipeline PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(fdv_audio_pipeline PRIVATE ebur128 agc)
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 

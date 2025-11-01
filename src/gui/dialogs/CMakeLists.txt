@@ -11,6 +11,8 @@ target_include_directories(fdv_gui_dialogs PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAK
 
 add_dependencies(fdv_gui_dialogs rade opus codec2)
 
+target_compile_options(fdv_gui_dialogs PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+
 if(HAMLIB_ADD_DEPENDENCY)
 add_dependencies(fdv_gui_dialogs hamlib)
 endif(HAMLIB_ADD_DEPENDENCY)

@@ -869,6 +869,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for BBWENet BW expander. (PR #1065)
 3. Build system:
     * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
+    * Force all compiler warnings to be errors. (PR #1076)
 
 ## V2.0.2 October 2025
 

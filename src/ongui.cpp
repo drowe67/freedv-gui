@@ -79,7 +79,7 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsEasySetup()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetup(wxCommandEvent& event)
+void MainFrame::OnToolsEasySetup(wxCommandEvent&)
 {
     EasySetupDialog* dlg = new EasySetupDialog(this);
     if (dlg->ShowModal() == wxOK)
@@ -118,7 +118,7 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsFreeDVReporter()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
+void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
 {
     if (m_reporterDialog == nullptr)
     {
@@ -285,7 +285,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsOptionsUI()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent& event)
+void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 {
 }
 
@@ -318,7 +318,7 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnHelpCheckUpdates()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
+void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
     wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/releases");
 }
@@ -334,7 +334,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnHelpManual()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelpManual( wxCommandEvent& event )
+void MainFrame::OnHelpManual( wxCommandEvent& )
 {
     wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
@@ -342,7 +342,7 @@ void MainFrame::OnHelpManual( wxCommandEvent& event )
 //-------------------------------------------------------------------------
 // OnHelp()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelp( wxCommandEvent& event )
+void MainFrame::OnHelp( wxCommandEvent& )
 {
     wxLaunchDefaultBrowser("https://freedv.org/#gethelp");
 }
@@ -459,7 +459,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
     });
 }
 
-void MainFrame::onRadioConnected_(IRigController* ptr)
+void MainFrame::onRadioConnected_(IRigController*)
 {
     if (wxGetApp().rigFrequencyController && 
         (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
@@ -479,7 +479,7 @@ void MainFrame::onRadioConnected_(IRigController* ptr)
     }
 }
 
-void MainFrame::onRadioDisconnected_(IRigController* ptr)
+void MainFrame::onRadioDisconnected_(IRigController*)
 {
     CallAfter([&]() {
         m_txtModeStatus->SetLabel(wxT("unk"));
@@ -588,7 +588,7 @@ void MainFrame::OpenOmniRig()
 //-------------------------------------------------------------------------
 // OnCloseFrame()
 //-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent& event)
+void MainFrame::OnCloseFrame(wxCloseEvent&)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
@@ -693,7 +693,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 // OnChangeTxLevel()
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
+void MainFrame::OnChangeTxLevel( wxScrollEvent& )
 {
     g_txLevel = m_sliderTxLevel->GetValue();
     float dbLoss = g_txLevel / 10.0;
@@ -709,7 +709,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 //-------------------------------------------------------------------------
 // OnChangeMicSpkrLevel()
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
+void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
 {
     auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
     
@@ -731,7 +731,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
 //-------------------------------------------------------------------------
 // OnCheckSQClick()
 //-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent& event)
+void MainFrame::OnCheckSQClick(wxCommandEvent&)
 {
     if(!g_SquelchActive)
     {
@@ -758,7 +758,7 @@ void MainFrame::setsnrBeta(bool snrSlow)
 //-------------------------------------------------------------------------
 // OnCheckSQClick()
 //-------------------------------------------------------------------------
-void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
+void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 {
     wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
@@ -810,7 +810,7 @@ void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
     adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
 }
 
-void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
+void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 {
     auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
     popup->Popup();
@@ -819,7 +819,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
 //-------------------------------------------------------------------------
 // OnTogBtnPTTRightClick(): show right-click menu for PTT button
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& event )
+void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
     auto sz = m_btnTogPTT->GetSize();
     m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
@@ -1175,7 +1175,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     event.Skip();
 }
 
-void MainFrame::OnCallSignReset(wxCommandEvent& event)
+void MainFrame::OnCallSignReset(wxCommandEvent&)
 {
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -1190,7 +1190,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 
 // Force manual resync, just in case demod gets stuck on false sync
 
-void MainFrame::OnReSync(wxCommandEvent& event)
+void MainFrame::OnReSync(wxCommandEvent&)
 {
     if (m_RxRunning)  {
         log_debug("OnReSync");
@@ -1216,7 +1216,7 @@ void MainFrame::resetStats_()
     }
 }
 
-void MainFrame::OnBerReset(wxCommandEvent& event)
+void MainFrame::OnBerReset(wxCommandEvent&)
 {
     resetStats_();
 }
@@ -1231,7 +1231,7 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
     OnChangeReportFrequency(event);
 }
 
-void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
+void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
 {    
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -1352,7 +1352,7 @@ void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
     TopFrame::OnNotebookPageChanging(event);
 }
 
-void MainFrame::OnCenterRx(wxCommandEvent& event)
+void MainFrame::OnCenterRx(wxCommandEvent&)
 {
     clickTune(FDMDV_FCENTRE);
 }
@@ -1401,7 +1401,7 @@ void MainFrame::updateReportingFreqList_()
     }
 }
 
-void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
+void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 {
     auto sliderLevel = 0;
     if (g_tx.load(std::memory_order_acquire))

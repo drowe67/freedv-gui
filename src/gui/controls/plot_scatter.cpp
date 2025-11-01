@@ -76,7 +76,7 @@ void PlotScatter::clearCurrentSamples() {
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScatter::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
+void PlotScatter::draw(wxGraphicsContext* ctx, bool)
 {
     float x_scale;
     float y_scale;
@@ -263,7 +263,7 @@ void PlotScatter::add_new_samples_eye(float samples[], int n)
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotScatter::OnSize(wxSizeEvent& event)
+void PlotScatter::OnSize(wxSizeEvent&)
 {
     // todo: clear screen
 }
@@ -271,7 +271,7 @@ void PlotScatter::OnSize(wxSizeEvent& event)
 //----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
-void PlotScatter::OnShow(wxShowEvent& event)
+void PlotScatter::OnShow(wxShowEvent&)
 {
 }
 

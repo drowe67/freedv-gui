@@ -57,7 +57,7 @@ MonitorVolumeAdjPopup::~MonitorVolumeAdjPopup()
     volumeSlider_->Disconnect(wxEVT_SLIDER, wxCommandEventHandler(MonitorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
 }
 
-void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent& event)
+void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent&)
 {
     configVal_ = volumeSlider_->GetValue();
 }

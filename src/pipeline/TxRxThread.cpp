@@ -156,7 +156,7 @@ void TxRxThread::initializePipeline_()
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
             []() { return g_sfRecMicFile; }, 
-            [](int numSamples) {
+            [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
             }
@@ -280,7 +280,7 @@ void TxRxThread::initializePipeline_()
         auto recordModulatedStep = new RecordStep(
             outputSampleRate_, 
             []() { return g_sfRecFileFromModulator; }, 
-            [](int numSamples) {
+            [](int) {
                 // empty
             });
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());

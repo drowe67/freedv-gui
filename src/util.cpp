@@ -216,7 +216,7 @@ void MainFrame::ClosePTTInPort(void)
 extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO extern *g_rxDataOutFifo;
 
-char my_get_next_tx_char(void *callback_state) {
+char my_get_next_tx_char(void *) {
     short ch = 0;
 
     auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
@@ -224,7 +224,7 @@ char my_get_next_tx_char(void *callback_state) {
     return (char)ch;
 }
 
-void my_put_next_rx_char(void *callback_state, char c) {
+void my_put_next_rx_char(void *, char c) {
     short ch = (short)((unsigned char)c);
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }

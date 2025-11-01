@@ -82,7 +82,7 @@ struct CallsignReporting
     MinimalTxRxThread* rxThread;
 };
 
-void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
+void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *state)
 {
     CallsignReporting* reportObj = (CallsignReporting*)state;
 

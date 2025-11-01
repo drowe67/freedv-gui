@@ -11,5 +11,6 @@ add_executable(freedv-flex
     FlexTcpTask.cpp
 
     ${MIMALLOC_SOURCE_FILE})
-    
+
+target_compile_options(freedv-flex PRIVATE ${WARNINGS_AS_ERRORS_FLAGS} -Wno-missing-field-initializers)
 target_link_libraries(freedv-flex PRIVATE fdv_integ_audio_pipeline fdv_reporting fdv_util)

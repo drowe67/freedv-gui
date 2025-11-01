@@ -116,7 +116,7 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 //----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
-void PlotWaterfall::OnShow(wxShowEvent& event)
+void PlotWaterfall::OnShow(wxShowEvent&)
 {
 }
 
@@ -182,7 +182,7 @@ bool PlotWaterfall::checkDT(void)
         return true;
 }
 
-bool PlotWaterfall::repaintAll_(wxPaintEvent& evt)
+bool PlotWaterfall::repaintAll_(wxPaintEvent&)
 {
     wxRect waterfallRegion(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     wxRegionIterator upd(GetUpdateRegion());
@@ -610,7 +610,7 @@ void PlotWaterfall::OnMouseRightDoubleClick(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseMiddleDown()
 //-------------------------------------------------------------------------
-void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent& event)
+void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent&)
 {
     clickTune(FDMDV_FCENTRE);
 }

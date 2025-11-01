@@ -16,3 +16,5 @@ if(WIN32)
 add_subdirectory(omnirig)
 target_link_libraries(fdv_rig_control PUBLIC fdv_rig_control_omnirig)
 endif(WIN32)
+
+target_compile_options(fdv_rig_control PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})

@@ -79,26 +79,26 @@ class FilterDlg : public wxDialog
         void    OnBwExpandEnable(wxScrollEvent& event);
         void    On700C_EQ(wxScrollEvent& event);
 
-        void    OnMicInBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInBass, true); }
-        void    OnMicInBassGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInBass, true); }
-        void    OnMicInTrebleFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInTreble, true); }
-        void    OnMicInTrebleGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInTreble, true); }
-        void    OnMicInMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInMid, true); }
-        void    OnMicInMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInMid, true); }
-        void    OnMicInMidQScroll(wxScrollEvent& event) { sliderToQ(&m_MicInMid, true); }
-        void    OnMicInVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInVol, true); }
+        void    OnMicInBassFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInBass, true); }
+        void    OnMicInBassGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInBass, true); }
+        void    OnMicInTrebleFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInTreble, true); }
+        void    OnMicInTrebleGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInTreble, true); }
+        void    OnMicInMidFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInMid, true); }
+        void    OnMicInMidGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInMid, true); }
+        void    OnMicInMidQScroll(wxScrollEvent&) { sliderToQ(&m_MicInMid, true); }
+        void    OnMicInVolGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInVol, true); }
         
         void    OnMicInEnable(wxScrollEvent& event);
         void    OnMicInDefault(wxCommandEvent& event);
 
-        void    OnSpkOutBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutBass, false); }
-        void    OnSpkOutBassGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutBass, false); }
-        void    OnSpkOutTrebleFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutTreble, false); }
-        void    OnSpkOutTrebleGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutTreble, false); }
-        void    OnSpkOutMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutMid, false); }
-        void    OnSpkOutMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutMid, false); }
-        void    OnSpkOutMidQScroll(wxScrollEvent& event) { sliderToQ(&m_SpkOutMid, false); }
-        void    OnSpkOutVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutVol, false); }
+        void    OnSpkOutBassFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutBass, false); }
+        void    OnSpkOutBassGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutBass, false); }
+        void    OnSpkOutTrebleFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutTreble, false); }
+        void    OnSpkOutTrebleGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutTreble, false); }
+        void    OnSpkOutMidFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutMid, false); }
+        void    OnSpkOutMidGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutMid, false); }
+        void    OnSpkOutMidQScroll(wxScrollEvent&) { sliderToQ(&m_SpkOutMid, false); }
+        void    OnSpkOutVolGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutVol, false); }
         
         void    OnSpkOutEnable(wxScrollEvent& event);
         void    OnSpkOutDefault(wxCommandEvent& event);

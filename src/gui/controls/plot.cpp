@@ -91,7 +91,7 @@ void PlotPanel::SetLabelSize(double size)
 //-------------------------------------------------------------------------
 // OnShow()
 //-------------------------------------------------------------------------
-void PlotPanel::OnShow(wxShowEvent& event)
+void PlotPanel::OnShow(wxShowEvent&)
 {
     this->Refresh();
 }
@@ -107,7 +107,7 @@ void PlotPanel::OnErase(wxEraseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseMove()
 //-------------------------------------------------------------------------
-void PlotPanel::OnMouseMove(wxMouseEvent& event)
+void PlotPanel::OnMouseMove(wxMouseEvent&)
 {
     // Default implementation is empty.
 }
@@ -115,7 +115,7 @@ void PlotPanel::OnMouseMove(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseLeftDown()
 //-------------------------------------------------------------------------
-void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
+void PlotPanel::OnMouseLeftDown(wxMouseEvent&)
 {
     // Default implementation is empty.
 }
@@ -123,7 +123,7 @@ void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseRightDown()
 //-------------------------------------------------------------------------
-void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
+void PlotPanel::OnMouseRightDown(wxMouseEvent&)
 {
     // Default implementation is empty.
 }
@@ -131,7 +131,7 @@ void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseWheelMoved()
 //-------------------------------------------------------------------------
-void PlotPanel::OnMouseWheelMoved(wxMouseEvent& event)
+void PlotPanel::OnMouseWheelMoved(wxMouseEvent&)
 {
     // Default implementation is empty.
 }
@@ -139,7 +139,7 @@ void PlotPanel::OnMouseWheelMoved(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 // OnMouseLeftUp()
 //-------------------------------------------------------------------------
-void PlotPanel::OnMouseLeftUp(wxMouseEvent& event)
+void PlotPanel::OnMouseLeftUp(wxMouseEvent&)
 {
     m_mouseDown = false;
 }
@@ -159,7 +159,7 @@ double PlotPanel::SetZoomFactor(double zf)
 //-------------------------------------------------------------------------
 // GetZoomFactor()
 //-------------------------------------------------------------------------
-double PlotPanel::GetZoomFactor(double zf)
+double PlotPanel::GetZoomFactor(double)
 {
     return m_zoomFactor;
 }
