@@ -111,7 +111,7 @@ jobs:
           ./make-appimage.sh ${{ matrix.target }}
 
     - name: Build AppImage (signed)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
