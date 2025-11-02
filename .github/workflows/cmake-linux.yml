@@ -35,7 +35,7 @@ jobs:
       FREEDV_LINUX_CODE_SIGNING_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY }}
       FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY }}
       FREEDV_LINUX_CODE_SIGNING_KEY_ID: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}
-      
+
     strategy:
       fail-fast: false
       matrix:
@@ -101,7 +101,7 @@ jobs:
         ${{ env.FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY }}
         EOF
         gpg --import tmp_public.pem
-        gpg --import-secret-key tmp_private.pem
+        gpg --import tmp_private.pem
 
     - name: Build AppImage (unsigned)
       if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
