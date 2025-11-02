@@ -95,6 +95,7 @@ jobs:
       MACOS_CODE_SIGNING_TEAM_ID: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}
       MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
       MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
+      MACOS_CODE_SIGNING_CERTIFICATE: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_CERTIFICATE }}
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
 
     steps:
@@ -107,6 +108,12 @@ jobs:
     - name: Initialize code signing infrastructure
       if: ${{ env.MACOS_CODE_SIGNING_USERNAME != '' }}
       run: |
+        security unlock-keychain -p "" ~/Library/Keychains/login.keychain
+        cat <<EOF >tmp.pem
+        ${{ env.MACOS_CODE_SIGNING_CERTIFICATE }}
+        EOF
+        openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout "pass:"
+        security import tmp.pem -k ~/Library/Keychains/login.keychain -P "" -T /usr/bin/codesign
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ env.MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Build universal freedv-gui (unsigned)
@@ -130,7 +137,7 @@ jobs:
       if: ${{ env.MACOS_CODE_SIGNING_USERNAME != '' }}
       run: |
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg
-        
+
     - name: Stash disk image
       uses: actions/upload-artifact@v4
       with:
