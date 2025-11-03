@@ -153,7 +153,7 @@ template<typename T>
 T* GenericFIFO<T>::canWrite_(int len) noexcept
 {
     T *ppin = pin.load(std::memory_order_acquire);
-    unsigned int used;
+    unsigned int used = 0;
 
     bool isResetting = resetOutCache.load(std::memory_order_relaxed);
     if (!isResetting)
@@ -182,7 +182,7 @@ template<typename T>
 T* GenericFIFO<T>::canRead_(int len) noexcept
 {
     T* ppout = pout.load(std::memory_order_acquire);
-    unsigned int used;
+    unsigned int used = 0;
 
     bool isResetting = resetInCache.load(std::memory_order_relaxed);
     if (!isResetting)
