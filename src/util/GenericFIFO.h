@@ -64,20 +64,27 @@ private:
 #pragma GCC diagnostic ignored "-Winterference-size"
 #endif // !defined(__clang__)
     alignas(hardware_destructive_interference_size) std::atomic<T*> pin;
+    T* poutCache;
     alignas(hardware_destructive_interference_size) std::atomic<T*> pout;
+    T* pinCache;
 #if !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif // !defined(__clang__) && defined(__cpp_lib_hardware_interference_size)
 
     int nelem;
     bool ownBuffer_;
+
+    T* canWrite_(int len) noexcept;
+    T* canRead_(int len) noexcept;
 };
 
 template<typename T>
 GenericFIFO<T>::GenericFIFO(int len, T* inBuf)
     : buf(inBuf)
     , pin(nullptr)
+    , poutCache(nullptr)
     , pout(nullptr)
+    , pinCache(nullptr)
     , nelem(len)
     , ownBuffer_(inBuf == nullptr ? true : false)
 {
@@ -88,7 +95,9 @@ GenericFIFO<T>::GenericFIFO(int len, T* inBuf)
     }
     
     pin = buf;
+    poutCache = buf;
     pout = buf;
+    pinCache = buf;
 }
 
 template<typename T>
@@ -104,12 +113,16 @@ template<typename T>
 GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
     : buf(rhs.buf)
     , pin(rhs.pin)
+    , poutCache(rhs.poutCache)
     , pout(rhs.pout)
+    , pinCache(rhs.pinCache)
     , nelem(rhs.nelem)
 {
     rhs.buf = nullptr;
     rhs.pin = nullptr;
+    rhs.poutCache = nullptr;
     rhs.pout = nullptr;
+    rhs.pinCache = nullptr;
     rhs.nelem = 0;
 }
 
@@ -117,7 +130,60 @@ template<typename T>
 void GenericFIFO<T>::reset() noexcept
 {
     pin.store(buf, std::memory_order_release);
+    poutCache = buf;
     pout.store(buf, std::memory_order_release);
+    pinCache = buf;
+}
+
+#define CALCULATE_ENTRIES_USED(in, out, used)     \
+    if (in >= out)                                \
+    {                                             \
+        used = in - out;                          \
+    }                                             \
+    else                                          \
+    {                                             \
+        used = nelem + (unsigned int)(in - out);  \
+    }
+
+template<typename T>
+T* GenericFIFO<T>::canWrite_(int len) noexcept
+{
+    T *ppin = pin.load(std::memory_order_acquire);
+    unsigned int used;
+
+    CALCULATE_ENTRIES_USED(ppin, poutCache, used);
+    if ((nelem - used - 1) < (unsigned)len)
+    {
+        // reload poutCache and test again
+        poutCache = pout.load(std::memory_order_acquire);
+        CALCULATE_ENTRIES_USED(ppin, poutCache, used);
+        if ((nelem - used - 1) < (unsigned)len)
+        {
+            return nullptr;
+        }
+    }
+
+    return ppin;
+}
+
+template<typename T>
+T* GenericFIFO<T>::canRead_(int len) noexcept
+{
+    T* ppout = pout.load(std::memory_order_acquire);
+    unsigned int used;
+
+    CALCULATE_ENTRIES_USED(pinCache, ppout, used);
+    if (used < (unsigned)len)
+    {
+        pinCache = pin.load(std::memory_order_acquire);
+        CALCULATE_ENTRIES_USED(pinCache, ppout, used);
+        if (used < (unsigned)len)
+        {
+            return nullptr;
+        }
+    }
+
+    return ppout;
 }
 
 template<typename T>
@@ -125,10 +191,13 @@ int GenericFIFO<T>::write(T* data, int len) noexcept
 {
     assert(data != NULL);
 
-    if (len > numFree()) {
-      return -1;
-    } else {
-        T* ppin = pin.load(std::memory_order_acquire);
+    T* ppin = canWrite_(len);
+    if (ppin == nullptr)
+    {
+        return -1;
+    } 
+    else 
+    {
         while (len > 0)
         {
             *ppin++ = *data++;
@@ -149,10 +218,13 @@ int GenericFIFO<T>::read(T* result, int len) noexcept
 {
     assert(result != NULL);
 
-    if (len > numUsed()) {
-      return -1;
-    } else {
-        T* ppout = pout.load(std::memory_order_acquire);
+    T* ppout = canRead_(len);
+    if (ppout == nullptr)
+    {
+        return -1;
+    } 
+    else 
+    {
         while (len > 0)
         {
             *result++ = *ppout++;
