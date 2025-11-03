@@ -90,7 +90,7 @@ jobs:
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
-    runs-on: macos-15-intel
+    runs-on: macos-latest
     env:
       MACOS_CODE_SIGNING_TEAM_ID: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}
       MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
