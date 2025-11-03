@@ -114,11 +114,12 @@ jobs:
         MACOS_CODE_SIGNING_CERTIFICATE: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_CERTIFICATE }}
       run: |
         security unlock-keychain -p "" ~/Library/Keychains/login.keychain
+        security set-keychain-settings ~/Library/Keychains/login.keychain
         cat <<EOF >tmp.pem
         ${{ env.MACOS_CODE_SIGNING_CERTIFICATE }}
         EOF
         openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout "pass:"
-        security import tmp.pem -k ~/Library/Keychains/login.keychain -P "" -A
+        security import tmp.p12 -k ~/Library/Keychains/login.keychain -P "" -A
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Build universal freedv-gui (unsigned)
