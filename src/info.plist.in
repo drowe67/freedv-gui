@@ -27,7 +27,7 @@
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
-	<</array>
+	</array>
 	<key>CFBundleAllowMixedLocalizations</key>
 	<true />
 	<key>CFBundleSignature</key>
