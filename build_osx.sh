@@ -22,7 +22,7 @@ if [ ! -d macdylibbundler ]; then
     git clone https://github.com/tmiw/macdylibbundler.git
 fi
 cd macdylibbundler && git checkout main && git pull
-make -j$(sysctl -n hw.logicalcpu)
+make -j$(sysctl -n hw.logicalcpu) >/dev/null
 cd ..
 
 # Prerequisite: Python
@@ -35,7 +35,7 @@ fi
 
 # Prerequisite: Python packages
 rm -rf pkg-tmp
-./generate-univ-pkgs.sh
+./generate-univ-pkgs.sh >/dev/null
 ./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
 arch -x86_64 ./Python.framework/Versions/Current/bin/pip3 install intel-openmp
 cp ./Python.framework/Versions/Current/lib/libiomp*.dylib ./Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/lib
@@ -47,15 +47,15 @@ if [ $BUILD_DEPS == 1 ]; then
         git clone https://github.com/Hamlib/Hamlib.git hamlib-code
     fi
     cd hamlib-code && git checkout 4.6.3 && git pull
-    ./bootstrap
+    ./bootstrap >/dev/null
     if [ $UNIV_BUILD == 1 ]; then
         CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
     else
         CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
     fi
 
-    make -j$(sysctl -n hw.logicalcpu)
-    make install
+    make -j$(sysctl -n hw.logicalcpu) >/dev/null
+    make install >/dev/null
 fi
 
 # Finally, build freedv-gui
