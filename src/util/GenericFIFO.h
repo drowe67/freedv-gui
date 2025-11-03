@@ -64,9 +64,9 @@ private:
 #pragma GCC diagnostic ignored "-Winterference-size"
 #endif // !defined(__clang__)
     alignas(hardware_destructive_interference_size) std::atomic<T*> pin;
-    T* poutCache;
+    std::atomic<T*> poutCache;
     alignas(hardware_destructive_interference_size) std::atomic<T*> pout;
-    T* pinCache;
+    std::atomic<T*> pinCache;
 #if !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif // !defined(__clang__) && defined(__cpp_lib_hardware_interference_size)
@@ -130,9 +130,9 @@ template<typename T>
 void GenericFIFO<T>::reset() noexcept
 {
     pin.store(buf, std::memory_order_release);
-    poutCache = buf;
+    poutCache.store(buf, std::memory_order_release);
     pout.store(buf, std::memory_order_release);
-    pinCache = buf;
+    pinCache.store(buf, std::memory_order_release);
 }
 
 #define CALCULATE_ENTRIES_USED(in, out, used)     \
@@ -155,7 +155,7 @@ T* GenericFIFO<T>::canWrite_(int len) noexcept
     if ((nelem - used - 1) < (unsigned)len)
     {
         // reload poutCache and test again
-        poutCache = pout.load(std::memory_order_acquire);
+        poutCache.store(pout.load(std::memory_order_acquire), std::memory_order_release);
         CALCULATE_ENTRIES_USED(ppin, poutCache, used);
         if ((nelem - used - 1) < (unsigned)len)
         {
@@ -175,7 +175,7 @@ T* GenericFIFO<T>::canRead_(int len) noexcept
     CALCULATE_ENTRIES_USED(pinCache, ppout, used);
     if (used < (unsigned)len)
     {
-        pinCache = pin.load(std::memory_order_acquire);
+        pinCache.store(pin.load(std::memory_order_acquire), std::memory_order_release);
         CALCULATE_ENTRIES_USED(pinCache, ppout, used);
         if (used < (unsigned)len)
         {
