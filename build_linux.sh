@@ -24,4 +24,4 @@ if [ -d .git ]; then
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE ..
-make VERBOSE=1 -j$(nproc)
+make -j$(nproc)
