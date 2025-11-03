@@ -118,7 +118,7 @@ jobs:
         cat <<EOF >tmp.pem
         ${{ env.MACOS_CODE_SIGNING_CERTIFICATE }}
         EOF
-        openssl pkcs12 -export -in tmp.pem -legacy -out tmp.p12 -passout pass:xxxxxxxx
+        openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout pass:xxxxxxxx
         security import tmp.p12 -k ~/Library/Keychains/login.keychain -P xxxxxxxx -A -f pkcs12
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
