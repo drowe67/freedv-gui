@@ -64,9 +64,11 @@ private:
 #pragma GCC diagnostic ignored "-Winterference-size"
 #endif // !defined(__clang__)
     alignas(hardware_destructive_interference_size) std::atomic<T*> pin;
-    std::atomic<T*> poutCache;
+    T* poutCache;
+    std::atomic<bool> resetOutCache;
     alignas(hardware_destructive_interference_size) std::atomic<T*> pout;
-    std::atomic<T*> pinCache;
+    T* pinCache;
+    std::atomic<bool> resetInCache;
 #if !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif // !defined(__clang__) && defined(__cpp_lib_hardware_interference_size)
@@ -83,8 +85,10 @@ GenericFIFO<T>::GenericFIFO(int len, T* inBuf)
     : buf(inBuf)
     , pin(nullptr)
     , poutCache(nullptr)
+    , resetOutCache(false)
     , pout(nullptr)
     , pinCache(nullptr)
+    , resetInCache(false)
     , nelem(len)
     , ownBuffer_(inBuf == nullptr ? true : false)
 {
@@ -130,9 +134,9 @@ template<typename T>
 void GenericFIFO<T>::reset() noexcept
 {
     pin.store(buf, std::memory_order_release);
-    poutCache.store(buf, std::memory_order_release);
+    resetOutCache.store(true, std::memory_order_release);
     pout.store(buf, std::memory_order_release);
-    pinCache.store(buf, std::memory_order_release);
+    resetInCache.store(true, std::memory_order_release);
 }
 
 #define CALCULATE_ENTRIES_USED(in, out, used)     \
@@ -151,11 +155,19 @@ T* GenericFIFO<T>::canWrite_(int len) noexcept
     T *ppin = pin.load(std::memory_order_acquire);
     unsigned int used;
 
-    CALCULATE_ENTRIES_USED(ppin, poutCache, used);
-    if ((nelem - used - 1) < (unsigned)len)
+    bool isResetting = resetOutCache.load(std::memory_order_relaxed);
+    if (!isResetting)
+    {
+        CALCULATE_ENTRIES_USED(ppin, poutCache, used);
+    }
+    else
+    {
+        resetOutCache.store(false, std::memory_order_release);
+    }
+    if (isResetting || (nelem - used - 1) < (unsigned)len)
     {
         // reload poutCache and test again
-        poutCache.store(pout.load(std::memory_order_acquire), std::memory_order_release);
+        poutCache = pout.load(std::memory_order_acquire);
         CALCULATE_ENTRIES_USED(ppin, poutCache, used);
         if ((nelem - used - 1) < (unsigned)len)
         {
@@ -172,10 +184,19 @@ T* GenericFIFO<T>::canRead_(int len) noexcept
     T* ppout = pout.load(std::memory_order_acquire);
     unsigned int used;
 
-    CALCULATE_ENTRIES_USED(pinCache, ppout, used);
-    if (used < (unsigned)len)
+    bool isResetting = resetInCache.load(std::memory_order_relaxed);
+    if (!isResetting)
     {
-        pinCache.store(pin.load(std::memory_order_acquire), std::memory_order_release);
+        CALCULATE_ENTRIES_USED(pinCache, ppout, used);
+    }
+    else
+    {
+        resetInCache.store(false, std::memory_order_release);
+    }
+
+    if (isResetting || used < (unsigned)len)
+    {
+        pinCache = pin.load(std::memory_order_acquire);
         CALCULATE_ENTRIES_USED(pinCache, ppout, used);
         if (used < (unsigned)len)
         {
