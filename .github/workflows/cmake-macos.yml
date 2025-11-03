@@ -102,7 +102,7 @@ jobs:
         packages: automake libtool numpy sox 
 
     - name: Initialize code signing infrastructure
-      if: ${{ env.MACOS_CODE_SIGNING_USERNAME != '' }}
+      if: ${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       env:
         MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
         MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
@@ -114,7 +114,7 @@ jobs:
         EOF
         openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout "pass:"
         security import tmp.pem -k ~/Library/Keychains/login.keychain -P "" -T /usr/bin/codesign
-        xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ env.MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
+        xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Build universal freedv-gui (unsigned)
       if: ${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
@@ -134,7 +134,7 @@ jobs:
           make release
 
     - name: Validate DMG signature
-      if: ${{ env.MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      if: ${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       run: |
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg
 
