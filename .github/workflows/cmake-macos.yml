@@ -92,7 +92,6 @@ jobs:
   dist:
     runs-on: macos-latest
     env:
-      MACOS_CODE_SIGNING_TEAM_ID: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
 
     steps:
@@ -118,16 +117,16 @@ jobs:
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ env.MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Build universal freedv-gui (unsigned)
-      if: ${{ env.MACOS_CODE_SIGNING_USERNAME == '' }}
+      if: ${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
 
     - name: Build universal freedv-gui (signed)
-      if: ${{ env.MACOS_CODE_SIGNING_USERNAME != '' }}
+      if: ${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ env.MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh 
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ env.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh 
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
@@ -135,7 +134,7 @@ jobs:
           make release
 
     - name: Validate DMG signature
-      if: ${{ env.MACOS_CODE_SIGNING_USERNAME != '' }}
+      if: ${{ env.MACOS_CODE_SIGNING_TEAM_ID != '' }}
       run: |
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg
 
