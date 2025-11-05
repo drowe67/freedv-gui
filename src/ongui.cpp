@@ -209,6 +209,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     
         // Show/hide frequency box based on reporting status.
         m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        
+        // Show/hide stats box
+        statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)

@@ -951,6 +951,8 @@ setDefaultMode:
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
+    
+    statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
