@@ -589,6 +589,16 @@ class MainFrame : public TopFrame
 
         void onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message);
         void onQsyRequestUIThread_(QsyRequestArgs* args);
+        
+        bool isFrequencyControlEnabled_()
+        {
+            auto& rigControlConfig = wxGetApp().appConfiguration.rigControlConfiguration;
+            return (rigControlConfig.hamlibUseForPTT 
+#if defined(WIN32)
+                || rigControlConfig.useOmniRig
+#endif // defined(WIN32)
+                ) && (rigControlConfig.hamlibEnableFreqModeChanges || rigControlConfig.hamlibEnableFreqChangesOnly);
+        }
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
