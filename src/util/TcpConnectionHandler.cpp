@@ -575,7 +575,7 @@ void TcpConnectionHandler::receiveImpl_()
 
     char buf[READ_SIZE_BYTES];
 
-    while (socket_ > 0)
+    while (socket_ != INVALID_SOCKET)
     {
         struct timeval tv = {0, 250000}; // 250ms
         fd_set readSet;
@@ -602,31 +602,31 @@ void TcpConnectionHandler::receiveImpl_()
                     break;
                 }
             }
-            if (numHaveRead > 0)
+            if (numHaveRead > 0 && socket_ != INVALID_SOCKET)
             {
                 enqueue_([&]() {
                     char tmp[READ_SIZE_BYTES];
                     int toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
-                    while (toRead > 0)
+                    while (socket_ != INVALID_SOCKET && toRead > 0)
                     {
                         receiveBuffer_.read(tmp, toRead);
-                        onReceive_(tmp, toRead);
+                        if (socket_ != INVALID_SOCKET) onReceive_(tmp, toRead);
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     }
-                    if (onRecvEndFn_)
+                    if (socket_ != INVALID_SOCKET && onRecvEndFn_)
                     {
                         onRecvEndFn_();
                     }
                 });
             } 
-            else if (numRead == 0)
+            else if (numRead == 0 && socket_ != INVALID_SOCKET)
             {
                 log_warn("EOF received");
                 enqueue_([&]() {
                     disconnectImpl_();
                 });
             }
-            else if (numRead < 0)
+            else if (numRead < 0 && socket_ != INVALID_SOCKET)
             {
 #if defined(WIN32)
                 log_warn("read failed (errno=%d)", WSAGetLastError());
@@ -638,7 +638,7 @@ void TcpConnectionHandler::receiveImpl_()
                 });
             }
         }
-        else if (rv < 0 && socket_ > 0)
+        else if (rv < 0 && socket_ != INVALID_SOCKET)
         {
 #if defined(WIN32)
             log_warn("read failed (errno=%d)", WSAGetLastError());

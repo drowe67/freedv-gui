@@ -33,6 +33,8 @@
 #include <functional>
 #include "IReporter.h"
 
+#include "../3rdparty/yyjson/yyjson.h"
+
 // FreeDV Reporter default hostname
 #define FREEDV_REPORTER_DEFAULT_HOSTNAME "qso.freedv.org"
 
@@ -109,6 +111,10 @@ public:
     bool isValidForReporting();
     
 private:
+    enum {
+        FREEDV_REPORTER_PROTOCOL_VERSION = 2
+    };
+    
     std::mutex objMutex_;
     bool isConnecting_;
     std::atomic<bool> isFullyConnected_;
@@ -150,6 +156,16 @@ private:
     
     void hideFromViewImpl_();
     void showOurselvesImpl_();
+    
+    void onFreeDVReporterNewConnection_(yyjson_val* msgParams);
+    void onFreeDVReporterConnectionSuccessful_(yyjson_val* msgParams);
+    void onFreeDVReporterRemoveConnection_(yyjson_val* msgParams);
+    void onFreeDVReporterTransmitReport_(yyjson_val* msgParams);
+    void onFreeDVReporterReceiveReport_(yyjson_val* msgParams);
+    void onFreeDVReporterFrequencyChange_(yyjson_val* msgParams);
+    void onFreeDVReporterMessageUpdate_(yyjson_val* msgParams);
+    void onFreeDVReporterQsyRequest_(yyjson_val* msgParams);
+    void onFreeDVReporterBulkUpdate_(yyjson_val* msgParams);
 };
 
 #endif // FREEDV_REPORTER_H

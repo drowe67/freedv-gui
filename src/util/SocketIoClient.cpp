@@ -243,6 +243,14 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
     }
 }
 
+void SocketIoClient::fireEvent(std::string eventName, yyjson_val* params)
+{
+    if (eventFnMap_[eventName])
+    {
+        (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
+    }
+}
+
 void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
 {
     switch(ptr[0])
@@ -268,11 +276,7 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
             yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
             std::string eventNameStr = yyjson_get_str(eventName);
-            if (eventFnMap_[eventNameStr])
-            {
-                (eventFnMap_[eventNameStr])(eventArgs); // eventArgs is nullptr if not provided
-            }
-
+            fireEvent(eventNameStr, eventArgs);
             yyjson_doc_free(eventDoc);
             break;
         }

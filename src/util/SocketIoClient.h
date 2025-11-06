@@ -47,11 +47,13 @@ public:
     void setOnConnectFn(OnConnectionStateChangeFn fn);
     void setOnDisconnectFn(OnConnectionStateChangeFn fn);
     
+    void fireEvent(std::string eventName, yyjson_val* params);
+    
 protected:
     virtual void onConnect_() override;
     virtual void onDisconnect_() override;
     virtual void onReceive_(char* buf, int length) override;
-    
+        
 private:
     using WebSocketClient = websocketpp::client<websocketpp::config::custom_config>;
     using message_ptr = WebSocketClient::message_ptr;
