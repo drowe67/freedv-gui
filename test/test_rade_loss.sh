@@ -32,7 +32,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
 
     # Make sure cables are actually created before proceeding with looping them back
-    sleep 2
+    sleep 5
 
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
