@@ -92,6 +92,7 @@ void FlexTcpTask::socketFinalCleanup_(bool)
 
     responseHandlers_.clear();
     inputBuffer_.clear();
+    activeFreeDVSlices_.clear();
 
     commandHandlingTimer_.stop();
     pingTimer_.stop();
@@ -151,6 +152,7 @@ void FlexTcpTask::cleanupWaveform_()
             // Recursively call ourselves again to actually remove the waveform
             // once we get a response for this command.
             activeSlice_ = -1;
+            activeFreeDVSlices_.clear();
             cleanupWaveform_();
         });
         
@@ -329,7 +331,15 @@ void FlexTcpTask::processCommand_(std::string& command)
                     {
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
                     }
-                    activeSlice_ = -1;
+                    activeFreeDVSlices_.erase(sliceId);
+                    if (activeFreeDVSlices_.size() > 0)
+                    {
+                        activeSlice_ = *activeFreeDVSlices_.begin()
+                    }
+                    else
+                    {
+                        activeSlice_ = -1;
+                    }
                 }
             }
             
@@ -356,6 +366,7 @@ void FlexTcpTask::processCommand_(std::string& command)
 
                         // User wants to use the waveform.
                         activeSlice_ = sliceId;
+                        activeFreeDVSlices_.insert(sliceId);
 
                         // Ensure that we connect to any reporting services as appropriate
                         uint64_t freqHz = atof(sliceFrequencies_[activeSlice_].c_str()) * 1000000;
@@ -377,7 +388,15 @@ void FlexTcpTask::processCommand_(std::string& command)
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
                     }
 
-                    activeSlice_ = -1;
+                    activeFreeDVSlices_.erase(sliceId);
+                    if (activeFreeDVSlices_.size() > 0)
+                    {
+                        activeSlice_ = *activeFreeDVSlices_.begin()
+                    }
+                    else
+                    {
+                        activeSlice_ = -1;
+                    }
                 }
             }
         }
