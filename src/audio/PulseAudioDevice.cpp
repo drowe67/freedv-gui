@@ -62,7 +62,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
 
 PulseAudioDevice::~PulseAudioDevice()
 {
-    stop();
+    stopImpl_();
 }
 
 bool PulseAudioDevice::isRunning()
@@ -108,10 +108,10 @@ void PulseAudioDevice::start()
     buffer_attr.fragsize = buffer_attr.tlength;
     
     // Stream flags
-    pa_stream_flags_t flags = pa_stream_flags_t(
+    auto flags = 
          PA_STREAM_INTERPOLATE_TIMING |
          PA_STREAM_AUTO_TIMING_UPDATE | 
-         PA_STREAM_ADJUST_LATENCY);
+         PA_STREAM_ADJUST_LATENCY;
     
     int result = 0;
     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
@@ -121,7 +121,7 @@ void PulseAudioDevice::start()
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
             stream_, devName_.c_str(), &buffer_attr, 
-            flags, NULL, NULL);
+            (pa_stream_flags_t)flags, NULL, NULL);
         if (result == 0) pa_stream_trigger(stream_, nullptr, nullptr);
     }
     else
@@ -130,7 +130,7 @@ void PulseAudioDevice::start()
         
         pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
-            stream_, devName_.c_str(), &buffer_attr, flags);
+            stream_, devName_.c_str(), &buffer_attr, (pa_stream_flags_t)flags);
     }
     
     if (result != 0)
@@ -153,6 +153,11 @@ void PulseAudioDevice::start()
 }
 
 void PulseAudioDevice::stop()
+{
+    stopImpl_();
+}
+
+void PulseAudioDevice::stopImpl_()
 {
     std::unique_lock<std::mutex> lk(objLock_);
     if (stream_ != nullptr)

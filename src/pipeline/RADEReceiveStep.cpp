@@ -68,8 +68,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 #endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(RADE_SPEECH_SAMPLE_RATE);
     assert(outputSamples_ != nullptr);
 
     inputBufCplx_ = new RADE_COMP[rade_nin_max(dv_)];

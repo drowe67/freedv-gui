@@ -228,7 +228,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     // plot each channel     
 
     // x -> (y1, y2)
-    if (lineMap_ != nullptr)
+    if (lineMap_ == nullptr)
     {
         lineMap_ = new MinMaxPoints[plotWidth];
         assert(lineMap_ != nullptr);

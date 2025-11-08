@@ -87,7 +87,11 @@ void *sox_biquad_create(int argc, const char *argv[])
     e = sox_create_effect(sox_find_effect(argv[0])); assert(e != NULL);
 
     ret = sox_effect_options(e, argc, (char * const*)&argv[1]);
-    assert(ret == SOX_SUCCESS);
+    if (ret != SOX_SUCCESS)
+    {
+        log_error("sox_effect_options ret = %d (%s)", ret, sox_strerror(ret)); 
+        assert(0);
+    }
 
     start = e->handler.start;
 

@@ -693,31 +693,31 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("Device"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 300);
 
     listItem.SetAlign(wxLIST_FORMAT_CENTRE);
     listItem.SetText(wxT("ID"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 45);
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("API"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 100);
 
     if(in_out == AUDIO_IN)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
     else if(in_out == AUDIO_OUT)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
 
@@ -741,7 +741,7 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
     // add "none" option at end
 
     buf.Printf(wxT("%s"), "none");
-    idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+    ctrl->InsertItem(ctrl->GetItemCount(), buf);
     
     // Auto-size column widths to improve readability
     for (int col = 0; col < 4; col++)

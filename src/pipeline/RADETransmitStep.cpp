@@ -66,7 +66,9 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 #endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = std::max(
+        RADE_SPEECH_SAMPLE_RATE,
+        RADE_MODEM_SAMPLE_RATE);
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
@@ -78,7 +80,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     radeOutShort_ = new short[numOutputSamples];
     assert(radeOutShort_ != nullptr);
 
-    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
     eooOut_ = new RADE_COMP[numEOOSamples];

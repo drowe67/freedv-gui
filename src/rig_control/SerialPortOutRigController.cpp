@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <future>
+
 #include "SerialPortOutRigController.h"
 
 SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
@@ -39,7 +41,14 @@ SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, b
 SerialPortOutRigController::~SerialPortOutRigController()
 {
     // Disable PTT before shutdown.
-    ptt(false);
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
+
+    enqueue_([&, prom]() {
+        pttImpl_(false);
+        prom->set_value();
+    });
+    fut.wait();
 }
 
 void SerialPortOutRigController::ptt(bool state)

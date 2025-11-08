@@ -50,8 +50,7 @@ PlaybackStep::PlaybackStep(
     , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(inputSampleRate_);
     assert(outputSamples_ != nullptr);
     
     // Create non-RT thread to perform audio I/O

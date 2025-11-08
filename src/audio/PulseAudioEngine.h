@@ -47,6 +47,8 @@ private:
     pa_mainloop_api *mainloopApi_;
     pa_context* context_;
     std::mutex startStopMtx_;
+
+    void stopImpl_();
 };
 
 #endif // PULSE_AUDIO_ENGINE_H

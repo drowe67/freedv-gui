@@ -161,8 +161,9 @@ void FlexVitaTask::openSocket_()
     if (socket_ == -1)
     {
         log_error("Got socket error %d (%s) while creating socket", errno, strerror(errno));
+        assert(socket_ != -1);
+        return;
     }
-    assert(socket_ != -1);
 
     // Listen on our hardcoded VITA port (or a random one if we already know the radio's IP)
     struct sockaddr_in ourSocketAddress;
@@ -374,7 +375,13 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 txStreamId_ = packet->stream_id;
                 inFifo = getAudioInput_(true);
             }
-            
+           
+            if (inFifo == nullptr)
+            {
+                // No valid FIFO, return
+                return;
+            }
+ 
             // Convert to int16 samples, normalizing to +/- 1.0 beforehand.
             unsigned int num_samples = payload_length >> 2; // / sizeof(uint32_t);
             unsigned int half_num_samples = num_samples >> 1;
@@ -383,7 +390,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
             float maxSampleValue = 1.0;
-            while (inFifo != nullptr && i < half_num_samples)
+            while (i < half_num_samples)
             {
                 union {
                     uint32_t intVal;

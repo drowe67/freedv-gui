@@ -1446,20 +1446,22 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     bool txState = false;
     int syncState = 0;
 
-    if (!m_RxRunning || !evt.GetTimer().IsRunning())
+    auto& timer = evt.GetTimer();
+    auto timerId = timer.GetId();
+    if (!m_RxRunning || !timer.IsRunning())
     {
         return;
     }
     
     // Most plots don't need TX/sync state.
-    if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
+    if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         syncState_ = freedvInterface.getSync();
     }
     syncState = syncState_;
 
-    if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
+    if (timerId == ID_TIMER_PSKREPORTER)
     {
         // Reporter timer fired; send in-progress packet.
         for (auto& obj : wxGetApp().m_reporters)
@@ -1467,7 +1469,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             obj->send();
         }
     }
-    else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
+    else if (timerId == ID_TIMER_UPD_FREQ)
     {
         // show freq. and mode [UP]
         if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
@@ -1476,7 +1478,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
-     else if (evt.GetTimer().GetId() == ID_TIMER_WATERFALL)
+     else if (timerId == ID_TIMER_WATERFALL)
      {
           if (m_panelWaterfall->checkDT()) {
               if (g_mode == FREEDV_MODE_RADE)
@@ -1494,7 +1496,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               m_panelWaterfall->refreshData();
           }
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
+      else if (timerId == ID_TIMER_SPECTRUM)
       {
           if (g_mode == FREEDV_MODE_RADE)
           {
@@ -1513,7 +1515,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->m_newdata = true;
           m_panelSpectrum->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
+      else if (timerId == ID_TIMER_SCATTER)
       {
           if (freedvInterface.isRunning()) {
               int currentMode = freedvInterface.getCurrentMode();
@@ -1556,7 +1558,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
           m_panelScatter->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+      else if (timerId == ID_TIMER_SPEECH_IN)
       {
           if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
@@ -1564,14 +1566,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechIn->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
+      else if (timerId == ID_TIMER_SPEECH_OUT)
       {
           if (g_plotSpeechOutFifo.read(speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechOut->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+      else if (timerId == ID_TIMER_DEMOD_IN)
       {
           if (g_plotDemodInFifo.read(demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
@@ -1579,12 +1581,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
+      else if (timerId == ID_TIMER_TIME_OFFSET)
       {
           m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
           m_panelTimeOffset->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
+      else if (timerId == ID_TIMER_FREQ_OFFSET)
       {
           m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
           m_panelFreqOffset->refreshData();
@@ -1593,6 +1595,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      {
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
+         memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
          while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
          {
              g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
@@ -2068,14 +2071,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         VoiceKeyerProcessEvent(VK_DT);
     }
     
-    if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN ||
-        evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+    if (timerId == ID_TIMER_SPEECH_IN ||
+        timerId == ID_TIMER_DEMOD_IN)
     {
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
         float tooHighThresh;
-        if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
@@ -2091,7 +2094,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             tooHighThresh = FROM_RADIO_MAX;
             updated = true;
         }
-        else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+        else if (timerId == ID_TIMER_SPEECH_IN)
         {
             // transmit mode - display From Mic peaks
 

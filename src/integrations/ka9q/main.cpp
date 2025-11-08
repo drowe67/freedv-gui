@@ -354,7 +354,6 @@ int main(int argc, char** argv)
                     // stdin closed, exit
                     log_warn("stdin pipe closed, exiting");
                     exiting = true;
-                    break;
                 }
                 callbackObj->infifo2->write(readBuffer, numActuallyRead);
             }
@@ -375,7 +374,6 @@ int main(int argc, char** argv)
                 // stdout closed, exit
                 log_warn("stdout pipe closed, exiting");
                 exiting = true;
-                break;
             }
         }
 
