@@ -35,6 +35,6 @@ int IAudioEngine::StandardSampleRates[] =
 
 void IAudioEngine::setOnEngineError(AudioErrorCallbackFn fn, void* state)
 {
-    onAudioErrorFunction = fn;
+    onAudioErrorFunction = std::move(fn);
     onAudioErrorState = state;
 }

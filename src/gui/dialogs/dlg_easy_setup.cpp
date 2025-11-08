@@ -1090,9 +1090,9 @@ void EasySetupDialog::updateHamlibDevices_()
 #if defined(__FreeBSD__)
     if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 || // NOLINT
 #endif // defined(__FreeBSD__)
-       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) { // NOLINT
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;
@@ -1124,7 +1124,7 @@ void EasySetupDialog::updateHamlibDevices_()
     }
 #else
     glob_t    gl;
-    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0) 
+    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0)  // NOLINT
     {
         wxRegEx pathRegex("/sys/class/tty/([^/]+)");
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
@@ -1140,7 +1140,7 @@ void EasySetupDialog::updateHamlibDevices_()
     }
 
     // Support /dev/serial as well
-    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0)
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
     {
         for(unsigned int i=0; i<gl.gl_pathc; i++)   
         {

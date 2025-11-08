@@ -33,10 +33,10 @@ using namespace std::placeholders;
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly)
     : isConnecting_(false)
-    , hostname_(hostname)
-    , callsign_(callsign)
-    , gridSquare_(gridSquare)
-    , software_(software)
+    , hostname_(std::move(hostname))
+    , callsign_(std::move(callsign))
+    , gridSquare_(std::move(gridSquare))
+    , software_(std::move(software))
     , lastFrequency_(0)
     , tx_(false)
     , rxOnly_(rxOnly)
@@ -66,7 +66,7 @@ void FreeDVReporter::connect()
     connect_();
 }
 
-void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::string message)
+void FreeDVReporter::requestQSY(std::string const& sid, uint64_t frequencyHz, std::string const& message)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     
@@ -84,7 +84,7 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     }
 }
 
-void FreeDVReporter::updateMessage(std::string message)
+void FreeDVReporter::updateMessage(std::string const& message)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     
@@ -175,73 +175,73 @@ void FreeDVReporter::send()
 void FreeDVReporter::setOnReporterConnectFn(ReporterConnectionFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReporterConnectFn_ = fn;
+    onReporterConnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnReporterDisconnectFn(ReporterConnectionFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReporterDisconnectFn_ = fn;
+    onReporterDisconnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnUserConnectFn(ConnectionDataFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onUserConnectFn_ = fn;
+    onUserConnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnUserDisconnectFn(ConnectionDataFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onUserDisconnectFn_ = fn;
+    onUserDisconnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnFrequencyChangeFn(FrequencyChangeFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onFrequencyChangeFn_ = fn;
+    onFrequencyChangeFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnTransmitUpdateFn(TxUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onTransmitUpdateFn_ = fn;
+    onTransmitUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnReceiveUpdateFn(RxUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReceiveUpdateFn_ = fn;
+    onReceiveUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onQsyRequestFn_ = fn;
+    onQsyRequestFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setMessageUpdateFn(MessageUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onMessageUpdateFn_ = fn;
+    onMessageUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onConnectionSuccessfulFn_ = fn;
+    onConnectionSuccessfulFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onAboutToShowSelfFn_ = fn;
+    onAboutToShowSelfFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setRecvEndFn(RecvEndFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onRecvEndFn_ = fn;
+    onRecvEndFn_ = std::move(fn);
 }
 
 bool FreeDVReporter::isValidForReporting()
@@ -628,7 +628,7 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
     lastFrequency_ = frequency;
 }
 
-void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
+void FreeDVReporter::transmitImpl_(std::string const& mode, bool tx)
 {
     if (isFullyConnected_.load(std::memory_order_acquire))
     {
@@ -646,7 +646,7 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
     tx_ = tx;
 }
 
-void FreeDVReporter::sendMessageImpl_(std::string message)
+void FreeDVReporter::sendMessageImpl_(std::string const& message)
 {
     if (isFullyConnected_.load(std::memory_order_acquire))
     {

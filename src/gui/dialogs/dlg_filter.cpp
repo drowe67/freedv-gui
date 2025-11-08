@@ -368,7 +368,7 @@ FilterDlg::~FilterDlg()
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
 }
 
-void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *s, wxString controlName)
+void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *s, wxString const& controlName)
 {
     wxBoxSizer *bs = new wxBoxSizer(wxHORIZONTAL);
 
@@ -393,7 +393,7 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
 #endif // wxUSE_ACCESSIBILITY
 }
 
-void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName, int max)
+void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString const& controlName, int max)
 {
     wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     sizer->Add(label, 0, wxALIGN_CENTER|wxALL, 0);
@@ -405,7 +405,7 @@ void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText**
     sizer->Add(*value, 0, wxALIGN_CENTER, 5);
 }
 
-EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderFreq)
+EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderFreq)
 {
     EQ eq;
 

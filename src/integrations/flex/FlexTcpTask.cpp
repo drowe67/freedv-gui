@@ -148,7 +148,7 @@ void FlexTcpTask::cleanupWaveform_()
         if (isLSB_) ss << "LSB";
         else ss << "USB";
         
-        sendRadioCommand_(ss.str().c_str(), [&](unsigned int, std::string) {
+        sendRadioCommand_(ss.str().c_str(), [&](unsigned int, std::string const&) {
             // Recursively call ourselves again to actually remove the waveform
             // once we get a response for this command.
             activeSlice_ = -1;
@@ -161,13 +161,13 @@ void FlexTcpTask::cleanupWaveform_()
     
     sendRadioCommand_("unsub slice all");
     sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string) {
+    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string const&) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
 }
 
-void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::string underlyingMode)
+void FlexTcpTask::createWaveform_(std::string const& name, std::string const& shortName, std::string const& underlyingMode)
 {
     log_info("Creating waveform %s (abbreviated %s in SmartSDR)", name.c_str(), shortName.c_str());
 
@@ -177,7 +177,7 @@ void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::
     // Actually create the waveform.
     std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=2.0.0";
     std::string setPrefix = "waveform set " + name + " ";
-    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string) {
+    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string const&) {
         if (rv == 0)
         {
             // Set the filter-related settings for the just-created waveform.
@@ -193,12 +193,12 @@ void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::
     });
 }
 
-void FlexTcpTask::sendRadioCommand_(std::string command)
+void FlexTcpTask::sendRadioCommand_(std::string const& command)
 {
-    sendRadioCommand_(command, std::function<void(int rv, std::string message)>());
+    sendRadioCommand_(command, std::function<void(int rv, std::string const& message)>());
 }
 
-void FlexTcpTask::sendRadioCommand_(std::string command, std::function<void(unsigned int rv, std::string message)> fn)
+void FlexTcpTask::sendRadioCommand_(std::string const& command, std::function<void(unsigned int rv, std::string const& message)> fn)
 {
     std::ostringstream ss;
 
@@ -206,7 +206,7 @@ void FlexTcpTask::sendRadioCommand_(std::string command, std::function<void(unsi
     ss << "C" << (sequenceNumber_) << "|" << command << "\n";
     
     send(ss.str().c_str(), ss.str().length());
-    responseHandlers_[sequenceNumber_++] = fn;
+    responseHandlers_[sequenceNumber_++] = std::move(fn);
     commandHandlingTimer_.stop();
     commandHandlingTimer_.start();
 }
@@ -480,7 +480,7 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-void FlexTcpTask::addSpot(std::string callsign)
+void FlexTcpTask::addSpot(std::string const& callsign)
 {
     enqueue_([=]() {
         if (activeSlice_ >= 0)

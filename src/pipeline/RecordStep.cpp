@@ -37,8 +37,8 @@ RecordStep::RecordStep(
     int inputSampleRate, std::function<SNDFILE*()> getSndFileFn, 
     std::function<void(int)> isFileCompleteFn)
     : inputSampleRate_(inputSampleRate)
-    , getSndFileFn_(getSndFileFn)
-    , isFileCompleteFn_(isFileCompleteFn)
+    , getSndFileFn_(std::move(getSndFileFn))
+    , isFileCompleteFn_(std::move(isFileCompleteFn))
     , fileIoThreadEnding_(false)
 {
     inputFifo_ = codec2_fifo_create(inputSampleRate_);

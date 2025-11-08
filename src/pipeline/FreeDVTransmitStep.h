@@ -38,7 +38,7 @@ extern "C"
 class FreeDVTransmitStep : public IPipelineStep
 {
 public:
-    FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> getFreqOffsetFn);
+    FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> const& getFreqOffsetFn);
     virtual ~FreeDVTransmitStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;

@@ -36,7 +36,7 @@ PulseAudioEngine::~PulseAudioEngine()
 {
     if (initialized_)
     {
-        stop();
+        stopImpl_();
     }
 }
 
@@ -124,6 +124,11 @@ void PulseAudioEngine::start()
 }
 
 void PulseAudioEngine::stop()
+{
+    stopImpl_();
+}
+
+void PulseAudioEngine::stopImpl_()
 {
     std::unique_lock<std::mutex> lk(startStopMtx_);
 

@@ -29,7 +29,7 @@
 
 extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
-FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> getFreqOffsetFn)
+FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> const& getFreqOffsetFn)
     : dv_(dv)
     , getFreqOffsetFn_(getFreqOffsetFn)
     , inputSampleFifo_(nullptr)
@@ -42,7 +42,9 @@ FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> g
     txFreqOffsetPhaseRectObj_.imag = sin(0.0);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = std::max(
+        freedv_get_speech_sample_rate(dv_),
+        freedv_get_modem_sample_rate(dv_));
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 

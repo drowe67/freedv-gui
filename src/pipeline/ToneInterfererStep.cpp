@@ -32,16 +32,15 @@
 #endif
 
 ToneInterfererStep::ToneInterfererStep(
-        int sampleRate, realtime_fp<float()> toneFrequencyFn, 
-        realtime_fp<float()> toneAmplitudeFn, realtime_fp<float*()> tonePhaseFn)
+        int sampleRate, realtime_fp<float()> const& toneFrequencyFn, 
+        realtime_fp<float()> const& toneAmplitudeFn, realtime_fp<float*()> const& tonePhaseFn)
     : sampleRate_(sampleRate)
     , toneFrequencyFn_(toneFrequencyFn)
     , toneAmplitudeFn_(toneAmplitudeFn)
     , tonePhaseFn_(tonePhaseFn)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(sampleRate_);
     assert(outputSamples_ != nullptr);
 }
 
@@ -72,7 +71,7 @@ short* ToneInterfererStep::execute(short* inputSamples, int numInputSamples, int
     
     float w = 2.0 * M_PI * toneFrequency / sampleRate_;
     for(int i = 0; i < numInputSamples; i++) {
-        float s = (float)toneAmplitude * cos(*tonePhase);
+        float s = (float)toneAmplitude * cosf(*tonePhase);
         outputSamples_.get()[i] += (int)s;
         *tonePhase += w;
     }

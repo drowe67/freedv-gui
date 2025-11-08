@@ -42,7 +42,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
     , isTransmitting_(false)
     , inputCtr_(0)
     , samplesRequired_(0)
-    , helper_(helper)
+    , helper_(std::move(helper))
     , randomUdpPort_(randomUdpPort)
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
@@ -149,20 +149,26 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         if (rv < 0)
         {
             // TBD: close and reopen socket
-            log_error("Got socket error %d (%s) while sending", errno, strerror(errno));
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_error("Got socket error %d (%s) while sending", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
         }
     }
 }
 
 void FlexVitaTask::openSocket_()
 {
+    constexpr int ERROR_BUFFER_LEN = 1024;
+    char tmpBuf[ERROR_BUFFER_LEN];
+
     // Bind socket so we can at least get discovery packets.
     socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (socket_ == -1)
     {
-        log_error("Got socket error %d (%s) while creating socket", errno, strerror(errno));
+        log_error("Got socket error %d (%s) while creating socket", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        assert(socket_ != -1);
+        return;
     }
-    assert(socket_ != -1);
 
     // Listen on our hardcoded VITA port (or a random one if we already know the radio's IP)
     struct sockaddr_in ourSocketAddress;
@@ -178,7 +184,7 @@ void FlexVitaTask::openSocket_()
         if (rv == -1)
         {
             auto err = errno;
-            log_error("Got socket error %d (%s) while binding", err, strerror(err));
+            log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
         }
         assert(rv != -1);
 
@@ -191,7 +197,7 @@ void FlexVitaTask::openSocket_()
         if (rv == -1)
         {
             auto err = errno;
-            log_error("Got socket error %d (%s) while calling getsockname", err, strerror(err));
+            log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
         }
         assert(rv != -1);
 
@@ -374,7 +380,13 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 txStreamId_ = packet->stream_id;
                 inFifo = getAudioInput_(true);
             }
-            
+           
+            if (inFifo == nullptr)
+            {
+                // No valid FIFO, return
+                return;
+            }
+ 
             // Convert to int16 samples, normalizing to +/- 1.0 beforehand.
             unsigned int num_samples = payload_length >> 2; // / sizeof(uint32_t);
             unsigned int half_num_samples = num_samples >> 1;
@@ -383,7 +395,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
             float maxSampleValue = 1.0;
-            while (inFifo != nullptr && i < half_num_samples)
+            while (i < half_num_samples)
             {
                 union {
                     uint32_t intVal;
@@ -391,7 +403,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabs(temp.floatVal), maxSampleValue);
+                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
             float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)

@@ -1020,6 +1020,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         // Save new reporting frequency list.
         std::vector<wxString> tmpList;
+        tmpList.reserve(m_freqList->GetCount());
         for (unsigned int index = 0; index < m_freqList->GetCount(); index++)
         {
             tmpList.push_back(m_freqList->GetString(index));

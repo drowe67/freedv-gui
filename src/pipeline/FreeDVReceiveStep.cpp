@@ -46,7 +46,9 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     rxFreqOffsetPhaseRectObjs_.imag = sin(0.0);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = std::max(
+        freedv_get_modem_sample_rate(dv_),
+        freedv_get_speech_sample_rate(dv_));
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 

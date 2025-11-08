@@ -42,16 +42,15 @@ PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
     : inputSampleRate_(inputSampleRate)
-    , fileSampleRateFn_(fileSampleRateFn)
-    , getSndFileFn_(getSndFileFn)
-    , fileCompleteFn_(fileCompleteFn)
+    , fileSampleRateFn_(std::move(fileSampleRateFn))
+    , getSndFileFn_(std::move(getSndFileFn))
+    , fileCompleteFn_(std::move(fileCompleteFn))
     , nonRtThreadEnding_(false)
     , playbackResampler_(nullptr)
     , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(inputSampleRate_);
     assert(outputSamples_ != nullptr);
     
     // Create non-RT thread to perform audio I/O

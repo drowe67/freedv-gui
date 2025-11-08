@@ -74,7 +74,7 @@ void AudioOptsDialog::audioEngineInit(void)
 
 
 void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
-                                        wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel)
+                                        wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString const& buttonLabel)
 {
     wxBoxSizer* bSizer1 = new wxBoxSizer(wxVERTICAL);
 
@@ -415,7 +415,7 @@ void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& )
 // helper function to look up name of devName, and if it exists write
 // name to textCtrl.  Used to trap disappearing devices.
 //-------------------------------------------------------------------------
-bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName)
+bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString const& devName)
 {
     // ignore last list entry as it is the "none" entry
     for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
@@ -643,7 +643,7 @@ int AudioOptsDialog::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 // buildListOfSupportedSampleRates()
 //-------------------------------------------------------------------------
-int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out)
+int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString const& devName, int in_out)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
     auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::AUDIO_ENGINE_IN : IAudioEngine::AUDIO_ENGINE_OUT);
@@ -693,31 +693,31 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("Device"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 300);
 
     listItem.SetAlign(wxLIST_FORMAT_CENTRE);
     listItem.SetText(wxT("ID"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 45);
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("API"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 100);
 
     if(in_out == AUDIO_IN)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
     else if(in_out == AUDIO_OUT)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
 
@@ -741,7 +741,7 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
     // add "none" option at end
 
     buf.Printf(wxT("%s"), "none");
-    idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+    ctrl->InsertItem(ctrl->GetItemCount(), buf);
     
     // Auto-size column widths to improve readability
     for (int col = 0; col < 4; col++)
@@ -842,13 +842,13 @@ void AudioOptsDialog::UpdatePlot(PlotScalar *plotScalar)
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
         SRC_STATE          *src;
@@ -977,13 +977,13 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken.  Also plots a pretty picture like the record versions
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
         SRC_STATE          *src;
         GenericFIFO<short>               *fifo, *callbackFifo;
         int src_error, n = 0;

@@ -47,7 +47,7 @@ ThreadedTimer::ThreadedTimer(int milliseconds, TimerCallbackFn fn, bool repeat)
 #endif // defined(__APPLE__)
 {
     setTimeout(milliseconds);
-    setCallback(fn);
+    setCallback(std::move(fn));
     setRepeat(repeat);
 }
 
@@ -65,7 +65,7 @@ void ThreadedTimer::setTimeout(int milliseconds)
 void ThreadedTimer::setCallback(TimerCallbackFn fn)
 {
     std::unique_lock<std::mutex> lk(timerMutex_);
-    fn_ = fn;
+    fn_ = std::move(fn);
 }
 
 void ThreadedTimer::setRepeat(bool repeat)

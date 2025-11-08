@@ -78,8 +78,8 @@ public:
     virtual ~FreeDVReporter();
 
     void connect();
-    void requestQSY(std::string sid, uint64_t frequencyHz, std::string message);
-    void updateMessage(std::string message);
+    void requestQSY(std::string const& sid, uint64_t frequencyHz, std::string const& message);
+    void updateMessage(std::string const& message);
     
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
@@ -151,8 +151,8 @@ private:
     void connect_();
     
     void freqChangeImpl_(uint64_t frequency);
-    void transmitImpl_(std::string mode, bool tx);
-    void sendMessageImpl_(std::string message);
+    void transmitImpl_(std::string const& mode, bool tx);
+    void sendMessageImpl_(std::string const& message);
     
     void hideFromViewImpl_();
     void showOurselvesImpl_();

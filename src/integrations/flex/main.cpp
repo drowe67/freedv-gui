@@ -95,12 +95,14 @@ int main(int, char**)
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
+    // NOLINTBEGIN
     setenv("OMP_NUM_THREADS", "1", 1);
     setenv("OPENBLAS_NUM_THREADS", "1", 1);
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
-    
+    // NOLINTEND
+
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
@@ -128,7 +130,7 @@ int main(int, char**)
     assert(lpcnetEncState != nullptr);
     
     std::string radioIp = "";
-    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS");
+    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS"); // NOLINT
     if (radioAddrEnv != nullptr)
     {
         radioIp = radioAddrEnv;
@@ -142,7 +144,7 @@ int main(int, char**)
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
     bool enableRadioLookup = true;
-    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void*)
+    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string const& friendlyName, std::string const& ip, void*)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         if (enableRadioLookup)
@@ -208,7 +210,7 @@ int main(int, char**)
     }, true);
     rxNoCallsignReporting.start();
 
-    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
+    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const& callsign, void*) {
         // Add callsign to EOO so others can report us
         log_info("Setting EOO bits");
         int nsyms = rade_n_eoo_bits(radeObj);
@@ -220,7 +222,7 @@ int main(int, char**)
 
         reportController.updateRadioCallsign(callsign);
     }, nullptr);
-    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
+    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const& gridSquare, void*) {
         reportController.updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {

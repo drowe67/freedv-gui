@@ -134,7 +134,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     assert(allocBuf != nullptr);
     memcpy(allocBuf, buf, length);
     
-    enqueue_([&, prom, allocBuf, length]() {
+    enqueue_([&, prom, allocBuf, length]() { // NOLINT
         sendImpl_(allocBuf, length);
         delete[] allocBuf;
         prom->set_value();
@@ -144,7 +144,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
 
 void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
 {
-    enqueue_([this, fn]() {
+    enqueue_([this, fn = std::move(fn)]() {
         onRecvEndFn_ = fn;
     });
 }
@@ -333,7 +333,9 @@ void TcpConnectionHandler::connectImpl_()
         else if (ret == -1 && errno != EINPROGRESS)
         {
             int err = errno;
-            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror(err));
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -712,10 +714,14 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
                 }
                 
 socket_error:
-                log_warn("Got socket error %d (%s) while connecting", err, strerror(err));
+                constexpr int ERROR_BUFFER_LEN = 1024;
+                char tmpBuf[ERROR_BUFFER_LEN];
 #if defined(WIN32)
+                strerror_s(tmpBuf, ERROR_BUFFER_LEN,  err);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
+                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
                 close(sock);
 #endif // defined(WIN32)
                 socketsToDelete.push_back(sock);

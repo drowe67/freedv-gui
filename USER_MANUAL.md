@@ -869,9 +869,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for BBWENet BW expander. (PR #1065)
     * Support bulk updates from FreeDV Reporter server. (PR #1079)
     * Hide Stats box by default. (PR #1081)
+    * Enable frequency drop-down whenever CAT control is enabled, not just for reporting. (PR #1080)
 3. Build system:
     * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
     * Force all compiler warnings to be errors. (PR #1076)
+    * Enable clang-tidy scans on codebase. (PR #1086)
 
 ## V2.0.2 October 2025
 

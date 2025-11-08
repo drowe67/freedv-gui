@@ -65,7 +65,7 @@ class FreeDVReporterDialog : public wxFrame
                 long style = wxCAPTION | wxCLOSE_BOX | wxSYSTEM_MENU | wxMINIMIZE_BOX | wxRESIZE_BORDER);
         ~FreeDVReporterDialog();
         
-        void setReporter(std::shared_ptr<FreeDVReporter> reporter);
+        void setReporter(std::shared_ptr<FreeDVReporter> const& reporter);
         void refreshQSYButtonState();
         void refreshLayout();
         
@@ -167,14 +167,14 @@ class FreeDVReporterDialog : public wxFrame
              FreeDVReporterDataModel(FreeDVReporterDialog* parent);
              virtual ~FreeDVReporterDataModel();
 
-             void setReporter(std::shared_ptr<FreeDVReporter> reporter);
+             void setReporter(std::shared_ptr<FreeDVReporter> const& reporter);
              void setBandFilter(FilterFrequency freq);
              void refreshAllRows();
-             void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
+             void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString const& customText);
              void updateHighlights();
              void triggerResort();
              void deallocateRemovedItems();
-             void updateMessage(wxString statusMsg)
+             void updateMessage(wxString const& statusMsg)
              {
                  if (reporter_)
                  {
@@ -327,10 +327,10 @@ class FreeDVReporterDialog : public wxFrame
             void onReporterConnect_();
             void onReporterDisconnect_();
             void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
-            void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
-            void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
+            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly);
+            void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, uint64_t frequencyHz);
+            void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
+            void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
             void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
 
             void onConnectionSuccessfulFn_();
@@ -340,7 +340,7 @@ class FreeDVReporterDialog : public wxFrame
 
             void execQueuedAction_();
 
-            wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
+            wxString makeValidTime_(std::string const& timeStr, wxDateTime& timeObj);
             double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
             double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
             void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);

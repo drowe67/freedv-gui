@@ -44,8 +44,8 @@ class GenericFIFO
 public:
     GenericFIFO(int len, T* inBuf = nullptr);
     GenericFIFO(const GenericFIFO<T>& rhs) = delete;
-    GenericFIFO(GenericFIFO<T>&& rhs);
-    virtual ~GenericFIFO();
+    GenericFIFO(GenericFIFO<T>&& rhs) noexcept;
+    virtual ~GenericFIFO() noexcept;
     
     int write(T* data, int len) noexcept;
     int read(T* result, int len) noexcept;
@@ -105,7 +105,7 @@ GenericFIFO<T>::GenericFIFO(int len, T* inBuf)
 }
 
 template<typename T>
-GenericFIFO<T>::~GenericFIFO()
+GenericFIFO<T>::~GenericFIFO() noexcept
 {
     if (buf != nullptr && ownBuffer_)
     {
@@ -114,7 +114,7 @@ GenericFIFO<T>::~GenericFIFO()
 }
 
 template<typename T>
-GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
+GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs) noexcept
     : buf(rhs.buf)
     , pin(rhs.pin)
     , poutCache(rhs.poutCache)
