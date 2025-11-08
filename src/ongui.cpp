@@ -209,6 +209,30 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     
         // Show/hide frequency box based on reporting status.
         m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        
+        // Show/hide stats box
+        statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+
+        // XXX - with really short windows, wxWidgets sometimes doesn't size
+        // the components properly until the user resizes the window (even if only
+        // by a pixel or two). As a really hacky workaround, we emulate this behavior
+        // when restoring window sizing. These resize events also happen after configuration
+        // is restored but I'm not sure this is necessary.
+        wxSize size = GetSize();
+        auto w = size.GetWidth();
+        auto h = size.GetHeight();
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w + 1, h + 1);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)

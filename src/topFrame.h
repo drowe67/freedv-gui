@@ -114,6 +114,7 @@ class TopFrame : public wxFrame
         wxStaticText* m_textSQ;
         wxStatusBar* m_statusBar1;
 
+        wxStaticBox* statsBox;
         wxButton*     m_BtnBerReset;
         wxStaticText  *m_textCurrentDecodeMode;
         wxStaticText  *m_textBits;

@@ -113,6 +113,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
+        
+    , showDecodeStats("/Debug/showDecodeStats", false)
 {
     // empty
 }
@@ -239,6 +241,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, txRxDelayMilliseconds);
 
     load_(config, reportingUserMsgColWidth);
+    
+    load_(config, showDecodeStats);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -326,6 +330,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, txRxDelayMilliseconds);
 
     save_(config, reportingUserMsgColWidth);
+    
+    save_(config, showDecodeStats);
     
     config->Flush();
 }
