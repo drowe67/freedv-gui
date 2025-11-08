@@ -34,7 +34,7 @@ inline void executeTestCase(std::string const& testName, std::function<bool()> c
     else
     {
         std::cout << "FAILED" << std::endl;
-        exit(-1);
+        exit(-1); // NOLINT
     }
 }
 

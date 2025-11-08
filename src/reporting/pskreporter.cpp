@@ -28,6 +28,8 @@
 #include <cstring>
 #include <thread>
 #include <functional>
+#include <random>
+
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
@@ -136,8 +138,10 @@ PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::stri
     , receiverGridSquare_(std::move(gridSquare))
     , decodingSoftware_(std::move(software))
 {
-    srand(time(0));
-    randomIdentifier_ = rand();
+    std::random_device randomDevice;
+    std::uniform_int_distribution<int> idDistribution(0, RAND_MAX);
+    std::mt19937 randomEngine(randomDevice());
+    randomIdentifier_ = idDistribution(randomEngine);
 
 #if defined(WIN32)
     // Initialize Winsock in case it hasn't already been done.

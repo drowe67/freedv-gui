@@ -95,12 +95,14 @@ int main(int, char**)
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
+    // NOLINTBEGIN
     setenv("OMP_NUM_THREADS", "1", 1);
     setenv("OPENBLAS_NUM_THREADS", "1", 1);
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
-    
+    // NOLINTEND
+
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
@@ -128,7 +130,7 @@ int main(int, char**)
     assert(lpcnetEncState != nullptr);
     
     std::string radioIp = "";
-    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS");
+    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS"); // NOLINT
     if (radioAddrEnv != nullptr)
     {
         radioIp = radioAddrEnv;

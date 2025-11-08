@@ -468,7 +468,7 @@ void ComPortsDlg::populatePortList()
     }
 #else
     glob_t    gl;
-    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0) 
+    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0)  // NOLINT
     {
         wxRegEx pathRegex("/sys/class/tty/([^/]+)");
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
@@ -484,7 +484,7 @@ void ComPortsDlg::populatePortList()
     }
 
     // Support /dev/serial as well
-    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0)
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
     {
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
         {
