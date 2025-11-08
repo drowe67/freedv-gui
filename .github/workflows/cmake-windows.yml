@@ -81,12 +81,6 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         make -j$(nproc) package
 
-    #- name: Verify Windows code with clang-tidy
-    #  shell: bash
-    #  working-directory: ${{github.workspace}}/build_windows
-    #  run: |
-    #      run-clang-tidy -p .
-
     - name: Calculate installer filename
       shell: bash
       id: installer-filename
