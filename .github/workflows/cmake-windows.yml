@@ -14,7 +14,7 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  build:
+  build-and-lint:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
@@ -72,7 +72,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
 
     - name: Build freedv-gui
       shell: bash
@@ -80,6 +80,12 @@ jobs:
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         make -j$(nproc) package
+
+    - name: Verify Windows code with clang-tidy
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+          clang-tidy -p .
 
     - name: Calculate installer filename
       shell: bash
@@ -97,7 +103,7 @@ jobs:
 
   test:
     runs-on: windows-2022
-    needs: build
+    needs: build-and-lint
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
