@@ -37,6 +37,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
+        export PATH=$(brew --prefix llvm)/bin:$PATH
         $(brew --prefix llvm)/bin/run-clang-tidy -p .
 
   test:
