@@ -515,7 +515,7 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().rigFrequencyController = tmp;
         wxGetApp().rigPttController = tmp;
         
-        wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
+        wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string const& err)
         {
             std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
             CallAfter([&, fullErr]() {

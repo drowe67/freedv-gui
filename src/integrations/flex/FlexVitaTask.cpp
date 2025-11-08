@@ -42,7 +42,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
     , isTransmitting_(false)
     , inputCtr_(0)
     , samplesRequired_(0)
-    , helper_(helper)
+    , helper_(std::move(helper))
     , randomUdpPort_(randomUdpPort)
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
@@ -391,7 +391,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabs(temp.floatVal), maxSampleValue);
+                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
             float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)

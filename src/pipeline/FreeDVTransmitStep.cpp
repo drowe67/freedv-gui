@@ -29,7 +29,7 @@
 
 extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
-FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> getFreqOffsetFn)
+FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, realtime_fp<float()> const& getFreqOffsetFn)
     : dv_(dv)
     , getFreqOffsetFn_(getFreqOffsetFn)
     , inputSampleFifo_(nullptr)

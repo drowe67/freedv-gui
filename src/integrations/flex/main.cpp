@@ -142,7 +142,7 @@ int main(int, char**)
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
     bool enableRadioLookup = true;
-    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void*)
+    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string const& friendlyName, std::string const& ip, void*)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         if (enableRadioLookup)
@@ -208,7 +208,7 @@ int main(int, char**)
     }, true);
     rxNoCallsignReporting.start();
 
-    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
+    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const& callsign, void*) {
         // Add callsign to EOO so others can report us
         log_info("Setting EOO bits");
         int nsyms = rade_n_eoo_bits(radeObj);
@@ -220,7 +220,7 @@ int main(int, char**)
 
         reportController.updateRadioCallsign(callsign);
     }, nullptr);
-    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
+    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const& gridSquare, void*) {
         reportController.updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {

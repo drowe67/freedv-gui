@@ -40,7 +40,7 @@ void clickTune(float freq) {
     log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
-bool MainApp::CanAccessSerialPort(std::string portName)
+bool MainApp::CanAccessSerialPort(std::string const& portName)
 {
     bool couldOpen = true;
     com_handle_t com_handle = COM_HANDLE_INVALID;
@@ -141,7 +141,7 @@ void MainFrame::OpenSerialPort(void)
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             wxGetApp().rigFrequencyController = nullptr;
             
-            wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string err) {
+            wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string const& err) {
                 std::string fullErrMsg = "Couldn't open serial port for PTT output: " + err; 
                 CallAfter([&]() 
                 {
@@ -168,7 +168,7 @@ void MainFrame::OpenPTTInPort(void)
                 (const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->c_str(),
                 wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS);
             
-            wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string err)
+            wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string const& err)
             {
                 std::string fullErr = "Couldn't open PTT input port: " + err;
                 CallAfter([&]() 

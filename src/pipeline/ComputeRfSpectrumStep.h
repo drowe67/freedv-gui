@@ -37,8 +37,8 @@ public:
     // Note: only supports 8 kHz, so needs to be inserted into an AudioPipeline
     // in order to downconvert properly.
     ComputeRfSpectrumStep(
-        realtime_fp<struct MODEM_STATS*()> modemStatsFn,
-        realtime_fp<GenericFIFO<float>*()> getAvMagFn);
+        realtime_fp<struct MODEM_STATS*()> const& modemStatsFn,
+        realtime_fp<GenericFIFO<float>*()> const& getAvMagFn);
     virtual ~ComputeRfSpectrumStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;

@@ -24,8 +24,8 @@
 #include "../defines.h"
 
 ComputeRfSpectrumStep::ComputeRfSpectrumStep(
-    realtime_fp<struct MODEM_STATS*()> modemStatsFn,
-    realtime_fp<GenericFIFO<float>*()> getAvMagFn)
+    realtime_fp<struct MODEM_STATS*()> const& modemStatsFn,
+    realtime_fp<GenericFIFO<float>*()> const& getAvMagFn)
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {

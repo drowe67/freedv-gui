@@ -142,9 +142,9 @@ class FilterDlg : public wxDialog
         void          setGamma(void); // sets slider and static text from m_gamma
         void          setCodec2(void);
  
-        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName, int max);
-        EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderBass);
-        void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *sbs, wxString controlName);
+        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString const& controlName, int max);
+        EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderBass);
+        void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *sbs, wxString const& controlName);
         wxNotebook    *m_auiNotebook;
         void          setFreq(EQ *eq);
         void          setGain(EQ *eq);

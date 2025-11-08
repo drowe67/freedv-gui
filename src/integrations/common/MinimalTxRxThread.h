@@ -65,7 +65,7 @@ public:
         , inputSampleRate_(inputSampleRate)
         , outputSampleRate_(outputSampleRate)
         , hasEooBeenSent_(false)
-        , helper_(helper)
+        , helper_(std::move(helper))
         , deferReset_(false)
         , radeText_(radeText)
         , txStep_(nullptr)

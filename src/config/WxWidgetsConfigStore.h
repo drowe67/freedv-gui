@@ -41,8 +41,8 @@ protected:
     template<typename UnderlyingDataType>
     void save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement);
     
-    wxString generateStringFromArray_(std::vector<wxString> vec);
-    std::vector<wxString> generateArayFromString_(wxString str);
+    wxString generateStringFromArray_(std::vector<wxString> const& vec);
+    std::vector<wxString> generateArayFromString_(wxString const& str);
 };
 
 template<typename UnderlyingDataType>

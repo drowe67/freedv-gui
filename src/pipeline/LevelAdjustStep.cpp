@@ -25,7 +25,7 @@
 #include <functional>
 #include <cassert>
 
-LevelAdjustStep::LevelAdjustStep(int sampleRate, realtime_fp<float()> scaleFactorFn)
+LevelAdjustStep::LevelAdjustStep(int sampleRate, realtime_fp<float()> const& scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)
     , sampleRate_(sampleRate)
 {

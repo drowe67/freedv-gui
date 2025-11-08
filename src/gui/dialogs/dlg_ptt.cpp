@@ -721,7 +721,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
                     (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8) );
 
-            hamlib->onRigError += [=](IRigController*, std::string error) {
+            hamlib->onRigError += [=](IRigController*, std::string const& error) {
                 CallAfter([=]() {
                     wxMessageBox(wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -785,7 +785,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 m_rbUseDTR->GetValue(),
                 m_ckDTRPos->IsChecked());
 
-            serialPort->onRigError += [=](IRigController*, std::string error)
+            serialPort->onRigError += [=](IRigController*, std::string const& error)
             {
                 CallAfter([=]() {
                     wxString errorMessage = wxString::Format("Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port.", ctrlport, error);

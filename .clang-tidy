@@ -1,0 +1,6 @@
+---
+Checks: "-*,performance*,-performance-enum-size,-performance-avoid-endl"
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '3rdparty/.*'
+FormatStyle:     none

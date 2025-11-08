@@ -24,7 +24,7 @@ inline short* generateOneSecondSineWave(float frequency, int sampleRate)
     return result;
 }
 
-inline void executeTestCase(std::string testName, std::function<bool()> fn)
+inline void executeTestCase(std::string const& testName, std::function<bool()> const& fn)
 {
     std::cout << "Executing " << testName << "...";
     if (fn())

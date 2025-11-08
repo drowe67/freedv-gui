@@ -229,7 +229,7 @@ static void LogLockFunction_(bool lock, void *)
 }
 
 template<int soundCardId, bool isOut>
-void MainFrame::handleAudioDeviceChange_(std::string newDeviceName)
+void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
 {
     wxString devName = wxString::FromUTF8(newDeviceName.c_str());
     if (soundCardId == 1)
@@ -2811,7 +2811,7 @@ void MainFrame::startRxStream()
         m_RxRunning = true;
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->setOnEngineError([](IAudioEngine& dev, std::string error, void* state) { 
+        engine->setOnEngineError([](IAudioEngine& dev, std::string const& error, void* state) { 
             MainFrame* castedThis = (MainFrame*)state;
             castedThis->onAudioEngineError_(dev, error, state); 
         }, this);
@@ -2907,7 +2907,7 @@ void MainFrame::startRxStream()
                 rxInSoundDevice->setDescription("Radio to FreeDV");
                 rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, std::move(newDeviceName));
                 }, this);
             }
             
@@ -2923,7 +2923,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -2975,7 +2975,7 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setDescription("Mic to FreeDV");
                 txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, std::move(newDeviceName));
                 }, nullptr);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
@@ -3007,7 +3007,7 @@ void MainFrame::startRxStream()
                 txOutSoundDevice->setDescription("FreeDV to Radio");
                 txOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, std::move(newDeviceName));
                 }, this);
                 txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
@@ -3041,7 +3041,7 @@ void MainFrame::startRxStream()
                 rxInSoundDevice->setDescription("Radio to FreeDV");
                 rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -3057,7 +3057,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -3532,9 +3532,9 @@ void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string
     // than two arguments for CallAfter().
     QsyRequestArgs* args = new QsyRequestArgs;
     assert(args != nullptr);
-    args->callsign = callsign;
+    args->callsign = std::move(callsign);
     args->freqHz = freqHz;
-    args->message = message;
+    args->message = std::move(message);
 
     CallAfter(&MainFrame::onQsyRequestUIThread_, args);
 }
@@ -3592,7 +3592,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     }
 }
 
-void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void*)
+void MainFrame::onAudioEngineError_(IAudioEngine&, std::string const& error, void*)
 {
      executeOnUiThreadAndWait_([&, error]() {
          wxMessageBox(wxString::Format(
@@ -3603,10 +3603,10 @@ void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void*)
 
 void MainFrame::onAudioDeviceError_(std::string error)
 {
-    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", std::move(error)), wxT("Error"), wxOK);
 }
 
-void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* state)
+void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string const& error, void* state)
 {
     MainFrame* castedState = (MainFrame*)state;
     log_error("%s", error.c_str());

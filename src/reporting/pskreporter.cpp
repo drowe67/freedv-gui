@@ -86,7 +86,7 @@ static const unsigned char txFormatHeader[] = {
 };
 
 SenderRecord::SenderRecord(std::string callsign, uint64_t frequency, signed char snr)
-    : callsign(callsign)
+    : callsign(std::move(callsign))
     , frequency(frequency)
     , snr(snr)
 {
@@ -132,9 +132,9 @@ void SenderRecord::encode(char* buf)
 
 PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::string software)
     : currentSequenceNumber_(0)
-    , receiverCallsign_(callsign)
-    , receiverGridSquare_(gridSquare)
-    , decodingSoftware_(software)
+    , receiverCallsign_(std::move(callsign))
+    , receiverGridSquare_(std::move(gridSquare))
+    , decodingSoftware_(std::move(software))
 {
     srand(time(0));
     randomIdentifier_ = rand();

@@ -144,7 +144,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
 
 void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
 {
-    enqueue_([this, fn]() {
+    enqueue_([this, fn = std::move(fn)]() {
         onRecvEndFn_ = fn;
     });
 }

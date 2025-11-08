@@ -51,7 +51,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     : context_(context)
     , mainloop_(mainloop)
     , stream_(nullptr)
-    , devName_(devName)
+    , devName_(std::move(devName))
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)

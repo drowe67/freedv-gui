@@ -42,9 +42,9 @@ PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
     : inputSampleRate_(inputSampleRate)
-    , fileSampleRateFn_(fileSampleRateFn)
-    , getSndFileFn_(getSndFileFn)
-    , fileCompleteFn_(fileCompleteFn)
+    , fileSampleRateFn_(std::move(fileSampleRateFn))
+    , getSndFileFn_(std::move(getSndFileFn))
+    , fileCompleteFn_(std::move(fileCompleteFn))
     , nonRtThreadEnding_(false)
     , playbackResampler_(nullptr)
     , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)

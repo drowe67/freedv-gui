@@ -50,7 +50,7 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -61,7 +61,7 @@ public:
     int getSync() const { return syncState_.load(std::memory_order_acquire); }
     int getSnr() const { return snr_.load(std::memory_order_acquire); }
     realtime_fp<std::atomic<int>*()> getRxStateFn() { return rxStateFn_; }
-    void setRxStateFn(realtime_fp<std::atomic<int>*()> rxFn) { rxStateFn_ = rxFn; }
+    void setRxStateFn(realtime_fp<std::atomic<int>*()> const& rxFn) { rxStateFn_ = rxFn; }
     void* getStateObj() const { return stateObj_; }
     void setStateObj(void* state) { stateObj_ = state; }
 

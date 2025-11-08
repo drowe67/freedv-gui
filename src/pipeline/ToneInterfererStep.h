@@ -31,8 +31,8 @@ class ToneInterfererStep : public IPipelineStep
 {
 public:
     ToneInterfererStep(
-        int sampleRate, realtime_fp<float()> toneFrequencyFn, 
-        realtime_fp<float()> toneAmplitudeFn, realtime_fp<float*()> tonePhaseFn);
+        int sampleRate, realtime_fp<float()> const& toneFrequencyFn, 
+        realtime_fp<float()> const& toneAmplitudeFn, realtime_fp<float*()> const& tonePhaseFn);
     virtual ~ToneInterfererStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;

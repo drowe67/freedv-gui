@@ -37,7 +37,7 @@
 class FlexVitaTask : public ThreadedObject
 {
 public:
-    using RadioDiscoveredFn = std::function<void(FlexVitaTask&, std::string, std::string, void*)>;
+    using RadioDiscoveredFn = std::function<void(FlexVitaTask&, std::string const&, std::string const&, void*)>;
     
     enum { VITA_PORT = 4992 }; // Default VITA port if we're discovering other radios on the network.
     
@@ -50,7 +50,7 @@ public:
     
     void setOnRadioDiscoveredFn(RadioDiscoveredFn fn, void* st)
     {
-        enqueue_([this, fn, st]() {
+        enqueue_([this, fn = std::move(fn), st]() {
             onRadioDiscoveredFn_ = fn;
             onRadioDiscoveredFnState_ = st;
         });

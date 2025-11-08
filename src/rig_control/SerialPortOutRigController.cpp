@@ -23,7 +23,7 @@
 #include "SerialPortOutRigController.h"
 
 SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
-    : SerialPortRigController(serialPort)
+    : SerialPortRigController(std::move(serialPort))
     , useRTS_(useRTS)
     , rtsPos_(RTSPos)
     , useDTR_(useDTR)
