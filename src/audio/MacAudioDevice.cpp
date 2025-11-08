@@ -118,7 +118,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , direction_(direction)
     , numChannels_(numChannels)
     , sampleRate_(sampleRate)
-    , deviceName_(deviceName)
+    , deviceName_(std::move(deviceName))
     , inputFrames_(nullptr)
     , isDefaultDevice_(false)
     , parent_(parent)
@@ -488,6 +488,11 @@ void MacAudioDevice::start()
 }
 
 void MacAudioDevice::stop()
+{
+    stopImpl_();
+}
+
+void MacAudioDevice::stopImpl_()
 {
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();

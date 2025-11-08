@@ -434,9 +434,9 @@ void ComPortsDlg::populatePortList()
 #if defined(__FreeBSD__)
     if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 || // NOLINT
 #endif // defined(__FreeBSD__)
-       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) { // NOLINT
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;

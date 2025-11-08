@@ -1,5 +1,5 @@
 ---
-Checks: "-*,performance*,-performance-enum-size,-performance-avoid-endl,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-security.FloatLoopCounter,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,concurrency*,objc*,darwin*"
+Checks: "-*,performance*,-performance-enum-size,-performance-avoid-endl,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.FloatLoopCounter,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,concurrency*,objc*,darwin*"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: '3rdparty/.*'

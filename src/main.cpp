@@ -1344,7 +1344,7 @@ MainFrame::~MainFrame()
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     
-    int mode;
+    int mode = FREEDV_MODE_RADE;
     if (m_rb1600->GetValue())
         mode = 0;
     if (m_rb700d->GetValue())

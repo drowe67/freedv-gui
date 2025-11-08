@@ -134,7 +134,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     assert(allocBuf != nullptr);
     memcpy(allocBuf, buf, length);
     
-    enqueue_([&, prom, allocBuf, length]() {
+    enqueue_([&, prom, allocBuf, length]() { // NOLINT
         sendImpl_(allocBuf, length);
         delete[] allocBuf;
         prom->set_value();
