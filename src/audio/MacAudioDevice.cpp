@@ -133,7 +133,7 @@ MacAudioDevice::~MacAudioDevice()
 {
     if (running_)
     {
-        stop();
+        stopImpl_();
     }
     
     dispatch_release(sem_);
