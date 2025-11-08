@@ -22,7 +22,7 @@ jobs:
 
     - uses: gerlero/brew-install@v1
       with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 llvm@21
 
     - name: Build freedv-gui
       shell: bash
@@ -30,14 +30,14 @@ jobs:
       run: |
         mkdir build_osx
         cd build_osx
-        CC=$(brew --prefix llvm@18)/bin/clang CXX=$(brew --prefix llvm@18)/bin/clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@18)/bin/clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
         make -j$(nproc) build_mimalloc build_rade build_codec2
     
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
-        export PATH=$(brew --prefix llvm@18)/bin:$PATH
+        export PATH=$(brew --prefix llvm@21)/bin:$PATH
         run-clang-tidy -p .
 
   test:
