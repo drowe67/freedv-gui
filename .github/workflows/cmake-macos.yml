@@ -27,7 +27,7 @@ jobs:
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "20.1.8"
+        version: "20.1"
 
     - name: Build freedv-gui
       shell: bash
