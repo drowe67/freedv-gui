@@ -41,6 +41,7 @@ jobs:
         mkdir build_linux
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        make -j$(nproc)
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
