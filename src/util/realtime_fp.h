@@ -37,6 +37,7 @@ public:
 
   realtime_fp() = default;
   realtime_fp(impl_t f) : mImpl{ f } {}
+
   virtual ~realtime_fp() = default;
 
   virtual R operator()(Args... args) const FREEDV_NONBLOCKING

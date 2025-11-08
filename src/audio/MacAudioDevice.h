@@ -87,6 +87,7 @@ private:
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
 
+    void stopImpl_();
     void joinWorkgroup_();
     void leaveWorkgroup_();
     

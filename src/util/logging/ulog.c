@@ -637,11 +637,11 @@ static void process_callback(ulog_Event *ev, Callback *cb) {
             time_t t = time(NULL);
             struct tm* buf = malloc(sizeof(struct tm));
             assert(buf != NULL);
-#if defined(WIN32)
             ev->time = buf;
+#if defined(WIN32)
             localtime_s(buf, &t);
 #else
-            ev->time = localtime_r(&t, buf);
+            localtime_r(&t, buf);
 #endif // defined(WIN32)
         }
 #endif  // FEATURE_TIME

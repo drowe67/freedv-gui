@@ -301,7 +301,7 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
             }
         }
     }
-    rms = sqrt(rms / symSize);
+    rms = sqrtf(rms / symSize);
 
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)

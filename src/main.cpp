@@ -229,7 +229,7 @@ static void LogLockFunction_(bool lock, void *)
 }
 
 template<int soundCardId, bool isOut>
-void MainFrame::handleAudioDeviceChange_(std::string newDeviceName)
+void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
 {
     wxString devName = wxString::FromUTF8(newDeviceName.c_str());
     if (soundCardId == 1)
@@ -1346,7 +1346,7 @@ MainFrame::~MainFrame()
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     
-    int mode;
+    int mode = FREEDV_MODE_RADE;
     if (m_rb1600->GetValue())
         mode = 0;
     if (m_rb700d->GetValue())
@@ -1448,20 +1448,22 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     bool txState = false;
     int syncState = 0;
 
-    if (!m_RxRunning || !evt.GetTimer().IsRunning())
+    auto& timer = evt.GetTimer();
+    auto timerId = timer.GetId();
+    if (!m_RxRunning || !timer.IsRunning())
     {
         return;
     }
     
     // Most plots don't need TX/sync state.
-    if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
+    if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         syncState_ = freedvInterface.getSync();
     }
     syncState = syncState_;
 
-    if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
+    if (timerId == ID_TIMER_PSKREPORTER)
     {
         // Reporter timer fired; send in-progress packet.
         for (auto& obj : wxGetApp().m_reporters)
@@ -1469,7 +1471,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             obj->send();
         }
     }
-    else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
+    else if (timerId == ID_TIMER_UPD_FREQ)
     {
         // show freq. and mode [UP]
         if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
@@ -1478,7 +1480,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
-     else if (evt.GetTimer().GetId() == ID_TIMER_WATERFALL)
+     else if (timerId == ID_TIMER_WATERFALL)
      {
           if (m_panelWaterfall->checkDT()) {
               if (g_mode == FREEDV_MODE_RADE)
@@ -1496,7 +1498,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               m_panelWaterfall->refreshData();
           }
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPECTRUM)
+      else if (timerId == ID_TIMER_SPECTRUM)
       {
           if (g_mode == FREEDV_MODE_RADE)
           {
@@ -1515,7 +1517,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->m_newdata = true;
           m_panelSpectrum->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SCATTER)
+      else if (timerId == ID_TIMER_SCATTER)
       {
           if (freedvInterface.isRunning()) {
               int currentMode = freedvInterface.getCurrentMode();
@@ -1558,7 +1560,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
           m_panelScatter->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+      else if (timerId == ID_TIMER_SPEECH_IN)
       {
           if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
@@ -1566,14 +1568,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechIn->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_OUT)
+      else if (timerId == ID_TIMER_SPEECH_OUT)
       {
           if (g_plotSpeechOutFifo.read(speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechOut->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+      else if (timerId == ID_TIMER_DEMOD_IN)
       {
           if (g_plotDemodInFifo.read(demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
@@ -1581,12 +1583,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_TIME_OFFSET)
+      else if (timerId == ID_TIMER_TIME_OFFSET)
       {
           m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
           m_panelTimeOffset->refreshData();
       }
-      else if (evt.GetTimer().GetId() == ID_TIMER_FREQ_OFFSET)
+      else if (timerId == ID_TIMER_FREQ_OFFSET)
       {
           m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
           m_panelFreqOffset->refreshData();
@@ -1595,6 +1597,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      {
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
+         memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
          while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
          {
              g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
@@ -2070,14 +2073,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         VoiceKeyerProcessEvent(VK_DT);
     }
     
-    if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN ||
-        evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN)
+    if (timerId == ID_TIMER_SPEECH_IN ||
+        timerId == ID_TIMER_DEMOD_IN)
     {
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
         float tooHighThresh;
-        if (evt.GetTimer().GetId() == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
@@ -2093,7 +2096,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             tooHighThresh = FROM_RADIO_MAX;
             updated = true;
         }
-        else if (evt.GetTimer().GetId() == ID_TIMER_SPEECH_IN)
+        else if (timerId == ID_TIMER_SPEECH_IN)
         {
             // transmit mode - display From Mic peaks
 
@@ -2813,7 +2816,7 @@ void MainFrame::startRxStream()
         m_RxRunning = true;
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->setOnEngineError([](IAudioEngine& dev, std::string error, void* state) { 
+        engine->setOnEngineError([](IAudioEngine& dev, std::string const& error, void* state) { 
             MainFrame* castedThis = (MainFrame*)state;
             castedThis->onAudioEngineError_(dev, error, state); 
         }, this);
@@ -2909,7 +2912,7 @@ void MainFrame::startRxStream()
                 rxInSoundDevice->setDescription("Radio to FreeDV");
                 rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, std::move(newDeviceName));
                 }, this);
             }
             
@@ -2925,7 +2928,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -2977,7 +2980,7 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setDescription("Mic to FreeDV");
                 txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, std::move(newDeviceName));
                 }, nullptr);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
@@ -3009,7 +3012,7 @@ void MainFrame::startRxStream()
                 txOutSoundDevice->setDescription("FreeDV to Radio");
                 txOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, true>, std::move(newDeviceName));
                 }, this);
                 txOutSoundDevice->setOnAudioData(&OnTxOutAudioData_, g_rxUserdata);
         
@@ -3043,7 +3046,7 @@ void MainFrame::startRxStream()
                 rxInSoundDevice->setDescription("Radio to FreeDV");
                 rxInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<1, false>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -3059,7 +3062,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice->setDescription("FreeDV to Speaker");
                 rxOutSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
-                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, newDeviceName);
+                    castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, true>, std::move(newDeviceName));
                 }, this);
             }
  
@@ -3534,9 +3537,9 @@ void MainFrame::onQsyRequest_(std::string callsign, uint64_t freqHz, std::string
     // than two arguments for CallAfter().
     QsyRequestArgs* args = new QsyRequestArgs;
     assert(args != nullptr);
-    args->callsign = callsign;
+    args->callsign = std::move(callsign);
     args->freqHz = freqHz;
-    args->message = message;
+    args->message = std::move(message);
 
     CallAfter(&MainFrame::onQsyRequestUIThread_, args);
 }
@@ -3594,7 +3597,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     }
 }
 
-void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void*)
+void MainFrame::onAudioEngineError_(IAudioEngine&, std::string const& error, void*)
 {
      executeOnUiThreadAndWait_([&, error]() {
          wxMessageBox(wxString::Format(
@@ -3605,10 +3608,10 @@ void MainFrame::onAudioEngineError_(IAudioEngine&, std::string error, void*)
 
 void MainFrame::onAudioDeviceError_(std::string error)
 {
-    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", std::move(error)), wxT("Error"), wxOK);
 }
 
-void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string error, void* state)
+void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string const& error, void* state)
 {
     MainFrame* castedState = (MainFrame*)state;
     log_error("%s", error.c_str());

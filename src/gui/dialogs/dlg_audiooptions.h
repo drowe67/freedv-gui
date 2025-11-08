@@ -60,13 +60,13 @@ class AudioOptsDialog : public wxDialog
         bool            m_isPaInitialized;
 
         void buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
-                               wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
-        void plotDeviceInputForAFewSecs(wxString devName, PlotScalar *plotScalar);
-        void plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *plotScalar);
+                               wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString const& buttonLabel);
+        void plotDeviceInputForAFewSecs(wxString const& devName, PlotScalar *plotScalar);
+        void plotDeviceOutputForAFewSecs(wxString const& devName, PlotScalar *plotScalar);
 
-        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out);
+        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString const& devName, int in_out);
         void populateParams(AudioInfoDisplay);
-        bool setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName);
+        bool setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString const& devName);
         void audioEngineInit(void);
         void OnDeviceSelect(wxComboBox *cbSampleRate, 
                             wxTextCtrl *textCtrl, 

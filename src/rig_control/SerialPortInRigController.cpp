@@ -25,7 +25,7 @@
 #define PTT_INPUT_MONITORING_TIME_MS 10
 
 SerialPortInRigController::SerialPortInRigController(std::string serialPort, bool ctsPos)
-    : SerialPortRigController(serialPort)
+    : SerialPortRigController(std::move(serialPort))
     , threadExiting_(false)
     , ctsPos_(ctsPos)
     , currentPttInputState_(false)

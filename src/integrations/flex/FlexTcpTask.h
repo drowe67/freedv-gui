@@ -32,8 +32,8 @@ public:
     enum TxState { RECEIVING, TRANSMITTING, ENDING_TX };
     using WaveformConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformTransmitFn = std::function<void(FlexTcpTask&, TxState, void*)>;
-    using WaveformCallsignRxFn = std::function<void(FlexTcpTask&, std::string, void*)>;
-    using WaveformGridSquareUpdateFn = std::function<void(FlexTcpTask&, std::string, void*)>;
+    using WaveformCallsignRxFn = std::function<void(FlexTcpTask&, std::string const&, void*)>;
+    using WaveformGridSquareUpdateFn = std::function<void(FlexTcpTask&, std::string const&, void*)>;
     using WaveformFreqChangeFn = std::function<void(FlexTcpTask&, uint64_t, void*)>;
     using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
@@ -43,47 +43,47 @@ public:
     
     void setWaveformConnectedFn(WaveformConnectedFn fn, void* state)
     {
-        waveformConnectedFn_ = fn;
+        waveformConnectedFn_ = std::move(fn);
         waveformConnectedState_ = state;
     }
     
     void setWaveformTransmitFn(WaveformTransmitFn fn, void* state)
     {
-        waveformTransmitFn_ = fn;
+        waveformTransmitFn_ = std::move(fn);
         waveformTransmitState_ = state;
     }
 
     void setWaveformCallsignRxFn(WaveformCallsignRxFn fn, void* state)
     {
-        waveformCallsignRxFn_ = fn;
+        waveformCallsignRxFn_ = std::move(fn);
         waveformCallsignRxState_ = state;
     }
     
     void setWaveformFreqChangeFn(WaveformFreqChangeFn fn, void* state)
     {
-        waveformFreqChangeFn_ = fn;
+        waveformFreqChangeFn_ = std::move(fn);
         waveformFreqChangeState_ = state;
     }
     
     void setWaveformUserConnectedFn(WaveformUserConnectedFn fn, void* state)
     {
-        waveformUserConnectedFn_ = fn;
+        waveformUserConnectedFn_ = std::move(fn);
         waveformUserConnectedState_ = state;
     }
     
     void setWaveformUserDisconnectedFn(WaveformUserDisconnectedFn fn, void* state)
     {
-        waveformUserDisconnectedFn_ = fn;
+        waveformUserDisconnectedFn_ = std::move(fn);
         waveformUserDisconnectedState_ = state;
     }
 
     void setWaveformGridSquareUpdateFn(WaveformGridSquareUpdateFn fn, void* state)
     {
-        waveformGridSquareUpdateFn_ = fn;
+        waveformGridSquareUpdateFn_ = std::move(fn);
         waveformGridSquareUpdateState_ = state;
     }
 
-    void addSpot(std::string callsign);
+    void addSpot(std::string const& callsign);
 
 protected:
     virtual void onConnect_() override;
@@ -140,11 +140,11 @@ private:
     void commandResponseTimeout_(ThreadedTimer&);
 
     void initializeWaveform_();
-    void createWaveform_(std::string name, std::string shortName, std::string underlyingMode);
+    void createWaveform_(std::string const& name, std::string const& shortName, std::string const& underlyingMode);
     void cleanupWaveform_();
     
-    void sendRadioCommand_(std::string command);
-    void sendRadioCommand_(std::string command, std::function<void(unsigned int rv, std::string message)> fn);
+    void sendRadioCommand_(std::string const& command);
+    void sendRadioCommand_(std::string const& command, std::function<void(unsigned int rv, std::string const& message)> fn);
     
     void processCommand_(std::string& command);
     void setFilter_(int low, int high);

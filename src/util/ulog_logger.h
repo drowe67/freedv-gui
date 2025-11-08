@@ -89,7 +89,7 @@ public:
 
 #ifdef _WEBSOCKETPP_MOVE_SEMANTICS_
     /// Move constructor
-    ulog(ulog<concurrency,names> && other)
+    ulog(ulog<concurrency,names> && other) noexcept
      : m_static_channels(other.m_static_channels)
      , m_dynamic_channels(other.m_dynamic_channels)
     {}

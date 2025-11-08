@@ -35,9 +35,9 @@ using namespace std::chrono_literals;
 ParallelStep::ParallelStep(
     int inputSampleRate, int outputSampleRate,
     bool runMultiThreaded,
-    realtime_fp<int(ParallelStep*)> inputRouteFn,
-    realtime_fp<int(ParallelStep*)> outputRouteFn,
-    std::vector<IPipelineStep*> parallelSteps,
+    realtime_fp<int(ParallelStep*)> const& inputRouteFn,
+    realtime_fp<int(ParallelStep*)> const& outputRouteFn,
+    std::vector<IPipelineStep*> const& parallelSteps,
     std::shared_ptr<void> state,
     void* callbackState,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
@@ -46,8 +46,8 @@ ParallelStep::ParallelStep(
     , runMultiThreaded_(runMultiThreaded)
     , inputRouteFn_(inputRouteFn)
     , outputRouteFn_(outputRouteFn)
-    , realtimeHelper_(realtimeHelper)
-    , state_(state)
+    , realtimeHelper_(std::move(realtimeHelper))
+    , state_(std::move(state))
     , callbackState_(callbackState)
 {
     for (auto& step : parallelSteps)

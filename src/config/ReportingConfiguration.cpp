@@ -84,7 +84,7 @@ ReportingConfiguration::ReportingConfiguration()
     , reportingDirectionAsCardinal("/Reporting/DirectionAsCardinal", false)
 {
     // Special handling for the frequency list to properly handle locales
-    reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> list) {
+    reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> const& list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {
@@ -125,7 +125,7 @@ ReportingConfiguration::ReportingConfiguration()
         return newList;
     });
 
-    reportingFrequencyList.setSaveProcessor([this](std::vector<wxString> list) {
+    reportingFrequencyList.setSaveProcessor([this](std::vector<wxString> const& list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {

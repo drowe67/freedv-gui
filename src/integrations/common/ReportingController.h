@@ -33,9 +33,9 @@ public:
     ReportingController(std::string softwareName, bool rxOnly = false);
     virtual ~ReportingController() = default;
 
-    void updateRadioCallsign(std::string newCallsign);
-    void updateRadioGridSquare(std::string newGridSquare);
-    void reportCallsign(std::string callsign, char snr);
+    void updateRadioCallsign(std::string const& newCallsign);
+    void updateRadioGridSquare(std::string const& newGridSquare);
+    void reportCallsign(std::string const& callsign, char snr);
     void showSelf();
     void hideSelf();
     void changeFrequency(uint64_t freqHz);

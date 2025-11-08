@@ -62,7 +62,7 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
     m_penDotDash        = wxPen(wxColor(0xD0, 0xD0, 0xD0), 1, wxPENSTYLE_DOT_DASH);
     m_penSolid          = wxPen(wxColor(0x00, 0x00, 0x00), 1, wxPENSTYLE_SOLID);
     SetBackgroundStyle(wxBG_STYLE_PAINT);
-    SetLabelSize(10.0);
+    m_label_size = 10.0;
 }
 
 //-------------------------------------------------------------------------

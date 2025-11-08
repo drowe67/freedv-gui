@@ -734,7 +734,7 @@ float FreeDVInterface::getSNREstimate()
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
     int inputSampleRate, 
     int outputSampleRate, 
-    realtime_fp<float()> getFreqOffsetFn,
+    realtime_fp<float()> const& getFreqOffsetFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -750,7 +750,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         pipeline->appendPipelineStep(radeTxStep_);
         return pipeline;
     }
- 
+
+    parallelSteps.reserve(dvObjects_.size()); 
     for (auto& dv : dvObjects_)
     {
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
@@ -784,7 +785,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         parallelSteps,
         nullptr,
         this,
-        realtimeHelper
+        std::move(realtimeHelper)
     );
     
     return parallelStep;
@@ -792,11 +793,11 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 
 IPipelineStep* FreeDVInterface::createReceivePipeline(
     int inputSampleRate, int outputSampleRate,
-    realtime_fp<std::atomic<int>*()> getRxStateFn,
-    realtime_fp<int()> getChannelNoiseFn,
-    realtime_fp<int()> getChannelNoiseSnrFn,
-    realtime_fp<float()> getFreqOffsetFn,
-    realtime_fp<float*()> getSigPwrAvgFn,
+    realtime_fp<std::atomic<int>*()> const& getRxStateFn,
+    realtime_fp<int()> const& getChannelNoiseFn,
+    realtime_fp<int()> const& getChannelNoiseSnrFn,
+    realtime_fp<float()> const& getFreqOffsetFn,
+    realtime_fp<float*()> const& getSigPwrAvgFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -867,7 +868,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         parallelSteps,
         state,
         this,
-        realtimeHelper
+        std::move(realtimeHelper)
     );
     
     return parallelStep;

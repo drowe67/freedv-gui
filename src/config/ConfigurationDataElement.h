@@ -28,7 +28,7 @@ template<typename UnderlyingDataType>
 class ConfigurationDataElement
 {
 public:
-    ConfigurationDataElement(const char* elementName, UnderlyingDataType defaultVal);
+    ConfigurationDataElement(const char* elementName, UnderlyingDataType const& defaultVal);
     virtual ~ConfigurationDataElement() = default;
     
     const char* getElementName() const;
@@ -58,7 +58,7 @@ private:
 };
 
 template<typename UnderlyingDataType>
-ConfigurationDataElement<UnderlyingDataType>::ConfigurationDataElement(const char* elementName, UnderlyingDataType defaultVal)
+ConfigurationDataElement<UnderlyingDataType>::ConfigurationDataElement(const char* elementName, UnderlyingDataType const& defaultVal)
     : elementName_(elementName)
     , data_(defaultVal)
     , default_(defaultVal)
@@ -107,7 +107,7 @@ UnderlyingDataType* ConfigurationDataElement<UnderlyingDataType>::operator->()
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType val)
 {
-    data_ = val;
+    data_ = std::move(val);
 }
 
 template<typename UnderlyingDataType>

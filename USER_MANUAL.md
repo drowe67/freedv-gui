@@ -873,6 +873,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
     * Force all compiler warnings to be errors. (PR #1076)
+    * Enable clang-tidy scans on codebase. (PR #1086)
 
 ## V2.0.2 October 2025
 

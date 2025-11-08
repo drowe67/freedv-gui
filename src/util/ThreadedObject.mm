@@ -47,7 +47,7 @@ ThreadedObject::~ThreadedObject()
     dispatch_release(queue_);
 }
 
-void ThreadedObject::enqueue_(std::function<void()> fn, int)
+void ThreadedObject::enqueue_(std::function<void()> fn, int) // NOLINT
 {
     // note: timeout not implemented
     dispatch_async(queue_, ^() {
