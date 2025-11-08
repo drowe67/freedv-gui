@@ -636,10 +636,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbDebugOptionsSizer->Add(m_ckboxTxRxThreadPriority, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxTxRxDumpTiming = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxTxRxDumpTiming, 0, wxALL | wxALIGN_LEFT, 5);
+    
     m_ckboxTxRxDumpFifoState = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxTxRxDumpFifoState, 0, wxALL | wxALIGN_LEFT, 5);   
     m_ckboxFreeDVAPIVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
+    m_showDecodeStats = new wxCheckBox(sb_fifo2, wxID_ANY, _("Show Decode Stats"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbDebugOptionsSizer2->Add(m_showDecodeStats, 0, wxALL | wxALIGN_LEFT, 5); 
     
     m_experimentalFeatures = new wxCheckBox(sb_fifo2, wxID_ANY, _("Enable Experimental Features"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer3->Add(m_experimentalFeatures, 0, wxALL | wxALIGN_LEFT, 5);   
@@ -906,6 +909,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
         m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
+        m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
         
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
        
@@ -1090,6 +1094,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         }
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
+        wxGetApp().appConfiguration.showDecodeStats = m_showDecodeStats->GetValue();
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
 

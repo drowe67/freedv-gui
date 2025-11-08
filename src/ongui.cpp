@@ -84,8 +84,8 @@ void MainFrame::OnToolsEasySetup(wxCommandEvent&)
     EasySetupDialog* dlg = new EasySetupDialog(this);
     if (dlg->ShowModal() == wxOK)
     {
-        // Show/hide frequency box based on PSK Reporter status.
-        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        // Show/hide frequency box based on CAT control setup.
+        m_freqBox->Show(isFrequencyControlEnabled_());
 
         // Show/hide callsign combo box based on PSK Reporter Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -207,8 +207,32 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Update reporting list.
         updateReportingFreqList_();
     
-        // Show/hide frequency box based on reporting status.
-        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        // Show/hide frequency box based on CAT control configuration.
+        m_freqBox->Show(isFrequencyControlEnabled_());
+        
+        // Show/hide stats box
+        statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+
+        // XXX - with really short windows, wxWidgets sometimes doesn't size
+        // the components properly until the user resizes the window (even if only
+        // by a pixel or two). As a really hacky workaround, we emulate this behavior
+        // when restoring window sizing. These resize events also happen after configuration
+        // is restored but I'm not sure this is necessary.
+        wxSize size = GetSize();
+        auto w = size.GetWidth();
+        auto h = size.GetHeight();
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w + 1, h + 1);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -235,11 +259,11 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Adjust frequency labels on main window
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_freqBox->SetLabel(_("Report Freq. (kHz)"));
+            m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
         }
         else
         {
-            m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+            m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
         }
 
         // If the "Frequency as kHz" option has changed, update the frequencies
@@ -300,6 +324,9 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 
     if (dlg->ShowModal() == wxID_OK)
     {
+        // Show/hide frequency box based on CAT control configuration.
+        m_freqBox->Show(isFrequencyControlEnabled_());
+        
         // Reinitialize FreeDV Reporter again in case we changed PTT method.
         initializeFreeDVReporter_();
     }
@@ -1393,11 +1420,11 @@ void MainFrame::updateReportingFreqList_()
     // Update associated label if the units have changed
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Report Freq. (kHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
     }
 }
 

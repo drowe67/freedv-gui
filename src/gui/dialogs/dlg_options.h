@@ -165,6 +165,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_ckboxVerbose;
         wxCheckBox    *m_ckboxFreeDVAPIVerbose;
         wxCheckBox    *m_experimentalFeatures;
+        wxCheckBox    *m_showDecodeStats;
         
         wxButton*     m_sdbSizer5OK;
         wxButton*     m_sdbSizer5Cancel;

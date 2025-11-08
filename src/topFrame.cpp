@@ -514,7 +514,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_ber;
-    wxStaticBox* statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(100,-1));
+    statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(100,-1));
     sbSizer_ber = new wxStaticBoxSizer(statsBox, wxVERTICAL);
 
     m_BtnBerReset = new wxButton(statsBox, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
@@ -768,7 +768,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
 
     // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
+    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
 
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     

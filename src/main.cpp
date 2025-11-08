@@ -762,11 +762,11 @@ void MainFrame::loadConfiguration_()
     // Adjust frequency entry labels
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Report Freq. (kHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
     }
     
     // PTT -------------------------------------------------------------------
@@ -891,8 +891,8 @@ setDefaultMode:
     m_ckboxSNR->SetValue(wxGetApp().appConfiguration.snrSlow);
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
     
-    // Show/hide frequency box based on reporting enablement
-    m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+    // Show/hide frequency box based on CAT control status
+    m_freqBox->Show(isFrequencyControlEnabled_());
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -951,6 +951,8 @@ setDefaultMode:
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
+    
+    statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1248,8 +1250,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             EasySetupDialog* dlg = new EasySetupDialog(this);
             if (dlg->ShowModal() == wxOK)
             {
-                // Show/hide frequency box based on PSK Reporter status.
-                m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+                // Show/hide frequency box based on CAT control configuration.
+                m_freqBox->Show(isFrequencyControlEnabled_());
 
                 // Show/hide callsign combo box based on PSK Reporter Status
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -3404,8 +3406,8 @@ bool MainFrame::validateSoundCardSetup()
             EasySetupDialog* dlg = new EasySetupDialog(this);
             if (dlg->ShowModal() == wxOK)
             {
-                // Show/hide frequency box based on PSK Reporter status.
-                m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+                // Show/hide frequency box based on CAT control status
+                m_freqBox->Show(isFrequencyControlEnabled_());
 
                 // Show/hide callsign combo box based on PSK Reporter Status
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
