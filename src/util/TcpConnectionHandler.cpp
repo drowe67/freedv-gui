@@ -717,7 +717,7 @@ socket_error:
                 constexpr int ERROR_BUFFER_LEN = 1024;
                 char tmpBuf[ERROR_BUFFER_LEN];
 #if defined(WIN32)
-                strerror_s(err, tmpBuf, ERROR_BUFFER_LEN);
+                strerror_s(tmpBuf, ERROR_BUFFER_LEN,  err);
                 log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
