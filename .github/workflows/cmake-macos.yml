@@ -22,7 +22,7 @@ jobs:
 
     - uses: gerlero/brew-install@v1
       with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 llvm@21
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 llvm@20
 
     - name: Build freedv-gui
       shell: bash
