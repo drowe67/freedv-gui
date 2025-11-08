@@ -23,7 +23,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core libebur128-dev libwxgtk3.2-dev pipewire pipewire-pulse wireplumber
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core libebur128-dev libwxgtk3.2-dev pipewire pipewire-pulse wireplumber python3-numpy python3-numpy-dev python3-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -41,7 +41,8 @@ jobs:
         mkdir build_linux
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
-        make -j$(nproc)
+        # Partially build so we have all required .h and .c/.cpp files
+        make -j$(nproc) build_rade build_codec2
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
