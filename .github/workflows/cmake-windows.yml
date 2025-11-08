@@ -85,7 +85,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-          clang-tidy -p .
+          run-clang-tidy -p .
 
     - name: Calculate installer filename
       shell: bash
