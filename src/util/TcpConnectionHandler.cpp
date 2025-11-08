@@ -716,10 +716,12 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
 socket_error:
                 constexpr int ERROR_BUFFER_LEN = 1024;
                 char tmpBuf[ERROR_BUFFER_LEN];
-                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
 #if defined(WIN32)
+                strerror_s(err, tmpBuf, ERROR_BUFFER_LEN);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
+                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
                 close(sock);
 #endif // defined(WIN32)
                 socketsToDelete.push_back(sock);
