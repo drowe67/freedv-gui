@@ -37,7 +37,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
-        run-clang-tidy-21 -p .
+        $(brew --prefix llvm)/bin/run-clang-tidy -p .
 
   test:
     strategy:
