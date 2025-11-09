@@ -27,6 +27,7 @@
 #include "FlexKeyValueParser.h"
 
 #include "../util/logging/ulog.h"
+#include "git_version.h"
 
 using namespace std::placeholders;
 using namespace std::chrono_literals;
@@ -175,11 +176,29 @@ void FlexTcpTask::createWaveform_(std::string const& name, std::string const& sh
     sendRadioCommand_(std::string("waveform remove ") + name);
 
     // Actually create the waveform.
-    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=2.0.0";
+    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=" + GetFreeDVVersion();
     std::string setPrefix = "waveform set " + name + " ";
-    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string const&) {
+    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string const& res) {
         if (rv == 0)
         {
+            std::stringstream paramsSS(res);
+            auto params = FlexKeyValueParser::GetCommandParameters(paramsSS, ' ');
+
+            log_info(
+                "Waveform registered, got IDs txin=%s txout=%s rxin=%s rxout=%s", 
+                params["tx_stream_in_id"].c_str(), params["tx_stream_out_id"].c_str(), 
+                params["rx_stream_in_id"].c_str(), params["rx_stream_out_id"].c_str());
+
+            uint32_t txInStreamId = strtol(params["tx_stream_in_id"].c_str(), nullptr, 0);
+            uint32_t rxInStreamId = strtol(params["rx_stream_in_id"].c_str(), nullptr, 0);
+            uint32_t txOutStreamId = strtol(params["tx_stream_out_id"].c_str(), nullptr, 0);
+            uint32_t rxOutStreamId = strtol(params["rx_stream_out_id"].c_str(), nullptr, 0);
+
+            if (waveformAddValidStreamIdentifiersFn_)
+            {
+                waveformAddValidStreamIdentifiersFn_(*this, txInStreamId, txOutStreamId, rxInStreamId, rxOutStreamId, waveformAddValidStreamIdentifiersState_);
+            }
+
             // Set the filter-related settings for the just-created waveform.
             sendRadioCommand_(setPrefix + "tx=1");
             sendRadioCommand_(setPrefix + "rx_filter depth=256");
@@ -265,7 +284,10 @@ void FlexTcpTask::processCommand_(std::string& command)
         // If we have a valid command handler, call it now
         if (responseHandlers_[seq])
         {
-            responseHandlers_[seq](rv, ss.str());
+            std::string resultStr;
+            std::getline(ss, resultStr);
+            resultStr.erase(0, 1); // erase | at beginning
+            responseHandlers_[seq](rv, resultStr);
         }
         responseHandlers_.erase(seq);
 

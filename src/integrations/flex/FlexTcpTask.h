@@ -38,6 +38,7 @@ public:
     using WaveformFreqChangeFn = std::function<void(FlexTcpTask&, uint64_t, void*)>;
     using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
+    using WaveformAddValidStreamIdentifiersFn = std::function<void(FlexTcpTask&, uint32_t, uint32_t, uint32_t, uint32_t, void*)>;
 
     FlexTcpTask(int vitaPort);
     virtual ~FlexTcpTask();
@@ -84,6 +85,12 @@ public:
         waveformGridSquareUpdateState_ = state;
     }
 
+    void setWaveformAddValidStreamIdentifiersFn(WaveformAddValidStreamIdentifiersFn fn, void* state)
+    {
+        waveformAddValidStreamIdentifiersFn_ = std::move(fn);
+        waveformAddValidStreamIdentifiersState_ = state;
+    }
+
     void addSpot(std::string const& callsign);
 
 protected:
@@ -112,6 +119,9 @@ private:
 
     WaveformGridSquareUpdateFn waveformGridSquareUpdateFn_;
     void* waveformGridSquareUpdateState_;
+
+    WaveformAddValidStreamIdentifiersFn waveformAddValidStreamIdentifiersFn_;
+    void* waveformAddValidStreamIdentifiersState_;
 
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;

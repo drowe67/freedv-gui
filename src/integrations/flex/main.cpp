@@ -226,6 +226,7 @@ int main(int, char**)
         reportController.updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
+        vitaTask.clearStreamIds();
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
@@ -254,6 +255,10 @@ int main(int, char**)
             reportController.transmit(txFlag);
         }
     }, nullptr);
+    tcpTask.setWaveformAddValidStreamIdentifiersFn([&](FlexTcpTask&, uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId, void*) {
+        vitaTask.registerStreamIds(txInStreamId, txOutStreamId, rxInStreamId, rxOutStreamId);
+    }, nullptr);
+
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         
     for(;;)

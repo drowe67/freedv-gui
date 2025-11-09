@@ -312,6 +312,21 @@ void FlexVitaTask::sendAudioOut_()
     }
 }
 
+void FlexVitaTask::clearStreamIds()
+{
+    log_info("Clearing registered stream IDs");
+
+    txStreamIds_.clear();
+    rxStreamIds_.clear();
+}
+
+void FlexVitaTask::registerStreamIds(uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId)
+{
+    log_info("Registering stream IDs: txin=%" PRIu32 " txout=%" PRIu32 " rxin=%" PRIu32 " rxout=%" PRIu32, txInStreamId, txOutStreamId, rxInStreamId, rxOutStreamId);
+    txStreamIds_[txInStreamId] = txOutStreamId;
+    rxStreamIds_[rxInStreamId] = rxOutStreamId;
+}
+
 void FlexVitaTask::radioConnected(const char* ip)
 {
     enqueue_([this, ip]() {
@@ -371,13 +386,18 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             if (!(htonl(packet->stream_id) & 0x0001u)) 
             {
                 // Packet contains receive audio from radio.
+                rxStreamId_ = rxStreamIds_[htonl(packet->stream_id)];
+                if (rxStreamId_ == 0) return;
                 rxStreamId_ = packet->stream_id;
                 inFifo = getAudioInput_(false);
             } 
             else 
             {
                 // Packet contains transmit audio from user's microphone.
+                txStreamId_ = txStreamIds_[htonl(packet->stream_id)];
+                if (txStreamId_ == 0) return;
                 txStreamId_ = packet->stream_id;
+                //log_info("outputting on stream %08x, input on %08x", txStreamId_, packet->stream_id);
                 inFifo = getAudioInput_(true);
             }
            
