@@ -48,6 +48,7 @@ ThreadedTimer::TimerServer::~TimerServer()
 void ThreadedTimer::TimerServer::registerTimer(ThreadedTimer* timer)
 {
     std::unique_lock<std::mutex> lk(mutex_);
+    timer->nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timer->timeoutMilliseconds_);
     timerQueue_.push(timer);
     timerCV_.notify_one(); // update wait time
 }
