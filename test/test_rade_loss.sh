@@ -15,7 +15,11 @@ fi
 createVirtualAudioCable () {
     CABLE_NAME=$1
     pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
-    until (pactl list short sinks | grep -E "^[0-9]+\\s+${CABLE_NAME}\\s+")
+}
+
+waitForCableUp () {
+    CABLE_NAME=$1
+    until (pactl list short sinks | grep -E "^[0-9]+\\s+${CABLE_NAME}\\s+" >/dev/null)
     do
         echo "Waiting for $CABLE_NAME to come up..."
         sleep 1;
@@ -32,9 +36,13 @@ FREEDV_COMPUTER_TO_RADIO_DEVICE="${FREEDV_COMPUTER_TO_RADIO_DEVICE:-FreeDV_Compu
 # does not work in Windows.
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Radio_To_Computer)
+    waitForCableUp FreeDV_Radio_To_Computer
     DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
+    waitForCableUp FreeDV_Computer_To_Speaker
     DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
+    waitForCableUp FreeDV_Microphone_To_Computer
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
+    waitForCableUp FreeDV_Computer_To_Radio
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
