@@ -31,6 +31,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
+#include <queue>
+#include <chrono>
 #include <functional>
 #include <atomic>
 
@@ -52,28 +54,52 @@ public:
     void restart();
     
     bool isRunning();
-    
+
 private:
+#if !defined(__APPLE__)
+    class TimerServer
+    {
+    public:
+        TimerServer();
+        virtual ~TimerServer();
+
+        void registerTimer(ThreadedTimer* timer);
+        void unregisterTimer(ThreadedTimer* timer);
+
+    private:
+        struct FireTimeComparator
+        {
+            inline bool operator()(const ThreadedTimer* lhs, const ThreadedTimer* rhs)
+            {
+                return lhs->nextFireTime_ < rhs->nextFireTime_;
+            }
+        };
+
+        std::mutex mutex_;
+        std::atomic<bool> isDestroying_;
+        std::thread objectThread_;
+        std::condition_variable timerCV_;
+        std::priority_queue<ThreadedTimer*, std::vector<ThreadedTimer*>, FireTimeComparator> timerQueue_;
+        void eventLoop_();
+    };
+
+    bool isRunning_;
+    std::chrono::time_point<std::chrono::steady_clock> nextFireTime_;
+
+    static TimerServer TheTimerServer_;
+#endif // !defined(__APPLE__)
+
     std::mutex timerMutex_;
-    std::atomic<bool> isDestroying_;
-    std::atomic<bool> isRestarting_;
     
 #if defined(__APPLE__)
     dispatch_source_t internalTimer_;
     
     static void OnHandleTimer_(void* context);
-#else
-    std::thread objectThread_;
-    std::condition_variable timerCV_;
 #endif // defined(__APPLE__)
     
     TimerCallbackFn fn_;
     bool repeat_;
     int timeoutMilliseconds_;
-
-#if !defined(__APPLE__)
-    void eventLoop_();
-#endif // !defined(__APPLE__)
 };
 
 #endif // THREADED_TIMER_H

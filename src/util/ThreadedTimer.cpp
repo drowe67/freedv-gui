@@ -28,22 +28,120 @@
 
 #define PERCENT_TOLERANCE 0.05
 
-ThreadedTimer::ThreadedTimer()
+#if !defined(__APPLE__)
+ThreadedTimer::TimerServer ThreadedTimer::TheTimerServer_;
+
+ThreadedTimer::TimerServer::TimerServer()
     : isDestroying_(false)
-    , isRestarting_(false)
+    , objectThread_(std::bind(&ThreadedTimer::TimerServer::eventLoop_, this))
+{
+    // empty
+}
+
+ThreadedTimer::TimerServer::~TimerServer()
+{
+    isDestroying_ = true;
+    timerCV_.notify_one();
+    objectThread_.join();
+}
+
+void ThreadedTimer::TimerServer::registerTimer(ThreadedTimer* timer)
+{
+    std::unique_lock<std::mutex> lk(mutex_);
+    timerQueue_.push(timer);
+    timerCV_.notify_one(); // update wait time
+}
+
+void ThreadedTimer::TimerServer::unregisterTimer(ThreadedTimer* timer)
+{
+    std::unique_lock<std::mutex> lk(mutex_);
+
+    // XXX - need to find a more optimal way of doing this
+    std::vector<ThreadedTimer*> tmpTimerList;
+    while (!timerQueue_.empty())
+    {
+        auto tmp = timerQueue_.top();
+        timerQueue_.pop();
+
+        if (tmp != timer)
+        {
+            tmpTimerList.push_back(tmp);
+        }
+    }
+
+    for (auto& tmp : tmpTimerList)
+    {
+        timerQueue_.push(tmp);
+    }
+    timerCV_.notify_one(); // update wait time
+}
+
+void ThreadedTimer::TimerServer::eventLoop_()
+{
+    std::chrono::time_point<std::chrono::steady_clock> nextWaitTime;
+
+    while (!isDestroying_.load(std::memory_order_acquire))
+    {
+        std::unique_lock<std::mutex> lk(mutex_);
+
+        if (timerQueue_.empty())
+        {
+            timerCV_.wait(lk, [&]() {
+                return isDestroying_.load(std::memory_order_acquire);
+            });
+        }
+        else
+        {
+            nextWaitTime = timerQueue_.top()->nextFireTime_;
+            timerCV_.wait_until(lk, nextWaitTime, [&]() { 
+                return isDestroying_.load(std::memory_order_acquire);
+            });
+        }
+
+        auto currentTime = std::chrono::steady_clock::now();
+
+        // Execute timers that have fired.
+        while (
+            !isDestroying_.load(std::memory_order_acquire) && 
+            !timerQueue_.empty() && timerQueue_.top()->nextFireTime_ <= currentTime)
+        {
+            auto& tmpTimer = timerQueue_.top();
+
+            // Set next fire time if repeating, otherwise deregister
+            // NOTE: we have to drop the lock here to avoid deadlocks.
+            timerQueue_.pop();
+            lk.unlock();
+            if (tmpTimer->repeat_)
+            {
+                registerTimer(tmpTimer);
+            }
+            else
+            {
+                std::unique_lock<std::mutex> timerLock(tmpTimer->timerMutex_);
+                tmpTimer->isRunning_ = false; 
+            }
+
+            tmpTimer->fn_(*tmpTimer);
+            lk.lock();
+        }        
+    }
+}
+#endif // !defined(__APPLE__)
+
+ThreadedTimer::ThreadedTimer()
+    : 
 #if defined(__APPLE__)
-    , internalTimer_(nullptr)
+      internalTimer_(nullptr)
 #endif // defined(__APPLE__)
-    , repeat_(false)
+      repeat_(false)
     , timeoutMilliseconds_(0)
 {
     // empty
 }
 
 ThreadedTimer::ThreadedTimer(int milliseconds, TimerCallbackFn fn, bool repeat)
-    : isDestroying_(false)
 #if defined(__APPLE__)
-    , internalTimer_(nullptr)
+    : internalTimer_(nullptr)
 #endif // defined(__APPLE__)
 {
     setTimeout(milliseconds);
@@ -79,7 +177,7 @@ bool ThreadedTimer::isRunning()
 #if defined(__APPLE__)
     return internalTimer_ != nullptr;
 #else
-    return objectThread_.joinable();
+    return isRunning_;
 #endif // defined(__APPLE__)
 }
     
@@ -103,15 +201,15 @@ void ThreadedTimer::start()
         }
     }
 #else
-    isDestroying_.store(false, std::memory_order_release);
-    objectThread_ = std::thread(std::bind(&ThreadedTimer::eventLoop_, this));
+    TheTimerServer_.registerTimer(this);
+    isRunning_ = true;
 #endif // defined(__APPLE__)
 }
 
 void ThreadedTimer::stop()
 {
-#if defined(__APPLE__)
     std::unique_lock<std::mutex> lk(timerMutex_);
+#if defined(__APPLE__)
     if (internalTimer_ != nullptr)
     {
         dispatch_source_cancel(internalTimer_);
@@ -119,31 +217,15 @@ void ThreadedTimer::stop()
         internalTimer_ = nullptr;
     }
 #else
-    if (objectThread_.joinable())
-    {
-        isDestroying_.store(true, std::memory_order_release);
-        timerCV_.notify_one();
-        objectThread_.join();
-    }
+    TheTimerServer_.unregisterTimer(this);
+    isRunning_ = false;
 #endif // defined(__APPLE__)
 }
 
 void ThreadedTimer::restart()
 {
-#if defined(__APPLE__)
     stop();
     start();
-#else
-    if (objectThread_.joinable())
-    {
-        isRestarting_.store(true, std::memory_order_release);
-        timerCV_.notify_one();
-    }
-    else
-    {
-        start();
-    }
-#endif // defined(__APPLE__)
 }
 
 #if defined(__APPLE__)
@@ -158,27 +240,5 @@ void ThreadedTimer::OnHandleTimer_(void* context)
         std::unique_lock<std::mutex> lk(thisObj->timerMutex_);
         thisObj->fn_(*thisObj);
     }
-}
-#else
-void ThreadedTimer::eventLoop_()
-{
-#if defined(__APPLE__)
-    // Downgrade thread QoS to Utility to avoid thread contention issues.
-    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
-#endif // defined(__APPLE__)
-
-    do
-    {
-        std::unique_lock<std::mutex> lk(timerMutex_);
-        isRestarting_.store(false, std::memory_order_release);
-        if (!timerCV_.wait_for(lk, std::chrono::milliseconds(timeoutMilliseconds_), [&]() { 
-            return 
-                isDestroying_.load(std::memory_order_acquire) || 
-                isRestarting_.load(std::memory_order_acquire);
-            }) && fn_)
-        {
-            fn_(*this);
-        }
-    } while (!isDestroying_.load(std::memory_order_acquire) && (isRestarting_.load(std::memory_order_acquire) || repeat_));
 }
 #endif // !defined(__APPLE__)
