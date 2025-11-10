@@ -102,7 +102,7 @@ function Test-FreeDV {
     Write-Host "$err_output"
 
     $syncs = ($err_output -split "`r?`n") | Where { $_.Contains("Sync changed") }
-    if ($syncs.Count -eq 1) {
+    if (($process.ExitCode -eq 0) -and ($syncs.Count -eq 1)) {
         return $true
     }
     return $false
