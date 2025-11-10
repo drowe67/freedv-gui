@@ -344,7 +344,7 @@ void TcpConnectionHandler::connectImpl_()
 
         // Check socket list to see if there have been any connections yet.
         checkConnections_(pendingSockets);
-        if (socket_ > 0)
+        if (socket_ != INVALID_SOCKET)
         {
             break;
         }
@@ -484,7 +484,7 @@ next_fd:
 
 void TcpConnectionHandler::disconnectImpl_()
 {
-    if (socket_ > 0)
+    if (socket_ != INVALID_SOCKET)
     {
         auto tmp = socket_.load();
         socket_ = INVALID_SOCKET;
@@ -511,7 +511,7 @@ void TcpConnectionHandler::disconnectImpl_()
 
 void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 {
-    if (socket_ > 0)
+    if (socket_ != INVALID_SOCKET)
     {
         // Simulate blocking socket for write. Most of the time this should
         // complete immediately anyway.
@@ -585,7 +585,7 @@ void TcpConnectionHandler::receiveImpl_()
         FD_SET(socket_, &readSet);
 
         int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
-        if (rv > 0)
+        if (rv > 0 && socket_ != INVALID_SOCKET)
         {
             int numRead = 0;
             int numHaveRead = 0;
