@@ -744,9 +744,9 @@ void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 #ifdef WIN32
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    hints.ai_flags = AI_ADDRCONFIG;
 #else
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
+    hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
 #endif // WIN32
     int err = getaddrinfo(host, port, &hints, result);
     if (err != 0) 
