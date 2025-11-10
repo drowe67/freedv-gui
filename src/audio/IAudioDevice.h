@@ -43,7 +43,7 @@ public:
     typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*) FREEDV_NONBLOCKING;
     typedef void (*AudioUnderflowCallbackFn)(IAudioDevice&, void*);
     typedef void (*AudioOverflowCallbackFn)(IAudioDevice&, void*);
-    typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string, void*);
+    typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string const&, void*);
     typedef void (*AudioDeviceChangedCallbackFn)(IAudioDevice&, std::string, void*);
     
     virtual int getNumChannels() FREEDV_NONBLOCKING = 0;

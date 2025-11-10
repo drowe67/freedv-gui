@@ -49,7 +49,7 @@ void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, C
     config->Write(configElement.getElementName(), val);
 }
 
-wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> vec)
+wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> const& vec)
 {
     wxString rv = "";
     
@@ -68,7 +68,7 @@ wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> ve
     return rv;
 }
 
-std::vector<wxString> WxWidgetsConfigStore::generateArayFromString_(wxString str)
+std::vector<wxString> WxWidgetsConfigStore::generateArayFromString_(wxString const& str)
 {
     std::vector<wxString> rv;
     

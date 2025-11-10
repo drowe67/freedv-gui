@@ -434,9 +434,9 @@ void ComPortsDlg::populatePortList()
 #if defined(__FreeBSD__)
     if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 || // NOLINT
 #endif // defined(__FreeBSD__)
-       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) { // NOLINT
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;
@@ -468,7 +468,7 @@ void ComPortsDlg::populatePortList()
     }
 #else
     glob_t    gl;
-    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0) 
+    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0)  // NOLINT
     {
         wxRegEx pathRegex("/sys/class/tty/([^/]+)");
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
@@ -484,7 +484,7 @@ void ComPortsDlg::populatePortList()
     }
 
     // Support /dev/serial as well
-    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0)
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
     {
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
         {
@@ -721,7 +721,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
                     (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8) );
 
-            hamlib->onRigError += [=](IRigController*, std::string error) {
+            hamlib->onRigError += [=](IRigController*, std::string const& error) {
                 CallAfter([=]() {
                     wxMessageBox(wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -785,7 +785,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 m_rbUseDTR->GetValue(),
                 m_ckDTRPos->IsChecked());
 
-            serialPort->onRigError += [=](IRigController*, std::string error)
+            serialPort->onRigError += [=](IRigController*, std::string const& error)
             {
                 CallAfter([=]() {
                     wxString errorMessage = wxString::Format("Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port.", ctrlport, error);

@@ -29,11 +29,10 @@ MuteStep::MuteStep(int outputSampleRate)
     : sampleRate_(outputSampleRate)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(sampleRate_);
     assert(outputSamples_ != nullptr);
 
-    memset(outputSamples_.get(), 0, sizeof(short) * maxSamples);
+    memset(outputSamples_.get(), 0, sizeof(short) * sampleRate_);
 }
     
 // Executes pipeline step.

@@ -151,7 +151,7 @@ void AudioPipeline::reloadResampler_(int index)
         }
     }
     
-    resamplers_[index] = std::unique_ptr<ResampleStep>(resampleStep);
+    resamplers_[index] = std::unique_ptr<ResampleStep>(resampleStep); // NOLINT
 }
 
 void AudioPipeline::reloadResultResampler_()

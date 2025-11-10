@@ -571,7 +571,7 @@ void FreeDVReporterDialog::refreshLayout()
     OnStatusTextChange(tmpEvent);
 }
 
-void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
+void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->setReporter(reporter);
@@ -1402,7 +1402,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
     refreshAllRows();
 }
 
-wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
+wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string const& timeStr, wxDateTime& timeObj)
 {
     wxRegEx millisecondsRemoval(parent_->MS_REMOVAL_RGX);
     wxString tmp = timeStr;
@@ -1494,8 +1494,8 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::calculateDistance_(wxStrin
     double lon2 = 0;
     
     // Grab latitudes and longitudes for the two locations.
-    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
-    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
+    calculateLatLonFromGridSquare_(std::move(gridSquare1), lat1, lon1);
+    calculateLatLonFromGridSquare_(std::move(gridSquare2), lat2, lon2);
     
     // Use Haversine formula to calculate distance. See
     // https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula.
@@ -1558,8 +1558,8 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::calculateBearingInDegrees_
     double lon2 = 0;
     
     // Grab latitudes and longitudes for the two locations.
-    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
-    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
+    calculateLatLonFromGridSquare_(std::move(gridSquare1), lat1, lon1);
+    calculateLatLonFromGridSquare_(std::move(gridSquare2), lat2, lon2);
 
     // Convert latitudes and longitudes into radians
     lat1 = DegreesToRadians_(lat1);
@@ -1713,7 +1713,7 @@ FreeDVReporterDialog::FreeDVReporterDataModel::~FreeDVReporterDataModel()
     allReporterData_.clear();
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<FreeDVReporter> reporter)
+void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
 {
     if (reporter_)
     {
@@ -2199,7 +2199,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 #endif // defined(WIN32)
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t, wxString customText)
+void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t, wxString const& customText)
 {
     if (reporter_ && selectedItem.IsOk())
     {
@@ -2417,7 +2417,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string, std::string, std::string, std::string, bool)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string const&, std::string const&, std::string const&, std::string const&, bool)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
 
@@ -2450,7 +2450,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string, std::string, uint64_t frequencyHz)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string const&, std::string const&, uint64_t frequencyHz)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2530,7 +2530,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string, std::string, std::string txMode, bool transmitting, std::string lastTxDate)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string const&, std::string const&, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2601,7 +2601,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string, std::string, std::string receivedCallsign, float snr, std::string rxMode)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string const&, std::string const&, std::string receivedCallsign, float snr, std::string rxMode)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;

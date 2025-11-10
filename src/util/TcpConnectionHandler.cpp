@@ -134,7 +134,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     assert(allocBuf != nullptr);
     memcpy(allocBuf, buf, length);
     
-    enqueue_([&, prom, allocBuf, length]() {
+    enqueue_([&, prom, allocBuf, length]() { // NOLINT
         sendImpl_(allocBuf, length);
         delete[] allocBuf;
         prom->set_value();
@@ -144,7 +144,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
 
 void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
 {
-    enqueue_([this, fn]() {
+    enqueue_([this, fn = std::move(fn)]() {
         onRecvEndFn_ = fn;
     });
 }
@@ -333,7 +333,9 @@ void TcpConnectionHandler::connectImpl_()
         else if (ret == -1 && errno != EINPROGRESS)
         {
             int err = errno;
-            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror(err));
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -575,7 +577,7 @@ void TcpConnectionHandler::receiveImpl_()
 
     char buf[READ_SIZE_BYTES];
 
-    while (socket_ > 0)
+    while (socket_ != INVALID_SOCKET)
     {
         struct timeval tv = {0, 250000}; // 250ms
         fd_set readSet;
@@ -602,31 +604,31 @@ void TcpConnectionHandler::receiveImpl_()
                     break;
                 }
             }
-            if (numHaveRead > 0)
+            if (numHaveRead > 0 && socket_ != INVALID_SOCKET)
             {
                 enqueue_([&]() {
                     char tmp[READ_SIZE_BYTES];
                     int toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
-                    while (toRead > 0)
+                    while (socket_ != INVALID_SOCKET && toRead > 0)
                     {
                         receiveBuffer_.read(tmp, toRead);
-                        onReceive_(tmp, toRead);
+                        if (socket_ != INVALID_SOCKET) onReceive_(tmp, toRead);
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     }
-                    if (onRecvEndFn_)
+                    if (socket_ != INVALID_SOCKET && onRecvEndFn_)
                     {
                         onRecvEndFn_();
                     }
                 });
             } 
-            else if (numRead == 0)
+            else if (numRead == 0 && socket_ != INVALID_SOCKET)
             {
                 log_warn("EOF received");
                 enqueue_([&]() {
                     disconnectImpl_();
                 });
             }
-            else if (numRead < 0)
+            else if (numRead < 0 && socket_ != INVALID_SOCKET)
             {
 #if defined(WIN32)
                 log_warn("read failed (errno=%d)", WSAGetLastError());
@@ -638,7 +640,7 @@ void TcpConnectionHandler::receiveImpl_()
                 });
             }
         }
-        else if (rv < 0 && socket_ > 0)
+        else if (rv < 0 && socket_ != INVALID_SOCKET)
         {
 #if defined(WIN32)
             log_warn("read failed (errno=%d)", WSAGetLastError());
@@ -712,10 +714,14 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
                 }
                 
 socket_error:
-                log_warn("Got socket error %d (%s) while connecting", err, strerror(err));
+                constexpr int ERROR_BUFFER_LEN = 1024;
+                char tmpBuf[ERROR_BUFFER_LEN];
 #if defined(WIN32)
+                strerror_s(tmpBuf, ERROR_BUFFER_LEN,  err);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
+                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
                 close(sock);
 #endif // defined(WIN32)
                 socketsToDelete.push_back(sock);

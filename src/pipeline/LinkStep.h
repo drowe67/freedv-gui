@@ -87,8 +87,7 @@ private:
             : parent_(parent)
         {
             // Pre-allocate buffers so we don't have to do so during real-time operation.
-            auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-            outputSamples_ = std::make_unique<short[]>(maxSamples);
+            outputSamples_ = std::make_unique<short[]>(parent_->getSampleRate());
             assert(outputSamples_ != nullptr);
         }
         
@@ -113,10 +112,9 @@ private:
         std::unique_ptr<short[]> outputSamples_;
     };
     
+    short* tmpBuffer_;
     int sampleRate_;
     GenericFIFO<short> fifo_;
-
-    short* tmpBuffer_;
 };
 
 #endif // AUDIO_PIPELINE__LINK_STEP_H

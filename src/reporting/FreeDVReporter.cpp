@@ -20,7 +20,6 @@
 //
 //=========================================================================
 
-#include "yyjson.h"
 #include "FreeDVReporter.h"
 #include "../util/SocketIoClient.h"
 #include "../os/os_interface.h"
@@ -30,13 +29,14 @@
 #endif // defined(__APPLE__)
 
 using namespace std::chrono_literals;
+using namespace std::placeholders;
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly, bool writeOnly)
     : isConnecting_(false)
-    , hostname_(hostname)
-    , callsign_(callsign)
-    , gridSquare_(gridSquare)
-    , software_(software)
+    , hostname_(std::move(hostname))
+    , callsign_(std::move(callsign))
+    , gridSquare_(std::move(gridSquare))
+    , software_(std::move(software))
     , lastFrequency_(0)
     , tx_(false)
     , rxOnly_(rxOnly)
@@ -66,7 +66,7 @@ void FreeDVReporter::connect()
     connect_();
 }
 
-void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::string message)
+void FreeDVReporter::requestQSY(std::string const& sid, uint64_t frequencyHz, std::string const& message)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     
@@ -84,7 +84,7 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     }
 }
 
-void FreeDVReporter::updateMessage(std::string message)
+void FreeDVReporter::updateMessage(std::string const& message)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
     
@@ -175,73 +175,73 @@ void FreeDVReporter::send()
 void FreeDVReporter::setOnReporterConnectFn(ReporterConnectionFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReporterConnectFn_ = fn;
+    onReporterConnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnReporterDisconnectFn(ReporterConnectionFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReporterDisconnectFn_ = fn;
+    onReporterDisconnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnUserConnectFn(ConnectionDataFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onUserConnectFn_ = fn;
+    onUserConnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnUserDisconnectFn(ConnectionDataFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onUserDisconnectFn_ = fn;
+    onUserDisconnectFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnFrequencyChangeFn(FrequencyChangeFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onFrequencyChangeFn_ = fn;
+    onFrequencyChangeFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnTransmitUpdateFn(TxUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onTransmitUpdateFn_ = fn;
+    onTransmitUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnReceiveUpdateFn(RxUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onReceiveUpdateFn_ = fn;
+    onReceiveUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onQsyRequestFn_ = fn;
+    onQsyRequestFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setMessageUpdateFn(MessageUpdateFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onMessageUpdateFn_ = fn;
+    onMessageUpdateFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onConnectionSuccessfulFn_ = fn;
+    onConnectionSuccessfulFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onAboutToShowSelfFn_ = fn;
+    onAboutToShowSelfFn_ = std::move(fn);
 }
 
 void FreeDVReporter::setRecvEndFn(RecvEndFn fn)
 {
     std::unique_lock<std::mutex> lk(objMutex_);
-    onRecvEndFn_ = fn;
+    onRecvEndFn_ = std::move(fn);
 }
 
 bool FreeDVReporter::isValidForReporting()
@@ -271,6 +271,8 @@ void FreeDVReporter::connect_()
         yyjson_mut_obj_add_str(authDoc, authData, "os", osString.c_str());
     }
 
+    yyjson_mut_obj_add_int(authDoc, authData, "protocol_version", FREEDV_REPORTER_PROTOCOL_VERSION);
+    
     sioClient_->setOnRecvEndFn([&]() {
         std::unique_lock<std::mutex> lk(objMutex_);
         if (onRecvEndFn_)
@@ -321,252 +323,292 @@ void FreeDVReporter::connect_()
         onReporterConnectFn_();
     }
     
-    sioClient_->on("new_connection", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        if (onUserConnectFn_)
-        {
-            auto sidJson = yyjson_obj_get(msgParams, "sid");
-            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
-            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
-            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
-            auto versionJson = yyjson_obj_get(msgParams, "version");
-            auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
-        
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sidJson) &&
-                yyjson_is_str(lastUpdateJson) &&
-                yyjson_is_str(callsignJson) &&
-                yyjson_is_str(gridSquareJson) &&
-                yyjson_is_str(versionJson) &&
-                yyjson_is_bool(rxOnlyJson))
-            {
-                onUserConnectFn_(
-                    yyjson_get_str(sidJson),
-                    yyjson_get_str(lastUpdateJson),
-                    yyjson_get_str(callsignJson),
-                    yyjson_get_str(gridSquareJson),
-                    yyjson_get_str(versionJson),
-                    yyjson_get_bool(rxOnlyJson)
-                );
-            }
-        }
-    });
+    sioClient_->on("new_connection", std::bind(&FreeDVReporter::onFreeDVReporterNewConnection_, this, _1));
+    sioClient_->on("connection_successful", std::bind(&FreeDVReporter::onFreeDVReporterConnectionSuccessful_, this, _1));
+    sioClient_->on("remove_connection", std::bind(&FreeDVReporter::onFreeDVReporterRemoveConnection_, this, _1));
+    sioClient_->on("tx_report", std::bind(&FreeDVReporter::onFreeDVReporterTransmitReport_, this, _1));
+    sioClient_->on("rx_report", std::bind(&FreeDVReporter::onFreeDVReporterReceiveReport_, this, _1));
+    sioClient_->on("freq_change", std::bind(&FreeDVReporter::onFreeDVReporterFrequencyChange_, this, _1));
+    sioClient_->on("message_update", std::bind(&FreeDVReporter::onFreeDVReporterMessageUpdate_, this, _1));
+    sioClient_->on("qsy_request", std::bind(&FreeDVReporter::onFreeDVReporterQsyRequest_, this, _1));
+    sioClient_->on("bulk_update", std::bind(&FreeDVReporter::onFreeDVReporterBulkUpdate_, this, _1));
+}
 
-    sioClient_->on("connection_successful", [&](yyjson_val*) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        isFullyConnected_.store(true, std::memory_order_release);
+void FreeDVReporter::onFreeDVReporterNewConnection_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    if (onUserConnectFn_)
+    {
+        auto sidJson = yyjson_obj_get(msgParams, "sid");
+        auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+        auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+        auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+        auto versionJson = yyjson_obj_get(msgParams, "version");
+        auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
     
-        if (onConnectionSuccessfulFn_)
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sidJson) &&
+            yyjson_is_str(lastUpdateJson) &&
+            yyjson_is_str(callsignJson) &&
+            yyjson_is_str(gridSquareJson) &&
+            yyjson_is_str(versionJson) &&
+            yyjson_is_bool(rxOnlyJson))
         {
-            onConnectionSuccessfulFn_();
+            onUserConnectFn_(
+                yyjson_get_str(sidJson),
+                yyjson_get_str(lastUpdateJson),
+                yyjson_get_str(callsignJson),
+                yyjson_get_str(gridSquareJson),
+                yyjson_get_str(versionJson),
+                yyjson_get_bool(rxOnlyJson)
+            );
         }
-   
-        // Send initial data now that we're fully connected to the server.
-        // This was originally done right on socket.io connect, but on some
-        // machines this caused the built-in FreeDV Reporter client to be
-        // unhappy. 	
-        if (hidden_)
-        {
-            hideFromViewImpl_();
-        }
-        else
-        {
-            freqChangeImpl_(lastFrequency_);
-            transmitImpl_(mode_, tx_);
-            sendMessageImpl_(message_);
-        }
-    });
+    }
+}
 
-    sioClient_->on("remove_connection", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        if (onUserDisconnectFn_)
-        {
-            auto sidJson = yyjson_obj_get(msgParams, "sid");
-            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
-            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
-            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
-            auto versionJson = yyjson_obj_get(msgParams, "version");
-            auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
-        
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sidJson) &&
-                yyjson_is_str(lastUpdateJson) &&
-                yyjson_is_str(callsignJson) &&
-                yyjson_is_str(gridSquareJson) &&
-                yyjson_is_str(versionJson) &&
-                yyjson_is_bool(rxOnlyJson))
-            {
-                onUserDisconnectFn_(
-                    yyjson_get_str(sidJson),
-                    yyjson_get_str(lastUpdateJson),
-                    yyjson_get_str(callsignJson),
-                    yyjson_get_str(gridSquareJson),
-                    yyjson_get_str(versionJson),
-                    yyjson_get_bool(rxOnlyJson)
-                );
-            }
-        }
-    });
+void FreeDVReporter::onFreeDVReporterConnectionSuccessful_(yyjson_val* msgParams)
+{
+    (void)msgParams;
+    
+    std::unique_lock<std::mutex> lk(objMutex_);
+    isFullyConnected_.store(true, std::memory_order_release);
 
-    sioClient_->on("tx_report", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        if (onTransmitUpdateFn_)
-        {
-            auto sidJson = yyjson_obj_get(msgParams, "sid");
-            auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
-            auto callsignJson = yyjson_obj_get(msgParams, "callsign");
-            auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
-            auto lastTxJson = yyjson_obj_get(msgParams, "last_tx");
-            auto modeJson = yyjson_obj_get(msgParams, "mode");
-            auto transmittingJson = yyjson_obj_get(msgParams, "transmitting");
-        
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sidJson) &&
-                yyjson_is_str(lastUpdateJson) &&
-                yyjson_is_str(callsignJson) &&
-                yyjson_is_str(gridSquareJson) &&
-                yyjson_is_str(modeJson) &&
-                yyjson_is_bool(transmittingJson))
-            {
-                onTransmitUpdateFn_(
-                    yyjson_get_str(sidJson),
-                    yyjson_get_str(lastUpdateJson),
-                    yyjson_get_str(callsignJson),
-                    yyjson_get_str(gridSquareJson),
-                    yyjson_get_str(modeJson),
-                    yyjson_get_bool(transmittingJson),
-                    yyjson_is_null(lastTxJson) ? "" : yyjson_get_str(lastTxJson)
-                );
-            }
-        }
-    });
+    if (onConnectionSuccessfulFn_)
+    {
+        onConnectionSuccessfulFn_();
+    }
 
-    sioClient_->on("rx_report", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
+    // Send initial data now that we're fully connected to the server.
+    // This was originally done right on socket.io connect, but on some
+    // machines this caused the built-in FreeDV Reporter client to be
+    // unhappy. 	
+    if (hidden_)
+    {
+        hideFromViewImpl_();
+    }
+    else
+    {
+        freqChangeImpl_(lastFrequency_);
+        transmitImpl_(mode_, tx_);
+        sendMessageImpl_(message_);
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterRemoveConnection_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    if (onUserDisconnectFn_)
+    {
+        auto sidJson = yyjson_obj_get(msgParams, "sid");
+        auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+        auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+        auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+        auto versionJson = yyjson_obj_get(msgParams, "version");
+        auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
+    
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sidJson) &&
+            yyjson_is_str(lastUpdateJson) &&
+            yyjson_is_str(callsignJson) &&
+            yyjson_is_str(gridSquareJson) &&
+            yyjson_is_str(versionJson) &&
+            yyjson_is_bool(rxOnlyJson))
+        {
+            onUserDisconnectFn_(
+                yyjson_get_str(sidJson),
+                yyjson_get_str(lastUpdateJson),
+                yyjson_get_str(callsignJson),
+                yyjson_get_str(gridSquareJson),
+                yyjson_get_str(versionJson),
+                yyjson_get_bool(rxOnlyJson)
+            );
+        }
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterTransmitReport_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    if (onTransmitUpdateFn_)
+    {
+        auto sidJson = yyjson_obj_get(msgParams, "sid");
+        auto lastUpdateJson = yyjson_obj_get(msgParams, "last_update");
+        auto callsignJson = yyjson_obj_get(msgParams, "callsign");
+        auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
+        auto lastTxJson = yyjson_obj_get(msgParams, "last_tx");
+        auto modeJson = yyjson_obj_get(msgParams, "mode");
+        auto transmittingJson = yyjson_obj_get(msgParams, "transmitting");
+    
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sidJson) &&
+            yyjson_is_str(lastUpdateJson) &&
+            yyjson_is_str(callsignJson) &&
+            yyjson_is_str(gridSquareJson) &&
+            yyjson_is_str(modeJson) &&
+            yyjson_is_bool(transmittingJson))
+        {
+            onTransmitUpdateFn_(
+                yyjson_get_str(sidJson),
+                yyjson_get_str(lastUpdateJson),
+                yyjson_get_str(callsignJson),
+                yyjson_get_str(gridSquareJson),
+                yyjson_get_str(modeJson),
+                yyjson_get_bool(transmittingJson),
+                yyjson_is_null(lastTxJson) ? "" : yyjson_get_str(lastTxJson)
+            );
+        }
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterReceiveReport_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    auto sid = yyjson_obj_get(msgParams, "sid");
+    auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
+    auto receiverCallsign = yyjson_obj_get(msgParams, "receiver_callsign");
+    auto receiverGridSquare = yyjson_obj_get(msgParams, "receiver_grid_square");
+    auto callsign = yyjson_obj_get(msgParams, "callsign");
+    auto snr = yyjson_obj_get(msgParams, "snr");
+    auto mode = yyjson_obj_get(msgParams, "mode");
+
+    if (onReceiveUpdateFn_)
+    {
+        bool snrInteger = yyjson_is_int(snr);
+        bool snrFloat = yyjson_is_real(snr);
+        bool snrValid = snrInteger || snrFloat;
+
+        float snrVal = 0;
+        if (snrInteger)
+        {
+            snrVal = yyjson_get_int(snr);
+        }
+        else if (snrFloat)
+        {
+            snrVal = yyjson_get_real(snr);
+        }
+
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sid) &&
+            yyjson_is_str(lastUpdate) &&
+            yyjson_is_str(callsign) &&
+            yyjson_is_str(receiverCallsign) &&
+            yyjson_is_str(receiverGridSquare) &&
+            yyjson_is_str(mode) &&
+            snrValid)
+        {
+            onReceiveUpdateFn_(
+                yyjson_get_str(sid),
+                yyjson_get_str(lastUpdate),
+                yyjson_get_str(receiverCallsign),
+                yyjson_get_str(receiverGridSquare),
+                yyjson_get_str(callsign),
+                snrVal,
+                yyjson_get_str(mode)
+            );
+        }
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterFrequencyChange_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    if (onFrequencyChangeFn_)
+    {
         auto sid = yyjson_obj_get(msgParams, "sid");
         auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
-        auto receiverCallsign = yyjson_obj_get(msgParams, "receiver_callsign");
-        auto receiverGridSquare = yyjson_obj_get(msgParams, "receiver_grid_square");
         auto callsign = yyjson_obj_get(msgParams, "callsign");
-        auto snr = yyjson_obj_get(msgParams, "snr");
-        auto mode = yyjson_obj_get(msgParams, "mode");
+        auto gridSquare = yyjson_obj_get(msgParams, "grid_square");
+        auto frequency = yyjson_obj_get(msgParams, "freq");
     
-        if (onReceiveUpdateFn_)
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sid) &&
+            yyjson_is_str(lastUpdate) &&
+            yyjson_is_str(callsign) &&
+            yyjson_is_str(gridSquare) &&
+            yyjson_is_uint(frequency))
         {
-            bool snrInteger = yyjson_is_int(snr);
-            bool snrFloat = yyjson_is_real(snr);
-            bool snrValid = snrInteger || snrFloat;
-
-            float snrVal = 0;
-            if (snrInteger)
-            {
-                snrVal = yyjson_get_int(snr);
-            }
-            else if (snrFloat)
-            {
-                snrVal = yyjson_get_real(snr);
-            }
-
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sid) &&
-                yyjson_is_str(lastUpdate) &&
-                yyjson_is_str(callsign) &&
-                yyjson_is_str(receiverCallsign) &&
-                yyjson_is_str(receiverGridSquare) &&
-                yyjson_is_str(mode) &&
-                snrValid)
-            {
-                onReceiveUpdateFn_(
-                    yyjson_get_str(sid),
-                    yyjson_get_str(lastUpdate),
-                    yyjson_get_str(receiverCallsign),
-                    yyjson_get_str(receiverGridSquare),
-                    yyjson_get_str(callsign),
-                    snrVal,
-                    yyjson_get_str(mode)
-                );
-            }
+            onFrequencyChangeFn_(
+                yyjson_get_str(sid),
+                yyjson_get_str(lastUpdate),
+                yyjson_get_str(callsign),
+                yyjson_get_str(gridSquare),
+                yyjson_get_uint(frequency)
+            );
         }
-    });
+    }
+}
 
-    sioClient_->on("freq_change", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        if (onFrequencyChangeFn_)
-        {
-            auto sid = yyjson_obj_get(msgParams, "sid");
-            auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
-            auto callsign = yyjson_obj_get(msgParams, "callsign");
-            auto gridSquare = yyjson_obj_get(msgParams, "grid_square");
-            auto frequency = yyjson_obj_get(msgParams, "freq");
-        
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sid) &&
-                yyjson_is_str(lastUpdate) &&
-                yyjson_is_str(callsign) &&
-                yyjson_is_str(gridSquare) &&
-                yyjson_is_uint(frequency))
-            {
-                onFrequencyChangeFn_(
-                    yyjson_get_str(sid),
-                    yyjson_get_str(lastUpdate),
-                    yyjson_get_str(callsign),
-                    yyjson_get_str(gridSquare),
-                    yyjson_get_uint(frequency)
-                );
-            }
-        }
-    });
-
-    sioClient_->on("message_update", [&](yyjson_val* msgParams) {  
-        std::unique_lock<std::mutex> lk(objMutex_);
-        if (onMessageUpdateFn_)
-        {
-            auto sid = yyjson_obj_get(msgParams, "sid");
-            auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
-            auto message = yyjson_obj_get(msgParams, "message");
-
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(sid) &&
-                yyjson_is_str(lastUpdate) &&
-                yyjson_is_str(message))
-            {
-                onMessageUpdateFn_(
-                    yyjson_get_str(sid),
-                    yyjson_get_str(lastUpdate),
-                    yyjson_get_str(message)
-                );
-            }
-        }
-    });
-    
-    sioClient_->on("qsy_request", [&](yyjson_val* msgParams) {
-        std::unique_lock<std::mutex> lk(objMutex_);
-        auto callsign = yyjson_obj_get(msgParams, "callsign");
-        auto frequency = yyjson_obj_get(msgParams, "frequency");
+void FreeDVReporter::onFreeDVReporterMessageUpdate_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    if (onMessageUpdateFn_)
+    {
+        auto sid = yyjson_obj_get(msgParams, "sid");
+        auto lastUpdate = yyjson_obj_get(msgParams, "last_update");
         auto message = yyjson_obj_get(msgParams, "message");
-    
-        if (onQsyRequestFn_)
+
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(sid) &&
+            yyjson_is_str(lastUpdate) &&
+            yyjson_is_str(message))
         {
-            // Only call event handler if we received the correct data types
-            // for the items in the message.
-            if (yyjson_is_str(callsign) &&
-                yyjson_is_uint(frequency) &&
-                yyjson_is_str(message))
-            {
-                onQsyRequestFn_(
-                    yyjson_get_str(callsign),
-                    yyjson_get_uint(frequency),
-                    yyjson_get_str(message)
-                );
-            }
+            onMessageUpdateFn_(
+                yyjson_get_str(sid),
+                yyjson_get_str(lastUpdate),
+                yyjson_get_str(message)
+            );
         }
-    });
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterQsyRequest_(yyjson_val* msgParams)
+{
+    std::unique_lock<std::mutex> lk(objMutex_);
+    auto callsign = yyjson_obj_get(msgParams, "callsign");
+    auto frequency = yyjson_obj_get(msgParams, "frequency");
+    auto message = yyjson_obj_get(msgParams, "message");
+
+    if (onQsyRequestFn_)
+    {
+        // Only call event handler if we received the correct data types
+        // for the items in the message.
+        if (yyjson_is_str(callsign) &&
+            yyjson_is_uint(frequency) &&
+            yyjson_is_str(message))
+        {
+            onQsyRequestFn_(
+                yyjson_get_str(callsign),
+                yyjson_get_uint(frequency),
+                yyjson_get_str(message)
+            );
+        }
+    }
+}
+
+void FreeDVReporter::onFreeDVReporterBulkUpdate_(yyjson_val* msgParams)
+{
+    // Note: don't lock here as the inner event handlers will
+    size_t idx, maxIdx;
+    yyjson_val* msg;
+    yyjson_arr_foreach(msgParams, idx, maxIdx, msg) {
+        (void)idx;
+        (void)maxIdx;
+        
+        auto eventName = yyjson_arr_get(msg, 0);
+        auto eventArgs = yyjson_arr_get(msg, 1);
+        
+        if (yyjson_is_str(eventName))
+        {
+            std::string eventNameStr = yyjson_get_str(eventName);
+            sioClient_->fireEvent(eventNameStr, eventArgs);
+        }
+    }
 }
 
 void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
@@ -586,7 +628,7 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
     lastFrequency_ = frequency;
 }
 
-void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
+void FreeDVReporter::transmitImpl_(std::string const& mode, bool tx)
 {
     if (isFullyConnected_.load(std::memory_order_acquire))
     {
@@ -604,7 +646,7 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
     tx_ = tx;
 }
 
-void FreeDVReporter::sendMessageImpl_(std::string message)
+void FreeDVReporter::sendMessageImpl_(std::string const& message)
 {
     if (isFullyConnected_.load(std::memory_order_acquire))
     {

@@ -1,0 +1,1 @@
+Checks: "-clang-analyzer-optin.cplusplus.VirtualCall"

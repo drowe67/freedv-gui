@@ -130,12 +130,14 @@ int main(int argc, char** argv)
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
+    // NOLINTBEGIN
     setenv("OMP_NUM_THREADS", "1", 1);
     setenv("OPENBLAS_NUM_THREADS", "1", 1);
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
-    
+    // NOLINTEND
+
     // Print version
     log_info("%s version %s", SOFTWARE_NAME, GetFreeDVVersion().c_str());
     
@@ -154,7 +156,7 @@ int main(int argc, char** argv)
     
     int optionIndex = 0;
     int c = 0;
-    while ((c = getopt_long(argc, argv, shortOptions, longOptions, &optionIndex)) != -1)
+    while ((c = getopt_long(argc, argv, shortOptions, longOptions, &optionIndex)) != -1) // NOLINT
     {
         switch(c)
         {
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
                 {
                     log_error("Invalid sample rate provided (%s)", optarg);
                     printUsage(argv[0]);
-                    exit(-1);
+                    exit(-1); // NOLINT
                 }
                 if (c == 'i')
                 {
@@ -184,7 +186,7 @@ int main(int argc, char** argv)
                 {
                     log_error("Callsign required if specifying -c/--reporting-callsign.");
                     printUsage(argv[0]);
-                    exit(-1);
+                    exit(-1); // NOLINT
                 }
                 log_info("Using callsign %s for FreeDV Reporter reporting", optarg);
                 stationCallsign = optarg;
@@ -196,7 +198,7 @@ int main(int argc, char** argv)
                 {
                     log_error("Grid square required if specifying -l/--reporting-locator.");
                     printUsage(argv[0]);
-                    exit(-1);
+                    exit(-1); // NOLINT
                 }
                 log_info("Using grid square %s for FreeDV Reporter reporting", optarg);
                 stationGridSquare = optarg;
@@ -209,7 +211,7 @@ int main(int argc, char** argv)
                 {
                     log_error("Invalid frequency provided (%s)", optarg);
                     printUsage(argv[0]);
-                    exit(-1);
+                    exit(-1); // NOLINT
                 }
                 stationFrequency = tmpFrequency;
                 log_info("Using frequency %" PRId64 " for FreeDV Reporter reporting", stationFrequency);
@@ -218,13 +220,13 @@ int main(int argc, char** argv)
             case 'v':
             {
                 // Version already printed above.
-                exit(0);
+                exit(0); // NOLINT
             }
             case 'h':
             default:
             {
                 printUsage(argv[0]);
-                exit(-1);
+                exit(-1); // NOLINT
             }
         }
     }
@@ -354,14 +356,15 @@ int main(int argc, char** argv)
                     // stdin closed, exit
                     log_warn("stdin pipe closed, exiting");
                     exiting = true;
-                    break;
                 }
                 callbackObj->infifo2->write(readBuffer, numActuallyRead);
             }
         }
         else if (rv < 0)
         {
-            log_error("Error waiting for input: %s", strerror(errno));
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_error("Error waiting for input: %s", strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
             break;
         }
 
@@ -375,7 +378,6 @@ int main(int argc, char** argv)
                 // stdout closed, exit
                 log_warn("stdout pipe closed, exiting");
                 exiting = true;
-                break;
             }
         }
 

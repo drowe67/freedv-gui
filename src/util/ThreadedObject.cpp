@@ -59,7 +59,7 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
     if (parent_ != nullptr)
     {
-        parent_->enqueue_(fn, timeoutMilliseconds);
+        parent_->enqueue_(std::move(fn), timeoutMilliseconds);
     }
     else
     {
@@ -93,7 +93,7 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
             }
         }
 
-        eventQueue_.push_back(fn);
+        eventQueue_.push_back(std::move(fn));
         lk.unlock();
 
         eventQueueCV_.notify_one();

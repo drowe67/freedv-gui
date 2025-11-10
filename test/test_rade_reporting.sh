@@ -13,6 +13,11 @@ fi
 createVirtualAudioCable () {
     CABLE_NAME=$1
     pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
+    until (pactl list short sinks | grep -E "^[0-9]+\\s+${CABLE_NAME}\\s+")
+    do
+        echo "Waiting for $CABLE_NAME to come up..."
+        sleep 1;
+    done
 }
 
 FREEDV_RADIO_TO_COMPUTER_DEVICE="${FREEDV_RADIO_TO_COMPUTER_DEVICE:-FreeDV_Radio_To_Computer}"
@@ -28,10 +33,6 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
     DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
-
-    # Make sure cables are actually created before proceeding with looping them back
-    sleep 2
-
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
@@ -114,7 +115,7 @@ if [ "$1" != "" ]; then
 
     # Add noise to recording to test performance
     if [ "$2" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     elif [ "$2" == "awgn" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi

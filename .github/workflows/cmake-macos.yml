@@ -14,6 +14,36 @@ env:
   BUILD_TYPE: RelWithDebInfo
 
 jobs:
+  lint:
+    runs-on: macos-15
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "20.1"
+
+    - name: Build freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        mkdir build_osx
+        cd build_osx
+        CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        # Partially build so we have all required .h and .c/.cpp files
+        make -j$(nproc) build_mimalloc build_rade build_codec2
+    
+    - name: Run clang-tidy on codebase
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+        run-clang-tidy -p .
+
   test:
     strategy:
       fail-fast: false
@@ -22,6 +52,7 @@ jobs:
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -93,6 +124,7 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -162,7 +194,7 @@ jobs:
         os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: dist
+    needs: ['dist', 'lint']
 
     steps:
     - uses: actions/checkout@v4

@@ -58,6 +58,8 @@ private:
     GenericFIFO<short> inputSampleFifo_;
     std::unique_ptr<short[]> outputSamples_;
     std::unique_ptr<short[]> tmpInput_;
+
+    void resetImpl_() FREEDV_NONBLOCKING;
 };
 
 

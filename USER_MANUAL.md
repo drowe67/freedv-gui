@@ -848,7 +848,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.3 TBD 2025
+## V2.1.0 TBD 2025
 
 1. Bugfixes:
     * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
@@ -860,16 +860,20 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
     * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
 2. Enhancements:
-    * Additional cleanup of code that runs in real-time. (PR #1039, #1068)
+    * Additional cleanup of code that runs in real-time. (PR #1039, #1068, #1077)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
     * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
     * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
     * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
     * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
     * Add support for BBWENet BW expander. (PR #1065)
+    * Support bulk updates from FreeDV Reporter server. (PR #1079)
+    * Hide Stats box by default. (PR #1081)
+    * Enable frequency drop-down whenever CAT control is enabled, not just for reporting. (PR #1080)
 3. Build system:
     * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
     * Force all compiler warnings to be errors. (PR #1076)
+    * Enable clang-tidy scans on codebase. (PR #1086)
 
 ## V2.0.2 October 2025
 

@@ -1143,8 +1143,8 @@ speech codec bits</td>
 </table>
 <h1 data-number="18" id="release-notes"><span
 class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v2.0.3-tbd-2025"><span
-class="header-section-number">18.1</span> V2.0.3 TBD 2025</h2>
+<h2 data-number="18.1" id="v2.1.0-tbd-2025"><span
+class="header-section-number">18.1</span> V2.1.0 TBD 2025</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1165,8 +1165,8 @@ startup crashes. (PR #1074)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
-<li>Additional cleanup of code that runs in real-time. (PR #1039,
-#1068)</li>
+<li>Additional cleanup of code that runs in real-time. (PR #1039, #1068,
+#1077)</li>
 <li>Print error if one attempts to use a stereo WAV file instead of a
 mono one. (PR #1052)</li>
 <li>Hamlib: Add support for automatically displaying only the valid baud
@@ -1178,12 +1178,17 @@ series. (PR #1018)</li>
 <li>Add ka9q-radio integration for use with web-based SDRs and similar.
 (PR #1066)</li>
 <li>Add support for BBWENet BW expander. (PR #1065)</li>
+<li>Support bulk updates from FreeDV Reporter server. (PR #1079)</li>
+<li>Hide Stats box by default. (PR #1081)</li>
+<li>Enable frequency drop-down whenever CAT control is enabled, not just
+for reporting. (PR #1080)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Add support for Thread/Undefined Behavior Sanitizer instrumentation
 on macOS and Linux builds. (PR #1075)</li>
 <li>Force all compiler warnings to be errors. (PR #1076)</li>
+<li>Enable clang-tidy scans on codebase. (PR #1086)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v2.0.2-october-2025"><span

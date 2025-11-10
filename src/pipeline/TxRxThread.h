@@ -52,9 +52,9 @@ public:
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
         , outputSampleRate_(outputSampleRate)
-        , equalizedMicAudioLink_(micAudioLink)
+        , equalizedMicAudioLink_(std::move(micAudioLink))
         , hasEooBeenSent_(false)
-        , helper_(helper)
+        , helper_(std::move(helper))
         , deferReset_(false)
     { 
         assert(inputSampleRate_ > 0);

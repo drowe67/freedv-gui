@@ -25,7 +25,8 @@
 #include "LinkStep.h"
 
 LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
-    : sampleRate_(outputSampleRate)
+    : tmpBuffer_(nullptr)
+    , sampleRate_(outputSampleRate)
     , fifo_(numSamples)
 {
     tmpBuffer_ = new short[numSamples];

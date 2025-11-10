@@ -171,7 +171,7 @@ class MainApp : public wxApp
         virtual int         OnExit();
 
 
-        bool                    CanAccessSerialPort(std::string portName);
+        bool                    CanAccessSerialPort(std::string const& portName);
         
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
@@ -264,7 +264,7 @@ public:
     {
         wxLogDebug("Destructor\n");
     }
-    void setSecondsToRecord(wxString value) { m_secondsToRecord->SetValue(value); }
+    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
     wxString getSecondsToRecord(void)
     {
         wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
@@ -566,13 +566,13 @@ class MainFrame : public TopFrame
         void onRadioDisconnected_(IRigController* ptr);
 
         // Audio error handlers
-        void onAudioEngineError_(IAudioEngine&, std::string error, void* state);
+        void onAudioEngineError_(IAudioEngine&, std::string const& error, void* state);
         void onAudioDeviceError_(std::string error);
-        static void OnAudioDeviceError_(IAudioDevice&, std::string error, void* state);
+        static void OnAudioDeviceError_(IAudioDevice&, std::string const& error, void* state);
 
         // Audio device change handling
         template<int soundCardId, bool isOut>
-        void handleAudioDeviceChange_(std::string newDeviceName);
+        void handleAudioDeviceChange_(std::string const& newDeviceName);
 
         // Audio device data handlers
         static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
@@ -589,6 +589,18 @@ class MainFrame : public TopFrame
 
         void onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message);
         void onQsyRequestUIThread_(QsyRequestArgs* args);
+        
+        bool isFrequencyControlEnabled_()
+        {
+            auto& rigControlConfig = wxGetApp().appConfiguration.rigControlConfiguration;
+            return 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled || 
+                ((rigControlConfig.hamlibUseForPTT 
+#if defined(WIN32)
+                || rigControlConfig.useOmniRig
+#endif // defined(WIN32)
+                ) && (rigControlConfig.hamlibEnableFreqModeChanges || rigControlConfig.hamlibEnableFreqChangesOnly));
+        }
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;

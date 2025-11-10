@@ -33,8 +33,7 @@ BandwidthExpandStep::BandwidthExpandStep()
     , inputSampleFifo_(INPUT_SAMPLE_RATE / 2)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(OUTPUT_SAMPLE_RATE);
     assert(outputSamples_ != nullptr);
 
     tmpInput_ = std::make_unique<short[]>(BWE_FRAME_SIZE);
@@ -51,7 +50,7 @@ BandwidthExpandStep::BandwidthExpandStep()
     arch_ = opus_select_arch();
     
     // Make sure OSCE data is initialized.
-    reset();
+    resetImpl_();
 }
 
 BandwidthExpandStep::~BandwidthExpandStep()
@@ -103,6 +102,11 @@ short* BandwidthExpandStep::execute(short* inputSamples, int numInputSamples, in
 }
 
 void BandwidthExpandStep::reset() FREEDV_NONBLOCKING
+{
+    resetImpl_();
+}
+
+void BandwidthExpandStep::resetImpl_() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
     

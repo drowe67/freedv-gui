@@ -37,7 +37,7 @@ std::string ReportingController::getVersionString_()
 #define MODE_STRING "RADEV1"
 
 ReportingController::ReportingController(std::string softwareName, bool rxOnly)
-    : softwareName_(softwareName)
+    : softwareName_(std::move(softwareName))
     , reporterConnection_(nullptr)
     , currentGridSquare_(SOFTWARE_GRID_SQUARE)
     , radioCallsign_("")
@@ -106,7 +106,7 @@ void ReportingController::updateReporterState_()
     }
 }
 
-void ReportingController::updateRadioCallsign(std::string newCallsign)
+void ReportingController::updateRadioCallsign(std::string const& newCallsign)
 {   
     enqueue_([&, newCallsign]() {
         log_info("Updating callsign to %s", newCallsign.c_str());
@@ -125,7 +125,7 @@ void ReportingController::updateRadioCallsign(std::string newCallsign)
     });
 }
 
-void ReportingController::reportCallsign(std::string callsign, char snr)
+void ReportingController::reportCallsign(std::string const& callsign, char snr)
 {
     enqueue_([&, callsign, snr]() {
         log_info("Reporting RX callsign %s (SNR %d) to FreeDV Reporter", callsign.c_str(), (int)snr);
@@ -136,7 +136,7 @@ void ReportingController::reportCallsign(std::string callsign, char snr)
     });
 }
 
-void ReportingController::updateRadioGridSquare(std::string newGridSquare)
+void ReportingController::updateRadioGridSquare(std::string const& newGridSquare)
 {
     enqueue_([&, newGridSquare]() {
         if (newGridSquare == "") return;
