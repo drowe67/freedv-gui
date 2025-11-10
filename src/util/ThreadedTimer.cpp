@@ -48,7 +48,6 @@ ThreadedTimer::TimerServer::~TimerServer()
 void ThreadedTimer::TimerServer::registerTimer(ThreadedTimer* timer)
 {
     std::unique_lock<std::mutex> lk(mutex_);
-    timer->nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timer->timeoutMilliseconds_);
     timerQueue_.push(timer);
     timerCV_.notify_one(); // update wait time
 }
@@ -114,6 +113,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             lk.unlock();
             if (tmpTimer->repeat_)
             {
+                tmpTimer->nextFireTime_ = currentTime + std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
                 registerTimer(tmpTimer);
             }
             else
@@ -132,7 +132,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
 ThreadedTimer::ThreadedTimer()
     : 
 #if defined(__APPLE__)
-      internalTimer_(nullptr)
+      internalTimer_(nullptr),
 #endif // defined(__APPLE__)
       repeat_(false)
     , timeoutMilliseconds_(0)
