@@ -202,6 +202,7 @@ void ThreadedTimer::start()
         }
     }
 #else
+    nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMilliseconds_);
     TheTimerServer_.registerTimer(this);
     isRunning_ = true;
 #endif // defined(__APPLE__)
