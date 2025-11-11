@@ -159,6 +159,9 @@ ThreadedTimer::ThreadedTimer(int milliseconds, TimerCallbackFn fn, bool repeat)
     setTimeout(milliseconds);
     setCallback(std::move(fn));
     setRepeat(repeat);
+#if !defined(__APPLE__)
+    isRunning_.store(false, std::memory_order_release);
+#endif // !defined(__APPLE__)
 }
 
 ThreadedTimer::~ThreadedTimer()
