@@ -26,6 +26,7 @@
 #include <string>
 #include "../util/ThreadedObject.h"
 #include "../reporting/FreeDVReporter.h"
+#include "../reporting/pskreporter.h"
 
 class ReportingController : public ThreadedObject
 {
@@ -43,7 +44,9 @@ public:
 
 private:
     std::string softwareName_;
-    FreeDVReporter* reporterConnection_;
+    FreeDVReporter* freedvReporterConnection_;
+    PskReporter* pskReporterConnection_;
+
     std::string currentGridSquare_;
     std::string radioCallsign_;
     bool userHidden_;
