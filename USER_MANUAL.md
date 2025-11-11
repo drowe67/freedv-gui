@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix waterfall flicker on macOS. (PR #1037, #1040)
     * Add timeout for TCP recv() so that FreeDV doesn't hang on exit. (PR #1038)
     * Fix various issues with bottom received callsign list. (PR #1040)
+    * Fix FreeDV Reporter connection issues when IPv6 is disabled. (PR #1089)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
