@@ -69,6 +69,12 @@ void ThreadedTimer::TimerServer::unregisterTimer(ThreadedTimer* timer)
         {
             tmpTimerList.push_back(tmp);
         }
+        else
+        {
+            // We found the timer we're trying to unregister,
+            // no need to remove any others.
+            break;
+        }
     }
 
     for (auto& tmp : tmpTimerList)
@@ -116,12 +122,12 @@ void ThreadedTimer::TimerServer::eventLoop_()
             lk.unlock();
             if (tmpTimer->repeat_)
             {
+                std::unique_lock<std::mutex> timerLock(tmpTimer->timerMutex_);
                 tmpTimer->nextFireTime_ = currentTime + std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
                 registerTimer(tmpTimer);
             }
             else
             {
-                std::unique_lock<std::mutex> timerLock(tmpTimer->timerMutex_);
                 tmpTimer->isRunning_.store(false, std::memory_order_release); 
             }
 
@@ -222,8 +228,11 @@ void ThreadedTimer::stop()
         internalTimer_ = nullptr;
     }
 #else
-    TheTimerServer_.unregisterTimer(this);
-    isRunning_.store(false, std::memory_order_release);
+    if (isRunning_.load(std::memory_order_acquire))
+    {
+        TheTimerServer_.unregisterTimer(this);
+        isRunning_.store(false, std::memory_order_release);
+    }
 #endif // defined(__APPLE__)
 }
 
