@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <atomic>
 
 #include "../ThreadedTimer.h"
 
@@ -10,7 +11,7 @@ int main(int argc, char** argv)
 {
     // Single-shot time ordering test
     std::cout << "Test 1 (Single-shot time ordering): ";
-    int count = 0;
+    std::atomic<int> count = 0;
     bool result = true;
     ThreadedTimer timer1(250, [&](ThreadedTimer&) { std::cout << "1 "; if (count == 0) count++; }, false);
     ThreadedTimer timer2(500, [&](ThreadedTimer&) { std::cout << "2 "; if (count == 1) count++; }, false);

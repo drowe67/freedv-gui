@@ -97,7 +97,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             auto& tmpTimer = timerQueue_.top();
             nextWaitTime = tmpTimer->nextFireTime_;
             timerCV_.wait_until(lk, nextWaitTime, [&]() { 
-                return isDestroying_.load(std::memory_order_acquire);
+                return isDestroying_.load(std::memory_order_acquire) || !timerQueue_.empty();
             });
         }
 
@@ -122,7 +122,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             else
             {
                 std::unique_lock<std::mutex> timerLock(tmpTimer->timerMutex_);
-                tmpTimer->isRunning_ = false; 
+                tmpTimer->isRunning_.store(false, std::memory_order_release); 
             }
 
             tmpTimer->fn_(*tmpTimer);
@@ -181,7 +181,7 @@ bool ThreadedTimer::isRunning()
 #if defined(__APPLE__)
     return internalTimer_ != nullptr;
 #else
-    return isRunning_;
+    return isRunning_.load(std::memory_order_acquire);
 #endif // defined(__APPLE__)
 }
     
@@ -207,7 +207,7 @@ void ThreadedTimer::start()
 #else
     nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMilliseconds_);
     TheTimerServer_.registerTimer(this);
-    isRunning_ = true;
+    isRunning_.store(true, std::memory_order_release);
 #endif // defined(__APPLE__)
 }
 
@@ -223,7 +223,7 @@ void ThreadedTimer::stop()
     }
 #else
     TheTimerServer_.unregisterTimer(this);
-    isRunning_ = false;
+    isRunning_.store(false, std::memory_order_release);
 #endif // defined(__APPLE__)
 }
 

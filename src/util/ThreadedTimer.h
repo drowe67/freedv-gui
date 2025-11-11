@@ -83,7 +83,7 @@ private:
         void eventLoop_();
     };
 
-    bool isRunning_;
+    std::atomic<bool> isRunning_;
     std::chrono::time_point<std::chrono::steady_clock> nextFireTime_;
 
     static TimerServer TheTimerServer_;
