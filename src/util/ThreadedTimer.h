@@ -71,7 +71,7 @@ private:
         {
             inline bool operator()(const ThreadedTimer* lhs, const ThreadedTimer* rhs)
             {
-                return lhs->nextFireTime_ < rhs->nextFireTime_;
+                return lhs->nextFireTime_ > rhs->nextFireTime_;
             }
         };
 

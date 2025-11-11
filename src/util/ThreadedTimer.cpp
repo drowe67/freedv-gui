@@ -22,6 +22,8 @@
 
 #include "ThreadedTimer.h"
 
+#include <cinttypes>
+
 #if defined(__APPLE__)
 #include <pthread.h>
 #endif // defined(__APPLE__)
@@ -87,12 +89,13 @@ void ThreadedTimer::TimerServer::eventLoop_()
         if (timerQueue_.empty())
         {
             timerCV_.wait(lk, [&]() {
-                return isDestroying_.load(std::memory_order_acquire);
+                return isDestroying_.load(std::memory_order_acquire) || !timerQueue_.empty();
             });
         }
         else
         {
-            nextWaitTime = timerQueue_.top()->nextFireTime_;
+            auto& tmpTimer = timerQueue_.top();
+            nextWaitTime = tmpTimer->nextFireTime_;
             timerCV_.wait_until(lk, nextWaitTime, [&]() { 
                 return isDestroying_.load(std::memory_order_acquire);
             });
@@ -105,7 +108,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             !isDestroying_.load(std::memory_order_acquire) && 
             !timerQueue_.empty() && timerQueue_.top()->nextFireTime_ <= currentTime)
         {
-            auto& tmpTimer = timerQueue_.top();
+            ThreadedTimer* tmpTimer = timerQueue_.top();
 
             // Set next fire time if repeating, otherwise deregister
             // NOTE: we have to drop the lock here to avoid deadlocks.

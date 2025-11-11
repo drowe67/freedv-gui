@@ -25,3 +25,15 @@ add_library(fdv_util STATIC
 
 target_compile_options(fdv_util PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(fdv_util yyjson)
+
+if(UNITTEST)
+macro(DefineUnitTest utName)
+    add_executable(${utName} test/${utName}.cpp)
+    target_link_libraries(${utName} PRIVATE fdv_util)
+
+    add_test(NAME util_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
+DefineUnitTest(ThreadedTimerTest)
+endif(UNITTEST)
+
