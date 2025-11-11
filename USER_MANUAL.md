@@ -874,6 +874,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
     * Force all compiler warnings to be errors. (PR #1076)
     * Enable clang-tidy scans on codebase. (PR #1086)
+    * Update CI process to enable automatic code signing of macOS and Linux builds. (PR #1078)
 
 ## V2.0.2 October 2025
 
@@ -892,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix waterfall flicker on macOS. (PR #1037, #1040)
     * Add timeout for TCP recv() so that FreeDV doesn't hang on exit. (PR #1038)
     * Fix various issues with bottom received callsign list. (PR #1040)
+    * Fix FreeDV Reporter connection issues when IPv6 is disabled. (PR #1089)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980, #1028)
     * Move less used Spectrum plot configuration to free up space on main window. (PR #996)

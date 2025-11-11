@@ -47,15 +47,15 @@ if [ $BUILD_DEPS == 1 ]; then
         git clone https://github.com/Hamlib/Hamlib.git hamlib-code
     fi
     cd hamlib-code && git checkout 4.6.3 && git pull
-    ./bootstrap
+    ./bootstrap 
     if [ $UNIV_BUILD == 1 ]; then
         CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
     else
         CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
     fi
 
-    make -j$(sysctl -n hw.logicalcpu)
-    make install
+    make -j$(sysctl -n hw.logicalcpu) 
+    make install 
 fi
 
 # Finally, build freedv-gui
@@ -75,4 +75,4 @@ else
     cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
 fi
 
-make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
+make -j$(sysctl -n hw.logicalcpu)

@@ -51,6 +51,9 @@ jobs:
 
   build-appimage:
     needs: lint
+    env:
+      FREEDV_LINUX_CODE_SIGNING_KEY_ID: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -106,11 +109,34 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
           make -j$(nproc) ${{ matrix.target }}
 
-    - name: Build AppImage
+    - name: Initialize GPG keys
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
+      env:
+        FREEDV_LINUX_CODE_SIGNING_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY }}
+        FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY }}
+      run: |
+        cat <<EOF >tmp_private.pem
+        ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY }}
+        EOF
+        cat <<EOF >tmp_public.pem
+        ${{ env.FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY }}
+        EOF
+        gpg --import tmp_public.pem
+        gpg --import tmp_private.pem
+
+    - name: Build AppImage (unsigned)
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
           ./make-appimage.sh ${{ matrix.target }}
+
+    - name: Build AppImage (signed)
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/appimage
+      run: |
+          LDAI_SIGN=1 LDAI_SIGN_KEY="${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}" ./make-appimage.sh ${{ matrix.target }}
 
     - name: Calculate AppImage filename
       shell: bash
@@ -201,6 +227,11 @@ jobs:
     needs: [build-appimage]
     steps:
     - uses: actions/checkout@v4
+
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
 
     - name: Save correct architecture
       id: save-arch
@@ -315,6 +346,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
 
     - name: Install LLVM/Clang >=20.0 (Required for sanitizers)
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}

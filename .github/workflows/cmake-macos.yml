@@ -11,7 +11,7 @@ concurrency:
     
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Debug
+  BUILD_TYPE: RelWithDebInfo
 
 jobs:
   lint:
@@ -122,24 +122,63 @@ jobs:
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
     runs-on: macos-latest
+    env:
+      MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
     needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
 
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
+
     - uses: gerlero/brew-install@v1
       with:
         packages: automake libtool numpy sox 
 
-    - name: Build universal freedv-gui
+    - name: Initialize code signing infrastructure
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      env:
+        MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
+        MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
+        MACOS_CODE_SIGNING_CERTIFICATE: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_CERTIFICATE }}
+      run: |
+        security create-keychain -p actions macos-build.keychain
+        security default-keychain -s macos-build.keychain
+        security unlock-keychain -p actions macos-build.keychain
+        security set-keychain-settings -t 3600 -u macos-build.keychain
+        cat <<EOF >tmp.pem
+        ${{ env.MACOS_CODE_SIGNING_CERTIFICATE }}
+        EOF
+        openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout pass:xxxxxxxx
+        security import tmp.p12 -k ~/Library/Keychains/macos-build.keychain -P xxxxxxxx -T /usr/bin/codesign -T /usr/bin/productsign -f pkcs12
+        security set-key-partition-list -S apple-tool:,apple: -s -k actions macos-build.keychain
+        security find-identity -v macos-build.keychain
+        xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
+
+    - name: Build universal freedv-gui (unsigned)
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+
+    - name: Build universal freedv-gui (signed)
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
       run: |
           make release
+
+    - name: Validate DMG signature
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      run: |
+        codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg --verbose
 
     - name: Stash disk image
       uses: actions/upload-artifact@v4
