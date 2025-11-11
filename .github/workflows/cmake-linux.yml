@@ -228,10 +228,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    #- name: Setup tmate session
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #    detached: true
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        detached: true
 
     - name: Save correct architecture
       id: save-arch
@@ -347,10 +347,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    #- name: Setup tmate session
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #    detached: true
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        detached: true
 
     - name: Install LLVM/Clang >=20.0 (Required for sanitizers)
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
