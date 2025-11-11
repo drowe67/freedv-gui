@@ -146,7 +146,9 @@ ThreadedTimer::ThreadedTimer()
       repeat_(false)
     , timeoutMilliseconds_(0)
 {
-    // empty
+#if !defined(__APPLE__)
+    isRunning_.store(false, std::memory_order_release);
+#endif // !defined(__APPLE__)
 }
 
 ThreadedTimer::ThreadedTimer(int milliseconds, TimerCallbackFn fn, bool repeat)
