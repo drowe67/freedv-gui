@@ -36,8 +36,18 @@ std::string ReportingController::getVersionString_()
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
+#define PSKREPORTER_REPORT_INTERVAL_MS (5*60*1000)
+
 ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     : softwareName_(std::move(softwareName))
+    , pskReporterSendTimer_(PSKREPORTER_REPORT_INTERVAL_MS, [&](ThreadedTimer&) {
+        enqueue_([&]() {
+            if (pskReporterConnection_ != nullptr)
+            {
+                pskReporterConnection_->send();
+            }
+        });
+    }, true)
     , freedvReporterConnection_(nullptr)
     , pskReporterConnection_(nullptr)
     , currentGridSquare_(SOFTWARE_GRID_SQUARE)
@@ -102,6 +112,7 @@ void ReportingController::updateReporterState_()
     if (pskReporterConnection_ != nullptr)
     {
         log_info("Disconnecting from PSK Reporter");
+        pskReporterSendTimer_.stop();
         delete pskReporterConnection_;
         pskReporterConnection_ = nullptr;
     }
@@ -117,6 +128,7 @@ void ReportingController::updateReporterState_()
     {
         log_info("Connecting to PSK Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
         pskReporterConnection_ = new PskReporter(radioCallsign_, currentGridSquare_, getVersionString_());
+        pskReporterSendTimer_.start();
     }
 }
 
@@ -150,7 +162,6 @@ void ReportingController::reportCallsign(std::string const& callsign, char snr)
         if (pskReporterConnection_ != nullptr)
         {
             pskReporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
-            pskReporterConnection_->send(); // XXX - we need to only send every 5min
         }
     });
 }

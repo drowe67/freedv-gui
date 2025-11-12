@@ -25,6 +25,7 @@
 
 #include <string>
 #include "../util/ThreadedObject.h"
+#include "../util/ThreadedTimer.h"
 #include "../reporting/FreeDVReporter.h"
 #include "../reporting/pskreporter.h"
 
@@ -44,6 +45,7 @@ public:
 
 private:
     std::string softwareName_;
+    ThreadedTimer pskReporterSendTimer_;
     FreeDVReporter* freedvReporterConnection_;
     PskReporter* pskReporterConnection_;
 
