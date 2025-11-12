@@ -35,9 +35,8 @@ ThreadedTimer::TimerServer ThreadedTimer::TheTimerServer_;
 
 ThreadedTimer::TimerServer::TimerServer()
     : isDestroying_(false)
-    , objectThread_(std::bind(&ThreadedTimer::TimerServer::eventLoop_, this))
 {
-    // empty
+    objectThread_ = std::thread(std::bind(&ThreadedTimer::TimerServer::eventLoop_, this));
 }
 
 ThreadedTimer::TimerServer::~TimerServer()
@@ -86,43 +85,33 @@ void ThreadedTimer::TimerServer::unregisterTimer(ThreadedTimer* timer)
 
 void ThreadedTimer::TimerServer::eventLoop_()
 {
-    std::chrono::time_point<std::chrono::steady_clock> nextWaitTime;
     std::unique_lock<std::mutex> lk(mutex_);
-
-    while (!isDestroying_.load(std::memory_order_relaxed))
+    std::chrono::time_point<std::chrono::steady_clock> nextFireTime;
+    while (!isDestroying_.load(std::memory_order_acquire))
     {
-
         if (timerQueue_.empty())
         {
-            timerCV_.wait(lk, [&]() {
-                auto currentTime = std::chrono::steady_clock::now();
-                return isDestroying_.load(std::memory_order_relaxed) || (!timerQueue_.empty() && timerQueue_.top()->nextFireTime_ <= currentTime);
-            });
+            timerCV_.wait(lk);
         }
         else
         {
-            auto& tmpTimer = timerQueue_.top();
-            nextWaitTime = tmpTimer->nextFireTime_;
-            timerCV_.wait_until(lk, nextWaitTime, [&]() { 
-                auto currentTime = std::chrono::steady_clock::now();
-                return isDestroying_.load(std::memory_order_relaxed) || (!timerQueue_.empty() && timerQueue_.top()->nextFireTime_ <= currentTime);
-            });
+            ThreadedTimer* tmpTimer = timerQueue_.top();
+            nextFireTime = tmpTimer->nextFireTime_;
+            timerCV_.wait_until(lk, tmpTimer->nextFireTime_);
         }
 
         // Execute timers that have fired.
         auto currentTime = std::chrono::steady_clock::now();
         while (
-            !isDestroying_.load(std::memory_order_relaxed) && 
+            !isDestroying_.load(std::memory_order_acquire) && 
             !timerQueue_.empty() && timerQueue_.top()->nextFireTime_ <= currentTime)
         {
             ThreadedTimer* tmpTimer = timerQueue_.top();
-
-            // Set next fire time if repeating, otherwise deregister
             timerQueue_.pop();
 
+            // Set next fire time if repeating, otherwise deregister
             if (tmpTimer->repeat_)
             {
-                std::unique_lock<std::mutex> timerLock(tmpTimer->timerMutex_);
                 tmpTimer->nextFireTime_ += std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
                 timerQueue_.push(tmpTimer);
             }
@@ -136,6 +125,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             lk.unlock();
             tmpTimer->fn_(*tmpTimer);
             lk.lock();
+            currentTime = std::chrono::steady_clock::now();
         }        
     }
 }
@@ -219,9 +209,12 @@ void ThreadedTimer::start()
         }
     }
 #else
-    nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMilliseconds_);
+    {
+        std::unique_lock<std::mutex> lk(timerMutex_);
+        nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMilliseconds_);
+        isRunning_.store(true, std::memory_order_release);
+    }
     TheTimerServer_.registerTimer(this);
-    isRunning_.store(true, std::memory_order_release);
 #endif // defined(__APPLE__)
 }
 
