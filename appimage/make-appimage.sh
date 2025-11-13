@@ -45,7 +45,7 @@ fi
 --executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
---custom-apprun=AppRun.sh \
+--custom-apprun=$APPRUN \
 --desktop-file $DESKTOP_FILE
 
 # create the virtual environment (copied from Brian's build script)

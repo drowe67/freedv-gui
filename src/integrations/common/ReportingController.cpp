@@ -36,9 +36,20 @@ std::string ReportingController::getVersionString_()
 #define SOFTWARE_GRID_SQUARE "AA00"
 #define MODE_STRING "RADEV1"
 
+#define PSKREPORTER_REPORT_INTERVAL_MS (5*60*1000)
+
 ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     : softwareName_(std::move(softwareName))
-    , reporterConnection_(nullptr)
+    , pskReporterSendTimer_(PSKREPORTER_REPORT_INTERVAL_MS, [&](ThreadedTimer&) {
+        enqueue_([&]() {
+            if (pskReporterConnection_ != nullptr)
+            {
+                pskReporterConnection_->send();
+            }
+        });
+    }, true)
+    , freedvReporterConnection_(nullptr)
+    , pskReporterConnection_(nullptr)
     , currentGridSquare_(SOFTWARE_GRID_SQUARE)
     , radioCallsign_("")
     , userHidden_(true)
@@ -52,9 +63,9 @@ void ReportingController::transmit(bool transmit)
 {   
     enqueue_([&, transmit]() {
         log_info("Reporting TX state %d", (int)transmit);
-        if (reporterConnection_ != nullptr)
+        if (freedvReporterConnection_ != nullptr)
         {   
-            reporterConnection_->transmit(MODE_STRING, transmit);
+            freedvReporterConnection_->transmit(MODE_STRING, transmit);
         }
     });
 }
@@ -63,9 +74,9 @@ void ReportingController::changeFrequency(uint64_t freqHz)
 {   
     enqueue_([&, freqHz]() {
         log_info("Reporting frequency %" PRIu64, freqHz);
-        if (reporterConnection_ != nullptr)
+        if (freedvReporterConnection_ != nullptr)
         {
-            reporterConnection_->freqChange(freqHz);
+            freedvReporterConnection_->freqChange(freqHz);
         }
         currentFreq_ = freqHz;
     });
@@ -91,18 +102,33 @@ void ReportingController::hideSelf()
 
 void ReportingController::updateReporterState_()
 {
-    if (reporterConnection_ != nullptr && userHidden_)
+    if (freedvReporterConnection_ != nullptr && userHidden_)
     {
         log_info("Disconnecting from FreeDV Reporter");
-        delete reporterConnection_;
-        reporterConnection_ = nullptr;
+        delete freedvReporterConnection_;
+        freedvReporterConnection_ = nullptr;
     }
 
-    if (reporterConnection_ == nullptr && !userHidden_)
+    if (pskReporterConnection_ != nullptr)
+    {
+        log_info("Disconnecting from PSK Reporter");
+        pskReporterSendTimer_.stop();
+        delete pskReporterConnection_;
+        pskReporterConnection_ = nullptr;
+    }
+
+    if (freedvReporterConnection_ == nullptr && !userHidden_)
     {
         log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
-        reporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), rxOnly_, true);
-        reporterConnection_->connect();
+        freedvReporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), rxOnly_, true);
+        freedvReporterConnection_->connect();
+    }
+
+    if (pskReporterConnection_ == nullptr && currentGridSquare_ != SOFTWARE_GRID_SQUARE)
+    {
+        log_info("Connecting to PSK Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
+        pskReporterConnection_ = new PskReporter(radioCallsign_, currentGridSquare_, getVersionString_());
+        pskReporterSendTimer_.start();
     }
 }
 
@@ -114,11 +140,11 @@ void ReportingController::updateRadioCallsign(std::string const& newCallsign)
         radioCallsign_ = newCallsign;
         if (changed)
         {
-            if (reporterConnection_ != nullptr)
+            if (freedvReporterConnection_ != nullptr)
             {
                 log_info("Disconnecting from FreeDV Reporter");
-                delete reporterConnection_;
-                reporterConnection_ = nullptr;
+                delete freedvReporterConnection_;
+                freedvReporterConnection_ = nullptr;
             }
             updateReporterState_();
         }
@@ -129,9 +155,13 @@ void ReportingController::reportCallsign(std::string const& callsign, char snr)
 {
     enqueue_([&, callsign, snr]() {
         log_info("Reporting RX callsign %s (SNR %d) to FreeDV Reporter", callsign.c_str(), (int)snr);
-        if (reporterConnection_ != nullptr)
+        if (freedvReporterConnection_ != nullptr)
         {
-            reporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
+            freedvReporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
+        }
+        if (pskReporterConnection_ != nullptr)
+        {
+            pskReporterConnection_->addReceiveRecord(callsign, MODE_STRING, currentFreq_, snr);
         }
     });
 }
@@ -146,10 +176,10 @@ void ReportingController::updateRadioGridSquare(std::string const& newGridSquare
         currentGridSquare_ = newGridSquare;
         if (changed)
         {
-            if (reporterConnection_ != nullptr)
+            if (freedvReporterConnection_ != nullptr)
             {
-                delete reporterConnection_;
-                reporterConnection_ = nullptr;
+                delete freedvReporterConnection_;
+                freedvReporterConnection_ = nullptr;
             }
             updateReporterState_();
         }

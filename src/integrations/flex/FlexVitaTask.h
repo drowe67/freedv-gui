@@ -21,6 +21,7 @@
 #include <chrono>
 #include <functional>
 #include <thread>
+#include <map>
 #include <string>
 #include <ctime>
 #include <sys/socket.h>
@@ -70,7 +71,10 @@ public:
     }
 
     int getPort() const { return udpPort_; }
-    
+   
+    void registerStreamIds(uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId);
+    void clearStreamIds();
+ 
 private:    
     paCallBackData callbackData_;
     struct sockaddr_in radioAddress_;
@@ -90,6 +94,8 @@ private:
     bool pendingEndTx_;
     bool randomUdpPort_;
     int udpPort_;
+    std::map<uint32_t, uint32_t> txStreamIds_; // txIn -> txOut
+    std::map<uint32_t, uint32_t> rxStreamIds_; // rxIn -> rxOut
 
     // vita packet cache -- preallocate on startup
     // to reduce the amount of latency when sending packets 
