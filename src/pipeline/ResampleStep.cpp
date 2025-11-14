@@ -138,7 +138,7 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
     while (numInputSamples > 0 && (outputSampleRate_ - *numOutputSamples) > 0)
     {
         int inputSize = std::min(numInputSamples, inputSampleRate_ * 10 / 1000);
-        int outputSize = outputSampleRate_ - *numOutputSamples;
+        int outputSize = std::min(2 * ((inputSize * outputSampleRate_) / inputSampleRate_), outputSampleRate_ - *numOutputSamples);
 
         auto numSamples = resample_step(
             resampleState_, outputPtr, inputPtr, outputSampleRate_, 
