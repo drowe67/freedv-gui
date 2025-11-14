@@ -592,6 +592,7 @@ class MainFrame : public TopFrame
         
         bool isFrequencyControlEnabled_()
         {
+#if 0
             auto& rigControlConfig = wxGetApp().appConfiguration.rigControlConfiguration;
             return 
                 wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled || 
@@ -600,6 +601,9 @@ class MainFrame : public TopFrame
                 || rigControlConfig.useOmniRig
 #endif // defined(WIN32)
                 ) && (rigControlConfig.hamlibEnableFreqModeChanges || rigControlConfig.hamlibEnableFreqChangesOnly));
+#else
+            return true;
+#endif // 0
         }
 };
 
