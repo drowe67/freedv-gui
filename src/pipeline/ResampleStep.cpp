@@ -57,7 +57,7 @@ static int resample_step(SRC_STATE *src,
     src_data.input_frames = length_input_short;
     src_data.output_frames = length_output_short;
     src_data.end_of_input = 0;
-    src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
+    src_data.src_ratio = (double)output_sample_rate/(double)input_sample_rate;
 
     // libsamplerate is unlikely to use RT-unsafe constructs in normal use
     // (verified with RTsan-enabled automated testing). Verified on 2025-09-30.

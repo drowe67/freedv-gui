@@ -273,7 +273,7 @@ void MinimalTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = getTxNNomModemSamples() * ((float)outputSampleRate_ / (float)RADE_MODEM_SAMPLE_RATE);
+        unsigned int nsam_one_modem_frame = (getTxNNomModemSamples() * outputSampleRate_) / RADE_MODEM_SAMPLE_RATE;
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
         assert(nsam_in_48 > 0);
@@ -386,7 +386,7 @@ void MinimalTxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
         clearFifos_();
     }
 
-    int nsam_one_speech_frame = getRxNumSpeechSamples() * ((float)outputSampleRate_ / (float)RADE_SPEECH_SAMPLE_RATE);
+    int nsam_one_speech_frame = (getRxNumSpeechSamples() * outputSampleRate_) / RADE_SPEECH_SAMPLE_RATE;
     auto outFifo = cbData_->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
