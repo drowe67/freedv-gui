@@ -397,7 +397,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 txStreamId_ = txStreamIds_[htonl(packet->stream_id)];
                 if (txStreamId_ == 0) return;
                 txStreamId_ = packet->stream_id;
-                //log_info("outputting on stream %08x, input on %08x", txStreamId_, packet->stream_id);
+                log_info("outputting on stream %08x, input on %08x", txStreamId_, packet->stream_id);
                 inFifo = getAudioInput_(true);
             }
            
