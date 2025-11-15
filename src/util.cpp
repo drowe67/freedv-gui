@@ -277,7 +277,7 @@ int resample(SRC_STATE *src,
     src_data.input_frames = length_input_short;
     src_data.output_frames = length_output_short;
     src_data.end_of_input = 0;
-    src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
+    src_data.src_ratio = (double)output_sample_rate/(double)input_sample_rate;
 
     ret = src_process(src, &src_data);
     if (ret != 0)
