@@ -396,8 +396,12 @@ void MainApp::UnitTest_()
             /*sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             sim.MouseClick();*/
             
-            // Wait 5 seconds for FreeDV to stop
-            std::this_thread::sleep_for(5s);
+            // Wait 5 seconds for FreeDV to stop. Add up to 500ms of additional
+            // random delay to avoid mpp test failures.
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<> distrib(0, 500);
+            std::this_thread::sleep_for(5s + std::chrono::milliseconds(distrib(gen)));
         }
     }
     else
