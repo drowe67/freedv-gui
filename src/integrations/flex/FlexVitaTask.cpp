@@ -151,7 +151,8 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
             // TBD: close and reopen socket
             constexpr int ERROR_BUFFER_LEN = 1024;
             char tmpBuf[ERROR_BUFFER_LEN];
-            log_error("Got socket error %d (%s) while sending", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+            strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN);
+            log_error("Got socket error %d (%s) while sending", errno, tmpBuf);
         }
     }
 }
@@ -165,7 +166,8 @@ void FlexVitaTask::openSocket_()
     socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (socket_ == -1)
     {
-        log_error("Got socket error %d (%s) while creating socket", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN);
+        log_error("Got socket error %d (%s) while creating socket", errno, tmpBuf);
         assert(socket_ != -1);
         return;
     }
@@ -184,7 +186,8 @@ void FlexVitaTask::openSocket_()
         if (rv == -1)
         {
             auto err = errno;
-            log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+            strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            log_error("Got socket error %d (%s) while binding", err, tmpBuf);
         }
         assert(rv != -1);
 
@@ -197,7 +200,8 @@ void FlexVitaTask::openSocket_()
         if (rv == -1)
         {
             auto err = errno;
-            log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+            strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            log_error("Got socket error %d (%s) while calling getsockname", err, tmpBuf);
         }
         assert(rv != -1);
 

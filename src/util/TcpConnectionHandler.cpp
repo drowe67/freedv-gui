@@ -335,7 +335,8 @@ void TcpConnectionHandler::connectImpl_()
             int err = errno;
             constexpr int ERROR_BUFFER_LEN = 1024;
             char tmpBuf[ERROR_BUFFER_LEN];
-            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+            strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -721,7 +722,8 @@ socket_error:
                 log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
-                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+                strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 close(sock);
 #endif // defined(WIN32)
                 socketsToDelete.push_back(sock);
