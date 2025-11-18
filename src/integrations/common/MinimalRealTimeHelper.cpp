@@ -48,12 +48,12 @@ void MinimalRealtimeHelper::setHelperRealTime()
         char tmpBuf[ERROR_BUFFER_SIZE];
         if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
         {
-            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            (void)strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
             log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
         }
         else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
         {
-            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            (void)strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
             log_warn("rtkit could not make high priority: %s", tmpBuf);
         }
     }

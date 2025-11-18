@@ -364,7 +364,7 @@ int main(int argc, char** argv)
         {
             constexpr int ERROR_BUFFER_LEN = 1024;
             char tmpBuf[ERROR_BUFFER_LEN];
-            strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN);
+            (void)strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN);
             log_error("Error waiting for input: %s", tmpBuf);
             break;
         }
