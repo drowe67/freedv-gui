@@ -122,6 +122,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
 
+#if 0
     // Speaker audio post-processing
     wxStaticBox* sbSpeakerAudio = new wxStaticBox(this, wxID_ANY, _("Speaker Audio Post-Processing"));
     wxStaticBoxSizer* sbSpeakerAudioSizer = new wxStaticBoxSizer(sbSpeakerAudio, wxHORIZONTAL);
@@ -131,6 +132,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_ckboxBwExpandEnabled->SetToolTip(_("Expands RADE RX audio to 24kHz. Requires speaker or headset capable of >16kHz sample rate."));
     
     bSizer30->Add(sbSpeakerAudioSizer, 0, wxALL | wxEXPAND, 5);   
+#endif // 0
 
     // EQ Filters -----------------------------------------------------------
 
@@ -267,7 +269,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
     m_ckboxAgcEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
-    m_ckboxBwExpandEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
+    //m_ckboxBwExpandEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
     int events[] = {
@@ -328,7 +330,7 @@ FilterDlg::~FilterDlg()
 
     m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
     m_ckboxAgcEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
-    m_ckboxBwExpandEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
+    //m_ckboxBwExpandEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     
     int events[] = {
         wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
@@ -497,7 +499,7 @@ void FilterDlg::ExchangeData(int inout)
         m_ckboxAgcEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.agcEnabled);
         
         // BW Expand
-        m_ckboxBwExpandEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled);
+        //m_ckboxBwExpandEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled);
 
         // Codec 2 700C EQ
         m_ckbox700C_EQ->SetValue(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -588,7 +590,7 @@ void FilterDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
         
         // BW Expand
-        wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
+        //wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
 
         // Codec 2 700C EQ
         wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();

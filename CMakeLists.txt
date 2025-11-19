@@ -58,12 +58,12 @@ endif(NOT DEFINED LINUX)
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
-set(FREEDV_VERSION_TAG "dev")
+set(FREEDV_VERSION_TAG "")
 
 # Uncomment the below definition to cause the build to expire
 # six months from the day it was built. This should be commented
 # for official releases.
-add_definitions(-DUNOFFICIAL_RELEASE)
+#add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -379,7 +379,7 @@ include(cmake/BuildCodec2.cmake)
 # Look for libebur128 (loudness measurement)
 if(NOT USE_STATIC_EBUR128)
     message(STATUS "Looking for ebur128...")
-    find_library(LIBEBR128 ebur128)
+    find_library(LIBEBUR128 ebur128)
     find_path(LIBEBUR128_INCLUDE_DIR ebur128.h)
     message(STATUS "  ebur128 library: ${LIBEBUR128}")
     message(STATUS "  ebur128 headers: ${LIBEBUR128_INCLUDE_DIR}")
