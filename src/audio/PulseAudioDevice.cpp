@@ -271,13 +271,11 @@ void PulseAudioDevice::setHelperRealTime()
         char tmpBuf[ERROR_BUFFER_SIZE];
         if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
         {
-            (void)strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-            log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+            log_warn("rtkit could not get minimum nice level: %s", strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE));
         }
         else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
         {
-            (void)strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-            log_warn("rtkit could not make high priority: %s", tmpBuf);
+            log_warn("rtkit could not make high priority: %s", strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE));
         }
     }
     

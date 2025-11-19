@@ -25,10 +25,6 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
-if(LINUX)
-add_definitions(-D_DEFAULT_SOURCE)
-endif(LINUX)
-
 # Include third party headers and components
 include_directories(3rdparty)
 add_subdirectory(3rdparty)
