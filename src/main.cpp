@@ -3665,7 +3665,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
                     
         // If VOX tone is enabled, go back through and add the VOX tone
         // on the left channel.
-        if (cbData->leftChannelVoxTone)
+        if (cbData->leftChannelVoxTone.load(std::memory_order_acquire))
         {
             cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
             cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
