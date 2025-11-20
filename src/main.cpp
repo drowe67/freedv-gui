@@ -259,6 +259,8 @@ void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
 
 void MainApp::UnitTest_()
 {
+    SetThreadName("UnitTest");
+
     // List audio devices
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->start();

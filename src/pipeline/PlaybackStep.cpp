@@ -103,7 +103,7 @@ void PlaybackStep::nonRtThreadEntry_()
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
 
-    SetThreadName("PlaybackStep");
+    SetThreadName("PlayStep");
 
     while (!nonRtThreadEnding_)
     {

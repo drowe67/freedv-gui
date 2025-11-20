@@ -109,8 +109,7 @@ void ThreadedObject::eventLoop_()
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
 #endif // defined(__APPLE__)
 
-    std::string fullThreadName = "FreeDV " + name_;
-    SetThreadName(fullThreadName);
+    SetThreadName(name_);
 
     while (!isDestroying_.load(std::memory_order_acquire))
     {
