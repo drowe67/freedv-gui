@@ -37,7 +37,8 @@
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
-    : client_(client)
+    : Win32COMObject("WASAPIDev")
+    , client_(client)
     , device_(device)
     , renderClient_(nullptr)
     , captureClient_(nullptr)

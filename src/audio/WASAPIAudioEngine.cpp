@@ -34,7 +34,8 @@
 #include "../util/logging/ulog.h"
 
 WASAPIAudioEngine::WASAPIAudioEngine()
-    : devEnumerator_(nullptr)
+    : Win32COMObject("WASAPIEng")
+    , devEnumerator_(nullptr)
     , inputDeviceList_(nullptr)
     , outputDeviceList_(nullptr)
 {

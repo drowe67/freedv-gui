@@ -24,8 +24,9 @@
 
 #include "ThreadedObject.h"
 
-ThreadedObject::ThreadedObject(ThreadedObject* parent)
+ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
+    , name_(name)
 {
     dispatch_queue_t parentQueue;
     
