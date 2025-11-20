@@ -21,12 +21,14 @@
 //=========================================================================
 
 #include <chrono>
+#include "../os/os_interface.h"
 #include "ThreadedObject.h"
 
 using namespace std::chrono_literals;
 
-ThreadedObject::ThreadedObject(ThreadedObject* parent)
+ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
+    , name_(name)
     , isDestroying_(false)
 {
     // Instantiate thread here rather than the initializer since otherwise
@@ -106,6 +108,9 @@ void ThreadedObject::eventLoop_()
     // Downgrade thread QoS to Utility to avoid thread contention issues.
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
 #endif // defined(__APPLE__)
+
+    std::string fullThreadName = "FreeDV " + name_;
+    SetThreadName(fullThreadName);
 
     while (!isDestroying_.load(std::memory_order_acquire))
     {

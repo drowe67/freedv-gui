@@ -33,6 +33,8 @@
 #include <sys/resource.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
@@ -245,6 +247,8 @@ void RADETransmitStep::utFeatureThreadEntry_()
     // Make sure other I/O can throttle us.
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RADETx");
 
     float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);

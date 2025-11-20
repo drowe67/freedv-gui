@@ -23,6 +23,9 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
+
+#include <pthread.h>
+
 #include "os_interface.h"
 
 static id<NSObject> Activity = nil;
@@ -116,4 +119,11 @@ void StopLowLatencyActivity()
 std::string GetOperatingSystemString()
 {
     return "macos";
+}
+
+void SetThreadName(std::string name)
+{
+    std::string fullName = "FDV ";
+    fullName += name;
+    pthread_setname_np(fullName.c_str());
 }

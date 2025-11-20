@@ -26,6 +26,10 @@
 #include <map>
 #include "../util/logging/ulog.h"
 
+#if defined(USE_RTKIT)
+#include "rtkit.h"
+#endif // defined(USE_RTKIT)
+
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
 {
@@ -73,6 +77,51 @@ void PulseAudioEngine::start()
     
     pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
+
+#if defined(USE_RTKIT)
+        if (pa_threaded_mainloop_in_thread(threadedML))
+        {
+            DBusError error;
+            DBusConnection* bus = nullptr;
+            int result = 0;
+
+            dbus_error_init(&error);
+            if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+            {
+                log_warn("Could not connect to system bus: %s", error.message);
+            }
+            else
+            {
+                int minNiceLevel = 0;
+                constexpr int ERROR_BUFFER_SIZE = 1024;
+                char tmpBuf[ERROR_BUFFER_SIZE];
+                if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+                {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#else
+                    log_warn("rtkit could not get minimum nice level: %s", strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE));
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                }
+                else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+                {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    log_warn("rtkit could not make high priority: %s", tmpBuf);
+#else
+                    log_warn("rtkit could not make high priority: %s", strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE));
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                }
+            }
+    
+            if (bus != nullptr)
+            {
+                dbus_connection_unref(bus);
+            }
+        }
+#endif // defined(USE_RTKIT)
+
         pa_threaded_mainloop_signal(threadedML, 0);
     }, mainloop_);
     

@@ -59,7 +59,8 @@ using namespace std::chrono_literals;
 #endif // INVALID_SOCKET
 
 TcpConnectionHandler::TcpConnectionHandler()
-    : enableReconnect_(false)
+    : ThreadedObject("TcpConnectionHandler")
+    , enableReconnect_(false)
     , reconnectTimer_(RECONNECT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)

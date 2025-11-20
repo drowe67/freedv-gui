@@ -1009,9 +1009,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     VAR_FMT("Var: %4.1f"),
     CLK_OFF_FMT("ClkOff: %+-d")
 {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV GUI");
-#endif // defined(__linux__)
+    SetThreadName("GUI");
 
     terminating_ = false;
     realigned_ = false;
@@ -2657,9 +2655,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     {
         std::thread onOffExec([this]() 
         {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV TurningOn");
-#endif // defined(__linux__)
+            SetThreadName("TurningOn");
 
             performFreeDVOn_();
             
@@ -2701,9 +2697,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     {
         std::thread onOffExec([this]() 
         {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV TurningOff");
-#endif // defined(__linux__)
+            SetThreadName("TurningOff");
 
             performFreeDVOff_();
             
