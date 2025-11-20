@@ -51,7 +51,7 @@ std::string GetOperatingSystemString()
 #endif // __linux__
 }
 
-void SetThreadName(std::string name)
+void SetThreadName(std::string const& name)
 {
     std::string fullName = "FDV ";
     fullName += name;

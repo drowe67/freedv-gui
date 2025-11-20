@@ -121,7 +121,7 @@ std::string GetOperatingSystemString()
     return "macos";
 }
 
-void SetThreadName(std::string name)
+void SetThreadName(std::string const& name)
 {
     std::string fullName = "FDV ";
     fullName += name;

@@ -64,7 +64,7 @@ std::string GetOperatingSystemString()
     return "windows";
 }
 
-void SetThreadName(std::string name)
+void SetThreadName(std::string const& name)
 {
     // XXX - assumes ASCII. This is probably fine, though, since
     // this is debug code.

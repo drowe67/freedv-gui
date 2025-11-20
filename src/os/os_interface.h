@@ -51,6 +51,6 @@ void StartLowLatencyActivity();
 void StopLowLatencyActivity();
 
 // Sets the name of the current thread in the OS.
-void SetThreadName(std::string name);
+void SetThreadName(std::string const& name);
 
 #endif // __OS_INTERFACE__
