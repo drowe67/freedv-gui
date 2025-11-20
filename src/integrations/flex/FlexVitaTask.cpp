@@ -33,7 +33,8 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 using namespace std::placeholders;
 
 FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort)
-    : socket_(-1)
+    : ThreadedObject("FlexVita")
+    , socket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
     , audioSeqNum_(0)
