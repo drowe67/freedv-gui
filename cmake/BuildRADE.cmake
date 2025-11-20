@@ -93,7 +93,7 @@ endif (NOT download_pip_POPULATED)
 
 # PyTorch needs the Visual Studio redistributable to be installed.
 FetchContent_Declare(download_vsr
-    URL https://aka.ms/vs/17/release/vc_redist.x64.exe
+    URL https://aka.ms/vc14/vc_redist.x64.exe
     DOWNLOAD_NO_EXTRACT TRUE)
 if (NOT download_vsr_POPULATED)
     FetchContent_Populate(download_vsr)
@@ -152,7 +152,7 @@ install(
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.
 set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive'
+    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive /norestart'
     MessageBox MB_OK 'FreeDV will now open a Command Prompt window to finish installing the Python components needed for RADE. Please allow this process to complete without interruption. It may appear as though nothing is happening but rest assured, things are happening.' /SD IDOK
     ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
 
