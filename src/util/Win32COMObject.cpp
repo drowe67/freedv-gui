@@ -27,7 +27,8 @@
 
 #include <future>
 
-Win32COMObject::Win32COMObject()
+Win32COMObject::Win32COMObject(std::string name)
+    : ThreadedObject(name)
 {
     enqueue_([&]() {
         HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);

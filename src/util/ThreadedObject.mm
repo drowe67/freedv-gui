@@ -26,7 +26,7 @@
 
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
-    , name_(name)
+    , name_(std::move(name))
 {
     dispatch_queue_t parentQueue;
     
