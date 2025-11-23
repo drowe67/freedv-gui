@@ -848,6 +848,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.1.1 TBD 2025
+
+1. Bugfixes:
+    * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
+
 ## V2.1.0 November 2025
 
 1. Bugfixes:

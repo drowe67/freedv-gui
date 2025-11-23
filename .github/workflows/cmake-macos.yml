@@ -20,9 +20,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+    - name: Install needed packages
+      run: |
+          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -62,9 +62,9 @@ jobs:
     #  with:
     #    detached: true
 
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+    - name: Install needed packages
+      run: |
+        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
 
     - name: Install VB-Cable
       shell: bash
@@ -134,9 +134,9 @@ jobs:
     #  with:
     #    detached: true
 
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool numpy sox 
+    - name: Install needed packages
+      run: |
+        brew install automake libtool numpy sox 
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -211,9 +211,9 @@ jobs:
           mkdir FreeDV-dmg
           hdiutil attach FreeDV.dmg -mountpoint FreeDV-dmg
           
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool sox
+    - name: Install needed packages
+      run: |
+        brew install automake libtool sox
 
     - name: Install VB-Cable
       shell: bash
