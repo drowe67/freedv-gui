@@ -92,9 +92,12 @@ void MinimalTxRxThread::initializePipeline_()
         });
         radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
-        
+      
+        // BW expander temporarily disabled pending further testing 
+#if 0 
         auto bwExpandStep = new BandwidthExpandStep();
         pipeline_->appendPipelineStep(bwExpandStep);
+#endif // 0
 
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();

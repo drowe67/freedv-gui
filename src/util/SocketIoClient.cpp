@@ -49,6 +49,14 @@ SocketIoClient::~SocketIoClient()
     enableReconnect_.store(false, std::memory_order_release);
     auto fut = disconnect();
     fut.wait();
+
+    // Make absolutely sure there's nothing else in the queue before release.
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
+    auto fut2 = prom->get_future();
+    enqueue_([&]() {
+        prom->set_value();
+    });
+    fut2.wait();
 }
 
 void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
