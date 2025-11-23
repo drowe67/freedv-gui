@@ -88,8 +88,11 @@ short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples)
     {
         outputFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
-    
-    fileIoThreadSem_.signal();
+   
+    if (outputFifo_.numUsed() < (outputFifo_.capacity() / 2))
+    { 
+        fileIoThreadSem_.signal();
+    }
 
     return outputSamples_.get();
 }
