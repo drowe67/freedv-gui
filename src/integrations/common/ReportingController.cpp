@@ -39,7 +39,8 @@ std::string ReportingController::getVersionString_()
 #define PSKREPORTER_REPORT_INTERVAL_MS (5*60*1000)
 
 ReportingController::ReportingController(std::string softwareName, bool rxOnly)
-    : softwareName_(std::move(softwareName))
+    : ThreadedObject("Reporting")
+    , softwareName_(std::move(softwareName))
     , pskReporterSendTimer_(PSKREPORTER_REPORT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_([&]() {
             if (pskReporterConnection_ != nullptr)

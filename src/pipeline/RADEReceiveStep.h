@@ -29,7 +29,6 @@
 #include <functional>
 
 #include "IPipelineStep.h"
-#include "../freedv_interface.h"
 #include "rade_api.h"
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
@@ -42,9 +41,15 @@
 #define NUM_FEATURES_TO_STORE (256 * 1024)
 
 // TBD - need to wrap in "extern C" to avoid linker errors
-extern "C" 
+extern "C"
 {
+#if defined(FREEDV_INTEGRATION)
+    #include "fargan_config_integ.h"
+#else
+    #include "fargan_config.h"
+#endif // defined(FREEDV_INTEGRATION)
     #include "fargan.h"
+    #include "lpcnet.h"
 }
 
 class RADEReceiveStep : public IPipelineStep

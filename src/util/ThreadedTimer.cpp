@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "ThreadedTimer.h"
+#include "../os/os_interface.h"
 
 #include <cinttypes>
 
@@ -85,6 +86,8 @@ void ThreadedTimer::TimerServer::unregisterTimer(ThreadedTimer* timer)
 
 void ThreadedTimer::TimerServer::eventLoop_()
 {
+    SetThreadName("Timer");
+
     std::unique_lock<std::mutex> lk(mutex_);
     std::chrono::time_point<std::chrono::steady_clock> nextFireTime;
     while (!isDestroying_.load(std::memory_order_acquire))

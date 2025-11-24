@@ -370,6 +370,7 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # Build RADE. 
 # (TBD - allow override with own build, similar to Codec2)
 include(cmake/BuildRADE.cmake)
+include(cmake/BuildRADEForIntegrations.cmake)
 
 #
 # Build codec2

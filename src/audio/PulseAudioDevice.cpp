@@ -365,16 +365,16 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
         pa_stream_peek(s, &data, &length);
         if (!data || length == 0) 
         {
-            return; //break;
+            return;
         }
 
         if (thisObj->onAudioDataFunction)
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
-        sem_post(&thisObj->sem_);
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
+    sem_post(&thisObj->sem_);
 }
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)

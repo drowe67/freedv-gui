@@ -24,7 +24,7 @@ add_library(fdv_util STATIC
 )
 
 target_compile_options(fdv_util PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(fdv_util yyjson)
+target_link_libraries(fdv_util yyjson fdv_os_wrapper)
 
 if(UNITTEST)
 macro(DefineUnitTest utName)
