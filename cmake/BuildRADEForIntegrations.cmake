@@ -33,7 +33,7 @@ set_target_properties(rade_integ PROPERTIES
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/librade${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
-set(rade_BINARY_DIR ${BINARY_DIR})
+set(rade_integ_BINARY_DIR ${BINARY_DIR})
 
 add_library(opus_integ STATIC IMPORTED)
 add_dependencies(opus_integ build_rade_integ)
