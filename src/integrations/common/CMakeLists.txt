@@ -1,7 +1,7 @@
 set(PIPELINE_SUBSET
     ../../pipeline/AgcStep.cpp
     ../../pipeline/AudioPipeline.cpp
-    ../../pipeline/BandwidthExpandStep.cpp
+    #../../pipeline/BandwidthExpandStep.cpp
     ../../pipeline/IPipelineStep.cpp
     ../../pipeline/LevelAdjustStep.cpp
     ../../pipeline/RADEReceiveStep.cpp
@@ -25,7 +25,7 @@ add_library(fdv_integ_audio_pipeline STATIC
     ${PIPELINE_SUBSET})
 
 target_compile_options(fdv_integ_audio_pipeline PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_compile_definitions(fdv_integ_audio_pipeline PRIVATE -DDISABLE_UNIT_TEST)
+target_compile_definitions(fdv_integ_audio_pipeline PRIVATE -DDISABLE_UNIT_TEST -DFREEDV_INTEGRATION)
 target_link_libraries(fdv_integ_audio_pipeline PRIVATE fdv_os_wrapper rade_integ opus_integ codec2 samplerate agc ebur128 ${SPEEXDSP_LIBRARY})
 if(STATIC_SPEEXDSP_BUILT)
     add_dependencies(fdv_integ_audio_pipeline speex)
