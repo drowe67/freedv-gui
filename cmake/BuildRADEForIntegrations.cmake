@@ -19,6 +19,7 @@ ExternalProject_Add(build_rade_integ
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
    #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
+   EXCLUDE_FROM_ALL TRUE
 )
 
 ExternalProject_Get_Property(build_rade_integ BINARY_DIR)
