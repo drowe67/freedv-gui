@@ -340,6 +340,22 @@ jobs:
           native-audio: USE_NATIVE_AUDIO=0
         - sanitizer: WITH_UBSAN=1
           native-audio: USE_NATIVE_AUDIO=0
+        - os: ubuntu-22.04
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_UBSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_UBSAN=1
 
     runs-on: ${{ matrix.os }}
     needs: lint
