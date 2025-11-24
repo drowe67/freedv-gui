@@ -1849,20 +1849,29 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->status.CmpNoCase(rightData->status);
             break;
         case USER_MESSAGE_COL:
+        {
             // Blank entries should drop to the bottom when sorting in ascending order.
-            if (leftData->userMessage == "")
+            wxString leftCopy(leftData->userMessage);
+            wxString rightCopy(rightData->userMessage);
+            leftCopy.Trim(false);
+            leftCopy.Trim(true);
+            rightCopy.Trim(false);
+            rightCopy.Trim(true);
+
+            if (leftCopy == "")
             {
                 result = 1;
             }
-            else if (rightData->userMessage == "")
+            else if (rightCopy == "")
             {
                 result = -1;
             }
             else
             {
-                result = leftData->userMessage.CmpNoCase(rightData->userMessage);
+                result = leftCopy.CmpNoCase(rightCopy);
             }
             break;
+        }
         case LAST_TX_DATE_COL:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
