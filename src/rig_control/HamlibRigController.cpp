@@ -319,6 +319,8 @@ void HamlibRigController::connectImpl_()
         onRigError(this, errMsg);
         return;
     }
+    log_info ("rigName -%s- via port -%s-\n", rigName_.c_str(), serialPort_.c_str() );
+    
     rig_.store(tmpRig, std::memory_order_release);
     log_debug("rig_init() OK ....");
 

@@ -854,6 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
+    * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
 
 ## V2.1.0 November 2025
 
