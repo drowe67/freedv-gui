@@ -49,6 +49,7 @@
 #endif // defined(WIN32) || defined(__MINGW32__)
 
 #include "pskreporter.h"
+#include "../os/os_interface.h"
 
 //#define PSK_REPORTER_TEST
 #if defined(PSK_REPORTER_TEST)
@@ -269,6 +270,8 @@ void PskReporter::encodeSenderRecords_(char* buf)
 bool PskReporter::reportCommon_()
 {
     std::unique_lock<std::mutex> lock(recordListMutex_);
+
+    SetThreadName("PSKReport");
 
     // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
     // RX format block + TX format block + RX data + TX data

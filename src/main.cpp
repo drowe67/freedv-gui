@@ -259,6 +259,8 @@ void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
 
 void MainApp::UnitTest_()
 {
+    SetThreadName("UnitTest");
+
     // List audio devices
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->start();
@@ -1009,9 +1011,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     VAR_FMT("Var: %4.1f"),
     CLK_OFF_FMT("ClkOff: %+-d")
 {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV GUI");
-#endif // defined(__linux__)
+    SetThreadName("GUI");
 
     terminating_ = false;
     realigned_ = false;
@@ -2657,9 +2657,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     {
         std::thread onOffExec([this]() 
         {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV TurningOn");
-#endif // defined(__linux__)
+            SetThreadName("TurningOn");
 
             performFreeDVOn_();
             
@@ -2701,9 +2699,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     {
         std::thread onOffExec([this]() 
         {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV TurningOff");
-#endif // defined(__linux__)
+            SetThreadName("TurningOff");
 
             performFreeDVOff_();
             
@@ -3669,7 +3665,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
                     
         // If VOX tone is enabled, go back through and add the VOX tone
         // on the left channel.
-        if (cbData->leftChannelVoxTone)
+        if (cbData->leftChannelVoxTone.load(std::memory_order_acquire))
         {
             cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
             cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));

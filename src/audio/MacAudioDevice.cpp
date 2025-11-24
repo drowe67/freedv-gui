@@ -114,7 +114,8 @@ static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
 }
 
 MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
-    : coreAudioId_(coreAudioId)
+    : ThreadedObject("MacDevice")
+    , coreAudioId_(coreAudioId)
     , direction_(direction)
     , numChannels_(numChannels)
     , sampleRate_(sampleRate)

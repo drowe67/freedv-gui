@@ -531,12 +531,11 @@ void* TxRxThread::Entry() noexcept
     resetStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-#if defined(__linux__)
+    // Set thread name for debugging
     const char* threadName = nullptr;
-    if (m_tx) threadName = "FreeDV txThread";
-    else threadName = "FreeDV rxThread";
-    pthread_setname_np(pthread_self(), threadName);
-#endif // defined(__linux__)
+    if (m_tx) threadName = "txThread";
+    else threadName = "rxThread";
+    SetThreadName(threadName);
 
     // Make sure we don't start processing until
     // the main thread is ready.

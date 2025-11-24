@@ -34,7 +34,8 @@ using namespace std::chrono_literals;
 #define OMNI_RIG_WAIT_TIME (200ms)
 
 OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool freqOnly)
-    : rigId_(rigId)
+    : ThreadedObject("OmniRig")
+    , rigId_(rigId)
     , omniRig_(nullptr)
     , rig_(nullptr)
     , origFreq_(0)

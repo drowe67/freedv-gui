@@ -63,3 +63,13 @@ std::string GetOperatingSystemString()
 {
     return "windows";
 }
+
+void SetThreadName(std::string const& name)
+{
+    // XXX - assumes ASCII. This is probably fine, though, since
+    // this is debug code.
+    std::string fullName = "FDV ";
+    fullName += name;
+    std::wstring stemp = std::wstring(fullName.begin(), fullName.end());
+    SetThreadDescription(GetCurrentThread(), stemp.c_str());
+}

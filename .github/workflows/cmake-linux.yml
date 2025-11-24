@@ -42,7 +42,7 @@ jobs:
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_mimalloc build_rade build_codec2
+        make -j$(nproc) build_mimalloc build_rade build_codec2 build_rade_integ
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
@@ -340,6 +340,22 @@ jobs:
           native-audio: USE_NATIVE_AUDIO=0
         - sanitizer: WITH_UBSAN=1
           native-audio: USE_NATIVE_AUDIO=0
+        - os: ubuntu-22.04
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-22.04
+          sanitizer: WITH_UBSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-22.04-arm
+          sanitizer: WITH_UBSAN=1
 
     runs-on: ${{ matrix.os }}
     needs: lint

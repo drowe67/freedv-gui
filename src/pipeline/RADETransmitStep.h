@@ -28,11 +28,21 @@
 #include <atomic>
 
 #include "IPipelineStep.h"
-#include "../freedv_interface.h"
 #include "rade_api.h"
-#include "lpcnet.h"
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
+
+// TBD - need to wrap in "extern C" to avoid linker errors
+extern "C"
+{
+#if defined(FREEDV_INTEGRATION)
+    #include "fargan_config_integ.h"
+#else
+    #include "fargan_config.h"
+#endif // defined(FREEDV_INTEGRATION)
+    #include "fargan.h"
+    #include "lpcnet.h"
+}
 
 // Number of features to store. This is set to be close to the 
 // typical size for RX/TX features for the rade_loss ctest to

@@ -29,6 +29,8 @@
 #include <pthread.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -96,6 +98,8 @@ void RecordStep::fileIoThreadEntry_()
     // Downgrade thread QoS to Utility to avoid thread contention issues.        
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RecordStep");
 
     while (!fileIoThreadEnding_)
     {

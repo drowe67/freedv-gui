@@ -33,6 +33,8 @@
 
 #include "pipeline_defines.h"
 
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 #if !defined(DISABLE_UNIT_TEST)
@@ -235,6 +237,8 @@ void RADEReceiveStep::utFeatureThreadEntry_()
     // Make sure other I/O can throttle us.
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RADERx");
 
     float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);

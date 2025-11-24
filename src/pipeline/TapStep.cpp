@@ -30,6 +30,8 @@
 #include <pthread.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
@@ -42,6 +44,8 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
         const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
         short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
         assert(fifoInput != nullptr);
+
+        SetThreadName("TapStep");
 
 #if defined(__APPLE__)
         // Downgrade thread QoS to Utility to avoid thread contention issues.        

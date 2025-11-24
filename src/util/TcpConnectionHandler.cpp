@@ -47,6 +47,7 @@
 
 #include "TcpConnectionHandler.h"
 #include "logging/ulog.h"
+#include "../os/os_interface.h"
 
 using namespace std::chrono_literals;
 
@@ -59,7 +60,8 @@ using namespace std::chrono_literals;
 #endif // INVALID_SOCKET
 
 TcpConnectionHandler::TcpConnectionHandler()
-    : enableReconnect_(false)
+    : ThreadedObject("TcpConn")
+    , enableReconnect_(false)
     , reconnectTimer_(RECONNECT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)
@@ -178,6 +180,8 @@ void TcpConnectionHandler::connectImpl_()
 
     std::string portStr = portStream.str();
     std::thread ipv6ResolveThread([&, portStr, ipv6ResultPromise]() {
+        SetThreadName("ipv6");
+
         struct addrinfo *result = nullptr;
         resolveAddresses_(AF_INET6, host_.c_str(), portStr.c_str(), &result);
         ipv6ResultPromise->set_value(result);
@@ -185,6 +189,8 @@ void TcpConnectionHandler::connectImpl_()
     });
     
     std::thread ipv4ResolveThread([&, portStr, ipv4ResultPromise]() {
+        SetThreadName("ipv4");
+
         struct addrinfo *result = nullptr;
         resolveAddresses_(AF_INET, host_.c_str(), portStr.c_str(), &result);
         ipv4ResultPromise->set_value(result);
@@ -579,8 +585,9 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 void TcpConnectionHandler::receiveImpl_()
 {
     constexpr int READ_SIZE_BYTES = 1024;
-
     char buf[READ_SIZE_BYTES];
+
+    SetThreadName("TCPRx");
 
     while (socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
     {

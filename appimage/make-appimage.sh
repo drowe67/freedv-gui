@@ -6,14 +6,17 @@ if [[ "${TARGET}" == "all" ]]; then
     export APPNAME="FreeDV"
     export APPEXEC=../build_linux/src/freedv
     export APPRUN="AppRun.sh"
+    export RADE_SRC="rade_src"
 elif [[ "${TARGET}" == "freedv-flex" ]]; then
     export APPNAME="FreeDV-FlexRadio"
     export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
     export APPRUN="AppRun-FlexRadio.sh"
+    export RADE_SRC="rade_integ_src"
 elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
     export APPNAME="FreeDV-KA9Q"
     export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
     export APPRUN="AppRun-KA9Q.sh"
+    export RADE_SRC="rade_integ_src"
 fi
 
 DESKTOP_FILE="$APPNAME.desktop"
@@ -81,9 +84,9 @@ cd -
 echo "Copying rade_src..."
 # ls freedv-rade/freedv-gui/build_linux/rade_src/model
 # model05/        model17/        model18/        model19/        model19_check3/ model_bbfm_01/  
-cp -r "$BUILDDIR/build_linux/rade_src" "$APPDIR/."
+cp -r "$BUILDDIR/build_linux/$RADE_SRC" "$APPDIR/."
 cd "$APPDIR/usr/bin"
-ln -s "../../rade_src/model19_check3" "model19_check3"
+ln -s "../../$RADE_SRC/model19_check3" "model19_check3"
 cd -
 
 # Create the output

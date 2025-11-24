@@ -50,3 +50,13 @@ std::string GetOperatingSystemString()
     return "other";
 #endif // __linux__
 }
+
+void SetThreadName(std::string const& name)
+{
+    std::string fullName = "FDV ";
+    fullName += name;
+#ifdef __linux__
+    pthread_setname_np(pthread_self(), fullName.c_str());
+#endif // __linux__
+}
+
