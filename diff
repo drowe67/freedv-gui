@@ -1,0 +1,37 @@
+diff --git a/src/gui/dialogs/dlg_ptt.cpp b/src/gui/dialogs/dlg_ptt.cpp
+index 1428ef7b..09a3c547 100644
+--- a/src/gui/dialogs/dlg_ptt.cpp
++++ b/src/gui/dialogs/dlg_ptt.cpp
+@@ -496,6 +496,19 @@ void ComPortsDlg::populatePortList()
+ #endif
+ #endif
+ 
++    // Support /dev/rfcomm as well
++    // linux usb over bluetooth
++
++    if (glob("/dev/rfcomm*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
++    {
++        for(unsigned int i=0; i<gl.gl_pathc; i++)
++        {
++            wxString path = gl.gl_pathv[i];
++            portList.push_back(path);
++        }
++        globfree(&gl);
++    }
++
+     // Sort the list such that the port number is in numeric (not text) order.
+     std::sort(portList.begin(), portList.end(), [](const wxString& first, const wxString& second) {
+         wxRegEx portRegex("^([^0-9]+)([0-9]+)$");
+diff --git a/src/rig_control/HamlibRigController.cpp b/src/rig_control/HamlibRigController.cpp
+index 9fcc52c6..dbbb09e5 100644
+--- a/src/rig_control/HamlibRigController.cpp
++++ b/src/rig_control/HamlibRigController.cpp
+@@ -317,6 +317,8 @@ void HamlibRigController::connectImpl_()
+         onRigError(this, errMsg);
+         return;
+     }
++    log_info ("rigName -%s- via port -%s-\n", rigName_.c_str(), serialPort_.c_str() );
++
+     rig_.store(tmpRig, std::memory_order_release);
+     log_debug("rig_init() OK ....");
+ 
