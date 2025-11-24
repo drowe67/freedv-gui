@@ -493,9 +493,21 @@ void ComPortsDlg::populatePortList()
         }
         globfree(&gl);
     }
-#endif
-#endif
 
+    // Support /dev/rfcomm as well
+    // linux usb over bluetooth
+    if (glob("/dev/rfcomm*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
+    {
+        for(unsigned int i=0; i<gl.gl_pathc; i++)
+        {
+            wxString path = gl.gl_pathv[i];
+            portList.push_back(path);
+        }
+        globfree(&gl);
+    }
+#endif
+#endif
+    
     // Sort the list such that the port number is in numeric (not text) order.
     std::sort(portList.begin(), portList.end(), [](const wxString& first, const wxString& second) {
         wxRegEx portRegex("^([^0-9]+)([0-9]+)$");
