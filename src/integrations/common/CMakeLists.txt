@@ -26,7 +26,7 @@ add_library(fdv_integ_audio_pipeline STATIC
 
 target_compile_options(fdv_integ_audio_pipeline PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_compile_definitions(fdv_integ_audio_pipeline PRIVATE -DDISABLE_UNIT_TEST)
-target_link_libraries(fdv_integ_audio_pipeline PRIVATE fdv_os_wrapper rade opus codec2 samplerate agc ebur128 ${SPEEXDSP_LIBRARY})
+target_link_libraries(fdv_integ_audio_pipeline PRIVATE fdv_os_wrapper rade_integ opus_integ codec2 samplerate agc ebur128 ${SPEEXDSP_LIBRARY})
 if(STATIC_SPEEXDSP_BUILT)
     add_dependencies(fdv_integ_audio_pipeline speex)
 endif(STATIC_SPEEXDSP_BUILT)
