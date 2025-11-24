@@ -37,7 +37,7 @@ jobs:
         cd build_osx
         CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_mimalloc build_rade build_codec2
+        make -j$(nproc) build_mimalloc build_rade build_codec2 build_rade_integ
     
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx

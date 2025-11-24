@@ -42,7 +42,7 @@ jobs:
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_mimalloc build_rade build_codec2 build_rade_integ build_codec2_integ
+        make -j$(nproc) build_mimalloc build_rade build_codec2 build_rade_integ
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
