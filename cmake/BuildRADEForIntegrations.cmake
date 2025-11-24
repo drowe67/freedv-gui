@@ -37,8 +37,8 @@ set(rade_BINARY_DIR ${BINARY_DIR})
 
 add_library(opus_integ STATIC IMPORTED)
 add_dependencies(opus_integ build_rade_integ)
-set(FARGAN_ARM_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
-set(FARGAN_X86_CONFIG_H_FILE "${BINARY_DIR}/build_opus_x86-prefix/src/build_opus_x86/config.h")
+set(FARGAN_INTEG_ARM_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
+set(FARGAN_INTEG_X86_CONFIG_H_FILE "${BINARY_DIR}/build_opus_x86-prefix/src/build_opus_x86/config.h")
 
 if(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
@@ -51,7 +51,7 @@ set_target_properties(opus_integ PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
-set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
+set(FARGAN_INTEG_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
 else(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
     ${BINARY_DIR}/build_opus-prefix/src/build_opus
@@ -62,10 +62,10 @@ include_directories(
 set_target_properties(opus_integ PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
-set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus-prefix/src/build_opus/config.h")
-set(FARGAN_ARM_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
-set(FARGAN_X86_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
+set(FARGAN_INTEG_CONFIG_H_FILE "${BINARY_DIR}/build_opus-prefix/src/build_opus/config.h")
+set(FARGAN_INTEG_ARM_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
+set(FARGAN_INTEG_X86_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
 endif(APPLE AND BUILD_OSX_UNIVERSAL)
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/fargan_config.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config_integ.h.in" "${CMAKE_CURRENT_BINARY_DIR}/fargan_config_integ.h")
 

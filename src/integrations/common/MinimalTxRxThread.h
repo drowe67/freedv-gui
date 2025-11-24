@@ -41,7 +41,7 @@
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C" 
 {
-    #include "fargan_config.h"
+    #include "fargan_config_integ.h"
     #include "fargan.h"
     #include "lpcnet.h"
 }
