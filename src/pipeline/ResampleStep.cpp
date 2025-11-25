@@ -57,7 +57,7 @@ static int resample_step(SRC_STATE *src,
     src_data.input_frames = length_input_short;
     src_data.output_frames = length_output_short;
     src_data.end_of_input = 0;
-    src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
+    src_data.src_ratio = (double)output_sample_rate/(double)input_sample_rate;
 
     // libsamplerate is unlikely to use RT-unsafe constructs in normal use
     // (verified with RTsan-enabled automated testing). Verified on 2025-09-30.
@@ -135,10 +135,10 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
 
     auto inputPtr = inputSamples;
     auto outputPtr = outputSamples_.get();
-    while (numInputSamples > 0)
+    while (numInputSamples > 0 && (outputSampleRate_ - *numOutputSamples) > 0)
     {
         int inputSize = std::min(numInputSamples, inputSampleRate_ * 10 / 1000);
-        int outputSize = ((float)outputSampleRate_ / inputSampleRate_) * inputSize;
+        int outputSize = std::min(2 * ((inputSize * outputSampleRate_) / inputSampleRate_), outputSampleRate_ - *numOutputSamples);
 
         auto numSamples = resample_step(
             resampleState_, outputPtr, inputPtr, outputSampleRate_, 
