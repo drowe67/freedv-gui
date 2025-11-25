@@ -852,6 +852,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
+    * Reduce RADE RX losses due to resampling. (PR #1094)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
@@ -867,7 +868,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
     * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
     * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
-    * Reduce RADE RX losses due to resampling. (PR #1094)
 2. Enhancements:
     * Additional cleanup of code that runs in real-time. (PR #1039, #1068, #1077)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
