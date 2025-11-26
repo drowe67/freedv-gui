@@ -67,6 +67,7 @@
 #define FIFO_SIZE           640                            // default fifo size in ms
 #define FRAME_DURATION_MS   20                             // default frame length of 20 mS = 0.02 seconds
 #define MS_TO_SEC           1000
+#define RECORD_FILE_SAMPLE_RATE (SAMPLE_RATE)
 
 #define MAX_BITS_PER_CODEC_FRAME 64                            // 1600 bit/s mode
 #define MAX_BYTES_PER_CODEC_FRAME (MAX_BITS_PER_CODEC_FRAME/8)

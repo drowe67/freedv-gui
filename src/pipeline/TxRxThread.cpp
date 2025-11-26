@@ -278,7 +278,7 @@ void TxRxThread::initializePipeline_()
 
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
-            outputSampleRate_, 
+            RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFileFromModulator; }, 
             [](int) {
                 // empty
@@ -309,7 +309,7 @@ void TxRxThread::initializePipeline_()
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
-            inputSampleRate_, 
+            RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile; }, 
             [](int numSamples) {
                 g_recFromRadioSamples -= numSamples;
@@ -320,7 +320,7 @@ void TxRxThread::initializePipeline_()
                 }
             }
         );
-        auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, recordRadioStep->getOutputSampleRate());
         recordRadioPipeline->appendPipelineStep(recordRadioStep);
         
         auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline);
