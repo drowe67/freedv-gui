@@ -863,7 +863,7 @@ setDefaultMode:
     }
     
     // Disable controls not supported by RADE.
-    bool isEnabled = mode != FREEDV_MODE_RADE;
+    bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
     m_sliderSQ->Enable(isEnabled);
     m_ckboxSQ->Enable(isEnabled);
     m_textSQ->Enable(isEnabled);
@@ -959,6 +959,7 @@ setDefaultMode:
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+    modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -2294,12 +2295,18 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
+        if (!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
             m_rbRADE->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
+            
+            if (!wxGetApp().appConfiguration.enableLegacyModes)
+            {
+                // If legacy modes are not enabled, RADE is the only option.
+                g_mode = FREEDV_MODE_RADE;
+            }
             freedvInterface.addRxMode(g_mode);
         }
         else

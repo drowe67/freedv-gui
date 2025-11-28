@@ -212,6 +212,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+        
+        // Show/hide legacy modes
+        modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+        
+        bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && !m_rbRADE->GetValue();
+        m_sliderSQ->Enable(isEnabled);
+        m_ckboxSQ->Enable(isEnabled);
+        m_textSQ->Enable(isEnabled);
+        m_btnCenterRx->Enable(isEnabled);
 
         // XXX - with really short windows, wxWidgets sometimes doesn't size
         // the components properly until the user resizes the window (even if only
