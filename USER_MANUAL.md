@@ -852,6 +852,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 TBD
 
+*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
+again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
+
 ## V2.1.1 TBD 2025
 
 1. Bugfixes:
