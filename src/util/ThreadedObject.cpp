@@ -150,3 +150,18 @@ void ThreadedObject::eventLoop_()
         } while (!isDestroying_.load(std::memory_order_acquire) && count > 0);
     }
 }
+
+void ThreadedObject::waitForAllTasksComplete_()
+{
+    std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
+    auto count = eventQueue_.size();
+    lk.unlock();
+
+    while (count > 0)
+    {
+        std::this_thread::sleep_for(1ms);
+        lk.lock();
+        count = eventQueue_.size();
+        lk.unlock();
+    }
+}

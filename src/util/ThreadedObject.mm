@@ -41,17 +41,30 @@ ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     
     queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
     assert(queue_ != nil);
+
+    group_ = dispatch_group_create();
+    assert(group_ != nil);
 }
 
 ThreadedObject::~ThreadedObject()
 {
+    // Wait for anything pending to finish executing.
+    dispatch_group_wait(group_, DISPATCH_TIME_FOREVER);
+
+    // Release GCD objects
+    dispatch_release(group_);
     dispatch_release(queue_);
 }
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int) // NOLINT
 {
     // note: timeout not implemented
-    dispatch_async(queue_, ^() {
+    dispatch_group_async(group_, queue_, ^() {
         fn();
     });
+}
+
+void ThreadedObject::waitForAllTasksComplete_()
+{
+    dispatch_group_wait(group_, DISPATCH_TIME_FOREVER);
 }
