@@ -428,13 +428,13 @@ void PlotSpectrum::refreshData()
     // Force redraw of entire control if not using RADE. This is determined
     // by rxFreq == 0. We need to do this so that the frequency indicators
     // redraw properly.
-    if (m_rxFreq == 0)
+    /*if (m_rxFreq == 0)
     {
         int screenX = PLOT_BORDER + XLEFT_OFFSET;
         int screenY = PLOT_BORDER;
         RefreshRect(wxRect(screenX, screenY, m_rGrid.GetWidth(), m_rGrid.GetHeight()), false);
     }
-    else
+    else*/
     {
         Refresh();
     }
