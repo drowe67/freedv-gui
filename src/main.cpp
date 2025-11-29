@@ -614,7 +614,7 @@ bool MainApp::OnInit()
     wxSetEnv("OPENBLAS_NUM_THREADS", "1");
  
     // Enable maximum optimization for Python.
-    wxSetEnv("PYTHONOPTIMIZE", "2");
+    //wxSetEnv("PYTHONOPTIMIZE", "2");
  
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
