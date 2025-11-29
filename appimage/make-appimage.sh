@@ -44,7 +44,7 @@ else
 fi
 
 ./linuxdeploy-${MACH_ARCH}.AppImage \
---executable /usr/bin/python3 \
+--executable /usr/bin/python3.14 \
 --executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
@@ -53,7 +53,7 @@ fi
 
 # create the virtual environment (copied from Brian's build script)
 cd $APPDIR
-python3.11 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
+python3.14 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
 # Activate it
 source rade-venv/bin/activate # || { echo "ERROR: activate venv failed"; exit 1; }
 
@@ -69,15 +69,14 @@ echo "Fix venv python links..."
 echo "Now in $(pwd)"
 cd "$APPDIR/rade-venv/bin"
 echo "Now in $(pwd)"
-ln -s -f ../../usr/bin/python3 python
-ln -s -f ../../usr/bin/python3 python3
-ln -s -f ../../usr/bin/python3 python3.11
+ln -s -f ../../usr/bin/python3.14 python
+ln -s -f ../../usr/bin/python3.14 python3
 cd - # back to the previous directory
 echo "### Now in $(pwd)"
 
-# Copy /usr/lib/python3.11 to image
+# Copy /usr/lib/python3.14 to image
 cd $APPDIR/usr
-cp -a /usr/lib/python3.11 lib/
+cp -a /usr/lib/python3.14 lib/
 cd -
 
 # Copy the models and symlink
