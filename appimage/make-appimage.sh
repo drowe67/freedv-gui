@@ -84,8 +84,11 @@ echo "Copying rade_src..."
 # ls freedv-rade/freedv-gui/build_linux/rade_src/model
 # model05/        model17/        model18/        model19/        model19_check3/ model_bbfm_01/  
 cp -r "$BUILDDIR/build_linux/$RADE_SRC" "$APPDIR/."
+if [[ -e "$APPDIR/rade_integ_src" ]]; then
+    mv $APPDIR/rade_integ_src $APPDIR/rade_src
+fi
 cd "$APPDIR/usr/bin"
-ln -s "../../$RADE_SRC/model19_check3" "model19_check3"
+ln -s "../../rade_src/model19_check3" "model19_check3"
 cd -
 
 # Create the output
