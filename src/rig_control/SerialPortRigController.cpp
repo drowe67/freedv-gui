@@ -49,6 +49,8 @@ SerialPortRigController::~SerialPortRigController()
     });
     
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 void SerialPortRigController::connect()

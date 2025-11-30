@@ -68,6 +68,8 @@ OmniRigController::~OmniRigController()
     });
 
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 void OmniRigController::connect()
