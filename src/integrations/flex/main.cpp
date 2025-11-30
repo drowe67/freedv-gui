@@ -29,10 +29,6 @@
 #include <cinttypes>
 #include <stdlib.h>
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
@@ -85,13 +81,6 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
 
 int main(int, char**)
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -101,6 +90,9 @@ int main(int, char**)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // Enable mimalloc in Python interpreter.
+    setenv("PYTHONMALLOC", "mimalloc", 1);
     // NOLINTEND
 
     // Initialize and start RADE.

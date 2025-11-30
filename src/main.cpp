@@ -37,10 +37,6 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -582,13 +578,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
@@ -615,7 +604,10 @@ bool MainApp::OnInit()
  
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
- 
+
+    // Enable mimalloc in Python interpreter. 
+    wxSetEnv("PYTHONMALLOC", "mimalloc");
+
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
@@ -627,8 +619,6 @@ bool MainApp::OnInit()
     // local Python installation for stuff like torch/torchaudio, causing
     // problems running RADE.
     wxUnsetEnv("PYTHONHOME");
-
-    wxSetEnv("PYTHONMALLOC", "mimalloc");
 
 #if __APPLE__
     // Set PYTHONPATH accordingly. We mainly want to be able to access
