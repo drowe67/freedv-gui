@@ -137,6 +137,7 @@ MacAudioDevice::~MacAudioDevice()
         stopImpl_();
     }
     
+    waitForAllTasksComplete_();
     dispatch_release(sem_);
 }
     

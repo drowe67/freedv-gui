@@ -33,7 +33,10 @@ class ReportingController : public ThreadedObject
 {
 public:
     ReportingController(std::string softwareName, bool rxOnly = false);
-    virtual ~ReportingController() = default;
+    virtual ~ReportingController()
+    {
+        waitForAllTasksComplete_();
+    }
 
     void updateRadioCallsign(std::string const& newCallsign);
     void updateRadioGridSquare(std::string const& newGridSquare);
