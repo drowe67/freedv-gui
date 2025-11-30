@@ -581,11 +581,6 @@ else()
     include(cmake/BuildSpeex.cmake)
 endif()
 
-# On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX) AND (NOT SANITIZERS_ENABLED))
-#include(cmake/BuildMimalloc.cmake)
-endif ((LINUX) AND (NOT SANITIZERS_ENABLED))
-
 #
 # Find libdl for dlopen/dlclose
 #

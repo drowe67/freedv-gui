@@ -1,11 +1,6 @@
-if((LINUX) AND (NOT SANITIZERS_ENABLED))
-#set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
-endif((LINUX) AND (NOT SANITIZERS_ENABLED))
-
 set(WARNINGS_AS_ERRORS_FLAGS -Wall -Wextra -Werror -Wno-null-pointer-subtraction)
 
 set(FREEDV_SOURCES
-    ${MIMALLOC_SOURCE_FILE}
     main.cpp
     topFrame.cpp
     sox_biquad.c

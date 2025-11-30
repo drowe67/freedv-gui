@@ -37,8 +37,6 @@ fi
 rm -rf pkg-tmp
 ./generate-univ-pkgs.sh
 ./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
-arch -x86_64 ./Python.framework/Versions/Current/bin/pip3 install intel-openmp
-cp ./Python.framework/Versions/Current/lib/libiomp*.dylib ./Python.framework/Versions/3.14/lib/python3.12/site-packages/torch/lib
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
