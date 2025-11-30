@@ -32,7 +32,10 @@ class PortAudioInterface : public ThreadedObject
 public:
     PortAudioInterface()
         : ThreadedObject("PortAudio") {}
-    virtual ~PortAudioInterface() = default;
+    virtual ~PortAudioInterface()
+    {
+        waitForAllTasksComplete_();
+    };
     
     std::future<PaError> Initialize();
     std::future<PaError> Terminate();
