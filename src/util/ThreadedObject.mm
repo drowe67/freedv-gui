@@ -24,6 +24,8 @@
 
 #include "ThreadedObject.h"
 
+constexpr static int MS_TO_NSEC = 1000000;
+
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
     , name_(std::move(name))
@@ -49,7 +51,7 @@ ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
 ThreadedObject::~ThreadedObject()
 {
     // Wait for anything pending to finish executing.
-    dispatch_group_wait(group_, DISPATCH_TIME_FOREVER);
+    waitForAllTasksComplete_();
 
     // Release GCD objects
     dispatch_release(group_);
@@ -58,6 +60,8 @@ ThreadedObject::~ThreadedObject()
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int) // NOLINT
 {
+    if (suppressEnqueue_.load(std::memory_order_acquire)) return;
+
     // note: timeout not implemented
     dispatch_group_async(group_, queue_, ^() {
         fn();
@@ -66,5 +70,10 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int) // NOLINT
 
 void ThreadedObject::waitForAllTasksComplete_()
 {
-    dispatch_group_wait(group_, DISPATCH_TIME_FOREVER);
+    suppressEnqueue_.store(true, std::memory_order_release);
+
+    constexpr int MAX_TIME_TO_WAIT_NSEC = MS_TO_NSEC * 100;
+    dispatch_group_wait(group_, dispatch_time(DISPATCH_TIME_NOW, MAX_TIME_TO_WAIT_NSEC));
+
+    suppressEnqueue_.store(false, std::memory_order_release);
 }

@@ -29,6 +29,7 @@ using namespace std::chrono_literals;
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
     , name_(std::move(name))
+    , suppressEnqueue_(false)
     , isDestroying_(false)
 {
     // Instantiate thread here rather than the initializer since otherwise
@@ -43,6 +44,8 @@ ThreadedObject::~ThreadedObject()
 {
     if (objectThread_.joinable())
     {
+        waitForAllTasksComplete_();
+        
         // Clear all remaining items from the event queue before ending the thread.
         // This helps make sure we don't accidentally execute code when this object
         // is no longer alive.
@@ -59,6 +62,8 @@ ThreadedObject::~ThreadedObject()
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
+    if (suppressEnqueue_.load(std::memory_order_acquire)) return;
+
     if (parent_ != nullptr)
     {
         parent_->enqueue_(std::move(fn), timeoutMilliseconds);
@@ -154,14 +159,21 @@ void ThreadedObject::eventLoop_()
 void ThreadedObject::waitForAllTasksComplete_()
 {
     std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
+    suppressEnqueue_.store(true, std::memory_order_release);
     auto count = eventQueue_.size();
     lk.unlock();
 
-    while (count > 0)
+    constexpr int MAX_TIMEOUT_COUNT = 100; // should be ~100ms
+    int timeoutCount = 0;
+    while (count > 0 && timeoutCount < MAX_TIMEOUT_COUNT)
     {
         std::this_thread::sleep_for(1ms);
         lk.lock();
         count = eventQueue_.size();
         lk.unlock();
+
+        timeoutCount++;
     }
+
+    suppressEnqueue_.store(false, std::memory_order_release);
 }
