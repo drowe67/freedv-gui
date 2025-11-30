@@ -66,6 +66,9 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
 FlexVitaTask::~FlexVitaTask()
 {
     disconnect_();
+    
+    waitForAllTasksComplete_();
+    
     delete[] packetArray_;
     delete callbackData_.infifo1;
     delete callbackData_.infifo2;
