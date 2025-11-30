@@ -582,9 +582,9 @@ else()
 endif()
 
 # On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
+if ((LINUX) AND (NOT SANITIZERS_ENABLED))
 #include(cmake/BuildMimalloc.cmake)
-endif ((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
+endif ((LINUX) AND (NOT SANITIZERS_ENABLED))
 
 #
 # Find libdl for dlopen/dlclose
