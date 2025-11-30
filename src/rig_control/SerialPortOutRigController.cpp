@@ -49,6 +49,8 @@ SerialPortOutRigController::~SerialPortOutRigController()
         prom->set_value();
     });
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 void SerialPortOutRigController::ptt(bool state)
