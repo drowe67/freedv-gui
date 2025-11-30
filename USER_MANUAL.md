@@ -854,6 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
+    * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
