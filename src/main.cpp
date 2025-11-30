@@ -614,7 +614,7 @@ bool MainApp::OnInit()
     wxSetEnv("OPENBLAS_NUM_THREADS", "1");
  
     // Enable maximum optimization for Python.
-    //wxSetEnv("PYTHONOPTIMIZE", "2");
+    wxSetEnv("PYTHONOPTIMIZE", "2");
  
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
@@ -627,6 +627,8 @@ bool MainApp::OnInit()
     // local Python installation for stuff like torch/torchaudio, causing
     // problems running RADE.
     wxUnsetEnv("PYTHONHOME");
+
+    wxSetEnv("PYTHONMALLOC", "mimalloc");
 
 #if __APPLE__
     // Set PYTHONPATH accordingly. We mainly want to be able to access

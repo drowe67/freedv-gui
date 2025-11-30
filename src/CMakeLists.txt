@@ -1,5 +1,5 @@
 if((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
-set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
+#set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
 endif((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 
 set(WARNINGS_AS_ERRORS_FLAGS -Wall -Wextra -Werror -Wno-null-pointer-subtraction)
