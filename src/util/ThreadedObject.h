@@ -52,7 +52,7 @@ protected:
 private:
     ThreadedObject* parent_;
     std::string name_;
-    bool suppressEnqueue_;
+    std::atomic<bool> suppressEnqueue_;
 
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
