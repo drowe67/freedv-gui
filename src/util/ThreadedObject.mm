@@ -73,7 +73,7 @@ void ThreadedObject::waitForAllTasksComplete_()
 {
     suppressEnqueue_.store(true, std::memory_order_release);
 
-    constexpr int MAX_TIME_TO_WAIT_NSEC = MS_TO_NSEC * 100;
+    constexpr int MAX_TIME_TO_WAIT_NSEC = MS_TO_NSEC * 250;
     dispatch_group_wait(group_, dispatch_time(DISPATCH_TIME_NOW, MAX_TIME_TO_WAIT_NSEC));
 
     suppressEnqueue_.store(false, std::memory_order_release);
