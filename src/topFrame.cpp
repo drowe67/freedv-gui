@@ -711,6 +711,23 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     rightSizer->Add(micSpeakerLevelSizer, 0, wxALL | wxEXPAND, 2);
     
+    // Frequency text field (PSK Reporter)
+    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
+
+    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
+    
+    //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
+    
+    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
+    m_cboReportFrequency->SetMinSize(wxSize(150,-1));
+    txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
+    
+    reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
+    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
+    
+    rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
+    
     /* new --- */
 
     //------------------------------
@@ -766,23 +783,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
-
-    // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
-
-    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
-    
-    //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    
-    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
-    m_cboReportFrequency->SetMinSize(wxSize(150,-1));
-    txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
-    
-    reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
-    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
-    
-    rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
         
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     
