@@ -71,13 +71,13 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT
 if(WIN32)
 
 # XXX only x86_64 supported for now
-set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
-set(PYTHON_HASH 4c0a5a44d4ca1d0bc76fe08ea8b76adc)
+set(PYTHON_URL https://www.python.org/ftp/python/3.14.0/python-3.14.0-embed-amd64.zip)
+set(PYTHON_HASH 0202b66e068989cc4257b3a8efd3bc068df68aa0)
 
 # Download Python. This is only included in the installer.
 FetchContent_Declare(download_python3 
     URL ${PYTHON_URL} 
-    URL_HASH MD5=${PYTHON_HASH})
+    URL_HASH SHA1=${PYTHON_HASH})
 if (NOT download_python3_POPULATED)
     FetchContent_Populate(download_python3)
 endif (NOT download_python3_POPULATED)
@@ -105,7 +105,7 @@ endif (NOT download_vsr_POPULATED)
 # allow pip to work; additional content should be added to this file instead
 # (see example at https://github.com/sergeyyurkov1/make_portable_python_env/blob/master/make_portable_python_env.bat).
 file(MAKE_DIRECTORY ${download_python3_SOURCE_DIR}/DLLs)
-file(WRITE ${download_python3_SOURCE_DIR}/python312._pth "Lib/site-packages\r\npython312.zip\r\n.\r\n\r\n# Uncomment to run site.main() automatically\r\nimport site")
+file(WRITE ${download_python3_SOURCE_DIR}/python314._pth "Lib/site-packages\r\npython314.zip\r\n.\r\n\r\n# Uncomment to run site.main() automatically\r\nimport site")
 
 # Tell NSIS to install Python and pip into the same folder freedv.exe is in.
 # This makes looking for python3.dll easier later.

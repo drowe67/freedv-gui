@@ -39,10 +39,6 @@
 #include <fcntl.h>
 #endif // _WIN32
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "../common/MinimalTxRxThread.h"
 #include "../common/MinimalRealTimeHelper.h"
 #include "../common/ReportingController.h"
@@ -120,13 +116,6 @@ int main(int argc, char** argv)
     std::string stationGridSquare;
     int64_t stationFrequency = 0;
 
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -136,6 +125,9 @@ int main(int argc, char** argv)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // Enable mimalloc in Python interpreter.
+    setenv("PYTHONMALLOC", "mimalloc", 1);
     // NOLINTEND
 
     // Print version

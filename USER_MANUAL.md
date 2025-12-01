@@ -850,7 +850,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V2.2.0 TBD TBD
 
-TBD
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Upgrade Python to 3.14.0. (PR #1109)
 
 ## V2.1.1 TBD 2025
 
