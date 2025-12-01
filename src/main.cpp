@@ -853,10 +853,12 @@ setDefaultMode:
     
     // Disable controls not supported by RADE.
     bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
+    squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
     m_sliderSQ->Enable(isEnabled);
     m_ckboxSQ->Enable(isEnabled);
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
+    m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
     
     if (!isEnabled)
     {
@@ -1060,10 +1062,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
-    
-    // Add Scatter Plot window
-    m_panelScatter = new PlotScatter(m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
@@ -1076,7 +1074,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotWaterfallTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_plotSpectrumTimer.SetOwner(this, ID_TIMER_SPECTRUM);
-    m_plotScatterTimer.SetOwner(this, ID_TIMER_SCATTER);
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
@@ -1369,7 +1366,6 @@ MainFrame::~MainFrame()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
@@ -1488,49 +1484,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->setSync(syncState ? true : false);
           m_panelSpectrum->m_newdata = true;
           m_panelSpectrum->refreshData();
-      }
-      else if (timerId == ID_TIMER_SCATTER)
-      {
-          if (freedvInterface.isRunning()) {
-              int currentMode = freedvInterface.getCurrentMode();
-              if (currentMode != wxGetApp().m_prevMode)
-              {
-                  // Force recreation of EQ filters.
-                  m_newMicInFilter = true;
-                  m_newSpkOutFilter = true;
-
-                  // The receive mode changed, so the previous samples are no longer valid.
-                  m_panelScatter->clearCurrentSamples();
-              }
-              wxGetApp().m_prevMode = currentMode;
-    
-              // Reset g_Nc accordingly.
-              switch(currentMode)
-              {
-                  case FREEDV_MODE_1600:
-                      g_Nc = 16;
-                      m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                      break;
-                  case FREEDV_MODE_700D:
-                  case FREEDV_MODE_700E:
-                      g_Nc = 17; 
-                      m_panelScatter->setNc(g_Nc);
-                      break;
-              }
-    
-              /* PSK Modes - scatter plot -------------------------------------------------------*/
-              for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
-
-                  if ((currentMode == FREEDV_MODE_1600) ||
-                      (currentMode == FREEDV_MODE_700D) ||
-                      (currentMode == FREEDV_MODE_700E)
-                  ) {
-                      m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                  }
-              }
-          }
-
-          m_panelScatter->refreshData();
       }
       else if (timerId == ID_TIMER_SPEECH_IN)
       {
@@ -2308,8 +2261,6 @@ void MainFrame::performFreeDVOn_()
         // Init text msg decoding
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             freedvInterface.setTextVaricodeNum(1);
-
-        m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
     g_State.store(0, std::memory_order_release);
@@ -2448,7 +2399,6 @@ void MainFrame::performFreeDVOn_()
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpectrumTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotScatterTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
@@ -2487,7 +2437,6 @@ void MainFrame::performFreeDVOff_()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();

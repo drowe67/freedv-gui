@@ -106,7 +106,6 @@ enum {
         ID_START = wxID_HIGHEST,
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
-        ID_TIMER_SCATTER,
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
@@ -294,7 +293,6 @@ class MainFrame : public TopFrame
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
-        PlotScatter*            m_panelScatter;
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
