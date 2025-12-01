@@ -110,8 +110,6 @@ enum {
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
-        ID_TIMER_TIME_OFFSET,
-        ID_TIMER_FREQ_OFFSET,
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
@@ -297,13 +295,9 @@ class MainFrame : public TopFrame
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;
-        PlotScalar*             m_panelTimeOffset;
-        PlotScalar*             m_panelFreqOffset;
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
-        PlotScalar*             m_panelTestFrameErrors;
-        PlotScalar*             m_panelTestFrameErrorsHist;
 
         bool                    m_RxRunning;
 
@@ -333,8 +327,6 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechInTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
-        wxTimer                 m_plotTimeOffsetTimer;
-        wxTimer                 m_plotFreqOffsetTimer;
 #endif
 
     void destroy_fifos(void);

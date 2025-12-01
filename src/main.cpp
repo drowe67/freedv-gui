@@ -1065,24 +1065,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelScatter = new PlotScatter(m_auiNbookCtrl);
     m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
 
-    // Add Timing Offset window
-    m_panelTimeOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", false, wxNullBitmap);
-
-    // Add Frequency Offset window
-    m_panelFreqOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", false, wxNullBitmap);
-
-    // Add Test Frame Errors window
-    m_panelTestFrameErrors = new PlotScalar(m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", false, wxNullBitmap);
-
-    // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
-    m_panelTestFrameErrorsHist = new PlotScalar(m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", false, wxNullBitmap);
-    m_panelTestFrameErrorsHist->setBarGraph(1);
-    m_panelTestFrameErrorsHist->setLogY(1);
-
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1098,8 +1080,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
-    m_plotTimeOffsetTimer.SetOwner(this, ID_TIMER_TIME_OFFSET);
-    m_plotFreqOffsetTimer.SetOwner(this, ID_TIMER_FREQ_OFFSET);
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
@@ -1393,8 +1373,6 @@ MainFrame::~MainFrame()
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         Unbind(wxEVT_TIMER, &MainFrame::OnTimer, this);
     }
 #endif //_USE_TIMER
@@ -1577,18 +1555,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
-      else if (timerId == ID_TIMER_TIME_OFFSET)
+      else
       {
-          m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-          m_panelTimeOffset->refreshData();
-      }
-      else if (timerId == ID_TIMER_FREQ_OFFSET)
-      {
-          m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-          m_panelFreqOffset->refreshData();
-      }
-     else
-     {
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
          memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
@@ -2011,44 +1979,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
                 m_textClockOffset->SetLabel(clockOffset);
-            }
-            
-            // update error pattern plots if supported
-            short* error_pattern = nullptr;
-            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
-            if (sz_error_pattern) {
-                int i,b;
-
-                /* both modes map IQ to alternate bits, but on same carrier */
-
-                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
-                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                    for(b=0; b<g_Nc*2; b++) {
-                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                            g_error_hist[b] += error_pattern[i];
-                            g_error_histn[b]++;
-                        }
-                    }
-
-                     /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<g_Nc*2; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                m_panelTestFrameErrors->Refresh();
-                m_panelTestFrameErrorsHist->Refresh();
-            
-                delete[] error_pattern;
             }
         }
 
@@ -2522,8 +2452,6 @@ void MainFrame::performFreeDVOn_()
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotTimeOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotFreqOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
@@ -2563,8 +2491,6 @@ void MainFrame::performFreeDVOff_()
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
