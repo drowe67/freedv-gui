@@ -29,7 +29,7 @@ cd ..
 if [ ! -d Python.framework ]; then
     git clone https://github.com/gregneagle/relocatable-python.git
     cd relocatable-python
-    ./make_relocatable_python_framework.py --python-version 3.12.7 --os-version=11 --destination $PWD/../
+    ./make_relocatable_python_framework.py --python-version 3.14.0 --os-version=11 --destination $PWD/../
     cd ..
 fi
 
@@ -37,8 +37,6 @@ fi
 rm -rf pkg-tmp
 ./generate-univ-pkgs.sh
 ./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
-arch -x86_64 ./Python.framework/Versions/Current/bin/pip3 install intel-openmp
-cp ./Python.framework/Versions/Current/lib/libiomp*.dylib ./Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/lib
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
@@ -70,9 +68,9 @@ if [ "$CODESIGN_KEYCHAIN_PROFILE" != "" ]; then
 fi
 
 if [ $BUILD_DEPS == 1 ]; then 
-    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
+    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.14 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
 else
-    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
+    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_UBSAN=${WITH_UBSAN} -DENABLE_TSAN=${WITH_TSAN} -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.14 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
 fi
 
 make -j$(sysctl -n hw.logicalcpu)

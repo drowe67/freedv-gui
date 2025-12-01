@@ -850,7 +850,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V2.2.0 TBD TBD
 
-TBD
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Upgrade Python to 3.14.0. (PR #1109)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
