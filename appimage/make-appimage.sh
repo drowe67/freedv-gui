@@ -61,7 +61,7 @@ source rade-venv/bin/activate # || { echo "ERROR: activate venv failed"; exit 1;
 pip3 cache purge
 pip3 install --upgrade pip || echo "WARNING: pip upgrade failed"
 pip3 install numpy
-pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip3 install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
 pip3 install matplotlib
 cd -
 

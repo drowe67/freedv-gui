@@ -12,6 +12,7 @@ concurrency:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
+  TORCH_RELEASE: 2.9.1
 
 jobs:
   lint:
@@ -86,7 +87,7 @@ jobs:
       run: |
           python3.14 -m venv rade-venv
           . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Set up Docker Buildx
@@ -279,7 +280,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Sanity check RADE
@@ -418,7 +419,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Build freedv-gui 
