@@ -7,6 +7,7 @@ export PYTHONHOME="$APPDIR/usr"
 export PYTHONPATH="$APPDIR/rade_src:$APPDIR/rade-venv/lib/python3.14/site-packages"
 echo "PYTHONPATH=$PYTHONPATH"
 echo "PYTHONHOME=$PYTHONHOME"
+export PYTHONMALLOC=mimalloc
 cd "$APPDIR"
 echo "#### after import"
 "$APPDIR/usr/bin/freedv-flex" $@

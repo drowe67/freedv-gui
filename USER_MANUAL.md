@@ -853,7 +853,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * TBD
 2. Enhancements:
-    * Upgrade Python to 3.14.0. (PR #1109)
+    * Upgrade Python to 3.14.0. (PR #1109, #1118)
 
 ## V2.1.1 TBD 2025
 
