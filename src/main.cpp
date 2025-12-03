@@ -605,10 +605,10 @@ bool MainApp::OnInit()
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
 
+#if _WIN32 || __APPLE__
     // Enable mimalloc in Python interpreter. 
     wxSetEnv("PYTHONMALLOC", "mimalloc");
 
-#if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
