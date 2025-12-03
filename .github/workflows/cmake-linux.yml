@@ -256,17 +256,22 @@ jobs:
            sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
            sudo systemctl restart polkit
 
+    - name: Install common packages
+      shell: bash
+      run: |
+          sudo apt-get install sox xvfb at-spi2-core
+
     - name: Install required packages for audio/display
       shell: bash
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
-           sudo apt-get install sox xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
+           sudo apt-get install pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
 
     - name: Install required packages for audio/display
       shell: bash
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       run: |
-           sudo apt-get install sox xvfb pulseaudio pulseaudio-utils metacity
+           sudo apt-get install pulseaudio pulseaudio-utils metacity
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
     - name: Create Python venv
