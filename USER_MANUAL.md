@@ -853,7 +853,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * TBD
 2. Enhancements:
-    * Upgrade Python to 3.14.0. (PR #1109)
+    * Upgrade Python to 3.14.0. (PR #1109, #1118)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
@@ -865,6 +865,7 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
     * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
+    * Suppress background for fake rightmost column. (PR #1116)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!

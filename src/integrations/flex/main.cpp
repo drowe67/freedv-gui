@@ -90,9 +90,6 @@ int main(int, char**)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
-
-    // Enable mimalloc in Python interpreter.
-    setenv("PYTHONMALLOC", "mimalloc", 1);
     // NOLINTEND
 
     // Initialize and start RADE.
