@@ -168,7 +168,7 @@ bool PlotScalar::repaintAll_(wxPaintEvent&)
 
 void PlotScalar::refreshData()
 {
-    if (!m_mini)
+    /*if (!m_mini)
     {
         wxRect plotRegion(
             PLOT_BORDER + XLEFT_OFFSET, 
@@ -177,7 +177,7 @@ void PlotScalar::refreshData()
             m_rGrid.GetHeight());
         RefreshRect(plotRegion);
     }
-    else
+    else*/
     {
         Refresh();
     }
