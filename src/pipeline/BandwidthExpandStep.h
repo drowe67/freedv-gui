@@ -32,7 +32,11 @@
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C" 
 {
+#if defined(FREEDV_INTEGRATION)
+    #include "fargan_config_integ.h"
+#else
     #include "fargan_config.h"
+#endif // defined(FREEDV_INTEGRATION)
     #include "../silk/structs.h"
     #include "osce_features.h"
     #include "osce_structs.h"
