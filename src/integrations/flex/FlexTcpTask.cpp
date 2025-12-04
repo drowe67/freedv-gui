@@ -136,6 +136,21 @@ void FlexTcpTask::initializeWaveform_()
 
     // subscribe to GPS updates, needed for FreeDV Reporter
     sendRadioCommand_("sub gps all");
+
+    // Create SNR meter
+    sendRadioCommand_("meter create name=FreeDV_SNR type=WAVEFORM min=-99 max=99 unit=DB", [&](unsigned int rv, std::string const& res) {
+        if (rv == 0)
+        {
+            // success, get meter number and stream ID
+            uint16_t meterNumber = (uint16_t)strtol(res.c_str(), nullptr, 0);
+
+            // Pass these to caller to use in VITA packets
+            if (waveformSnrMeterIdentifiersFn_)
+            {
+                waveformSnrMeterIdentifiersFn_(*this, meterNumber, waveformSnrMeterIdentifiersState_);
+            }
+        }
+    });
 }
 
 void FlexTcpTask::cleanupWaveform_()

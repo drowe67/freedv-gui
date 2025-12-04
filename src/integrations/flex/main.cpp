@@ -186,18 +186,29 @@ int main(int, char**)
     rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
 
     // Set up reporting of actual receive state (prior to getting callsign).
-    int rxCounter = 0;    
+    int rxCounter = 0;
+    uint16_t meterMeterId = 0;
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
         if (rxThread.getSync())
         {
             rxCounter = (rxCounter + 1) % 10;
+            auto snr = rxThread.getSnr();
             if (rxCounter == 0)
             {
-                reportController.reportCallsign("", rxThread.getSnr());
+                reportController.reportCallsign("", snr);
             }
+            vitaTask.sendMeter(meterMeterId, snr);
         }
+        else
+        {
+            vitaTask.sendMeter(meterMeterId, -99);
+        }        
     }, true);
     rxNoCallsignReporting.start();
+
+    tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t meterId, void*) {
+        meterMeterId = meterId;
+    }, nullptr);
 
     tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const& callsign, void*) {
         // Add callsign to EOO so others can report us
