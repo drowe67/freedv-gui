@@ -863,6 +863,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use same sample rate for both recording RX and TX. (PR #1107)
     * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
     * Suppress background for fake rightmost column. (PR #1116)
+    * Emit VOX tone only when PTT is enabled. (PR #1122)
+    * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
