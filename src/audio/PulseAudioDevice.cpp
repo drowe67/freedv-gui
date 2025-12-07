@@ -23,9 +23,11 @@
 #include <cstring>
 #include <cstdio>
 #include <chrono>
+#include <atomic>
 #include <sched.h>
 #include <alloca.h>
 #include <sys/resource.h>
+#include <sys/sysinfo.h>
 #include <signal.h>
 
 #include "PulseAudioDevice.h"
@@ -46,6 +48,8 @@ using namespace std::chrono_literals;
 #if 0
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 #endif // 0
+
+static std::atomic<int> NumRealTimeThreads_;
  
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
@@ -192,6 +196,23 @@ int64_t PulseAudioDevice::getLatencyInMicroseconds()
 
 void PulseAudioDevice::setHelperRealTime()
 {
+    // Set thread affinity to the last two cores of a user's system.
+    // This is because of measured thread migration times in Linux being
+    // large enough to cause dropouts.
+    auto numCpusAvailable = get_nprocs();
+    auto oldNumThreads = NumRealTimeThreads_.fetch_add(1);
+    auto cpuToUse = numCpusAvailable - (oldNumThreads & 1 ? 1 : 0) - 1;
+    if (numCpusAvailable > 1)
+    {
+        cpu_set_t cpus;
+        CPU_ZERO(&cpus);
+        CPU_SET(cpuToUse, &cpus);
+        if (sched_setaffinity(0, sizeof(cpus), &cpus) == -1)
+        {
+            log_warn("Could not pin thread to CPU %d (errno = %d)", cpuToUse, errno);
+        }
+    }
+
     // XXX: We can't currently enable RT scheduling on Linux
     // due to unreliable behavior surrounding how long it takes to
     // go through a single RX or TX cycle. This unreliability is 
@@ -354,6 +375,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 
 void PulseAudioDevice::clearHelperRealTime()
 {
+    NumRealTimeThreads_.fetch_sub(1);
     IAudioDevice::clearHelperRealTime();
 }
 
