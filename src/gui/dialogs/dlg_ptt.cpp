@@ -343,7 +343,7 @@ void ComPortsDlg::OnInitDialog(wxInitDialogEvent&)
 
 void ComPortsDlg::populateBaudRateList(int min, int max)
 {
-    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "921600", "1000000", "1152000", "1500000", "2000000"}; 
     
     auto prevSelection = m_cbSerialRate->GetCurrentSelection();
     int oldBaud = 0;
