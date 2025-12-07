@@ -33,6 +33,10 @@
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
 
+#if defined(__linux__)
+#include <sys/mman.h>
+#endif // defined(__linux__)
+
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
@@ -588,6 +592,16 @@ bool MainApp::OnInit()
     mi_option_set(mi_option_purge_extend_delay, 10);
     //mi_option_enable(mi_option_verbose);
 #endif // defined(USING_MIMALLOC)
+
+#if defined(__linux__)
+    // Ensure that all memory pages remain in RAM to avoid latency due to 
+    // page faults.
+    auto mlockRet = mlockall(MCL_CURRENT | MCL_FUTURE);
+    if (mlockRet != 0)
+    {
+        log_warn("Could not lock memory pages into RAM (errno=%d)", errno);
+    }
+#endif // defined(__linux__)
 
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
