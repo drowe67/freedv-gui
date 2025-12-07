@@ -3523,6 +3523,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
 
     cbData->outfifo1->read(tmpOutput, toRead);
     auto numChannels = dev.getNumChannels();
+    auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
     for (size_t count = 0; count < size; count++, audioData += numChannels)
     {
         auto output = (count < toRead) ? tmpOutput[count] : 0;
@@ -3536,7 +3537,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
                     
         // If VOX tone is enabled, go back through and add the VOX tone
         // on the left channel.
-        if (cbData->leftChannelVoxTone.load(std::memory_order_acquire))
+        if (enableVoxTone)
         {
             cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
             cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
