@@ -988,7 +988,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SYNC_UNK_LABEL("Sync: unk"),
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
-    TOO_HIGH_LABEL("Too High"),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
@@ -1995,12 +1994,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         {
             // Peak Reading meter: updates peaks immediately, then slowly decays
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
-            m_gaugeLevel->SetValue(maxScaled);
             if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel(TOO_HIGH_LABEL);
+            {
+                m_gaugeLevel->Pulse();
+            }
             else
-                m_textLevel->SetLabel(EMPTY_STR);
-
+            {
+                m_gaugeLevel->SetValue(maxScaled);
+            }
             m_maxLevel *= LEVEL_BETA;
         }
     }
@@ -2274,7 +2275,6 @@ void MainFrame::performFreeDVOn_()
     m_maxLevel = 0;
     executeOnUiThreadAndWait_([&]() 
     {
-        m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
     });
     

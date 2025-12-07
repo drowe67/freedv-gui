@@ -94,7 +94,6 @@ class TopFrame : public wxFrame
         wxStaticText* m_textSNR;
         wxCheckBox* m_ckboxSNR;
         wxGauge* m_gaugeLevel;
-        wxStaticText* m_textLevel;
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
