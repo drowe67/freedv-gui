@@ -29,7 +29,7 @@ cd ..
 if [ ! -d Python.framework ]; then
     git clone https://github.com/gregneagle/relocatable-python.git
     cd relocatable-python
-    ./make_relocatable_python_framework.py --python-version 3.14.0 --os-version=11 --destination $PWD/../
+    ./make_relocatable_python_framework.py --python-version 3.14.1 --os-version=11 --destination $PWD/../
     cd ..
 fi
 
