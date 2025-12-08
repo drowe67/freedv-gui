@@ -862,7 +862,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
-    * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
 
 ## V2.1.0 November 2025
 
