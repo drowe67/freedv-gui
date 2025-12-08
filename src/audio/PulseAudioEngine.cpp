@@ -24,6 +24,8 @@
 #include "PulseAudioEngine.h"
 
 #include <map>
+#include <sys/sysinfo.h>
+
 #include "../util/logging/ulog.h"
 
 #if defined(USE_RTKIT)
@@ -78,9 +80,22 @@ void PulseAudioEngine::start()
     pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
-#if defined(USE_RTKIT)
         if (pa_threaded_mainloop_in_thread(threadedML))
         {
+            auto numCpusAvailable = get_nprocs();
+            if (numCpusAvailable > 2)
+            {
+                cpu_set_t cpus;
+                CPU_ZERO(&cpus);
+                CPU_SET(numCpusAvailable - 1, &cpus);
+                CPU_SET(numCpusAvailable - 2, &cpus);
+                if (sched_setaffinity(0, sizeof(cpus), &cpus) == -1)
+                {
+                    log_warn("Could not pin thread to CPU %d and %d (errno = %d)", numCpusAvailable - 2, numCpusAvailable - 1, errno);
+                }
+            }
+
+#if defined(USE_RTKIT)
             DBusError error;
             DBusConnection* bus = nullptr;
             int result = 0;
@@ -129,8 +144,8 @@ void PulseAudioEngine::start()
             {
                 dbus_connection_unref(bus);
             }
-        }
 #endif // defined(USE_RTKIT)
+        }
 
         pa_threaded_mainloop_signal(threadedML, 0);
     }, mainloop_);
