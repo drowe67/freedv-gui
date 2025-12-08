@@ -35,6 +35,7 @@
 
 #if defined(__linux__)
 #include <sys/mman.h>
+#include <sys/sysinfo.h>
 #endif // defined(__linux__)
 
 #if wxCHECK_VERSION(3,2,0)
@@ -600,6 +601,23 @@ bool MainApp::OnInit()
     if (mlockRet != 0)
     {
         log_warn("Could not lock memory pages into RAM (errno=%d)", errno);
+    }
+
+    // Set default CPU affinity to all but the last two cores
+    // (those cores are reserved for the TX/RX threads).
+    auto numCpusAvailable = get_nprocs();
+    if (numCpusAvailable > 2)
+    {
+        cpu_set_t cpus;
+        CPU_ZERO(&cpus);
+        for (int cpu = 0; cpu < numCpusAvailable - 2; cpu++)
+        {
+            CPU_SET(cpu, &cpus);
+        }
+        if (sched_setaffinity(0, sizeof(cpus), &cpus) == -1)
+        {
+            log_warn("Could not pin process to CPUs 0-%d (errno = %d)", numCpusAvailable - 2, errno);
+        }
     }
 #endif // defined(__linux__)
 
