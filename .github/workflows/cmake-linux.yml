@@ -180,6 +180,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Lower swappiness to reduce jitter
+      run: |
+          sudo sysctl vm.swappiness=10
+
     - name: Save correct architecture
       id: save-arch
       run: |
@@ -232,6 +236,10 @@ jobs:
     #  uses: mxschmitt/action-tmate@v3
     #  with:
     #    detached: true
+
+    - name: Lower swappiness to reduce jitter
+      run: |
+          sudo sysctl vm.swappiness=10
 
     - name: Save correct architecture
       id: save-arch
@@ -362,6 +370,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Lower swappiness to reduce jitter
+      run: |
+          sudo sysctl vm.swappiness=10
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
