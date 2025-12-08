@@ -890,6 +890,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 updateControlState();
             });
         });
+        omniRigThread.detach();
     }  
 #endif // defined(WIN32)
 }
