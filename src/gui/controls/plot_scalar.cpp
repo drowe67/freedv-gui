@@ -385,7 +385,16 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
             {
                 snprintf(buf, STR_LENGTH, "%2.1fs", t);
                 GetTextExtent(buf, &text_w, &text_h);
-                ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+                int left = x - text_w/2;
+                if (t == 0)
+                {
+                    left += text_w/2;
+                }
+                else if (t == m_t_secs)
+                {
+                    left -= text_w/2;
+                }
+                ctx->DrawText(buf, left, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
             }
         }
     }
@@ -415,9 +424,19 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
                         (plotWidth + PLOT_BORDER + leftOffset_), y);
             if (!repaintDataOnly) 
             {
+                auto top = y-text_h/2;
+                if (a == m_a_min)
+                {
+                    top -= text_h/2;
+                }
+                else if ((a + m_graticule_a_step) >= m_a_max)
+                {
+                    top += text_h/2;
+                }
+
                 snprintf(buf, STR_LENGTH, m_a_fmt, a);
                 GetTextExtent(buf, &text_w, &text_h);
-                ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+                ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
             }
         }
  
