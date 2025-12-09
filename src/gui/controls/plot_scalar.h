@@ -79,6 +79,7 @@ class PlotScalar: public PlotPanel
          float   *m_mem;   
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
+         int      leftOffset_;
          
          void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
          void drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
