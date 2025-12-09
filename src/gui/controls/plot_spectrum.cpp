@@ -29,6 +29,8 @@
 void clickTune(float frequency); // callback to pass new click freq
 extern float           g_RxFreqOffsetHz;
 
+constexpr int STR_LENGTH = 15;
+    
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_MOTION          (PlotSpectrum::OnMouseMove)
     EVT_LEFT_DOWN       (PlotSpectrum::OnMouseLeftDown)
@@ -65,6 +67,7 @@ PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB,
     m_firstPass     = true;
     m_line_color    = 0;
     m_numSampleAveraging = 1;
+    leftOffset_ = 0;
     SetLabelSize(10.0);
 
     m_magdB         = magdB;
@@ -103,6 +106,16 @@ PlotSpectrum::~PlotSpectrum()
 // OnSize()
 //----------------------------------------------------------------
 void PlotSpectrum::OnSize(wxSizeEvent&) {
+    // Determine correct left offset based on font size
+    int text_w = 0;
+    int text_h = 0;
+    leftOffset_ = 0;
+    for(float mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
+        char buf[STR_LENGTH];
+        snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
+        GetTextExtent(buf, &text_w, &text_h);
+        leftOffset_ = std::max(leftOffset_, text_w);
+    }
 }
 
 //----------------------------------------------------------------
@@ -125,14 +138,14 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     // is selected
 
     m_rGrid  = m_rCtrl;
-    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // black background
 
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
-    ctx->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+    ctx->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
 
     // draw spectrum
 
@@ -149,7 +162,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     index_to_px = (float)m_rGrid.GetWidth()/m_n_magdB;
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
 
-    prev_x = PLOT_BORDER + XLEFT_OFFSET;
+    prev_x = PLOT_BORDER + leftOffset_;
 
     auto freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
 
@@ -183,7 +196,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         if (mag < m_min_mag_db) mag = m_min_mag_db;
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
 
-        x += PLOT_BORDER + XLEFT_OFFSET;
+        x += PLOT_BORDER + leftOffset_;
         y += PLOT_BORDER;
 
         if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px))
@@ -208,8 +221,6 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 //-------------------------------------------------------------------------
 void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
-    const int STR_LENGTH = 15;
-    
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
     float    f, mag, freq_hz_to_px, mag_dB_to_py;
@@ -230,8 +241,8 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
 
-    // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
-    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
+    // upper LH coords of plot area are (PLOT_BORDER + leftOffset_, PLOT_BORDER)
+    // lower RH coords of plot area are (PLOT_BORDER + leftOffset_ + m_rGrid.GetWidth(), 
     //                                   PLOT_BORDER + m_rGrid.GetHeight())
 
     // Check if small screen size means text will overlap
@@ -248,7 +259,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) {
         x = f*freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
+        x += PLOT_BORDER + leftOffset_;
 
         ctx->SetPen(m_penShortDash);
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
@@ -268,7 +279,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
+        x += PLOT_BORDER + leftOffset_;
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET-5);
     }
     
@@ -278,14 +289,14 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
         y += PLOT_BORDER;
-        ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-                (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+        ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
+                (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         if (!repaintDataOnly)
         {
             snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedText)
-                 ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+                 ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
         }
     }
 
@@ -304,13 +315,13 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             // get average offset and draw sync tuning line
             ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
             x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-            x += PLOT_BORDER + XLEFT_OFFSET;
+            x += PLOT_BORDER + leftOffset_;
             ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
    
             // red rx tuning line
             ctx->SetPen(wxPen(RED_COLOR, 3));
             x = m_rxFreq*freq_hz_to_px;
-            x += PLOT_BORDER + XLEFT_OFFSET;
+            x += PLOT_BORDER + leftOffset_;
             ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
         }
     }
@@ -327,7 +338,7 @@ void PlotSpectrum::OnDoubleClickCommon(wxMouseEvent& event)
     wxPoint pt(event.GetLogicalPosition(dc));
 
     // map x coord to edges of actual plot
-    pt.x -= PLOT_BORDER + XLEFT_OFFSET;
+    pt.x -= PLOT_BORDER + leftOffset_;
     pt.y -= PLOT_BORDER;
 
     // valid click if inside of plot
@@ -430,7 +441,7 @@ void PlotSpectrum::refreshData()
     // redraw properly.
     /*if (m_rxFreq == 0)
     {
-        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenX = PLOT_BORDER + leftOffset_;
         int screenY = PLOT_BORDER;
         RefreshRect(wxRect(screenX, screenY, m_rGrid.GetWidth(), m_rGrid.GetHeight()), false);
     }
@@ -443,7 +454,7 @@ void PlotSpectrum::refreshData()
 bool PlotSpectrum::repaintAll_(wxPaintEvent&)
 {       
     wxRect plotRegion(
-        PLOT_BORDER + XLEFT_OFFSET,
+        PLOT_BORDER + leftOffset_,
         PLOT_BORDER,
         m_rGrid.GetWidth(),
         m_rGrid.GetHeight());

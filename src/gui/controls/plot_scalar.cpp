@@ -36,7 +36,6 @@ BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
 END_EVENT_TABLE()
 
 constexpr int STR_LENGTH = 15;
-constexpr int TEXT_SPACING = 10;
 
 //----------------------------------------------------------------
 // PlotScalar()
@@ -445,6 +444,28 @@ void PlotScalar::clearSamples()
 //----------------------------------------------------------------
 void PlotScalar::OnSize(wxSizeEvent&)
 {
+    // Determine correct left offset based on max text width
+    leftOffset_ = 0;
+    for(auto a=m_a_min; a<m_a_max; )
+    {
+        int      text_w, text_h;
+        char     buf[STR_LENGTH];
+        snprintf(buf, STR_LENGTH, m_a_fmt, a);
+        GetTextExtent(buf, &text_w, &text_h);
+        leftOffset_ = std::max(leftOffset_, text_w);
+
+        if (m_logy)
+        {
+            // m_graticule_a_step ==  0.1 means 10 steps/decade
+            float log10_step_size = floor(log10(a));
+            a += pow(10,log10_step_size);
+        }
+        else
+        {
+            a += m_graticule_a_step;
+        }
+    }
+
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
     if (!m_mini)
@@ -455,12 +476,6 @@ void PlotScalar::OnSize(wxSizeEvent&)
 
     lineMap_ = new MinMaxPoints[plotWidth];
     assert(lineMap_ != nullptr);
-    
-    int      text_w, text_h;
-    char     buf[STR_LENGTH];
-    snprintf(buf, STR_LENGTH, "%2.1fs", m_t_secs);
-    GetTextExtent(buf, &text_w, &text_h);
-    leftOffset_ = text_w + TEXT_SPACING;
 }
 
 //----------------------------------------------------------------
