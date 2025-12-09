@@ -349,9 +349,14 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
             ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         snprintf(buf, STR_LENGTH, "%3.0fs", time);
-	    GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
+        auto top = y - text_h / 2;
+        if (time == 0)
+        {
+            top += text_h;
+        }
         if (!overlappedText)
-            ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
    }
    
    float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
