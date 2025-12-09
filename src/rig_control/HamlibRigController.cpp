@@ -133,6 +133,8 @@ HamlibRigController::~HamlibRigController()
     });
     
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 static int LogHamlibErrors_(

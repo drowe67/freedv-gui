@@ -60,6 +60,8 @@ SerialPortInRigController::~SerialPortInRigController()
         threadExiting_ = true;
         pollThread_.join();
     }
+    
+    waitForAllTasksComplete_();
 }
 
 bool SerialPortInRigController::getCTS_() 

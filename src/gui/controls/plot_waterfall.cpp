@@ -434,9 +434,7 @@ void PlotWaterfall::plotPixelData()
         index = px;
         assert(index < MODEM_STATS_NSPEC);
 
-        intensity = intensity_per_dB * (m_magDb[index] - m_min_mag);
-        if(intensity > 255) intensity = 255;
-        if (intensity < 0) intensity = 0;
+        intensity = std::clamp((int)(intensity_per_dB * (m_magDb[index] - m_min_mag)), 0, 255);
 
         int pixelPos = (px * 3);
             

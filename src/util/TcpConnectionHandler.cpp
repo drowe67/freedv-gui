@@ -345,7 +345,12 @@ void TcpConnectionHandler::connectImpl_()
             strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
             log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
 #else
-            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+            auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            if (ptr != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
             close(fd);
             pendingSockets.pop_back();
@@ -737,7 +742,12 @@ socket_error:
                 strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
                 log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
 #else
-                log_warn("Got socket error %d (%s) while connecting", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+                auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                if (ptr != 0)
+                {
+                    strncpy(tmpBuf, "(null)", 7);
+                }
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
                 close(sock);
 #endif // defined(WIN32)
