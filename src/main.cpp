@@ -595,14 +595,6 @@ bool MainApp::OnInit()
 #endif // defined(USING_MIMALLOC)
 
 #if defined(__linux__)
-    // Ensure that all memory pages remain in RAM to avoid latency due to 
-    // page faults.
-    auto mlockRet = mlockall(MCL_CURRENT | MCL_FUTURE);
-    if (mlockRet != 0)
-    {
-        log_warn("Could not lock memory pages into RAM (errno=%d)", errno);
-    }
-
     // Set default CPU affinity to all but the last two cores
     // (those cores are reserved for the TX/RX threads).
     auto numCpusAvailable = get_nprocs();
