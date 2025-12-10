@@ -266,15 +266,13 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
         ctx->SetPen(m_penShortDash);
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
-        ctx->SetPen(wxPen(foregroundColor, 1));
-        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
         if (!repaintDataOnly)
         {
             snprintf(buf, STR_LENGTH, "%4.0fHz", f);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedText)
-                ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+                ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER);
         }
     }
 
