@@ -1087,6 +1087,7 @@ void MainFrame::togglePTT(void) {
     // reset level gauge
 
     m_maxLevel = 0;
+    m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
     
     // Report TX change to registered reporters
