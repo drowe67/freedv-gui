@@ -988,7 +988,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SYNC_UNK_LABEL("Sync: unk"),
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
-    TOO_HIGH_LABEL("Too High"),
+    TOO_HIGH_LABEL("Clip"),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
