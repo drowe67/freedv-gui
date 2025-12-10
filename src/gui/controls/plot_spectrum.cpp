@@ -68,6 +68,7 @@ PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB,
     m_line_color    = 0;
     m_numSampleAveraging = 1;
     leftOffset_ = 0;
+    bottomOffset_ = 0;
     SetLabelSize(10.0);
 
     m_magdB         = magdB;
@@ -110,11 +111,13 @@ void PlotSpectrum::OnSize(wxSizeEvent&) {
     int text_w = 0;
     int text_h = 0;
     leftOffset_ = 0;
+    bottomOffset_ = 0;
     for(float mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
         char buf[STR_LENGTH];
         snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
         GetTextExtent(buf, &text_w, &text_h);
         leftOffset_ = std::max(leftOffset_, text_w);
+        bottomOffset_ = std::max(bottomOffset_, text_h);
     }
 }
 
@@ -138,7 +141,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     // is selected
 
     m_rGrid  = m_rCtrl;
-    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
     // black background
 

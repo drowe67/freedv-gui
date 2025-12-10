@@ -76,7 +76,8 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_bar_graph = 0;
     m_logy = 0;
     leftOffset_ = 0;
-    
+    bottomOffset_ = 0;
+
     // work out number of samples we will store and allocate storage
 
     m_samples = m_t_secs/m_sample_period_secs;
@@ -199,7 +200,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
     if (!m_mini)
-        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
     // black background
     int plotX = 0, plotY = 0, plotWidth = 0, plotHeight = 0;
@@ -465,6 +466,7 @@ void PlotScalar::OnSize(wxSizeEvent&)
 {
     // Determine correct left offset based on max text width
     leftOffset_ = 0;
+    bottomOffset_ = 0;
     for(auto a=m_a_min; a<m_a_max; )
     {
         int      text_w, text_h;
@@ -472,6 +474,7 @@ void PlotScalar::OnSize(wxSizeEvent&)
         snprintf(buf, STR_LENGTH, m_a_fmt, a);
         GetTextExtent(buf, &text_w, &text_h);
         leftOffset_ = std::max(leftOffset_, text_w);
+        bottomOffset_ = std::max(bottomOffset_, text_h);
 
         if (m_logy)
         {
@@ -488,7 +491,7 @@ void PlotScalar::OnSize(wxSizeEvent&)
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
     if (!m_mini)
-        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
     int plotWidth = m_rGrid.GetWidth();
     delete[] lineMap_;
