@@ -462,15 +462,15 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxStaticBoxSizer* levelSizer;
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
-    levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
-    
-    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    m_textLevel->SetForegroundColour(wxColour(255,0,0));
-    levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_HORIZONTAL, 1);
+    levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
 
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
+    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|wxALL, 10);
+    
+    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(35,-1), wxALIGN_CENTRE);
+    m_textLevel->SetForegroundColour(wxColour(255,0,0));
+    levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_VERTICAL, 1);
 
     leftSizer->Add(levelSizer, 0, wxALL|wxEXPAND, 2);
     
@@ -629,7 +629,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Squelch Slider Control
     //=====================================================
     wxStaticBoxSizer* sbSizer3;
-    wxStaticBox* squelchBox = new wxStaticBox(m_panel, wxID_ANY, _("S&quelch"), wxDefaultPosition, wxSize(100,-1));
+    squelchBox = new wxStaticBox(m_panel, wxID_ANY, _("S&quelch"), wxDefaultPosition, wxSize(100,-1));
     sbSizer3 = new wxStaticBoxSizer(squelchBox, wxVERTICAL);
 
     m_sliderSQ = new wxSlider(squelchBox, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
@@ -711,6 +711,23 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     rightSizer->Add(micSpeakerLevelSizer, 0, wxALL | wxEXPAND, 2);
     
+    // Frequency text field (PSK Reporter)
+    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
+
+    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
+    
+    //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
+    
+    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
+    m_cboReportFrequency->SetMinSize(wxSize(150,-1));
+    txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
+    
+    reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
+    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
+    
+    rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
+    
     /* new --- */
 
     //------------------------------
@@ -766,23 +783,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
-
-    // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
-
-    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
-    
-    //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    
-    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
-    m_cboReportFrequency->SetMinSize(wxSize(150,-1));
-    txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
-    
-    reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
-    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
-    
-    rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
         
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     

@@ -71,8 +71,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT
 if(WIN32)
 
 # XXX only x86_64 supported for now
-set(PYTHON_URL https://www.python.org/ftp/python/3.14.0/python-3.14.0-embed-amd64.zip)
-set(PYTHON_HASH 0202b66e068989cc4257b3a8efd3bc068df68aa0)
+set(PYTHON_URL https://www.python.org/ftp/python/3.14.2/python-3.14.2-embed-amd64.zip)
+set(PYTHON_HASH e1f8c4ffa4cc383d8449816d5cf664859d6c64bc)
 
 # Download Python. This is only included in the installer.
 FetchContent_Declare(download_python3 

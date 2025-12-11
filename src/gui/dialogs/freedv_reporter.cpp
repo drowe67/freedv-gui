@@ -561,6 +561,10 @@ void FreeDVReporterDialog::refreshLayout()
         item->SetTitle("Hdg");
         item->SetAlignment(wxALIGN_RIGHT);
     }
+    
+    // Hide RX Mode column if legacy modes aren't enabled
+    auto rxModeColumn = m_listSpots->GetColumn(LAST_RX_MODE_COL);
+    rxModeColumn->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes);
 
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();

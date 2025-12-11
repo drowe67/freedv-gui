@@ -1152,9 +1152,13 @@ class="header-section-number">18.1</span> V2.2.0 TBD TBD</h2>
 </ul></li>
 <li>Enhancements:
 <ul>
-<li>Upgrade Python to 3.14.0. (PR #1109, #1118)</li>
+<li>Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)</li>
 </ul></li>
 </ol>
+<p><em>Note: Legacy modes (700D, 700E, 1600) are now hidden by default.
+(PR #1108) You can show them again by going to
+Tools-&gt;Options-&gt;Modem and selecting “Enable Legacy
+Modes”.</em></p>
 <h2 data-number="18.2" id="v2.1.1-tbd-2025"><span
 class="header-section-number">18.2</span> V2.1.1 TBD 2025</h2>
 <ol type="1">
@@ -1167,6 +1171,10 @@ installation. (PR #1102)</li>
 <li>Fix intermittent crash on FreeDV Reporter connection loss. (PR
 #1112, #1115)</li>
 <li>Suppress background for fake rightmost column. (PR #1116)</li>
+<li>Emit VOX tone only when PTT is enabled. (PR #1122)</li>
+<li>KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)</li>
+<li>OmniRig: Fix crash when using Test button in CAT config dialog. (PR
+#1126)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1175,6 +1183,8 @@ installation. (PR #1102)</li>
 <li>Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106)
 - thanks <span class="citation"
 data-cites="NespaLa">@NespaLa</span>!</li>
+<li>Hamlib: Allow selection of baud rates greater than 115200. (PR
+#1125)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.3" id="v2.1.0-november-2025"><span

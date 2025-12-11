@@ -346,7 +346,7 @@ int main(int argc, char** argv)
                     log_warn("stdin pipe closed, exiting");
                     exiting = true;
                 }
-                callbackObj->infifo2->write(readBuffer, numActuallyRead);
+                callbackObj->infifo2->write(readBuffer, numActuallyRead / sizeof(short));
             }
         }
         else if (rv < 0)
@@ -358,7 +358,7 @@ int main(int argc, char** argv)
         }
 
         // If we have anything decoded, output that now
-        if (!exiting && callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
+        while (callbackObj->outfifo2->numUsed() >= NUM_TO_WRITE)
         {
             callbackObj->outfifo2->read(writeBuffer, NUM_TO_WRITE);
             int numActuallyWritten = write(fileno(stdout), writeBuffer, sizeof(short) * NUM_TO_WRITE);
@@ -367,6 +367,7 @@ int main(int argc, char** argv)
                 // stdout closed, exit
                 log_warn("stdout pipe closed, exiting");
                 exiting = true;
+                break;
             }
         }
 

@@ -853,7 +853,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * TBD
 2. Enhancements:
-    * Upgrade Python to 3.14.0. (PR #1109, #1118)
+    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
+
+*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
+again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
 
 ## V2.1.1 TBD 2025
 
@@ -863,9 +866,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use same sample rate for both recording RX and TX. (PR #1107)
     * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
     * Suppress background for fake rightmost column. (PR #1116)
+    * Emit VOX tone only when PTT is enabled. (PR #1122)
+    * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
+    * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
+    * Fix hidden/clipped axis labels on plots. (PR #1110)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
+    * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
 
 ## V2.1.0 November 2025
 
