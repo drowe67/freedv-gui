@@ -62,6 +62,8 @@ class PlotSpectrum : public PlotPanel
         int         m_n_magdB;  
         bool        m_clickTune;
         int         m_numSampleAveraging;
+        int         leftOffset_;
+        int         bottomOffset_;
 
         void        OnDoubleClickCommon(wxMouseEvent& event);
 

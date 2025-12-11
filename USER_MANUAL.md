@@ -859,6 +859,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Emit VOX tone only when PTT is enabled. (PR #1122)
     * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
+    * Fix hidden/clipped axis labels on plots. (PR #1110)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
