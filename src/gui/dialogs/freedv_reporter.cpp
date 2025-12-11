@@ -561,6 +561,10 @@ void FreeDVReporterDialog::refreshLayout()
         item->SetTitle("Hdg");
         item->SetAlignment(wxALIGN_RIGHT);
     }
+    
+    // Hide RX Mode column if legacy modes aren't enabled
+    auto rxModeColumn = m_listSpots->GetColumn(LAST_RX_MODE_COL);
+    rxModeColumn->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes);
 
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
@@ -1993,7 +1997,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     return result;
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int, wxDataViewItemAttr &attr) const
+bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const
 {
     std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     bool result = false;
@@ -2002,15 +2006,19 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
     if (item.IsOk())
     {
         auto row = (ReporterData*)item.GetID();
-        if (row->backgroundColor.IsOk())
+        
+        if (col < RIGHTMOST_COL)
         {
-            attr.SetBackgroundColour(row->backgroundColor);
-            result = true;
-        }
-        if (row->foregroundColor.IsOk())
-        {
-            attr.SetColour(row->foregroundColor);
-            result = true;
+            if (row->backgroundColor.IsOk())
+            {
+                attr.SetBackgroundColour(row->backgroundColor);
+                result = true;
+            }
+            if (row->foregroundColor.IsOk())
+            {
+                attr.SetColour(row->foregroundColor);
+                result = true;
+            }
         }
     }
 
@@ -2053,7 +2061,7 @@ wxDataViewItem FreeDVReporterDialog::FreeDVReporterDataModel::GetParent (const w
 #if !wxCHECK_VERSION(3,2,0)
 unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnCount () const
 {
-    return RIGHTMOST_COL;
+    return RIGHTMOST_COL + 1;
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnType (unsigned int) const

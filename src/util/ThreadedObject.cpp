@@ -163,7 +163,7 @@ void ThreadedObject::waitForAllTasksComplete_()
     auto count = eventQueue_.size();
     lk.unlock();
 
-    constexpr int MAX_TIMEOUT_COUNT = 100; // should be ~100ms
+    constexpr int MAX_TIMEOUT_COUNT = 250; // should be ~250ms
     int timeoutCount = 0;
     while (count > 0 && timeoutCount < MAX_TIMEOUT_COUNT)
     {

@@ -52,10 +52,10 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           export WINEPREFIX=`pwd`/wine-env
-          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
+          wget https://www.python.org/ftp/python/3.14.2/python-3.14.2-amd64.exe
+          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.14.2-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
           cat $WINEPREFIX/drive_c/python.log
-          DISPLAY= wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
@@ -72,7 +72,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..
 
     - name: Build freedv-gui
       shell: bash

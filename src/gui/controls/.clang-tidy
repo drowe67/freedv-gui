@@ -1,1 +1,1 @@
-Checks: "-clang-analyzer-optin.cplusplus.VirtualCall"
+Checks: "-*,performance*,-performance-enum-size,-performance-avoid-endl,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.FloatLoopCounter,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,concurrency*,objc*,darwin*,-clang-analyzer-optin.cplusplus.VirtualCall"

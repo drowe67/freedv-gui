@@ -96,6 +96,8 @@ class PlotWaterfall : public PlotPanel
         int m_imgHeight;
         int m_imgWidth;
         
+        int      leftOffset_;
+
         std::deque<wxBitmap*> waterfallSlices_;
         
         void        OnDoubleClickCommon(wxMouseEvent& event);
