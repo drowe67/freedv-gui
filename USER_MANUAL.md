@@ -868,9 +868,12 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * Suppress background for fake rightmost column. (PR #1116)
     * Emit VOX tone only when PTT is enabled. (PR #1122)
     * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
+    * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
+    * Fix hidden/clipped axis labels on plots. (PR #1110)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
+    * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
 
 ## V2.1.0 November 2025
 
