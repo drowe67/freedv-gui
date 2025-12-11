@@ -115,6 +115,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
         
     , showDecodeStats("/Debug/showDecodeStats", false)
+    , enableLegacyModes("/Modem/enableLegacyModes", false)
 {
     // empty
 }
@@ -243,6 +244,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reportingUserMsgColWidth);
     
     load_(config, showDecodeStats);
+    load_(config, enableLegacyModes);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -332,6 +334,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reportingUserMsgColWidth);
     
     save_(config, showDecodeStats);
+    save_(config, enableLegacyModes);
     
     config->Flush();
 }
