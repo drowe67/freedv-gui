@@ -1234,7 +1234,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         auto dxFreq = m_lastReportedCallsignListView->GetItemText(0, 1);
         auto snrStr = m_lastReportedCallsignListView->GetItemText(0, 3);
         
-        uint64_t dxFreqInt = 0;
+        int64_t dxFreqInt = 0;
         wxNumberFormatter::FromString(dxFreq, &dxFreqInt);
         
         long snr = 0;
