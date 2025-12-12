@@ -1225,6 +1225,30 @@ void MainFrame::OnCallSignReset(wxCommandEvent&)
     m_cboLastReportedCallsigns->SetText(_(""));
 }
 
+void MainFrame::OnLogQSO(wxCommandEvent&)
+{
+    if (m_lastReportedCallsignListView->GetItemCount() > 0)
+    {
+        // Get callsign and RX frequency
+        auto dxCall = m_lastReportedCallsignListView->GetItemText(0, 0);
+        auto dxFreq = m_lastReportedCallsignListView->GetItemText(0, 1);
+        auto snrStr = m_lastReportedCallsignListView->GetItemText(0, 3);
+        
+        uint64_t dxFreqInt = 0;
+        wxNumberFormatter::FromString(dxFreq, &dxFreqInt);
+        
+        long snr = 0;
+        wxNumberFormatter::FromString(snrStr, &snr);
+        
+        // Log contact
+        wxGetApp().logger->logContact(
+            (const char*)dxCall.ToUTF8(), "", 
+            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 
+            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
+            dxFreqInt,
+            (int)snr);    
+    }
+}
 
 // Force manual resync, just in case demod gets stuck on false sync
 

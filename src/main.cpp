@@ -47,6 +47,8 @@
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 
+#include "logging/WSJTXNetworkLogger.h"
+
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
@@ -1806,6 +1808,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
+        
+        if (wxGetApp().logger != nullptr && m_lastReportedCallsignListView->GetItemCount() > 0)
+        {
+            m_logQSO->Enable(true);
+        }
     
         // Run time update of EQ filters -----------------------------------
 
@@ -2144,6 +2151,8 @@ void MainFrame::performFreeDVOn_()
         m_cboLastReportedCallsigns->Enable(false);
             
         m_cboLastReportedCallsigns->SetText(wxT(""));
+        
+        m_logQSO->Disable();
     });
     
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -2231,6 +2240,9 @@ void MainFrame::performFreeDVOn_()
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
+            
+            // Create logger object
+            wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>();
         }
     
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
@@ -2484,6 +2496,8 @@ void MainFrame::performFreeDVOff_()
     freedvInterface.stop();
     
     m_newMicInFilter = m_newSpkOutFilter = true;
+    
+    wxGetApp().logger = nullptr;
 
     executeOnUiThreadAndWait_([&]() 
     {
@@ -2498,6 +2512,8 @@ void MainFrame::performFreeDVOff_()
         m_rb1600->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
+        
+        m_logQSO->Disable();
         
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
