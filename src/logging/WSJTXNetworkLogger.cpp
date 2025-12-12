@@ -22,6 +22,23 @@
 
 #include "WSJTXNetworkLogger.h"
 
+#include <cstring>
+#include <sstream>
+
+// For htonl etc.
+#if defined(WIN32) || defined(__MINGW32__)
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif // !_WIN32_WINNT
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <ws2def.h>
+#else
+#include <arpa/inet.h>
+#endif // defined(WIN32) || defined(__MINGW32__)
+
 const std::string WSJTXNetworkLogger::UNIQUE_ID("FreeDV");
 const std::string WSJTXNetworkLogger::LOG_MODE("DIGITALVOICE");
     
