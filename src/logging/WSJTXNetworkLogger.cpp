@@ -41,110 +41,110 @@
 
 const std::string WSJTXNetworkLogger::UNIQUE_ID("FreeDV");
 const std::string WSJTXNetworkLogger::LOG_MODE("DIGITALVOICE");
-    
+
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const uint32_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<uint32_t>(const uint32_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(uint32_t));
+    char* ptr = reallocPacket_(sizeof(uint32_t));
     assert(ptr != nullptr);
     
     *((uint32_t*)ptr) = htonl(obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const signed char& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<signed char>(const signed char& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(signed char));
+    char* ptr = reallocPacket_(sizeof(signed char));
     assert(ptr != nullptr);
     
     *((signed char*)ptr) = obj;
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const unsigned char& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<unsigned char>(const unsigned char& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(unsigned char));
+    char* ptr = reallocPacket_(sizeof(unsigned char));
     assert(ptr != nullptr);
     
     *((unsigned char*)ptr) = obj;
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const uint16_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<uint16_t>(const uint16_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(uint16_t));
+    char* ptr = reallocPacket_(sizeof(uint16_t));
     assert(ptr != nullptr);
     
     *((uint16_t*)ptr) = htons(obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const uint64_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<uint64_t>(const uint64_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(uint64_t));
+    char* ptr = reallocPacket_(sizeof(uint64_t));
     assert(ptr != nullptr);
     
     *((uint64_t*)ptr) = __builtin_bswap64(obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const int32_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<int32_t>(const int32_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(int32_t));
+    char* ptr = reallocPacket_(sizeof(int32_t));
     assert(ptr != nullptr);
     
     *((uint32_t*)ptr) = htonl((uint32_t)obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const int16_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<int16_t>(const int16_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(int16_t));
+    char* ptr = reallocPacket_(sizeof(int16_t));
     assert(ptr != nullptr);
     
     *((uint16_t*)ptr) = htons((uint16_t)obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const int64_t& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<int64_t>(const int64_t& obj)
 {
-    char* ptr = builder.reallocPacket_(sizeof(int64_t));
+    char* ptr = reallocPacket_(sizeof(int64_t));
     assert(ptr != nullptr);
     
     *((uint64_t*)ptr) = __builtin_bswap64((uint64_t)obj);
-    return builder;
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const std::string& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<std::string>(const std::string& obj)
 {
-    char* ptr = builder.reallocPacket_(obj.size() + sizeof(uint32_t));
+    char* ptr = reallocPacket_(obj.size() + sizeof(uint32_t));
     assert(ptr != nullptr);
     
     *((uint32_t*)ptr) = htonl(obj.size());
-    memcpy(ptr + obj.size(), obj.c_str(), obj.size());
-    return builder;
+    memcpy(ptr + sizeof(uint32_t), obj.c_str(), obj.size());
+    return *this;
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const WSJTXNetworkLogger::jdate_clock::time_point& obj)
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<WSJTXNetworkLogger::jdate_clock::time_point>(const WSJTXNetworkLogger::jdate_clock::time_point& obj)
 {
     auto currentTimeAsJulian = obj.time_since_epoch().count();
     auto fracDay = currentTimeAsJulian - ((int64_t)currentTimeAsJulian);
     auto msSinceMidnight = fracDay * (1000*60*60*24);
     
-    builder << (int64_t)currentTimeAsJulian
+    *this   << (int64_t)currentTimeAsJulian
             << (uint32_t)msSinceMidnight
             << (unsigned char)0 // local time
                 ;
-    return builder;
+    return *this;
 }
 
 WSJTXNetworkLogger::WSJTXNetworkLogger()

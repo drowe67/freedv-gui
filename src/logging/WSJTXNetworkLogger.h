@@ -33,6 +33,27 @@
 class WSJTXNetworkLogger : protected UdpHandler, public ILogger
 {
 public:
+    class PacketBuilder
+    {
+    public:
+        PacketBuilder();
+        virtual ~PacketBuilder();
+        
+        template<typename T> 
+        friend PacketBuilder& operator<<(PacketBuilder& builder, const T& obj);
+
+        char* getPacket() const;
+        int getPacketSize() const;
+    private:
+        char* packet_;
+        int packetSize_;
+        
+        template<typename T> 
+        PacketBuilder& serialize_(const T& obj); 
+
+        char* reallocPacket_(int addSize);
+    };
+    
     WSJTXNetworkLogger();
     virtual ~WSJTXNetworkLogger();
     
@@ -46,24 +67,6 @@ private:
     static const std::string UNIQUE_ID;
     static const std::string LOG_MODE;
     static constexpr uint32_t MAX_SCHEMA_VER = 2;
-    
-    class PacketBuilder
-    {
-    public:
-        PacketBuilder();
-        virtual ~PacketBuilder();
-        
-        template<typename T>
-        friend PacketBuilder& operator<<(PacketBuilder& builder, const T& obj);
-        
-        char* getPacket() const;
-        int getPacketSize() const;
-    private:
-        char* packet_;
-        int packetSize_;
-        
-        char* reallocPacket_(int addSize);
-    };
     
     struct jdate_clock
     {
@@ -86,5 +89,11 @@ private:
     
     void sendHeartbeat_();
 };
+
+template<typename T> 
+WSJTXNetworkLogger::PacketBuilder& operator<<(WSJTXNetworkLogger::PacketBuilder& builder, const T& obj)
+{
+    return builder.serialize_(obj);
+}
 
 #endif // WSJTX_NETWORK_LOGGER_H
