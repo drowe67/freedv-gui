@@ -150,7 +150,11 @@ void UdpHandler::openImpl_()
         
         // Make sure we can receive IPv4 too
         int opt_false = 0;
-        setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &opt_false, sizeof opt_false);
+#if defined(WIN32)
+        setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&opt_false, sizeof(opt_false));
+#else
+        setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &opt_false, sizeof(opt_false));
+#endif // defined(WIN32)
     }
     else
     {
