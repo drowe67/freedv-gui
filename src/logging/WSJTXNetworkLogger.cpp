@@ -48,7 +48,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(uint32_t));
     assert(ptr != nullptr);
     
-    *((uint32_t*)ptr) = htonl(obj);
+    auto tmp = htonl(obj);
+    memcpy(ptr, &tmp, sizeof(uint32_t));
+
     return *this;
 }
 
@@ -78,7 +80,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(uint16_t));
     assert(ptr != nullptr);
     
-    *((uint16_t*)ptr) = htons(obj);
+    auto tmp = htons(obj);
+    memcpy(ptr, &tmp, sizeof(uint16_t));
+
     return *this;
 }
 
@@ -88,7 +92,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(uint64_t));
     assert(ptr != nullptr);
     
-    *((uint64_t*)ptr) = __builtin_bswap64(obj);
+    auto tmp = __builtin_bswap64(obj);
+    memcpy(ptr, &tmp, sizeof(uint64_t));
+    
     return *this;
 }
 
@@ -98,7 +104,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(int32_t));
     assert(ptr != nullptr);
     
-    *((uint32_t*)ptr) = htonl((uint32_t)obj);
+    auto tmp = htonl((uint32_t)obj);
+    memcpy(ptr, &tmp, sizeof(int32_t));
+
     return *this;
 }
 
@@ -108,7 +116,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(int16_t));
     assert(ptr != nullptr);
     
-    *((uint16_t*)ptr) = htons((uint16_t)obj);
+    auto tmp = htons((uint16_t)obj);
+    memcpy(ptr, &tmp, sizeof(int16_t));
+    
     return *this;
 }
 
@@ -118,7 +128,9 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(sizeof(int64_t));
     assert(ptr != nullptr);
     
-    *((uint64_t*)ptr) = __builtin_bswap64((uint64_t)obj);
+    auto tmp = __builtin_bswap64((uint64_t)obj);
+    memcpy(ptr, &tmp, sizeof(int64_t));
+
     return *this;
 }
 
@@ -128,8 +140,10 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     char* ptr = reallocPacket_(obj.size() + sizeof(uint32_t));
     assert(ptr != nullptr);
     
-    *((uint32_t*)ptr) = htonl(obj.size());
+    auto tmp = htonl(obj.size());
+    memcpy(ptr, &tmp, sizeof(uint32_t));
     memcpy(ptr + sizeof(uint32_t), obj.c_str(), obj.size());
+    
     return *this;
 }
 
