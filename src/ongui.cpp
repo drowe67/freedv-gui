@@ -1237,6 +1237,15 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         int64_t dxFreqInt = 0;
         wxNumberFormatter::FromString(dxFreq, &dxFreqInt);
         
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            dxFreqInt *= 1000;
+        }
+        else
+        {
+            dxFreqInt *= 1000000;
+        }
+        
         long snr = 0;
         wxNumberFormatter::FromString(snrStr, &snr);
         
