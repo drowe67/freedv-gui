@@ -50,6 +50,11 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
     , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
+        
+    , udpReportingEnabled("/Reporting/UDP/Enable", false)
+    , udpReportingHostname("/Reporting/UDP/Hostname", wxT("127.0.0.1"))
+    , udpReportingPort("/Reporting/UDP/Port", 2237)
+        
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
     , reportingFrequencyList("/Reporting/FrequencyList", {
@@ -180,6 +185,10 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterBandFilterTracksExactFreq);
     load_(config, freedvReporterStatusText);
     load_(config, freedvReporterRecentStatusTexts);
+    
+    load_(config, udpReportingEnabled);
+    load_(config, udpReportingHostname);
+    load_(config, udpReportingPort);
 
     load_(config, useUTCForReporting);
     
@@ -225,6 +234,10 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterBandFilterTracksExactFreq);
     save_(config, freedvReporterStatusText);
     save_(config, freedvReporterRecentStatusTexts);
+    
+    save_(config, udpReportingEnabled);
+    save_(config, udpReportingHostname);
+    save_(config, udpReportingPort);
     
     save_(config, useUTCForReporting);
     

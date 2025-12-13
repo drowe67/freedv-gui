@@ -125,36 +125,60 @@ void UdpHandler::openImpl_()
     
     log_info("Opening UDP socket (host %s port %d)", host_.c_str(), port_);
     
-    // If empty hostname, use IN6ADDR_ANY
+    // If empty hostname, use INADDR_ANY
     if (host_ == "")
     {
 #if defined(WIN32)
-        socket_ = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+        socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (socket_ == INVALID_SOCKET)
         {
             log_warn("cannot open socket (err=%d)", WSAGetLastError());
         }
 #else
-        socket_= socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+        socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if(socket_ < 0)
         {
             log_warn("cannot open socket (err=%d)", errno);
         }
 #endif // defined(WIN32)
-        
-        struct sockaddr_in6 sin6;
-        sin6.sin6_family = AF_INET6;
-        memcpy(sin6.sin6_addr.s6_addr, in6addr_any.s6_addr, 16);
-        sin6.sin6_port = htons(port_);
-        ::bind(socket_, (struct sockaddr*)&sin6, sizeof(sin6));
-        
+
+        // XXX - macOS isn't able to set V6ONLY. Forcing IPv4 for now.
+#if 0
         // Make sure we can receive IPv4 too
         int opt_false = 0;
 #if defined(WIN32)
-        setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&opt_false, sizeof(opt_false));
+        auto rv = setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&opt_false, sizeof(opt_false));
+        if (rv != 0)
+        {
+            log_warn("cannot set socket options (err=%d)", WSAGetLastError());
+        }
 #else
-        setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &opt_false, sizeof(opt_false));
+        auto rv = setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &opt_false, sizeof(opt_false));
+        if (rv != 0)
+        {
+            log_warn("cannot set socket options (err=%d)", errno);
+        }
 #endif // defined(WIN32)
+        
+        if (port_ > 0)
+        {
+            struct sockaddr_in6 sin6;
+            sin6.sin6_family = AF_INET6;
+            memcpy(sin6.sin6_addr.s6_addr, in6addr_any.s6_addr, 16);
+            sin6.sin6_port = htons(port_);
+            sin6.sin6_flowinfo = 0;
+            sin6.sin6_scope_id = 0;
+            auto rv = ::bind(socket_, (struct sockaddr*)&sin6, sizeof(sin6));
+            if (rv != 0)
+            {
+    #if defined(WIN32)
+                log_warn("cannot bind socket (err=%d)", WSAGetLastError());
+    #else
+                log_warn("cannot bind socket (err=%d)", errno);
+    #endif // defined(WIN32)
+            }
+        }
+#endif
     }
     else
     {

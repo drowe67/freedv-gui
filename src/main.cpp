@@ -2242,7 +2242,12 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.setReliableText(temp);
             
             // Create logger object
-            wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>();
+            if (wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
+            {
+                wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>(
+                    (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                    wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+            }
         }
     
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];

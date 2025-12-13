@@ -161,13 +161,14 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     return *this;
 }
 
-WSJTXNetworkLogger::WSJTXNetworkLogger()
+WSJTXNetworkLogger::WSJTXNetworkLogger(std::string hostname, int port)
     : heartbeatTimer_(HEARTBEAT_INTERVAL_MS, [&](ThreadedTimer&) {
         sendHeartbeat_();
     }, true)
+    , reportHostname_(std::move(hostname))
+    , reportPort_(port)
 {
-    // TBD: allow configuration of the below
-    open("127.0.0.1", 0);
+    open("", 0);
     heartbeatTimer_.start();
     sendHeartbeat_();
 }
@@ -207,7 +208,7 @@ void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std:
             << std::string("")     // ADIF propagation mode
                 ;
     
-    send("127.0.0.1", 2237, builder.getPacket(), builder.getPacketSize()).wait();
+    send(reportHostname_.c_str(), reportPort_, builder.getPacket(), builder.getPacketSize()).wait();
 }
 
 void WSJTXNetworkLogger::sendHeartbeat_()
@@ -219,7 +220,7 @@ void WSJTXNetworkLogger::sendHeartbeat_()
     builder << std::string("1.2.3"); // TBD
     builder << std::string(""); // TBD
     
-    send("127.0.0.1", 2237, builder.getPacket(), builder.getPacketSize()).wait();
+    send(reportHostname_.c_str(), reportPort_, builder.getPacket(), builder.getPacketSize()).wait();
 }
 
 WSJTXNetworkLogger::PacketBuilder::PacketBuilder()

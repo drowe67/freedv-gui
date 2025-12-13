@@ -54,7 +54,7 @@ public:
         char* reallocPacket_(int addSize);
     };
     
-    WSJTXNetworkLogger();
+    WSJTXNetworkLogger(std::string hostname, int port);
     virtual ~WSJTXNetworkLogger();
     
     virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, int snr) override;
@@ -86,6 +86,8 @@ private:
     };
     
     ThreadedTimer heartbeatTimer_;
+    std::string reportHostname_;
+    int reportPort_;
     
     void sendHeartbeat_();
 };
