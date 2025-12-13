@@ -194,16 +194,17 @@ void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std:
             << freqHz
             << LOG_MODE
             << reportSent.str()
-            << std::string("") // report RX
-            << std::string("") // TX power
-            << std::string("") // comments
-            << std::string("") // name
+            << std::string("")     // report RX
+            << std::string("")     // TX power
+            << std::string("")     // comments
+            << std::string("")     // name
             << currentTimeAsJulian // time on
+            << myCall              // operator call
             << myCall
             << myGrid
-            << std::string("") // exchange sent
-            << std::string("") // exchange RX
-            << std::string("") // ADIF propagation mode
+            << std::string("")     // exchange sent
+            << std::string("")     // exchange RX
+            << std::string("")     // ADIF propagation mode
                 ;
     
     send("127.0.0.1", 2237, builder.getPacket(), builder.getPacketSize()).wait();
