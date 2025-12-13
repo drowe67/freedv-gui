@@ -90,6 +90,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
+#include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
 #include "util/sanitizers.h"
@@ -180,6 +181,9 @@ class MainApp : public wxApp
 
         // PTT Input
         std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
+        
+        // Logging
+        std::shared_ptr<ILogger> logger;
 
         wxRect              m_rTopWindow;
 
@@ -402,6 +406,8 @@ class MainFrame : public TopFrame
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
+        virtual void OnLogQSO(wxCommandEvent& event) override;
+        
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
         void OnReSync( wxCommandEvent& event ) override;

@@ -155,6 +155,10 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_useCardinalDirections;
         wxCheckBox    *m_ckboxFreeDVReporterForceReceiveOnly;
         
+        wxCheckBox    *m_ckboxUDPReportingEnable;
+        wxTextCtrl    *m_udpHostname;
+        wxTextCtrl    *m_udpPort;
+        
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;
         wxStaticText  *m_textPA1;

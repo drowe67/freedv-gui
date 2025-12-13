@@ -395,6 +395,13 @@ FreeDV will also show the callsigns of previously received signals. To view thos
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
 
+# QSO Logging
+
+FreeDV supports integration with external logging utilities that support the WSJT-X logging protocol (for example,
+[KLog](https://github.com/ea4k/klog). This can be enabled by going to Tools->Options->Reporting and enabling 
+the "Enable QSO Logging" option. By default, it sends packets to "localhost" (127.0.0.1) port 2237, but this
+can be changed if the logging computer is elsewhere on the network.
+
 # Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
@@ -874,6 +881,7 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
+    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
 
 ## V2.1.0 November 2025
 
