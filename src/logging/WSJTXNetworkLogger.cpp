@@ -236,6 +236,9 @@ char* WSJTXNetworkLogger::PacketBuilder::reallocPacket_(int addSize)
     char* newPacket = new char[packetSize_ + addSize];
     assert(newPacket != nullptr);
     
+    // Copy existing data to new packet.
+    memcpy(newPacket, packet_, packetSize_);
+    
     char *returnVal = newPacket + packetSize_;
     if (packet_ != nullptr)
     {
