@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include "WSJTXNetworkLogger.h"
+#include "git_version.h"
 
 #include <cstring>
 #include <sstream>
@@ -217,8 +218,8 @@ void WSJTXNetworkLogger::sendHeartbeat_()
     builder << (uint32_t)0;
     builder << UNIQUE_ID;
     builder << MAX_SCHEMA_VER;
-    builder << std::string("1.2.3"); // TBD
-    builder << std::string(""); // TBD
+    builder << GetFreeDVVersion();
+    builder << std::string("");
     
     send(reportHostname_.c_str(), reportPort_, builder.getPacket(), builder.getPacketSize()).wait();
 }
