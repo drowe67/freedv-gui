@@ -172,7 +172,7 @@ bool PlotScalar::repaintAll_(wxPaintEvent&)
 
 void PlotScalar::refreshData()
 {
-    /*if (!m_mini)
+    if (!m_mini)
     {
         wxRect plotRegion(
             PLOT_BORDER + leftOffset_, 
@@ -181,7 +181,7 @@ void PlotScalar::refreshData()
             m_rGrid.GetHeight());
         RefreshRect(plotRegion);
     }
-    else*/
+    else
     {
         Refresh();
     }
@@ -331,7 +331,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             path.AddLineToPoint(x, item->y2 + offsetY);
         }
         path.AddLineToPoint(offsetX, lineMap_[0].y1 + offsetY);
-        ctx->DrawPath(path);
+        ctx->FillPath(path);
     }
  
     ctx->EndLayer();
