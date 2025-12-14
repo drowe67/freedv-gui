@@ -214,6 +214,16 @@ class FreeDVReporterDialog : public wxFrame
                  return "";
              }
              
+             wxString getSoftwareVersion(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     return data->version;
+                 }
+                 return "";
+             }
+
              bool isValidForReporting()
              {
                  return reporter_ && reporter_->isValidForReporting();
