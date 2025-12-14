@@ -76,6 +76,41 @@ FlexVitaTask::~FlexVitaTask()
     delete callbackData_.outfifo2;
 }
 
+void FlexVitaTask::sendMeter(uint16_t meterId, float valueDb)
+{
+    enqueue_([this, meterId, valueDb]() {
+        // Get free packet
+        vita_packet* packet = &packetArray_[packetIndex_++];
+        assert(packet != nullptr);
+        if (packetIndex_ == MAX_VITA_PACKETS)
+        {
+            packetIndex_ = 0;
+        }
+
+        // Fil in packet with data
+        packet->packet_type = VITA_PACKET_TYPE_EXT_DATA_WITH_STREAM_ID;
+        packet->stream_id = METER_STREAM_ID;
+        packet->class_id = METER_CLASS_ID;
+        packet->timestamp_type = 0;
+        packet->timestamp_int = 0;
+        packet->timestamp_frac = 0;
+        packet->meter[0].id = htons(meterId);
+        packet->meter[0].value = htons((int32_t)(valueDb * 128) & 0xFFFF);
+        
+        size_t packet_len = VITA_PACKET_HEADER_SIZE + sizeof(uint32_t);
+        packet->length = htons(packet_len >> 2); // Length is in 32-bit words
+
+        int rv = send(socket_, (char*)packet, packet_len, 0);
+        if (rv < 0)
+        {
+            // TBD: close and reopen socket
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_error("Got socket error %d (%s) while sending", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        }
+    });
+}
+
 GenericFIFO<short>* FlexVitaTask::getAudioInput_(bool tx)
 {
     return tx ? callbackData_.infifo1 : callbackData_.infifo2;
@@ -122,12 +157,12 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
             *ptrOut++ = tmp;
         }
                 
+
         // Fil in packet with data
         packet->packet_type = VITA_PACKET_TYPE_IF_DATA_WITH_STREAM_ID;
         packet->stream_id = streamId;
         packet->class_id = AUDIO_CLASS_ID;
         packet->timestamp_type = audioSeqNum_++;
-
         size_t packet_len = VITA_PACKET_HEADER_SIZE + samplesRequired_ * 2 * sizeof(float);
 
         constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
