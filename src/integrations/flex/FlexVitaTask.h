@@ -74,6 +74,8 @@ public:
    
     void registerStreamIds(uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId);
     void clearStreamIds();
+
+    void sendMeter(uint16_t meterId, float valueDb);
  
 private:    
     paCallBackData callbackData_;
