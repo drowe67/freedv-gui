@@ -125,8 +125,8 @@ void* MinimalTxRxThread::Entry()
 
 #if defined(__linux__)
     const char* threadName = nullptr;
-    if (m_tx) threadName = "FreeDV txThread";
-    else threadName = "FreeDV rxThread";
+    if (m_tx) threadName = "FDV txThread";
+    else threadName = "FDV rxThread";
     pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
