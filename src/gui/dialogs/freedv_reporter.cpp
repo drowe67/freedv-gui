@@ -263,6 +263,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_trackFrequency->SetToolTip(_("Filters FreeDV Reporter list based on radio's current frequency or band."));
     reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
