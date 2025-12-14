@@ -223,6 +223,8 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
         m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
+        m_BtnReSync->Enable(isEnabled);
+        m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
         // XXX - with really short windows, wxWidgets sometimes doesn't size
         // the components properly until the user resizes the window (even if only

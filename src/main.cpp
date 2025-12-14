@@ -859,7 +859,9 @@ setDefaultMode:
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
     m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    
+    m_BtnReSync->Enable(isEnabled);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
     if (!isEnabled)
     {
         m_textBits->SetLabel("Bits: unk");
@@ -951,6 +953,7 @@ setDefaultMode:
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
     modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -2117,6 +2120,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_ckboxSQ->Enable(isEnabled);
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
+        m_BtnReSync->Enable(isEnabled);
     }
 }
 
