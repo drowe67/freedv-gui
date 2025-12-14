@@ -39,9 +39,16 @@ public:
     using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformAddValidStreamIdentifiersFn = std::function<void(FlexTcpTask&, uint32_t, uint32_t, uint32_t, uint32_t, void*)>;
+    using WaveformSnrMeterIdentifiersFn = std::function<void(FlexTcpTask&, uint16_t, void*)>;
 
     FlexTcpTask(int vitaPort);
     virtual ~FlexTcpTask();
+    
+    void setWaveformSnrMeterIdentifiersFn(WaveformSnrMeterIdentifiersFn fn, void* state)
+    {
+        waveformSnrMeterIdentifiersFn_ = std::move(fn);
+        waveformSnrMeterIdentifiersState_ = state;
+    }
     
     void setWaveformConnectedFn(WaveformConnectedFn fn, void* state)
     {
@@ -122,6 +129,9 @@ private:
 
     WaveformAddValidStreamIdentifiersFn waveformAddValidStreamIdentifiersFn_;
     void* waveformAddValidStreamIdentifiersState_;
+
+    WaveformSnrMeterIdentifiersFn waveformSnrMeterIdentifiersFn_;
+    void* waveformSnrMeterIdentifiersState_;
 
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;
