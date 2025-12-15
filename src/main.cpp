@@ -1181,6 +1181,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
@@ -2129,6 +2130,8 @@ void MainFrame::performFreeDVOn_()
     log_debug("Start .....");
     g_queueResync = false;
     endingTx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -2268,7 +2271,7 @@ void MainFrame::performFreeDVOn_()
     });
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
