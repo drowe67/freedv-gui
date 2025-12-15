@@ -283,48 +283,51 @@ error:
             return;
         }
 
-        if(tcgetattr(serialPortHandle_, &t)==-1) 
+        // Skip termios configuration for PTT Input to avoid tcgetattr/tcsetattr hang on tty0tty driver
+        if (shouldConfigureTermios_())
         {
-            close(serialPortHandle_);
-            serialPortHandle_ = COM_HANDLE_INVALID;
-            
-            std::string errMsg = "Could not open serial port " + serialPort_;
-            onRigError(this, errMsg);
-            return;
+            if(tcgetattr(serialPortHandle_, &t)==-1)
+            {
+                close(serialPortHandle_);
+                serialPortHandle_ = COM_HANDLE_INVALID;
+
+                std::string errMsg = "Could not open serial port " + serialPort_;
+                onRigError(this, errMsg);
+                return;
+            }
+
+            t.c_iflag = (
+                          IGNBRK   /* ignore BREAK condition */
+                        | IGNPAR   /* ignore (discard) parity errors */
+                        );
+            t.c_oflag = 0;    /* No output processing */
+            t.c_cflag = (
+                          CS8         /* 8 bits */
+                        | CREAD       /* enable receiver */
+            /*
+            Fun snippet from the FreeBSD manpage:
+                If CREAD is set, the receiver is enabled.  Otherwise, no character is
+                received.  Not all hardware supports this bit.  In fact, this flag is
+                pretty silly and if it were not part of the termios specification it
+                would be omitted.
+            */
+                        | CLOCAL      /* ignore modem status lines */
+                        );
+            t.c_lflag = 0;    /* No local modes */
+
+            if(tcsetattr(serialPortHandle_, TCSANOW, &t)==-1)
+            {
+                close(serialPortHandle_);
+                serialPortHandle_ = COM_HANDLE_INVALID;
+
+                std::string errMsg = "Could not open serial port " + serialPort_;
+                onRigError(this, errMsg);
+                return;
+            }
         }
 
-        t.c_iflag = (
-                      IGNBRK   /* ignore BREAK condition */
-                    | IGNPAR   /* ignore (discard) parity errors */
-                    );
-        t.c_oflag = 0;    /* No output processing */
-        t.c_cflag = (
-                      CS8         /* 8 bits */
-                    | CREAD       /* enable receiver */
+        onRigConnected(this);
 
-        /*
-        Fun snippet from the FreeBSD manpage:
-
-             If CREAD is set, the receiver is enabled.  Otherwise, no character is
-             received.  Not all hardware supports this bit.  In fact, this flag is
-             pretty silly and if it were not part of the termios specification it
-             would be omitted.
-        */
-                    | CLOCAL      /* ignore modem status lines */
-                    );
-
-        t.c_lflag = 0;    /* No local modes */
-        if(tcsetattr(serialPortHandle_, TCSANOW, &t)==-1) 
-        {
-            close(serialPortHandle_);
-            serialPortHandle_ = COM_HANDLE_INVALID;
-            
-            std::string errMsg = "Could not open serial port " + serialPort_;
-            onRigError(this, errMsg);
-            return;
-        }
-
-        onRigConnected(this);        
     }
 #endif
 
