@@ -35,16 +35,17 @@ extern FreeDVInterface freedvInterface;
 
 #define CALLSIGN_COL (0)
 #define GRID_SQUARE_COL (1)
-#define HEADING_COL (2)
-#define FREQUENCY_COL (3)
-#define TX_MODE_COL (4)
-#define STATUS_COL (5)
-#define USER_MESSAGE_COL (6)
-#define LAST_TX_DATE_COL (7)
-#define LAST_RX_CALLSIGN_COL (8)
-#define LAST_RX_MODE_COL (9)
-#define SNR_COL (10)
-#define LAST_UPDATE_DATE_COL (11)
+#define DISTANCE_COL (2)
+#define HEADING_COL (3)
+#define FREQUENCY_COL (4)
+#define TX_MODE_COL (5)
+#define STATUS_COL (6)
+#define USER_MESSAGE_COL (7)
+#define LAST_TX_DATE_COL (8)
+#define LAST_RX_CALLSIGN_COL (9)
+#define LAST_RX_MODE_COL (10)
+#define SNR_COL (11)
+#define LAST_UPDATE_DATE_COL (12)
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
@@ -108,6 +109,15 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     colObj->GetRenderer()->DisableEllipsize();
     colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
     colObj->SetMinWidth(65);
+    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    {
+        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+    }
+    
+    colObj = m_listSpots->AppendTextColumn(wxT("km"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    colObj->GetRenderer()->DisableEllipsize();
+    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
+    colObj->SetMinWidth(60);
     if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
     {
         colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
@@ -508,8 +518,30 @@ void FreeDVReporterDialog::refreshLayout()
     rxRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
     rxRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
  
+    wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
+
+    if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+    {
+        item->SetTitle("km ");
+    }
+    else
+    {
+        item->SetTitle("Miles");
+    }
+    
+    // Refresh frequency units as appropriate.
+    item = m_listSpots->GetColumn(FREQUENCY_COL);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        item->SetTitle("kHz");
+    }
+    else
+    {
+        item->SetTitle("MHz");
+    }
+
     // Change direction/heading column label based on preferences
-    auto item = m_listSpots->GetColumn(HEADING_COL);
+    item = m_listSpots->GetColumn(HEADING_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item->SetTitle("Dir");
@@ -1811,6 +1843,9 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->callsign.CmpNoCase(rightData->callsign);
             break;
         case GRID_SQUARE_COL:
+            result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
+            break;
+        case DISTANCE_COL:
             result = leftData->distanceVal - rightData->distanceVal;
             break;
         case HEADING_COL:
@@ -2058,19 +2093,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
                 variant = wxVariant(row->callsign);
                 break;
             case GRID_SQUARE_COL:
-            {
-                wxString unit;
-                if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
-                {
-                    unit = " km";
-                }
-                else
-                {
-                    unit = " mi";
-                }
-                variant = wxVariant(row->gridSquare + " (" + row->distance + unit + ")");
+                variant = wxVariant(row->gridSquare);
                 break;
-            }
+            case DISTANCE_COL:
+                variant = wxVariant(row->distance);
+                break;
             case HEADING_COL:
                 variant = wxVariant(row->heading);
                 break;
