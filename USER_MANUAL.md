@@ -873,6 +873,7 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
     * Fix hidden/clipped axis labels on plots. (PR #1110)
+    * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!

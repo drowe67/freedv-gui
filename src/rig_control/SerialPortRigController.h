@@ -63,7 +63,12 @@ protected:
     SerialPortRigController(std::string serialPort);
 
     com_handle_t serialPortHandle_;
-    
+
+    // Virtual method to allow derived classes to skip termios configuration
+    // This is to work around a bug in the tty0tty kernel driver that causes
+    // deadlocks if tcgetattr or tcsetattr are called.
+    virtual bool shouldConfigureTermios_() const { return true; }
+
     void raiseDTR_(void);
     void lowerDTR_(void);
     void raiseRTS_(void);
