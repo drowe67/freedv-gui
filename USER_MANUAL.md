@@ -856,6 +856,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
+    * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
