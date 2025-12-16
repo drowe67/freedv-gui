@@ -662,7 +662,11 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent&)
             break;
         }
     }
-    
+   
+    // Preserve column ordering
+    wxDataViewEvent tmp;
+    OnColumnReordered(tmp);
+ 
     // Preserve Msg column width
     auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
@@ -715,6 +719,10 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
         wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = true;
     }
 
+    // Preserve column ordering
+    wxDataViewEvent tmp;
+    OnColumnReordered(tmp);
+ 
     // Preserve Msg column width
     auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
