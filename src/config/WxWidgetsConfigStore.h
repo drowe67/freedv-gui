@@ -42,7 +42,10 @@ protected:
     void save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement);
     
     wxString generateStringFromArray_(std::vector<wxString> const& vec);
-    std::vector<wxString> generateArayFromString_(wxString const& str);
+    std::vector<wxString> generateStrArrayFromString_(wxString const& str);
+
+    wxString generateStringFromArray_(std::vector<int> const& vec);
+    std::vector<int> generateNumArrayFromString_(wxString const& str);
 };
 
 template<typename UnderlyingDataType>
@@ -67,5 +70,11 @@ template<>
 void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement);
 template<>
 void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement);
+
+// Special handling for loading and saving int arrays.
+template<>
+void WxWidgetsConfigStore::load_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement);
+template<>
+void WxWidgetsConfigStore::save_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement);
 
 #endif // WXWIDGETS_CONFIG_STORE_H

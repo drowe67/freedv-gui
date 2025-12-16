@@ -106,6 +106,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
+        void OnColumnReordered(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
         void DeselectItem();
@@ -361,6 +362,8 @@ class FreeDVReporterDialog : public wxFrame
         };
 
         bool isSelectionPossible_;
+
+        void createColumn_(int col);
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;

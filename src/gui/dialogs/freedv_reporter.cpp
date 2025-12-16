@@ -60,6 +60,106 @@ extern FreeDVInterface freedvInterface;
 
 using namespace std::placeholders;
 
+void FreeDVReporterDialog::createColumn_(int col)
+{
+    wxDataViewColumn* colObj = nullptr;
+    int minWidth = 0;
+    int alignment = wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL;
+    wxString colName = "";
+    bool ellipsize = false;
+
+    switch (col)
+    {
+        case CALLSIGN_COL:
+            colName = wxT("Callsign");
+            minWidth = 70;
+            break;
+        case GRID_SQUARE_COL:
+            colName = wxT("Locator");
+            minWidth = 65;
+            break;
+        case DISTANCE_COL:
+            colName = wxT("km");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case HEADING_COL:
+            colName = wxT("Hdg");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case FREQUENCY_COL:
+            colName = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case TX_MODE_COL:
+            colName = wxT("Mode");
+            minWidth = 65;
+            break;
+        case STATUS_COL:
+            colName = wxT("Status");
+            minWidth = 60;
+            break;
+        case USER_MESSAGE_COL:
+            // Note: there's Windows specific logic here, so we create the column
+            // here rather than farther down.
+#if defined(WIN32)
+            // Use ReportMessageRenderer only on Windows so that we can render emojis in color.
+            colObj = new wxDataViewColumn(wxT("Msg"), new ReportMessageRenderer(), col, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+            m_listSpots->AppendColumn(colObj);
+#else
+            colObj = m_listSpots->AppendTextColumn(wxT("Msg"), col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+#endif // defined(WIN32)
+            colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
+            minWidth = 130;
+            ellipsize = true;
+            break;
+        case LAST_TX_DATE_COL:
+            colName = wxT("Last TX");
+            minWidth = 60;
+            break;
+        case LAST_RX_CALLSIGN_COL:
+            colName = wxT("RX Call");
+            minWidth = 65;
+            break;
+        case LAST_RX_MODE_COL:
+            colName = wxT("Mode");
+            minWidth = 60;
+            break;
+        case SNR_COL:
+            colName = wxT("SNR");
+            minWidth = 60;
+            break;
+        case LAST_UPDATE_DATE_COL:
+            colName = wxT("Last Update");
+            minWidth = 100;
+            break;
+        default:
+            return;
+    }
+
+    if (colObj == nullptr)
+    {
+        colObj = m_listSpots->AppendTextColumn(colName, col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+    }
+    auto renderer = colObj->GetRenderer();
+    renderer->SetAlignment(alignment);
+    if (ellipsize)
+    {
+        renderer->EnableEllipsize(wxELLIPSIZE_END);
+    }
+    else
+    {
+        renderer->DisableEllipsize();
+    }
+    colObj->SetMinWidth(minWidth);
+    if (col == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    {
+        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+    }
+}
+
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
@@ -88,141 +188,27 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         
     // Main list box
     // =============================
-    int col = 0;
-
     m_listSpots = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 
     // Associate data model.
     spotsDataModel_ = new FreeDVReporterDataModel(this);
     m_listSpots->AssociateModel(spotsDataModel_.get());
 
-    auto colObj = m_listSpots->AppendTextColumn(wxT("Callsign"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->SetMinWidth(70);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0)
     {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+        // Generate default column ordering
+        for (auto index = 0; index < RIGHTMOST_COL; index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
+        }
     }
     
-    colObj = m_listSpots->AppendTextColumn(wxT("Locator"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
     {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+        log_info("Creating col %d", col);
+        createColumn_(col);
     }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("km"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Hdg"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), 
-        col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Mode"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Status"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-#if defined(WIN32)
-    // Use ReportMessageRenderer only on Windows so that we can render emojis in color.
-    colObj = new wxDataViewColumn(wxT("Msg"), new ReportMessageRenderer(), col++, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    m_listSpots->AppendColumn(colObj);
-#else
-    colObj = m_listSpots->AppendTextColumn(wxT("Msg"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-#endif // defined(WIN32)
-    colObj->GetRenderer()->EnableEllipsize(wxELLIPSIZE_END);
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(130);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Last TX"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("RX Call"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Mode"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("SNR"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Last Update"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(100);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-
-    m_listSpots->AppendTextColumn(wxT(" "), col++, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
+    m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
@@ -423,6 +409,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
+    m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
 
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -489,7 +476,8 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
-    
+    m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
+
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
     m_buttonClear->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
@@ -1092,6 +1080,23 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
+}
+
+void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
+{
+    // Preserve new column ordering
+    std::vector<int> newColPositions;
+    std::stringstream ss;
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        auto dvc = m_listSpots->GetColumn(index);
+        newColPositions.push_back(dvc->GetModelColumn());
+
+        ss << dvc->GetModelColumn() << " ";
+    }
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
+
+    log_info("New column ordering: %s", ss.str().c_str());
 }
 
 void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)

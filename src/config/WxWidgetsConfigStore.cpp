@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <wx/tokenzr.h>
+#include <wx/numformatter.h>
 #include "WxWidgetsConfigStore.h"
 
 template<>
@@ -28,6 +29,23 @@ void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, Configurati
     long val;
     config->Read(configElement.getElementName(), &val, (long)configElement.getDefaultVal());
     configElement.setWithoutProcessing((unsigned int)val);
+}
+
+template<>
+void WxWidgetsConfigStore::load_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement)
+{
+    wxString val;
+    wxString defaultVal = generateStringFromArray_(configElement.getDefaultVal());
+    
+    config->Read(configElement.getElementName(), &val, defaultVal);
+    configElement.setWithoutProcessing(generateNumArrayFromString_(val));
+}
+
+template<>
+void WxWidgetsConfigStore::save_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement)
+{
+    wxString val = generateStringFromArray_(configElement.getWithoutProcessing());
+    config->Write(configElement.getElementName(), val);
 }
 
 /* Note: for string arrays, we're treating them as a list of strings separated by commas. */
@@ -39,7 +57,7 @@ void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, C
     wxString defaultVal = generateStringFromArray_(configElement.getDefaultVal());
     
     config->Read(configElement.getElementName(), &val, defaultVal);
-    configElement.setWithoutProcessing(generateArayFromString_(val));
+    configElement.setWithoutProcessing(generateStrArrayFromString_(val));
 }
 
 template<>
@@ -47,6 +65,42 @@ void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, C
 {
     wxString val = generateStringFromArray_(configElement.getWithoutProcessing());
     config->Write(configElement.getElementName(), val);
+}
+
+wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<int> const& vec)
+{
+    wxString rv = "";
+    
+    int count = vec.size();
+    for (auto& item : vec)
+    {
+        wxString numAsString = wxNumberFormatter::ToString((long)item, wxNumberFormatter::Style_None);
+        rv += numAsString;
+        count--;
+        
+        if (count > 0)
+        {
+            rv += ",";
+        }
+    }
+    
+    return rv;
+}
+
+std::vector<int> WxWidgetsConfigStore::generateNumArrayFromString_(wxString const& str)
+{
+    std::vector<int> rv;
+    
+    wxStringTokenizer tokenizer(str, ",");
+    while ( tokenizer.HasMoreTokens() )
+    {
+        wxString token = tokenizer.GetNextToken();
+        long tmp = 0;
+        wxNumberFormatter::FromString(token, &tmp);
+        rv.push_back((int)tmp);
+    }
+    
+    return rv;
 }
 
 wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> const& vec)
@@ -68,7 +122,7 @@ wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> co
     return rv;
 }
 
-std::vector<wxString> WxWidgetsConfigStore::generateArayFromString_(wxString const& str)
+std::vector<wxString> WxWidgetsConfigStore::generateStrArrayFromString_(wxString const& str)
 {
     std::vector<wxString> rv;
     
