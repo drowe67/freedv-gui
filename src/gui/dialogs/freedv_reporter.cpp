@@ -198,6 +198,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0)
     {
         // Generate default column ordering
+        log_info("Generating default column ordering");
         for (auto index = 0; index < RIGHTMOST_COL; index++)
         {
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
@@ -497,6 +498,23 @@ bool FreeDVReporterDialog::isTextMessageFieldInFocus()
     return m_statusMessage->HasFocus();
 }
 
+wxDataViewColumn* FreeDVReporterDialog::getColumnForModelColId_(unsigned int col)
+{
+    wxDataViewColumn* item = nullptr;
+
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        item = m_listSpots->GetColumn(index);
+        if (item->GetModelColumn() == col)
+        {
+            break;
+        }
+        item = nullptr;
+    }
+    assert(item != nullptr);
+    return item;
+}
+
 void FreeDVReporterDialog::refreshLayout()
 {
     // Update row colors
@@ -507,7 +525,7 @@ void FreeDVReporterDialog::refreshLayout()
     rxRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
     rxRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
  
-    wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
+    wxDataViewColumn* item = getColumnForModelColId_(DISTANCE_COL);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
@@ -519,7 +537,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
     
     // Refresh frequency units as appropriate.
-    item = m_listSpots->GetColumn(FREQUENCY_COL);
+    item = getColumnForModelColId_(FREQUENCY_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         item->SetTitle("kHz");
@@ -530,7 +548,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
 
     // Change direction/heading column label based on preferences
-    item = m_listSpots->GetColumn(HEADING_COL);
+    item = getColumnForModelColId_(HEADING_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item->SetTitle("Dir");
@@ -543,7 +561,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
     
     // Hide RX Mode column if legacy modes aren't enabled
-    auto rxModeColumn = m_listSpots->GetColumn(LAST_RX_MODE_COL);
+    auto rxModeColumn = getColumnForModelColId_(LAST_RX_MODE_COL);
     rxModeColumn->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes);
 
     // Refresh all data based on current settings and filters.
@@ -654,10 +672,10 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent&)
     // Preserve sort column/ordering
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
-        auto colObj = m_listSpots->GetColumn(index);
+        auto colObj = getColumnForModelColId_(index);
         if (colObj != nullptr && colObj->IsSortKey())
         {
-            wxGetApp().appConfiguration.reporterWindowCurrentSort = index;
+            wxGetApp().appConfiguration.reporterWindowCurrentSort = colObj->GetModelColumn();
             wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = colObj->IsSortOrderAscending();
             break;
         }
@@ -668,7 +686,7 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent&)
     OnColumnReordered(tmp);
  
     // Preserve Msg column width
-    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
+    auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
 
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -703,11 +721,11 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
     bool found = false;
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
-        auto colObj = m_listSpots->GetColumn(index);
+        auto colObj = getColumnForModelColId_(index);
         if (colObj != nullptr && colObj->IsSortKey())
         {
             found = true;
-            wxGetApp().appConfiguration.reporterWindowCurrentSort = index;
+            wxGetApp().appConfiguration.reporterWindowCurrentSort = colObj->GetModelColumn();
             wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = colObj->IsSortOrderAscending();
             break;
         }
@@ -724,7 +742,7 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
     OnColumnReordered(tmp);
  
     // Preserve Msg column width
-    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
+    auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
     
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -1415,7 +1433,7 @@ void FreeDVReporterDialog::autosizeColumns()
         if (index != USER_MESSAGE_COL)
         {
             // USER_MESSAGE_COL width is preserved and should not be messed with.
-            auto col = m_listSpots->GetColumn(index);
+            auto col = getColumnForModelColId_(index);
             col->SetWidth(wxCOL_WIDTH_DEFAULT);
             col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
         }
@@ -2537,8 +2555,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->m_listSpots->GetColumn(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
+                (sortingColumn == parent_->getColumnForModelColId_(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             bool isDataChanged = 
                 (iter->second->frequency != frequencyHz ||
                  iter->second->lastUpdate != lastUpdateTime);
@@ -2620,8 +2638,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(STATUS_COL) && iter->second->status != txStatus) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(TX_MODE_COL) && iter->second->txMode != txMode);
+                    (sortingColumn == parent_->getColumnForModelColId_(STATUS_COL) && iter->second->status != txStatus) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(TX_MODE_COL) && iter->second->txMode != txMode);
                 isDataChanged |=
                     iter->second->status != txStatus ||
                     iter->second->txMode != txMode;
@@ -2630,7 +2648,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 iter->second->txMode = txMode;
             
                 auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
                 isDataChanged |= iter->second->lastTx != lastTxTime;
                 iter->second->lastTx = lastTxTime;
             }
@@ -2681,8 +2699,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
             bool isDataChanged =
                 iter->second->lastRxCallsign != receivedCallsignWx ||
                 iter->second->lastRxMode != rxModeWx;
@@ -2695,9 +2713,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=
                     iter->second->lastRxCallsign != parent_->UNKNOWN_STR ||
@@ -2714,7 +2732,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString);
+                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != snrString);
                 isDataChanged |=
                     iter->second->snr != snrString;
                 
@@ -2764,13 +2782,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
                 iter->second->userMessage = parent_->UNKNOWN_STR;
             }
             else
             {
                 auto msgAsWxString = wxString::FromUTF8(message.c_str());
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
                 iter->second->userMessage = msgAsWxString;
             }
         
