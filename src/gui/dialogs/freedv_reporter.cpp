@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <sstream>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
