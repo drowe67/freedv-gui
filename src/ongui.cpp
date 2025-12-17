@@ -18,6 +18,7 @@
 #include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
+#include "gui/dialogs/log_entry.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -1232,30 +1233,22 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         // Get callsign and RX frequency
         auto dxCall = m_lastReportedCallsignListView->GetItemText(0, 0);
         auto dxFreq = m_lastReportedCallsignListView->GetItemText(0, 1);
-        auto snrStr = m_lastReportedCallsignListView->GetItemText(0, 3);
         
-        int64_t dxFreqInt = 0;
-        wxNumberFormatter::FromString(dxFreq, &dxFreqInt);
+        double dxFreqDouble = 0;
+        wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            dxFreqInt *= 1000;
+            dxFreqDouble *= 1000;
         }
         else
         {
-            dxFreqInt *= 1000000;
+            dxFreqDouble *= 1000000;
         }
-        
-        long snr = 0;
-        wxNumberFormatter::FromString(snrStr, &snr);
-        
-        // Log contact
-        wxGetApp().logger->logContact(
-            (const char*)dxCall.ToUTF8(), "", 
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
-            dxFreqInt,
-            (int)snr);    
+
+        // Show log contact dialog 
+        auto logDialog = new LogEntryDialog(this);
+        logDialog->ShowDialog(dxCall.ToUTF8(), "", (int64_t)dxFreqDouble);
     }
 }
 

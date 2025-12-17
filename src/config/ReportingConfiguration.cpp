@@ -52,7 +52,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
         
     , udpReportingEnabled("/Reporting/UDP/Enable", false)
-    , udpReportingHostname("/Reporting/UDP/Hostname", wxT("127.0.0.1"))
+    , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
     , udpReportingPort("/Reporting/UDP/Port", 2237)
         
     , useUTCForReporting("/CallsignList/UseUTCTime", false)

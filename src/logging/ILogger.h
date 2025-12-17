@@ -28,7 +28,7 @@
 class ILogger
 {
 public:
-    virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, int snr) = 0;
+    virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz) = 0;
 };
 
 #endif // I_LOGGER_H

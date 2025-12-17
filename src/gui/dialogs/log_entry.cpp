@@ -41,34 +41,34 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
     wxFlexGridSizer* gridSizerLogEntry = new wxFlexGridSizer(5, 2, 5, 0);
 
     // Log entry fields
-    wxStaticText* labelMyCall = new wxStaticText(panel, wxID_ANY, wxT("Your Call:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelMyCall = new wxStaticText(logEntryBox, wxID_ANY, wxT("Your Call:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelMyCall, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    wxStaticText* labelMyCallVal = new wxStaticText(panel, wxID_ANY, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign, wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelMyCallVal = new wxStaticText(logEntryBox, wxID_ANY, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign, wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelMyCallVal, 0, wxALIGN_CENTER_VERTICAL, 2);
 
-    wxStaticText* labelMyLocator = new wxStaticText(panel, wxID_ANY, wxT("Your Locator:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelMyLocator = new wxStaticText(logEntryBox, wxID_ANY, wxT("Your Locator:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelMyLocator, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    wxStaticText* labelMyLocatorVal = new wxStaticText(panel, wxID_ANY, wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelMyLocatorVal = new wxStaticText(logEntryBox, wxID_ANY, wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelMyLocatorVal, 0, wxALIGN_CENTER_VERTICAL, 2);
 
-    wxStaticText* labelDxCall = new wxStaticText(panel, wxID_ANY, wxT("DX Call:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelDxCall = new wxStaticText(logEntryBox, wxID_ANY, wxT("DX Call:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelDxCall, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    dxCall_ = new wxTextCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
+    dxCall_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
     gridSizerLogEntry->Add(dxCall_, 0, wxALIGN_CENTER_VERTICAL, 2);
 
-    wxStaticText* labelDxGrid = new wxStaticText(panel, wxID_ANY, wxT("DX Locator:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelDxGrid = new wxStaticText(logEntryBox, wxID_ANY, wxT("DX Locator:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelDxGrid, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    dxGrid_ = new wxTextCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
+    dxGrid_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
     gridSizerLogEntry->Add(dxGrid_, 0, wxALIGN_CENTER_VERTICAL, 2);
 
-    wxStaticText* labelFrequency = new wxStaticText(panel, wxID_ANY, wxT("Frequency (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelFrequency = new wxStaticText(logEntryBox, wxID_ANY, wxT("Frequency (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelFrequency, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    frequency_ = new wxTextCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
+    frequency_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
     gridSizerLogEntry->Add(frequency_, 0, wxALIGN_CENTER_VERTICAL, 2);
 
     logEntryBoxSizer->Add(gridSizerLogEntry, 0, wxEXPAND | wxALIGN_LEFT, 2);

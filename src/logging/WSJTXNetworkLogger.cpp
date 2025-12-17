@@ -180,13 +180,10 @@ WSJTXNetworkLogger::~WSJTXNetworkLogger()
     close();
 }
 
-void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, int snr)
+void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz)
 {
     auto currentTimeAsJulian = jdate_clock::now();
 
-    std::stringstream reportSent;
-    reportSent << snr;
-    
     PacketBuilder builder;
     builder << (uint32_t)5
             << UNIQUE_ID
@@ -195,7 +192,7 @@ void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std:
             << dxGrid
             << freqHz
             << LOG_MODE
-            << reportSent.str()
+            << std::string("")     // report TX
             << std::string("")     // report RX
             << std::string("")     // TX power
             << std::string("")     // comments
