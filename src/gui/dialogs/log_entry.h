@@ -35,7 +35,7 @@ class LogEntryDialog : public wxDialog
         LogEntryDialog( wxWindow* parent,
                 wxWindowID id = wxID_ANY, const wxString& title = _("Confirm Log Entry"), 
                 const wxPoint& pos = wxDefaultPosition, 
-                const wxSize& size = wxDefaultSize, 
+                const wxSize& size = wxSize(250,-1), 
                 long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
         virtual ~LogEntryDialog();
 
