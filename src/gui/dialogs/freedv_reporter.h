@@ -75,7 +75,7 @@ class FreeDVReporterDialog : public wxFrame
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
 
-        wxString getGridSquareForCallsign(wxString callsign)
+        wxString getGridSquareForCallsign(wxString const& callsign)
         {
             FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
             return model->getGridSquareForCallsign(callsign);
@@ -220,7 +220,7 @@ class FreeDVReporterDialog : public wxFrame
                  return "";
              }
              
-             wxString getGridSquareForCallsign(wxString callsign)
+             wxString getGridSquareForCallsign(wxString const& callsign)
              {
                  for (auto& kvp : allReporterData_)
                  {
