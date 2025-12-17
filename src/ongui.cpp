@@ -1245,10 +1245,17 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         {
             dxFreqDouble *= 1000000;
         }
+        
+        // If connected to FreeDV Reporter, get DX grid
+        wxString dxGrid;
+        if (m_reporterDialog != nullptr)
+        {
+            dxGrid = m_reporterDialog->getGridSquareForCallsign(dxCall);
+        }
 
         // Show log contact dialog 
         auto logDialog = new LogEntryDialog(this);
-        logDialog->ShowDialog(dxCall.ToUTF8(), "", (int64_t)dxFreqDouble);
+        logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), (int64_t)dxFreqDouble);
     }
 }
 
