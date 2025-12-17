@@ -121,7 +121,7 @@ void LogEntryDialog::OnInitDialog(wxInitDialogEvent&)
     // empty
 }
 
-void LogEntryDialog::ShowDialog(wxString dxCall, wxString dxGrid, int64_t freqHz)
+void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, int64_t freqHz)
 {
     logger_ = wxGetApp().logger;
     dxCall_->SetValue(dxCall);
