@@ -1331,14 +1331,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent&)
 }
 
 void OptionsDlg::updateReportingState()
-{
-    wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled = m_ckboxUDPReportingEnable->GetValue();
-    wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname = m_udpHostname->GetValue();
-    
-    long udpPort;
-    m_udpPort->GetValue().ToLong(&udpPort);
-    wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort = (int)udpPort;
-    
+{    
     if (!sessionActive_)
     {
         m_ckbox_use_utc_time->Enable(true);
