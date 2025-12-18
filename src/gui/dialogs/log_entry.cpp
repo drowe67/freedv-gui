@@ -65,8 +65,8 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
     dxGrid_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
     gridSizerLogEntry->Add(dxGrid_, 0, wxALIGN_CENTER_VERTICAL, 2);
 
-    wxStaticText* labelFrequency = new wxStaticText(logEntryBox, wxID_ANY, wxT("Frequency (Hz):"), wxDefaultPosition, wxSize(125,-1), 0);
-    gridSizerLogEntry->Add(labelFrequency, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+    labelFrequency_ = new wxStaticText(logEntryBox, wxID_ANY, wxT("Frequency (Hz):"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelFrequency_, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
     frequency_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100, -1), 0);
     gridSizerLogEntry->Add(frequency_, 0, wxALIGN_CENTER_VERTICAL, 2);
@@ -126,8 +126,23 @@ void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, 
     logger_ = wxGetApp().logger;
     dxCall_->SetValue(dxCall);
     dxGrid_->SetValue(dxGrid);
+    
+    double freqDouble = freqHz;
+    int precision = 0;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freqDouble /= 1000;
+        precision = 1;
+        labelFrequency_->SetLabel(wxT("Frequency (kHz):"));
+    }
+    else
+    {
+        freqDouble /= 1000000;
+        precision = 4;
+        labelFrequency_->SetLabel(wxT("Frequency (MHz):"));
+    }
 
-    wxString freqString = wxNumberFormatter::ToString(freqHz);
+    wxString freqString = wxNumberFormatter::ToString(freqDouble, precision);
     frequency_->SetValue(freqString);
 
     ShowModal();
@@ -145,8 +160,19 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
     else
     {
         // Forward to logger
-        wxNumberFormatter::FromString(frequency_->GetValue(), &freqHz);
-
+        double freqDouble = 0;
+        wxNumberFormatter::FromString(frequency_->GetValue(), &freqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqDouble *= 1000;
+        }
+        else
+        {
+            freqDouble *= 1000000;
+        }
+        freqHz = (int64_t)freqDouble;
+        
         logger_->logContact(
             (const char*)dxCall_->GetValue().ToUTF8(), 
             (const char*)dxGrid_->GetValue().ToUTF8(),
