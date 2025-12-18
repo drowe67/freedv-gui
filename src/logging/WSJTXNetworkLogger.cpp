@@ -23,6 +23,8 @@
 #include "WSJTXNetworkLogger.h"
 #include "git_version.h"
 
+#include "../util/logging/ulog.h"
+#include <inttypes.h>
 #include <cstring>
 #include <sstream>
 
@@ -168,13 +170,17 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
 template<>
 WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<WSJTXNetworkLogger::jdate_clock::time_point>(const WSJTXNetworkLogger::jdate_clock::time_point& obj)
 {
-    auto currentTimeAsJulian = obj.time_since_epoch().count();
-    auto fracDay = currentTimeAsJulian - ((int64_t)currentTimeAsJulian);
-    auto msSinceMidnight = fracDay * (1000*60*60*24);
+    // Not using C++20, so we need to manually define this.
+    using day_duration = std::chrono::duration<int64_t, std::ratio<86400>>;
     
-    *this   << (int64_t)currentTimeAsJulian
+    auto currentTimeAsJulian = obj.time_since_epoch();
+    auto julianDays = std::chrono::floor<day_duration>(currentTimeAsJulian);
+    auto julianFracDay = currentTimeAsJulian - julianDays;
+    auto msSinceMidnight = std::chrono::duration_cast<std::chrono::milliseconds>(julianFracDay).count();
+        
+    *this   << (int64_t)julianDays.count()
             << (uint32_t)msSinceMidnight
-            << (unsigned char)0 // local time
+            << (unsigned char)1     // UTC
                 ;
     return *this;
 }

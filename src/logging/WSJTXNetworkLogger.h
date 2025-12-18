@@ -82,7 +82,10 @@ private:
         {
             using namespace std::chrono;
             using namespace std::chrono_literals;
-            return time_point{duration{system_clock::now().time_since_epoch()} + 58574100h};
+            
+            // Note: the constant is supposed to be 58574100h but this is 12 hours behind
+            // what the various WSJT-X compatible logging tools are expecting.
+            return time_point{duration{system_clock::now().time_since_epoch()} + 58574112h};
         }
     };
     
