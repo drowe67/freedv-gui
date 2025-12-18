@@ -52,6 +52,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
     
     , freedvReporterColumnOrder("/Reporting/FreeDV/ColumnOrder", { }) /* empty means default ordering */
+    , freedvReporterColumnVisibility("/Reporting/FreeDV/ColumnVisibility", { })
 
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
 
@@ -185,6 +186,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterRecentStatusTexts);
 
     load_(config, freedvReporterColumnOrder);
+    load_(config, freedvReporterColumnVisibility);
 
     load_(config, useUTCForReporting);
     
@@ -232,6 +234,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterRecentStatusTexts);
     
     save_(config, freedvReporterColumnOrder);
+    save_(config, freedvReporterColumnVisibility);
 
     save_(config, useUTCForReporting);
     

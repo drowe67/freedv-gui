@@ -58,6 +58,7 @@ public:
     ConfigurationDataElement<std::vector<wxString> > freedvReporterRecentStatusTexts;
     
     ConfigurationDataElement<std::vector<int> > freedvReporterColumnOrder;
+    ConfigurationDataElement<std::vector<bool> > freedvReporterColumnVisibility;
 
     ConfigurationDataElement<bool> useUTCForReporting;
     

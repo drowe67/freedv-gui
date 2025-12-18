@@ -48,6 +48,23 @@ void WxWidgetsConfigStore::save_<std::vector<int> >(wxConfigBase* config, Config
     config->Write(configElement.getElementName(), val);
 }
 
+template<>
+void WxWidgetsConfigStore::load_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement)
+{
+    wxString val;
+    wxString defaultVal = generateStringFromArray_(configElement.getDefaultVal());
+    
+    config->Read(configElement.getElementName(), &val, defaultVal);
+    configElement.setWithoutProcessing(generateBoolArrayFromString_(val));
+}
+
+template<>
+void WxWidgetsConfigStore::save_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement)
+{
+    wxString val = generateStringFromArray_(configElement.getWithoutProcessing());
+    config->Write(configElement.getElementName(), val);
+}
+
 /* Note: for string arrays, we're treating them as a list of strings separated by commas. */
 
 template<>
@@ -84,6 +101,31 @@ wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<int> const& 
         }
     }
     
+    return rv;
+}
+
+wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<bool> const& vec)
+{
+    std::vector<int> tmpVec;
+    tmpVec.reserve(vec.size());
+    for (auto v : vec)
+    {
+        tmpVec.push_back(v ? 1 : 0);
+    }
+    return generateStringFromArray_(tmpVec);
+}
+
+std::vector<bool> WxWidgetsConfigStore::generateBoolArrayFromString_(wxString const& str)
+{
+    std::vector<int> tmpVec = generateNumArrayFromString_(str);
+    std::vector<bool> rv;
+    
+    rv.reserve(tmpVec.size());
+    for (auto& v : tmpVec)
+    {
+        rv.push_back(v == 1 ? true : false);
+    }
+
     return rv;
 }
 

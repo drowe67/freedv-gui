@@ -46,6 +46,9 @@ protected:
 
     wxString generateStringFromArray_(std::vector<int> const& vec);
     std::vector<int> generateNumArrayFromString_(wxString const& str);
+
+    wxString generateStringFromArray_(std::vector<bool> const& vec);
+    std::vector<bool> generateBoolArrayFromString_(wxString const& str);
 };
 
 template<typename UnderlyingDataType>
@@ -76,5 +79,11 @@ template<>
 void WxWidgetsConfigStore::load_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement);
 template<>
 void WxWidgetsConfigStore::save_<std::vector<int> >(wxConfigBase* config, ConfigurationDataElement<std::vector<int> >& configElement);
+
+// Special handling for loading and saving bool arrays.
+template<>
+void WxWidgetsConfigStore::load_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement);
+template<>
+void WxWidgetsConfigStore::save_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement);
 
 #endif // WXWIDGETS_CONFIG_STORE_H

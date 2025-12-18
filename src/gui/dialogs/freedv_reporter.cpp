@@ -61,7 +61,7 @@ extern FreeDVInterface freedvInterface;
 
 using namespace std::placeholders;
 
-void FreeDVReporterDialog::createColumn_(int col)
+void FreeDVReporterDialog::createColumn_(int col, bool visible)
 {
     wxDataViewColumn* colObj = nullptr;
     int minWidth = 0;
@@ -159,6 +159,11 @@ void FreeDVReporterDialog::createColumn_(int col)
     {
         colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     }
+
+    if (!visible)
+    {
+        colObj->SetHidden(true);
+    }
 }
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
@@ -204,11 +209,21 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
         }
     }
+
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() == 0)
+    {
+        // Generate default column visibility
+        log_info("Generating default column visibility");
+        for (auto index = 0; index < RIGHTMOST_COL; index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
+        }
+    }
     
     for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
     {
         log_info("Creating col %d", col);
-        createColumn_(col);
+        createColumn_(col, wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col));
     }
     m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
@@ -293,6 +308,36 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     sectionSizer->Add(bottomRowSizer, 0, wxALL | wxALIGN_CENTER, 2);
     
     this->SetMinSize(GetBestSize());
+
+    // Menu bar
+    menuBar_ = new wxMenuBar();
+    this->SetMenuBar(menuBar_);
+
+    showMenu_ = new wxMenu();
+    menuBar_->Append(showMenu_, _("Show"));
+
+    std::vector<std::pair<int, wxString> > menus {
+        {CALLSIGN_COL, _("Callsign")},
+        {GRID_SQUARE_COL, _("Locator")},
+        {DISTANCE_COL, _("Distance")},
+        {HEADING_COL, _("Heading")},
+        {FREQUENCY_COL, _("Frequency")},
+        {TX_MODE_COL, _("TX Mode")},
+        {STATUS_COL, _("Status")},
+        {USER_MESSAGE_COL, _("User Message")},
+        {LAST_TX_DATE_COL, _("Last TX Date")},
+        {LAST_RX_CALLSIGN_COL, _("Last RX Callsign")},
+        {LAST_RX_MODE_COL, _("Last RX Mode")},
+        {SNR_COL, _("SNR")},
+        {LAST_UPDATE_DATE_COL, _("Last Update")},
+    };
+
+    for (auto& item : menus)
+    {
+        auto menuItem = showMenu_->Append(wxID_HIGHEST + item.first, item.second, wxEmptyString, wxITEM_CHECK);
+        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(item.first));
+        this->Connect(wxID_HIGHEST + item.first, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnShowColumn));
+    }
     
     // Trigger auto-layout of window.
     // ==============================
@@ -584,6 +629,24 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& re
         auto statusMsg = m_statusMessage->GetValue();
         reporter->updateMessage((const char*)statusMsg.utf8_str());
     }
+}
+
+void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
+{
+    // Invert visibility value
+    auto columnId = event.GetId() - wxID_HIGHEST;
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId) = 
+        !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
+
+    auto newColValue =
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
+
+    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
+    menuItem->Check(newColValue);
+
+    // Set column visibility in wxDataViewCtl.
+    auto col = getColumnForModelColId_(columnId);
+    col->SetHidden(!newColValue);
 }
 
 void FreeDVReporterDialog::DeselectItem(wxMouseEvent& event)
@@ -1114,7 +1177,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     // Preserve new column ordering
     std::vector<int> newColPositions;
     std::stringstream ss;
-    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount() - 1; index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
         newColPositions.push_back(dvc->GetModelColumn());
