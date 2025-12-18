@@ -222,8 +222,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
     {
-        log_info("Creating col %d", col);
-        createColumn_(col, wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col));
+        if (col < RIGHTMOST_COL)
+        {
+            log_info("Creating col %d", col);
+            auto visible = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col);
+            createColumn_(col, visible);
+        }
     }
     m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
