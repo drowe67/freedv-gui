@@ -369,7 +369,7 @@ class FreeDVReporterDialog : public wxFrame
 
         bool isSelectionPossible_;
 
-        void createColumn_(int col, bool visibile);
+        void createColumn_(int col, bool visible);
         wxDataViewColumn* getColumnForModelColId_(unsigned int col);
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
