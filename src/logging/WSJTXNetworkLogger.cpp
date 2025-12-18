@@ -42,6 +42,7 @@
 
 const std::string WSJTXNetworkLogger::UNIQUE_ID("FreeDV");
 const std::string WSJTXNetworkLogger::LOG_MODE("DIGITALVOICE");
+const std::string WSJTXNetworkLogger::LOG_SUBMODE("FREEDV");
 
 template<>
 WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<uint32_t>(const uint32_t& obj)
@@ -52,6 +53,16 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     auto tmp = htonl(obj);
     memcpy(ptr, &tmp, sizeof(uint32_t));
 
+    return *this;
+}
+
+template<>
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<char>(const char& obj)
+{
+    char* ptr = reallocPacket_(sizeof(char));
+    assert(ptr != nullptr);
+    
+    *((char*)ptr) = obj;
     return *this;
 }
 
@@ -73,6 +84,12 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     
     *((unsigned char*)ptr) = obj;
     return *this;
+}
+
+template<>
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<bool>(const bool& obj)
+{
+    return serialize_((char)(obj ? 1 : 0));
 }
 
 template<>
@@ -184,6 +201,35 @@ void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std:
 {
     auto currentTimeAsJulian = jdate_clock::now();
 
+    // Send status message so loggers have the correct RX frequency
+    PacketBuilder statusBuilder;
+    statusBuilder << (uint32_t)1
+                  << UNIQUE_ID
+                  << freqHz
+                  << LOG_MODE
+                  << dxCall
+                  << std::string("") // report
+                  << LOG_MODE        // TX mode
+                  << true            // TX enabled
+                  << false           // transmitting - TBD
+                  << true            // decoding - TBD
+                  << (uint32_t)0     // RX DF
+                  << (uint32_t)0     // TX DF
+                  << myCall
+                  << myGrid
+                  << dxGrid
+                  << false           // TX watchdog - TBD
+                  << LOG_SUBMODE
+                  << false           // fast mode - TBD
+                  << (uint8_t)0      // Special Operation Mode - TBD
+                  << (uint32_t)0     // Frequency tolderance - TBD
+                  << (uint32_t)0     // T/R period - TBD
+                  << std::string("") // config name - TBD
+                  << std::string("") // TX message - TBD
+                  ;
+    send(reportHostname_.c_str(), reportPort_, statusBuilder.getPacket(), statusBuilder.getPacketSize()).wait();
+    
+    // Send actual log request
     PacketBuilder builder;
     builder << (uint32_t)5
             << UNIQUE_ID

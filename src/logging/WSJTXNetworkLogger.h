@@ -66,6 +66,7 @@ private:
     static constexpr int HEARTBEAT_INTERVAL_MS = 15000;
     static const std::string UNIQUE_ID;
     static const std::string LOG_MODE;
+    static const std::string LOG_SUBMODE;
     static constexpr uint32_t MAX_SCHEMA_VER = 2;
     
     struct jdate_clock
