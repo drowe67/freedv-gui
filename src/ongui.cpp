@@ -1230,9 +1230,17 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 {
     if (m_lastReportedCallsignListView->GetItemCount() > 0)
     {
+        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+        if (selected == -1)
+        {
+            // Default to the first/most recent entry if user hasn't explicitly selected
+            // a contact.
+            selected = 0;
+        }
+        
         // Get callsign and RX frequency
-        auto dxCall = m_lastReportedCallsignListView->GetItemText(0, 0);
-        auto dxFreq = m_lastReportedCallsignListView->GetItemText(0, 1);
+        auto dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+        auto dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
         
         double dxFreqDouble = 0;
         wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
