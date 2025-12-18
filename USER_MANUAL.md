@@ -861,6 +861,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
     * Fix hidden/clipped axis labels on plots. (PR #1110)
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
+    * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
