@@ -23,6 +23,7 @@
 #include <wx/datetime.h>
 #include <wx/display.h>
 #include <wx/clipbrd.h>
+#include <wx/wrapsizer.h>
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -238,23 +239,28 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     // Bottom buttons
     // =============================
-    wxBoxSizer* bottomRowSizer = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* reportingSettingsSizer = new wxBoxSizer(wxHORIZONTAL);
+    auto reportingSettingsSizer = new wxWrapSizer(wxHORIZONTAL);
+
+    wxBoxSizer* leftButtonSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     m_buttonOK->SetToolTip(_("Closes FreeDV Reporter window."));
-    reportingSettingsSizer->Add(m_buttonOK, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonOK, 0, wxALL, 5);
 
     m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
     m_buttonSendQSY->SetToolTip(_("Asks selected user to switch to your frequency."));
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
-    reportingSettingsSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
 
     m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Website"));
     m_buttonDisplayWebpage->SetToolTip(_("Opens FreeDV Reporter in your Web browser."));
-    reportingSettingsSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
 
-    // Band filter list    
+    reportingSettingsSizer->Add(leftButtonSizer, 0, wxALL | wxEXPAND, 0);
+
+    // Band filter list
+    wxBoxSizer* bandFilterSizer = new wxBoxSizer(wxHORIZONTAL);
+
     wxString bandList[] = {
         _("All"),
         _("160 m"),
@@ -271,7 +277,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         _("Other"),
     };
     
-    reportingSettingsSizer->Add(new wxStaticText(this, wxID_ANY, _("Band:"), wxDefaultPosition, wxDefaultSize, 0), 
+    bandFilterSizer->Add(new wxStaticText(this, wxID_ANY, _("Band:"), wxDefaultPosition, wxDefaultSize, 0), 
                           0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_bandFilter = new wxComboBox(
@@ -280,38 +286,40 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
     setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
     
-    reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    bandFilterSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    reportingSettingsSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    bandFilterSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackFreqBand->Enable(false);
     
     m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("freq."), wxDefaultPosition, wxDefaultSize, 0);
-    reportingSettingsSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    bandFilterSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    reportingSettingsSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 0);
+
+    wxBoxSizer* statusMessageSizer = new wxBoxSizer(wxHORIZONTAL);
 
     auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Message:"), wxDefaultPosition, wxDefaultSize);
-    reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_statusMessage = new wxComboBox(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), 0, nullptr, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
-    reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonSend = new wxButton(this, wxID_ANY, _("Send"));
     m_buttonSend->SetToolTip(_("Sends message to FreeDV Reporter. Right-click for additional options."));
-    reportingSettingsSizer->Add(m_buttonSend, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_buttonSend, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonClear = new wxButton(this, wxID_ANY, _("Clear"));
     m_buttonClear->SetToolTip(_("Clears message from FreeDV Reporter. Right-click for additional options."));
-    reportingSettingsSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
-
-    sectionSizer->Add(bottomRowSizer, 0, wxALL | wxALIGN_CENTER, 2);
+    reportingSettingsSizer->Add(statusMessageSizer, 0, wxALL | wxEXPAND, 0);
+    sectionSizer->Add(reportingSettingsSizer, 0, wxALL | wxEXPAND | wxFIXED_MINSIZE, 2);
     
     this->SetMinSize(GetBestSize());
     
