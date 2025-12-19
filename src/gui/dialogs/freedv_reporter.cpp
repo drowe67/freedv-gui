@@ -30,6 +30,10 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
+#if defined(WIN32)
+#include <wx/headerctrl.h>
+#endif // defined(WIN32)
+
 #include "freedv_reporter.h"
 #include "freedv_interface.h"
 
@@ -1226,7 +1230,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
 #if defined(WIN32)
     auto headerCtrl = m_listSpots->GenericGetHeader();
     wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
-    for (auto index = 0; index < wxColumnOrder.GetCount(); index++)
+    for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
     {
         auto col = wxColumnOrder.Item(index);
         newColPositions.push_back(col);
