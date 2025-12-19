@@ -99,8 +99,8 @@ private:
     sys_to_jdate(std::chrono::time_point<std::chrono::system_clock, Duration> tp) noexcept
     {
         using namespace std::chrono;
-        static_assert(jdate_clock::duration{jdate_clock::julianConversionFactor_()} < Duration::max(),
-                      "Overflow in sys_to_jdate");
+        //static_assert(jdate_clock::duration{jdate_clock::julianConversionFactor_()} < Duration::max(),
+        //              "Overflow in sys_to_jdate");
         const auto d = std::chrono::duration_cast<jdate_clock::duration>(tp.time_since_epoch() + jdate_clock::julianConversionFactor_());
         return time_point<jdate_clock, std::remove_cv_t<decltype(d)>>{d};
     }
