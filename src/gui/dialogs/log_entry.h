@@ -59,12 +59,14 @@ class LogEntryDialog : public wxDialog
         wxTextCtrl *txReport_;
         wxTextCtrl *name_;
         wxTextCtrl *comments_;
+        wxStaticText* labelTimeVal_;
 
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;
 
      private:
         std::shared_ptr<ILogger> logger_;
+        wxDateTime logTime_;
 };
 
 #endif // LOG_ENTRY_DIALOG_H

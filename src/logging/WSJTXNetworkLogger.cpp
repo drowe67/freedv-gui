@@ -203,9 +203,9 @@ WSJTXNetworkLogger::~WSJTXNetworkLogger()
     close();
 }
 
-void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments)
+void WSJTXNetworkLogger::logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments)
 {
-    auto currentTimeAsJulian = jdate_clock::now();
+    auto currentTimeAsJulian = sys_to_jdate(logTime);
 
     // Send status message so loggers have the correct RX frequency
     PacketBuilder statusBuilder;

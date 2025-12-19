@@ -38,7 +38,7 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
     wxStaticBox* logEntryBox = new wxStaticBox(panel, wxID_ANY, _("Log Entry"));
     wxStaticBoxSizer* logEntryBoxSizer = new wxStaticBoxSizer(logEntryBox, wxVERTICAL);
 
-    wxFlexGridSizer* gridSizerLogEntry = new wxFlexGridSizer(9, 2, 5, 0);
+    wxFlexGridSizer* gridSizerLogEntry = new wxFlexGridSizer(10, 2, 5, 0);
 
     // Log entry fields
     wxStaticText* labelMyCall = new wxStaticText(logEntryBox, wxID_ANY, wxT("Your Call:"), wxDefaultPosition, wxSize(125,-1), 0);
@@ -52,6 +52,12 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
 
     wxStaticText* labelMyLocatorVal = new wxStaticText(logEntryBox, wxID_ANY, wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, wxDefaultPosition, wxDefaultSize, 0);
     gridSizerLogEntry->Add(labelMyLocatorVal, 0, wxALIGN_CENTER_VERTICAL, 2);
+    
+    wxStaticText* labelTime = new wxStaticText(logEntryBox, wxID_ANY, wxT("Time (UTC):"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelTime, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    labelTimeVal_ = new wxStaticText(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    gridSizerLogEntry->Add(labelTimeVal_, 0, wxALIGN_CENTER_VERTICAL, 2);
 
     wxStaticText* labelDxCall = new wxStaticText(logEntryBox, wxID_ANY, wxT("DX Call:"), wxDefaultPosition, wxSize(125,-1), 0);
     gridSizerLogEntry->Add(labelDxCall, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
@@ -147,6 +153,9 @@ void LogEntryDialog::OnInitDialog(wxInitDialogEvent&)
 
 void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, int64_t freqHz)
 {
+    logTime_ = wxDateTime::Now();
+    labelTimeVal_->SetLabel(logTime_.ToUTC().FormatISOTime());
+    
     logger_ = wxGetApp().logger;
     dxCall_->SetValue(dxCall);
     dxGrid_->SetValue(dxGrid);
@@ -197,7 +206,10 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
         }
         freqHz = (int64_t)freqDouble;
         
+        std::time_t timeSinceUnixEpoch = logTime_.GetTicks();
+        
         logger_->logContact(
+            std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
             (const char*)dxCall_->GetValue().ToUTF8(), 
             (const char*)dxGrid_->GetValue().ToUTF8(),
             (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),

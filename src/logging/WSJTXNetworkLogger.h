@@ -57,7 +57,7 @@ public:
     WSJTXNetworkLogger(std::string hostname, int port);
     virtual ~WSJTXNetworkLogger();
     
-    virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments) override;
+    virtual void logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments) override;
 
 protected:
     virtual void onReceive_(const char*, int, char*, int) override { /* not used */ }
@@ -69,6 +69,7 @@ private:
     static const std::string LOG_SUBMODE;
     static constexpr uint32_t MAX_SCHEMA_VER = 2;
     
+    // Source: https://stackoverflow.com/questions/33964461/handling-julian-days-in-c11-14
     struct jdate_clock
     {
         using rep        = double;
@@ -78,16 +79,42 @@ private:
 
         static constexpr bool is_steady = false;
 
+        static constexpr auto julianConversionFactor_()
+        {
+            // Note: the constant is supposed to be 58574100h but this is 12 hours behind
+            // what the various WSJT-X compatible logging tools are expecting.
+            using namespace std::chrono_literals;
+            return 58574112h;
+        }
+        
         static time_point now() noexcept
         {
             using namespace std::chrono;
-            using namespace std::chrono_literals;
-            
-            // Note: the constant is supposed to be 58574100h but this is 12 hours behind
-            // what the various WSJT-X compatible logging tools are expecting.
-            return time_point{duration{system_clock::now().time_since_epoch()} + 58574112h};
+            return time_point{duration{system_clock::now().time_since_epoch()} + julianConversionFactor_()};
         }
     };
+    
+    template <class Duration>
+    static constexpr auto
+    sys_to_jdate(std::chrono::time_point<std::chrono::system_clock, Duration> tp) noexcept
+    {
+        using namespace std::chrono;
+        static_assert(jdate_clock::duration{jdate_clock::julianConversionFactor_()} < Duration::max(),
+                      "Overflow in sys_to_jdate");
+        const auto d = std::chrono::duration_cast<jdate_clock::duration>(tp.time_since_epoch() + jdate_clock::julianConversionFactor_());
+        return time_point<jdate_clock, std::remove_cv_t<decltype(d)>>{d};
+    }
+    
+    template <class Duration>
+    static constexpr auto
+    jdate_to_sys(std::chrono::time_point<jdate_clock, Duration> tp) noexcept
+    {
+        using namespace std::chrono;
+        static_assert(jdate_clock::duration{-jdate_clock::julianConversionFactor_()} > Duration::min(),
+                      "Overflow in jdate_to_sys");
+        const auto d = tp.time_since_epoch() - jdate_clock::julianConversionFactor_();
+        return time_point<system_clock, std::remove_cv_t<decltype(d)>>{d};
+    }
     
     ThreadedTimer heartbeatTimer_;
     std::string reportHostname_;
