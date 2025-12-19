@@ -220,8 +220,14 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
         }
     }
-    
+
+    // Windows seems to have the model column ID equal to the actual column ID regardless of the 
+    // actual ordering, so we just use wxHeaderCtrl to save/restore the column ordering.
+#if defined(WIN32)
+    for (auto col = 0; col < RIGHTMOST_COL; col++)
+#else    
     for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
+#endif // defined(WIN32)
     {
         if (col < RIGHTMOST_COL)
         {
@@ -238,6 +244,19 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     }
     m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
+#if defined(WIN32)
+    auto headerCtrl = m_listSpots->GenericGetHeader();
+    wxArrayInt wxColumnOrder;
+    for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
+    {
+        if (col < RIGHTMOST_COL)
+        {
+            wxColumnOrder.Add(col);
+        }
+    }
+    headerCtrl->SetColumnsOrder(wxColumnOrder);
+#endif // defined(WIN32)
+    
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
     // Bottom buttons
@@ -1200,17 +1219,29 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
 {
     // Preserve new column ordering
+    // Note: Windows uses the same indices for model column and GetColumn()
+    // so we need to use an alternate implementation for that platform.
     std::vector<int> newColPositions;
     std::stringstream ss;
+#if defined(WIN32)
+    auto headerCtrl = m_listSpots->GenericGetHeader();
+    wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
+    for (auto index = 0; index < wxColumnOrder.GetCount(); index++)
+    {
+        auto col = wxColumnOrder.Item(index);
+        newColPositions.push_back(col);
+        ss << col << " ";
+    }
+#else
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount() - 1; index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
         newColPositions.push_back(dvc->GetModelColumn());
-
         ss << dvc->GetModelColumn() << " ";
     }
-    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
+#endif // defined(WIN32)
 
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
     log_info("New column ordering: %s", ss.str().c_str());
 }
 
