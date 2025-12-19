@@ -38,7 +38,7 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
     wxStaticBox* logEntryBox = new wxStaticBox(panel, wxID_ANY, _("Log Entry"));
     wxStaticBoxSizer* logEntryBoxSizer = new wxStaticBoxSizer(logEntryBox, wxVERTICAL);
 
-    wxFlexGridSizer* gridSizerLogEntry = new wxFlexGridSizer(5, 2, 5, 0);
+    wxFlexGridSizer* gridSizerLogEntry = new wxFlexGridSizer(9, 2, 5, 0);
 
     // Log entry fields
     wxStaticText* labelMyCall = new wxStaticText(logEntryBox, wxID_ANY, wxT("Your Call:"), wxDefaultPosition, wxSize(125,-1), 0);
@@ -73,6 +73,30 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
 
     logEntryBoxSizer->Add(gridSizerLogEntry, 0, wxEXPAND | wxALIGN_LEFT, 2);
     sectionSizer->Add(logEntryBoxSizer, 0, wxALL | wxEXPAND, 2);
+    
+    wxStaticText* labelTxReport = new wxStaticText(logEntryBox, wxID_ANY, wxT("TX Report:"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelTxReport, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    txReport_ = new wxTextCtrl(logEntryBox, wxID_ANY, _("59"), wxDefaultPosition, wxSize(50, -1), 0);
+    gridSizerLogEntry->Add(txReport_, 0, wxALIGN_CENTER_VERTICAL, 2);
+    
+    wxStaticText* labelRxReport = new wxStaticText(logEntryBox, wxID_ANY, wxT("RX Report:"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelRxReport, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    rxReport_ = new wxTextCtrl(logEntryBox, wxID_ANY, _("59"), wxDefaultPosition, wxSize(50, -1), 0);
+    gridSizerLogEntry->Add(rxReport_, 0, wxALIGN_CENTER_VERTICAL, 2);
+    
+    wxStaticText* labelName = new wxStaticText(logEntryBox, wxID_ANY, wxT("Name:"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelName, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    name_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(125, -1), 0);
+    gridSizerLogEntry->Add(name_, 0, wxALIGN_CENTER_VERTICAL, 2);
+    
+    wxStaticText* labelComments = new wxStaticText(logEntryBox, wxID_ANY, wxT("Comments:"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerLogEntry->Add(labelComments, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    comments_ = new wxTextCtrl(logEntryBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(125, -1), 0);
+    gridSizerLogEntry->Add(comments_, 0, wxALIGN_CENTER_VERTICAL, 2);
     
     // OK/Cancel buttons
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -178,7 +202,11 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
             (const char*)dxGrid_->GetValue().ToUTF8(),
             (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),
             (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
-            freqHz);
+            freqHz,
+            (const char*)rxReport_->GetValue().ToUTF8(),
+            (const char*)txReport_->GetValue().ToUTF8(),
+            (const char*)name_->GetValue().ToUTF8(),
+            (const char*)comments_->GetValue().ToUTF8());
         this->EndModal(wxOK);
     }
 }

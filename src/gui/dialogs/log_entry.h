@@ -55,6 +55,10 @@ class LogEntryDialog : public wxDialog
         wxStaticText *myGrid_;
         wxTextCtrl *frequency_;
         wxStaticText* labelFrequency_;
+        wxTextCtrl *rxReport_;
+        wxTextCtrl *txReport_;
+        wxTextCtrl *name_;
+        wxTextCtrl *comments_;
 
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;

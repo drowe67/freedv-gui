@@ -203,7 +203,7 @@ WSJTXNetworkLogger::~WSJTXNetworkLogger()
     close();
 }
 
-void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz)
+void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments)
 {
     auto currentTimeAsJulian = jdate_clock::now();
 
@@ -244,11 +244,11 @@ void WSJTXNetworkLogger::logContact(std::string dxCall, std::string dxGrid, std:
             << dxGrid
             << freqHz
             << LOG_MODE
-            << std::string("")     // report TX
-            << std::string("")     // report RX
+            << reportTx            // report TX
+            << reportRx            // report RX
             << std::string("")     // TX power
-            << std::string("")     // comments
-            << std::string("")     // name
+            << comments            // comments
+            << name                // name
             << currentTimeAsJulian // time on
             << myCall              // operator call
             << myCall

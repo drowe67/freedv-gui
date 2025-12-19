@@ -57,7 +57,7 @@ public:
     WSJTXNetworkLogger(std::string hostname, int port);
     virtual ~WSJTXNetworkLogger();
     
-    virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz) override;
+    virtual void logContact(std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments) override;
 
 protected:
     virtual void onReceive_(const char*, int, char*, int) override { /* not used */ }
