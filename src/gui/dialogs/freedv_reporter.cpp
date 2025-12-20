@@ -39,15 +39,16 @@ extern FreeDVInterface freedvInterface;
 #define GRID_SQUARE_COL (1)
 #define DISTANCE_COL (2)
 #define HEADING_COL (3)
-#define FREQUENCY_COL (4)
-#define TX_MODE_COL (5)
-#define STATUS_COL (6)
-#define USER_MESSAGE_COL (7)
-#define LAST_TX_DATE_COL (8)
-#define LAST_RX_CALLSIGN_COL (9)
-#define LAST_RX_MODE_COL (10)
-#define SNR_COL (11)
-#define LAST_UPDATE_DATE_COL (12)
+#define VERSION_COL (4)
+#define FREQUENCY_COL (5)
+#define TX_MODE_COL (6)
+#define STATUS_COL (7)
+#define USER_MESSAGE_COL (8)
+#define LAST_TX_DATE_COL (9)
+#define LAST_RX_CALLSIGN_COL (10)
+#define LAST_RX_MODE_COL (11)
+#define SNR_COL (12)
+#define LAST_UPDATE_DATE_COL (13)
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
@@ -89,6 +90,10 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
             colName = wxT("Hdg");
             minWidth = 60;
             alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case VERSION_COL:
+            colName = wxT("Version");
+            minWidth = 70;
             break;
         case FREQUENCY_COL:
             colName = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz");
@@ -1117,7 +1122,9 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
     int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
-    wxRect rect;    
+    wxRect rect;
+    unsigned int desiredCol = USER_MESSAGE_COL;
+    
     wxDataViewItem item;
     wxDataViewColumn* col;
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
@@ -1130,7 +1137,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         tempUserMessage_ = model->getUserMessage(item);
     
-        if (col->GetModelColumn() == USER_MESSAGE_COL)
+        if (col->GetModelColumn() == desiredCol)
         {
             rect = m_listSpots->GetItemRect(item, col);
             if (tipWindow_ == nullptr)
@@ -1154,28 +1161,6 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
         else
         {
             tempUserMessage_ = _("");
-        }
-
-        if (col->GetModelColumn() == STATUS_COL)
-        {
-            rect = m_listSpots->GetItemRect(item, col);
-            if (tipWindow_ == nullptr)
-            {
-                // Use screen coordinates to determine bounds.
-                auto pos = rect.GetPosition();
-                rect.SetPosition(ClientToScreen(pos));
-        
-                tipWindow_ = new wxTipWindow(m_listSpots, wxString("Using ") + model->getSoftwareVersion(item), 1000, &tipWindow_, &rect);
-                tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-                tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-            
-                // Make sure we actually override behavior of needed events inside the tooltip.
-                for (auto& child : tipWindow_->GetChildren())
-                {
-                    child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-                    child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-                }
-            }
         }
     }
     else
@@ -1971,6 +1956,9 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
         case HEADING_COL:
             result = leftData->headingVal - rightData->headingVal;
             break;
+        case VERSION_COL:
+            result = leftData->version.CmpNoCase(rightData->version);
+            break;
         case FREQUENCY_COL:
             result = leftData->frequency - rightData->frequency;
             break;
@@ -2220,6 +2208,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
                 break;
             case HEADING_COL:
                 variant = wxVariant(row->heading);
+                break;
+            case VERSION_COL:
+                variant = wxVariant(row->version);
                 break;
             case FREQUENCY_COL:
                 variant = wxVariant(row->freqString);
