@@ -1220,7 +1220,11 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
     OnItemRightClick(contextEvent);
 }
 
+#if defined(WIN32)
+void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent& event)
+#else
 void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
+#endif // defined(WIN32)
 {
     // Preserve new column ordering
     // Note: Windows uses the same indices for model column and GetColumn()
@@ -1228,6 +1232,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     std::vector<int> newColPositions;
     std::stringstream ss;
 #if defined(WIN32)
+    log_info("column moved to %d", event.GetColumn());
     auto headerCtrl = m_listSpots->GenericGetHeader();
     wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
     for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
