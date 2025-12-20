@@ -366,6 +366,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         {CALLSIGN_COL, _("Callsign")},
         {GRID_SQUARE_COL, _("Locator")},
         {DISTANCE_COL, _("Distance")},
+        {VERSION_COL, _("Version")},
         {HEADING_COL, _("Heading")},
         {FREQUENCY_COL, _("Frequency")},
         {TX_MODE_COL, _("TX Mode")},
