@@ -798,8 +798,10 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent&)
     }
    
     // Preserve column ordering
+#if !defined(WIN32)
     wxDataViewEvent tmp;
     OnColumnReordered(tmp);
+#endif // !defined(WIN32)
  
     // Preserve Msg column width
     auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
@@ -854,8 +856,10 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
     }
 
     // Preserve column ordering
+#if !defined(WIN32)
     wxDataViewEvent tmp;
     OnColumnReordered(tmp);
+#endif // !defined(WIN32)
  
     // Preserve Msg column width
     auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
@@ -1215,18 +1219,23 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     // Note: Windows uses the same indices for model column and GetColumn()
     // so we need to use an alternate implementation for that platform.
     std::vector<int> newColPositions;
-    std::stringstream ss;
 #if defined(WIN32)
-    log_info("column moved to %d", event.GetColumn());
-    auto headerCtrl = m_listSpots->GenericGetHeader();
-    wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
-    for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
-    {
-        auto col = wxColumnOrder.Item(index);
-        newColPositions.push_back(col);
-        ss << col << " ";
-    }
+    CallAfter([&]() {
+        std::stringstream ss;
+        auto headerCtrl = m_listSpots->GenericGetHeader();
+        wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
+        for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
+        {
+            auto col = wxColumnOrder.Item(index);
+            newColPositions.push_back(col);
+            ss << col << " ";
+        }
+
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
+        log_info("New column ordering: %s", ss.str().c_str());
+    });
 #else
+    std::stringstream ss;
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount() - 1; index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
