@@ -192,7 +192,7 @@ WSJTXNetworkLogger::WSJTXNetworkLogger(std::string hostname, int port)
     , reportHostname_(std::move(hostname))
     , reportPort_(port)
 {
-    open("", 0);
+    open("", 0, reportHostname_.c_str(), reportPort_);
     heartbeatTimer_.start();
     sendHeartbeat_();
 }

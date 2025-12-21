@@ -79,7 +79,7 @@ UdpHandler::~UdpHandler()
 #endif // defined(WIN32)
 }
 
-std::future<void> UdpHandler::open(const char* host, int port)
+std::future<void> UdpHandler::open(const char* host, int port, const char* sendIp, int sendPort)
 {
     host_ = host;
     port_ = port;
@@ -87,8 +87,8 @@ std::future<void> UdpHandler::open(const char* host, int port)
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     
-    enqueue_([&, prom]() {
-        openImpl_();
+    enqueue_([&, prom, sendIp, sendPort]() {
+        openImpl_(sendIp, sendPort);
         prom->set_value();
     });
     return fut;
@@ -118,67 +118,41 @@ std::future<void> UdpHandler::send(const char* host, int port, const char* buf, 
     return fut;
 }
 
-void UdpHandler::openImpl_()
+void UdpHandler::openImpl_(const char* sendIp, int sendPort)
 {
     std::stringstream portStream;
     portStream << port_;
     
     log_info("Opening UDP socket (host %s port %d)", host_.c_str(), port_);
     
-    // If empty hostname, use INADDR_ANY
+    // If empty hostname, see if we can infer the socket type from the provided
+    // example send port. If not, default to INADDR_ANY.
     if (host_ == "")
     {
+        auto addressType = AF_INET;
+        if (sendIp != nullptr)
+        {
+            struct addrinfo* result = resolveIpAddress_(sendIp, sendPort);
+            if (result != nullptr)
+            {
+                addressType = result->ai_family;
+                freeaddrinfo(result);
+            }
+        }
+
 #if defined(WIN32)
-        socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        socket_ = socket(addressType, SOCK_DGRAM, IPPROTO_UDP);
         if (socket_ == INVALID_SOCKET)
         {
             log_warn("cannot open socket (err=%d)", WSAGetLastError());
         }
 #else
-        socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        socket_ = socket(addressType, SOCK_DGRAM, IPPROTO_UDP);
         if(socket_ < 0)
         {
             log_warn("cannot open socket (err=%d)", errno);
         }
 #endif // defined(WIN32)
-
-        // XXX - macOS isn't able to set V6ONLY. Forcing IPv4 for now.
-#if 0
-        // Make sure we can receive IPv4 too
-        int opt_false = 0;
-#if defined(WIN32)
-        auto rv = setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&opt_false, sizeof(opt_false));
-        if (rv != 0)
-        {
-            log_warn("cannot set socket options (err=%d)", WSAGetLastError());
-        }
-#else
-        auto rv = setsockopt(socket_, IPPROTO_IPV6, IPV6_V6ONLY, &opt_false, sizeof(opt_false));
-        if (rv != 0)
-        {
-            log_warn("cannot set socket options (err=%d)", errno);
-        }
-#endif // defined(WIN32)
-        
-        if (port_ > 0)
-        {
-            struct sockaddr_in6 sin6;
-            sin6.sin6_family = AF_INET6;
-            memcpy(sin6.sin6_addr.s6_addr, in6addr_any.s6_addr, 16);
-            sin6.sin6_port = htons(port_);
-            sin6.sin6_flowinfo = 0;
-            sin6.sin6_scope_id = 0;
-            auto rv = ::bind(socket_, (struct sockaddr*)&sin6, sizeof(sin6));
-            if (rv != 0)
-            {
-    #if defined(WIN32)
-                log_warn("cannot bind socket (err=%d)", WSAGetLastError());
-    #else
-                log_warn("cannot bind socket (err=%d)", errno);
-    #endif // defined(WIN32)
-            }
-        }
-#endif
     }
     else
     {

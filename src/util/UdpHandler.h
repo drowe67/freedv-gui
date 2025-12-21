@@ -37,7 +37,8 @@ public:
     virtual ~UdpHandler();
     
     // Note: host is an IP here, not hostname.
-    std::future<void> open(const char* host, int port);
+    std::future<void> open() { return open("", 0); }
+    std::future<void> open(const char* host, int port, const char* sendIp = nullptr, int sendPort = 0);
     std::future<void> close();
     std::future<void> send(const char* host, int port, const char* buf, int length);
     
@@ -55,7 +56,7 @@ private:
     std::atomic<int> socket_;
 #endif // defined(WIN32)
 
-    void openImpl_();
+    void openImpl_(const char* sendIp, int sendPort);
     void closeImpl_();
     void sendImpl_(const char* host, int port, const char* buf, int length);
     void receiveImpl_();
