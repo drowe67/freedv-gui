@@ -210,24 +210,39 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     spotsDataModel_ = new FreeDVReporterDataModel(this);
     m_listSpots->AssociateModel(spotsDataModel_.get());
 
-    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0)
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() != (RIGHTMOST_COL - 1))
     {
         // Generate default column ordering
-        log_info("Generating default column ordering");
-        for (auto index = 0; index < RIGHTMOST_COL; index++)
+        log_info("Generating missing column ordering");
+        auto iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
+        while (iter != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end())
+        {
+            if (*iter >= RIGHTMOST_COL)
+            {
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->erase(iter);
+                iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        auto maxIndex = *std::max_element(
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
+        );
+
+        for (auto index = maxIndex + 1; index < RIGHTMOST_COL; index++)
         {
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
         }
     }
 
-    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() == 0)
+    while (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() < (RIGHTMOST_COL - 1))
     {
         // Generate default column visibility
-        log_info("Generating default column visibility");
-        for (auto index = 0; index < RIGHTMOST_COL; index++)
-        {
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
-        }
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
     }
 
     // Windows seems to have the model column ID equal to the actual column ID regardless of the 
