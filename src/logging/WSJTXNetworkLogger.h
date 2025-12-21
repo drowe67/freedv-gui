@@ -84,7 +84,7 @@ private:
             // Note: the constant is supposed to be 58574100h but this is 12 hours behind
             // what the various WSJT-X compatible logging tools are expecting.
             using namespace std::chrono_literals;
-            return 58574112h;
+            return std::chrono::duration<double>(58574112h);
         }
         
         static time_point now() noexcept
