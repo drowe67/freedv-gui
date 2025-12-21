@@ -210,7 +210,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     spotsDataModel_ = new FreeDVReporterDataModel(this);
     m_listSpots->AssociateModel(spotsDataModel_.get());
 
-    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() != (RIGHTMOST_COL - 1))
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() != NUM_COLS)
     {
         // Generate default column ordering
         log_info("Generating missing column ordering");
@@ -233,13 +233,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
         );
 
-        for (auto index = maxIndex + 1; index < RIGHTMOST_COL; index++)
+        for (auto index = maxIndex + 1; index < NUM_COLS; index++)
         {
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
         }
     }
 
-    while (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() < (RIGHTMOST_COL - 1))
+    while (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() < NUM_COLS)
     {
         // Generate default column visibility
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
@@ -248,12 +248,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Windows seems to have the model column ID equal to the actual column ID regardless of the 
     // actual ordering, so we just use wxHeaderCtrl to save/restore the column ordering.
 #if defined(WIN32)
-    for (auto col = 0; col < RIGHTMOST_COL; col++)
+    for (auto col = 0; col < NUM_COLS; col++)
 #else    
     for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
 #endif // defined(WIN32)
     {
-        if (col < RIGHTMOST_COL)
+        if (col < NUM_COLS)
         {
             log_info("Creating col %d", col);
             auto visible = (bool)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col);
@@ -273,7 +273,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     wxArrayInt wxColumnOrder;
     for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
     {
-        if (col < RIGHTMOST_COL)
+        if (col < NUM_COLS)
         {
             wxColumnOrder.Add(col);
         }
