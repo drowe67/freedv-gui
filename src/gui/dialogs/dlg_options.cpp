@@ -144,8 +144,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // UDP reporting options
     wxBoxSizer* sbSizerReportingUDP = new wxBoxSizer(wxHORIZONTAL);
     m_ckboxUDPReportingEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Enable QSO Logging"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxUDPReportingEnable->SetToolTip(_("Enables QSO logging using the WSJT-X support in your preferred logging program."));
     sbSizerReportingUDP->Add(m_ckboxUDPReportingEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    wxStaticText* labelUDPHostName = new wxStaticText(sbReporting, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelUDPHostName = new wxStaticText(sbReporting, wxID_ANY, wxT("IP Address:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingUDP->Add(labelUDPHostName, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     m_udpHostname = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(150,-1), 0);
     sbSizerReportingUDP->Add(m_udpHostname, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
