@@ -1234,9 +1234,9 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     // Preserve new column ordering
     // Note: Windows uses the same indices for model column and GetColumn()
     // so we need to use an alternate implementation for that platform.
-    std::vector<int> newColPositions;
 #if defined(WIN32)
     CallAfter([&]() {
+        std::vector<int> newColPositions;
         std::stringstream ss;
         auto headerCtrl = m_listSpots->GenericGetHeader();
         wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
@@ -1255,6 +1255,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     });
 #else
     std::stringstream ss;
+    std::vector<int> newColPositions;
     for (unsigned int index = 0; index < NUM_COLS; index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
