@@ -870,6 +870,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
+    * FreeDV Reporter: Combine Version and Status columns to save horizontal space. (PR #1132)
+    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
@@ -887,6 +889,7 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
     * Fix hidden/clipped axis labels on plots. (PR #1110)
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
+    * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
 2. Enhancements:
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!

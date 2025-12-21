@@ -861,7 +861,9 @@ setDefaultMode:
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
     m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    
+    m_BtnReSync->Enable(isEnabled);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
     if (!isEnabled)
     {
         m_textBits->SetLabel("Bits: unk");
@@ -953,6 +955,7 @@ setDefaultMode:
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
     modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1180,6 +1183,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
@@ -1416,6 +1420,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
     bool txState = false;
+    bool halfDuplexState = false;
     int syncState = 0;
 
     auto& timer = evt.GetTimer();
@@ -1429,6 +1434,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
+        halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
         syncState_ = freedvInterface.getSync();
     }
     syncState = syncState_;
@@ -1515,14 +1521,24 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
          memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
-         while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
+         bool txNotInFullDuplex = halfDuplexState && txState;
+         if (!txNotInFullDuplex)
          {
-             g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
-             for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+             while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
              {
-                 g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
-             }
-             memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+                 g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
+                 for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+                 {
+                     g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
+                 }
+                 memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+              }
+         }
+         else
+         {
+            // Assume zero spectrum to avoid waterfall artifacts
+            memset(g_avmag_waterfall, 0, sizeof(float) * MODEM_STATS_NSPEC);
+            memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
          }
 
          // Synchronize changes with Filter dialog
@@ -2124,6 +2140,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_ckboxSQ->Enable(isEnabled);
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
+        m_BtnReSync->Enable(isEnabled);
     }
 }
 
@@ -2132,6 +2149,8 @@ void MainFrame::performFreeDVOn_()
     log_debug("Start .....");
     g_queueResync = false;
     endingTx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -2281,7 +2300,7 @@ void MainFrame::performFreeDVOn_()
     });
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
