@@ -228,10 +228,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             }
         }
 
-        auto maxIndex = *std::max_element(
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
-        );
+        auto maxIndex = 
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0 ? 
+            -1 : 
+            *std::max_element(
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
+            );
 
         for (auto index = maxIndex + 1; index < NUM_COLS; index++)
         {
@@ -1243,8 +1246,11 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
         for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
         {
             auto col = wxColumnOrder.Item(index);
-            newColPositions.push_back(col);
-            ss << col << " ";
+            if (col < NUM_COLS)
+            {
+                newColPositions.push_back(col);
+                ss << col << " ";
+            }
         }
 
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
@@ -1252,7 +1258,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     });
 #else
     std::stringstream ss;
-    for (unsigned int index = 0; index < m_listSpots->GetColumnCount() - 1; index++)
+    for (unsigned int index = 0; index < NUM_COLS; index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
         newColPositions.push_back(dvc->GetModelColumn());
