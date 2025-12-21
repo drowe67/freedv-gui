@@ -864,21 +864,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.2.0 TBD TBD
 
 1. Bugfixes:
-    * TBD
-2. Enhancements:
-    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
-    * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
-    * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
-    * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
-    * FreeDV Reporter: Combine Version and Status columns to save horizontal space. (PR #1132)
-    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
-
-*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
-again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
-
-## V2.1.1 TBD 2025
-
-1. Bugfixes:
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
@@ -891,10 +876,19 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
     * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
 2. Enhancements:
+    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
+    * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
+    * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
+    * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
+    * FreeDV Reporter: Combine Version and Status columns to save horizontal space. (PR #1132)
+    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
+
+*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
+again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
 
 ## V2.1.0 November 2025
 
