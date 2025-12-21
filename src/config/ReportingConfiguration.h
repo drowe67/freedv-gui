@@ -60,6 +60,10 @@ public:
     ConfigurationDataElement<std::vector<int> > freedvReporterColumnOrder;
     ConfigurationDataElement<std::vector<bool> > freedvReporterColumnVisibility;
 
+    ConfigurationDataElement<bool> udpReportingEnabled;
+    ConfigurationDataElement<wxString> udpReportingHostname;
+    ConfigurationDataElement<int> udpReportingPort;
+    
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;

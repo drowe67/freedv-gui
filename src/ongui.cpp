@@ -18,6 +18,7 @@
 #include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
+#include "gui/dialogs/log_entry.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -1227,6 +1228,46 @@ void MainFrame::OnCallSignReset(wxCommandEvent&)
     m_cboLastReportedCallsigns->SetText(_(""));
 }
 
+void MainFrame::OnLogQSO(wxCommandEvent&)
+{
+    if (m_lastReportedCallsignListView->GetItemCount() > 0)
+    {
+        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+        if (selected == -1)
+        {
+            // Default to the first/most recent entry if user hasn't explicitly selected
+            // a contact.
+            selected = 0;
+        }
+        
+        // Get callsign and RX frequency
+        auto dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+        auto dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        
+        double dxFreqDouble = 0;
+        wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            dxFreqDouble *= 1000;
+        }
+        else
+        {
+            dxFreqDouble *= 1000000;
+        }
+        
+        // If connected to FreeDV Reporter, get DX grid
+        wxString dxGrid;
+        if (m_reporterDialog != nullptr)
+        {
+            dxGrid = m_reporterDialog->getGridSquareForCallsign(dxCall);
+        }
+
+        // Show log contact dialog 
+        auto logDialog = new LogEntryDialog(this);
+        logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), (int64_t)dxFreqDouble);
+    }
+}
 
 // Force manual resync, just in case demod gets stuck on false sync
 

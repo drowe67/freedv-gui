@@ -131,6 +131,8 @@ class TopFrame : public wxFrame
         wxButton      *m_btnCenterRx;
         
         wxToggleButton      *m_audioRecord;
+        
+        wxButton*     m_logQSO;
 
         wxRadioButton *m_rbRADE;
         wxRadioButton *m_rb700d;
@@ -192,6 +194,8 @@ class TopFrame : public wxFrame
         virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnLogQSO(wxCommandEvent& event) { event.Skip(); }
 
         virtual void OnTogBtnAnalogClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnRxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }

@@ -74,7 +74,13 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-    
+
+        wxString getGridSquareForCallsign(wxString const& callsign)
+        {
+            FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+            return model->getGridSquareForCallsign(callsign);
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
@@ -218,6 +224,20 @@ class FreeDVReporterDialog : public wxFrame
                      auto data = (ReporterData*)item.GetID();
                      return data->userMessage;
                  }
+                 return "";
+             }
+             
+             wxString getGridSquareForCallsign(wxString const& callsign)
+             {
+                 for (auto& kvp : allReporterData_)
+                 {
+                     auto reportData = kvp.second;
+                     if (reportData->callsign == callsign)
+                     {
+                         return reportData->gridSquare;
+                     }
+                 }
+                 
                  return "";
              }
              
