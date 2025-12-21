@@ -281,6 +281,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             wxColumnOrder.Add(col);
         }
     }
+    wxColumnOrder.Add(RIGHTMOST_COL); // All columns need to be in the list to actually take effect.
     headerCtrl->SetColumnsOrder(wxColumnOrder);
 #endif // defined(WIN32)
     
