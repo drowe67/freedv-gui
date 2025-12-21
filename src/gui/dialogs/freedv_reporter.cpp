@@ -1228,11 +1228,7 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
     OnItemRightClick(contextEvent);
 }
 
-#if defined(WIN32)
-void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent& event)
-#else
 void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
-#endif // defined(WIN32)
 {
     // Preserve new column ordering
     // Note: Windows uses the same indices for model column and GetColumn()
@@ -1264,10 +1260,10 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
         newColPositions.push_back(dvc->GetModelColumn());
         ss << dvc->GetModelColumn() << " ";
     }
-#endif // defined(WIN32)
-
+    
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
     log_info("New column ordering: %s", ss.str().c_str());
+#endif // defined(WIN32)
 }
 
 void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
