@@ -395,6 +395,19 @@ FreeDV will also show the callsigns of previously received signals. To view thos
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
 
+# QSO Logging
+
+FreeDV supports integration with external logging utilities that support the WSJT-X logging protocol (for example,
+[KLog](https://github.com/ea4k/klog). This can be enabled by going to Tools->Options->Reporting and enabling 
+the "Enable QSO Logging" option. By default, it sends packets to "localhost" (127.0.0.1) port 2237, but this
+can be changed if the logging computer is elsewhere on the network.
+
+Once FreeDV decodes a callsign, it will appear in the drop-down list on the bottom of the main window. To log
+this contact (or any other contact received by the application), simply choose that callsign from the list and
+click the "Log QSO" button on the left side of the window. You will then see a dialog box that will let you 
+enter any additional information about the contact. Upon clicking the OK button, this information will be 
+transmitted to your logging tool.
+
 # Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
@@ -857,6 +870,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
+    * FreeDV Reporter: Combine Version and Status columns to save horizontal space. (PR #1132)
+    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
@@ -879,6 +894,7 @@ again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
+    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
 
 ## V2.1.0 November 2025
 

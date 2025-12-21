@@ -14,6 +14,10 @@ env:
   BUILD_TYPE: RelWithDebInfo
   TORCH_RELEASE: 2.9.1
 
+  # Needed to suppress possible cause of test errors.
+  # See https://github.com/alexmurray/emacs-snap/issues/60
+  NO_AT_BRIDGE: 1
+
 jobs:
   lint:
     runs-on: ubuntu-24.04

@@ -47,6 +47,8 @@
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 
+#include "logging/WSJTXNetworkLogger.h"
+
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
@@ -859,7 +861,9 @@ setDefaultMode:
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
     m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    
+    m_BtnReSync->Enable(isEnabled);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
     if (!isEnabled)
     {
         m_textBits->SetLabel("Bits: unk");
@@ -951,6 +955,7 @@ setDefaultMode:
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
     modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1178,6 +1183,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
@@ -1818,6 +1824,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
+        
+        if (wxGetApp().logger != nullptr && m_lastReportedCallsignListView->GetItemCount() > 0)
+        {
+            m_logQSO->Enable(true);
+        }
     
         // Run time update of EQ filters -----------------------------------
 
@@ -2129,6 +2140,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_ckboxSQ->Enable(isEnabled);
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
+        m_BtnReSync->Enable(isEnabled);
     }
 }
 
@@ -2137,6 +2149,8 @@ void MainFrame::performFreeDVOn_()
     log_debug("Start .....");
     g_queueResync = false;
     endingTx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -2156,6 +2170,8 @@ void MainFrame::performFreeDVOn_()
         m_cboLastReportedCallsigns->Enable(false);
             
         m_cboLastReportedCallsigns->SetText(wxT(""));
+        
+        m_logQSO->Disable();
     });
     
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -2243,6 +2259,14 @@ void MainFrame::performFreeDVOn_()
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
+            
+            // Create logger object
+            if (wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
+            {
+                wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>(
+                    (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                    wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+            }
         }
     
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
@@ -2276,7 +2300,7 @@ void MainFrame::performFreeDVOn_()
     });
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -2496,6 +2520,8 @@ void MainFrame::performFreeDVOff_()
     freedvInterface.stop();
     
     m_newMicInFilter = m_newSpkOutFilter = true;
+    
+    wxGetApp().logger = nullptr;
 
     executeOnUiThreadAndWait_([&]() 
     {
@@ -2510,6 +2536,8 @@ void MainFrame::performFreeDVOff_()
         m_rb1600->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
+        
+        m_logQSO->Disable();
         
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)

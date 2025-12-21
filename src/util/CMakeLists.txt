@@ -18,6 +18,7 @@ add_library(fdv_util STATIC
     ${THREADED_OBJECT_FILES}
     ThreadedTimer.cpp
     TcpConnectionHandler.cpp
+    UdpHandler.cpp
     logging/ulog.c
     ${UTIL_LINUX_FILES}
     ${UTIL_WIN32_FILES}

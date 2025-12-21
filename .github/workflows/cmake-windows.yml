@@ -134,7 +134,7 @@ jobs:
     - name: Install VB-Cable ("Radio" sound device)
       uses: LABSN/sound-ci-helpers@v1
   
-    - run: 'Invoke-WebRequest https://software.muzychenko.net/trials/vac464.zip -OutFile vac464.zip'
+    - run: 'Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip'
     - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
