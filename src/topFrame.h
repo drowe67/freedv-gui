@@ -131,6 +131,8 @@ class TopFrame : public wxFrame
         wxButton      *m_btnCenterRx;
         
         wxToggleButton      *m_audioRecord;
+        
+        wxButton*     m_logQSO;
 
         wxRadioButton *m_rbRADE;
         wxRadioButton *m_rb700d;
@@ -192,6 +194,8 @@ class TopFrame : public wxFrame
         virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnLogQSO(wxCommandEvent& event) { event.Skip(); }
 
         virtual void OnTogBtnAnalogClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnRxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }
@@ -228,10 +232,10 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
         wxToggleButton* m_btnTogPTT;
-        wxButton* m_btnHelp;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
         wxStaticBox*  m_freqBox;
+        wxStaticBox*  squelchBox;
 
         TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 

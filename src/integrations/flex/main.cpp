@@ -29,10 +29,6 @@
 #include <cinttypes>
 #include <stdlib.h>
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
@@ -85,13 +81,6 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
 
 int main(int, char**)
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -197,18 +186,29 @@ int main(int, char**)
     rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
 
     // Set up reporting of actual receive state (prior to getting callsign).
-    int rxCounter = 0;    
+    int rxCounter = 0;
+    uint16_t meterMeterId = 0;
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
         if (rxThread.getSync())
         {
             rxCounter = (rxCounter + 1) % 10;
+            auto snr = rxThread.getSnr();
             if (rxCounter == 0)
             {
-                reportController.reportCallsign("", rxThread.getSnr());
+                reportController.reportCallsign("", snr);
             }
+            vitaTask.sendMeter(meterMeterId, snr);
         }
+        else
+        {
+            vitaTask.sendMeter(meterMeterId, -99);
+        }        
     }, true);
     rxNoCallsignReporting.start();
+
+    tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t meterId, void*) {
+        meterMeterId = meterId;
+    }, nullptr);
 
     tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const& callsign, void*) {
         // Add callsign to EOO so others can report us

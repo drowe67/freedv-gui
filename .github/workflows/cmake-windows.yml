@@ -52,10 +52,10 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           export WINEPREFIX=`pwd`/wine-env
-          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
+          wget https://www.python.org/ftp/python/3.14.2/python-3.14.2-amd64.exe
+          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.14.2-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
           cat $WINEPREFIX/drive_c/python.log
-          DISPLAY= wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
@@ -72,7 +72,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..
 
     - name: Build freedv-gui
       shell: bash
@@ -112,6 +112,25 @@ jobs:
   
     - uses: ilammy/msvc-dev-cmd@v1
  
+    - name: Install VB-Cable ("Radio" sound device)
+      uses: LABSN/sound-ci-helpers@v1
+  
+    - run: 'Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip'
+    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
+    - name: Install driver
+      shell: pwsh
+      run: |
+          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
+          Start-Sleep -Seconds 10
+      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
+      timeout-minutes: 10
+
+    - name: Screenshot if failed
+      if: failure()
+      uses: OrbitalOwen/desktop-screenshot-action@0.1
+
     - name: Install FreeDV on hard drive
       shell: pwsh
       run: |
@@ -131,21 +150,6 @@ jobs:
       run: |
            choco install sox.portable
  
-    - name: Install VB-Cable ("Radio" sound device)
-      uses: LABSN/sound-ci-helpers@v1
-  
-    - run: 'Invoke-WebRequest https://software.muzychenko.net/trials/vac464.zip -OutFile vac464.zip'
-    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
-    - name: Install driver
-      shell: pwsh
-      run: |
-          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
-          Start-Sleep -Seconds 10
-      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
-      timeout-minutes: 10
-
     - name: Grant FreeDV access to the microphone 
       run: |
           New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force

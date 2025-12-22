@@ -90,6 +90,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
+#include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
 #include "util/sanitizers.h"
@@ -106,12 +107,9 @@ enum {
         ID_START = wxID_HIGHEST,
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
-        ID_TIMER_SCATTER,
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
-        ID_TIMER_TIME_OFFSET,
-        ID_TIMER_FREQ_OFFSET,
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
@@ -183,6 +181,9 @@ class MainApp : public wxApp
 
         // PTT Input
         std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
+        
+        // Logging
+        std::shared_ptr<ILogger> logger;
 
         wxRect              m_rTopWindow;
 
@@ -296,14 +297,9 @@ class MainFrame : public TopFrame
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
-        PlotScatter*            m_panelScatter;
-        PlotScalar*             m_panelTimeOffset;
-        PlotScalar*             m_panelFreqOffset;
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
-        PlotScalar*             m_panelTestFrameErrors;
-        PlotScalar*             m_panelTestFrameErrorsHist;
 
         bool                    m_RxRunning;
 
@@ -333,8 +329,6 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechInTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
-        wxTimer                 m_plotTimeOffsetTimer;
-        wxTimer                 m_plotFreqOffsetTimer;
 #endif
 
     void destroy_fifos(void);
@@ -412,6 +406,8 @@ class MainFrame : public TopFrame
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
+        virtual void OnLogQSO(wxCommandEvent& event) override;
+        
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
         void OnReSync( wxCommandEvent& event ) override;

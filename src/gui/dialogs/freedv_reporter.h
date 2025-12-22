@@ -74,7 +74,13 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-    
+
+        wxString getGridSquareForCallsign(wxString const& callsign)
+        {
+            FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+            return model->getGridSquareForCallsign(callsign);
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
@@ -106,6 +112,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
+        void OnColumnReordered(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
         void DeselectItem();
@@ -116,6 +123,8 @@ class FreeDVReporterDialog : public wxFrame
         void SkipMouseEvent(wxMouseEvent& event);
         void AdjustMsgColWidth(wxListEvent& event);
         void OnRightClickSpotsList(wxContextMenuEvent& event);
+
+        void OnShowColumn(wxCommandEvent& event);
                 
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
@@ -150,6 +159,10 @@ class FreeDVReporterDialog : public wxFrame
         wxTimer* m_deleteTimer;
 
         wxTipWindow* tipWindow_;
+
+        // Menu bar and menu options
+        wxMenuBar* menuBar_;
+        wxMenu* showMenu_;
         
      private:
         const wxString UNKNOWN_STR;
@@ -211,6 +224,20 @@ class FreeDVReporterDialog : public wxFrame
                      auto data = (ReporterData*)item.GetID();
                      return data->userMessage;
                  }
+                 return "";
+             }
+             
+             wxString getGridSquareForCallsign(wxString const& callsign)
+             {
+                 for (auto& kvp : allReporterData_)
+                 {
+                     auto reportData = kvp.second;
+                     if (reportData->callsign == callsign)
+                     {
+                         return reportData->gridSquare;
+                     }
+                 }
+                 
                  return "";
              }
              
@@ -351,6 +378,9 @@ class FreeDVReporterDialog : public wxFrame
         };
 
         bool isSelectionPossible_;
+
+        void createColumn_(int col, bool visible);
+        wxDataViewColumn* getColumnForModelColId_(unsigned int col);
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;

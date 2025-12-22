@@ -110,7 +110,7 @@ set( _windlls
     api-ms-win-crt-multibyte-l1-1-0.dll
 
     # Filter Python DLLs as they're already included via install()
-    python312.dll
+    python314.dll
 
     # Additional DLLs needed by Address Sanitizer
     api-ms-win-core-synch-l1-2-0.dll

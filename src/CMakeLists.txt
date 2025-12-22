@@ -1,11 +1,6 @@
-if((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
-set(MIMALLOC_SOURCE_FILE $<TARGET_OBJECTS:mimalloc-obj>)
-endif((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
-
 set(WARNINGS_AS_ERRORS_FLAGS -Wall -Wextra -Werror -Wno-null-pointer-subtraction)
 
 set(FREEDV_SOURCES
-    ${MIMALLOC_SOURCE_FILE}
     main.cpp
     topFrame.cpp
     sox_biquad.c
@@ -36,6 +31,7 @@ include_directories(${CMAKE_BINARY_DIR}/generated)
 add_subdirectory(audio)
 add_subdirectory(config)
 add_subdirectory(gui)
+add_subdirectory(logging)
 add_subdirectory(os)
 add_subdirectory(pipeline)
 add_subdirectory(reporting)
@@ -71,10 +67,10 @@ endif(APPLE)
 
 if(APPLE)
 target_compile_options(FreeDV PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
 else(APPLE)
 target_compile_options(freedv PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
 endif(APPLE)
 
 # Add dependencies for other statically built libraries, if applicable.
@@ -173,7 +169,7 @@ if(APPLE)
         COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
         
         # Codesign binary so that it can execute
-        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign ${MACOS_CODESIGN_IDENTITY} ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app -name '*.so' -o -name '*.dylib'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/bin -name 'Python' -o -name 'python3.12*'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/ -name 'Python'` ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/MacOS/FreeDV ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/bin/* ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/Python
+        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign ${MACOS_CODESIGN_IDENTITY} ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app -name '*.so' -o -name '*.dylib'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin -name 'Python' -o -name 'python3.*'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/ -name 'Python'` ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/MacOS/FreeDV ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/lib/python3.*/site-packages/torch/bin/* ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/Python
     )
 
     if (MACOS_CODESIGN_KEYCHAIN_PROFILE)

@@ -93,11 +93,8 @@ void MinimalTxRxThread::initializePipeline_()
         radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
       
-        // BW expander temporarily disabled pending further testing 
-#if 0 
         auto bwExpandStep = new BandwidthExpandStep();
         pipeline_->appendPipelineStep(bwExpandStep);
-#endif // 0
 
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
@@ -125,8 +122,8 @@ void* MinimalTxRxThread::Entry()
 
 #if defined(__linux__)
     const char* threadName = nullptr;
-    if (m_tx) threadName = "FreeDV txThread";
-    else threadName = "FreeDV rxThread";
+    if (m_tx) threadName = "FDV txThread";
+    else threadName = "FDV rxThread";
     pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 

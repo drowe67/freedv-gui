@@ -37,10 +37,6 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -50,6 +46,8 @@
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
+
+#include "logging/WSJTXNetworkLogger.h"
 
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_filter.h"
@@ -582,13 +580,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
@@ -615,8 +606,11 @@ bool MainApp::OnInit()
  
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
- 
+
 #if _WIN32 || __APPLE__
+    // Enable mimalloc in Python interpreter. 
+    wxSetEnv("PYTHONMALLOC", "mimalloc");
+
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
@@ -640,9 +634,6 @@ bool MainApp::OnInit()
     wxGetEnv("PYTHONPATH", &ppath);
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
-
-    // Turn on optimization for Python code
-    wxSetEnv("PYTHONOPTIMIZE", "2");
 
 #endif // _WIN32 || __APPLE__ 
 
@@ -863,12 +854,16 @@ setDefaultMode:
     }
     
     // Disable controls not supported by RADE.
-    bool isEnabled = mode != FREEDV_MODE_RADE;
+    bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
+    squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
     m_sliderSQ->Enable(isEnabled);
     m_ckboxSQ->Enable(isEnabled);
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
-    
+    m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Enable(isEnabled);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
     if (!isEnabled)
     {
         m_textBits->SetLabel("Bits: unk");
@@ -959,6 +954,8 @@ setDefaultMode:
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+    modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -996,7 +993,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SYNC_UNK_LABEL("Sync: unk"),
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
-    TOO_HIGH_LABEL("Too High"),
+    TOO_HIGH_LABEL("Clip"),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
@@ -1070,28 +1067,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
-    
-    // Add Scatter Plot window
-    m_panelScatter = new PlotScatter(m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
-
-    // Add Timing Offset window
-    m_panelTimeOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", false, wxNullBitmap);
-
-    // Add Frequency Offset window
-    m_panelFreqOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", false, wxNullBitmap);
-
-    // Add Test Frame Errors window
-    m_panelTestFrameErrors = new PlotScalar(m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", false, wxNullBitmap);
-
-    // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
-    m_panelTestFrameErrorsHist = new PlotScalar(m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", false, wxNullBitmap);
-    m_panelTestFrameErrorsHist->setBarGraph(1);
-    m_panelTestFrameErrorsHist->setLogY(1);
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
@@ -1104,12 +1079,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotWaterfallTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_plotSpectrumTimer.SetOwner(this, ID_TIMER_SPECTRUM);
-    m_plotScatterTimer.SetOwner(this, ID_TIMER_SCATTER);
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
-    m_plotTimeOffsetTimer.SetOwner(this, ID_TIMER_TIME_OFFSET);
-    m_plotFreqOffsetTimer.SetOwner(this, ID_TIMER_FREQ_OFFSET);
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
@@ -1211,6 +1183,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
@@ -1399,12 +1372,9 @@ MainFrame::~MainFrame()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         Unbind(wxEVT_TIMER, &MainFrame::OnTimer, this);
     }
 #endif //_USE_TIMER
@@ -1523,49 +1493,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->m_newdata = true;
           m_panelSpectrum->refreshData();
       }
-      else if (timerId == ID_TIMER_SCATTER)
-      {
-          if (freedvInterface.isRunning()) {
-              int currentMode = freedvInterface.getCurrentMode();
-              if (currentMode != wxGetApp().m_prevMode)
-              {
-                  // Force recreation of EQ filters.
-                  m_newMicInFilter = true;
-                  m_newSpkOutFilter = true;
-
-                  // The receive mode changed, so the previous samples are no longer valid.
-                  m_panelScatter->clearCurrentSamples();
-              }
-              wxGetApp().m_prevMode = currentMode;
-    
-              // Reset g_Nc accordingly.
-              switch(currentMode)
-              {
-                  case FREEDV_MODE_1600:
-                      g_Nc = 16;
-                      m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                      break;
-                  case FREEDV_MODE_700D:
-                  case FREEDV_MODE_700E:
-                      g_Nc = 17; 
-                      m_panelScatter->setNc(g_Nc);
-                      break;
-              }
-    
-              /* PSK Modes - scatter plot -------------------------------------------------------*/
-              for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
-
-                  if ((currentMode == FREEDV_MODE_1600) ||
-                      (currentMode == FREEDV_MODE_700D) ||
-                      (currentMode == FREEDV_MODE_700E)
-                  ) {
-                      m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                  }
-              }
-          }
-
-          m_panelScatter->refreshData();
-      }
       else if (timerId == ID_TIMER_SPEECH_IN)
       {
           if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
@@ -1589,18 +1516,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
-      else if (timerId == ID_TIMER_TIME_OFFSET)
+      else
       {
-          m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-          m_panelTimeOffset->refreshData();
-      }
-      else if (timerId == ID_TIMER_FREQ_OFFSET)
-      {
-          m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-          m_panelFreqOffset->refreshData();
-      }
-     else
-     {
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
          memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
@@ -1907,6 +1824,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
+        
+        if (wxGetApp().logger != nullptr && m_lastReportedCallsignListView->GetItemCount() > 0)
+        {
+            m_logQSO->Enable(true);
+        }
     
         // Run time update of EQ filters -----------------------------------
 
@@ -2033,44 +1955,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
                 m_textClockOffset->SetLabel(clockOffset);
-            }
-            
-            // update error pattern plots if supported
-            short* error_pattern = nullptr;
-            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
-            if (sz_error_pattern) {
-                int i,b;
-
-                /* both modes map IQ to alternate bits, but on same carrier */
-
-                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
-                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                    for(b=0; b<g_Nc*2; b++) {
-                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                            g_error_hist[b] += error_pattern[i];
-                            g_error_histn[b]++;
-                        }
-                    }
-
-                     /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<g_Nc*2; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                m_panelTestFrameErrors->Refresh();
-                m_panelTestFrameErrorsHist->Refresh();
-            
-                delete[] error_pattern;
             }
         }
 
@@ -2256,6 +2140,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_ckboxSQ->Enable(isEnabled);
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
+        m_BtnReSync->Enable(isEnabled);
     }
 }
 
@@ -2264,6 +2149,8 @@ void MainFrame::performFreeDVOn_()
     log_debug("Start .....");
     g_queueResync = false;
     endingTx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
     
@@ -2283,6 +2170,8 @@ void MainFrame::performFreeDVOn_()
         m_cboLastReportedCallsigns->Enable(false);
             
         m_cboLastReportedCallsigns->SetText(wxT(""));
+        
+        m_logQSO->Disable();
     });
     
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -2306,12 +2195,18 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
+        if (!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
             m_rbRADE->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
+            
+            if (!wxGetApp().appConfiguration.enableLegacyModes)
+            {
+                // If legacy modes are not enabled, RADE is the only option.
+                g_mode = FREEDV_MODE_RADE;
+            }
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -2364,6 +2259,14 @@ void MainFrame::performFreeDVOn_()
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
+            
+            // Create logger object
+            if (wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
+            {
+                wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>(
+                    (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                    wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+            }
         }
     
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
@@ -2394,12 +2297,10 @@ void MainFrame::performFreeDVOn_()
         // Init text msg decoding
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             freedvInterface.setTextVaricodeNum(1);
-
-        m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -2534,12 +2435,9 @@ void MainFrame::performFreeDVOn_()
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpectrumTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotScatterTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotTimeOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotFreqOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
@@ -2575,12 +2473,9 @@ void MainFrame::performFreeDVOff_()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
@@ -2625,6 +2520,8 @@ void MainFrame::performFreeDVOff_()
     freedvInterface.stop();
     
     m_newMicInFilter = m_newSpkOutFilter = true;
+    
+    wxGetApp().logger = nullptr;
 
     executeOnUiThreadAndWait_([&]() 
     {
@@ -2639,6 +2536,8 @@ void MainFrame::performFreeDVOff_()
         m_rb1600->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
+        
+        m_logQSO->Disable();
         
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
