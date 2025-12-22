@@ -46,6 +46,8 @@ public:
     void changeFrequency(uint64_t freqHz);
     void transmit(bool transmit);
 
+    bool isHidden();
+
 private:
     std::string softwareName_;
     ThreadedTimer pskReporterSendTimer_;

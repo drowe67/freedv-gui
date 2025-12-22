@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <future>
 #include <cinttypes>
 #include <sstream>
 #include "git_version.h"
@@ -58,6 +59,16 @@ ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     , rxOnly_(rxOnly)
 {   
     // empty
+}
+
+bool ReportingController::isHidden()
+{
+    auto prom = std::make_shared<std::promise<bool>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        prom->set_value(userHidden_);
+    });
+    return fut.get();
 }
 
 void ReportingController::transmit(bool transmit)
