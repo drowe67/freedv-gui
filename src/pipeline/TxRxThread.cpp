@@ -808,7 +808,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     
     if (g_queueResync.load(std::memory_order_acquire))
     {
-        g_queueResync.store(std::memory_order_release);
+        g_queueResync.store(false, std::memory_order_release);
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }
