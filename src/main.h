@@ -302,9 +302,6 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelDemodIn;
 
         bool                    m_RxRunning;
-
-        TxRxThread*             m_txThread;
-        TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)

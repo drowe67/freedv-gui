@@ -85,6 +85,8 @@ int                 g_Nc;
 int                 g_mode;
 
 FreeDVInterface     freedvInterface;
+std::shared_ptr<TxRxThread> m_txThread;
+std::shared_ptr<TxRxThread> m_rxThread;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
@@ -2665,7 +2667,6 @@ void MainFrame::stopRxStream()
                 txOutSoundDevice.reset();
             }
             
-            delete m_txThread;
             m_txThread = nullptr;
         }
 
@@ -2685,7 +2686,6 @@ void MainFrame::stopRxStream()
                 rxOutSoundDevice.reset();
             }
             
-            delete m_rxThread;
             m_rxThread = nullptr;
         }
 
@@ -3159,7 +3159,7 @@ void MainFrame::startRxStream()
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
+            m_txThread = std::make_shared<TxRxThread>(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
             
             if (!txInSoundDevice->isRunning())
             {
@@ -3186,7 +3186,7 @@ void MainFrame::startRxStream()
             m_txThread->start();
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
+        m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
 
         rxInSoundDevice->start();
         if (!rxInSoundDevice->isRunning())
