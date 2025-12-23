@@ -282,7 +282,7 @@ int main(int argc, char** argv)
     // Set up reporting of actual receive state (prior to getting callsign).
     int rxCounter = 0;    
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
-        if (rxThread.getSync())
+        if (rxThread.getSync() && !reportController.isHidden())
         {
             rxCounter = (rxCounter + 1) % 10;
             if (rxCounter == 0)

@@ -189,7 +189,7 @@ int main(int, char**)
     int rxCounter = 0;
     uint16_t meterMeterId = 0;
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
-        if (rxThread.getSync())
+        if (rxThread.getSync() && !reportController.isHidden())
         {
             rxCounter = (rxCounter + 1) % 10;
             auto snr = rxThread.getSnr();
