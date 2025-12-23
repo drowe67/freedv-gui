@@ -875,6 +875,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix hidden/clipped axis labels on plots. (PR #1110)
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
     * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
+    * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
+    * Avoid data race when terminating application. (PR #1140)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
