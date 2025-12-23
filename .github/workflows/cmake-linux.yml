@@ -64,9 +64,6 @@ jobs:
       matrix:
         os: [ubuntu-22.04-arm, ubuntu-22.04]
         target: [all, freedv-ka9q, freedv-flex]
-        exclude:
-        - os: ubuntu-22.04
-          target: freedv-flex    # Only supported on aarch64
 
     runs-on: ${{ matrix.os }}
 
@@ -156,7 +153,7 @@ jobs:
     - name: Generate waveform file
       shell: bash
       working-directory: ${{github.workspace}}/src/integrations/flex
-      if: ${{ matrix.target == 'freedv-flex' }}
+      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
       run: |
         cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
         ./FreeDV-FlexRadio.AppImage --appimage-extract
@@ -172,7 +169,7 @@ jobs:
 
     - name: Upload waveform file
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.target == 'freedv-flex' }}
+      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
       with:
         name: freedv-waveform.tar.gz
         path: ${{github.workspace}}/src/integrations/flex/freedv-waveform.tar.gz
