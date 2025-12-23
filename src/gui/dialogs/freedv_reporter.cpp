@@ -665,15 +665,18 @@ void FreeDVReporterDialog::refreshLayout()
 
     // Change direction/heading column label based on preferences
     item = getColumnForModelColId_(HEADING_COL);
+    auto renderer = item->GetRenderer();
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item->SetTitle("Dir");
         item->SetAlignment(wxALIGN_LEFT);
+        renderer->SetAlignment(wxALIGN_LEFT);
     }
     else
     {
         item->SetTitle("Hdg");
         item->SetAlignment(wxALIGN_RIGHT);
+        renderer->SetAlignment(wxALIGN_RIGHT);
     }
     
     // Hide/show legacy columns
