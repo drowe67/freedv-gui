@@ -32,9 +32,10 @@ constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
     : ThreadedObject("FlexVita")
     , socket_(-1)
+    , discoverySocket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
     , audioSeqNum_(0)
@@ -44,7 +45,6 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
     , inputCtr_(0)
     , samplesRequired_(0)
     , helper_(std::move(helper))
-    , randomUdpPort_(randomUdpPort)
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
     assert(packetArray_ != nullptr);
@@ -209,41 +209,56 @@ void FlexVitaTask::openSocket_()
         return;
     }
 
-    // Listen on our hardcoded VITA port (or a random one if we already know the radio's IP)
+    discoverySocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (discoverySocket_ == -1)
+    {
+        log_error("Got socket error %d (%s) while creating discovery socket", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        assert(socket_ != -1);
+        return;
+    }
+
+    // Bind to discovery port (4992)
     struct sockaddr_in ourSocketAddress;
     memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
     ourSocketAddress.sin_family = AF_INET;
     ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    if (!randomUdpPort_)
-    {
-        ourSocketAddress.sin_port = htons(VITA_PORT);
+    ourSocketAddress.sin_port = htons(VITA_PORT);
         
-        auto rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
-        if (rv == -1)
-        {
-            auto err = errno;
-            log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
-        }
-        assert(rv != -1);
-
-        udpPort_ = VITA_PORT;
-    }
-    else
+    auto rv = bind(discoverySocket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
+    if (rv == -1)
     {
-        socklen_t bindAddrLen = sizeof(ourSocketAddress);
-        auto rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
-        if (rv == -1)
-        {
-            auto err = errno;
-            log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
-        }
-        assert(rv != -1);
-
-        udpPort_ = ntohl(ourSocketAddress.sin_port);
+        auto err = errno;
+        log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
     }
+    assert(rv != -1);
+
+    // Get local port for main socket
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    ourSocketAddress.sin_family = AF_INET;
+    ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    ourSocketAddress.sin_port = htons(0);
+    rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
+    if (rv == -1)
+    {
+        auto err = errno;
+        log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+    }
+    assert(rv != -1);
+
+    socklen_t bindAddrLen = sizeof(ourSocketAddress);
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
+    if (rv == -1)
+    {
+        auto err = errno;
+        log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+    }
+    assert(rv != -1);
+
+    udpPort_ = ntohs(ourSocketAddress.sin_port);
 
     fcntl (socket_, F_SETFL , O_NONBLOCK);
+    fcntl (discoverySocket_, F_SETFL , O_NONBLOCK);
 
     rxTxThreadRunning_ = true;
     rxTxThread_ = std::thread(std::bind(&FlexVitaTask::rxTxThreadEntry_, this));
@@ -260,6 +275,12 @@ void FlexVitaTask::disconnect_()
         
         close(socket_);
         socket_ = -1;
+
+        if (discoverySocket_ > -1)
+        {
+            close(discoverySocket_);
+            discoverySocket_ = -1;
+        }
         
         rxStreamId_ = 0;
         txStreamId_ = 0;
@@ -284,17 +305,23 @@ void FlexVitaTask::rxTxThreadEntry_()
         
         FD_ZERO(&fds);
         FD_SET(socket_, &fds);
-        
-        if (select(socket_ + 1, &fds, nullptr, nullptr, &timeout) > 0)
+        int maxSocket = socket_;
+        if (discoverySocket_ > -1)
         {
-            readPendingPackets_();
+            FD_SET(discoverySocket_, &fds);
+            maxSocket = std::max(maxSocket, discoverySocket_);
+        }
+        
+        if (select(maxSocket + 1, &fds, nullptr, nullptr, &timeout) > 0)
+        {
+            readPendingPackets_(&fds);
         }
     }
 
     helper_->clearHelperRealTime();
 }
 
-void FlexVitaTask::readPendingPackets_()
+void FlexVitaTask::readPendingPackets_(fd_set* fds)
 { 
     // Process if there are pending datagrams in the buffer
     int ctr = MAX_VITA_PACKETS_TO_SEND;
@@ -308,15 +335,41 @@ void FlexVitaTask::readPendingPackets_()
             packetIndex_ = 0;
         }
     
-        auto rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
-        if (rv > 0)
+        int rv = 0;
+        if (FD_ISSET(socket_, fds))
         {
-            // Queue up packet for future processing.
-            onReceiveVitaMessage_(packet, rv);
+            rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
+            if (rv > 0)
+            {
+                // Queue up packet for future processing.
+                onReceiveVitaMessage_(packet, rv);
+            }
+            else
+            {
+                break;
+            }
         }
-        else
+
+        packet = &packetArray_[packetIndex_++];
+        assert(packet != nullptr);
+
+        if (packetIndex_ == MAX_VITA_PACKETS)
         {
-            break;
+            packetIndex_ = 0;
+        }
+
+        if (FD_ISSET(discoverySocket_, fds))
+        {
+            rv = recv(discoverySocket_, (char*)packet, sizeof(vita_packet), 0);
+            if (rv > 0)
+            {
+                // Queue up packet for future processing.
+                onReceiveVitaMessage_(packet, rv);
+            }
+            else
+            {
+                break;
+            }
         }
     }
 }
@@ -382,6 +435,13 @@ void FlexVitaTask::radioConnected(const char* ip)
         else
         {
             log_info("Connected to radio successfully");
+        }
+
+        // Close discovery socket as it's no longer needed
+        if (discoverySocket_ > -1)
+        {
+            close(discoverySocket_);
+            discoverySocket_ = -1;
         }
     });
 }

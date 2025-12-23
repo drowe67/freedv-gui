@@ -42,7 +42,7 @@ public:
     
     enum { VITA_PORT = 4992 }; // Default VITA port if we're discovering other radios on the network.
     
-    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort);
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.
@@ -81,6 +81,7 @@ private:
     paCallBackData callbackData_;
     struct sockaddr_in radioAddress_;
     int socket_;
+    int discoverySocket_;
     std::string ip_;
     uint32_t rxStreamId_;
     uint32_t txStreamId_;
@@ -94,7 +95,6 @@ private:
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
     bool pendingEndTx_;
-    bool randomUdpPort_;
     int udpPort_;
     std::map<uint32_t, uint32_t> txStreamIds_; // txIn -> txOut
     std::map<uint32_t, uint32_t> rxStreamIds_; // rxIn -> rxOut
@@ -116,7 +116,7 @@ private:
     void disconnect_();
     
     void rxTxThreadEntry_();
-    void readPendingPackets_();
+    void readPendingPackets_(fd_set* fds);
     void sendAudioOut_();
     
     void generateVitaPackets_(bool tx, uint32_t streamId);

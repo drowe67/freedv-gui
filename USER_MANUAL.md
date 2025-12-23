@@ -888,6 +888,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
+    * Flex: use random port for VITA socket after connect. (PR #1141)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
