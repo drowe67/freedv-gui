@@ -877,12 +877,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
     * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
     * Avoid data race when terminating application. (PR #1140)
+    * FreeDV Reporter: left-align cardinal directions. (PR #1139)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
-    * FreeDV Reporter: Combine Version and Status columns to save horizontal space. (PR #1132)
     * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
     * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
