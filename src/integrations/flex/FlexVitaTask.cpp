@@ -233,7 +233,20 @@ void FlexVitaTask::openSocket_()
     assert(rv != -1);
 
     // Get local port for main socket
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    ourSocketAddress.sin_family = AF_INET;
+    ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    ourSocketAddress.sin_port = htons(0);
+    rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
+    if (rv == -1)
+    {
+        auto err = errno;
+        log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+    }
+    assert(rv != -1);
+
     socklen_t bindAddrLen = sizeof(ourSocketAddress);
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
     rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
     if (rv == -1)
     {
@@ -242,7 +255,7 @@ void FlexVitaTask::openSocket_()
     }
     assert(rv != -1);
 
-    udpPort_ = ntohl(ourSocketAddress.sin_port);
+    udpPort_ = ntohs(ourSocketAddress.sin_port);
 
     fcntl (socket_, F_SETFL , O_NONBLOCK);
     fcntl (discoverySocket_, F_SETFL , O_NONBLOCK);
