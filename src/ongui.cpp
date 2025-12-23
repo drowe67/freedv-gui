@@ -34,7 +34,7 @@ extern int   g_analog;
 extern std::atomic<int>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern bool g_queueResync;
+extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
@@ -1278,7 +1278,7 @@ void MainFrame::OnReSync(wxCommandEvent&)
         
         // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
         // the next execution of the TX/RX loop.
-        g_queueResync = true;
+        g_queueResync.store(true, std::memory_order_release);
     }
 }
 

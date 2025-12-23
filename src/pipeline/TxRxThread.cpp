@@ -88,7 +88,7 @@ extern bool g_recFileFromModulator;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
-extern bool g_queueResync;
+extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
@@ -806,9 +806,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //  RX side processing --------------------------------------------
     //
     
-    if (g_queueResync)
+    if (g_queueResync.load(std::memory_order_acquire))
     {
-        g_queueResync = false;
+        g_queueResync.store(std::memory_order_release);
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }
