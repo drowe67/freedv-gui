@@ -28,6 +28,7 @@
 #include <sstream>
 #include <cinttypes>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
@@ -54,6 +55,13 @@ using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
 bool endingTx;
+bool exitingApplication;
+
+void OnSignalExit(int)
+{
+    // Infinite loop at bottom will check for this and trigger cleanup
+    exitingApplication = true;
+}
 
 struct CallsignReporting
 {
@@ -95,6 +103,16 @@ int main(int, char**)
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
+
+    // Override signal handlers. Needed to ensure we can properly
+    // clean up the waveform if the user wants to exit.
+    log_info("Setting up signal handlers...");
+    struct sigaction action = {
+        .sa_handler = &OnSignalExit,
+        .sa_mask = 0,
+        .sa_flags = SA_RESTART
+    };
+    sigaction(SIGINT, &action, nullptr);
     
     log_info("Creating RADE object");
     char modelFile[1];
@@ -261,12 +279,16 @@ int main(int, char**)
 
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         
-    for(;;)
+    while (!exitingApplication)
     {
-        std::this_thread::sleep_for(3600s);
+        std::this_thread::sleep_for(100ms);
     }
     
-    // TBD - the below isn't called since we're in an infinite loop above.
+    // Stop TX/RX threads. Needed to prevent RADE calls after finalize.
+    txThread.stop();
+    rxThread.stop();
+
+    // Clean up RADE
     rade_close(radeObj);
     rade_finalize();
     return 0;
