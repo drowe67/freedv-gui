@@ -89,6 +89,9 @@ TcpConnectionHandler::~TcpConnectionHandler()
     auto fut = disconnect();
     fut.wait();
 
+    // Make absolutely sure there's nothing else in the queue before release.
+    waitForAllTasksComplete_();
+    
 #if defined(WIN32)
     WSACleanup();
 #endif // defined(WIN32)
