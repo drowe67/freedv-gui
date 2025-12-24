@@ -25,6 +25,8 @@
 #include <wx/display.h>
 #include <wx/clipbrd.h>
 #include <wx/wrapsizer.h>
+#include <wx/menuitem.h>
+#include <wx/numdlg.h> 
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -400,16 +402,39 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     for (auto& item : menus)
     {
-        auto menuItem = showMenu_->Append(wxID_HIGHEST + item.first, item.second, wxEmptyString, wxITEM_CHECK);
+        auto menuItem = showMenu_->Append(wxID_HIGHEST + 100 + item.first, item.second, wxEmptyString, wxITEM_CHECK);
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(item.first));
-        this->Connect(wxID_HIGHEST + item.first, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnShowColumn));
+        this->Connect(wxID_HIGHEST + 100 + item.first, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnShowColumn));
 
         if (item.first == LAST_RX_MODE_COL && !wxGetApp().appConfiguration.enableLegacyModes)
         {
             menuItem->Enable(false);
         }
     }
-    
+
+    std::vector<int> idleLongerThanMinutes { 30, 60, 90, 120 };
+    filterMenu_ = new wxMenu();
+    idleLongerThanMenu_ = new wxMenu();
+    menuBar_->Append(filterMenu_, _("Filter"));
+    filterMenu_->Append(wxID_ANY, _("Idle more than (minutes)..."), idleLongerThanMenu_);
+
+    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_RADIO);
+    menuItem->Check(!wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
+    bool foundChecked = menuItem->IsChecked();
+    this->Connect(menuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+
+    for (auto& item : idleLongerThanMinutes)
+    {
+        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_RADIO);
+        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes == item);
+        foundChecked |= menuItem->IsChecked();
+        this->Connect(wxID_HIGHEST + 200 + item, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+    }
+
+    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_RADIO);
+    menuItem->Check(!foundChecked);
+    this->Connect(wxID_HIGHEST + 200, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
@@ -682,7 +707,7 @@ void FreeDVReporterDialog::refreshLayout()
     // Hide/show legacy columns
     item = getColumnForModelColId_(LAST_RX_MODE_COL);
     item->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(LAST_RX_MODE_COL));
-    auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + LAST_RX_MODE_COL);
+    auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + 100 + LAST_RX_MODE_COL);
     menuItem->Enable(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Refresh all data based on current settings and filters.
@@ -710,7 +735,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& re
 void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
 {
     // Invert visibility value
-    auto columnId = event.GetId() - wxID_HIGHEST;
+    auto columnId = event.GetId() - wxID_HIGHEST - 100;
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId) = 
         !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
 
@@ -723,6 +748,66 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
     col->SetHidden(!newColValue);
+}
+
+void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
+{
+    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
+
+    if (event.GetId() >= (wxID_HIGHEST + 200))
+    {
+        auto numMinutes = event.GetId() - wxID_HIGHEST - 200;
+        if (numMinutes == 0)
+        {
+            // need to ask user for number of minutes
+            numMinutes = 
+                wxGetNumberFromUser(wxEmptyString, _("Enter number of minutes: "), _("Max Idle Time"), wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes, 1, 1440, this);
+            if (numMinutes > -1)
+            {
+                auto menuItems = idleLongerThanMenu_->GetMenuItems();
+                bool found = false;
+                for (auto& item : menuItems)
+                {
+                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                    {
+                        found = true;
+                        item->Check(true);
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    menuItem->Check(true);
+                }
+
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
+                    numMinutes;
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = true;
+            }
+            else
+            {
+                // No changes needed.
+                return;
+            }
+        }
+        else
+        {
+            menuItem->Check(true);
+
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
+                numMinutes;
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = true;
+        }
+    }
+    else
+    {
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
+        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
+    }
+
+    // Allow changes to take effect.
+    FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+    model->refreshAllRows();
 }
 
 void FreeDVReporterDialog::DeselectItem(wxMouseEvent& event)
@@ -1046,7 +1131,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
             if (parent_->IsShownOnScreen())
             {
-                bool newVisibility = !isFiltered_(reportData->frequency);
+                bool newVisibility = !isFiltered_(reportData);
                 if (newVisibility != reportData->isVisible)
                 {
                     reportData->isVisible = newVisibility;
@@ -1853,27 +1938,49 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     return bandForFreq;
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
+bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
 {
-    auto bandForFreq = parent_->getFilterForFrequency_(freq);
-   
+    bool isHidden = false;
     if (!parent_->IsShownOnScreen())
     {
         return true;
     }
 
-    if (currentBandFilter_ == FilterFrequency::BAND_ALL)
+    if (currentBandFilter_ != FilterFrequency::BAND_ALL)
     {
-        return false;
-    }
-    else
-    {
-        return 
+        auto freq = data->frequency;
+        auto bandForFreq = parent_->getFilterForFrequency_(freq);
+
+        isHidden =  
             (bandForFreq != currentBandFilter_) ||
             (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq &&
                 freq != filteredFrequency_);
     }
+
+    // If enabled, hide rows that exceed the max idle time.
+    if (!isHidden && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
+    {
+        // "Idle" is defined as someone who either:
+        // * Connected more than X minutes ago and has yet to transmit, or
+        // * Last transmitted more than X minutes ago.
+        int maxIdleTimeMins = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+        wxDateTime maxIdleDate;
+        wxDateTime origDate;
+        if (data->lastTxDate.IsValid())
+        {
+            origDate = data->lastTxDate;
+        }
+        else
+        {
+            origDate = data->connectTime;
+        }
+
+        maxIdleDate = origDate.Add(wxTimeSpan(maxIdleTimeMins / 60, maxIdleTimeMins % 60));
+        isHidden = maxIdleDate.IsEarlierThan(wxDateTime::Now());
+    }
+
+    return isHidden;
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetCardinalDirection_(int degrees)
@@ -2383,7 +2490,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         }
 
         // Refresh filter state
-        bool newVisibility = !isFiltered_(kvp.second->frequency);
+        bool newVisibility = !isFiltered_(kvp.second);
         if (newVisibility != kvp.second->isVisible)
         {
             kvp.second->isVisible = newVisibility;
@@ -2583,7 +2690,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
-        temp->isVisible = !isFiltered_(temp->frequency);
+        temp->isVisible = !isFiltered_(temp);
         temp->isPendingUpdate = false;
 
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
@@ -2717,7 +2824,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             iter->second->lastUpdate = lastUpdateTime;
 
             wxDataViewItem dvi(iter->second);
-            bool newVisibility = !isFiltered_(iter->second->frequency);
+            bool newVisibility = !isFiltered_(iter->second);
             if (newVisibility != iter->second->isVisible)
             {
                 iter->second->isVisible = newVisibility;
