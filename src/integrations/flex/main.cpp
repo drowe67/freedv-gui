@@ -107,11 +107,10 @@ int main(int, char**)
     // Override signal handlers. Needed to ensure we can properly
     // clean up the waveform if the user wants to exit.
     log_info("Setting up signal handlers...");
-    struct sigaction action = {
-        .sa_handler = &OnSignalExit,
-        .sa_mask = 0,
-        .sa_flags = SA_RESTART
-    };
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = &OnSignalExit;
+    action.sa_flags = SA_RESTART;
     sigaction(SIGINT, &action, nullptr);
     
     log_info("Creating RADE object");
