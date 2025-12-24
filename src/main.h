@@ -342,6 +342,7 @@ class MainFrame : public TopFrame
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
+        void StopRecFileFromDecoder();
         
         bool isReceiveOnly();
         
@@ -401,7 +402,8 @@ class MainFrame : public TopFrame
         void OnHelp( wxCommandEvent& event ) override;
 
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
-        void OnTogBtnRecord( wxCommandEvent& event ) override;
+        void OnTogBtnRecordRaw( wxCommandEvent& event ) override;
+        void OnTogBtnRecordDecoded( wxCommandEvent& event ) override;
 
         virtual void OnLogQSO(wxCommandEvent& event) override;
         

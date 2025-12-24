@@ -130,7 +130,8 @@ class TopFrame : public wxFrame
         wxButton      *m_BtnReSync;
         wxButton      *m_btnCenterRx;
         
-        wxToggleButton      *m_audioRecord;
+        wxToggleButton      *m_audioRecordRaw;
+        wxToggleButton      *m_audioRecordDecoded;
         
         wxButton*     m_logQSO;
 
@@ -193,7 +194,8 @@ class TopFrame : public wxFrame
 
         virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         
-        virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTogBtnRecordRaw( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTogBtnRecordDecoded( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnLogQSO(wxCommandEvent& event) { event.Skip(); }
 

@@ -504,12 +504,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Audio Recording/Playback
     //------------------------------
-    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio Recording"), wxDefaultPosition, wxSize(100,-1));
     wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
     
-    m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
-    m_audioRecord->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
-    sbSizerAudioRecordPlay->Add(m_audioRecord, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    m_audioRecordRaw = new wxToggleButton(audioBox, wxID_ANY, _("Raw"), wxDefaultPosition, wxDefaultSize, 0);
+    m_audioRecordRaw->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
+    sbSizerAudioRecordPlay->Add(m_audioRecordRaw, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+
+    m_audioRecordDecoded = new wxToggleButton(audioBox, wxID_ANY, _("Decoded"), wxDefaultPosition, wxDefaultSize, 0);
+    m_audioRecordDecoded->SetToolTip(_("Records decoded audio from received over the air signals."));
+    sbSizerAudioRecordPlay->Add(m_audioRecordDecoded, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
     
     leftSizer->Add(sbSizerAudioRecordPlay, 0, wxALL|wxEXPAND, 2);
     
@@ -859,8 +863,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_ckboxSNR->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(TopFrame::OnCheckSNRClick), NULL, this);
 
-    m_audioRecord->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecord), NULL, this);
-    
+    m_audioRecordRaw->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecordRaw), NULL, this);
+    m_audioRecordDecoded->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecordDecoded), NULL, this);
+
     m_logQSO->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnLogQSO), NULL, this);
     
     m_togBtnOnOff->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnOnOff), NULL, this);
@@ -965,7 +970,8 @@ TopFrame::~TopFrame()
     
     m_btnCenterRx->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
 
-    m_audioRecord->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecord), NULL, this);
+    m_audioRecordRaw->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecordRaw), NULL, this);
+    m_audioRecordDecoded->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecordDecoded), NULL, this);
     
     m_logQSO->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnLogQSO), NULL, this);
 
