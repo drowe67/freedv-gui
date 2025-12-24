@@ -24,6 +24,7 @@
 #include <map>
 #include <string>
 #include <ctime>
+#include <poll.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -116,7 +117,7 @@ private:
     void disconnect_();
     
     void rxTxThreadEntry_();
-    void readPendingPackets_(fd_set* fds);
+    void readPendingPackets_(struct pollfd* fds, int numFds);
     void sendAudioOut_();
     
     void generateVitaPackets_(bool tx, uint32_t streamId);
