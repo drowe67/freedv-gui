@@ -878,6 +878,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
     * Avoid data race when terminating application. (PR #1140)
     * FreeDV Reporter: left-align cardinal directions. (PR #1139)
+    * Flex: use poll() instead of select(). (PR #1143)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
