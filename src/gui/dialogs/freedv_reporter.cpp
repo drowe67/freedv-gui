@@ -1263,7 +1263,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
     wxDataViewItem item;
     wxDataViewColumn* col;
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
-    if (item.IsOk())
+    if (item.IsOk() && IsActive())
     {
         // Linux workaround to avoid inadvertent selections.
         isSelectionPossible_ = true;
