@@ -33,7 +33,7 @@ public:
     SerialPortInRigController(std::string serialPort, bool ctsPos);
     virtual ~SerialPortInRigController();
 
-    virtual void ptt(bool state) override { /* does not support output */ }
+    virtual void ptt(bool) override { /* does not support output */ }
     virtual int getRigResponseTimeMicroseconds() override { return 0; /* no support for output */ }
 
 private:
@@ -43,7 +43,12 @@ private:
     bool ctsPos_;
     bool currentPttInputState_;
     bool firstPoll_;
-    
+
+    // Override to skip termios configuration.
+    // This is to work around a bug in the tty0tty kernel driver that causes
+    // deadlocks if tcgetattr or tcsetattr are called.
+    virtual bool shouldConfigureTermios_() const override { return false; }
+
     bool getCTS_(void);
 
     void pollThreadEntry_();

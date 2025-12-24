@@ -395,6 +395,19 @@ FreeDV will also show the callsigns of previously received signals. To view thos
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
 
+# QSO Logging
+
+FreeDV supports integration with external logging utilities that support the WSJT-X logging protocol (for example,
+[KLog](https://github.com/ea4k/klog). This can be enabled by going to Tools->Options->Reporting and enabling 
+the "Enable QSO Logging" option. By default, it sends packets to "localhost" (127.0.0.1) port 2237, but this
+can be changed if the logging computer is elsewhere on the network.
+
+Once FreeDV decodes a callsign, it will appear in the drop-down list on the bottom of the main window. To log
+this contact (or any other contact received by the application), simply choose that callsign from the list and
+click the "Log QSO" button on the left side of the window. You will then see a dialog box that will let you 
+enter any additional information about the contact. Upon clicking the OK button, this information will be 
+transmitted to your logging tool.
+
 # Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
@@ -802,17 +815,13 @@ Have you removed/changed USB audio devices? If you remove/change USB audio devic
 
 ## FreeDV can't be opened on macOS because the developer cannot be verified
 
-From January 2020 Apple is enforcing notarization for all macOS applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+From January 2020 Apple is enforcing notarization for all macOS applications. While official releases of FreeDV are signed,
+other types of builds may not be. This may result in a dialog box similar to the below:
 
 ![Notarization Error](contrib/osx_notarization1.png)
 
-Security & Privacy shows the Open Anyway option for FreeDV:
-
-![Security and Privacy](contrib/osx_notarization2.png)
-
-![Open FreeDV](contrib/osx_notarization3.png)
-
-Or you can use command line options:
+(or on later releases of macOS) a message indicating that the FreeDV binary is "corrupt". To override the notarization requirement
+and execute FreeDV, run the following from Terminal:
 
 ```
 xattr -d com.apple.quarantine FreeDV.app
@@ -852,7 +861,40 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.3 TBD 2025
+## V2.2.0 TBD TBD
+
+1. Bugfixes:
+    * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
+    * Reduce RADE RX losses due to resampling. (PR #1094)
+    * Use same sample rate for both recording RX and TX. (PR #1107)
+    * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
+    * Suppress background for fake rightmost column. (PR #1116)
+    * Emit VOX tone only when PTT is enabled. (PR #1122)
+    * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
+    * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
+    * Fix hidden/clipped axis labels on plots. (PR #1110)
+    * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
+    * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
+    * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
+    * Avoid data race when terminating application. (PR #1140)
+    * FreeDV Reporter: left-align cardinal directions. (PR #1139)
+    * Flex: use poll() instead of select(). (PR #1143)
+2. Enhancements:
+    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
+    * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
+    * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
+    * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
+    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
+    * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
+    * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
+    * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
+    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
+    * Flex: use random port for VITA socket after connect. (PR #1141)
+
+*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
+again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
+
+## V2.1.0 November 2025
 
 1. Bugfixes:
     * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
@@ -861,137 +903,25 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
     * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
     * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
+    * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
+    * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
 2. Enhancements:
-    * Additional cleanup of code that runs in real-time. (PR #1039, #1068)
+    * Additional cleanup of code that runs in real-time. (PR #1039, #1068, #1077)
     * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
     * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
     * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
-    * Added implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018)
-
-## V2.0.2 October 2025
-
-1. Bugfixes:
-    * FreeDV Reporter: Use numeric sort for SNR. (PR #979)
-    * FreeDV Reporter: Fix issue causing users to be logged in even when not decoding. (PR #993)
-    * FreeDV Reporter/Linux: Fix issue causing random rows to be highlighted. (PR #993)
-    * FreeDV Reporter/macOS: Fix issue causing entire table to be redrawn on user disconnect. (PR #993)
-    * Fix compile failure when compiling from tarball.(PR #985)
-    * Fix failing macOS tests on CI environment. (PR #1006)
-    * Update Linux/macOS audio handling to match Windows more closely. (PR #1007)
-    * macOS: Fix spurious error on startup when changing locales. (PR #1010)
-    * Prevent lockup/crash when testing Hamlib in PTT Config window. (PR #1016)
-    * Linux: fix rendering bug for mic/speaker slider when transitioning from TX to RX. (PR #1021)
-    * Various unit test fixes to reduce failure rate in CI environment. (PR #1023)
-    * Fix waterfall flicker on macOS. (PR #1037, #1040)
-    * Add timeout for TCP recv() so that FreeDV doesn't hang on exit. (PR #1038)
-    * Fix various issues with bottom received callsign list. (PR #1040)
-2. Enhancements:
-    * Add Mic/Speaker volume control to main window. (PR #980, #1028)
-    * Move less used Spectrum plot configuration to free up space on main window. (PR #996)
-    * Further audio performance improvements. (PR #975, #1041)
-    * Add Automatic Gain Control (AGC) to microphone input. (PR #997, #1024)
-    * Linux: Search for and list serial devices from /dev/serial for PTT config. (PR #999)
-    * Add RADEV1 sample file and remove samples for unsupported modes. (PR #998)
-    * Various GUI and FreeDV Reporter performance improvements. (PR #1002, #1026, #1033, #1035)
-    * Use rigerror2() for friendlier Hamlib errors. (PR #1020)
+    * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018, #1088)
+    * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
+    * Support bulk updates from FreeDV Reporter server. (PR #1079)
+    * Hide Stats box by default. (PR #1081)
+    * Always allow frequency drop-down to be used, even if CAT and reporting are disabled. (PR #1080, #1093)
 3. Build system:
-    * Update Hamlib to v4.6.5. (PR #1030)
-    * macOS: Upgrade PyTorch to 2.7 (and NumPy to 2.3). (PR #1003)
-4. Documentation:
-    * Add pkgconf dependency for macOS instructions. (PR #1013)
+    * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
+    * Force all compiler warnings to be errors. (PR #1076)
+    * Enable clang-tidy scans on codebase. (PR #1086)
+    * Update CI process to enable automatic code signing of macOS and Linux builds. (PR #1078)
 
-## V2.0.1 July 2025
-
-1. Bugfixes:
-    * Reduce latency when going between TX->RX with Hamlib configured. (PR #893)
-    * Reduce usage of non-real time safe code. (PR #900)
-    * FreeDV Reporter: Force explicit background color (avoids unwanted mouseover highlights on Linux). (PR #911)
-    * Fix compiler errors when using wxWidgets 3.0. (PR #914)
-    * Unit tests: Increase sleep time before killing recording to resolve macOS test failures. (PR #917)
-    * Fix typo causing RX radio device to remain open. (PR #918)
-    * Fix WASAPI errors on some machines by supporting audio mix formats other than 16-bit integer. (PR #919)
-    * Reduce CPU usage of FreeDV Reporter window by only re-sorting if we actually get new data from the server. (PR #915)
-    * FreeDV Reporter: Fix issue with first column not being aligned properly with other columns. (PR #922)
-    * FreeDV Reporter: Work around Linux bug preventing some flag emojis from being fully deleted on backspace. (PR #931)
-    * Fix GTK+ assertion after FreeDV Reporter has been open for a long time. (PR #929, #945)
-    * Easy Setup: Use card names instead of device names for generating device list. (PR #932)
-    * Fix compiler error on Fedora 42 when using Hamlib packages. (PR #936, #940; thanks @jaspejavier!)
-    * Legacy FreeDV modes: ensure that sync is obtained in an atomic manner. (PR #939)
-    * Fix intermittent crash on Windows when pushing Start. (PR #943, #972)
-    * FreeDV Reporter: Defer deallocation of disconnected users. (PR #948)
-    * FreeDV Reporter: Be explicit about the use of signed char for reporting. (PR #953)
-    * Fix issue preventing rtkit from being compiled-in on Ubuntu 22.04. (PR #954)
-    * PulseAudio: Make sure we can only do one stop() at a time. (PR #955, #961)
-    * macOS: Fix audio-related crash with certain devices. (PR #958, #960)
-    * PulseAudio/PortAudio: Only support default sample rate. (PR #964)
-    * Force left-to-right rendering of UI elements. (PR #966)
-    * macOS: improve behavior with Bluetooth devices. (PR #971)
-    * Windows: Fix intermittent disappearance of audio devices. (PR #974)
-    * Fix crash when playing back files with higher sample rates than configured. (PR #977)
-2. Documentation:
-    * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
-    * Add note about using XWayland on Linux. (PR #926)
-    * Add notes for Linux users having trouble with Hamlib. (PR #968)
-3. Enhancements:
-    * General improvements to backend audio processing to further reduce dropouts. (PR #949, #957)
-    * Disable UI controls not supported by RADE to avoid user confusion. (PR #962)
-4. Build system:
-    * Update Hamlib to 4.6.3 (macOS/Windows). (PR #930)
-    * Reload current Git hash every time it changes. (PR #935, #951)
-    * Add infrastructure for generating AppImage builds. (PR #937)
-    * Make explicit various dependencies to avoid compile race condition. (PR #957, #959)
-    * Add additional RADE loss tests. (PR #969)
-
-## V2.0.0 June 2025
-
-This version contains the first official release of the RADE V1 mode previously trialled over several 
-preview releases. Radio Autoencoder (RADE) technology is a new approach to sending speech over HF radio. 
-It combines Machine Learning (ML) with classical DSP to send high quality speech over HF radio at SNRs 
-as low as -2dB in a bandwidth of 1500 Hz. More information about Radio Autoencoder can be found at 
-[https://freedv.org/radio-autoencoder/](https://freedv.org/radio-autoencoder/).
-
-1. Bugfixes:
-    * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
-    * Fix bug preventing proper time display in FreeDV Reporter on macOS. (PR #748)
-    * Hamlib: Improve behavior with Icom rigs, serial port PTT. (PR #875)
-    * Fix various audio dropout issues, especially on Linux. (PR #761)
-    * Fix issue preventing non-ASCII text from appearing properly in FreeDV Reporter messages. (PR #812)
-    * Don't adjust Msg column width when user disconnects. (PR #828)
-    * Fix issue preventing suppression of the Msg tooltip for non-truncated messages. (PR #829)
-    * Preserve Hamlib rig names on startup to guard against changes by Hamlib during execution. (PR #834)
-    * Fix dropouts related to virtual audio cables. (PR #840)
-    * Report "unk" for mode on Hamlib disconnect. (PR #851)
-    * Fix deadlocks and crashes while using Play/Record buttons in Audio Options window. (PR #871)
-    * Fix issue causing PTT button to remain active after pushing it. (PR #871)
-    * Fix rendering issue causing random spikes in From Mic plot. (PR #871)
-2. Enhancements:
-    * Show green line indicating RX frequency. (PR #725)
-    * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
-    * Add monitor volume adjustment. (PR #733)
-    * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
-    * If provided by user, add config file to titlebar. (PR #738)
-    * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
-    * Implement new logging framework. (PR #773)
-    * Windows: Detect whether microphone permissions have been granted and display error if not. (PR #790)
-    * Add rig control option to prevent auto-adjustment of the radio's current mode. (PR #809)
-    * Update default 80 and 160m calling frequencies. (PR #831)
-    * Shorten PulseAudio/pipewire app name. (PR #843)
-    * Hamlib: support CAT PTT via the Data port instead of Mic (needed for some older radios). (PR #875)
-    * macOS: Show /dev/tty.* devices in CAT/PTT options. (PR #883)
-    * Remove pre-PTT interrogation of frequency/mode to improve TX/RX switching time. (PR #898)
-3. Build system:
-    * Allow overriding the version tag when building. (PR #727)
-    * Update wxWidgets to 3.2.8. (PR #861)
-    * Update Hamlib to 4.6.2. (PR #834)
-    * Use optimal number of parallel builds during build process. (PR #842)
-4. Miscellaneous:
-    * Add issue template for SW bugs. (PR #759)
-    * Fix typos in user manual and code. (PR #859; thanks @dforsi)
-    * Removed deprecated modes: 700C, 800XA, 2020, 2020B (PR #889)
-
-*Note: Official Windows releases are now signed using Software Freedom Conservancy's code certificate. To validate that the installers and binary files are properly signed, right-click on the file, choose Properties and go to the 'Digital Signatures' tab.*
-
-## Earlier than V2.0.0
+## Earlier than V2.1.0
 
 See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to v1.9.0.
 

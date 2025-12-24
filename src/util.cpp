@@ -40,7 +40,7 @@ void clickTune(float freq) {
     log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
-bool MainApp::CanAccessSerialPort(std::string portName)
+bool MainApp::CanAccessSerialPort(std::string const& portName)
 {
     bool couldOpen = true;
     com_handle_t com_handle = COM_HANDLE_INVALID;
@@ -141,7 +141,7 @@ void MainFrame::OpenSerialPort(void)
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             wxGetApp().rigFrequencyController = nullptr;
             
-            wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string err) {
+            wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string const& err) {
                 std::string fullErrMsg = "Couldn't open serial port for PTT output: " + err; 
                 CallAfter([&]() 
                 {
@@ -168,7 +168,7 @@ void MainFrame::OpenPTTInPort(void)
                 (const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->c_str(),
                 wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS);
             
-            wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string err)
+            wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string const& err)
             {
                 std::string fullErr = "Couldn't open PTT input port: " + err;
                 CallAfter([&]() 
@@ -216,7 +216,7 @@ void MainFrame::ClosePTTInPort(void)
 extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO extern *g_rxDataOutFifo;
 
-char my_get_next_tx_char(void *callback_state) {
+char my_get_next_tx_char(void *) {
     short ch = 0;
 
     auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
@@ -224,7 +224,7 @@ char my_get_next_tx_char(void *callback_state) {
     return (char)ch;
 }
 
-void my_put_next_rx_char(void *callback_state, char c) {
+void my_put_next_rx_char(void *, char c) {
     short ch = (short)((unsigned char)c);
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
@@ -253,8 +253,8 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
 int resample(SpeexResamplerState *src,
             short      output_short[],
             short      input_short[],
-            int        output_sample_rate,
-            int        input_sample_rate,
+            int        ,
+            int        ,
             int        length_output_short, // maximum output array length in samples
             int        length_input_short
             )

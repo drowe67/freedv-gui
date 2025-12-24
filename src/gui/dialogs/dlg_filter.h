@@ -22,7 +22,7 @@
 #ifndef __FILTER_DIALOG__
 #define __FILTER_DIALOG__
 
-#include "main.h"
+#include "../../main.h"
 
 enum {disableQ = false, enableQ = true, disableFreq = false, enableFreq = true};
 
@@ -76,28 +76,29 @@ class FilterDlg : public wxDialog
 
         void    OnSpeexppEnable(wxScrollEvent& event);
         void    OnAgcEnable(wxScrollEvent& event);
+        void    OnBwExpandEnable(wxScrollEvent& event);
         void    On700C_EQ(wxScrollEvent& event);
 
-        void    OnMicInBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInBass, true); }
-        void    OnMicInBassGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInBass, true); }
-        void    OnMicInTrebleFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInTreble, true); }
-        void    OnMicInTrebleGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInTreble, true); }
-        void    OnMicInMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInMid, true); }
-        void    OnMicInMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInMid, true); }
-        void    OnMicInMidQScroll(wxScrollEvent& event) { sliderToQ(&m_MicInMid, true); }
-        void    OnMicInVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInVol, true); }
+        void    OnMicInBassFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInBass, true); }
+        void    OnMicInBassGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInBass, true); }
+        void    OnMicInTrebleFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInTreble, true); }
+        void    OnMicInTrebleGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInTreble, true); }
+        void    OnMicInMidFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInMid, true); }
+        void    OnMicInMidGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInMid, true); }
+        void    OnMicInMidQScroll(wxScrollEvent&) { sliderToQ(&m_MicInMid, true); }
+        void    OnMicInVolGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInVol, true); }
         
         void    OnMicInEnable(wxScrollEvent& event);
         void    OnMicInDefault(wxCommandEvent& event);
 
-        void    OnSpkOutBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutBass, false); }
-        void    OnSpkOutBassGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutBass, false); }
-        void    OnSpkOutTrebleFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutTreble, false); }
-        void    OnSpkOutTrebleGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutTreble, false); }
-        void    OnSpkOutMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutMid, false); }
-        void    OnSpkOutMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutMid, false); }
-        void    OnSpkOutMidQScroll(wxScrollEvent& event) { sliderToQ(&m_SpkOutMid, false); }
-        void    OnSpkOutVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutVol, false); }
+        void    OnSpkOutBassFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutBass, false); }
+        void    OnSpkOutBassGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutBass, false); }
+        void    OnSpkOutTrebleFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutTreble, false); }
+        void    OnSpkOutTrebleGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutTreble, false); }
+        void    OnSpkOutMidFreqScroll(wxScrollEvent&) { sliderToFreq(&m_SpkOutMid, false); }
+        void    OnSpkOutMidGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutMid, false); }
+        void    OnSpkOutMidQScroll(wxScrollEvent&) { sliderToQ(&m_SpkOutMid, false); }
+        void    OnSpkOutVolGainScroll(wxScrollEvent&) { sliderToGain(&m_SpkOutVol, false); }
         
         void    OnSpkOutEnable(wxScrollEvent& event);
         void    OnSpkOutDefault(wxCommandEvent& event);
@@ -117,6 +118,7 @@ class FilterDlg : public wxDialog
         wxCheckBox*   m_ckboxSpeexpp;
         wxCheckBox*   m_ckbox700C_EQ;
         wxCheckBox*   m_ckboxAgcEnabled;
+        wxCheckBox*   m_ckboxBwExpandEnabled;
         
         wxStdDialogButtonSizer* m_sdbSizer5;
         wxButton*     m_sdbSizer5OK;
@@ -140,9 +142,9 @@ class FilterDlg : public wxDialog
         void          setGamma(void); // sets slider and static text from m_gamma
         void          setCodec2(void);
  
-        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName, int max);
-        EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderBass);
-        void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *sbs, wxString controlName);
+        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString const& controlName, int max);
+        EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderBass);
+        void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *sbs, wxString const& controlName);
         wxNotebook    *m_auiNotebook;
         void          setFreq(EQ *eq);
         void          setGain(EQ *eq);

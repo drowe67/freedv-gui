@@ -120,6 +120,10 @@ public:
 
     ConfigurationDataElement<int> reportingUserMsgColWidth;
     
+    ConfigurationDataElement<bool> showDecodeStats;
+    
+    ConfigurationDataElement<bool> enableLegacyModes;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

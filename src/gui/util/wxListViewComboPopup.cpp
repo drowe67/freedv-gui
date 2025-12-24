@@ -60,7 +60,7 @@ void wxListViewComboPopup::OnMouseClick(wxMouseEvent& event)
 wxSize wxListViewComboPopup::GetAdjustedSize(
         int	minWidth,
         int	prefHeight,
-        int	maxHeight)
+        int	)
 {
     return wxSize(400 < minWidth ? minWidth : 400, prefHeight);
 }

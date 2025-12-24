@@ -11,17 +11,48 @@ concurrency:
     
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Debug
+  BUILD_TYPE: RelWithDebInfo
 
 jobs:
+  lint:
+    runs-on: macos-15
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install needed packages
+      run: |
+          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "20.1"
+
+    - name: Build freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        mkdir build_osx
+        cd build_osx
+        CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        # Partially build so we have all required .h and .c/.cpp files
+        make -j$(nproc) build_rade build_codec2 build_rade_integ
+    
+    - name: Run clang-tidy on codebase
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+        run-clang-tidy -p .
+
   test:
     strategy:
       fail-fast: false
       matrix:
         os: [macos-15]  # ARM64
-        sanitizer: [WITH_ASAN=0, WITH_ASAN=1]
+        sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -31,9 +62,9 @@ jobs:
     #  with:
     #    detached: true
 
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+    - name: Install needed packages
+      run: |
+        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
 
     - name: Install VB-Cable
       shell: bash
@@ -66,7 +97,12 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V --repeat until-pass:2
+          if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
+              export MAX_EXECUTION_TIMES=2
+          else
+              export MAX_EXECUTION_TIMES=1
+          fi
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=ignore_noninstrumented_modules=1 FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
     #- name: Zip up traces
     #  shell: bash
@@ -86,23 +122,63 @@ jobs:
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
     runs-on: macos-latest
+    env:
+      MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
 
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool numpy sox 
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
 
-    - name: Build universal freedv-gui
+    - name: Install needed packages
+      run: |
+        brew install automake libtool numpy sox 
+
+    - name: Initialize code signing infrastructure
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      env:
+        MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
+        MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
+        MACOS_CODE_SIGNING_CERTIFICATE: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_CERTIFICATE }}
+      run: |
+        security create-keychain -p actions macos-build.keychain
+        security default-keychain -s macos-build.keychain
+        security unlock-keychain -p actions macos-build.keychain
+        security set-keychain-settings -t 3600 -u macos-build.keychain
+        cat <<EOF >tmp.pem
+        ${{ env.MACOS_CODE_SIGNING_CERTIFICATE }}
+        EOF
+        openssl pkcs12 -export -in tmp.pem -out tmp.p12 -passout pass:xxxxxxxx
+        security import tmp.p12 -k ~/Library/Keychains/macos-build.keychain -P xxxxxxxx -T /usr/bin/codesign -T /usr/bin/productsign -f pkcs12
+        security set-key-partition-list -S apple-tool:,apple: -s -k actions macos-build.keychain
+        security find-identity -v macos-build.keychain
+        xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
+
+    - name: Build universal freedv-gui (unsigned)
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+
+    - name: Build universal freedv-gui (signed)
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
       run: |
           make release
+
+    - name: Validate DMG signature
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      run: |
+        codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg --verbose
 
     - name: Stash disk image
       uses: actions/upload-artifact@v4
@@ -118,7 +194,7 @@ jobs:
         os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: dist
+    needs: ['dist', 'lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -135,9 +211,9 @@ jobs:
           mkdir FreeDV-dmg
           hdiutil attach FreeDV.dmg -mountpoint FreeDV-dmg
           
-    - uses: gerlero/brew-install@v1
-      with:
-        packages: automake libtool sox
+    - name: Install needed packages
+      run: |
+        brew install automake libtool sox
 
     - name: Install VB-Cable
       shell: bash

@@ -25,6 +25,7 @@
 
 #include <functional>
 #include <vector>
+#include <utility>
 
 template<typename... FnArgs>
 class EventHandler
@@ -36,7 +37,7 @@ public:
     virtual ~EventHandler() = default;
     
     void operator() (FnArgs... args);
-    EventHandler<FnArgs...>& operator+=(FnType fn);
+    EventHandler<FnArgs...>& operator+=(FnType const& fn);
     void clear();
     
 private:
@@ -48,12 +49,12 @@ void EventHandler<FnArgs...>::operator() (FnArgs... args)
 {
     for (auto& fn : fnList_)
     {
-        fn(args...);
+        fn(std::forward<FnArgs>(args)...);
     }
 }
 
 template<typename... FnArgs>
-EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator+=(FnType fn)
+EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator+=(FnType const& fn)
 {
     fnList_.push_back(fn);
     return *this;

@@ -179,7 +179,7 @@ int64_t PortAudioDevice::getLatencyInMicroseconds()
     return latency;
 }
 
-int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
+int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *, PaStreamCallbackFlags statusFlags, void *userData)
 {
     PortAudioDevice* thisObj = static_cast<PortAudioDevice*>(userData);
     

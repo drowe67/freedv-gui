@@ -1,0 +1,5 @@
+vptr:wx/containr.h
+vptr:wx/window.h
+vptr:src/osx/core/colour.cpp
+vptr:src/osx/window_osx.cpp
+vptr:src/common/containr.cpp

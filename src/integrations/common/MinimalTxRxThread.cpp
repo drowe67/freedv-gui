@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            FlexTxRxThread.h
+// Name:            MinimalTxRxThread.cpp
 // Purpose:         Implements the main processing thread for audio I/O.
 //
 // Authors:         Mooneer Salem
@@ -23,19 +23,20 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
-#include "FlexTxRxThread.h"
+#include "MinimalTxRxThread.h"
 #include "../pipeline/paCallbackData.h"
 
-#include "../pipeline/AgcStep.h"
-#include "../pipeline/SpeexStep.h"
-#include "../pipeline/ResampleStep.h"
-#include "../pipeline/LevelAdjustStep.h"
-#include "../pipeline/RADEReceiveStep.h"
+#include "../../pipeline/AgcStep.h"
+#include "../../pipeline/SpeexStep.h"
+#include "../../pipeline/ResampleStep.h"
+#include "../../pipeline/LevelAdjustStep.h"
+#include "../../pipeline/RADEReceiveStep.h"
+#include "../../pipeline/BandwidthExpandStep.h"
 
-#include "../util/logging/ulog.h"
-#include "../os/os_interface.h"
+#include "../../util/logging/ulog.h"
+#include "../../os/os_interface.h"
 
-#include "../pipeline/pipeline_defines.h"
+#include "../../pipeline/pipeline_defines.h"
 
 #include "codec2_alloc.h"
 
@@ -45,13 +46,13 @@ bool g_eoo_enqueued;
 
 static const float TxScaleFactor_ = 2.0;
 
-int FlexTxRxThread::getTxNNomModemSamples() const
+int MinimalTxRxThread::getTxNNomModemSamples() const
 {
     const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
     return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
 }
 
-int FlexTxRxThread::getRxNumSpeechSamples() const
+int MinimalTxRxThread::getRxNumSpeechSamples() const
 {
     return 1920;
 }
@@ -66,7 +67,7 @@ int FlexTxRxThread::getRxNumSpeechSamples() const
 
 #define ENABLE_FASTER_PLOTS
 
-void FlexTxRxThread::initializePipeline_()
+void MinimalTxRxThread::initializePipeline_()
 {
     pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
     
@@ -85,19 +86,22 @@ void FlexTxRxThread::initializePipeline_()
     else
     {
         auto radeRxStep = new RADEReceiveStep(rade_, farganState_, radeText_, +[](RADEReceiveStep* step) FREEDV_NONBLOCKING { 
-            FlexTxRxThread* thisObj = (FlexTxRxThread*)step->getStateObj();
+            MinimalTxRxThread* thisObj = (MinimalTxRxThread*)step->getStateObj();
             thisObj->snr_.store(step->getSnr(), std::memory_order_release);
             thisObj->sync_.store(step->getSync(), std::memory_order_release); 
         });
         radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
-        
+      
+        auto bwExpandStep = new BandwidthExpandStep();
+        pipeline_->appendPipelineStep(bwExpandStep);
+
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
     }
 }
 
-void* FlexTxRxThread::Entry()
+void* MinimalTxRxThread::Entry()
 {
     // Get raw pointer so we don't need to constantly access the shared_ptr
     // and thus constantly increment/decrement refcounts.
@@ -118,8 +122,8 @@ void* FlexTxRxThread::Entry()
 
 #if defined(__linux__)
     const char* threadName = nullptr;
-    if (m_tx) threadName = "FreeDV txThread";
-    else threadName = "FreeDV rxThread";
+    if (m_tx) threadName = "FDV txThread";
+    else threadName = "FDV rxThread";
     pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
@@ -167,7 +171,7 @@ void* FlexTxRxThread::Entry()
 }
 
 #if defined(ENABLE_PROCESSING_STATS)
-void FlexTxRxThread::resetStats_()
+void MinimalTxRxThread::resetStats_()
 {
     numTimeSamples_ = 0;
     minDuration_ = 1e9;
@@ -176,12 +180,12 @@ void FlexTxRxThread::resetStats_()
     sumDoubleDuration_ = 0; 
 }
 
-void FlexTxRxThread::startTimer_()
+void MinimalTxRxThread::startTimer_()
 {
     timeStart_ = std::chrono::high_resolution_clock::now();
 }
 
-void FlexTxRxThread::endTimer_()
+void MinimalTxRxThread::endTimer_()
 {
     auto e = std::chrono::high_resolution_clock::now();
     auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - timeStart_).count();
@@ -199,7 +203,7 @@ void FlexTxRxThread::endTimer_()
     sumDuration_ += d; sumDoubleDuration_ += pow(d, 2);
 }
 
-void FlexTxRxThread::reportStats_()
+void MinimalTxRxThread::reportStats_()
 {
     if (numTimeSamples_ > 0)
     {
@@ -215,7 +219,7 @@ void FlexTxRxThread::reportStats_()
 }
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-void FlexTxRxThread::clearFifos_()
+void MinimalTxRxThread::clearFifos_()
 {
     if (m_tx)
     {
@@ -233,7 +237,7 @@ void FlexTxRxThread::clearFifos_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void FlexTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
+void MinimalTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -269,7 +273,7 @@ void FlexTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = getTxNNomModemSamples() * ((float)outputSampleRate_ / (float)RADE_MODEM_SAMPLE_RATE);
+        unsigned int nsam_one_modem_frame = (getTxNNomModemSamples() * outputSampleRate_) / RADE_MODEM_SAMPLE_RATE;
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
         assert(nsam_in_48 > 0);
@@ -351,7 +355,7 @@ void FlexTxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
     }
 }
 
-void FlexTxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
+void MinimalTxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -382,7 +386,7 @@ void FlexTxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
         clearFifos_();
     }
 
-    int nsam_one_speech_frame = getRxNumSpeechSamples() * ((float)outputSampleRate_ / (float)RADE_SPEECH_SAMPLE_RATE);
+    int nsam_one_speech_frame = (getRxNumSpeechSamples() * outputSampleRate_) / RADE_SPEECH_SAMPLE_RATE;
     auto outFifo = cbData_->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 

@@ -40,18 +40,20 @@ public:
     virtual ~SocketIoClient();
     
     void setAuthDictionary(yyjson_mut_doc* authJson);
-    void on(std::string eventName, SioMessageReceivedFn fn);
-    void emit(std::string eventName, yyjson_mut_val* params);
-    void emit(std::string eventName);
+    void on(std::string const& eventName, SioMessageReceivedFn fn);
+    void emit(std::string const& eventName, yyjson_mut_val* params);
+    void emit(std::string const& eventName);
     
     void setOnConnectFn(OnConnectionStateChangeFn fn);
     void setOnDisconnectFn(OnConnectionStateChangeFn fn);
+    
+    void fireEvent(std::string const& eventName, yyjson_val* params);
     
 protected:
     virtual void onConnect_() override;
     virtual void onDisconnect_() override;
     virtual void onReceive_(char* buf, int length) override;
-    
+        
 private:
     using WebSocketClient = websocketpp::client<websocketpp::config::custom_config>;
     using message_ptr = WebSocketClient::message_ptr;
@@ -64,7 +66,7 @@ private:
     OnConnectionStateChangeFn onDisconnectFn_;
     ThreadedTimer pingTimer_;
     
-    void handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg);
+    void handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl const& hdl, message_ptr const& msg);
     void handleSocketIoMessage_(char* ptr, int length);
     void handleEngineIoMessage_(char* ptr, int length);
 };

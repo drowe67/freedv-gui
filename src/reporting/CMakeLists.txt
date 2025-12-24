@@ -9,4 +9,5 @@ if(SIOCLIENT_ADD_DEPENDENCY)
 add_dependencies(fdv_reporting sioclient)
 endif(SIOCLIENT_ADD_DEPENDENCY)
 
-target_link_libraries(fdv_reporting PRIVATE yyjson)
+target_compile_options(fdv_reporting PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+target_link_libraries(fdv_reporting PRIVATE yyjson git_version)

@@ -92,6 +92,8 @@ private:
     struct timespec ts_;
     bool sleepFallback_;
 
+    void stopImpl_();
+
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamUnderflowCallback_(pa_stream *p, void *userdata);

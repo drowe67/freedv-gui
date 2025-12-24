@@ -27,6 +27,7 @@
 #include "FlexKeyValueParser.h"
 
 #include "../util/logging/ulog.h"
+#include "git_version.h"
 
 using namespace std::placeholders;
 using namespace std::chrono_literals;
@@ -83,7 +84,7 @@ void FlexTcpTask::onReceive_(char* buf, int length)
     }
 }
 
-void FlexTcpTask::socketFinalCleanup_(bool reconnect)
+void FlexTcpTask::socketFinalCleanup_(bool)
 {
     // Report disconnection
     activeSlice_ = -1;
@@ -92,6 +93,7 @@ void FlexTcpTask::socketFinalCleanup_(bool reconnect)
 
     responseHandlers_.clear();
     inputBuffer_.clear();
+    activeFreeDVSlices_.clear();
 
     commandHandlingTimer_.stop();
     pingTimer_.stop();
@@ -134,6 +136,21 @@ void FlexTcpTask::initializeWaveform_()
 
     // subscribe to GPS updates, needed for FreeDV Reporter
     sendRadioCommand_("sub gps all");
+
+    // Create SNR meter
+    sendRadioCommand_("meter create name=FreeDV_SNR type=WAVEFORM min=-99 max=99 unit=DB", [&](unsigned int rv, std::string const& res) {
+        if (rv == 0)
+        {
+            // success, get meter number and stream ID
+            uint16_t meterNumber = (uint16_t)strtol(res.c_str(), nullptr, 0);
+
+            // Pass these to caller to use in VITA packets
+            if (waveformSnrMeterIdentifiersFn_)
+            {
+                waveformSnrMeterIdentifiersFn_(*this, meterNumber, waveformSnrMeterIdentifiersState_);
+            }
+        }
+    });
 }
 
 void FlexTcpTask::cleanupWaveform_()
@@ -147,10 +164,11 @@ void FlexTcpTask::cleanupWaveform_()
         if (isLSB_) ss << "LSB";
         else ss << "USB";
         
-        sendRadioCommand_(ss.str().c_str(), [&](unsigned int rv, std::string message) {
+        sendRadioCommand_(ss.str().c_str(), [&](unsigned int, std::string const&) {
             // Recursively call ourselves again to actually remove the waveform
             // once we get a response for this command.
             activeSlice_ = -1;
+            activeFreeDVSlices_.clear();
             cleanupWaveform_();
         });
         
@@ -159,13 +177,13 @@ void FlexTcpTask::cleanupWaveform_()
     
     sendRadioCommand_("unsub slice all");
     sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int rv, std::string message) {
+    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string const&) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
 }
 
-void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::string underlyingMode)
+void FlexTcpTask::createWaveform_(std::string const& name, std::string const& shortName, std::string const& underlyingMode)
 {
     log_info("Creating waveform %s (abbreviated %s in SmartSDR)", name.c_str(), shortName.c_str());
 
@@ -173,30 +191,48 @@ void FlexTcpTask::createWaveform_(std::string name, std::string shortName, std::
     sendRadioCommand_(std::string("waveform remove ") + name);
 
     // Actually create the waveform.
-    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=2.0.0";
+    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=" + GetFreeDVVersion();
     std::string setPrefix = "waveform set " + name + " ";
-    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string message) {
+    sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string const& res) {
         if (rv == 0)
         {
+            std::stringstream paramsSS(res);
+            auto params = FlexKeyValueParser::GetCommandParameters(paramsSS, ' ');
+
+            log_info(
+                "Waveform registered, got IDs txin=%s txout=%s rxin=%s rxout=%s", 
+                params["tx_stream_in_id"].c_str(), params["tx_stream_out_id"].c_str(), 
+                params["rx_stream_in_id"].c_str(), params["rx_stream_out_id"].c_str());
+
+            uint32_t txInStreamId = strtol(params["tx_stream_in_id"].c_str(), nullptr, 0);
+            uint32_t rxInStreamId = strtol(params["rx_stream_in_id"].c_str(), nullptr, 0);
+            uint32_t txOutStreamId = strtol(params["tx_stream_out_id"].c_str(), nullptr, 0);
+            uint32_t rxOutStreamId = strtol(params["rx_stream_out_id"].c_str(), nullptr, 0);
+
+            if (waveformAddValidStreamIdentifiersFn_)
+            {
+                waveformAddValidStreamIdentifiersFn_(*this, txInStreamId, txOutStreamId, rxInStreamId, rxOutStreamId, waveformAddValidStreamIdentifiersState_);
+            }
+
             // Set the filter-related settings for the just-created waveform.
-            sendRadioCommand_(setPrefix + "tx=1");
+            sendRadioCommand_(setPrefix + "tx 1");
             sendRadioCommand_(setPrefix + "rx_filter depth=256");
             sendRadioCommand_(setPrefix + "tx_filter depth=256");
 
             // Link waveform to our UDP audio stream.
             std::stringstream ss;
-            ss << "udpport=" << vitaPort_;
+            ss << "udpport " << vitaPort_;
             sendRadioCommand_(setPrefix + ss.str().c_str());
         }
     });
 }
 
-void FlexTcpTask::sendRadioCommand_(std::string command)
+void FlexTcpTask::sendRadioCommand_(std::string const& command)
 {
-    sendRadioCommand_(command, std::function<void(int rv, std::string message)>());
+    sendRadioCommand_(command, std::function<void(int rv, std::string const& message)>());
 }
 
-void FlexTcpTask::sendRadioCommand_(std::string command, std::function<void(unsigned int rv, std::string message)> fn)
+void FlexTcpTask::sendRadioCommand_(std::string const& command, std::function<void(unsigned int rv, std::string const& message)> fn)
 {
     std::ostringstream ss;
 
@@ -204,7 +240,7 @@ void FlexTcpTask::sendRadioCommand_(std::string command, std::function<void(unsi
     ss << "C" << (sequenceNumber_) << "|" << command << "\n";
     
     send(ss.str().c_str(), ss.str().length());
-    responseHandlers_[sequenceNumber_++] = fn;
+    responseHandlers_[sequenceNumber_++] = std::move(fn);
     commandHandlingTimer_.stop();
     commandHandlingTimer_.start();
 }
@@ -263,7 +299,10 @@ void FlexTcpTask::processCommand_(std::string& command)
         // If we have a valid command handler, call it now
         if (responseHandlers_[seq])
         {
-            responseHandlers_[seq](rv, ss.str());
+            std::string resultStr;
+            std::getline(ss, resultStr);
+            resultStr.erase(0, 1); // erase | at beginning
+            responseHandlers_[seq](rv, resultStr);
         }
         responseHandlers_.erase(seq);
 
@@ -329,7 +368,15 @@ void FlexTcpTask::processCommand_(std::string& command)
                     {
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
                     }
-                    activeSlice_ = -1;
+                    activeFreeDVSlices_.erase(sliceId);
+                    if (activeFreeDVSlices_.size() > 0)
+                    {
+                        activeSlice_ = *activeFreeDVSlices_.begin();
+                    }
+                    else
+                    {
+                        activeSlice_ = -1;
+                    }
                 }
             }
             
@@ -356,6 +403,7 @@ void FlexTcpTask::processCommand_(std::string& command)
 
                         // User wants to use the waveform.
                         activeSlice_ = sliceId;
+                        activeFreeDVSlices_.insert(sliceId);
 
                         // Ensure that we connect to any reporting services as appropriate
                         uint64_t freqHz = atof(sliceFrequencies_[activeSlice_].c_str()) * 1000000;
@@ -377,7 +425,15 @@ void FlexTcpTask::processCommand_(std::string& command)
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
                     }
 
-                    activeSlice_ = -1;
+                    activeFreeDVSlices_.erase(sliceId);
+                    if (activeFreeDVSlices_.size() > 0)
+                    {
+                        activeSlice_ = *activeFreeDVSlices_.begin();
+                    }
+                    else
+                    {
+                        activeSlice_ = -1;
+                    }
                 }
             }
         }
@@ -461,9 +517,9 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-void FlexTcpTask::addSpot(std::string callsign)
+void FlexTcpTask::addSpot(std::string const& callsign)
 {
-    enqueue_([=, this]() {
+    enqueue_([=]() {
         if (activeSlice_ >= 0)
         {
             std::stringstream ss;

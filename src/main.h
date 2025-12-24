@@ -90,6 +90,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
+#include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
 #include "util/sanitizers.h"
@@ -106,12 +107,9 @@ enum {
         ID_START = wxID_HIGHEST,
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
-        ID_TIMER_SCATTER,
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
-        ID_TIMER_TIME_OFFSET,
-        ID_TIMER_FREQ_OFFSET,
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
@@ -171,7 +169,7 @@ class MainApp : public wxApp
         virtual int         OnExit();
 
 
-        bool                    CanAccessSerialPort(std::string portName);
+        bool                    CanAccessSerialPort(std::string const& portName);
         
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
@@ -183,6 +181,9 @@ class MainApp : public wxApp
 
         // PTT Input
         std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
+        
+        // Logging
+        std::shared_ptr<ILogger> logger;
 
         wxRect              m_rTopWindow;
 
@@ -264,7 +265,7 @@ public:
     {
         wxLogDebug("Destructor\n");
     }
-    void setSecondsToRecord(wxString value) { m_secondsToRecord->SetValue(value); }
+    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
     wxString getSecondsToRecord(void)
     {
         wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
@@ -296,19 +297,11 @@ class MainFrame : public TopFrame
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
-        PlotScatter*            m_panelScatter;
-        PlotScalar*             m_panelTimeOffset;
-        PlotScalar*             m_panelFreqOffset;
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
-        PlotScalar*             m_panelTestFrameErrors;
-        PlotScalar*             m_panelTestFrameErrorsHist;
 
         bool                    m_RxRunning;
-
-        TxRxThread*             m_txThread;
-        TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
@@ -333,8 +326,6 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechInTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
-        wxTimer                 m_plotTimeOffsetTimer;
-        wxTimer                 m_plotFreqOffsetTimer;
 #endif
 
     void destroy_fifos(void);
@@ -412,6 +403,8 @@ class MainFrame : public TopFrame
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
+        virtual void OnLogQSO(wxCommandEvent& event) override;
+        
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
         void OnReSync( wxCommandEvent& event ) override;
@@ -566,13 +559,13 @@ class MainFrame : public TopFrame
         void onRadioDisconnected_(IRigController* ptr);
 
         // Audio error handlers
-        void onAudioEngineError_(IAudioEngine&, std::string error, void* state);
+        void onAudioEngineError_(IAudioEngine&, std::string const& error, void* state);
         void onAudioDeviceError_(std::string error);
-        static void OnAudioDeviceError_(IAudioDevice&, std::string error, void* state);
+        static void OnAudioDeviceError_(IAudioDevice&, std::string const& error, void* state);
 
         // Audio device change handling
         template<int soundCardId, bool isOut>
-        void handleAudioDeviceChange_(std::string newDeviceName);
+        void handleAudioDeviceChange_(std::string const& newDeviceName);
 
         // Audio device data handlers
         static void OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING;
@@ -589,6 +582,22 @@ class MainFrame : public TopFrame
 
         void onQsyRequest_(std::string callsign, uint64_t freqHz, std::string message);
         void onQsyRequestUIThread_(QsyRequestArgs* args);
+        
+        bool isFrequencyControlEnabled_()
+        {
+#if 0
+            auto& rigControlConfig = wxGetApp().appConfiguration.rigControlConfiguration;
+            return 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled || 
+                ((rigControlConfig.hamlibUseForPTT 
+#if defined(WIN32)
+                || rigControlConfig.useOmniRig
+#endif // defined(WIN32)
+                ) && (rigControlConfig.hamlibEnableFreqModeChanges || rigControlConfig.hamlibEnableFreqChangesOnly));
+#else
+            return true;
+#endif // 0
+        }
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;

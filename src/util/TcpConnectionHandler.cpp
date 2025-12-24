@@ -20,9 +20,6 @@
 //
 //=========================================================================
 
-#include "TcpConnectionHandler.h"
-#include "logging/ulog.h"
-
 #include <chrono>
 #include <cassert>
 #include <cstdlib>
@@ -48,14 +45,23 @@
 #include <fcntl.h>
 #endif // defined(WIN32) || defined(__MINGW32__)
 
+#include "TcpConnectionHandler.h"
+#include "logging/ulog.h"
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 #define RX_ATTEMPT_INTERVAL_MS (50)
 #define RECONNECT_INTERVAL_MS (5000)
 #define RX_BUFFER_SIZE (128 * 1024)
 
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET (-1)
+#endif // INVALID_SOCKET
+
 TcpConnectionHandler::TcpConnectionHandler()
-    : enableReconnect_(false)
+    : ThreadedObject("TcpConn")
+    , enableReconnect_(false)
     , reconnectTimer_(RECONNECT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)
@@ -78,11 +84,14 @@ TcpConnectionHandler::TcpConnectionHandler()
 TcpConnectionHandler::~TcpConnectionHandler()
 {
     // Make sure we're disconnected before destroying.
-    enableReconnect_ = false;
+    enableReconnect_.store(false, std::memory_order_release);
 
     auto fut = disconnect();
     fut.wait();
 
+    // Make absolutely sure there's nothing else in the queue before release.
+    waitForAllTasksComplete_();
+    
 #if defined(WIN32)
     WSACleanup();
 #endif // defined(WIN32)
@@ -93,7 +102,7 @@ std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool
     cancelConnect_ = false;
     host_ = host;
     port_ = port;
-    enableReconnect_ = enableReconnect;
+    enableReconnect_.store(enableReconnect, std::memory_order_release);
     
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
@@ -130,7 +139,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
     assert(allocBuf != nullptr);
     memcpy(allocBuf, buf, length);
     
-    enqueue_([&, prom, allocBuf, length]() {
+    enqueue_([&, prom, allocBuf, length]() { // NOLINT
         sendImpl_(allocBuf, length);
         delete[] allocBuf;
         prom->set_value();
@@ -140,7 +149,7 @@ std::future<void> TcpConnectionHandler::send(const char* buf, int length)
 
 void TcpConnectionHandler::setOnRecvEndFn(OnRecvEndFn fn)
 {
-    enqueue_([this, fn]() {
+    enqueue_([this, fn = std::move(fn)]() {
         onRecvEndFn_ = fn;
     });
 }
@@ -174,6 +183,8 @@ void TcpConnectionHandler::connectImpl_()
 
     std::string portStr = portStream.str();
     std::thread ipv6ResolveThread([&, portStr, ipv6ResultPromise]() {
+        SetThreadName("ipv6");
+
         struct addrinfo *result = nullptr;
         resolveAddresses_(AF_INET6, host_.c_str(), portStr.c_str(), &result);
         ipv6ResultPromise->set_value(result);
@@ -181,6 +192,8 @@ void TcpConnectionHandler::connectImpl_()
     });
     
     std::thread ipv4ResolveThread([&, portStr, ipv4ResultPromise]() {
+        SetThreadName("ipv4");
+
         struct addrinfo *result = nullptr;
         resolveAddresses_(AF_INET, host_.c_str(), portStr.c_str(), &result);
         ipv4ResultPromise->set_value(result);
@@ -242,8 +255,10 @@ void TcpConnectionHandler::connectImpl_()
 
 #if !defined(WIN32)
     int flags = 0;
-#endif // !defined(WIN32)
     std::vector<int> pendingSockets;
+#else
+    std::vector<SOCKET> pendingSockets;
+#endif // !defined(WIN32)
     
     while (!cancelConnect_ && (results[0] || results[1]))
     {
@@ -311,7 +326,7 @@ void TcpConnectionHandler::connectImpl_()
         if (ret == 0)
         {
             // Connection succeeded immediately -- no need to attempt any other IPs
-            socket_ = fd;
+            socket_.store(fd, std::memory_order_release);
             break;
         }
 #if defined(WIN32)
@@ -327,7 +342,19 @@ void TcpConnectionHandler::connectImpl_()
         else if (ret == -1 && errno != EINPROGRESS)
         {
             int err = errno;
-            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror(err));
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+            strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
+#else
+            auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            if (ptr != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -336,7 +363,7 @@ void TcpConnectionHandler::connectImpl_()
 
         // Check socket list to see if there have been any connections yet.
         checkConnections_(pendingSockets);
-        if (socket_ > 0)
+        if (socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
         {
             break;
         }
@@ -393,7 +420,7 @@ next_fd:
     }
     
     // Keep checking connections until one connects or we all time out.
-    while (!cancelConnect_ && pendingSockets.size() > 0 && socket_ == -1)
+    while (!cancelConnect_ && pendingSockets.size() > 0 && socket_.load(std::memory_order_acquire) == INVALID_SOCKET)
     {
         checkConnections_(pendingSockets);
     }
@@ -401,7 +428,7 @@ next_fd:
     // Close any connections still pending.
     for (auto& sock : pendingSockets)
     {
-        if (sock != socket_)
+        if (sock != socket_.load(std::memory_order_acquire))
         {
 #if defined(WIN32)
             closesocket(sock);
@@ -411,13 +438,13 @@ next_fd:
         }
     }
     
-    if (socket_ != -1)
+    if (socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
     {
         // Call connect handler (defined by child class).
         char buf[256];
         struct sockaddr_storage addr;
         socklen_t len = sizeof(addr);
-        if (getpeername(socket_, (struct sockaddr*)&addr, &len) != 0)
+        if (getpeername(socket_.load(std::memory_order_acquire), (struct sockaddr*)&addr, &len) != 0)
         {
 #if defined(WIN32)
             int err = WSAGetLastError();
@@ -441,7 +468,7 @@ next_fd:
         // Start receive thread
         receiveThread_ = std::thread(std::bind(&TcpConnectionHandler::receiveImpl_, this));
     }
-    else if (enableReconnect_)
+    else if (enableReconnect_.load(std::memory_order_acquire))
     {
         // Attempt reconnect
         log_warn("connection failed, waiting to reconnect");
@@ -476,10 +503,10 @@ next_fd:
 
 void TcpConnectionHandler::disconnectImpl_()
 {
-    if (socket_ > 0)
+    auto tmp = socket_.load(std::memory_order_acquire);
+    if (tmp != INVALID_SOCKET)
     {
-        auto tmp = socket_.load();
-        socket_ = -1;
+        socket_.store(INVALID_SOCKET, std::memory_order_release);
 
 #if defined(WIN32)
         closesocket(tmp);
@@ -494,7 +521,7 @@ void TcpConnectionHandler::disconnectImpl_()
 
         onDisconnect_();
         
-        if (enableReconnect_)
+        if (enableReconnect_.load(std::memory_order_acquire))
         {
             reconnectTimer_.start();
         }
@@ -503,7 +530,7 @@ void TcpConnectionHandler::disconnectImpl_()
 
 void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 {
-    if (socket_ > 0)
+    if (socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
     {
         // Simulate blocking socket for write. Most of the time this should
         // complete immediately anyway.
@@ -512,15 +539,15 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
             fd_set writeSet;
 
             FD_ZERO(&writeSet);
-            FD_SET(socket_, &writeSet);
+            FD_SET(socket_.load(std::memory_order_acquire), &writeSet);
 
-            int rv = select(socket_ + 1, nullptr, &writeSet, nullptr, nullptr);
+            int rv = select(socket_.load(std::memory_order_acquire) + 1, nullptr, &writeSet, nullptr, nullptr);
             if (rv > 0)
             {
 #if defined(WIN32)
-                int numWritten = ::send(socket_, buf, length, 0);
+                int numWritten = ::send(socket_.load(std::memory_order_acquire), buf, length, 0);
 #else
-                int numWritten = write(socket_, buf, length);
+                int numWritten = write(socket_.load(std::memory_order_acquire), buf, length);
 #endif // defined(WIN32)
                 if (numWritten > 0)
                 {
@@ -566,25 +593,26 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
 void TcpConnectionHandler::receiveImpl_()
 {
     constexpr int READ_SIZE_BYTES = 1024;
-
     char buf[READ_SIZE_BYTES];
 
-    while (socket_ > 0)
+    SetThreadName("TCPRx");
+
+    while (socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
     {
         struct timeval tv = {0, 250000}; // 250ms
         fd_set readSet;
         FD_ZERO(&readSet);
-        FD_SET(socket_, &readSet);
+        FD_SET(socket_.load(std::memory_order_acquire), &readSet);
 
-        int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
-        if (rv > 0)
+        int rv = select(socket_.load(std::memory_order_acquire) + 1, &readSet, nullptr, nullptr, &tv);
+        if (rv > 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
         {
             int numRead = 0;
             int numHaveRead = 0;
 #if defined(WIN32)
-            while ((numRead = recv(socket_, buf, READ_SIZE_BYTES, 0)) > 0)
+            while ((numRead = recv(socket_.load(std::memory_order_acquire), buf, READ_SIZE_BYTES, 0)) > 0)
 #else
-            while ((numRead = read(socket_, buf, READ_SIZE_BYTES)) > 0)
+            while ((numRead = read(socket_.load(std::memory_order_acquire), buf, READ_SIZE_BYTES)) > 0)
 #endif // defined(WIN32)
             {
                 // Queue RX handler
@@ -596,31 +624,31 @@ void TcpConnectionHandler::receiveImpl_()
                     break;
                 }
             }
-            if (numHaveRead > 0)
+            if (numHaveRead > 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
             {
                 enqueue_([&]() {
                     char tmp[READ_SIZE_BYTES];
                     int toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
-                    while (toRead > 0)
+                    while (socket_.load(std::memory_order_acquire) != INVALID_SOCKET && toRead > 0)
                     {
                         receiveBuffer_.read(tmp, toRead);
-                        onReceive_(tmp, toRead);
+                        if (socket_.load(std::memory_order_acquire) != INVALID_SOCKET) onReceive_(tmp, toRead);
                         toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     }
-                    if (onRecvEndFn_)
+                    if (socket_.load(std::memory_order_acquire) != INVALID_SOCKET && onRecvEndFn_)
                     {
                         onRecvEndFn_();
                     }
                 });
             } 
-            else if (numRead == 0)
+            else if (numRead == 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
             {
                 log_warn("EOF received");
                 enqueue_([&]() {
                     disconnectImpl_();
                 });
             }
-            else if (numRead < 0)
+            else if (numRead < 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
             {
 #if defined(WIN32)
                 log_warn("read failed (errno=%d)", WSAGetLastError());
@@ -632,7 +660,7 @@ void TcpConnectionHandler::receiveImpl_()
                 });
             }
         }
-        else if (rv < 0 && socket_ > 0)
+        else if (rv < 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
         {
 #if defined(WIN32)
             log_warn("read failed (errno=%d)", WSAGetLastError());
@@ -646,14 +674,22 @@ void TcpConnectionHandler::receiveImpl_()
     }
 }
 
+#if defined(WIN32)
+void TcpConnectionHandler::checkConnections_(std::vector<SOCKET>& sockets)
+#else
 void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
+#endif // defined(WIN32)
 {
     fd_set writeSet;
     struct timeval tv = {0, 250000}; // 250ms
     int err = 0;
 
     FD_ZERO(&writeSet);
-    int maxSocket = -1;
+#if defined(WIN32)
+    SOCKET maxSocket = INVALID_SOCKET;
+#else
+    int maxSocket = INVALID_SOCKET;
+#endif // defined(WIN32)
     for (auto& sock : sockets)
     {
         FD_SET(sock, &writeSet);
@@ -693,15 +729,29 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
                 else if (sockErrCode == 0)
                 {
                     // Connection succeeded.
-                    socket_ = sock;
+                    socket_.store(sock, std::memory_order_release);
                     break;
                 }
                 
 socket_error:
-                log_warn("Got socket error %d (%s) while connecting", err, strerror(err));
+                constexpr int ERROR_BUFFER_LEN = 1024;
+                char tmpBuf[ERROR_BUFFER_LEN];
 #if defined(WIN32)
+                strerror_s(tmpBuf, ERROR_BUFFER_LEN,  err);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
                 closesocket(sock);
 #else
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
+#else
+                auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                if (ptr != 0)
+                {
+                    strncpy(tmpBuf, "(null)", 7);
+                }
+                log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
                 close(sock);
 #endif // defined(WIN32)
                 socketsToDelete.push_back(sock);
@@ -724,9 +774,9 @@ void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 #ifdef WIN32
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    hints.ai_flags = AI_ADDRCONFIG;
 #else
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
+    hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
 #endif // WIN32
     int err = getaddrinfo(host, port, &hints, result);
     if (err != 0) 

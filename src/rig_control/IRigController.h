@@ -32,7 +32,7 @@ public:
     virtual ~IRigController() = default;
     
     // Event handlers common across all rig control objects.
-    EventHandler<IRigController*, std::string> onRigError;
+    EventHandler<IRigController*, std::string const&> onRigError;
     EventHandler<IRigController*> onRigConnected;
     EventHandler<IRigController*> onRigDisconnected;
     

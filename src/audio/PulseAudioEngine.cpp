@@ -26,6 +26,10 @@
 #include <map>
 #include "../util/logging/ulog.h"
 
+#if defined(USE_RTKIT)
+#include "rtkit.h"
+#endif // defined(USE_RTKIT)
+
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
 {
@@ -36,7 +40,7 @@ PulseAudioEngine::~PulseAudioEngine()
 {
     if (initialized_)
     {
-        stop();
+        stopImpl_();
     }
 }
 
@@ -71,8 +75,63 @@ void PulseAudioEngine::start()
         return;
     }
     
-    pa_context_set_state_callback(context_, [](pa_context* context, void* mainloop) {
+    pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
+
+#if defined(USE_RTKIT)
+        if (pa_threaded_mainloop_in_thread(threadedML))
+        {
+            DBusError error;
+            DBusConnection* bus = nullptr;
+            int result = 0;
+
+            dbus_error_init(&error);
+            if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+            {
+                log_warn("Could not connect to system bus: %s", error.message);
+            }
+            else
+            {
+                int minNiceLevel = 0;
+                constexpr int ERROR_BUFFER_SIZE = 1024;
+                char tmpBuf[ERROR_BUFFER_SIZE];
+                if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+                {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#else
+                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    if (ptr != 0)
+                    {
+                        strncpy(tmpBuf, "(null)", 7);
+                    }
+                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                }
+                else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+                {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    log_warn("rtkit could not make high priority: %s", tmpBuf);
+#else
+                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    if (ptr != 0)
+                    {
+                        strncpy(tmpBuf, "(null)", 7);
+                    }
+                    log_warn("rtkit could not make high priority: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                }
+            }
+    
+            if (bus != nullptr)
+            {
+                dbus_connection_unref(bus);
+            }
+        }
+#endif // defined(USE_RTKIT)
+
         pa_threaded_mainloop_signal(threadedML, 0);
     }, mainloop_);
     
@@ -125,6 +184,11 @@ void PulseAudioEngine::start()
 
 void PulseAudioEngine::stop()
 {
+    stopImpl_();
+}
+
+void PulseAudioEngine::stopImpl_()
+{
     std::unique_lock<std::mutex> lk(startStopMtx_);
 
     if (initialized_)
@@ -161,7 +225,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_threaded_mainloop_lock(mainloop_);
     if (direction == AUDIO_ENGINE_OUT)
     {
-        op = pa_context_get_sink_info_list(context_, [](pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
+        op = pa_context_get_sink_info_list(context_, [](pa_context *, const pa_sink_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
             if (eol)
@@ -185,7 +249,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     }
     else
     {
-        op = pa_context_get_source_info_list(context_, [](pa_context *c, const pa_source_info *i, int eol, void *userdata) {
+        op = pa_context_get_source_info_list(context_, [](pa_context *, const pa_source_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
             if (eol)
@@ -217,7 +281,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_operation_unref(op);
     
     // Get list of cards
-    op = pa_context_get_card_info_list(context_, [](pa_context *c, const pa_card_info *i, int eol, void *userdata)
+    op = pa_context_get_card_info_list(context_, [](pa_context *, const pa_card_info *i, int eol, void *userdata)
     {
         PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
         
@@ -294,7 +358,7 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
     tempData.mainloop = mainloop_;
     
     pa_threaded_mainloop_lock(mainloop_);
-    auto op = pa_context_get_server_info(context_, [](pa_context *c, const pa_server_info *i, void *userdata) {
+    auto op = pa_context_get_server_info(context_, [](pa_context *, const pa_server_info *i, void *userdata) {
         PaDefaultAudioDeviceTemp* tempData = static_cast<PaDefaultAudioDeviceTemp*>(userdata);
         
         tempData->defaultSink = i->default_sink_name;

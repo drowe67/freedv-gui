@@ -30,7 +30,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 
-#include "main.h"
+#include "../../main.h"
 
 using namespace std::chrono_literals;
 
@@ -63,7 +63,7 @@ void AudioOptsDialog::audioEngineInit(void)
     engine->setOnEngineError([this](IAudioEngine&, std::string error, void*)
     {
         CallAfter([&]() {
-            wxMessageBox(wxT("Sound engine failed to initialize"), wxT("Error"), wxOK);
+            wxMessageBox(wxString::Format("Sound engine failed to initialize: %s", error), wxT("Error"), wxOK);
         });
         
         m_isPaInitialized = false;
@@ -74,7 +74,7 @@ void AudioOptsDialog::audioEngineInit(void)
 
 
 void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
-                                        wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel)
+                                        wxStaticBox *parentPanel, wxBoxSizer *bSizer, wxString const& buttonLabel)
 {
     wxBoxSizer* bSizer1 = new wxBoxSizer(wxVERTICAL);
 
@@ -404,7 +404,7 @@ AudioOptsDialog::~AudioOptsDialog()
 //-------------------------------------------------------------------------
 // OnInitDialog()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& event )
+void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& )
 {
     ExchangeData(EXCHANGE_DATA_IN);
 }
@@ -415,7 +415,7 @@ void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& event )
 // helper function to look up name of devName, and if it exists write
 // name to textCtrl.  Used to trap disappearing devices.
 //-------------------------------------------------------------------------
-bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName)
+bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString const& devName)
 {
     // ignore last list entry as it is the "none" entry
     for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
@@ -643,7 +643,7 @@ int AudioOptsDialog::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 // buildListOfSupportedSampleRates()
 //-------------------------------------------------------------------------
-int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out)
+int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString const& devName, int in_out)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
     auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::AUDIO_ENGINE_IN : IAudioEngine::AUDIO_ENGINE_OUT);
@@ -693,31 +693,31 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("Device"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 300);
 
     listItem.SetAlign(wxLIST_FORMAT_CENTRE);
     listItem.SetText(wxT("ID"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 45);
 
     listItem.SetAlign(wxLIST_FORMAT_LEFT);
     listItem.SetText(wxT("API"));
-    idx = ctrl->InsertColumn(col, listItem);
+    ctrl->InsertColumn(col, listItem);
     ctrl->SetColumnWidth(col++, 100);
 
     if(in_out == AUDIO_IN)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
     else if(in_out == AUDIO_OUT)
     {
         listItem.SetAlign(wxLIST_FORMAT_CENTRE);
         listItem.SetText(wxT("Default Sample Rate"));
-        idx = ctrl->InsertColumn(col, listItem);
+        ctrl->InsertColumn(col, listItem);
         ctrl->SetColumnWidth(col++, 160);
     }
 
@@ -741,7 +741,7 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
     // add "none" option at end
 
     buf.Printf(wxT("%s"), "none");
-    idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+    ctrl->InsertItem(ctrl->GetItemCount(), buf);
     
     // Auto-size column widths to improve readability
     for (int col = 0; col < 4; col++)
@@ -842,13 +842,13 @@ void AudioOptsDialog::UpdatePlot(PlotScalar *plotScalar)
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
         SpeexResamplerState *src = nullptr;
@@ -885,7 +885,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     callbackFifo = new GenericFIFO<short>(sampleRate);
                     assert(callbackFifo != nullptr);
 
-                    AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running };
+                    AudioDeviceCapture capture { .fifo = callbackFifo, .cv = &callbackFifoCV, .running = &running, .n = nullptr };
                     device->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
                         AudioDeviceCapture* castedState = (AudioDeviceCapture*)state;
 
@@ -981,13 +981,13 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken.  Also plots a pretty picture like the record versions
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
         SpeexResamplerState          *src = nullptr;
         GenericFIFO<short>               *fifo, *callbackFifo;
         int src_error, n = 0;
@@ -1122,7 +1122,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
 //-------------------------------------------------------------------------
 // OnRxInTest()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnRxInTest(wxCommandEvent& event)
+void AudioOptsDialog::OnRxInTest(wxCommandEvent&)
 {
     plotDeviceInputForAFewSecs(m_textCtrlRxIn->GetValue(), m_plotScalarRxIn);
 }
@@ -1130,7 +1130,7 @@ void AudioOptsDialog::OnRxInTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnRxOutTest()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnRxOutTest(wxCommandEvent& event)
+void AudioOptsDialog::OnRxOutTest(wxCommandEvent&)
 {
     plotDeviceOutputForAFewSecs(m_textCtrlRxOut->GetValue(), m_plotScalarRxOut);
 }
@@ -1138,7 +1138,7 @@ void AudioOptsDialog::OnRxOutTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnTxInTest()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnTxInTest(wxCommandEvent& event)
+void AudioOptsDialog::OnTxInTest(wxCommandEvent&)
 {
     plotDeviceInputForAFewSecs(m_textCtrlTxIn->GetValue(), m_plotScalarTxIn);
 }
@@ -1146,7 +1146,7 @@ void AudioOptsDialog::OnTxInTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnTxOutTest()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnTxOutTest(wxCommandEvent& event)
+void AudioOptsDialog::OnTxOutTest(wxCommandEvent&)
 {
     plotDeviceOutputForAFewSecs(m_textCtrlTxOut->GetValue(), m_plotScalarTxOut);
 }
@@ -1154,7 +1154,7 @@ void AudioOptsDialog::OnTxOutTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnRefreshClick()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnRefreshClick(wxCommandEvent& event)
+void AudioOptsDialog::OnRefreshClick(wxCommandEvent&)
 {
     // restart audio engine, to re-sample available devices
     auto engine = AudioEngineFactory::GetAudioEngine();
@@ -1176,7 +1176,7 @@ void AudioOptsDialog::OnRefreshClick(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnApplyAudioParameters()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnApplyAudioParameters(wxCommandEvent& event)
+void AudioOptsDialog::OnApplyAudioParameters(wxCommandEvent&)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
 }
@@ -1184,7 +1184,7 @@ void AudioOptsDialog::OnApplyAudioParameters(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnCancelAudioParameters()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
+void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent&)
 {
     if(m_isPaInitialized)
     {
@@ -1199,7 +1199,7 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnOkAudioParameters()
 //-------------------------------------------------------------------------
-void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
+void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent&)
 {
     int status = ExchangeData(EXCHANGE_DATA_OUT);
 

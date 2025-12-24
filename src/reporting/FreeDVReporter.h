@@ -33,6 +33,8 @@
 #include <functional>
 #include "IReporter.h"
 
+#include "../3rdparty/yyjson/yyjson.h"
+
 // FreeDV Reporter default hostname
 #define FREEDV_REPORTER_DEFAULT_HOSTNAME "qso.freedv.org"
 
@@ -76,8 +78,8 @@ public:
     virtual ~FreeDVReporter();
 
     void connect();
-    void requestQSY(std::string sid, uint64_t frequencyHz, std::string message);
-    void updateMessage(std::string message);
+    void requestQSY(std::string const& sid, uint64_t frequencyHz, std::string const& message);
+    void updateMessage(std::string const& message);
     
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
@@ -109,6 +111,10 @@ public:
     bool isValidForReporting();
     
 private:
+    enum {
+        FREEDV_REPORTER_PROTOCOL_VERSION = 2
+    };
+    
     std::mutex objMutex_;
     bool isConnecting_;
     std::atomic<bool> isFullyConnected_;
@@ -145,11 +151,21 @@ private:
     void connect_();
     
     void freqChangeImpl_(uint64_t frequency);
-    void transmitImpl_(std::string mode, bool tx);
-    void sendMessageImpl_(std::string message);
+    void transmitImpl_(std::string const& mode, bool tx);
+    void sendMessageImpl_(std::string const& message);
     
     void hideFromViewImpl_();
     void showOurselvesImpl_();
+    
+    void onFreeDVReporterNewConnection_(yyjson_val* msgParams);
+    void onFreeDVReporterConnectionSuccessful_(yyjson_val* msgParams);
+    void onFreeDVReporterRemoveConnection_(yyjson_val* msgParams);
+    void onFreeDVReporterTransmitReport_(yyjson_val* msgParams);
+    void onFreeDVReporterReceiveReport_(yyjson_val* msgParams);
+    void onFreeDVReporterFrequencyChange_(yyjson_val* msgParams);
+    void onFreeDVReporterMessageUpdate_(yyjson_val* msgParams);
+    void onFreeDVReporterQsyRequest_(yyjson_val* msgParams);
+    void onFreeDVReporterBulkUpdate_(yyjson_val* msgParams);
 };
 
 #endif // FREEDV_REPORTER_H

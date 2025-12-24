@@ -32,7 +32,7 @@ public:
     virtual ~Win32COMObject();
 
 protected:
-    Win32COMObject();
+    Win32COMObject(std::string name);
     
 private:
 };

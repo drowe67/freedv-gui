@@ -1,6 +1,7 @@
 add_library(fdv_audio_pipeline STATIC
     AgcStep.cpp
     AudioPipeline.cpp
+    BandwidthExpandStep.cpp
     ComputeRfSpectrumStep.cpp
     EitherOrStep.cpp
     EqualizerStep.cpp
@@ -24,10 +25,11 @@ add_library(fdv_audio_pipeline STATIC
     rade_text.c
 )
 
-target_link_libraries(fdv_audio_pipeline PRIVATE ebur128 agc)
+target_compile_options(fdv_audio_pipeline PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+target_link_libraries(fdv_audio_pipeline PRIVATE ebur128 agc fdv_os_wrapper)
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 
-add_dependencies(fdv_audio_pipeline rade opus codec2 ebur128 agc)
+add_dependencies(fdv_audio_pipeline rade opus codec2)
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_audio_pipeline wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)

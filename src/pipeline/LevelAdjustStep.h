@@ -31,7 +31,7 @@
 class LevelAdjustStep : public IPipelineStep
 {
 public:
-    LevelAdjustStep(int sampleRate, realtime_fp<float()> scaleFactorFn);
+    LevelAdjustStep(int sampleRate, realtime_fp<float()> const& scaleFactorFn);
     virtual ~LevelAdjustStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;

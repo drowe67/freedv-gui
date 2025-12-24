@@ -62,7 +62,7 @@ public:
     virtual void requestCurrentFrequencyMode() override;
 
     static void InitializeHamlibLibrary();
-    static int RigNameToIndex(std::string rigName);
+    static int RigNameToIndex(std::string const& rigName);
     static std::string RigIndexToName(unsigned int rigIndex);
     static int GetNumberSupportedRadios();
     static int GetMinimumSerialBaudRate(unsigned int rigIndex);

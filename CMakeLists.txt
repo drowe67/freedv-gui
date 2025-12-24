@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 2.0.3)
+set(PROJECT_VERSION 2.2.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -144,6 +144,8 @@ set(ENABLE_RTSAN FALSE CACHE BOOL
     "Instruments the build with RealtimeSanitizer for RT safety checks.")
 set(ENABLE_TSAN FALSE CACHE BOOL
     "Instruments the build with ThreadSanitizer for thread checks.")
+set(ENABLE_UBSAN FALSE CACHE BOOL
+    "Instruments the build with UndefinedBehaviorSanitizer for undefined behavior checks.")
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
@@ -162,6 +164,18 @@ if(ENABLE_TSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=thread")
 endif(ENABLE_TSAN)
+
+if(ENABLE_UBSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=undefined")
+endif(ENABLE_UBSAN)
+
+if(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
+set(SANITIZERS_ENABLED TRUE)
+else(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
+set(SANITIZERS_ENABLED FALSE)
+endif(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -353,6 +367,7 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # Build RADE. 
 # (TBD - allow override with own build, similar to Codec2)
 include(cmake/BuildRADE.cmake)
+include(cmake/BuildRADEForIntegrations.cmake)
 
 #
 # Build codec2
@@ -362,7 +377,7 @@ include(cmake/BuildCodec2.cmake)
 # Look for libebur128 (loudness measurement)
 if(NOT USE_STATIC_EBUR128)
     message(STATUS "Looking for ebur128...")
-    find_library(LIBEBR128 ebur128)
+    find_library(LIBEBUR128 ebur128)
     find_path(LIBEBUR128_INCLUDE_DIR ebur128.h)
     message(STATUS "  ebur128 library: ${LIBEBUR128}")
     message(STATUS "  ebur128 headers: ${LIBEBUR128_INCLUDE_DIR}")
@@ -543,11 +558,6 @@ else()
     include(cmake/BuildSpeex.cmake)
 endif()
 
-# On Linux/macOS, build mimalloc for a bit more performance
-if ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
-include(cmake/BuildMimalloc.cmake)
-endif ((LINUX OR APPLE) AND (NOT ENABLE_TSAN AND NOT ENABLE_ASAN AND NOT ENABLE_RTSAN))
-
 #
 # Find libdl for dlopen/dlclose
 #
@@ -716,9 +726,9 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+    if(NOT SANITIZERS_ENABLED)
     set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+    endif(NOT SANITIZERS_ENABLED)
 endmacro()
 
 DefineAudioTest(RADEV1)
@@ -728,10 +738,10 @@ if(NOT ENABLE_RTSAN)
 add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
 
-# For AddressSanitizer, we're just seeing if there are any memory leaks or crashes.
-if(NOT ENABLE_ASAN)
+# For sanitizers, we're just seeing if there are any errors from the sanitizer.
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
-endif(NOT ENABLE_ASAN)
+endif(NOT SANITIZERS_ENABLED)
 endif(NOT ENABLE_RTSAN)
 
 DefineAudioTest(700D)
@@ -739,18 +749,18 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
+endif(NOT SANITIZERS_ENABLED)
 
 endif(UNITTEST)

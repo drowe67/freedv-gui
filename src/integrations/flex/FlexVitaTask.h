@@ -21,8 +21,10 @@
 #include <chrono>
 #include <functional>
 #include <thread>
+#include <map>
 #include <string>
 #include <ctime>
+#include <poll.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -37,11 +39,11 @@
 class FlexVitaTask : public ThreadedObject
 {
 public:
-    using RadioDiscoveredFn = std::function<void(FlexVitaTask&, std::string, std::string, void*)>;
+    using RadioDiscoveredFn = std::function<void(FlexVitaTask&, std::string const&, std::string const&, void*)>;
     
     enum { VITA_PORT = 4992 }; // Default VITA port if we're discovering other radios on the network.
     
-    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort);
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.
@@ -50,7 +52,7 @@ public:
     
     void setOnRadioDiscoveredFn(RadioDiscoveredFn fn, void* st)
     {
-        enqueue_([this, fn, st]() {
+        enqueue_([this, fn = std::move(fn), st]() {
             onRadioDiscoveredFn_ = fn;
             onRadioDiscoveredFnState_ = st;
         });
@@ -70,11 +72,17 @@ public:
     }
 
     int getPort() const { return udpPort_; }
-    
+   
+    void registerStreamIds(uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId);
+    void clearStreamIds();
+
+    void sendMeter(uint16_t meterId, float valueDb);
+ 
 private:    
     paCallBackData callbackData_;
     struct sockaddr_in radioAddress_;
     int socket_;
+    int discoverySocket_;
     std::string ip_;
     uint32_t rxStreamId_;
     uint32_t txStreamId_;
@@ -88,8 +96,9 @@ private:
     std::thread rxTxThread_;
     bool rxTxThreadRunning_;
     bool pendingEndTx_;
-    bool randomUdpPort_;
     int udpPort_;
+    std::map<uint32_t, uint32_t> txStreamIds_; // txIn -> txOut
+    std::map<uint32_t, uint32_t> rxStreamIds_; // rxIn -> rxOut
 
     // vita packet cache -- preallocate on startup
     // to reduce the amount of latency when sending packets 
@@ -108,7 +117,7 @@ private:
     void disconnect_();
     
     void rxTxThreadEntry_();
-    void readPendingPackets_();
+    void readPendingPackets_(struct pollfd* fds, int numFds);
     void sendAudioOut_();
     
     void generateVitaPackets_(bool tx, uint32_t streamId);

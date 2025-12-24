@@ -50,4 +50,7 @@ void StartLowLatencyActivity();
 // Tells the operating system that we no longer need low latency.
 void StopLowLatencyActivity();
 
+// Sets the name of the current thread in the OS.
+void SetThreadName(std::string const& name);
+
 #endif // __OS_INTERFACE__

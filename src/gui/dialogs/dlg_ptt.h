@@ -22,7 +22,7 @@
 #ifndef __COMPORTS_DIALOG__
 #define __COMPORTS_DIALOG__
 
-#include "main.h"
+#include "../../main.h"
 #include <wx/settings.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/xrc/xh_bmp.h>

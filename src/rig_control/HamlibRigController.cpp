@@ -69,12 +69,13 @@ bool HamlibRigController::RigCompare_(const struct rig_caps *rig1, const struct 
 }
 
 HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
-    : rigName_(rigName)
-    , serialPort_(serialPort)
+    : ThreadedObject("hamlib")
+    , rigName_(std::move(rigName))
+    , serialPort_(std::move(serialPort))
     , serialRate_(serialRate)
     , civHex_(civHex)
     , pttType_(pttType)
-    , pttSerialPort_(pttSerialPort)
+    , pttSerialPort_(std::move(pttSerialPort))
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
@@ -92,12 +93,13 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
 }
 
 HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
-    : rigName_(RigIndexToName(rigIndex))
-    , serialPort_(serialPort)
+    : ThreadedObject("hamlib")
+    , rigName_(RigIndexToName(rigIndex))
+    , serialPort_(std::move(serialPort))
     , serialRate_(serialRate)
     , civHex_(civHex)
     , pttType_(pttType)
-    , pttSerialPort_(pttSerialPort)
+    , pttSerialPort_(std::move(pttSerialPort))
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
@@ -131,11 +133,13 @@ HamlibRigController::~HamlibRigController()
     });
     
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 static int LogHamlibErrors_(
     enum rig_debug_level_e debug_level,
-    rig_ptr_t user_data,
+    rig_ptr_t,
     const char *fmt,
     va_list ap)
 {
@@ -243,7 +247,7 @@ int HamlibRigController::getRigResponseTimeMicroseconds()
     return rigResponseTime_;
 }
 
-int HamlibRigController::RigNameToIndex(std::string rigName)
+int HamlibRigController::RigNameToIndex(std::string const& rigName)
 {
     InitializeHamlibLibrary();
 
@@ -317,6 +321,8 @@ void HamlibRigController::connectImpl_()
         onRigError(this, errMsg);
         return;
     }
+    log_info ("rigName -%s- via port -%s-\n", rigName_.c_str(), serialPort_.c_str() );
+    
     rig_.store(tmpRig, std::memory_order_release);
     log_debug("rig_init() OK ....");
 

@@ -28,6 +28,8 @@
 #include <cstring>
 #include <thread>
 #include <functional>
+#include <random>
+
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
@@ -47,6 +49,7 @@
 #endif // defined(WIN32) || defined(__MINGW32__)
 
 #include "pskreporter.h"
+#include "../os/os_interface.h"
 
 //#define PSK_REPORTER_TEST
 #if defined(PSK_REPORTER_TEST)
@@ -86,7 +89,7 @@ static const unsigned char txFormatHeader[] = {
 };
 
 SenderRecord::SenderRecord(std::string callsign, uint64_t frequency, signed char snr)
-    : callsign(callsign)
+    : callsign(std::move(callsign))
     , frequency(frequency)
     , snr(snr)
 {
@@ -132,12 +135,14 @@ void SenderRecord::encode(char* buf)
 
 PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::string software)
     : currentSequenceNumber_(0)
-    , receiverCallsign_(callsign)
-    , receiverGridSquare_(gridSquare)
-    , decodingSoftware_(software)
+    , receiverCallsign_(std::move(callsign))
+    , receiverGridSquare_(std::move(gridSquare))
+    , decodingSoftware_(std::move(software))
 {
-    srand(time(0));
-    randomIdentifier_ = rand();
+    std::random_device randomDevice;
+    std::uniform_int_distribution<int> idDistribution(0, RAND_MAX);
+    std::mt19937 randomEngine(randomDevice());
+    randomIdentifier_ = idDistribution(randomEngine);
 
 #if defined(WIN32)
     // Initialize Winsock in case it hasn't already been done.
@@ -163,7 +168,7 @@ PskReporter::~PskReporter()
 #endif // defined(WIN32)
 }
 
-void PskReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr)
+void PskReporter::addReceiveRecord(std::string callsign, std::string, uint64_t frequency, signed char snr)
 {
     std::unique_lock<std::mutex> lock(recordListMutex_);
     recordList_.push_back(SenderRecord(callsign, frequency, snr));
@@ -266,6 +271,8 @@ bool PskReporter::reportCommon_()
 {
     std::unique_lock<std::mutex> lock(recordListMutex_);
 
+    SetThreadName("PSKReport");
+
     // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
     // RX format block + TX format block + RX data + TX data
     int dgSize = 16 + sizeof(rxFormatHeader) + sizeof(txFormatHeader) + getRxDataSize_() + getTxDataSize_();
@@ -327,12 +334,14 @@ bool PskReporter::reportCommon_()
     int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
     if (err != 0) {
         log_debug("cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
+        delete[] packet;
         return false;
     }
 
     int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(fd < 0){
         log_debug("cannot open PSK Reporter socket (err=%d)", errno);
+        delete[] packet;
         return false;
     }
 

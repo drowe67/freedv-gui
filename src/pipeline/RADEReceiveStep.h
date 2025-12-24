@@ -29,7 +29,6 @@
 #include <functional>
 
 #include "IPipelineStep.h"
-#include "../freedv_interface.h"
 #include "rade_api.h"
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
@@ -42,15 +41,21 @@
 #define NUM_FEATURES_TO_STORE (256 * 1024)
 
 // TBD - need to wrap in "extern C" to avoid linker errors
-extern "C" 
+extern "C"
 {
+#if defined(FREEDV_INTEGRATION)
+    #include "fargan_config_integ.h"
+#else
+    #include "fargan_config.h"
+#endif // defined(FREEDV_INTEGRATION)
     #include "fargan.h"
+    #include "lpcnet.h"
 }
 
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -61,7 +66,7 @@ public:
     int getSync() const { return syncState_.load(std::memory_order_acquire); }
     int getSnr() const { return snr_.load(std::memory_order_acquire); }
     realtime_fp<std::atomic<int>*()> getRxStateFn() { return rxStateFn_; }
-    void setRxStateFn(realtime_fp<std::atomic<int>*()> rxFn) { rxStateFn_ = rxFn; }
+    void setRxStateFn(realtime_fp<std::atomic<int>*()> const& rxFn) { rxStateFn_ = rxFn; }
     void* getStateObj() const { return stateObj_; }
     void setStateObj(void* state) { stateObj_ = state; }
 

@@ -33,6 +33,8 @@
 #include <sys/resource.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
@@ -40,7 +42,7 @@ using namespace std::chrono_literals;
 const int RADE_SCALING_FACTOR = 16383;
 
 #if !defined(DISABLE_UNIT_TEST)
-#include <wx/wx.h>
+#include <wx/string.h>
 extern wxString utTxFeatureFile;
 #endif // !defined(DISABLE_UNIT_TEST)
 
@@ -66,7 +68,9 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 #endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = std::max(
+        RADE_SPEECH_SAMPLE_RATE,
+        RADE_MODEM_SAMPLE_RATE);
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
@@ -78,7 +82,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     radeOutShort_ = new short[numOutputSamples];
     assert(radeOutShort_ != nullptr);
 
-    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
     eooOut_ = new RADE_COMP[numEOOSamples];
@@ -243,6 +247,8 @@ void RADETransmitStep::utFeatureThreadEntry_()
     // Make sure other I/O can throttle us.
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RADETx");
 
     float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);

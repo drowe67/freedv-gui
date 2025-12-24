@@ -34,7 +34,8 @@ using namespace std::chrono_literals;
 #define OMNI_RIG_WAIT_TIME (200ms)
 
 OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool freqOnly)
-    : rigId_(rigId)
+    : ThreadedObject("OmniRig")
+    , rigId_(rigId)
     , omniRig_(nullptr)
     , rig_(nullptr)
     , origFreq_(0)
@@ -67,6 +68,8 @@ OmniRigController::~OmniRigController()
     });
 
     fut.wait();
+    
+    waitForAllTasksComplete_();
 }
 
 void OmniRigController::connect()
@@ -255,7 +258,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
             }
         }
 
-        if (result != S_OK || tmpFreq != frequencyHz)
+        if (result != S_OK || (uint64_t)tmpFreq != frequencyHz)
         {
             // Try VFO-less set in case the first one didn't work.
             log_info("Trying frequency set fallback");

@@ -18,6 +18,7 @@
 #include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
+#include "gui/dialogs/log_entry.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -33,7 +34,7 @@ extern int   g_analog;
 extern std::atomic<int>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern bool g_queueResync;
+extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
@@ -79,13 +80,13 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsEasySetup()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetup(wxCommandEvent& event)
+void MainFrame::OnToolsEasySetup(wxCommandEvent&)
 {
     EasySetupDialog* dlg = new EasySetupDialog(this);
     if (dlg->ShowModal() == wxOK)
     {
-        // Show/hide frequency box based on PSK Reporter status.
-        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        // Show/hide frequency box based on CAT control setup.
+        m_freqBox->Show(isFrequencyControlEnabled_());
 
         // Show/hide callsign combo box based on PSK Reporter Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -118,7 +119,7 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsFreeDVReporter()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
+void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
 {
     if (m_reporterDialog == nullptr)
     {
@@ -207,8 +208,45 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Update reporting list.
         updateReportingFreqList_();
     
-        // Show/hide frequency box based on reporting status.
-        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        // Show/hide frequency box based on CAT control configuration.
+        m_freqBox->Show(isFrequencyControlEnabled_());
+        
+        // Show/hide stats box
+        statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+        
+        // Show/hide legacy modes
+        modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+        
+        bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && !m_rbRADE->GetValue();
+        squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+        m_sliderSQ->Enable(isEnabled);
+        m_ckboxSQ->Enable(isEnabled);
+        m_textSQ->Enable(isEnabled);
+        m_btnCenterRx->Enable(isEnabled);
+        m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
+        m_BtnReSync->Enable(isEnabled);
+        m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
+        // XXX - with really short windows, wxWidgets sometimes doesn't size
+        // the components properly until the user resizes the window (even if only
+        // by a pixel or two). As a really hacky workaround, we emulate this behavior
+        // when restoring window sizing. These resize events also happen after configuration
+        // is restored but I'm not sure this is necessary.
+        wxSize size = GetSize();
+        auto w = size.GetWidth();
+        auto h = size.GetHeight();
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w + 1, h + 1);
+        });
+        CallAfter([=]()
+        {
+            SetSize(w, h);
+        });
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -235,11 +273,11 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Adjust frequency labels on main window
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_freqBox->SetLabel(_("Report Freq. (kHz)"));
+            m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
         }
         else
         {
-            m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+            m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
         }
 
         // If the "Frequency as kHz" option has changed, update the frequencies
@@ -285,7 +323,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnToolsOptionsUI()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent& event)
+void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 {
 }
 
@@ -300,6 +338,9 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 
     if (dlg->ShowModal() == wxID_OK)
     {
+        // Show/hide frequency box based on CAT control configuration.
+        m_freqBox->Show(isFrequencyControlEnabled_());
+        
         // Reinitialize FreeDV Reporter again in case we changed PTT method.
         initializeFreeDVReporter_();
     }
@@ -318,7 +359,7 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnHelpCheckUpdates()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
+void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
     wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/releases");
 }
@@ -334,7 +375,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 // OnHelpManual()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelpManual( wxCommandEvent& event )
+void MainFrame::OnHelpManual( wxCommandEvent& )
 {
     wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
@@ -342,9 +383,9 @@ void MainFrame::OnHelpManual( wxCommandEvent& event )
 //-------------------------------------------------------------------------
 // OnHelp()
 //-------------------------------------------------------------------------
-void MainFrame::OnHelp( wxCommandEvent& event )
+void MainFrame::OnHelp( wxCommandEvent& )
 {
-    wxLaunchDefaultBrowser("https://freedv.org/#gethelp");
+    wxLaunchDefaultBrowser("https://freedv.org/#getting-help");
 }
 
 //-------------------------------------------------------------------------
@@ -459,7 +500,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
     });
 }
 
-void MainFrame::onRadioConnected_(IRigController* ptr)
+void MainFrame::onRadioConnected_(IRigController*)
 {
     if (wxGetApp().rigFrequencyController && 
         (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
@@ -479,7 +520,7 @@ void MainFrame::onRadioConnected_(IRigController* ptr)
     }
 }
 
-void MainFrame::onRadioDisconnected_(IRigController* ptr)
+void MainFrame::onRadioDisconnected_(IRigController*)
 {
     CallAfter([&]() {
         m_txtModeStatus->SetLabel(wxT("unk"));
@@ -515,7 +556,7 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().rigFrequencyController = tmp;
         wxGetApp().rigPttController = tmp;
         
-        wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
+        wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string const& err)
         {
             std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
             CallAfter([&, fullErr]() {
@@ -588,7 +629,7 @@ void MainFrame::OpenOmniRig()
 //-------------------------------------------------------------------------
 // OnCloseFrame()
 //-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent& event)
+void MainFrame::OnCloseFrame(wxCloseEvent&)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
@@ -693,7 +734,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 // OnChangeTxLevel()
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
+void MainFrame::OnChangeTxLevel( wxScrollEvent& )
 {
     g_txLevel = m_sliderTxLevel->GetValue();
     float dbLoss = g_txLevel / 10.0;
@@ -709,7 +750,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 //-------------------------------------------------------------------------
 // OnChangeMicSpkrLevel()
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
+void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
 {
     auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
     
@@ -731,7 +772,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
 //-------------------------------------------------------------------------
 // OnCheckSQClick()
 //-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent& event)
+void MainFrame::OnCheckSQClick(wxCommandEvent&)
 {
     if(!g_SquelchActive)
     {
@@ -758,7 +799,7 @@ void MainFrame::setsnrBeta(bool snrSlow)
 //-------------------------------------------------------------------------
 // OnCheckSQClick()
 //-------------------------------------------------------------------------
-void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
+void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 {
     wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
@@ -810,7 +851,7 @@ void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
     adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
 }
 
-void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
+void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 {
     auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
     popup->Popup();
@@ -819,7 +860,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
 //-------------------------------------------------------------------------
 // OnTogBtnPTTRightClick(): show right-click menu for PTT button
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& event )
+void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
     auto sz = m_btnTogPTT->GetSize();
     m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
@@ -1175,7 +1216,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     event.Skip();
 }
 
-void MainFrame::OnCallSignReset(wxCommandEvent& event)
+void MainFrame::OnCallSignReset(wxCommandEvent&)
 {
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -1187,17 +1228,57 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
     m_cboLastReportedCallsigns->SetText(_(""));
 }
 
+void MainFrame::OnLogQSO(wxCommandEvent&)
+{
+    if (m_lastReportedCallsignListView->GetItemCount() > 0)
+    {
+        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+        if (selected == -1)
+        {
+            // Default to the first/most recent entry if user hasn't explicitly selected
+            // a contact.
+            selected = 0;
+        }
+        
+        // Get callsign and RX frequency
+        auto dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+        auto dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        
+        double dxFreqDouble = 0;
+        wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            dxFreqDouble *= 1000;
+        }
+        else
+        {
+            dxFreqDouble *= 1000000;
+        }
+        
+        // If connected to FreeDV Reporter, get DX grid
+        wxString dxGrid;
+        if (m_reporterDialog != nullptr)
+        {
+            dxGrid = m_reporterDialog->getGridSquareForCallsign(dxCall);
+        }
+
+        // Show log contact dialog 
+        auto logDialog = new LogEntryDialog(this);
+        logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), (int64_t)dxFreqDouble);
+    }
+}
 
 // Force manual resync, just in case demod gets stuck on false sync
 
-void MainFrame::OnReSync(wxCommandEvent& event)
+void MainFrame::OnReSync(wxCommandEvent&)
 {
     if (m_RxRunning)  {
         log_debug("OnReSync");
         
         // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
         // the next execution of the TX/RX loop.
-        g_queueResync = true;
+        g_queueResync.store(true, std::memory_order_release);
     }
 }
 
@@ -1216,7 +1297,7 @@ void MainFrame::resetStats_()
     }
 }
 
-void MainFrame::OnBerReset(wxCommandEvent& event)
+void MainFrame::OnBerReset(wxCommandEvent&)
 {
     resetStats_();
 }
@@ -1231,7 +1312,7 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
     OnChangeReportFrequency(event);
 }
 
-void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
+void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
 {    
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -1352,7 +1433,7 @@ void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
     TopFrame::OnNotebookPageChanging(event);
 }
 
-void MainFrame::OnCenterRx(wxCommandEvent& event)
+void MainFrame::OnCenterRx(wxCommandEvent&)
 {
     clickTune(FDMDV_FCENTRE);
 }
@@ -1393,15 +1474,15 @@ void MainFrame::updateReportingFreqList_()
     // Update associated label if the units have changed
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Report Freq. (kHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
     }
 }
 
-void MainFrame::OnResetMicSpkrLevel(wxMouseEvent& event)
+void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 {
     auto sliderLevel = 0;
     if (g_tx.load(std::memory_order_acquire))

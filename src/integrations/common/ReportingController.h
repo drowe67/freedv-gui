@@ -25,30 +25,43 @@
 
 #include <string>
 #include "../util/ThreadedObject.h"
+#include "../util/ThreadedTimer.h"
 #include "../reporting/FreeDVReporter.h"
+#include "../reporting/pskreporter.h"
 
 class ReportingController : public ThreadedObject
 {
 public:
-    ReportingController();
-    virtual ~ReportingController() = default;
+    ReportingController(std::string softwareName, bool rxOnly = false);
+    virtual ~ReportingController()
+    {
+        waitForAllTasksComplete_();
+    }
 
-    void updateRadioCallsign(std::string newCallsign);
-    void updateRadioGridSquare(std::string newGridSquare);
-    void reportCallsign(std::string callsign, char snr);
+    void updateRadioCallsign(std::string const& newCallsign);
+    void updateRadioGridSquare(std::string const& newGridSquare);
+    void reportCallsign(std::string const& callsign, char snr);
     void showSelf();
     void hideSelf();
     void changeFrequency(uint64_t freqHz);
     void transmit(bool transmit);
 
+    bool isHidden();
+
 private:
-    FreeDVReporter* reporterConnection_;
+    std::string softwareName_;
+    ThreadedTimer pskReporterSendTimer_;
+    FreeDVReporter* freedvReporterConnection_;
+    PskReporter* pskReporterConnection_;
+
     std::string currentGridSquare_;
     std::string radioCallsign_;
     bool userHidden_;
     uint64_t currentFreq_;
+    bool rxOnly_;
 
     void updateReporterState_();
+    std::string getVersionString_();
 };
 
 #endif // REPORTING_CONTROLLER_H

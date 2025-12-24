@@ -130,15 +130,15 @@ public:
     IPipelineStep* createTransmitPipeline(
         int inputSampleRate, 
         int outputSampleRate, 
-        realtime_fp<float()> getFreqOffsetFn,
+        realtime_fp<float()> const& getFreqOffsetFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
-        realtime_fp<std::atomic<int>*()> getRxStateFn,
-        realtime_fp<int()> getChannelNoiseFn,
-        realtime_fp<int()> getChannelNoiseSnrFn,
-        realtime_fp<float()> getFreqOffsetFn,
-        realtime_fp<float*()> getSigPwrAvgFn,
+        realtime_fp<std::atomic<int>*()> const& getRxStateFn,
+        realtime_fp<int()> const& getChannelNoiseFn,
+        realtime_fp<int()> const& getChannelNoiseSnrFn,
+        realtime_fp<float()> const& getFreqOffsetFn,
+        realtime_fp<float*()> const& getSigPwrAvgFn,
         std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
 

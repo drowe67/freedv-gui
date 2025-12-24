@@ -24,7 +24,7 @@
 
 void IAudioDevice::setDescription(std::string desc)
 {
-    description = desc;
+    description = std::move(desc);
 }
 
 void IAudioDevice::setOnAudioData(AudioDataCallbackFn fn, void* state)

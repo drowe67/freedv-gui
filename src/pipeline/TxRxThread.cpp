@@ -88,7 +88,7 @@ extern bool g_recFileFromModulator;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
-extern bool g_queueResync;
+extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
@@ -147,7 +147,7 @@ void TxRxThread::initializePipeline_()
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
             []() { return g_sfRecMicFile; }, 
-            [](int numSamples) {
+            [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
             }
@@ -269,9 +269,9 @@ void TxRxThread::initializePipeline_()
 
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
-            outputSampleRate_, 
+            RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFileFromModulator; }, 
-            [](int numSamples) {
+            [](int) {
                 // empty
             });
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
@@ -300,7 +300,7 @@ void TxRxThread::initializePipeline_()
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
-            inputSampleRate_, 
+            RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile; }, 
             [](int numSamples) {
                 g_recFromRadioSamples -= numSamples;
@@ -311,7 +311,7 @@ void TxRxThread::initializePipeline_()
                 }
             }
         );
-        auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, recordRadioStep->getOutputSampleRate());
         recordRadioPipeline->appendPipelineStep(recordRadioStep);
         
         auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline);
@@ -522,12 +522,11 @@ void* TxRxThread::Entry() noexcept
     resetStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-#if defined(__linux__)
+    // Set thread name for debugging
     const char* threadName = nullptr;
-    if (m_tx) threadName = "FreeDV txThread";
-    else threadName = "FreeDV rxThread";
-    pthread_setname_np(pthread_self(), threadName);
-#endif // defined(__linux__)
+    if (m_tx) threadName = "txThread";
+    else threadName = "rxThread";
+    SetThreadName(threadName);
 
     // Make sure we don't start processing until
     // the main thread is ready.
@@ -688,7 +687,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = freedvInterface.getTxNNomModemSamples() * ((float)outputSampleRate_ / (float)freedvInterface.getTxModemSampleRate());
+        unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -798,9 +797,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //  RX side processing --------------------------------------------
     //
     
-    if (g_queueResync)
+    if (g_queueResync.load(std::memory_order_acquire))
     {
-        g_queueResync = false;
+        g_queueResync.store(false, std::memory_order_release);
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }
@@ -825,7 +824,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         clearFifos_();
     }
 
-    int nsam_one_speech_frame = freedvInterface.getRxNumSpeechSamples() * ((float)outputSampleRate_ / (float)freedvInterface.getRxSpeechSampleRate());
+    int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 

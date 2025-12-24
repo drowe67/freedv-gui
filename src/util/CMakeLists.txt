@@ -18,9 +18,23 @@ add_library(fdv_util STATIC
     ${THREADED_OBJECT_FILES}
     ThreadedTimer.cpp
     TcpConnectionHandler.cpp
+    UdpHandler.cpp
     logging/ulog.c
     ${UTIL_LINUX_FILES}
     ${UTIL_WIN32_FILES}
 )
 
-target_link_libraries(fdv_util yyjson)
+target_compile_options(fdv_util PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+target_link_libraries(fdv_util yyjson fdv_os_wrapper)
+
+if(UNITTEST)
+macro(DefineUnitTest utName)
+    add_executable(${utName} test/${utName}.cpp)
+    target_link_libraries(${utName} PRIVATE fdv_util)
+
+    add_test(NAME util_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
+DefineUnitTest(ThreadedTimerTest)
+endif(UNITTEST)
+

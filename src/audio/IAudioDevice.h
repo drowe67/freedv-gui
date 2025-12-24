@@ -43,7 +43,7 @@ public:
     typedef void (*AudioDataCallbackFn)(IAudioDevice&, void*, size_t, void*) FREEDV_NONBLOCKING;
     typedef void (*AudioUnderflowCallbackFn)(IAudioDevice&, void*);
     typedef void (*AudioOverflowCallbackFn)(IAudioDevice&, void*);
-    typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string, void*);
+    typedef void (*AudioErrorCallbackFn)(IAudioDevice&, std::string const&, void*);
     typedef void (*AudioDeviceChangedCallbackFn)(IAudioDevice&, std::string, void*);
     
     virtual int getNumChannels() FREEDV_NONBLOCKING = 0;
@@ -66,7 +66,7 @@ public:
     
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork(bool fastMode = false) override { std::this_thread::sleep_for(10ms); }
+    virtual void stopRealTimeWork(bool fastMode = false) override { (void)fastMode; std::this_thread::sleep_for(10ms); }
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override { /* empty */ }

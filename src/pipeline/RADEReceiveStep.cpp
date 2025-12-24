@@ -33,16 +33,18 @@
 
 #include "pipeline_defines.h"
 
+#include "../os/os_interface.h"
+
 using namespace std::chrono_literals;
 
 #if !defined(DISABLE_UNIT_TEST)
-#include <wx/wx.h>
+#include <wx/string.h>
 extern wxString utRxFeatureFile;
 #endif // !defined(DISABLE_UNIT_TEST)
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> syncFn)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , pendingFeatures_(nullptr)
@@ -68,8 +70,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 #endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(RADE_SPEECH_SAMPLE_RATE);
     assert(outputSamples_ != nullptr);
 
     inputBufCplx_ = new RADE_COMP[rade_nin_max(dv_)];
@@ -236,6 +237,8 @@ void RADEReceiveStep::utFeatureThreadEntry_()
     // Make sure other I/O can throttle us.
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RADERx");
 
     float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);

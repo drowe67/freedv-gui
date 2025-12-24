@@ -32,6 +32,8 @@
 #include <pthread.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -42,16 +44,15 @@ PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
     : inputSampleRate_(inputSampleRate)
-    , fileSampleRateFn_(fileSampleRateFn)
-    , getSndFileFn_(getSndFileFn)
-    , fileCompleteFn_(fileCompleteFn)
+    , fileSampleRateFn_(std::move(fileSampleRateFn))
+    , getSndFileFn_(std::move(getSndFileFn))
+    , fileCompleteFn_(std::move(fileCompleteFn))
     , nonRtThreadEnding_(false)
     , playbackResampler_(nullptr)
     , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(inputSampleRate_);
     assert(outputSamples_ != nullptr);
     
     // Create non-RT thread to perform audio I/O
@@ -78,7 +79,7 @@ int PlaybackStep::getOutputSampleRate() const FREEDV_NONBLOCKING
     return inputSampleRate_;
 }
 
-short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);
@@ -87,8 +88,11 @@ short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numO
     {
         outputFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
-    
-    fileIoThreadSem_.signal();
+   
+    if (outputFifo_.numUsed() < (outputFifo_.capacity() / 2))
+    { 
+        fileIoThreadSem_.signal();
+    }
 
     return outputSamples_.get();
 }
@@ -101,6 +105,8 @@ void PlaybackStep::nonRtThreadEntry_()
     // Downgrade thread QoS to Utility to avoid thread contention issues. 
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
+
+    SetThreadName("PlayStep");
 
     while (!nonRtThreadEnding_)
     {

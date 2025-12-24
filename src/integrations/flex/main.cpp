@@ -29,16 +29,12 @@
 #include <cinttypes>
 #include <stdlib.h>
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
 #include "FlexTcpTask.h"
-#include "FlexTxRxThread.h"
-#include "FlexRealtimeHelper.h"
-#include "ReportingController.h"
+#include "../common/MinimalTxRxThread.h"
+#include "../common/MinimalRealTimeHelper.h"
+#include "../common/ReportingController.h"
 #include "../pipeline/rade_text.h"
 #include "../util/logging/ulog.h"
 #include "../reporting/FreeDVReporter.h"
@@ -47,10 +43,12 @@
 
 extern "C" 
 {
-    #include "fargan_config.h"
+    #include "fargan_config_integ.h"
     #include "fargan.h"
     #include "lpcnet.h"
 }
+
+#define SOFTWARE_NAME "freedv-flex"
 
 using namespace std::chrono_literals;
 
@@ -61,10 +59,10 @@ struct CallsignReporting
 {
     ReportingController* reporter;
     FlexTcpTask* tcpTask;
-    FlexTxRxThread* rxThread;
+    MinimalTxRxThread* rxThread;
 };
 
-void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, void *state)
+void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *state)
 {
     CallsignReporting* reportObj = (CallsignReporting*)state;
 
@@ -81,24 +79,19 @@ void ReportReceivedCallsign(rade_text_t rt, const char *txt_ptr, int length, voi
     }
 }
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
+    // NOLINTBEGIN
     setenv("OMP_NUM_THREADS", "1", 1);
     setenv("OPENBLAS_NUM_THREADS", "1", 1);
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
-    
+    // NOLINTEND
+
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
@@ -126,7 +119,7 @@ int main(int argc, char** argv)
     assert(lpcnetEncState != nullptr);
     
     std::string radioIp = "";
-    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS");
+    auto radioAddrEnv = getenv("SSDR_RADIO_ADDRESS"); // NOLINT
     if (radioAddrEnv != nullptr)
     {
         radioIp = radioAddrEnv;
@@ -134,13 +127,13 @@ int main(int argc, char** argv)
     }
 
     // Start up VITA task so we can get the list of available radios.
-    auto realtimeHelper = std::make_shared<FlexRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper, false /*radioIp != "" ? true : false*/); // TBD - our VITA port must be 4992 despite Flex documentation
+    auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
+    FlexVitaTask vitaTask(realtimeHelper);
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
     bool enableRadioLookup = true;
-    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string friendlyName, std::string ip, void* state)
+    vitaTask.setOnRadioDiscoveredFn([&](FlexVitaTask&, std::string const& friendlyName, std::string const& ip, void*)
     {
         std::unique_lock<std::mutex> lk(radioMapMutex);
         if (enableRadioLookup)
@@ -152,8 +145,8 @@ int main(int argc, char** argv)
     
     // Initialize audio pipelines
     auto callbackObj = vitaTask.getCallbackData();
-    FlexTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
-    FlexTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread txThread(true, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
+    MinimalTxRxThread rxThread(false, FLEX_SAMPLE_RATE, FLEX_SAMPLE_RATE, realtimeHelper, radeObj, lpcnetEncState, &fargan, radeTextPtr, callbackObj);
 
     log_info("Starting TX/RX threads");
     txThread.start();
@@ -185,7 +178,7 @@ int main(int argc, char** argv)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
-    ReportingController reportController;
+    ReportingController reportController(SOFTWARE_NAME);
     reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
@@ -193,20 +186,31 @@ int main(int argc, char** argv)
     rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
 
     // Set up reporting of actual receive state (prior to getting callsign).
-    int rxCounter = 0;    
+    int rxCounter = 0;
+    uint16_t meterMeterId = 0;
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
-        if (rxThread.getSync())
+        if (rxThread.getSync() && !reportController.isHidden())
         {
             rxCounter = (rxCounter + 1) % 10;
+            auto snr = rxThread.getSnr();
             if (rxCounter == 0)
             {
-                reportController.reportCallsign("", rxThread.getSnr());
+                reportController.reportCallsign("", snr);
             }
+            vitaTask.sendMeter(meterMeterId, snr);
         }
+        else
+        {
+            vitaTask.sendMeter(meterMeterId, -99);
+        }        
     }, true);
     rxNoCallsignReporting.start();
 
-    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string callsign, void*) {
+    tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t meterId, void*) {
+        meterMeterId = meterId;
+    }, nullptr);
+
+    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const& callsign, void*) {
         // Add callsign to EOO so others can report us
         log_info("Setting EOO bits");
         int nsyms = rade_n_eoo_bits(radeObj);
@@ -218,10 +222,11 @@ int main(int argc, char** argv)
 
         reportController.updateRadioCallsign(callsign);
     }, nullptr);
-    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string gridSquare, void*) {
+    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const& gridSquare, void*) {
         reportController.updateRadioGridSquare(gridSquare);
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
+        vitaTask.clearStreamIds();
         vitaTask.enableAudio(true);
         vitaTask.radioConnected(radioIp.c_str());
     }, nullptr);
@@ -250,6 +255,10 @@ int main(int argc, char** argv)
             reportController.transmit(txFlag);
         }
     }, nullptr);
+    tcpTask.setWaveformAddValidStreamIdentifiersFn([&](FlexTcpTask&, uint32_t txInStreamId, uint32_t txOutStreamId, uint32_t rxInStreamId, uint32_t rxOutStreamId, void*) {
+        vitaTask.registerStreamIds(txInStreamId, txOutStreamId, rxInStreamId, rxOutStreamId);
+    }, nullptr);
+
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         
     for(;;)

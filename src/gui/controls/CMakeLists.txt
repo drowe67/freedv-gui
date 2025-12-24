@@ -8,6 +8,7 @@ add_library(fdv_gui_controls STATIC
 
 target_include_directories(fdv_gui_controls PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 add_dependencies(fdv_gui_controls codec2)
+target_compile_options(fdv_gui_controls PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_gui_controls wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)

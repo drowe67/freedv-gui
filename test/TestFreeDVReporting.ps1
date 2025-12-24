@@ -152,7 +152,7 @@ function Test-FreeDV {
 
     # Check for RX callsign
     $syncs = ($err_output_fdv -split "`r?`n") | Where { $_.Contains("Reporting callsign ZZ0ZZZ @ SNR") }
-    if ($syncs.Count -eq 1) {
+    if (($process.ExitCode -eq 0) -and ($syncs.Count -eq 1)) {
         return $true
     }
     return $false

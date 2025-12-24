@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            FlexFlexTxRxThread.h
+// Name:            MinimalTxRxThread.h
 // Purpose:         Implements the main processing thread for audio I/O.
 //
 // Authors:         Mooneer Salem
@@ -20,8 +20,8 @@
 //
 //=========================================================================
 
-#ifndef FLEX_TX_RX_THREAD_H
-#define FLEX_TX_RX_THREAD_H
+#ifndef MINIMAL_TX_RX_THREAD_H
+#define MINIMAL_TX_RX_THREAD_H
 
 #include <assert.h>
 #include <functional>
@@ -39,9 +39,13 @@
 #include "../pipeline/RADETransmitStep.h"
 
 // TBD - need to wrap in "extern C" to avoid linker errors
-extern "C" 
+extern "C"
 {
+#if defined(FREEDV_INTEGRATION)
+    #include "fargan_config_integ.h"
+#else
     #include "fargan_config.h"
+#endif // defined(FREEDV_INTEGRATION)
     #include "fargan.h"
     #include "lpcnet.h"
 }
@@ -49,12 +53,12 @@ extern "C"
 //#define ENABLE_PROCESSING_STATS
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class FlexTxRxThread - tx/rx processing thread
+// class MinimalTxRxThread - tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class FlexTxRxThread
+class MinimalTxRxThread
 {
 public:
-    FlexTxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<IRealtimeHelper> helper, struct rade* rade, LPCNetEncState* encState, FARGANState* farganState, rade_text_t radeText, paCallBackData* cbData) 
+    MinimalTxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<IRealtimeHelper> helper, struct rade* rade, LPCNetEncState* encState, FARGANState* farganState, rade_text_t radeText, paCallBackData* cbData) 
         : rade_(rade)
         , encState_(encState)
         , farganState_(farganState)
@@ -65,7 +69,7 @@ public:
         , inputSampleRate_(inputSampleRate)
         , outputSampleRate_(outputSampleRate)
         , hasEooBeenSent_(false)
-        , helper_(helper)
+        , helper_(std::move(helper))
         , deferReset_(false)
         , radeText_(radeText)
         , txStep_(nullptr)
@@ -84,15 +88,16 @@ public:
         sync_.store(0, std::memory_order_release);
     }
     
-    virtual ~FlexTxRxThread()
+    virtual ~MinimalTxRxThread()
     {
         // Free allocated buffer
+        stop();
         inputSamples_ = nullptr;
     }
 
     void start()
     {
-        thread_ = std::thread(std::bind(&FlexTxRxThread::Entry, this));
+        thread_ = std::thread(std::bind(&MinimalTxRxThread::Entry, this));
     }
 
     void stop()
@@ -176,4 +181,4 @@ private:
     void clearFifos_();
 };
 
-#endif // FLEX_TX_RX_THREAD_H
+#endif // MINIMAL_TX_RX_THREAD_H

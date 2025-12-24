@@ -51,7 +51,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     : context_(context)
     , mainloop_(mainloop)
     , stream_(nullptr)
-    , devName_(devName)
+    , devName_(std::move(devName))
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
@@ -62,7 +62,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
 
 PulseAudioDevice::~PulseAudioDevice()
 {
-    stop();
+    stopImpl_();
 }
 
 bool PulseAudioDevice::isRunning()
@@ -108,10 +108,10 @@ void PulseAudioDevice::start()
     buffer_attr.fragsize = buffer_attr.tlength;
     
     // Stream flags
-    pa_stream_flags_t flags = pa_stream_flags_t(
+    auto flags = 
          PA_STREAM_INTERPOLATE_TIMING |
          PA_STREAM_AUTO_TIMING_UPDATE | 
-         PA_STREAM_ADJUST_LATENCY);
+         PA_STREAM_ADJUST_LATENCY;
     
     int result = 0;
     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
@@ -121,7 +121,7 @@ void PulseAudioDevice::start()
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
             stream_, devName_.c_str(), &buffer_attr, 
-            flags, NULL, NULL);
+            (pa_stream_flags_t)flags, NULL, NULL);
         if (result == 0) pa_stream_trigger(stream_, nullptr, nullptr);
     }
     else
@@ -130,7 +130,7 @@ void PulseAudioDevice::start()
         
         pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
-            stream_, devName_.c_str(), &buffer_attr, flags);
+            stream_, devName_.c_str(), &buffer_attr, (pa_stream_flags_t)flags);
     }
     
     if (result != 0)
@@ -153,6 +153,11 @@ void PulseAudioDevice::start()
 }
 
 void PulseAudioDevice::stop()
+{
+    stopImpl_();
+}
+
+void PulseAudioDevice::stopImpl_()
 {
     std::unique_lock<std::mutex> lk(objLock_);
     if (stream_ != nullptr)
@@ -262,13 +267,35 @@ void PulseAudioDevice::setHelperRealTime()
     else
     {
         int minNiceLevel = 0;
+        constexpr int ERROR_BUFFER_SIZE = 1024;
+        char tmpBuf[ERROR_BUFFER_SIZE];
         if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
         {
-            log_warn("rtkit could not get minimum nice level: %s", strerror(-result));
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#else
+            auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            if (ptr != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
+            log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
         }
         else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
         {
-            log_warn("rtkit could not make high priority: %s", strerror(-result));
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            log_warn("rtkit could not make high priority: %s", tmpBuf);
+#else
+            auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            if (ptr != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
+            log_warn("rtkit could not make high priority: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
         }
     }
     
@@ -348,16 +375,16 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
         pa_stream_peek(s, &data, &length);
         if (!data || length == 0) 
         {
-            return; //break;
+            return;
         }
 
         if (thisObj->onAudioDataFunction)
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
-        sem_post(&thisObj->sem_);
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
+    sem_post(&thisObj->sem_);
 }
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
@@ -392,7 +419,7 @@ void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
     }    
 }
 
-void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)
+void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
@@ -402,7 +429,7 @@ void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)
     }
 }
 
-void PulseAudioDevice::StreamOverflowCallback_(pa_stream *p, void *userdata)
+void PulseAudioDevice::StreamOverflowCallback_(pa_stream *, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
@@ -440,7 +467,7 @@ void PulseAudioDevice::StreamLatencyCallback_(pa_stream *p, void *userdata)
 }
 #endif // 0
 
-void PulseAudioDevice::HandleXCPU_(int signum, siginfo_t *info, void *extra)
+void PulseAudioDevice::HandleXCPU_(int, siginfo_t *, void *)
 {
     // Notify thread that it has to stop work immediately and sleep.
     log_warn("Taking too much CPU handling real-time tasks, pausing for a bit");

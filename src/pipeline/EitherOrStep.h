@@ -30,7 +30,7 @@
 class EitherOrStep : public IPipelineStep
 {
 public:
-    EitherOrStep(realtime_fp<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep);
+    EitherOrStep(realtime_fp<bool()> const& conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep);
     virtual ~EitherOrStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;

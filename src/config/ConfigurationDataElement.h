@@ -28,7 +28,7 @@ template<typename UnderlyingDataType>
 class ConfigurationDataElement
 {
 public:
-    ConfigurationDataElement(const char* elementName, UnderlyingDataType defaultVal);
+    ConfigurationDataElement(const char* elementName, UnderlyingDataType const& defaultVal);
     virtual ~ConfigurationDataElement() = default;
     
     const char* getElementName() const;
@@ -58,10 +58,12 @@ private:
 };
 
 template<typename UnderlyingDataType>
-ConfigurationDataElement<UnderlyingDataType>::ConfigurationDataElement(const char* elementName, UnderlyingDataType defaultVal)
+ConfigurationDataElement<UnderlyingDataType>::ConfigurationDataElement(const char* elementName, UnderlyingDataType const& defaultVal)
     : elementName_(elementName)
     , data_(defaultVal)
     , default_(defaultVal)
+    , saveProcessor_(nullptr)
+    , loadProcessor_(nullptr)
 {
     // empty
 }
@@ -105,7 +107,7 @@ UnderlyingDataType* ConfigurationDataElement<UnderlyingDataType>::operator->()
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType val)
 {
-    data_ = val;
+    data_ = std::move(val);
 }
 
 template<typename UnderlyingDataType>
@@ -139,13 +141,13 @@ UnderlyingDataType ConfigurationDataElement<UnderlyingDataType>::get()
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
 {
-    saveProcessor_ = fn;
+    saveProcessor_ = std::move(fn);
 }
 
 template<typename UnderlyingDataType>
 void ConfigurationDataElement<UnderlyingDataType>::setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
 {
-    loadProcessor_ = fn;
+    loadProcessor_ = std::move(fn);
 }
 
 #endif // CONFIGURATION_DATA_ELEMENT_H

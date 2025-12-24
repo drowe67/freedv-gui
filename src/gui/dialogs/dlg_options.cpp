@@ -141,6 +141,22 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingRows->Add(sbSizerReportingFreeDV, 0, wxALL | wxEXPAND, 5);
     
+    // UDP reporting options
+    wxBoxSizer* sbSizerReportingUDP = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxUDPReportingEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Enable QSO Logging"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxUDPReportingEnable->SetToolTip(_("Enables QSO logging using the WSJT-X support in your preferred logging program."));
+    sbSizerReportingUDP->Add(m_ckboxUDPReportingEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPHostName = new wxStaticText(sbReporting, wxID_ANY, wxT("IP Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDP->Add(labelUDPHostName, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpHostname = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(150,-1), 0);
+    sbSizerReportingUDP->Add(m_udpHostname, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPPort = new wxStaticText(sbReporting, wxID_ANY, wxT("Port:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDP->Add(labelUDPPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpPort = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0);
+    sbSizerReportingUDP->Add(m_udpPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbSizerReportingRows->Add(sbSizerReportingUDP, 0, wxALL | wxEXPAND, 5);
+    
     sizerReporting->Add(sbSizerReportingRows, 0, wxALL | wxEXPAND, 5);
     
     // FreeDV Reporter options that don't depend on Reporting checkboxes
@@ -453,6 +469,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txBPF = new wxCheckBox(sb_freedv700, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
+    m_ckboxEnableLegacyModes = new wxCheckBox(sb_freedv700, wxID_ANY, _("Enable Legacy Modes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedv700->Add(m_ckboxEnableLegacyModes, 0, wxALL | wxALIGN_LEFT, 5);
+    
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
     //------------------------------
@@ -636,10 +655,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbDebugOptionsSizer->Add(m_ckboxTxRxThreadPriority, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxTxRxDumpTiming = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxTxRxDumpTiming, 0, wxALL | wxALIGN_LEFT, 5);
+    
     m_ckboxTxRxDumpFifoState = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxTxRxDumpFifoState, 0, wxALL | wxALIGN_LEFT, 5);   
     m_ckboxFreeDVAPIVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
+    m_showDecodeStats = new wxCheckBox(sb_fifo2, wxID_ANY, _("Show Decode Stats"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbDebugOptionsSizer2->Add(m_showDecodeStats, 0, wxALL | wxALIGN_LEFT, 5); 
     
     m_experimentalFeatures = new wxCheckBox(sb_fifo2, wxID_ANY, _("Enable Experimental Features"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer3->Add(m_experimentalFeatures, 0, wxALL | wxALIGN_LEFT, 5);   
@@ -768,6 +790,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -816,6 +839,7 @@ OptionsDlg::~OptionsDlg()
     
     m_ckboxReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -906,12 +930,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
         m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
+        m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
         
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
        
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
-
+        m_ckboxEnableLegacyModes->SetValue(wxGetApp().appConfiguration.enableLegacyModes);
+        
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
 #endif
@@ -931,6 +957,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_useMetricDistances->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances);
         m_useCardinalDirections->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal);
         m_ckboxFreeDVReporterForceReceiveOnly->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly);
+        
+        // UDP reporting options
+        m_ckboxUDPReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled);
+        m_udpHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname);
+        m_udpPort->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort.get()));
         
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
@@ -1016,6 +1047,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         // Save new reporting frequency list.
         std::vector<wxString> tmpList;
+        tmpList.reserve(m_freqList->GetCount());
         for (unsigned int index = 0; index < m_freqList->GetCount(); index++)
         {
             tmpList.push_back(m_freqList->GetString(index));
@@ -1089,9 +1121,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         }
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
+        wxGetApp().appConfiguration.showDecodeStats = m_showDecodeStats->GetValue();
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
-
+        wxGetApp().appConfiguration.enableLegacyModes = m_ckboxEnableLegacyModes->GetValue();
+        
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
@@ -1113,7 +1147,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances = m_useMetricDistances->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly = m_ckboxFreeDVReporterForceReceiveOnly->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal = m_useCardinalDirections->GetValue();
-                
+        
+        // UDP reporting options
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled = m_ckboxUDPReportingEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname = m_udpHostname->GetValue();
+        
+        long udpPort;
+        m_udpPort->GetValue().ToLong(&udpPort);
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort = (int)udpPort;
+            
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
@@ -1152,7 +1194,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 //-------------------------------------------------------------------------
 // OnOK()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnOK(wxCommandEvent& event)
+void OptionsDlg::OnOK(wxCommandEvent&)
 {
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
@@ -1166,7 +1208,7 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnCancel()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnCancel(wxCommandEvent& event)
+void OptionsDlg::OnCancel(wxCommandEvent&)
 {
     //this->EndModal(wxID_CANCEL);
     EndModal(wxCANCEL);
@@ -1179,7 +1221,7 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnApply()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnApply(wxCommandEvent& event)
+void OptionsDlg::OnApply(wxCommandEvent&)
 {
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
     
@@ -1216,24 +1258,24 @@ void OptionsDlg::OnApply(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 // OnInitDialog()
 //-------------------------------------------------------------------------
-void OptionsDlg::OnInitDialog(wxInitDialogEvent& event)
+void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 {
     ExchangeData(EXCHANGE_DATA_IN, false);
 }
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time
 
-void OptionsDlg::OnTestFrame(wxScrollEvent& event) {
+void OptionsDlg::OnTestFrame(wxScrollEvent&) {
     wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 }
 
-void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
+void OptionsDlg::OnChannelNoise(wxScrollEvent&) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
     updateChannelNoiseState();
 }
 
 
-void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event) {
+void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     wxDirDialog pathDialog(
                                 this,
                                 wxT("Voice Keyer file location"),
@@ -1247,7 +1289,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event) {
     m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
+void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent&) {
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
@@ -1260,11 +1302,11 @@ void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
      m_txtCtrlQuickRecordPath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
+void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {
     wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
 }
 
-void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
+void OptionsDlg::OnDebugConsole(wxScrollEvent&) {
     wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #ifdef __WXMSW__
     // somewhere to send printfs while developing, causes conmsole to pop up on Windows
@@ -1278,7 +1320,7 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
 }
 
 
-void OptionsDlg::OnFifoReset(wxCommandEvent& event)
+void OptionsDlg::OnFifoReset(wxCommandEvent&)
 {
     g_infifo1_full.store(0, std::memory_order_release);
     g_outfifo1_empty.store(0, std::memory_order_release);
@@ -1290,7 +1332,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
 }
 
 void OptionsDlg::updateReportingState()
-{
+{    
     if (!sessionActive_)
     {
         m_ckbox_use_utc_time->Enable(true);
@@ -1308,6 +1350,17 @@ void OptionsDlg::updateReportingState()
             m_ckboxFreeDVReporterEnable->Enable(true);
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
+            
+            if (m_ckboxUDPReportingEnable->GetValue())
+            {
+                m_udpHostname->Enable(true);
+                m_udpPort->Enable(true);
+            }
+            else
+            {
+                m_udpHostname->Enable(false);
+                m_udpPort->Enable(false);
+            }
         }
         else
         {
@@ -1319,6 +1372,8 @@ void OptionsDlg::updateReportingState()
             m_ckboxManualFrequencyReporting->Enable(false);
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
+            m_udpHostname->Enable(false);
+            m_udpPort->Enable(false);
         }    
     }
     else
@@ -1335,6 +1390,8 @@ void OptionsDlg::updateReportingState()
         m_freedvReporterHostname->Enable(false);
         m_ckboxFreeDVReporterForceReceiveOnly->Enable(false);
         m_useCardinalDirections->Enable(false);
+        m_udpHostname->Enable(false);
+        m_udpPort->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }
@@ -1394,22 +1451,22 @@ void OptionsDlg::updateRigControlState()
     }
 }
     
-void OptionsDlg::OnReportingEnable(wxCommandEvent& event)
+void OptionsDlg::OnReportingEnable(wxCommandEvent&)
 {
     updateReportingState();
 }
 
-void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)
+void OptionsDlg::OnToneStateEnable(wxCommandEvent&)
 {
     updateToneState();
 }
 
-void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)
+void OptionsDlg::OnMultipleRxEnable(wxCommandEvent&)
 {
     updateMultipleRxState();
 }
 
-void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
+void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent&)
 {
     updateRigControlState();
 }
@@ -1430,7 +1487,7 @@ void OptionsDlg::DisplayFifoPACounters() {
     }
 }
 
-void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent&)
 {
     auto sel = m_freqList->GetSelection();
     if (sel >= 0)
@@ -1443,7 +1500,7 @@ void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent&)
 {
     double tmpValue = 0.0;
     bool validNumber = wxNumberFormatter::FromString(m_txtCtrlNewFrequency->GetValue(), &tmpValue);
@@ -1486,7 +1543,7 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqAdd(wxCommandEvent&)
 {
     auto val = m_txtCtrlNewFrequency->GetValue();
     
@@ -1504,7 +1561,7 @@ void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue("");
 }
 
-void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqRemove(wxCommandEvent&)
 {
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
     if (idx >= 0)
@@ -1514,7 +1571,7 @@ void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue("");
 }
 
-void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent&)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
@@ -1529,7 +1586,7 @@ void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
     m_txtCtrlNewFrequency->SetValue(prevStr);
 }
 
-void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent& event)
+void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent&)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());

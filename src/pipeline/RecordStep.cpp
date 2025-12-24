@@ -29,6 +29,8 @@
 #include <pthread.h>
 #endif // defined(__APPLE__)
 
+#include "../os/os_interface.h"
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -37,8 +39,8 @@ RecordStep::RecordStep(
     int inputSampleRate, std::function<SNDFILE*()> getSndFileFn, 
     std::function<void(int)> isFileCompleteFn)
     : inputSampleRate_(inputSampleRate)
-    , getSndFileFn_(getSndFileFn)
-    , isFileCompleteFn_(isFileCompleteFn)
+    , getSndFileFn_(std::move(getSndFileFn))
+    , isFileCompleteFn_(std::move(isFileCompleteFn))
     , fileIoThreadEnding_(false)
 {
     inputFifo_ = codec2_fifo_create(inputSampleRate_);
@@ -96,6 +98,8 @@ void RecordStep::fileIoThreadEntry_()
     // Downgrade thread QoS to Utility to avoid thread contention issues.        
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
+
+    SetThreadName("RecordStep");
 
     while (!fileIoThreadEnding_)
     {

@@ -4,7 +4,8 @@ export LD_LIBRARY_PATH="${APPIMAGE_LIBRARY_PATH}:${APPDIR}/usr/lib:${LD_LIBRARY_
 export PATH="$APPDIR/usr/bin:$APPDIR/rade-venv/bin"
 echo "PATH=$PATH"
 export PYTHONHOME="$APPDIR/usr"
-export PYTHONPATH="$APPDIR/rade_src:$APPDIR/rade-venv/lib/python3.11/site-packages"
+export PYTHONPATH="$APPDIR/rade_src:$APPDIR/rade-venv/lib/python3.14/site-packages"
+export PYTHONMALLOC=mimalloc
 echo "PYTHONPATH=$PYTHONPATH"
 echo "PYTHONHOME=$PYTHONHOME"
 cd "$APPDIR"

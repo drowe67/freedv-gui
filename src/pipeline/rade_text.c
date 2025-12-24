@@ -80,7 +80,7 @@ static void convert_callsign_to_ota_string_(const char *input, char *output, int
     assert(maxLength >= 0);
 
     int outidx = 0;
-    for (size_t index = 0; index < maxLength; index++)
+    for (size_t index = 0; index < (size_t)maxLength; index++)
     {
         if (input[index] == 0)
             break;
@@ -112,7 +112,7 @@ static void convert_ota_string_to_callsign_(const char *input, char *output, int
     assert(maxLength >= 0);
 
     int outidx = 0;
-    for (size_t index = 0; index < maxLength; index++)
+    for (size_t index = 0; index < (size_t)maxLength; index++)
     {
         if (input[index] == 0)
             break;
@@ -301,7 +301,7 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
             }
         }
     }
-    rms = sqrt(rms / symSize);
+    rms = sqrtf(rms / symSize);
 
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)

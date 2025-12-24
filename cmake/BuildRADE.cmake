@@ -8,14 +8,14 @@ if(BUILD_OSX_UNIVERSAL)
     set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DBUILD_OSX_UNIVERSAL=1)
 endif(BUILD_OSX_UNIVERSAL)
 
-set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip)
 
 include(ExternalProject)
 ExternalProject_Add(build_rade
    SOURCE_DIR rade_src
    BINARY_DIR rade_build
    GIT_REPOSITORY https://github.com/drowe67/radae.git
-   GIT_TAG ms-disable-python-gc
+   GIT_TAG main
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
    #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
@@ -41,8 +41,10 @@ set(FARGAN_X86_CONFIG_H_FILE "${BINARY_DIR}/build_opus_x86-prefix/src/build_opus
 
 if(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/dnn
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/celt
+    ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/silk
     ${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -51,8 +53,10 @@ set_target_properties(opus PROPERTIES
 set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus_arm-prefix/src/build_opus_arm/config.h")
 else(APPLE AND BUILD_OSX_UNIVERSAL)
 include_directories(
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/dnn
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/celt
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/silk
     ${BINARY_DIR}/build_opus-prefix/src/build_opus/include)
 set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -67,13 +71,13 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT
 if(WIN32)
 
 # XXX only x86_64 supported for now
-set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
-set(PYTHON_HASH 4c0a5a44d4ca1d0bc76fe08ea8b76adc)
+set(PYTHON_URL https://www.python.org/ftp/python/3.14.2/python-3.14.2-embed-amd64.zip)
+set(PYTHON_HASH e1f8c4ffa4cc383d8449816d5cf664859d6c64bc)
 
 # Download Python. This is only included in the installer.
 FetchContent_Declare(download_python3 
     URL ${PYTHON_URL} 
-    URL_HASH MD5=${PYTHON_HASH})
+    URL_HASH SHA1=${PYTHON_HASH})
 if (NOT download_python3_POPULATED)
     FetchContent_Populate(download_python3)
 endif (NOT download_python3_POPULATED)
@@ -89,7 +93,7 @@ endif (NOT download_pip_POPULATED)
 
 # PyTorch needs the Visual Studio redistributable to be installed.
 FetchContent_Declare(download_vsr
-    URL https://aka.ms/vs/16/release/vc_redist.x64.exe
+    URL https://aka.ms/vc14/vc_redist.x64.exe
     DOWNLOAD_NO_EXTRACT TRUE)
 if (NOT download_vsr_POPULATED)
     FetchContent_Populate(download_vsr)
@@ -101,7 +105,7 @@ endif (NOT download_vsr_POPULATED)
 # allow pip to work; additional content should be added to this file instead
 # (see example at https://github.com/sergeyyurkov1/make_portable_python_env/blob/master/make_portable_python_env.bat).
 file(MAKE_DIRECTORY ${download_python3_SOURCE_DIR}/DLLs)
-file(WRITE ${download_python3_SOURCE_DIR}/python312._pth "Lib/site-packages\r\npython312.zip\r\n.\r\n\r\n# Uncomment to run site.main() automatically\r\nimport site")
+file(WRITE ${download_python3_SOURCE_DIR}/python314._pth "Lib/site-packages\r\npython314.zip\r\n.\r\n\r\n# Uncomment to run site.main() automatically\r\nimport site")
 
 # Tell NSIS to install Python and pip into the same folder freedv.exe is in.
 # This makes looking for python3.dll easier later.
@@ -148,7 +152,7 @@ install(
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.
 set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive'
+    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive /norestart'
     MessageBox MB_OK 'FreeDV will now open a Command Prompt window to finish installing the Python components needed for RADE. Please allow this process to complete without interruption. It may appear as though nothing is happening but rest assured, things are happening.' /SD IDOK
     ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
 

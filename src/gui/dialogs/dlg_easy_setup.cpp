@@ -27,7 +27,7 @@
 #include <wx/wx.h>
 #include <wx/valnum.h>
 
-#include "main.h"
+#include "../../main.h"
 #include "dlg_easy_setup.h"
 #include "dlg_audiooptions.h"
 #include "dlg_ptt.h"
@@ -640,13 +640,13 @@ void EasySetupDialog::ExchangeReportingData(int inout)
     }
 }
 
-void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent& event)
+void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent&)
 {
     m_txt_callsign->Enable(m_ckbox_psk_enable->GetValue());
     m_txt_grid_square->Enable(m_ckbox_psk_enable->GetValue());
 }
 
-void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent& event)
+void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent&)
 {
     resetIcomCIVStatus_();
     
@@ -677,7 +677,7 @@ void EasySetupDialog::resetIcomCIVStatus_()
     Layout();
 }
 
-void EasySetupDialog::OnInitDialog(wxInitDialogEvent& event)
+void EasySetupDialog::OnInitDialog(wxInitDialogEvent&)
 {
     updateAudioDevices_();
     updateHamlibDevices_();
@@ -693,17 +693,17 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
     }
 }
 
-void EasySetupDialog::OnCancel(wxCommandEvent& event)
+void EasySetupDialog::OnCancel(wxCommandEvent&)
 {
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
-void EasySetupDialog::OnClose(wxCloseEvent& event)
+void EasySetupDialog::OnClose(wxCloseEvent&)
 {
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
-void EasySetupDialog::OnApply(wxCommandEvent& event)
+void EasySetupDialog::OnApply(wxCommandEvent&)
 {
     if (canSaveSettings_())
     {
@@ -745,7 +745,7 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
     delete dlg;
 }
 
-void EasySetupDialog::OnTest(wxCommandEvent& event)
+void EasySetupDialog::OnTest(wxCommandEvent&)
 {
     if (canTestRadioSettings_())
     {
@@ -842,7 +842,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 hamlibTestObject_->onRigError += [&](IRigController*, std::string error) {
                     CallAfter([&]() {
                         wxMessageBox(
-                            "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                            wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
                 };
@@ -882,7 +882,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 serialPortTestObject_->onRigError += [&](IRigController*, std::string error) {
                     CallAfter([&]() {
                         wxMessageBox(
-                            "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                            wxString::Format("Couldn't connect to Radio (%s).  Make sure the serial Device and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
                 };
@@ -968,7 +968,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
     }
 }
 
-void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
+void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent&)
 {
     if (m_ckUseHamlibPTT->GetValue())
     {
@@ -996,7 +996,7 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
 
 void EasySetupDialog::updateHamlibSerialRates_(int min, int max)
 {
-    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "921600", "1000000", "1152000", "1500000", "2000000"};
 
     auto prevSelection = m_cbSerialRate->GetCurrentSelection();
     int oldBaud = 0;
@@ -1073,7 +1073,6 @@ void EasySetupDialog::updateHamlibDevices_()
         wxString key_name;
         long el = 1;
         key.GetFirstValue(key_name, el);
-        wxString valType;
         wxString key_data;
         for(unsigned int i = 0; i < values; i++)
         {
@@ -1091,9 +1090,9 @@ void EasySetupDialog::updateHamlibDevices_()
 #if defined(__FreeBSD__)
     if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 || // NOLINT
 #endif // defined(__FreeBSD__)
-       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) { // NOLINT
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;
@@ -1125,7 +1124,7 @@ void EasySetupDialog::updateHamlibDevices_()
     }
 #else
     glob_t    gl;
-    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0) 
+    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0)  // NOLINT
     {
         wxRegEx pathRegex("/sys/class/tty/([^/]+)");
         for(unsigned int i=0; i<gl.gl_pathc; i++) 
@@ -1141,9 +1140,21 @@ void EasySetupDialog::updateHamlibDevices_()
     }
 
     // Support /dev/serial as well
-    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0)
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
     {
         for(unsigned int i=0; i<gl.gl_pathc; i++)   
+        {
+            wxString path = gl.gl_pathv[i];
+            portList.push_back(path);
+        }
+        globfree(&gl);
+    }
+
+    // Support /dev/rfcomm as well
+    // linux usb over bluetooth
+    if (glob("/dev/rfcomm*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
+    {
+        for(unsigned int i=0; i<gl.gl_pathc; i++)
         {
             wxString path = gl.gl_pathv[i];
             portList.push_back(path);

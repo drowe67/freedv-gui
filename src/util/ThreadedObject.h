@@ -33,6 +33,7 @@
 #include <deque>
 #include <functional>
 #include <atomic>
+#include <string>
 
 class ThreadedObject
 {
@@ -40,17 +41,22 @@ public:
     virtual ~ThreadedObject();
 
 protected:
-    ThreadedObject(ThreadedObject* parent = nullptr);
+    ThreadedObject(std::string name, ThreadedObject* parent = nullptr);
     
     // Enqueues some code to run on a different thread.
     // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
     void enqueue_(std::function<void()> fn, int timeoutMilliseconds = 0);
     
+    // Waits for all queued tasks to complete.
+    void waitForAllTasksComplete_();
 private:
     ThreadedObject* parent_;
-    
+    std::string name_;
+    std::atomic<bool> suppressEnqueue_;
+
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
+    dispatch_group_t group_;
 #else
     std::atomic<bool> isDestroying_;
     std::thread objectThread_;

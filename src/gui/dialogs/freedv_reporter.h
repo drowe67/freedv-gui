@@ -30,7 +30,7 @@
 #include <wx/tipwin.h>
 #include <wx/dataview.h>
 
-#include "main.h"
+#include "../../main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
 #include "../controls/ReportMessageRenderer.h"
@@ -65,7 +65,7 @@ class FreeDVReporterDialog : public wxFrame
                 long style = wxCAPTION | wxCLOSE_BOX | wxSYSTEM_MENU | wxMINIMIZE_BOX | wxRESIZE_BORDER);
         ~FreeDVReporterDialog();
         
-        void setReporter(std::shared_ptr<FreeDVReporter> reporter);
+        void setReporter(std::shared_ptr<FreeDVReporter> const& reporter);
         void refreshQSYButtonState();
         void refreshLayout();
         
@@ -74,7 +74,13 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-    
+
+        wxString getGridSquareForCallsign(wxString const& callsign)
+        {
+            FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+            return model->getGridSquareForCallsign(callsign);
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
@@ -106,6 +112,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
+        void OnColumnReordered(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
         void DeselectItem();
@@ -116,6 +123,8 @@ class FreeDVReporterDialog : public wxFrame
         void SkipMouseEvent(wxMouseEvent& event);
         void AdjustMsgColWidth(wxListEvent& event);
         void OnRightClickSpotsList(wxContextMenuEvent& event);
+
+        void OnShowColumn(wxCommandEvent& event);
                 
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
@@ -150,6 +159,10 @@ class FreeDVReporterDialog : public wxFrame
         wxTimer* m_deleteTimer;
 
         wxTipWindow* tipWindow_;
+
+        // Menu bar and menu options
+        wxMenuBar* menuBar_;
+        wxMenu* showMenu_;
         
      private:
         const wxString UNKNOWN_STR;
@@ -167,14 +180,14 @@ class FreeDVReporterDialog : public wxFrame
              FreeDVReporterDataModel(FreeDVReporterDialog* parent);
              virtual ~FreeDVReporterDataModel();
 
-             void setReporter(std::shared_ptr<FreeDVReporter> reporter);
+             void setReporter(std::shared_ptr<FreeDVReporter> const& reporter);
              void setBandFilter(FilterFrequency freq);
              void refreshAllRows();
-             void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
+             void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString const& customText);
              void updateHighlights();
              void triggerResort();
              void deallocateRemovedItems();
-             void updateMessage(wxString statusMsg)
+             void updateMessage(wxString const& statusMsg)
              {
                  if (reporter_)
                  {
@@ -211,6 +224,20 @@ class FreeDVReporterDialog : public wxFrame
                      auto data = (ReporterData*)item.GetID();
                      return data->userMessage;
                  }
+                 return "";
+             }
+             
+             wxString getGridSquareForCallsign(wxString const& callsign)
+             {
+                 for (auto& kvp : allReporterData_)
+                 {
+                     auto reportData = kvp.second;
+                     if (reportData->callsign == callsign)
+                     {
+                         return reportData->gridSquare;
+                     }
+                 }
+                 
                  return "";
              }
              
@@ -278,6 +305,15 @@ class FreeDVReporterDialog : public wxFrame
                 // Controls the current highlight color
                 wxColour foregroundColor;
                 wxColour backgroundColor;
+
+                ReporterData()
+                    : lastTxDate(wxInvalidDateTime)
+                    , lastRxDate(wxInvalidDateTime)
+                    , lastUpdateDate(wxInvalidDateTime)
+                    , lastUpdateUserMessage(wxInvalidDateTime)
+                    , connectTime(wxInvalidDateTime)
+                    , deleteTime(wxInvalidDateTime)
+                { /* empty */ }
             };
 
             struct CallbackHandler
@@ -318,10 +354,10 @@ class FreeDVReporterDialog : public wxFrame
             void onReporterConnect_();
             void onReporterDisconnect_();
             void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
-            void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
-            void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
+            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly);
+            void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, uint64_t frequencyHz);
+            void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
+            void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
             void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
 
             void onConnectionSuccessfulFn_();
@@ -331,7 +367,7 @@ class FreeDVReporterDialog : public wxFrame
 
             void execQueuedAction_();
 
-            wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
+            wxString makeValidTime_(std::string const& timeStr, wxDateTime& timeObj);
             double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
             double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
             void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
@@ -342,6 +378,9 @@ class FreeDVReporterDialog : public wxFrame
         };
 
         bool isSelectionPossible_;
+
+        void createColumn_(int col, bool visible);
+        wxDataViewColumn* getColumnForModelColId_(unsigned int col);
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;

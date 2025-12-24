@@ -26,6 +26,16 @@ DEFINE_FILTER_CONFIG_NAMES(SpkOut);
 DEFINE_FILTER_CONFIG_NAMES_OLD(MicIn);
 DEFINE_FILTER_CONFIG_NAMES_OLD(SpkOut);
 
+static float GammaBetaSaveProcessor_(float val)
+{
+    return val * 100.0;
+}
+
+static float GammaBetaLoadProcessor_(float val)
+{
+    return val / 100.0;
+}
+
 FilterConfiguration::FilterConfiguration()
     : codec2LPCPostFilterEnable("/Filter/codec2LPCPostFilterEnable", true)
     , codec2LPCPostFilterBassBoost("/Filter/codec2LPCPostFilterBassBoost", true)
@@ -33,20 +43,13 @@ FilterConfiguration::FilterConfiguration()
     , codec2LPCPostFilterBeta("/Filter/codec2LPCPostFilter/Beta", CODEC2_LPC_PF_BETA*100)
     , speexppEnable("/Filter/speexpp_enable", true)
     , agcEnabled("/Filter/agcEnable", true)
+    , bwExpandEnabled("/Filter/bwExpandEnable", true)
     , enable700CEqualizer("/Filter/700C_EQ", true)
 {
-    std::function<float(float)> gammaBetaSaveProcessor = [](float val) {
-        return val * 100.0;
-    };
-    
-    std::function<float(float)> gammaBetaLoadProcessor = [](float val) {
-        return val / 100.0;
-    };
-    
-    codec2LPCPostFilterGamma.setSaveProcessor(gammaBetaSaveProcessor);
-    codec2LPCPostFilterBeta.setSaveProcessor(gammaBetaSaveProcessor);
-    codec2LPCPostFilterGamma.setLoadProcessor(gammaBetaLoadProcessor);
-    codec2LPCPostFilterBeta.setLoadProcessor(gammaBetaLoadProcessor);
+    codec2LPCPostFilterGamma.setSaveProcessor(GammaBetaSaveProcessor_);
+    codec2LPCPostFilterBeta.setSaveProcessor(GammaBetaSaveProcessor_);
+    codec2LPCPostFilterGamma.setLoadProcessor(GammaBetaLoadProcessor_);
+    codec2LPCPostFilterBeta.setLoadProcessor(GammaBetaLoadProcessor_);
 }
 
 void FilterConfiguration::load(wxConfigBase* config)
@@ -77,6 +80,7 @@ void FilterConfiguration::load(wxConfigBase* config)
     load_(config, speexppEnable);
     load_(config, enable700CEqualizer);
     load_(config, agcEnabled);
+    load_(config, bwExpandEnabled);
 }
 
 void FilterConfiguration::save(wxConfigBase* config)
@@ -92,4 +96,5 @@ void FilterConfiguration::save(wxConfigBase* config)
     save_(config, speexppEnable);
     save_(config, enable700CEqualizer);
     save_(config, agcEnabled);
+    save_(config, bwExpandEnabled);
 }

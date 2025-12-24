@@ -23,6 +23,9 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
+
+#include <pthread.h>
+
 #include "os_interface.h"
 
 static id<NSObject> Activity = nil;
@@ -75,7 +78,7 @@ void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 
 void ResetMainWindowColorSpace()
 {
-    [NSApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *win, BOOL *stop) {       
+    [NSApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *win, BOOL *) {       
         NSColorSpace* colorSpace = win.colorSpace;
         CFStringRef colorSpaceName = CGColorSpaceCopyName(colorSpace.CGColorSpace);
         bool recreate = colorSpaceName == nil || CFStringCompare(colorSpaceName, kCGColorSpaceSRGB, 0) != kCFCompareEqualTo;
@@ -116,4 +119,11 @@ void StopLowLatencyActivity()
 std::string GetOperatingSystemString()
 {
     return "macos";
+}
+
+void SetThreadName(std::string const& name)
+{
+    std::string fullName = "FDV ";
+    fullName += name;
+    pthread_setname_np(fullName.c_str());
 }

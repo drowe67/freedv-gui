@@ -21,11 +21,12 @@
 //=========================================================================
 
 #include "SerialPortInRigController.h"
+#include "../os/os_interface.h"
 
 #define PTT_INPUT_MONITORING_TIME_MS 10
 
 SerialPortInRigController::SerialPortInRigController(std::string serialPort, bool ctsPos)
-    : SerialPortRigController(serialPort)
+    : SerialPortRigController(std::move(serialPort))
     , threadExiting_(false)
     , ctsPos_(ctsPos)
     , currentPttInputState_(false)
@@ -59,6 +60,8 @@ SerialPortInRigController::~SerialPortInRigController()
         threadExiting_ = true;
         pollThread_.join();
     }
+    
+    waitForAllTasksComplete_();
 }
 
 bool SerialPortInRigController::getCTS_() 
@@ -80,6 +83,8 @@ bool SerialPortInRigController::getCTS_()
 
 void SerialPortInRigController::pollThreadEntry_()
 {
+    SetThreadName("SerialIn");
+
     while (!threadExiting_)
     {
         enqueue_(std::bind(&SerialPortInRigController::pollSerialPort_, this));

@@ -48,6 +48,8 @@ elseif(LINUX AND NATIVE_AUDIO_AVAILABLE AND DBUS_FOUND)
     target_link_libraries(fdv_audio PRIVATE ${DBUS_LIBRARIES})
 endif()
 
+target_compile_options(fdv_audio PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_audio wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
     target_compile_definitions(fdv_audio PRIVATE ${WXBUILD_BUILD_DEFS})

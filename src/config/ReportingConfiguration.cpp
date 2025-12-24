@@ -50,8 +50,16 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
     , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
-    , useUTCForReporting("/CallsignList/UseUTCTime", false)
+    
+    , freedvReporterColumnOrder("/Reporting/FreeDV/ColumnOrder", { }) /* empty means default ordering */
+    , freedvReporterColumnVisibility("/Reporting/FreeDV/ColumnVisibility", { })
+
+    , udpReportingEnabled("/Reporting/UDP/Enable", false)
+    , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
+    , udpReportingPort("/Reporting/UDP/Port", 2237)
         
+    , useUTCForReporting("/CallsignList/UseUTCTime", false)
+
     , reportingFrequencyList("/Reporting/FrequencyList", {
         _("1.8700"),
         _("3.6250"),
@@ -84,7 +92,7 @@ ReportingConfiguration::ReportingConfiguration()
     , reportingDirectionAsCardinal("/Reporting/DirectionAsCardinal", false)
 {
     // Special handling for the frequency list to properly handle locales
-    reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> list) {
+    reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> const& list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {
@@ -125,7 +133,7 @@ ReportingConfiguration::ReportingConfiguration()
         return newList;
     });
 
-    reportingFrequencyList.setSaveProcessor([this](std::vector<wxString> list) {
+    reportingFrequencyList.setSaveProcessor([this](std::vector<wxString> const& list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {
@@ -180,6 +188,13 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterBandFilterTracksExactFreq);
     load_(config, freedvReporterStatusText);
     load_(config, freedvReporterRecentStatusTexts);
+    
+    load_(config, udpReportingEnabled);
+    load_(config, udpReportingHostname);
+    load_(config, udpReportingPort);
+
+    load_(config, freedvReporterColumnOrder);
+    load_(config, freedvReporterColumnVisibility);
 
     load_(config, useUTCForReporting);
     
@@ -225,6 +240,13 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterBandFilterTracksExactFreq);
     save_(config, freedvReporterStatusText);
     save_(config, freedvReporterRecentStatusTexts);
+    
+    save_(config, freedvReporterColumnOrder);
+    save_(config, freedvReporterColumnVisibility);
+
+    save_(config, udpReportingEnabled);
+    save_(config, udpReportingHostname);
+    save_(config, udpReportingPort);
     
     save_(config, useUTCForReporting);
     

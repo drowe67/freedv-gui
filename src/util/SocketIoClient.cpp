@@ -46,9 +46,12 @@ SocketIoClient::~SocketIoClient()
 {
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
-    enableReconnect_ = false;
+    enableReconnect_.store(false, std::memory_order_release);
     auto fut = disconnect();
     fut.wait();
+
+    // Make absolutely sure there's nothing else in the queue before release.
+    waitForAllTasksComplete_();
 }
 
 void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
@@ -59,12 +62,12 @@ void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
     yyjson_mut_doc_free(authJson);
 }
 
-void SocketIoClient::on(std::string eventName, SioMessageReceivedFn fn)
+void SocketIoClient::on(std::string const& eventName, SioMessageReceivedFn fn)
 {
-    eventFnMap_[eventName] = fn;
+    eventFnMap_[eventName] = std::move(fn);
 }
 
-void SocketIoClient::emit(std::string eventName, yyjson_mut_val* params)
+void SocketIoClient::emit(std::string const& eventName, yyjson_mut_val* params)
 {
     yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
     yyjson_mut_val* eventArray = yyjson_mut_arr(doc);
@@ -85,7 +88,7 @@ void SocketIoClient::emit(std::string eventName, yyjson_mut_val* params)
     });
 }
 
-void SocketIoClient::emit(std::string eventName)
+void SocketIoClient::emit(std::string const& eventName)
 {
     yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
     yyjson_mut_val* eventArray = yyjson_mut_arr(doc);
@@ -107,12 +110,12 @@ void SocketIoClient::emit(std::string eventName)
 
 void SocketIoClient::setOnConnectFn(OnConnectionStateChangeFn fn)
 {
-    onConnectFn_ = fn;
+    onConnectFn_ = std::move(fn);
 }
 
 void SocketIoClient::setOnDisconnectFn(OnConnectionStateChangeFn fn)
 {
-    onDisconnectFn_ = fn;
+    onDisconnectFn_ = std::move(fn);
 }
 
 void SocketIoClient::onConnect_()
@@ -127,7 +130,7 @@ void SocketIoClient::onConnect_()
     client_.set_message_handler(bind(&SocketIoClient::handleWebsocketRequest_, this, &client_, ::_1, ::_2));
     
     // Register open handler
-    client_.set_open_handler([&](websocketpp::connection_hdl) {
+    client_.set_open_handler([&](websocketpp::connection_hdl const&) {
         std::string namespaceOpen = "40";
         namespaceOpen += authObj_;
         
@@ -135,12 +138,12 @@ void SocketIoClient::onConnect_()
     });
     
     // Register fail handler
-    client_.set_fail_handler([&](websocketpp::connection_hdl) {
+    client_.set_fail_handler([&](websocketpp::connection_hdl const&) {
         disconnect();
     });
     
     // Register write handler
-    client_.set_write_handler([&](websocketpp::connection_hdl, char const *buf, size_t len) {
+    client_.set_write_handler([&](websocketpp::connection_hdl const&, char const *buf, size_t len) {
         send(buf, len);
         return websocketpp::lib::error_code();
     });
@@ -173,7 +176,7 @@ void SocketIoClient::onReceive_(char* buf, int length)
     connection_->read_some(buf, length);
 }
 
-void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
+void SocketIoClient::handleWebsocketRequest_(WebSocketClient*, websocketpp::connection_hdl const&, message_ptr const& msg)
 {
     if (msg->get_opcode() == websocketpp::frame::opcode::text)
     {
@@ -243,7 +246,15 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
     }
 }
 
-void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
+void SocketIoClient::fireEvent(std::string const& eventName, yyjson_val* params)
+{
+    if (eventFnMap_[eventName])
+    {
+        (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
+    }
+}
+
+void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
 {
     switch(ptr[0])
     {
@@ -268,11 +279,7 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
             yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
             std::string eventNameStr = yyjson_get_str(eventName);
-            if (eventFnMap_[eventNameStr])
-            {
-                (eventFnMap_[eventNameStr])(eventArgs); // eventArgs is nullptr if not provided
-            }
-
+            fireEvent(eventNameStr, eventArgs);
             yyjson_doc_free(eventDoc);
             break;
         }

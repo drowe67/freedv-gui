@@ -1,0 +1,1 @@
+Checks: "-*,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI*,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling"

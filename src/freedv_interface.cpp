@@ -26,6 +26,8 @@
 #endif // defined(__clang__)
 
 #include <future>
+#include <atomic>
+
 #include "main.h"
 #include "codec2_fdmdv.h"
 #include "lpcnet.h"
@@ -35,6 +37,8 @@
 #include "pipeline/RADEReceiveStep.h"
 #include "pipeline/RADETransmitStep.h"
 #include "pipeline/AudioPipeline.h"
+#include "pipeline/BandwidthExpandStep.h"
+#include "pipeline/EitherOrStep.h"
 
 #include "util/logging/ulog.h"
 
@@ -42,6 +46,8 @@ using namespace std::placeholders;
 
 #include <wx/string.h>
 extern wxString utFreeDVMode;
+
+extern std::atomic<bool> g_bwExpandEnabled;
 
 static const char* GetCurrentModeStrImpl_(int mode)
 {
@@ -91,7 +97,7 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
 }
 
-void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state) 
+void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int, void* state) 
 {
     log_info("FreeDVInterface::OnReliableTextRx_: received %s", txt_ptr);
     
@@ -105,7 +111,7 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     reliable_text_reset(rt);
 }
 
-void FreeDVInterface::OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state) 
+void FreeDVInterface::OnRadeTextRx_(rade_text_t, const char* txt_ptr, int, void* state) 
 {
     log_info("FreeDVInterface::OnRadeTextRx_: received %s", txt_ptr);
     
@@ -133,7 +139,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
     }
 }
 
-void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
+void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReliableText)
 {
     sync_.store(0, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
@@ -728,7 +734,7 @@ float FreeDVInterface::getSNREstimate()
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
     int inputSampleRate, 
     int outputSampleRate, 
-    realtime_fp<float()> getFreqOffsetFn,
+    realtime_fp<float()> const& getFreqOffsetFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -744,7 +750,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         pipeline->appendPipelineStep(radeTxStep_);
         return pipeline;
     }
- 
+
+    parallelSteps.reserve(dvObjects_.size()); 
     for (auto& dv : dvObjects_)
     {
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
@@ -778,7 +785,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         parallelSteps,
         nullptr,
         this,
-        realtimeHelper
+        std::move(realtimeHelper)
     );
     
     return parallelStep;
@@ -786,11 +793,11 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 
 IPipelineStep* FreeDVInterface::createReceivePipeline(
     int inputSampleRate, int outputSampleRate,
-    realtime_fp<std::atomic<int>*()> getRxStateFn,
-    realtime_fp<int()> getChannelNoiseFn,
-    realtime_fp<int()> getChannelNoiseSnrFn,
-    realtime_fp<float()> getFreqOffsetFn,
-    realtime_fp<float*()> getSigPwrAvgFn,
+    realtime_fp<std::atomic<int>*()> const& getRxStateFn,
+    realtime_fp<int()> const& getChannelNoiseFn,
+    realtime_fp<int()> const& getChannelNoiseSnrFn,
+    realtime_fp<float()> const& getFreqOffsetFn,
+    realtime_fp<float*()> const& getSigPwrAvgFn,
     std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
@@ -813,12 +820,26 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
-	});
+	    });
         rxStep->setStateObj(this);
         rxStep->setRxStateFn(getRxStateFn);
 
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         pipeline->appendPipelineStep(rxStep);
+        
+        // Temporarily disabling BW expander pending further testing.
+#if 0
+        auto bwExpandStep = new BandwidthExpandStep();
+        auto bwExpandBypass = new AudioPipeline(bwExpandStep->getInputSampleRate(), bwExpandStep->getOutputSampleRate());
+        
+        auto eitherOrBwExpandStep = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING { return g_bwExpandEnabled.load(std::memory_order_acquire); },
+            bwExpandStep,
+            bwExpandBypass
+        );
+        pipeline->appendPipelineStep(eitherOrBwExpandStep);
+#endif // 0
+            
         return pipeline;
     }
     else
@@ -850,7 +871,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         parallelSteps,
         state,
         this,
-        realtimeHelper
+        std::move(realtimeHelper)
     );
     
     return parallelStep;

@@ -25,7 +25,8 @@
 #include "LinkStep.h"
 
 LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
-    : sampleRate_(outputSampleRate)
+    : tmpBuffer_(nullptr)
+    , sampleRate_(outputSampleRate)
     , fifo_(numSamples)
 {
     tmpBuffer_ = new short[numSamples];
@@ -57,7 +58,7 @@ short* LinkStep::InputStep::execute(short* inputSamples, int numInputSamples, in
     return nullptr;
 }
 
-short* LinkStep::OutputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+short* LinkStep::OutputStep::execute(short*, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     auto& fifo = parent_->getFifo();
     *numOutputSamples = numInputSamples > 0 ? std::min(fifo.numUsed(), numInputSamples) : fifo.numUsed();

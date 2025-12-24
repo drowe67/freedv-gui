@@ -46,6 +46,7 @@ void sox_biquad_start(void)
 {
     int r = sox_init();
     assert(r == SOX_SUCCESS);
+    (void)r; // suppress warnings
 }
 
 void sox_biquad_finish(void)
@@ -86,7 +87,11 @@ void *sox_biquad_create(int argc, const char *argv[])
     e = sox_create_effect(sox_find_effect(argv[0])); assert(e != NULL);
 
     ret = sox_effect_options(e, argc, (char * const*)&argv[1]);
-    assert(ret == SOX_SUCCESS);
+    if (ret != SOX_SUCCESS)
+    {
+        log_error("sox_effect_options ret = %d (%s)", ret, sox_strerror(ret)); 
+        assert(0);
+    }
 
     start = e->handler.start;
 
@@ -126,6 +131,9 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOC
     unsigned int clips;
     SOX_SAMPLE_LOCALS; 
     int i;
+
+    memset(ibuf, 0, sizeof(ibuf));
+    memset(obuf, 0, sizeof(obuf));
 
     clips = 0;
     for(i=0; i<n; i++)
