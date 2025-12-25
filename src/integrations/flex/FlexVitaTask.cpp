@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <future>
 #include <chrono>
 #include <cmath>
 #include <unistd.h>
@@ -66,8 +67,14 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
 
 FlexVitaTask::~FlexVitaTask()
 {
-    disconnect_();
-    
+    auto prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        disconnect_();
+        prom->set_value();
+    });
+    fut.wait();
+
     waitForAllTasksComplete_();
     
     delete[] packetArray_;
@@ -269,11 +276,14 @@ void FlexVitaTask::openSocket_()
 
 void FlexVitaTask::disconnect_()
 {
+    rxTxThreadRunning_ = false;
+    if (rxTxThread_.joinable())
+    {
+        rxTxThread_.join();
+    }
+    
     if (socket_ > 0)
     {
-        rxTxThreadRunning_ = false;
-        rxTxThread_.join();
-        
         close(socket_);
         socket_ = -1;
 

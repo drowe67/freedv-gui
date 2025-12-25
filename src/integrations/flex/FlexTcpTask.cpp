@@ -51,17 +51,23 @@ FlexTcpTask::FlexTcpTask(int vitaPort)
 
 FlexTcpTask::~FlexTcpTask()
 {
+    deregisterPromise_ = std::make_shared<std::promise<void>>();
+    auto fut = deregisterPromise_->get_future();
+
     enqueue_([&]() {
         cleanupWaveform_();
     });
-    std::this_thread::sleep_for(1s);
-    
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-    enqueue_([prom]() {
-        prom->set_value();
-    });
+
     fut.wait();
+    deregisterPromise_ = nullptr;
+
+    // Note: not currently done in the underlying object due to
+    // "pure virtual" function exceptions.
+    enableReconnect_.store(false, std::memory_order_release);
+    auto fut2 = disconnect();
+    fut2.wait();
+
+    waitForAllTasksComplete_();
 }
 
 void FlexTcpTask::onReceive_(char* buf, int length)
@@ -98,6 +104,11 @@ void FlexTcpTask::socketFinalCleanup_(bool)
     commandHandlingTimer_.stop();
     pingTimer_.stop();
     isConnecting_ = false;
+
+    if (deregisterPromise_)
+    {
+        deregisterPromise_->set_value();
+    }
 }
 
 void FlexTcpTask::onConnect_()
@@ -175,9 +186,10 @@ void FlexTcpTask::cleanupWaveform_()
         return;
     }
     
-    sendRadioCommand_("unsub slice all");
-    sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string const&) {
+    // We shouldn't really have to do this, but the radio seems to get confused by a client registering
+    // more than one waveform, and only cleans up the last one created.
+    // Even more interestingly, if we try to remove FreeDV-LSB as well, the radio will crash.
+    sendRadioCommand_("waveform remove FreeDV-USB", [&](unsigned int, std::string const&) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
