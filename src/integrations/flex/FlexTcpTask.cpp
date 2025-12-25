@@ -186,10 +186,10 @@ void FlexTcpTask::cleanupWaveform_()
         return;
     }
     
-    sendRadioCommand_("unsub gps all");
-    sendRadioCommand_("unsub slice all");
-    sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string const&) {
+    // We shouldn't really have to do this, but the radio seems to get confused by a client registering
+    // more than one waveform, and only cleans up the last one created.
+    // Even more interestingly, if we try to remove FreeDV-LSB as well, the radio will crash.
+    sendRadioCommand_("waveform remove FreeDV-USB", [&](unsigned int, std::string const&) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
