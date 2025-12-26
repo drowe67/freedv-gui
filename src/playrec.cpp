@@ -21,6 +21,9 @@ int                 g_recFileFromRadioEventId;
 SNDFILE            *g_sfRecMicFile;
 bool                g_recFileFromMic;
 
+SNDFILE* g_sfRecDecoderFile;
+bool g_recFileFromDecoder;
+
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
 int                 g_sfFs;
@@ -203,8 +206,26 @@ void MainFrame::StopRecFileFromRadio()
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
         g_mutexProtectingCallbackData.Unlock();
         
-        m_audioRecord->SetValue(false);
-        m_audioRecord->SetBackgroundColour(wxNullColour);
+        m_audioRecordRaw->SetValue(false);
+        m_audioRecordRaw->SetBackgroundColour(wxNullColour);
+    }
+}
+
+void MainFrame::StopRecFileFromDecoder()
+{
+    if (g_sfRecDecoderFile != nullptr)
+    {
+        log_debug("Stopping Record....");
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromDecoder = false;
+        sf_close(g_sfRecDecoderFile);
+        g_sfRecDecoderFile = nullptr;
+        SetStatusText(wxT(""));
+        
+        g_mutexProtectingCallbackData.Unlock();
+        
+        m_audioRecordDecoded->SetValue(false);
+        m_audioRecordDecoded->SetBackgroundColour(wxNullColour);
     }
 }
 
@@ -326,12 +347,12 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             g_recFileFromModulator = true;
         }
         
-        m_audioRecord->SetValue(true);
-        m_audioRecord->SetBackgroundColour(*wxRED);
+        m_audioRecordRaw->SetValue(true);
+        m_audioRecordRaw->SetBackgroundColour(*wxRED);
     }
 }
 
-void MainFrame::OnTogBtnRecord( wxCommandEvent& )
+void MainFrame::OnTogBtnRecordRaw( wxCommandEvent& )
 {
     if (g_sfRecFile != nullptr) 
     {
@@ -373,6 +394,39 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& )
             g_recFileFromModulator = true;
         }
         
-        m_audioRecord->SetBackgroundColour(*wxRED);
+        m_audioRecordRaw->SetBackgroundColour(*wxRED);
+    }
+}
+
+void MainFrame::OnTogBtnRecordDecoded( wxCommandEvent& )
+{
+    if (g_sfRecDecoderFile != nullptr) 
+    {
+        StopRecFileFromDecoder();
+    }
+    else
+    {
+        auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
+        wxFileName filePath(wxGetApp().appConfiguration.quickRecordPath, wxString::Format(_("FreeDV_FromDecoder_%s.wav"), currentTime));
+        wxString    soundFile = filePath.GetFullPath();
+        SF_INFO     sfInfo;
+    
+        sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        sfInfo.channels   = 1;
+        sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
+    
+        g_recFromRadioSamples = UINT32_MAX; // record until stopped
+    
+        g_sfRecDecoderFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+        if(g_sfRecDecoderFile == NULL)
+        {
+            wxString strErr = sf_strerror(NULL);
+            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            return;
+        }
+
+        SetStatusText(wxT("Recording file ") + soundFile + wxT(" from decoder"), 0);
+        g_recFileFromDecoder = true;        
+        m_audioRecordDecoded->SetBackgroundColour(*wxRED);
     }
 }
