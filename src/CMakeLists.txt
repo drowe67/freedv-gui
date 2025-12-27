@@ -69,7 +69,7 @@ if(APPLE)
 target_compile_options(FreeDV PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
 else(APPLE)
-#target_compile_options(freedv PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+target_compile_options(freedv PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus git_version)
 endif(APPLE)
 
