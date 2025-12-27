@@ -386,8 +386,7 @@ jobs:
     #  with:
     #    detached: true
 
-    - name: Install LLVM/Clang >=20.0 (Required for sanitizers)
-      if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
+    - name: Install LLVM/Clang >=20.0 
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
@@ -452,7 +451,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
