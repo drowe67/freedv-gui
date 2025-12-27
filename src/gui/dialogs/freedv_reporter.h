@@ -125,6 +125,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnRightClickSpotsList(wxContextMenuEvent& event);
 
         void OnShowColumn(wxCommandEvent& event);
+        void OnIdleFilter(wxCommandEvent& event);
                 
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
@@ -163,6 +164,8 @@ class FreeDVReporterDialog : public wxFrame
         // Menu bar and menu options
         wxMenuBar* menuBar_;
         wxMenu* showMenu_;
+        wxMenu* filterMenu_;
+        wxMenu* idleLongerThanMenu_;
         
      private:
         const wxString UNKNOWN_STR;
@@ -347,7 +350,7 @@ class FreeDVReporterDialog : public wxFrame
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
 
-            bool isFiltered_(uint64_t freq);
+            bool isFiltered_(ReporterData* data);
 
             void clearAllEntries_();
 
