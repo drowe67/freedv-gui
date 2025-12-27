@@ -281,6 +281,7 @@ jobs:
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
            sudo apt-get install pulseaudio pulseaudio-utils metacity
+           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
     - name: Create Python venv
@@ -415,6 +416,7 @@ jobs:
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
            sudo apt-get install libwxgtk3.0-gtk3-dev pulseaudio 
+           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
     - name: Install version-specific packages
