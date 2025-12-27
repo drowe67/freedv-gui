@@ -272,6 +272,10 @@ jobs:
       shell: bash
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       run: |
+           mkdir -p ~/.config/pulse
+           cat <<EOF > ~/.config/pulse/daemon.conf
+default-sample-rate = 48000
+EOF
            sudo apt-get install pulseaudio pulseaudio-utils metacity
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
@@ -405,6 +409,10 @@ jobs:
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       shell: bash
       run: |
+           mkdir -p ~/.config/pulse
+           cat <<EOF > ~/.config/pulse/daemon.conf
+default-sample-rate = 48000
+EOF
            sudo apt-get install libwxgtk3.0-gtk3-dev pulseaudio 
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
