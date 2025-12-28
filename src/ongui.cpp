@@ -289,7 +289,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
                 wxString newFreq = "";
                 wxString freq = m_lastReportedCallsignListView->GetItemText(index, 1);
                 double freqDouble = 0;
-                freq.ToDouble(&freqDouble);
+                wxNumberFormatter::FromString(freq, &freqDouble);
 
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                 {
