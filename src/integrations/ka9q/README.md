@@ -20,7 +20,7 @@ Running without any arguments will use a default of 8000 Hz for input samples an
 You can override these if preferred. For example, from the `build_linux` folder:
 
 ```
-$ PYTHONPATH=$(pwd)/rade_src src/integrations/ka9q/freedv-ka9q -i 48000 -o 48000
+$ PYTHONPATH=$(pwd)/rade_integ_src src/integrations/ka9q/freedv-ka9q -i 48000 -o 48000
 ```
 
 This tool also supports FreeDV Reporter reporting. You must specify your callsign, grid square and reporting

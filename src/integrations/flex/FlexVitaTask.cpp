@@ -15,11 +15,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <future>
 #include <chrono>
 #include <cmath>
 #include <unistd.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#include <poll.h>
 
 #include "../pipeline/pipeline_defines.h"
 #include "flex_defines.h"
@@ -65,8 +67,14 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
 
 FlexVitaTask::~FlexVitaTask()
 {
-    disconnect_();
-    
+    auto prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        disconnect_();
+        prom->set_value();
+    });
+    fut.wait();
+
     waitForAllTasksComplete_();
     
     delete[] packetArray_;
@@ -268,11 +276,14 @@ void FlexVitaTask::openSocket_()
 
 void FlexVitaTask::disconnect_()
 {
+    rxTxThreadRunning_ = false;
+    if (rxTxThread_.joinable())
+    {
+        rxTxThread_.join();
+    }
+    
     if (socket_ > 0)
     {
-        rxTxThreadRunning_ = false;
-        rxTxThread_.join();
-        
         close(socket_);
         socket_ = -1;
 
@@ -295,33 +306,36 @@ void FlexVitaTask::rxTxThreadEntry_()
 {
     helper_->setHelperRealTime();
 
+    struct pollfd fds[2];
+    int numFds = 0;
+
     while (rxTxThreadRunning_)
     {
-        fd_set fds;
-        struct timeval timeout;
-        
-        timeout.tv_sec = 0;
-        timeout.tv_usec = VITA_IO_TIME_INTERVAL_US;
-        
-        FD_ZERO(&fds);
-        FD_SET(socket_, &fds);
-        int maxSocket = socket_;
+        memset(fds, 0, sizeof(fds));
+        fds[0].fd = socket_;
+        fds[0].events = POLLIN;
+
         if (discoverySocket_ > -1)
         {
-            FD_SET(discoverySocket_, &fds);
-            maxSocket = std::max(maxSocket, discoverySocket_);
+            fds[1].fd = discoverySocket_;
+            fds[1].events = POLLIN;
+            numFds = 2;
+        }
+        else
+        {
+            numFds = 1;
         }
         
-        if (select(maxSocket + 1, &fds, nullptr, nullptr, &timeout) > 0)
+        if (poll(fds, numFds, VITA_IO_TIME_INTERVAL_US / 1000) > 0)
         {
-            readPendingPackets_(&fds);
+            readPendingPackets_(fds, numFds);
         }
     }
 
     helper_->clearHelperRealTime();
 }
 
-void FlexVitaTask::readPendingPackets_(fd_set* fds)
+void FlexVitaTask::readPendingPackets_(struct pollfd* fds, int numFds)
 { 
     // Process if there are pending datagrams in the buffer
     int ctr = MAX_VITA_PACKETS_TO_SEND;
@@ -336,7 +350,7 @@ void FlexVitaTask::readPendingPackets_(fd_set* fds)
         }
     
         int rv = 0;
-        if (FD_ISSET(socket_, fds))
+        if (fds[0].revents != 0)
         {
             rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
             if (rv > 0)
@@ -350,16 +364,16 @@ void FlexVitaTask::readPendingPackets_(fd_set* fds)
             }
         }
 
-        packet = &packetArray_[packetIndex_++];
-        assert(packet != nullptr);
-
-        if (packetIndex_ == MAX_VITA_PACKETS)
+        if (numFds > 1 && fds[1].revents != 0)
         {
-            packetIndex_ = 0;
-        }
+            packet = &packetArray_[packetIndex_++];
+            assert(packet != nullptr);
 
-        if (FD_ISSET(discoverySocket_, fds))
-        {
+            if (packetIndex_ == MAX_VITA_PACKETS)
+            {
+                packetIndex_ = 0;
+            }
+
             rv = recv(discoverySocket_, (char*)packet, sizeof(vita_packet), 0);
             if (rv > 0)
             {

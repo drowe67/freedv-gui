@@ -28,7 +28,7 @@ $ docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.ta
 The waveform can be run similarly to the main FreeDV application. From your build folder:
 
 ```
-$ PYTHONPATH=$(pwd)/rade_src src/integrations/flex/freedv-flex
+$ PYTHONPATH=$(pwd)/rade_integ_src src/integrations/flex/freedv-flex
 ```
 
 By default, it will listen on the network until it receives a broadcast packet from a supported radio,

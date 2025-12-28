@@ -898,6 +898,12 @@ void MainFrame::togglePTT(void) {
 
     if (g_tx.load(std::memory_order_acquire))
     {
+        // If PTT input is enabled, suspend further changes until after EOO is sent.
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(true);
+        }
+        
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
         log_debug("Sleeping for %d ms prior to ending TX", msSleep);
@@ -1029,6 +1035,11 @@ void MainFrame::togglePTT(void) {
         }
         g_tx.store(false, std::memory_order_release);
         endingTx.store(false, std::memory_order_release);
+        
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(false);
+        }
 
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
         CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
@@ -1055,6 +1066,12 @@ void MainFrame::togglePTT(void) {
     }
     else
     {
+        // If PTT input is enabled, suspend further changes until we actually start TX.
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(true);
+        }
+        
         // rx-> tx transition, swap to Mic In page to monitor speech
         wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
         
@@ -1146,6 +1163,11 @@ void MainFrame::togglePTT(void) {
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
         wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
+        
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(false);
+        }
     }
 }
 

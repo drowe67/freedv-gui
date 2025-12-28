@@ -8,7 +8,13 @@ set(wxBUILD_MONOLITHIC OFF CACHE BOOL "Build a single library" FORCE)
 # wxWidgets features to enable/disable.
 set(wxUSE_STL OFF CACHE STRING "use C++ STL classes" FORCE)
 set(wxUSE_REGEX "builtin" CACHE STRING "enable support for wxRegEx class" FORCE)
+
+if (NOT LINUX)
+# Clang will not build the built-in zlib on Linux, so use the system one
+# instead on that platform.
 set(wxUSE_ZLIB "builtin" CACHE STRING "Use built-in zlib" FORCE)
+endif (NOT LINUX)
+
 set(wxUSE_EXPAT "builtin" CACHE STRING "Use built-in expat" FORCE)
 set(wxUSE_LIBJPEG "builtin" CACHE STRING "use libjpeg (JPEG file format)" FORCE)
 set(wxUSE_LIBPNG "builtin" CACHE STRING "use libpng (PNG image format)" FORCE)
