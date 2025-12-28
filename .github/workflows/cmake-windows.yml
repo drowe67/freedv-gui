@@ -128,7 +128,7 @@ jobs:
       timeout-minutes: 10
 
     - name: Screenshot if failed
-      #if: failure()
+      if: failure()
       shell: pwsh
       run: |
           Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
@@ -136,6 +136,7 @@ jobs:
 
     - name: Upload screenshot
       uses: actions/upload-artifact@v4
+      if: failure()
       with:
         name: screenshot.png
         path: ${{github.workspace}}/screenshot.png
