@@ -3560,30 +3560,28 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
-    else
+
+    cbData->outfifo1->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
+    for (size_t count = 0; count < size; count++, audioData += numChannels)
     {
-        cbData->outfifo1->read(tmpOutput, toRead);
-        auto numChannels = dev.getNumChannels();
-        auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-        for (size_t count = 0; count < size; count++, audioData += numChannels)
+        auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+        // write signal to all channels to start. This is so that
+        // the compiler can optimize for the most common case.
+        for (auto j = 0; j < numChannels; j++)
         {
-            auto output = (count < toRead) ? tmpOutput[count] : 0;
-    
-            // write signal to all channels to start. This is so that
-            // the compiler can optimize for the most common case.
-            for (auto j = 0; j < numChannels; j++)
-            {
-                audioData[j] = output;
-            }
-                        
-            // If VOX tone is enabled, go back through and add the VOX tone
-            // on the left channel.
-            if (enableVoxTone)
-            {
-                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
-                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-            }
+            audioData[j] = output;
+        }
+                    
+        // If VOX tone is enabled, go back through and add the VOX tone
+        // on the left channel.
+        if (enableVoxTone)
+        {
+            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
+            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
         }
     }
 }
@@ -3616,16 +3614,15 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     {
         g_outfifo2_empty.fetch_add(1, std::memory_order_release);
     }
-    else
+
+    cbData->outfifo2->read(tmpOutput, toRead);
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++)
     {
-        cbData->outfifo2->read(tmpOutput, toRead);
-        auto numChannels = dev.getNumChannels();
-        for (size_t count = 0; count < size; count++)
+        for (int j = 0; j < numChannels; j++)
         {
-            for (int j = 0; j < numChannels; j++)
-            {
-                *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
-            }
+            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
         }
     }
 }
+
