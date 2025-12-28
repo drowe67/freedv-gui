@@ -64,6 +64,13 @@ SerialPortInRigController::~SerialPortInRigController()
     waitForAllTasksComplete_();
 }
 
+void SerialPortInRigController::suspendChanges(bool suspend)
+{
+    enqueue_([&, suspend]() {
+        suspendChanges_ = suspend;
+    });
+}
+
 bool SerialPortInRigController::getCTS_() 
 {
     if(serialPortHandle_ == COM_HANDLE_INVALID)
@@ -95,7 +102,7 @@ void SerialPortInRigController::pollThreadEntry_()
 void SerialPortInRigController::pollSerialPort_()
 {
     bool pttState = getCTS_();
-    if (firstPoll_ || pttState != currentPttInputState_)
+    if (!suspendChanges_ && (firstPoll_ || pttState != currentPttInputState_))
     {
         firstPoll_ = false;
         currentPttInputState_ = pttState;
