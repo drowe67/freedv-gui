@@ -1826,11 +1826,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
-        
-        if (wxGetApp().logger != nullptr && m_lastReportedCallsignListView->GetItemCount() > 0)
-        {
-            m_logQSO->Enable(true);
-        }
     
         // Run time update of EQ filters -----------------------------------
 
@@ -2314,6 +2309,11 @@ void MainFrame::performFreeDVOn_()
     {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
+        
+        if (wxGetApp().logger != nullptr)
+        {
+            m_logQSO->Enable(true);
+        }
     });
     
     // attempt to start sound cards and tx/rx processing
