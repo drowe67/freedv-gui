@@ -891,6 +891,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
     * Flex: use random port for VITA socket after connect. (PR #1141)
     * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146) - thanks @arodland!
+3. Build system:
+    * Use Clang to build AppImages for better performance. (PR #1149)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
