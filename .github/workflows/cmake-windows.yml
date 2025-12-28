@@ -128,8 +128,17 @@ jobs:
       timeout-minutes: 10
 
     - name: Screenshot if failed
-      if: failure()
-      uses: OrbitalOwen/desktop-screenshot-action@0.1
+      #if: failure()
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
+          screenCapture.bat screenshot.png
+
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshot.png
+        path: ${{github.workspace}}/screenshot.png
 
     - name: Install FreeDV on hard drive
       shell: pwsh
