@@ -132,7 +132,7 @@ jobs:
       shell: pwsh
       run: |
           Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          screenCapture.bat screenshot.png
+          & .\screenCapture.bat screenshot.png
 
     - name: Upload screenshot
       uses: actions/upload-artifact@v4
