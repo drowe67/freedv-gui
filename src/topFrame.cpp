@@ -504,16 +504,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Audio Recording/Playback
     //------------------------------
-    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio Recording"), wxDefaultPosition, wxSize(100,-1));
-    wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
+    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Quick Record From"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxHORIZONTAL);
     
-    m_audioRecordRaw = new wxToggleButton(audioBox, wxID_ANY, _("Raw"), wxDefaultPosition, wxDefaultSize, 0);
+    m_audioRecordRaw = new wxToggleButton(audioBox, wxID_ANY, _("Radio"), wxDefaultPosition, wxDefaultSize, 0);
     m_audioRecordRaw->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
-    sbSizerAudioRecordPlay->Add(m_audioRecordRaw, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    sbSizerAudioRecordPlay->Add(m_audioRecordRaw, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_audioRecordDecoded = new wxToggleButton(audioBox, wxID_ANY, _("Decoded"), wxDefaultPosition, wxDefaultSize, 0);
+    m_audioRecordDecoded = new wxToggleButton(audioBox, wxID_ANY, _("Decoder"), wxDefaultPosition, wxDefaultSize, 0);
     m_audioRecordDecoded->SetToolTip(_("Records decoded audio from received over the air signals."));
-    sbSizerAudioRecordPlay->Add(m_audioRecordDecoded, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    sbSizerAudioRecordPlay->Add(m_audioRecordDecoded, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     leftSizer->Add(sbSizerAudioRecordPlay, 0, wxALL|wxEXPAND, 2);
     
