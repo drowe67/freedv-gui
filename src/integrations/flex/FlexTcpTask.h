@@ -22,6 +22,7 @@
 #include <map>
 #include <set>
 #include <functional>
+#include <future>
 
 #include "../util/TcpConnectionHandler.h"
 #include "../util/ThreadedTimer.h"
@@ -144,6 +145,7 @@ private:
     bool isTransmitting_;
     bool isConnecting_;
     int vitaPort_;
+    std::shared_ptr<std::promise<void>> deregisterPromise_;   // so we don't need to wait a fixed amount of time during deinit
 
     std::map<int, std::string> sliceFrequencies_;
     std::map<int, bool> activeSlices_;

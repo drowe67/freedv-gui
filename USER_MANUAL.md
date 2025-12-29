@@ -879,6 +879,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid data race when terminating application. (PR #1140)
     * FreeDV Reporter: left-align cardinal directions. (PR #1139)
     * Flex: use poll() instead of select(). (PR #1143)
+    * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
@@ -890,6 +891,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129)
     * Flex: use random port for VITA socket after connect. (PR #1141)
+    * FreeDV Reporter: Add idle filter. (PR #1142)
+    * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146) - thanks @arodland!
+3. Build system:
+    * Use Clang to build AppImages for better performance. (PR #1149)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*

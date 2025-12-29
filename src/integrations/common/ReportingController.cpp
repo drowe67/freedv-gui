@@ -61,6 +61,22 @@ ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     // empty
 }
 
+ReportingController::~ReportingController()
+{   
+    enqueue_([&]() {
+        if (freedvReporterConnection_ != nullptr)
+        {
+            delete freedvReporterConnection_;
+        }
+        if (pskReporterConnection_ != nullptr)
+        {
+            delete pskReporterConnection_;
+        }
+    });
+        
+    waitForAllTasksComplete_();
+}
+
 bool ReportingController::isHidden()
 {
     auto prom = std::make_shared<std::promise<bool>>();
