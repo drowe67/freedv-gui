@@ -65,6 +65,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Recording settings */
     , playFileToMicInPath("/File/playFileToMicInPath", _(""))
     , recFileFromRadioPath("/File/recFileFromRadioPath", _(""))
+    , recFileFromDecoderPath("/File/recFileFromDecoderPath", _(""))
     , recFileFromRadioSecs("/File/recFileFromRadioSecs", 60)
     , recFileFromModulatorPath("/File/recFileFromModulatorPath", _(""))
     , recFileFromModulatorSecs("/File/recFileFromModulatorSecs", 60)
@@ -156,6 +157,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, transmitLevel);
     
     load_(config, playFileToMicInPath);
+    load_(config, recFileFromDecoderPath);
     load_(config, recFileFromRadioPath);
     load_(config, recFileFromRadioSecs);
     load_(config, recFileFromModulatorPath);
@@ -283,6 +285,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, transmitLevel);
     
     save_(config, playFileToMicInPath);
+    save_(config, recFileFromDecoderPath);
     save_(config, recFileFromRadioPath);
     save_(config, recFileFromRadioSecs);
     save_(config, recFileFromModulatorPath);

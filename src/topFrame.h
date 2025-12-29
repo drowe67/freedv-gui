@@ -146,6 +146,7 @@ class TopFrame : public wxFrame
         wxStaticBoxSizer* sbSizer_mode;
         
         wxMenuItem* m_menuItemRecFileFromRadio;
+        wxMenuItem* m_menuItemRecFileFromDecoder;
         wxMenuItem* m_menuItemPlayFileFromRadio;
     
         // Virtual event handlers, override them in your derived class
@@ -172,6 +173,7 @@ class TopFrame : public wxFrame
         virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnRecFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnRecFileFromDecoder( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }

@@ -23,6 +23,7 @@ bool                g_recFileFromMic;
 
 SNDFILE* g_sfRecDecoderFile;
 bool g_recFileFromDecoder;
+int                 g_recFileFromDecoderEventId;
 
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
@@ -222,6 +223,7 @@ void MainFrame::StopRecFileFromDecoder()
         g_sfRecDecoderFile = nullptr;
         SetStatusText(wxT(""));
         
+        m_menuItemRecFileFromDecoder->SetItemLabel(wxString(_("Start Record File - From Decoder...")));
         g_mutexProtectingCallbackData.Unlock();
         
         m_audioRecordDecoded->SetValue(false);
@@ -352,6 +354,91 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
     }
 }
 
+//-------------------------------------------------------------------------
+// OnRecFileFromDecoder()
+//-------------------------------------------------------------------------
+void MainFrame::OnRecFileFromDecoder(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    if (g_sfRecDecoderFile != nullptr) {
+        StopRecFileFromDecoder();
+    }
+    else {
+
+        wxString    soundFile;
+        SF_INFO     sfInfo;
+        
+        auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
+        wxFileDialog openFileDialog(
+                                    this,
+                                    wxT("Record File From Decoder"),
+                                    wxGetApp().appConfiguration.recFileFromDecoderPath,
+                                    wxString::Format(_("FreeDV_FromDecoder_%s.wav"), currentTime),
+                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
+                                    wxT("All files (*.*)|*.*"),
+                                    wxFD_SAVE
+                                    );
+
+        // Default to WAV.
+        openFileDialog.SetFilterIndex(0);
+        
+        if(openFileDialog.ShowModal() == wxID_CANCEL)
+        {
+            return;     // the user changed their mind...
+        }
+
+        wxString fileName, extension;
+        soundFile = openFileDialog.GetPath();
+        wxString tmpString = wxGetApp().appConfiguration.recFileFromDecoderPath;
+        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
+        wxLogDebug("m_recFileFromDecoderPath: %s", wxGetApp().appConfiguration.recFileFromDecoderPath.get());
+        wxLogDebug("soundFile: %s", soundFile);
+        sfInfo.format = 0;
+
+        int sample_rate = RECORD_FILE_SAMPLE_RATE;
+
+        if(!extension.IsEmpty())
+        {
+            extension.LowerCase();
+            if(extension == wxT("raw"))
+            {
+                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            }
+            else if(extension == wxT("wav"))
+            {
+                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            } else {
+                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Decoder"), wxOK);
+                return;
+            }
+        }
+        else {
+            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Decoded"), wxOK);
+            return;
+        }
+    
+        g_recFromRadioSamples = UINT32_MAX; // record until stopped
+    
+        g_sfRecDecoderFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+        if(g_sfRecDecoderFile == NULL)
+        {
+            wxString strErr = sf_strerror(NULL);
+            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            return;
+        }
+
+        SetStatusText(wxT("Recording file ") + soundFile + wxT(" from decoder"), 0);
+        m_menuItemRecFileFromDecoder->SetItemLabel(wxString(_("Stop Record File - From Decoder...")));
+        g_recFileFromDecoder = true;        
+        m_audioRecordDecoded->SetBackgroundColour(*wxRED);
+    }
+}
+
 void MainFrame::OnTogBtnRecordRaw( wxCommandEvent& )
 {
     if (g_sfRecFile != nullptr) 
@@ -426,6 +513,7 @@ void MainFrame::OnTogBtnRecordDecoded( wxCommandEvent& )
         }
 
         SetStatusText(wxT("Recording file ") + soundFile + wxT(" from decoder"), 0);
+        m_menuItemRecFileFromDecoder->SetItemLabel(wxString(_("Stop Record File - From Decoder...")));
         g_recFileFromDecoder = true;        
         m_audioRecordDecoded->SetBackgroundColour(*wxRED);
     }

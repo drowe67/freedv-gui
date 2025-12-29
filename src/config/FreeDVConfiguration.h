@@ -71,6 +71,7 @@ public:
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
     ConfigurationDataElement<wxString> recFileFromRadioPath;
+    ConfigurationDataElement<wxString> recFileFromDecoderPath;
     ConfigurationDataElement<unsigned int> recFileFromRadioSecs;
     ConfigurationDataElement<wxString> recFileFromModulatorPath;
     ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
