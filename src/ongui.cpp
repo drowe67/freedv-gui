@@ -1252,22 +1252,26 @@ void MainFrame::OnCallSignReset(wxCommandEvent&)
 
 void MainFrame::OnLogQSO(wxCommandEvent&)
 {
-    if (m_lastReportedCallsignListView->GetItemCount() > 0)
-    {
-        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
-        if (selected == -1)
-        {
-            // Default to the first/most recent entry if user hasn't explicitly selected
-            // a contact.
-            selected = 0;
-        }
-        
+    wxString dxCall;
+    wxString dxGrid;
+    wxString dxFreq;
+    wxString logTime;
+    wxDateTime logTimeObj = wxDateTime::Now();
+    double dxFreqDouble = 0;
+    uint64_t dxFreqHz = 0;
+    
+    auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+    if (selected != -1)
+    {        
         // Get callsign and RX frequency
-        auto dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
-        auto dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+        dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        logTime = m_lastReportedCallsignListView->GetItemText(selected, 2);
         
-        double dxFreqDouble = 0;
         wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        wxString::const_iterator end;
+        logTimeObj.ParseDateTime(logTime, &end);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
@@ -1279,16 +1283,41 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         }
         
         // If connected to FreeDV Reporter, get DX grid
-        wxString dxGrid;
-        if (m_reporterDialog != nullptr)
+        if (m_reporterDialog != nullptr && dxFreq != "")
         {
             dxGrid = m_reporterDialog->getGridSquareForCallsign(dxCall);
         }
-
-        // Show log contact dialog 
-        auto logDialog = new LogEntryDialog(this);
-        logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), (int64_t)dxFreqDouble);
+        
+        dxFreqHz = (uint64_t)dxFreqDouble;
+        
+        log_info("Logging %s/%s at %" PRIu64 " Hz from main window drop-down list", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
     }
+    else if (m_reporterDialog != nullptr && m_reporterDialog->getSelectedCallsignInfo(dxCall, dxGrid, dxFreqHz))
+    {
+        log_info("Logging %s/%s at %" PRIu64 " Hz from FreeDV Reporter", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
+    }
+    else
+    {
+        dxFreq = m_cboReportFrequency->GetValue();
+        wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            dxFreqDouble *= 1000;
+        }
+        else
+        {
+            dxFreqDouble *= 1000000;
+        }
+        
+        dxFreqHz = (uint64_t)dxFreqDouble;
+        
+        log_info("No rows selected, defaulting logging to %" PRIu64 " Hz", dxFreqHz);
+    }
+
+    // Show log contact dialog 
+    auto logDialog = new LogEntryDialog(this);
+    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz);
 }
 
 // Force manual resync, just in case demod gets stuck on false sync
