@@ -285,13 +285,14 @@ int main(int argc, char** argv)
     if (!disableReporting)
     {
         rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
-    }
-    else if (stationGridSquare != "")
-    {
-        reportController.updateRadioGridSquare(stationGridSquare);
-    }
-    reportController.updateUserMessage(stationUserMessage);
+        if (stationGridSquare != "")
+        {
+            reportController.updateRadioGridSquare(stationGridSquare);
+        }
     
+        reportController.updateUserMessage(stationUserMessage);
+    }
+ 
     // Set up reporting of actual receive state (prior to getting callsign).
     int rxCounter = 0;
     uint16_t meterMeterId = 0;
