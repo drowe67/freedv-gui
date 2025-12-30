@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: use random port for VITA socket after connect. (PR #1141)
     * FreeDV Reporter: Add idle filter. (PR #1142)
     * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146) - thanks @arodland!
+    * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
 
