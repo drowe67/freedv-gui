@@ -227,7 +227,7 @@ void FlexTcpTask::createWaveform_(std::string const& name, std::string const& sh
             }
 
             // Set the filter-related settings for the just-created waveform.
-            sendRadioCommand_(setPrefix + "tx 1");
+            sendRadioCommand_(setPrefix + "tx=1");
             sendRadioCommand_(setPrefix + "rx_filter depth=256");
             sendRadioCommand_(setPrefix + "tx_filter depth=256");
 
