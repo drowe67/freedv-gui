@@ -151,9 +151,9 @@ void LogEntryDialog::OnInitDialog(wxInitDialogEvent&)
     // empty
 }
 
-void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, int64_t freqHz)
+void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, wxDateTime const& logTime, int64_t freqHz)
 {
-    logTime_ = wxDateTime::Now();
+    logTime_ = logTime;
     labelTimeVal_->SetLabel(logTime_.ToUTC().FormatISOTime());
     
     logger_ = wxGetApp().logger;

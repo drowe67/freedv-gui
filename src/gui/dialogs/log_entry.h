@@ -39,7 +39,7 @@ class LogEntryDialog : public wxDialog
                 long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
         virtual ~LogEntryDialog();
 
-        void ShowDialog(wxString const& dxCall, wxString const& dxGrid, int64_t freqHz);
+        void ShowDialog(wxString const& dxCall, wxString const& dxGrid, wxDateTime const& logTime, int64_t freqHz);
         
     protected:
 

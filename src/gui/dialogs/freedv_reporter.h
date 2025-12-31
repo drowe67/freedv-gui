@@ -74,6 +74,17 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
+        
+        bool getSelectedCallsignInfo(wxString& callsign, wxString& gridSquare, uint64_t& freqHz)
+        {
+            auto selectedItem = m_listSpots->GetSelection();
+            if (selectedItem.IsOk())
+            {
+                FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+                return model->getSelectedCallsignInfo(selectedItem, callsign, gridSquare, freqHz);
+            }
+            return false;
+        }
 
         wxString getGridSquareForCallsign(wxString const& callsign)
         {
@@ -247,6 +258,19 @@ class FreeDVReporterDialog : public wxFrame
              bool isValidForReporting()
              {
                  return reporter_ && reporter_->isValidForReporting();
+             }
+             
+             bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign, wxString& gridSquare, uint64_t& freqHz)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     callsign = data->callsign;
+                     gridSquare = data->gridSquare;
+                     freqHz = data->frequency;
+                     return true;
+                 }
+                 return false;
              }
              
              // Required overrides to implement functionality
