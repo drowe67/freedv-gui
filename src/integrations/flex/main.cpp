@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <getopt.h>
+
 #include <map>
 #include <chrono>
 #include <thread>
@@ -41,6 +43,7 @@
 #include "../reporting/FreeDVReporter.h"
 
 #include "rade_api.h"
+#include "git_version.h"
 
 extern "C" 
 {
@@ -87,8 +90,87 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
     }
 }
 
-int main(int, char**)
+void printUsage(char* appName)
 {
+    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-h|--help] [-v|--version]", appName);
+    log_info("    -d|--disable-reporting: Disables FreeDV Reporter reporting.");
+    log_info("    -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.");
+    log_info("    -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.");
+    log_info("    -h|--help: This help message.");
+    log_info("    -v|--version: Prints the application version and exits.");
+    log_info("");
+}
+
+int main(int argc, char** argv)
+{
+    std::string stationGridSquare;
+    std::string stationUserMessage;
+    bool disableReporting = false;
+    
+    // Print version
+    log_info("%s version %s", SOFTWARE_NAME, GetFreeDVVersion().c_str());
+    
+    // Check command line options
+    static struct option longOptions[] = {
+        {"disable-reporting",     no_argument,       0,  'd' },
+        {"reporting-locator",     required_argument, 0,  'l' },
+        {"reporting-message",     required_argument, 0,  'm' },
+        {"help",                  no_argument,       0,  'h' },
+        {"version",               no_argument,       0,  'v' },
+        {0,         0,                 0,  0 }
+    };
+    constexpr char shortOptions[] = "dl:m:hv";
+    
+    int optionIndex = 0;
+    int c = 0;
+    while ((c = getopt_long(argc, argv, shortOptions, longOptions, &optionIndex)) != -1) // NOLINT
+    {
+        switch(c)
+        {
+            case 'd':
+            {
+                log_info("Disabling FreeDV Reporter reporting");
+                disableReporting = true;
+                break;
+            }
+            case 'm':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Message required if specifying -m/--reporting-message.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using '%s' for FreeDV Reporter user message", optarg);
+                stationUserMessage = optarg;
+                break;
+            }
+            case 'l':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Grid square required if specifying -l/--reporting-locator.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using grid square %s for FreeDV Reporter reporting", optarg);
+                stationGridSquare = optarg;
+                break;
+            }
+            case 'v':
+            {
+                // Version already printed above.
+                exit(0); // NOLINT
+            }
+            case 'h':
+            default:
+            {
+                printUsage(argv[0]);
+                exit(-1); // NOLINT
+            }
+        }
+    }
+    
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -195,13 +277,22 @@ int main(int, char**)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
-    ReportingController reportController(SOFTWARE_NAME);
+    ReportingController reportController(SOFTWARE_NAME, false, disableReporting);
     reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 
-    rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
-
+    if (!disableReporting)
+    {
+        rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
+        if (stationGridSquare != "")
+        {
+            reportController.updateRadioGridSquare(stationGridSquare);
+        }
+    
+        reportController.updateUserMessage(stationUserMessage);
+    }
+ 
     // Set up reporting of actual receive state (prior to getting callsign).
     int rxCounter = 0;
     uint16_t meterMeterId = 0;
@@ -221,8 +312,11 @@ int main(int, char**)
             vitaTask.sendMeter(meterMeterId, -99);
         }        
     }, true);
-    rxNoCallsignReporting.start();
-
+    if (!disableReporting)
+    {
+        rxNoCallsignReporting.start();
+    }
+    
     tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t meterId, void*) {
         meterMeterId = meterId;
     }, nullptr);
@@ -240,7 +334,10 @@ int main(int, char**)
         reportController.updateRadioCallsign(callsign);
     }, nullptr);
     tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const& gridSquare, void*) {
-        reportController.updateRadioGridSquare(gridSquare);
+        if (stationGridSquare == "")
+        {
+            reportController.updateRadioGridSquare(gridSquare);
+        }
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.clearStreamIds();

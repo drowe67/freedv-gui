@@ -2709,7 +2709,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         }
         allReporterData_[sid] = temp;
 
-#if 0
         if (temp->isVisible)
         {
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
@@ -2720,7 +2719,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 #endif // defined(WIN32)
             sortOnNextTimerInterval = true;
         }
-#endif // 0
     };
 
     fnQueue_.push_back(std::move(handler));
