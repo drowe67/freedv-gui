@@ -538,7 +538,7 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             }
             for (i = 0; i < half_num_samples; i++)
             {
-                audioInput[i] = tanh(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
+                audioInput[i] = tanhf(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
             }
             if (!pendingEndTx_)
             {
