@@ -527,7 +527,6 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
-            float maxSampleValue = 1.0;
             while (i < half_num_samples)
             {
                 union {
@@ -536,12 +535,10 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
-            float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)
             {
-                audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
+                audioInput[i] = tanh(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
             }
             if (!pendingEndTx_)
             {
