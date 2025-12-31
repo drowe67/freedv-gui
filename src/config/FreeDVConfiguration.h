@@ -87,9 +87,7 @@ public:
     ConfigurationDataElement<bool> halfDuplexMode;
     ConfigurationDataElement<bool> multipleReceiveEnabled;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
-    
-    ConfigurationDataElement<wxString> quickRecordPath;
-    
+        
     ConfigurationDataElement<bool> freedv700Clip;
     ConfigurationDataElement<bool> freedv700TxBPF;
     
