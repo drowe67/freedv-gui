@@ -31,6 +31,8 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
+const float RX_SCALE_FACTOR = std::expf(6.0f/20.0f * std::logf(10.0f));
+const float TX_SCALE_FACTOR = std::expf(3.0f/20.0f * std::logf(10.0f));
 
 using namespace std::placeholders;
 
@@ -155,10 +157,13 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         }
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
-        // Convert short to float samples and save to packet
+        // Convert short to float samples and save to packet.
+        // Amplify signal as required.
         for (int index = 0; index < samplesRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
+            if (transmitChannel) fpSample *= TX_SCALE_FACTOR;
+            else fpSample *= RX_SCALE_FACTOR;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
             uint32_t tmp = htonl(*fpSampleAsInt);
             *ptrOut++ = tmp;
