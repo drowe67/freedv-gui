@@ -130,8 +130,7 @@ class TopFrame : public wxFrame
         wxButton      *m_BtnReSync;
         wxButton      *m_btnCenterRx;
         
-        wxToggleButton      *m_audioRecordRaw;
-        wxToggleButton      *m_audioRecordDecoded;
+        wxToggleButton      *m_audioRecord;
         
         wxButton*     m_logQSO;
 
@@ -145,8 +144,6 @@ class TopFrame : public wxFrame
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
         
-        wxMenuItem* m_menuItemRecFileFromRadio;
-        wxMenuItem* m_menuItemRecFileFromDecoder;
         wxMenuItem* m_menuItemPlayFileFromRadio;
     
         // Virtual event handlers, override them in your derived class
@@ -172,8 +169,6 @@ class TopFrame : public wxFrame
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnRecFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnRecFileFromDecoder( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
@@ -196,8 +191,7 @@ class TopFrame : public wxFrame
 
         virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         
-        virtual void OnTogBtnRecordRaw( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnRecordDecoded( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnLogQSO(wxCommandEvent& event) { event.Skip(); }
 

@@ -81,9 +81,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , halfDuplexMode("/Rig/HalfDuplex", true)
     , multipleReceiveEnabled("/Rig/MultipleRx", true)
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
-        
-    , quickRecordPath("/QuickRecord/SavePath", _(""))
-        
+                
     , freedv700Clip("/FreeDV700/txClip", true)
     , freedv700TxBPF("/FreeDV700/txBPF", true)
         
@@ -234,10 +232,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, monitorTxAudio);
     load_(config, monitorVoiceKeyerAudioVol);
     load_(config, monitorTxAudioVol);
-    
-    quickRecordPath.setDefaultVal(documentsDir);
-    load_(config, quickRecordPath);
-    
+        
     load_(config, experimentalFeatures);
     load_(config, tabLayout);
 
@@ -302,9 +297,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, halfDuplexMode);
     save_(config, multipleReceiveEnabled);
     save_(config, multipleReceiveOnSingleThread);
-    
-    save_(config, quickRecordPath);
-    
+        
     save_(config, freedv700Clip);
     save_(config, freedv700TxBPF);
     
