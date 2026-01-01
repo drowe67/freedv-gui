@@ -180,6 +180,9 @@ int main(int argc, char** argv)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // Enable Python JIT (if version of Python supports it).
+    setenv("PYTHON_JIT", "1", 1);
     // NOLINTEND
 
     // Initialize and start RADE.
