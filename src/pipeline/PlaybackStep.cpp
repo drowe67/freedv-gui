@@ -89,11 +89,7 @@ short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples)
         outputFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
    
-    if (outputFifo_.numUsed() < (outputFifo_.capacity() / 2))
-    { 
-        fileIoThreadSem_.signal();
-    }
-
+    fileIoThreadSem_.signal();
     return outputSamples_.get();
 }
 
@@ -115,18 +111,20 @@ void PlaybackStep::nonRtThreadEntry_()
         if (playFile != nullptr)
         {
             auto fileSampleRate = fileSampleRateFn_();
-            if (getInputSampleRate() != fileSampleRate && (
-                playbackResampler_ == nullptr || 
+            if (playbackResampler_ == nullptr || 
                 playbackResampler_->getInputSampleRate() != fileSampleRate ||
-                playbackResampler_->getOutputSampleRate() != getInputSampleRate()))
+                playbackResampler_->getOutputSampleRate() != getInputSampleRate())
             {
-                //log_info("Create SR (in = %d, out = %d)", fileSampleRate, inputSampleRate_);
+                log_info("Create SR (in = %d, out = %d)", fileSampleRate, inputSampleRate_);
                 if (playbackResampler_ != nullptr)
                 {
                     delete playbackResampler_;
                 }
                 playbackResampler_ = new ResampleStep(fileSampleRate, inputSampleRate_);
                 assert(playbackResampler_ != nullptr);
+                
+                buf = nullptr;
+                outputFifo_.reset();
             }
 
             if (buf == nullptr)
@@ -177,6 +175,18 @@ void PlaybackStep::nonRtThreadEntry_()
                     g_mutexProtectingCallbackData.Lock();
                 }
             }
+        }
+        else
+        {
+            log_info("Detected playback stop, reset");
+            if (playbackResampler_ != nullptr)
+            {
+                delete playbackResampler_;
+                playbackResampler_ = nullptr;
+            }
+            
+            buf = nullptr;    
+            outputFifo_.reset();
         }
 
         g_mutexProtectingCallbackData.Unlock();
