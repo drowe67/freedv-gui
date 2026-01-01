@@ -881,6 +881,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: use poll() instead of select(). (PR #1143)
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
     * Flex: use tanh() for audio limiting. (PR #1156)
+    * Fix memory corruption when stopping and starting different playback files. (PR #1157)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)

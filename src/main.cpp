@@ -609,6 +609,9 @@ bool MainApp::OnInit()
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
 
+    // Enable Python JIT if available.
+    wxSetEnv("PYTHON_JIT", "1");
+
 #if _WIN32 || __APPLE__
     // Enable mimalloc in Python interpreter. 
     wxSetEnv("PYTHONMALLOC", "mimalloc");
