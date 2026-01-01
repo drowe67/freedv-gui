@@ -51,7 +51,7 @@ RecordStep::RecordStep(
 
 RecordStep::~RecordStep()
 {
-    fileIoThreadEnding_ = true;
+    fileIoThreadEnding_.store(true, std::memory_order_release);
     fileIoThreadSem_.signal();
     if (fileIoThread_.joinable())
     {
@@ -101,7 +101,7 @@ void RecordStep::fileIoThreadEntry_()
 
     SetThreadName("RecordStep");
 
-    while (!fileIoThreadEnding_)
+    while (!fileIoThreadEnding_.load(std::memory_order_release))
     {
         g_mutexProtectingCallbackData.Lock();
         auto recordFile = getSndFileFn_();

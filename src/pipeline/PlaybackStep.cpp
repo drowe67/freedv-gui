@@ -61,7 +61,7 @@ PlaybackStep::PlaybackStep(
 
 PlaybackStep::~PlaybackStep()
 {
-    nonRtThreadEnding_ = true;
+    nonRtThreadEnding_.store(true, std::memory_order_release);
     fileIoThreadSem_.signal();
     if (nonRtThread_.joinable())
     {
@@ -104,7 +104,7 @@ void PlaybackStep::nonRtThreadEntry_()
 
     SetThreadName("PlayStep");
 
-    while (!nonRtThreadEnding_)
+    while (!nonRtThreadEnding_.load(std::memory_order_acquire))
     {
         g_mutexProtectingCallbackData.Lock();
         auto playFile = getSndFileFn_();
