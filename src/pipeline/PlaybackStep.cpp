@@ -176,14 +176,11 @@ void PlaybackStep::nonRtThreadEntry_()
                 }
             }
         }
-        else
+        else if (playbackResampler_ != nullptr)
         {
             log_info("Detected playback stop, reset");
-            if (playbackResampler_ != nullptr)
-            {
-                delete playbackResampler_;
-                playbackResampler_ = nullptr;
-            }
+            delete playbackResampler_;
+            playbackResampler_ = nullptr;
             
             buf = nullptr;    
             outputFifo_.reset();
