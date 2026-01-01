@@ -31,8 +31,8 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
-const float RX_SCALE_FACTOR = std::expf(6.0f/20.0f * std::logf(10.0f));
-const float TX_SCALE_FACTOR = std::expf(3.0f/20.0f * std::logf(10.0f));
+const float RX_SCALE_FACTOR = expf(6.0f/20.0f * logf(10.0f));
+const float TX_SCALE_FACTOR = expf(3.0f/20.0f * logf(10.0f));
 
 using namespace std::placeholders;
 
