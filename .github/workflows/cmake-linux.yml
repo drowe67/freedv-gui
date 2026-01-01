@@ -38,7 +38,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22 all
+        sudo ./llvm.sh 22
         sudo apt-get install clang-tidy
 
     - name: Generate compile_commands.json
@@ -77,7 +77,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22 all
+        sudo ./llvm.sh 22
 
     - name: Install required packages
       shell: bash
@@ -107,7 +107,7 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          CC=clang-22 CXX=clang++-22 CXXFLAGS="-stdlib=libc++" LDFLAGS="-stdlib=libc++" ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 ./build_linux.sh 
 
     - name: Build target
       shell: bash
@@ -117,7 +117,7 @@ jobs:
           . ./rade-venv/bin/activate
           mkdir build_linux
           cd build_linux
-          CC=clang-22 CXX=clang++-22 CXXFLAGS="-stdlib=libc++" LDFLAGS="-stdlib=libc++" cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
+          CC=clang-22 CXX=clang++-22 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
           make -j$(nproc) ${{ matrix.target }}
 
     - name: Initialize GPG keys
@@ -391,7 +391,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22 all
+        sudo ./llvm.sh 22
 
     - name: Install rtkit for RT threading
       shell: bash
@@ -445,7 +445,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 CXXFLAGS="-stdlib=libc++" LDFLAGS="-stdlib=libc++" ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -453,7 +453,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 CXXFLAGS="-stdlib=libc++" LDFLAGS="-stdlib=libc++" ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
