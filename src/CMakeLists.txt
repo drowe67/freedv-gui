@@ -117,6 +117,12 @@ add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
 
+# If on Linux, force static libstdc++. This is to prevent versioning
+# problems when using AppImages.
+if(LINUX)
+    target_link_options(freedv PRIVATE -static-libgcc -static-libstdc++)
+endif(LINUX)
+
 # If a release tag's set, pass it to the compiler.
 if(FREEDV_VERSION_TAG)
 add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")

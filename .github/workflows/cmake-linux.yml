@@ -107,7 +107,7 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          CC=clang-22 CXX=clang++-22 CXXFLAGS="-static-libgcc -static-libstdc++" LDFLAGS="-static-libgcc -static-libstdc++" ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 ./build_linux.sh 
 
     - name: Build target
       shell: bash
