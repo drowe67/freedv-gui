@@ -1069,13 +1069,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         // green and it's been more than >20 seconds, clear coloring.
         auto curDate = wxDateTime::Now().ToUTC();
 
+        wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
+        wxDataViewItemArray itemsDeleted;
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
             {
+                if (item.second->isVisible)
+                {
+                    wxDataViewItem dvi(item.second);
+                    item.second->isVisible = false;
+                    parent_->Unselect(dvi);
+                    itemsDeleted.Add(dvi);
+                }
                 continue;
-                
             }
             auto reportData = item.second;
 
@@ -1137,14 +1145,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     reportData->isVisible = newVisibility;
                     if (newVisibility)
                     {
-                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        itemsAdded.Add(wxDataViewItem(reportData));
 #if defined(WIN32)
                         doAutoSizeColumns = true;
 #endif // defined(WIN32)
                     }
                     else
                     {
-                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        itemsDeleted.Add(wxDataViewItem(reportData));
                     }
                     sortOnNextTimerInterval = true;
                 }
@@ -1165,7 +1173,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         }
 
         ItemsChanged(itemsChanged);
-        
+        ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
+        ItemsDeleted(wxDataViewItem(nullptr), itemsDeleted);
+
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
@@ -2690,7 +2700,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
-        temp->isVisible = !isFiltered_(temp);
+        // defer visiblity until timer update
+        temp->isVisible = false;
         temp->isPendingUpdate = false;
 
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
@@ -2759,12 +2770,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         {
             auto item = iter->second;
             wxDataViewItem dvi(item);
-            if (item->isVisible)
+            /*if (item->isVisible)
             {
                 item->isVisible = false;
                 parent_->Unselect(dvi);
                 Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
-            }
+            }*/
 
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
