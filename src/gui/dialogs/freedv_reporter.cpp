@@ -2700,7 +2700,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
-        // defer visiblity until timer update
+        // defer visibility until timer update
         temp->isVisible = false;
         temp->isPendingUpdate = false;
 
