@@ -65,6 +65,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Recording settings */
     , playFileToMicInPath("/File/playFileToMicInPath", _(""))
     , recFileFromRadioPath("/File/recFileFromRadioPath", _(""))
+    , recFileFromDecoderPath("/File/recFileFromDecoderPath", _(""))
     , recFileFromRadioSecs("/File/recFileFromRadioSecs", 60)
     , recFileFromModulatorPath("/File/recFileFromModulatorPath", _(""))
     , recFileFromModulatorSecs("/File/recFileFromModulatorSecs", 60)
@@ -80,9 +81,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , halfDuplexMode("/Rig/HalfDuplex", true)
     , multipleReceiveEnabled("/Rig/MultipleRx", true)
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
-        
-    , quickRecordPath("/QuickRecord/SavePath", _(""))
-        
+                
     , freedv700Clip("/FreeDV700/txClip", true)
     , freedv700TxBPF("/FreeDV700/txBPF", true)
         
@@ -156,6 +155,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, transmitLevel);
     
     load_(config, playFileToMicInPath);
+    load_(config, recFileFromDecoderPath);
     load_(config, recFileFromRadioPath);
     load_(config, recFileFromRadioSecs);
     load_(config, recFileFromModulatorPath);
@@ -232,10 +232,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, monitorTxAudio);
     load_(config, monitorVoiceKeyerAudioVol);
     load_(config, monitorTxAudioVol);
-    
-    quickRecordPath.setDefaultVal(documentsDir);
-    load_(config, quickRecordPath);
-    
+        
     load_(config, experimentalFeatures);
     load_(config, tabLayout);
 
@@ -283,6 +280,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, transmitLevel);
     
     save_(config, playFileToMicInPath);
+    save_(config, recFileFromDecoderPath);
     save_(config, recFileFromRadioPath);
     save_(config, recFileFromRadioSecs);
     save_(config, recFileFromModulatorPath);
@@ -299,9 +297,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, halfDuplexMode);
     save_(config, multipleReceiveEnabled);
     save_(config, multipleReceiveOnSingleThread);
-    
-    save_(config, quickRecordPath);
-    
+        
     save_(config, freedv700Clip);
     save_(config, freedv700TxBPF);
     

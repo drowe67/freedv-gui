@@ -71,6 +71,7 @@ public:
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
     ConfigurationDataElement<wxString> recFileFromRadioPath;
+    ConfigurationDataElement<wxString> recFileFromDecoderPath;
     ConfigurationDataElement<unsigned int> recFileFromRadioSecs;
     ConfigurationDataElement<wxString> recFileFromModulatorPath;
     ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
@@ -86,9 +87,7 @@ public:
     ConfigurationDataElement<bool> halfDuplexMode;
     ConfigurationDataElement<bool> multipleReceiveEnabled;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
-    
-    ConfigurationDataElement<wxString> quickRecordPath;
-    
+        
     ConfigurationDataElement<bool> freedv700Clip;
     ConfigurationDataElement<bool> freedv700TxBPF;
     

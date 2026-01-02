@@ -265,14 +265,27 @@ public:
     {
         wxLogDebug("Destructor\n");
     }
-    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
-    wxString getSecondsToRecord(void)
+
+    void setDecodedRecording(bool val)
     {
-        wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
-        return m_secondsToRecord->GetValue();
+        if (val)
+        {
+            decodedRecording_->SetValue(true);
+        }
+        else
+        {
+            rawRecording_->SetValue(true);
+        }
     }
+
+    bool getDecodedRecording()
+    {
+        return decodedRecording_->GetValue();
+    }
+
 private:
-    wxTextCtrl *m_secondsToRecord;
+    wxRadioButton* rawRecording_;
+    wxRadioButton* decodedRecording_;
 };
 
 class TxRxThread;
@@ -342,6 +355,7 @@ class MainFrame : public TopFrame
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
+        void StopRecFileFromDecoder();
         
         bool isReceiveOnly();
         
@@ -377,7 +391,6 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnRecFileFromRadio( wxCommandEvent& event ) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
         
         void OnCenterRx(wxCommandEvent& event) override;
