@@ -92,10 +92,11 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
 
 void printUsage(char* appName)
 {
-    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-h|--help] [-v|--version]", appName);
+    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-r|--rx-volume DB] [-h|--help] [-v|--version]", appName);
     log_info("    -d|--disable-reporting: Disables FreeDV Reporter reporting.");
     log_info("    -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.");
     log_info("    -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.");
+    log_info("    -r|--rx-volume: Increases or decreases receive volume by the provided dB figure.");
     log_info("    -h|--help: This help message.");
     log_info("    -v|--version: Prints the application version and exits.");
     log_info("");
@@ -106,6 +107,7 @@ int main(int argc, char** argv)
     std::string stationGridSquare;
     std::string stationUserMessage;
     bool disableReporting = false;
+    float volumeAdjustmentDecibel = 0.0f;
     
     // Print version
     log_info("%s version %s", SOFTWARE_NAME, GetFreeDVVersion().c_str());
@@ -115,6 +117,7 @@ int main(int argc, char** argv)
         {"disable-reporting",     no_argument,       0,  'd' },
         {"reporting-locator",     required_argument, 0,  'l' },
         {"reporting-message",     required_argument, 0,  'm' },
+        {"rx-volume",             required_argument, 0,  'r' },
         {"help",                  no_argument,       0,  'h' },
         {"version",               no_argument,       0,  'v' },
         {0,         0,                 0,  0 }
@@ -155,6 +158,27 @@ int main(int argc, char** argv)
                 }
                 log_info("Using grid square %s for FreeDV Reporter reporting", optarg);
                 stationGridSquare = optarg;
+                break;
+            }
+            case 'r':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Adjustment level in dB required if specifying -r/--rx-volume.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                
+                char* tmp = nullptr;
+                volumeAdjustmentDecibel = strtof(optarg, &tmp);
+                if (tmp != (optarg + strlen(optarg)) || errno == ERANGE)
+                {
+                    log_error("Provided level for -r/--rx-volume must be a number.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+
+                log_info("Adjusting receive audio volume by %f dB", volumeAdjustmentDecibel);
                 break;
             }
             case 'v':
@@ -230,7 +254,7 @@ int main(int argc, char** argv)
 
     // Start up VITA task so we can get the list of available radios.
     auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper);
+    FlexVitaTask vitaTask(realtimeHelper, volumeAdjustmentDecibel);
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
