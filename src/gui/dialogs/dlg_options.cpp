@@ -1205,17 +1205,17 @@ void OptionsDlg::OnApply(wxCommandEvent&)
     if (freqString.Length() > 0 && khzChanged)
     {
         double freqDouble = 0;
-        freqString.ToDouble(&freqDouble);
+        wxNumberFormatter::FromString(freqString, &freqDouble);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
             freqDouble *= 1000;
-            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.01f", freqDouble));
+            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 1));
         }
         else
         {
             freqDouble /= 1000.0;
-            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.04f", freqDouble));
+            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 1));
         }
     }
         

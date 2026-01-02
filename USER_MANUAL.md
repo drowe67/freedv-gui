@@ -879,7 +879,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid data race when terminating application. (PR #1140)
     * FreeDV Reporter: left-align cardinal directions. (PR #1139)
     * Flex: use poll() instead of select(). (PR #1143)
+    * Fix issue saving frequency list on non-English systems. (PR #1152)
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
+    * Flex: use tanh() for audio limiting. (PR #1156)
+    * Fix memory corruption when stopping and starting different playback files. (PR #1157)
+    * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)

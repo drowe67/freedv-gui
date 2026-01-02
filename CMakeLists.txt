@@ -148,6 +148,10 @@ set(ENABLE_TSAN FALSE CACHE BOOL
     "Instruments the build with ThreadSanitizer for thread checks.")
 set(ENABLE_UBSAN FALSE CACHE BOOL
     "Instruments the build with UndefinedBehaviorSanitizer for undefined behavior checks.")
+if (LINUX)
+set(STATIC_LIBGCC FALSE CACHE BOOL
+    "Staticly links libgcc and libstdc++ (Linux only)")
+endif (LINUX)
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")

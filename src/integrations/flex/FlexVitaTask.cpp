@@ -31,6 +31,8 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
+const float RX_SCALE_FACTOR = expf(6.0f/20.0f * logf(10.0f));
+const float TX_SCALE_FACTOR = expf(3.0f/20.0f * logf(10.0f));
 
 using namespace std::placeholders;
 
@@ -155,10 +157,13 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         }
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
-        // Convert short to float samples and save to packet
+        // Convert short to float samples and save to packet.
+        // Amplify signal as required.
         for (int index = 0; index < samplesRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
+            if (transmitChannel) fpSample *= TX_SCALE_FACTOR;
+            else fpSample *= RX_SCALE_FACTOR;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
             uint32_t tmp = htonl(*fpSampleAsInt);
             *ptrOut++ = tmp;
@@ -527,7 +532,6 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
-            float maxSampleValue = 1.0;
             while (i < half_num_samples)
             {
                 union {
@@ -536,12 +540,10 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
-            float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)
             {
-                audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
+                audioInput[i] = tanhf(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
             }
             if (!pendingEndTx_)
             {

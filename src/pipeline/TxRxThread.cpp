@@ -341,7 +341,7 @@ void TxRxThread::initializePipeline_()
         auto playRadio = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfFs; },
-            []() { return g_sfPlayFileFromRadio.load(std::memory_order_acquire); },
+            []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
             []() {
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
