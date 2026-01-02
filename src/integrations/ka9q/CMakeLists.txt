@@ -8,6 +8,6 @@ target_link_libraries(freedv-ka9q PRIVATE git_version fdv_integ_audio_pipeline f
 
 # If on Linux, force static libstdc++. This is to prevent versioning
 # problems when using AppImages.
-if(LINUX)
+if(LINUX AND STATIC_LIBGCC)
     target_link_options(freedv-ka9q PRIVATE -static-libgcc -static-libstdc++)
 endif(LINUX)

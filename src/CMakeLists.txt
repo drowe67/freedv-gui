@@ -119,7 +119,7 @@ endif(APPLE)
 
 # If on Linux, force static libstdc++. This is to prevent versioning
 # problems when using AppImages.
-if(LINUX)
+if(LINUX AND STATIC_LIBGCC)
     target_link_options(freedv PRIVATE -static-libgcc -static-libstdc++)
 endif(LINUX)
 
