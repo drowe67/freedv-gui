@@ -42,7 +42,7 @@ for arch in x86_64; do
     cd $BUILD_ARCH_DIR
 
     # Kick off new build with the given architecture
-    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPython3_ROOT_DIR=`pwd`/../wine-env/drive_c/Program\ Files/Python314 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
+    cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPython3_ROOT_DIR=`pwd`/../wine-env/drive_c/Program\ Files/Python314 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
     make -j$(nproc) package
     cp FreeDV-*.exe $WIN_BUILD_DIR
     cd $WIN_BUILD_DIR
