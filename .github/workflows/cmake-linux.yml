@@ -117,7 +117,7 @@ jobs:
           . ./rade-venv/bin/activate
           mkdir build_linux
           cd build_linux
-          CC=clang-22 CXX=clang++-22 cmake -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
+          CC=clang-22 CXX=clang++-22 CFLAGS=-flto CXXFLAGS=-flto LDFLAGS=-flto cmake -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
           make -j$(nproc) ${{ matrix.target }}
 
     - name: Initialize GPG keys

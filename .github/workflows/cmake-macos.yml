@@ -162,13 +162,13 @@ jobs:
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CFLAGS=-flto CXXFLAGS=-flto LDFLAGS=-flto OBJCXXFLAGS=-flto ./build_osx.sh 
 
     - name: Build universal freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CFLAGS=-flto CXXFLAGS=-flto LDFLAGS=-flto OBJCXXFLAGS=-flto CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
