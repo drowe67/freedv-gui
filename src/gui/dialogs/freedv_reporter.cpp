@@ -1069,13 +1069,21 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         // green and it's been more than >20 seconds, clear coloring.
         auto curDate = wxDateTime::Now().ToUTC();
 
+        wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
+        wxDataViewItemArray itemsDeleted;
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
             {
+                if (item.second->isVisible)
+                {
+                    wxDataViewItem dvi(item.second);
+                    item.second->isVisible = false;
+                    parent_->Unselect(dvi);
+                    itemsDeleted.Add(dvi);
+                }
                 continue;
-                
             }
             auto reportData = item.second;
 
@@ -1137,14 +1145,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     reportData->isVisible = newVisibility;
                     if (newVisibility)
                     {
-                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        itemsAdded.Add(wxDataViewItem(reportData));
 #if defined(WIN32)
                         doAutoSizeColumns = true;
 #endif // defined(WIN32)
                     }
                     else
                     {
-                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        itemsDeleted.Add(wxDataViewItem(reportData));
                     }
                     sortOnNextTimerInterval = true;
                 }
@@ -1164,7 +1172,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
         }
 
-        ItemsChanged(itemsChanged);
+        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+        {
+            Cleared(); // avoids spurious errors on macOS
+        }
+        else
+        {
+            ItemsChanged(itemsChanged);
+        }
         
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
@@ -2448,6 +2463,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     bool doAutoSizeColumns = false;
 #endif // defined(WIN32)
     
+    wxDataViewItemArray itemsAdded;
+    wxDataViewItemArray itemsDeleted;
+    
     for (auto& kvp : allReporterData_)
     {
     	if (kvp.second->isPendingDelete)
@@ -2496,14 +2514,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
-                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                itemsAdded.Add(wxDataViewItem(kvp.second));
 #if defined(WIN32)
                 doAutoSizeColumns = true;
 #endif // defined(WIN32)
             }
             else
             {
-                ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                itemsDeleted.Add(wxDataViewItem(kvp.second));
             }
             sortOnNextTimerInterval = true;
         }
@@ -2511,6 +2529,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         {
             kvp.second->isPendingUpdate = true;
         }
+    }
+    
+    if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+    {
+        Cleared(); // avoids spurious errors on macOS
     }
     
 #if defined(WIN32)
@@ -2690,7 +2713,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
-        temp->isVisible = !isFiltered_(temp);
+        // defer visibility until timer update
+        temp->isVisible = false;
         temp->isPendingUpdate = false;
 
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
@@ -2708,17 +2732,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             delete existsIter->second;
         }
         allReporterData_[sid] = temp;
-
-        if (temp->isVisible)
-        {
-            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
-#if defined(WIN32)
-            // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-            // platforms causes excessive CPU usage for no benefit.
-            parent_->autosizeColumns();
-#endif // defined(WIN32)
-            sortOnNextTimerInterval = true;
-        }
     };
 
     fnQueue_.push_back(std::move(handler));
@@ -2759,13 +2772,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         {
             auto item = iter->second;
             wxDataViewItem dvi(item);
-            if (item->isVisible)
-            {
-                item->isVisible = false;
-                parent_->Unselect(dvi);
-                Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
-            }
-
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
         }
@@ -2823,27 +2829,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
 
-            wxDataViewItem dvi(iter->second);
-            bool newVisibility = !isFiltered_(iter->second);
-            if (newVisibility != iter->second->isVisible)
-            {
-                iter->second->isVisible = newVisibility;
-                if (newVisibility)
-                {
-                    ItemAdded(wxDataViewItem(nullptr), dvi);
-#if defined(WIN32)
-                    // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-                    // platforms causes excessive CPU usage for no benefit.
-                    parent_->autosizeColumns();
-#endif // defined(WIN32)
-                }
-                else
-                {
-                    ItemDeleted(wxDataViewItem(nullptr), dvi);
-                }
-                sortOnNextTimerInterval = true;
-            }
-            else if (newVisibility)
+            if (iter->second->isVisible)
             {            
                 iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
