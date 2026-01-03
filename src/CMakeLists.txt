@@ -121,7 +121,7 @@ endif(APPLE)
 # problems when using AppImages.
 if(LINUX AND STATIC_LIBGCC)
     target_link_options(freedv PRIVATE -static-libgcc -static-libstdc++)
-endif(LINUX)
+endif(LINUX AND STATIC_LIBGCC)
 
 # If a release tag's set, pass it to the compiler.
 if(FREEDV_VERSION_TAG)
