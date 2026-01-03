@@ -122,7 +122,7 @@ int main(int argc, char** argv)
         {"version",               no_argument,       0,  'v' },
         {0,         0,                 0,  0 }
     };
-    constexpr char shortOptions[] = "dl:m:hv";
+    constexpr char shortOptions[] = "dl:m:r:hv";
     
     int optionIndex = 0;
     int c = 0;
