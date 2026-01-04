@@ -254,40 +254,6 @@ private:
     wxCheckBox *m_cb;
 };
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// panel with custom Seconds-to-record control for record file dialog
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class MyExtraRecFilePanel : public wxPanel
-{
-public:
-    MyExtraRecFilePanel(wxWindow *parent);
-    ~MyExtraRecFilePanel()
-    {
-        wxLogDebug("Destructor\n");
-    }
-
-    void setDecodedRecording(bool val)
-    {
-        if (val)
-        {
-            decodedRecording_->SetValue(true);
-        }
-        else
-        {
-            rawRecording_->SetValue(true);
-        }
-    }
-
-    bool getDecodedRecording()
-    {
-        return decodedRecording_->GetValue();
-    }
-
-private:
-    wxRadioButton* rawRecording_;
-    wxRadioButton* decodedRecording_;
-};
-
 class TxRxThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
