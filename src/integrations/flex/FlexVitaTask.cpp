@@ -230,6 +230,12 @@ void FlexVitaTask::openSocket_()
         return;
     }
 
+    const int enable = 1;
+    if (setsockopt(discoverySocket_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        log_warn("Could not set SO_REUSEADDR, other applications may not allow us to listen on the discovery port!");
+    }
+
     // Bind to discovery port (4992)
     struct sockaddr_in ourSocketAddress;
     memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
