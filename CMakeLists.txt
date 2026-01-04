@@ -152,6 +152,16 @@ if (LINUX)
 set(STATIC_LIBGCC FALSE CACHE BOOL
     "Staticly links libgcc and libstdc++ (Linux only)")
 endif (LINUX)
+set(ENABLE_LTO FALSE CACHE BOOL
+    "Enable Link Time Optimization (LTO)")
+
+if(ENABLE_LTO)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif(result)
+endif(ENABLE_LTO)
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
