@@ -710,6 +710,9 @@ void FreeDVReporterDialog::refreshLayout()
     auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + 100 + LAST_RX_MODE_COL);
     menuItem->Enable(wxGetApp().appConfiguration.enableLegacyModes);
 
+    // Update filter status in window
+    updateFilterStatus_();
+
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->refreshAllRows();
@@ -717,6 +720,25 @@ void FreeDVReporterDialog::refreshLayout()
     // Update status controls.
     wxCommandEvent tmpEvent;
     OnStatusTextChange(tmpEvent);
+}
+
+void FreeDVReporterDialog::updateFilterStatus_()
+{
+    wxString prefix = _("FreeDV Reporter");
+    FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+    if (model->filtersEnabled())
+    {
+        prefix = _("[Filtered] ") + prefix;
+    }
+
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", prefix, wxGetApp().customConfigFileName));
+    }
+    else
+    {
+        SetTitle(prefix);
+    }
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
@@ -804,6 +826,9 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     }
+
+    // Update filter status in window
+    updateFilterStatus_();
 
     // Allow changes to take effect.
     FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
@@ -1653,6 +1678,9 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->setBandFilter(freq);
+
+    // Update filter status in window
+    updateFilterStatus_();
 }
 
 #if defined(WIN32)
@@ -1936,6 +1964,15 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     }
     
     return bandForFreq;
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
+{
+    return 
+        (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
+        (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)

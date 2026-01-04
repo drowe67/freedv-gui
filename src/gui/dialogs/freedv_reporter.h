@@ -272,6 +272,8 @@ class FreeDVReporterDialog : public wxFrame
                  }
                  return false;
              }
+
+             bool filtersEnabled() const;
              
              // Required overrides to implement functionality
              virtual bool HasDefaultCompare() const override;
@@ -416,6 +418,8 @@ class FreeDVReporterDialog : public wxFrame
         wxColour txRowForegroundColor;
         wxColour rxRowBackgroundColor;
         wxColour rxRowForegroundColor;
+
+        void updateFilterStatus_();
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
