@@ -197,6 +197,7 @@ int main(int argc, char** argv)
     action.sa_handler = &OnSignalExit;
     action.sa_flags = SA_RESTART;
     sigaction(SIGINT, &action, nullptr);
+    sigaction(SIGTERM, &action, nullptr);
     
     log_info("Creating RADE object");
     char modelFile[1];

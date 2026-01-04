@@ -884,6 +884,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: use tanh() for audio limiting. (PR #1156)
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
     * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
+    * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
@@ -896,10 +897,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153)
     * Flex: use random port for VITA socket after connect. (PR #1141)
     * FreeDV Reporter: Add idle filter. (PR #1142)
-    * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146) - thanks @arodland!
+    * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
     * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
+    * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
