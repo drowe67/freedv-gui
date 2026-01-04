@@ -117,6 +117,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlVoiceKeyerWaveFilePath;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
+
+        /* Quick Record */
+        wxButton     *m_buttonChooseQuickRecordPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordPath;
         
         /* test frames, other simulated channel impairments */
 
@@ -191,6 +195,7 @@ class OptionsDlg : public wxDialog
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event);
+        void OnChooseQuickRecordPath(wxCommandEvent& event);
         
         void OnReportingFreqSelectionChange(wxCommandEvent& event);
         void OnReportingFreqTextChange(wxCommandEvent& event);
