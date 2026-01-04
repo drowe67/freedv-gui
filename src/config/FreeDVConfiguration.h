@@ -70,11 +70,6 @@ public:
     ConfigurationDataElement<int> transmitLevel;
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
-    ConfigurationDataElement<wxString> recFileFromRadioPath;
-    ConfigurationDataElement<wxString> recFileFromDecoderPath;
-    ConfigurationDataElement<unsigned int> recFileFromRadioSecs;
-    ConfigurationDataElement<wxString> recFileFromModulatorPath;
-    ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
     ConfigurationDataElement<wxString> playFileFromRadioPath;
     
     ConfigurationDataElement<bool> enableSpaceBarForPTT;

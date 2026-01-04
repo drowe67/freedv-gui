@@ -258,7 +258,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
 
             log_info("Recording to %s", (const char*)soundFile.ToUTF8());
             wxString fileName, extension;
-            wxString tmpString = wxGetApp().appConfiguration.recFileFromRadioPath;
+            wxString tmpString;
             wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
         
             sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
