@@ -88,7 +88,8 @@ public:
     ConfigurationDataElement<bool> multipleReceiveEnabled;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
     
-    ConfigurationDataElement<wxString> quickRecordPath;
+    ConfigurationDataElement<wxString> quickRecordRawPath;
+    ConfigurationDataElement<wxString> quickRecordDecodedPath;
     
     ConfigurationDataElement<bool> freedv700Clip;
     ConfigurationDataElement<bool> freedv700TxBPF;
