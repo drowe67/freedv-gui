@@ -1069,6 +1069,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         // green and it's been more than >20 seconds, clear coloring.
         auto curDate = wxDateTime::Now().ToUTC();
 
+        wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
+        
         wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
         wxDataViewItemArray itemsDeleted;
@@ -1082,6 +1084,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     item.second->isVisible = false;
                     parent_->Unselect(dvi);
                     itemsDeleted.Add(dvi);
+                    
+                    if (currentSelection.IsOk() && dvi.GetID() == currentSelection.GetID())
+                    {
+                        // Selection is no longer valid.
+                        currentSelection = wxDataViewItem(nullptr);
+                    }
                 }
                 continue;
             }
@@ -1152,7 +1160,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     }
                     else
                     {
-                        itemsDeleted.Add(wxDataViewItem(reportData));
+                        wxDataViewItem dvi(reportData);
+                        itemsDeleted.Add(dvi);
+                        if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
+                        {
+                            // Selection no longer valid
+                            currentSelection = wxDataViewItem(nullptr);
+                        }
                     }
                     sortOnNextTimerInterval = true;
                 }
@@ -1175,6 +1189,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
         {
             Cleared(); // avoids spurious errors on macOS
+            if (currentSelection.IsOk())
+            {
+                // Reselect after redraw
+                parent_->CallAfter([&, currentSelection]() {
+                    parent_->m_listSpots->Select(currentSelection);
+                });
+            }
         }
         else
         {
@@ -2465,6 +2486,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     
     wxDataViewItemArray itemsAdded;
     wxDataViewItemArray itemsDeleted;
+    wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
     
     for (auto& kvp : allReporterData_)
     {
@@ -2521,7 +2543,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             }
             else
             {
-                itemsDeleted.Add(wxDataViewItem(kvp.second));
+                wxDataViewItem dvi(kvp.second);
+                itemsDeleted.Add(dvi);
+                
+                if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
+                {
+                    // Selection no longer valid
+                    currentSelection = wxDataViewItem(nullptr);
+                }
             }
             sortOnNextTimerInterval = true;
         }
@@ -2534,6 +2563,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
     {
         Cleared(); // avoids spurious errors on macOS
+        if (currentSelection.IsOk())
+        {
+            // Reselect after redraw
+            parent_->CallAfter([&, currentSelection]() {
+                parent_->m_listSpots->Select(currentSelection);
+            });
+        }
     }
     
 #if defined(WIN32)
