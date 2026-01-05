@@ -50,7 +50,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     gridSizerRecordingSettings->Add(labelRecordingType, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
     wxBoxSizer* typeSizer = new wxBoxSizer(wxHORIZONTAL);
-    rawRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Raw"));
+    rawRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Off Air"));
     rawRecording_->SetValue(true);
     typeSizer->Add(rawRecording_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     decodedRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Decoded"));
@@ -74,7 +74,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     // OK/Cancel buttons
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_buttonOK = new wxButton(panel, wxID_OK);
+    m_buttonOK = new wxButton(panel, wxID_ANY, _("Start"));
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
     m_buttonCancel = new wxButton(panel, wxID_CANCEL);
