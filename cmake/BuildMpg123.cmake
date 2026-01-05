@@ -59,14 +59,12 @@ ExternalProject_Add(build_mpg123
     URL_HASH ${MPG123_HASH}
 )
 
-ExternalProject_Get_Property(build_mpg123 BINARY_DIR)
-ExternalProject_Get_Property(build_mpg123 SOURCE_DIR)
 add_library(mpg123 STATIC IMPORTED)
 add_dependencies(mpg123 build_mpg123)
 
 set_target_properties(mpg123 PROPERTIES
-    IMPORTED_LOCATION "${BINARY_DIR}/.libs/libmpg123${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    IMPORTED_IMPLIB   "${BINARY_DIR}/.libs/libmpg123${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/external/dist/lib/libmpg123${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${CMAKE_BINARY_DIR}/external/dist/lib/libmpg123${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
 endif(APPLE AND BUILD_OSX_UNIVERSAL)
