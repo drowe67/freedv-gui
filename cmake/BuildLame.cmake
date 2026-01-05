@@ -59,14 +59,12 @@ ExternalProject_Add(build_mp3lame
     URL_HASH ${LAME_HASH}
 )
 
-ExternalProject_Get_Property(build_mp3lame BINARY_DIR)
-ExternalProject_Get_Property(build_mp3lame SOURCE_DIR)
 add_library(mp3lame STATIC IMPORTED)
 add_dependencies(mp3lame build_mp3lame)
 
 set_target_properties(mp3lame PROPERTIES
-    IMPORTED_LOCATION "${BINARY_DIR}/.libs/libmp3lame${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    IMPORTED_IMPLIB   "${BINARY_DIR}/.libs/libmp3lame${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/external/dist/lib/libmp3lame${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${CMAKE_BINARY_DIR}/external/dist/lib/libmp3lame${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
 endif(APPLE AND BUILD_OSX_UNIVERSAL)
