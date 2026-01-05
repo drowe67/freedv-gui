@@ -41,7 +41,8 @@ class BeginRecordingDialog : public wxDialog
 
         bool isRawRecording() const { return rawRecording_->GetValue(); }
         wxString getRecordingSuffix() const { return recordingSuffix_->GetValue(); }
-       
+        bool isMp3Format() const { return formatMp3_->GetValue(); }
+        
     protected:
 
         // Handlers for events.
@@ -53,6 +54,8 @@ class BeginRecordingDialog : public wxDialog
         wxTextCtrl *recordingSuffix_;
         wxRadioButton *rawRecording_;
         wxRadioButton *decodedRecording_;
+        wxRadioButton *formatWav_;
+        wxRadioButton *formatMp3_;
 
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;

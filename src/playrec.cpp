@@ -253,15 +253,33 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
                 filenamePrefix = _("FDV_FromDecoder");
             }
 
-            wxFileName filePath(folder, wxString::Format(_("%s_%s.wav"), filenamePrefix, filenameSuffix));
+            wxString extension;
+            if (recordDialog.isMp3Format())
+            {
+                extension = _("mp3");
+            }
+            else
+            {
+                extension = _("wav");
+            }
+
+            wxFileName filePath(folder, wxString::Format(_("%s_%s.%s"), filenamePrefix, filenameSuffix, extension));
             soundFile = filePath.GetFullPath();
 
             log_info("Recording to %s", (const char*)soundFile.ToUTF8());
-            wxString fileName, extension;
+            wxString fileName;
             wxString tmpString;
             wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
         
-            sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            if (recordDialog.isMp3Format())
+            {
+                sfInfo.format     = SF_FORMAT_MPEG | SF_FORMAT_MPEG_LAYER_III;
+            }
+            else
+            {
+                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            }
+            
             sfInfo.channels   = 1;
             sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
 

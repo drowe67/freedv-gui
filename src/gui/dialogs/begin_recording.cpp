@@ -36,7 +36,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     wxStaticBox* recordingSettingsBox = new wxStaticBox(panel, wxID_ANY, _("Recording Settings"));
     wxStaticBoxSizer* recordingSettingsBoxSizer = new wxStaticBoxSizer(recordingSettingsBox, wxVERTICAL);
 
-    wxFlexGridSizer* gridSizerRecordingSettings = new wxFlexGridSizer(2, 2, 5, 5);
+    wxFlexGridSizer* gridSizerRecordingSettings = new wxFlexGridSizer(3, 2, 5, 5);
     gridSizerRecordingSettings->AddGrowableCol(1);
 
     // Recording suffix
@@ -56,6 +56,17 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     decodedRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Decoded"));
     typeSizer->Add(decodedRecording_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     gridSizerRecordingSettings->Add(typeSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
+
+    wxStaticText* labelRecordingFormat = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording format:"), wxDefaultPosition, wxSize(125,-1), 0);
+    gridSizerRecordingSettings->Add(labelRecordingFormat, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    wxBoxSizer* formatSizer = new wxBoxSizer(wxHORIZONTAL);
+    formatWav_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("WAV"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    formatWav_->SetValue(true);
+    formatSizer->Add(formatWav_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    formatMp3_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("MP3"));
+    formatSizer->Add(formatMp3_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    gridSizerRecordingSettings->Add(formatSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
 
     recordingSettingsBoxSizer->Add(gridSizerRecordingSettings, 0, wxEXPAND | wxALIGN_LEFT, 2);
     sectionSizer->Add(recordingSettingsBoxSizer, 0, wxALL | wxEXPAND, 2);
