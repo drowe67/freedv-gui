@@ -65,9 +65,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     formatWav_->SetValue(true);
     formatSizer->Add(formatWav_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     formatMp3_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("MP3"));
-#if defined(SNDFILE_NO_MP3_SUPPORT)
     formatMp3_->Enable(false);
-#endif // defined(SNDFILE_NO_MP3_SUPPORT)
     formatSizer->Add(formatMp3_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     gridSizerRecordingSettings->Add(formatSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
 
@@ -100,6 +98,9 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(BeginRecordingDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(BeginRecordingDialog::OnClose));
+    
+    rawRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
+    decodedRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
        
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
@@ -109,6 +110,9 @@ BeginRecordingDialog::~BeginRecordingDialog()
 {
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(BeginRecordingDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(BeginRecordingDialog::OnClose));
+    
+    rawRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
+    decodedRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
        
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
@@ -132,4 +136,19 @@ void BeginRecordingDialog::OnClose(wxCloseEvent&)
 void BeginRecordingDialog::OnOK(wxCommandEvent&)
 {
     this->EndModal(wxOK);
+}
+
+void BeginRecordingDialog::OnRecordingTypeChange(wxCommandEvent&)
+{
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+    if (rawRecording_->GetValue())
+    {
+        formatMp3_->Enable(false);
+        formatWav_->SetValue(true);
+    }
+    else
+    {
+        formatMp3_->Enable(true);
+    }
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
 }
