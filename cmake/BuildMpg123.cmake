@@ -1,4 +1,4 @@
-set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+set(CONFIGURE_COMMAND ./configure --disable-shared --disable-components --enable-libmpg123 --prefix=${CMAKE_BINARY_DIR}/external/dist)
 
 if (CMAKE_CROSSCOMPILING)
 set(CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=${CMAKE_C_COMPILER_TARGET} --target=${CMAKE_C_COMPILER_TARGET})

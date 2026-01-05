@@ -39,7 +39,7 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis
+      run: sudo apt-get install nsis autoconf automake libtool
 
     - name: Configure WINE
       shell: bash
