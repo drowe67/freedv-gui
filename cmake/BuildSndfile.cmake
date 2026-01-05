@@ -1,24 +1,21 @@
-set(SNDFILE_TARBALL "libsndfile-1.0.28")
+# Ensure that MP3 support is built into libsndfile
+include(cmake/BuildMpg123.cmake)
+include(cmake/BuildLame.cmake)
 
-if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND autoreconf -i && ./configure --host=${HOST} --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-sqlite)
-elseif(APPLE)
-if(BUILD_OSX_UNIVERSAL)
-    set(CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-shared --disable-external-libs CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 LDFLAGS=-arch\ x86_64\ -arch\ arm64)
-else()
-    set(CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-shared --disable-external-libs CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
-endif(BUILD_OSX_UNIVERSAL)
-else()
-    set(CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-external-libs)
+set(SNDFILE_CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external/dist -DBUILD_SHARED_LIBS=OFF -DBUILD_PROGRAMS=OFF -DBUILD_EXAMPLES=OFF -DENABLE_CPACK=OFF -DENABLE_EXTERNAL_LIBS=OFF -Dmp3lame_ROOT=${CMAKE_BINARY_DIR}/external/dist -DLAME_ROOT=${CMAKE_BINARY_DIR}/external/dist -Dmpg123_ROOT=${CMAKE_BINARY_DIR}/external/dist)
+if(CMAKE_CROSSCOMPILING)
+    set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
 include(ExternalProject)
 ExternalProject_Add(sndfile
-    URL http://www.mega-nerd.com/libsndfile/files/${SNDFILE_TARBALL}.tar.gz
+    URL https://github.com/libsndfile/libsndfile/archive/refs/tags/1.2.2.tar.gz
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-    BUILD_COMMAND $(MAKE) V=1
+    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/sndfile-cmake.patch
+    CMAKE_ARGS ${SNDFILE_CMAKE_ARGS}
+    CMAKE_CACHE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET} -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
+    BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
 )
 if(MINGW)
@@ -28,5 +25,7 @@ else()
 endif()
 
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
-list(APPEND FREEDV_LINK_LIBS ${SNDFILE_LIBRARIES})
-list(APPEND FREEDV_STATIC_DEPS sndfile)
+list(APPEND FREEDV_LINK_LIBS mp3lame mpg123 ${SNDFILE_LIBRARIES})
+list(APPEND FREEDV_STATIC_DEPS mpg123 mp3lame sndfile)
+
+add_dependencies(sndfile mpg123 mp3lame)
