@@ -254,13 +254,13 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             }
 
             wxString extension;
-#if defined(SNDFILE_NO_MP3_SUPPORT)
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
             if (recordDialog.isMp3Format())
             {
                 extension = _("mp3");
             }
             else
-#endif // defined(SNDFILE_NO_MP3_SUPPORT)
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
             {
                 extension = _("wav");
             }
@@ -273,13 +273,13 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             wxString tmpString;
             wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
 
-#if defined(SNDFILE_NO_MP3_SUPPORT)
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
             if (recordDialog.isMp3Format())
             {
                 sfInfo.format     = SF_FORMAT_MPEG | SF_FORMAT_MPEG_LAYER_III;
             }
             else
-#endif // defined(SNDFILE_NO_MP3_SUPPORT)
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
             {
                 sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
             }
