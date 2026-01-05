@@ -555,7 +555,30 @@ if(NOT USE_STATIC_SNDFILE)
     find_path(LIBSNDFILE_INCLUDE_DIR sndfile.h)
     message(STATUS "  sndfile library: ${LIBSNDFILE}")
     message(STATUS "  sndfile headers: ${LIBSNDFILE_INCLUDE_DIR}")
+
     if(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
+        # Some Linux distros don't include MP3 support for libsamplefile. 
+        # Check for this, and if we don't have the needed config, disable 
+        # MP3 support in the app.
+        if (NOT CMAKE_CROSSCOMPILING)
+            if (CMAKE_VERSION VERSION_LESS 3.25)
+                set(_SNDFILE_TRY_RUN_BINDIR "${CMAKE_CURRENT_BINARY_DIR}/SndfileTryRun")
+                message(STATUS "Using old try_run syntax for CMake ${CMAKE_VERSION}")
+            else()
+                set(_SNDFILE_TRY_RUN_BINDIR "SOURCES")
+                message(STATUS "Using new try_run syntax for CMake ${CMAKE_VERSION}")
+            endif(CMAKE_VERSION VERSION_LESS 3.25)
+            try_run(SAMPLEFILE_RUN_RESULT SAMPLEFILE_COMPILE_RESULT
+                ${_SNDFILE_TRY_RUN_BINDIR} ${CMAKE_SOURCE_DIR}/cmake/sndfile-test.c
+                CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${LIBSNDFILE_INCLUDE_DIR}
+                LINK_LIBRARIES ${LIBSNDFILE}
+                RUN_OUTPUT_VARIABLE SNDFILE_MP3_ENABLED)
+            if (NOT SAMPLEFILE_COMPILE_RESULT OR NOT SNDFILE_MP3_ENABLED)
+                message(STATUS "No MP3 support in sndfile, disabling.")
+                add_definitions(-DSNDFILE_NO_MP3_SUPPORT)
+            endif (NOT SAMPLEFILE_COMPILE_RESULT OR NOT SNDFILE_MP3_ENABLED)
+        endif (NOT CMAKE_CROSSCOMPILING)
+
         list(APPEND FREEDV_LINK_LIBS ${LIBSNDFILE})
     else(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
         message(STATUS "Will attempt static build of sndfile.")

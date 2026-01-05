@@ -65,6 +65,9 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     formatWav_->SetValue(true);
     formatSizer->Add(formatWav_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     formatMp3_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("MP3"));
+#if defined(SNDFILE_NO_MP3_SUPPORT)
+    formatMp3_->Enable(false);
+#endif // defined(SNDFILE_NO_MP3_SUPPORT)
     formatSizer->Add(formatMp3_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     gridSizerRecordingSettings->Add(formatSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
 
