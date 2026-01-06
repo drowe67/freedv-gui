@@ -255,7 +255,11 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn.store(true, std::memory_order_release);
 
-        m_btnTogPTT->SetValue(true); togglePTT();
+        // Allow enabling VK during TX.
+        if (!m_btnTogPTT->GetValue())
+        {
+            m_btnTogPTT->SetValue(true); togglePTT();
+        }
         next_state = VK_TX;
         
         wxColour vkBackgroundColor(55, 155, 175);
