@@ -195,6 +195,9 @@ wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 // End of TX state control
 std::atomic<bool> endingTx;
 
+// Running state
+std::atomic<bool> isModemRunning;
+
 // Option test file to log samples
 
 FILE *ftest;
@@ -332,16 +335,11 @@ void MainApp::UnitTest_()
     sim.MouseClick();*/
     
     // Wait for FreeDV to start
-    std::this_thread::sleep_for(1s);
-    while (true)
+    while (!isModemRunning.load(std::memory_order_acquire))
     {
-        bool isRunning = false;
-        frame->executeOnUiThreadAndWait_([&]() {
-            isRunning = frame->m_togBtnOnOff->IsEnabled();
-        });
-        if (isRunning) break;
         std::this_thread::sleep_for(20ms);
     }
+    std::this_thread::sleep_for(2s);
     
     constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
@@ -352,15 +350,6 @@ void MainApp::UnitTest_()
             // Fire event to begin TX
             //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             //sim.MouseClick();
-            log_info("Firing PTT");
-            CallAfter([this]() {
-                frame->m_btnTogPTT->SetValue(true);
-                wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
-                txEvent->SetEventObject(frame->m_btnTogPTT);
-                //QueueEvent(txEvent);
-                frame->OnTogBtnPTT(*txEvent);
-                delete txEvent;
-            });
             
             if (utTxFile != "")
             {
@@ -372,6 +361,16 @@ void MainApp::UnitTest_()
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn.store(true, std::memory_order_release);
 
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 int counter = 0;
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
@@ -380,6 +379,16 @@ void MainApp::UnitTest_()
             }
             else
             {
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 // Transmit for user given time period (default 60 seconds)
                 std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
             }
@@ -2447,6 +2456,8 @@ void MainFrame::performFreeDVOn_()
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
+
+                isModemRunning.store(true, std::memory_order_release);
             }
         }
     }
@@ -2470,6 +2481,8 @@ void MainFrame::performFreeDVOff_()
     //
     // Stop Running -------------------------------------------------
     //
+
+    isModemRunning.store(false, std::memory_order_release);
 
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
@@ -3546,7 +3559,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         {
             tmpInput[i] = audioData[0];
         }
-        if (cbData->infifo2->write(tmpInput, size)) 
+        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
         {
             g_infifo2_full.fetch_add(1, std::memory_order_release);
         }
@@ -3601,7 +3614,7 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     {
         tmpInput[i] = audioData[0];
     }
-    if (cbData->infifo1->write(tmpInput, size)) 
+    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
     {
         g_infifo1_full.fetch_add(1, std::memory_order_release);
     }
