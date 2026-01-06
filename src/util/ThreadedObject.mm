@@ -73,8 +73,10 @@ void ThreadedObject::waitForAllTasksComplete_()
 {
     suppressEnqueue_.store(true, std::memory_order_release);
 
-    constexpr int MAX_TIME_TO_WAIT_NSEC = MS_TO_NSEC * 250;
-    dispatch_group_wait(group_, dispatch_time(DISPATCH_TIME_NOW, MAX_TIME_TO_WAIT_NSEC));
+    // We wait forever here instead of 250ms as with the non-macOS implementation
+    // since we don't have a way to just clear out the queued events in the dispatch
+    // group after the timeout.
+    dispatch_group_wait(group_, DISPATCH_TIME_FOREVER);
 
     suppressEnqueue_.store(false, std::memory_order_release);
 }
