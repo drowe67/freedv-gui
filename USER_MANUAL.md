@@ -886,6 +886,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
     * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
     * FreeDV Reporter: Defer row adds and removes until timer fires. (PR #1162)
+    * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
