@@ -10,4 +10,4 @@ echo "PYTHONHOME=$PYTHONHOME"
 export PYTHONMALLOC=mimalloc
 cd "$APPDIR"
 echo "#### after import"
-"$APPDIR/usr/bin/freedv-flex" $@
+"$APPDIR/usr/bin/freedv-flex" "$@"
