@@ -886,6 +886,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
     * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
+    * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
 2. Enhancements:
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
     * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
@@ -900,6 +901,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Add idle filter. (PR #1142)
     * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
     * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
+    * Flex: add command line option to adjust RX volume. (PR #1159)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
