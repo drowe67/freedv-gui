@@ -183,7 +183,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 {
     // Only enable VK file selection on idle
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
-    chooseVKFileMenuItem_->Enable(enabled);
+    chooseVKFileMenuItem_->Enable(vk_state == VK_IDLE);
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
     
     // Trigger right-click menu popup in a location that will prevent it from
