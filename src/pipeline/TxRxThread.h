@@ -70,6 +70,8 @@ public:
     
     virtual ~TxRxThread()
     {
+        stop();
+        
         // Free allocated buffer
         inputSamples_ = nullptr;
     }
