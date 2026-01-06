@@ -8,6 +8,7 @@
 #include "main.h"
 
 #include "gui/dialogs/begin_recording.h"
+#include "gui/dialogs/freedv_reporter.h"
 
 extern wxMutex g_mutexProtectingCallbackData;
 std::atomic<SNDFILE*> g_sfPlayFile;
@@ -227,7 +228,20 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
     }
     else 
     {
-        BeginRecordingDialog recordDialog(this);
+        wxString dxCall;
+        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+        if (selected != -1)
+        {        
+            // Get callsign and RX frequency
+            dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+            log_info("Using %s from main window drop-down list as default recording suffix", (const char*)dxCall.ToUTF8());
+        }
+        else if (m_reporterDialog != nullptr && m_reporterDialog->getSelectedCallsignInfo(dxCall))
+        {
+            log_info("Using %s from FreeDV Reporter as default recording suffix", (const char*)dxCall.ToUTF8());
+        }
+        
+        BeginRecordingDialog recordDialog(this, dxCall);
         if (recordDialog.ShowModal() == wxOK)
         {
             wxString    soundFile;

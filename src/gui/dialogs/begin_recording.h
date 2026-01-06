@@ -32,11 +32,7 @@
 class BeginRecordingDialog : public wxDialog
 {
     public:
-        BeginRecordingDialog( wxWindow* parent,
-                wxWindowID id = wxID_ANY, const wxString& title = _("Start Recording"), 
-                const wxPoint& pos = wxDefaultPosition, 
-                const wxSize& size = wxSize(250,-1), 
-                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
+        BeginRecordingDialog( wxWindow* parent, wxString const& defaultRecordingSuffix );
         virtual ~BeginRecordingDialog();
 
         bool isRawRecording() const { return rawRecording_->GetValue(); }

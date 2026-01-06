@@ -22,8 +22,8 @@
 #include <wx/wx.h>
 #include "begin_recording.h"
 
-BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
-    : wxDialog(parent, id, title, pos, size, style)
+BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& defaultRecordingSuffix) 
+    : wxDialog(parent, wxID_ANY, _("Start Recording"), wxDefaultPosition, wxSize(250,-1), wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL)
 {    
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -43,7 +43,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxWindowID id, cons
     wxStaticText* labelRecordingSuffix = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording suffix:"), wxDefaultPosition, wxSize(125,-1), 0);
     gridSizerRecordingSettings->Add(labelRecordingSuffix, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(125, -1), 0);
+    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, defaultRecordingSuffix, wxDefaultPosition, wxSize(125, -1), 0);
     gridSizerRecordingSettings->Add(recordingSuffix_, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 2);
 
     wxStaticText* labelRecordingType = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording type:"), wxDefaultPosition, wxSize(125,-1), 0);
