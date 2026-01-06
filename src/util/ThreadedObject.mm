@@ -24,8 +24,6 @@
 
 #include "ThreadedObject.h"
 
-constexpr static int MS_TO_NSEC = 1000000;
-
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
     , name_(std::move(name))
