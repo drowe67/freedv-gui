@@ -43,7 +43,7 @@ public:
     
     enum { VITA_PORT = 4992 }; // Default VITA port if we're discovering other radios on the network.
     
-    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper);
+    FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, float volumeAdjustmentDecibel = 0.0f);
     virtual ~FlexVitaTask();
     
     // Indicates to VitaTask that we've connected to the radio's TCP port.
@@ -109,6 +109,9 @@ private:
     // Event handlers
     RadioDiscoveredFn onRadioDiscoveredFn_;
     void* onRadioDiscoveredFnState_;
+
+    // Volume adjustment
+    float volumeAdjustmentScaleFactor_;
     
     GenericFIFO<short>* getAudioInput_(bool tx);
     GenericFIFO<short>* getAudioOutput_(bool tx);

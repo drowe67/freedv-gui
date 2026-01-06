@@ -31,12 +31,11 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
-const float RX_SCALE_FACTOR = expf(6.0f/20.0f * logf(10.0f));
 const float TX_SCALE_FACTOR = expf(3.0f/20.0f * logf(10.0f));
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, float volumeAdjustmentDecibel)
     : ThreadedObject("FlexVita")
     , socket_(-1)
     , discoverySocket_(-1)
@@ -49,6 +48,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
     , inputCtr_(0)
     , samplesRequired_(0)
     , helper_(std::move(helper))
+    , volumeAdjustmentScaleFactor_(expf(volumeAdjustmentDecibel/20.0f * logf(10.0f)))
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
     assert(packetArray_ != nullptr);
@@ -163,7 +163,7 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
             if (transmitChannel) fpSample *= TX_SCALE_FACTOR;
-            else fpSample *= RX_SCALE_FACTOR;
+            else fpSample *= volumeAdjustmentScaleFactor_;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
             uint32_t tmp = htonl(*fpSampleAsInt);
             *ptrOut++ = tmp;
