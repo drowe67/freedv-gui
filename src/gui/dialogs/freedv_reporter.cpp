@@ -1186,7 +1186,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
         }
 
-        if (itemsDeleted.size() > 0)
+        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
         {
             Cleared(); // avoids spurious errors on macOS
             if (currentSelection.IsOk())
@@ -1197,7 +1197,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 });
             }
         }
-        else if (itemsChanged.size() > 0  || itemsAdded.size() > 0)
+        else if (itemsChanged.size() > 0)
         {
             // Temporarily disable autosizing prior to item updates.
             // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
@@ -1207,9 +1207,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
             }
             
-            ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
             ItemsChanged(itemsChanged);
-            
+
             // Reenable autosizing
             for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
             {
