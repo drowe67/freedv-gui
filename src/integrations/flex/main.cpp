@@ -98,7 +98,7 @@ void printUsage(char* appName)
     log_info("    -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.");
     log_info("    -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.");
     log_info("    -r|--rx-volume: Increases or decreases receive volume by the provided dB figure.");
-    log_info("    -t|--spot-timeout: Timeout for reported spots (default: 600s or 10min).")
+    log_info("    -t|--spot-timeout: Timeout for reported spots (default: 600s or 10min).");
     log_info("    -h|--help: This help message.");
     log_info("    -v|--version: Prints the application version and exits.");
     log_info("");
@@ -194,7 +194,8 @@ int main(int argc, char** argv)
                 }
                 
                 char* tmp = nullptr;
-                spotTimeoutSeconds = strtol(optarg, &tmp);
+                errno = 0;
+                spotTimeoutSeconds = (int)strtol(optarg, &tmp, 10);
                 if (tmp != (optarg + strlen(optarg)) || errno == ERANGE)
                 {
                     log_error("Provided timeout for -t/--spot-timeout must be a number.");
