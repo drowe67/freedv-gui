@@ -148,6 +148,7 @@ class FreeDVReporterDialog : public wxFrame
         wxTextCtrl* m_qsyText;
         
         // Band filter
+        wxStaticText* m_filterStatus;
         wxComboBox* m_bandFilter;
         wxCheckBox* m_trackFrequency;
         wxRadioButton* m_trackFreqBand;

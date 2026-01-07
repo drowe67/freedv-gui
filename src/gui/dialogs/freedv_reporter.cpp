@@ -335,9 +335,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_bandFilter = new wxComboBox(
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
         sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
-    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
-    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
-    
+    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);    
     bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -352,8 +350,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     bandFilterSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
+    m_filterStatus = new wxStaticText(this, wxID_ANY, _("Filters Off"));
+    bandFilterSizer->Add(m_filterStatus, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
     reportingSettingsSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 0);
+    
+    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
 
     wxBoxSizer* statusMessageSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -724,20 +727,16 @@ void FreeDVReporterDialog::refreshLayout()
 
 void FreeDVReporterDialog::updateFilterStatus_()
 {
-    wxString prefix = _("FreeDV Reporter");
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     if (model->filtersEnabled())
     {
-        prefix = _("[Filtered] ") + prefix;
-    }
-
-    if (wxGetApp().customConfigFileName != "")
-    {
-        SetTitle(wxString::Format("%s (%s)", prefix, wxGetApp().customConfigFileName));
+        m_filterStatus->SetLabel(_("Filters On"));
+        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
     }
     else
     {
-        SetTitle(prefix);
+        m_filterStatus->SetLabel(_("Filters Off"));
+        m_filterStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     }
 }
 
