@@ -1209,7 +1209,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             
             ItemsChanged(itemsChanged);
 
-            // Reenable autosizing
+            // Re-enable autosizing
             for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
             {
                 auto col = parent_->m_listSpots->GetColumn(index);
