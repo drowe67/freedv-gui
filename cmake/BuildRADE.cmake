@@ -16,6 +16,7 @@ ExternalProject_Add(build_rade
    BINARY_DIR rade_build
    GIT_REPOSITORY https://github.com/drowe67/radae.git
    GIT_TAG main
+   GIT_SUBMODULES ""
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
    #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
