@@ -23,6 +23,7 @@ jobs:
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+          brew uninstall git # workaround, forces use of Apple git
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -37,7 +38,7 @@ jobs:
         cd build_osx
         CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_rade build_codec2 build_rade_integ
+        make -j$(sysctl -n hw.logicalcpu) build_rade build_codec2 build_rade_integ
     
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
@@ -65,6 +66,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash
@@ -137,6 +139,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox 
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -214,6 +217,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool sox
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash

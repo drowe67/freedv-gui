@@ -130,10 +130,12 @@ extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
+extern SNDFILE* g_sfRecDecoderFile;
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 
 extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
+extern bool g_recFileFromDecoder;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -506,6 +508,28 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutVol,
             g_rxUserdata->spkEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
+
+        // Record from decoder step (optional)
+        auto recordDecoderStep = new RecordStep(
+            outputSampleRate_, 
+            []() { return g_sfRecDecoderFile; }, 
+            [](int) {
+                // Recording stops when the user explicitly tells us to,
+                // no action required here.
+            }
+        );
+        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        recordDecoderPipeline->appendPipelineStep(recordDecoderStep);
+        
+        auto recordDecoderTap = new TapStep(outputSampleRate_, recordDecoderPipeline);
+        auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        
+        auto eitherOrRecordDecoder = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder) && (g_sfRecDecoderFile != NULL); },
+            recordDecoderTap,
+            bypassRecordDecoder
+        );
+        pipeline_->appendPipelineStep(eitherOrRecordDecoder);
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
