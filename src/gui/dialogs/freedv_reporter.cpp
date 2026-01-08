@@ -1326,7 +1326,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         tempUserMessage_ = model->getUserMessage(item);
     
-        if (col->GetModelColumn() == desiredCol)
+        if (col->GetModelColumn() == desiredCol && tempUserMessage_ != "")
         {
             rect = m_listSpots->GetItemRect(item, col);
             if (tipWindow_ == nullptr)
