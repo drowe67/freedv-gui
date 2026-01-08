@@ -1,4 +1,5 @@
 add_library(fdv_gui_dialogs STATIC
+    begin_recording.cpp
     dlg_audiooptions.cpp
     dlg_easy_setup.cpp
     dlg_filter.cpp

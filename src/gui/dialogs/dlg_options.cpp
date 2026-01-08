@@ -435,18 +435,30 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* quickRecordBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record"));
     wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer(quickRecordBox, wxVERTICAL);
 
-    wxBoxSizer* quickRecordSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxFlexGridSizer* quickRecordSizer = new wxFlexGridSizer(2, 3, 5, 5);
+    quickRecordSizer->AddGrowableCol(1);
 
-    wxStaticText *staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save raw recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlQuickRecordPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
-    m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
-    quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlQuickRecordRawPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlQuickRecordRawPath->SetToolTip(_("Location which to save raw recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonChooseQuickRecordPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
-    m_buttonChooseQuickRecordPath->SetMinSize(wxSize(120, -1));
-    quickRecordSizer->Add(m_buttonChooseQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonChooseQuickRecordRawPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordRawPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save decoded recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlQuickRecordDecodedPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlQuickRecordDecodedPath->SetToolTip(_("Location which to save decoded recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_buttonChooseQuickRecordDecodedPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordDecodedPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sbsQuickRecord->Add(quickRecordSizer);
     
@@ -784,7 +796,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_buttonChooseVoiceKeyerWaveFilePath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
 
-    m_buttonChooseQuickRecordPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordRawPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordDecodedPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
@@ -829,7 +842,8 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
-    m_buttonChooseQuickRecordPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordDecodedPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
@@ -904,7 +918,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
-        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().appConfiguration.quickRecordPath);
+        m_txtCtrlQuickRecordRawPath->SetValue(wxGetApp().appConfiguration.quickRecordRawPath);
+        m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
@@ -1082,7 +1097,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().appConfiguration.voiceKeyerRepeats = (int)tmp;
         
-        wxGetApp().appConfiguration.quickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
+        wxGetApp().appConfiguration.quickRecordRawPath = m_txtCtrlQuickRecordRawPath->GetValue();
+        wxGetApp().appConfiguration.quickRecordDecodedPath = m_txtCtrlQuickRecordDecodedPath->GetValue();
         
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
@@ -1289,17 +1305,28 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent&) {
+void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
+    wxString defaultLocation = 
+        (event.GetEventObject() == m_buttonChooseQuickRecordRawPath) ?
+        wxGetApp().appConfiguration.quickRecordRawPath :
+        wxGetApp().appConfiguration.quickRecordDecodedPath;
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
-                                 wxGetApp().appConfiguration.quickRecordPath
+                                 defaultLocation
                                  );
      if(pathDialog.ShowModal() == wxID_CANCEL) {
          return;     // the user changed their mind...
      }
 
-     m_txtCtrlQuickRecordPath->SetValue(pathDialog.GetPath());
+     if (event.GetEventObject() == m_buttonChooseQuickRecordRawPath)
+     {
+        m_txtCtrlQuickRecordRawPath->SetValue(pathDialog.GetPath());
+     }
+     else
+     {
+        m_txtCtrlQuickRecordDecodedPath->SetValue(pathDialog.GetPath());
+     }
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {

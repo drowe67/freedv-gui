@@ -85,6 +85,17 @@ class FreeDVReporterDialog : public wxFrame
             }
             return false;
         }
+        
+        bool getSelectedCallsignInfo(wxString& callsign)
+        {
+            auto selectedItem = m_listSpots->GetSelection();
+            if (selectedItem.IsOk())
+            {
+                FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+                return model->getSelectedCallsignInfo(selectedItem, callsign);
+            }
+            return false;
+        }
 
         wxString getGridSquareForCallsign(wxString const& callsign)
         {
@@ -275,6 +286,17 @@ class FreeDVReporterDialog : public wxFrame
              }
 
              bool filtersEnabled() const;
+             
+             bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     callsign = data->callsign;
+                     return true;
+                 }
+                 return false;
+             }
              
              // Required overrides to implement functionality
              virtual bool HasDefaultCompare() const override;
