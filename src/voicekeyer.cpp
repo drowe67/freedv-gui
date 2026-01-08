@@ -183,7 +183,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 {
     // Only enable VK file selection on idle
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
-    chooseVKFileMenuItem_->Enable(enabled);
+    chooseVKFileMenuItem_->Enable(vk_state == VK_IDLE);
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
     
     // Trigger right-click menu popup in a location that will prevent it from
@@ -255,7 +255,11 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn.store(true, std::memory_order_release);
 
-        m_btnTogPTT->SetValue(true); togglePTT();
+        // Allow enabling VK during TX.
+        if (!m_btnTogPTT->GetValue())
+        {
+            m_btnTogPTT->SetValue(true); togglePTT();
+        }
         next_state = VK_TX;
         
         wxColour vkBackgroundColor(55, 155, 175);

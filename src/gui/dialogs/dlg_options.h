@@ -119,8 +119,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
 
         /* Quick Record */
-        wxButton     *m_buttonChooseQuickRecordPath;
-        wxTextCtrl   *m_txtCtrlQuickRecordPath;
+        wxButton     *m_buttonChooseQuickRecordRawPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordRawPath;
+        wxButton     *m_buttonChooseQuickRecordDecodedPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordDecodedPath;
         
         /* test frames, other simulated channel impairments */
 

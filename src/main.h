@@ -254,27 +254,6 @@ private:
     wxCheckBox *m_cb;
 };
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// panel with custom Seconds-to-record control for record file dialog
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class MyExtraRecFilePanel : public wxPanel
-{
-public:
-    MyExtraRecFilePanel(wxWindow *parent);
-    ~MyExtraRecFilePanel()
-    {
-        wxLogDebug("Destructor\n");
-    }
-    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
-    wxString getSecondsToRecord(void)
-    {
-        wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
-        return m_secondsToRecord->GetValue();
-    }
-private:
-    wxTextCtrl *m_secondsToRecord;
-};
-
 class TxRxThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -342,6 +321,7 @@ class MainFrame : public TopFrame
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
+        void StopRecFileFromDecoder();
         
         bool isReceiveOnly();
         
@@ -377,7 +357,6 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnRecFileFromRadio( wxCommandEvent& event ) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
         
         void OnCenterRx(wxCommandEvent& event) override;
