@@ -17,6 +17,7 @@ ExternalProject_Add(build_rade_integ
    GIT_REPOSITORY https://github.com/drowe67/radae.git
    GIT_TAG ms-disable-python-gc
    GIT_SUBMODULES ""
+   GIT_SUBMODULES_RECURSE NO
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
    #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
