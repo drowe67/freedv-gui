@@ -75,8 +75,8 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
         wxT("Select Voice Keyer File"),
         wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
-        wxT("All files (*.*)|*.*|")
-        wxT("WAV files (*.wav)|*.wav"),
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
         );
         
@@ -143,8 +143,8 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
         wxT("Select Voice Keyer File"),
         wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
-        wxT("All files (*.*)|*.*|")
-        wxT("WAV files (*.wav)|*.wav"),
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
         );
 
