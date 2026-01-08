@@ -7,6 +7,9 @@
 
 #include "main.h"
 
+#include "gui/dialogs/begin_recording.h"
+#include "gui/dialogs/freedv_reporter.h"
+
 extern wxMutex g_mutexProtectingCallbackData;
 std::atomic<SNDFILE*> g_sfPlayFile;
 std::atomic<bool>                g_playFileToMicIn;
@@ -20,6 +23,10 @@ int                 g_recFileFromRadioEventId;
 
 SNDFILE            *g_sfRecMicFile;
 bool                g_recFileFromMic;
+
+SNDFILE* g_sfRecDecoderFile;
+bool g_recFileFromDecoder;
+int                 g_recFileFromDecoderEventId;
 
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
@@ -166,27 +173,6 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
     }
 }
 
-// extra panel added to file save dialog to set number of seconds to record for
-
-MyExtraRecFilePanel::MyExtraRecFilePanel(wxWindow *parent): wxPanel(parent)
-{
-    wxBoxSizer *sizerTop = new wxBoxSizer(wxHORIZONTAL);
-
-    wxStaticText* staticText = new wxStaticText(this, wxID_ANY, _("Seconds:"), wxDefaultPosition, wxDefaultSize, 0);
-    sizerTop->Add(staticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_secondsToRecord = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_secondsToRecord->SetToolTip(_("Number of seconds to record for"));
-    m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.recFileFromRadioSecs.get()));
-    m_secondsToRecord->SetMinSize(wxSize(50, -1));
-    sizerTop->Add(m_secondsToRecord, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    SetSizerAndFit(sizerTop);
-}
-
-static wxWindow* createMyExtraRecFilePanel(wxWindow *parent)
-{
-    return new MyExtraRecFilePanel(parent);
-}
-
 void MainFrame::StopRecFileFromRadio()
 {
     if (g_sfRecFile != nullptr)
@@ -200,7 +186,24 @@ void MainFrame::StopRecFileFromRadio()
         g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         
-        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
+        g_mutexProtectingCallbackData.Unlock();
+        
+        m_audioRecord->SetValue(false);
+        m_audioRecord->SetBackgroundColour(wxNullColour);
+    }
+}
+
+void MainFrame::StopRecFileFromDecoder()
+{
+    if (g_sfRecDecoderFile != nullptr)
+    {
+        log_debug("Stopping Record....");
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromDecoder = false;
+        sf_close(g_sfRecDecoderFile);
+        g_sfRecDecoderFile = nullptr;
+        SetStatusText(wxT(""));
+        
         g_mutexProtectingCallbackData.Unlock();
         
         m_audioRecord->SetValue(false);
@@ -209,170 +212,143 @@ void MainFrame::StopRecFileFromRadio()
 }
 
 //-------------------------------------------------------------------------
-// OnRecFileFromRadio()
+// OnTogBtnRecord()
 //-------------------------------------------------------------------------
-void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
+void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    if (g_sfRecFile != nullptr) {
-        StopRecFileFromRadio();
-    }
-    else {
-
-        wxString    soundFile;
-        SF_INFO     sfInfo;
-
-        wxFileDialog openFileDialog(
-                                    this,
-                                    wxT("Record File From Radio"),
-                                    wxGetApp().appConfiguration.recFileFromRadioPath,
-                                    wxT("Untitled.wav"),
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
-                                    wxFD_SAVE
-                                    );
-
-        // add the loop check box
-        openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
-
-        // Default to WAV.
-        openFileDialog.SetFilterIndex(0);
-        
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
-        wxString tmpString = wxGetApp().appConfiguration.recFileFromRadioPath;
-        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
-        wxLogDebug("m_recFileFromRadioPath: %s", wxGetApp().appConfiguration.recFileFromRadioPath.get());
-        wxLogDebug("soundFile: %s", soundFile);
-        sfInfo.format = 0;
-
-        int sample_rate = RECORD_FILE_SAMPLE_RATE;
-
-        if(!extension.IsEmpty())
-        {
-            extension.LowerCase();
-            if(extension == wxT("raw"))
-            {
-                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            }
-            else if(extension == wxT("wav"))
-            {
-                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            } else {
-                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-                return;
-            }
-        }
-        else {
-            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-            return;
-        }
-
-        // Bug: on Win32 I can't read m_recFileFromRadioSecs, so have hard coded it
-#ifdef __WIN32__
-        long secs = wxGetApp().appConfiguration.recFileFromRadioSecs;
-        g_recFromRadioSamples = sample_rate*(unsigned int)secs;
-#else
-        // work out number of samples to record
-
-        wxWindow * const ctrl = openFileDialog.GetExtraControl();
-        wxString secsString = static_cast<MyExtraRecFilePanel*>(ctrl)->getSecondsToRecord();
-        wxLogDebug("test: %s secsString: %s\n", wxT("testing 123"), secsString);
-
-        long secs;
-        if (secsString.ToLong(&secs)) {
-            wxGetApp().appConfiguration.recFileFromRadioSecs = (unsigned int)secs;
-            g_recFromRadioSamples = sample_rate*(unsigned int)secs;
-        }
-        else {
-            wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Radio"), wxOK);
-            return;
-        }
-#endif
-
-        g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
-        if(g_sfRecFile == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
-        }
-        
-        // Save path for future use
-        wxGetApp().appConfiguration.recFileFromRadioPath = tmpString;
-
-        SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
-        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
-        g_sfRecFileFromModulator = g_sfRecFile;
-        
-        if (!g_tx.load(std::memory_order_acquire))
-        {
-            g_recFileFromModulator = false;
-            g_recFileFromRadio = true;
-        }
-        else
-        {
-            g_recFileFromRadio = false;
-            g_recFileFromModulator = true;
-        }
-        
-        m_audioRecord->SetValue(true);
-        m_audioRecord->SetBackgroundColour(*wxRED);
-    }
-}
-
-void MainFrame::OnTogBtnRecord( wxCommandEvent& )
-{
     if (g_sfRecFile != nullptr) 
     {
         StopRecFileFromRadio();
     }
-    else
+    else if (g_sfRecDecoderFile != nullptr) 
     {
-        auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
-        wxFileName filePath(wxGetApp().appConfiguration.quickRecordPath, wxString::Format(_("FreeDV_FromRadio_%s.wav"), currentTime));
-        wxString    soundFile = filePath.GetFullPath();
-        SF_INFO     sfInfo;
-    
-        sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-        sfInfo.channels   = 1;
-        sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
-    
-        g_recFromRadioSamples = UINT32_MAX; // record until stopped
-    
-        g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
-        if(g_sfRecFile == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
+        StopRecFileFromDecoder();
+    }
+    else 
+    {
+        wxString dxCall;
+        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+        if (selected != -1)
+        {        
+            // Get callsign and RX frequency
+            dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+            log_info("Using %s from main window drop-down list as default recording suffix", (const char*)dxCall.ToUTF8());
         }
-
-        SetStatusText(wxT("Recording file ") + soundFile + wxT(" from radio"), 0);
-        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
-        g_sfRecFileFromModulator = g_sfRecFile;
-        
-        if (!g_tx.load(std::memory_order_acquire))
+        else if (m_reporterDialog != nullptr && m_reporterDialog->getSelectedCallsignInfo(dxCall))
         {
-            g_recFileFromModulator = false;
-            g_recFileFromRadio = true;
+            log_info("Using %s from FreeDV Reporter as default recording suffix", (const char*)dxCall.ToUTF8());
+        }
+        
+        BeginRecordingDialog recordDialog(this, dxCall);
+        if (recordDialog.ShowModal() == wxOK)
+        {
+            wxString    soundFile;
+            SF_INFO     sfInfo;
+            auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
+
+            wxString folder;
+            wxString filenameSuffix = currentTime;
+            wxString filenamePrefix;
+            wxString recordingSuffix = recordDialog.getRecordingSuffix();
+            if (recordingSuffix != "")
+            {
+                filenameSuffix += wxString::Format(_("_%s"), recordingSuffix);
+            }
+            if (recordDialog.isRawRecording())
+            {
+                folder = wxGetApp().appConfiguration.quickRecordRawPath;
+                filenamePrefix = _("FDV_FromRadio");
+            }
+            else
+            {
+                folder = wxGetApp().appConfiguration.quickRecordDecodedPath;
+                filenamePrefix = _("FDV_FromDecoder");
+            }
+
+            wxString extension;
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+            if (recordDialog.isMp3Format())
+            {
+                extension = _("mp3");
+            }
+            else
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
+            {
+                extension = _("wav");
+            }
+
+            wxFileName filePath(folder, wxString::Format(_("%s_%s.%s"), filenamePrefix, filenameSuffix, extension));
+            soundFile = filePath.GetFullPath();
+
+            log_info("Recording to %s", (const char*)soundFile.ToUTF8());
+            wxString fileName;
+            wxString tmpString;
+            wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
+
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+            if (recordDialog.isMp3Format())
+            {
+                sfInfo.format     = SF_FORMAT_MPEG | SF_FORMAT_MPEG_LAYER_III;
+            }
+            else
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
+            {
+                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            }
+            
+            sfInfo.channels   = 1;
+            sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+            g_recFromRadioSamples = UINT32_MAX; // record until stopped
+
+            if (!recordDialog.isRawRecording())
+            {
+                g_sfRecDecoderFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+                if(g_sfRecDecoderFile == NULL)
+                {
+                    wxString strErr = sf_strerror(NULL);
+                    wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+                    m_audioRecord->SetValue(false);
+                    return;
+                }
+
+                SetStatusText(wxT("Recording file ") + soundFile + wxT(" from decoder"), 0);
+                g_recFileFromDecoder = true;
+            }
+            else
+            {
+                g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+                if(g_sfRecFile == NULL)
+                {
+                    wxString strErr = sf_strerror(NULL);
+                    wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+                    m_audioRecord->SetValue(false);
+                    return;
+                }
+            
+                SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
+                g_sfRecFileFromModulator = g_sfRecFile;
+            
+                if (!g_tx.load(std::memory_order_acquire))
+                {
+                    g_recFileFromModulator = false;
+                    g_recFileFromRadio = true;
+                }
+                else
+                {
+                    g_recFileFromRadio = false;
+                    g_recFileFromModulator = true;
+                }
+            }
+
+            m_audioRecord->SetValue(true);
+            m_audioRecord->SetBackgroundColour(*wxRED);
         }
         else
         {
-            g_recFileFromRadio = false;
-            g_recFileFromModulator = true;
+            m_audioRecord->SetValue(false);
         }
-        
-        m_audioRecord->SetBackgroundColour(*wxRED);
     }
 }

@@ -73,6 +73,7 @@ public:
         stop();
         
         // Free allocated buffer
+        stop();
         inputSamples_ = nullptr;
     }
 
