@@ -15,7 +15,7 @@ env:
 
 jobs:
   lint:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
     - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
         cd build_osx
         CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_rade build_codec2 build_rade_integ
+        make -j$(sysctl -n hw.logicalcpu) build_rade build_codec2 build_rade_integ
     
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15]  # ARM64
+        os: [macos-26]  # ARM64
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
