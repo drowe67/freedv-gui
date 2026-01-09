@@ -44,6 +44,9 @@ SocketIoClient::SocketIoClient()
 
 SocketIoClient::~SocketIoClient()
 {
+    // Prevent anything further from being queued.
+    suppressEnqueue_ = true;
+    
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
     enableReconnect_.store(false, std::memory_order_release);
