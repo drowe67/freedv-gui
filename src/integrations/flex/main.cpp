@@ -59,6 +59,7 @@ using namespace std::chrono_literals;
 std::atomic<int> g_tx;
 bool endingTx;
 bool exitingApplication;
+int spotTimeoutSeconds = 600; // 10 minute default
 
 void OnSignalExit(int)
 {
@@ -86,17 +87,18 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
             reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
         }
 
-        reportObj->tcpTask->addSpot(callsign);
+        reportObj->tcpTask->addSpot(callsign, spotTimeoutSeconds);
     }
 }
 
 void printUsage(char* appName)
 {
-    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-r|--rx-volume DB] [-h|--help] [-v|--version]", appName);
+    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-r|--rx-volume DB] [-t|--spot-timeout SEC] [-h|--help] [-v|--version]", appName);
     log_info("    -d|--disable-reporting: Disables FreeDV Reporter reporting.");
     log_info("    -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.");
     log_info("    -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.");
     log_info("    -r|--rx-volume: Increases or decreases receive volume by the provided dB figure.");
+    log_info("    -t|--spot-timeout: Timeout for reported spots (default: 600s or 10min).");
     log_info("    -h|--help: This help message.");
     log_info("    -v|--version: Prints the application version and exits.");
     log_info("");
@@ -118,11 +120,12 @@ int main(int argc, char** argv)
         {"reporting-locator",     required_argument, 0,  'l' },
         {"reporting-message",     required_argument, 0,  'm' },
         {"rx-volume",             required_argument, 0,  'r' },
+        {"spot-timeout",          required_argument, 0,  't' },
         {"help",                  no_argument,       0,  'h' },
         {"version",               no_argument,       0,  'v' },
         {0,         0,                 0,  0 }
     };
-    constexpr char shortOptions[] = "dl:m:r:hv";
+    constexpr char shortOptions[] = "dl:m:r:t:hv";
     
     int optionIndex = 0;
     int c = 0;
@@ -181,6 +184,26 @@ int main(int argc, char** argv)
                 log_info("Adjusting receive audio volume by %f dB", volumeAdjustmentDecibel);
                 break;
             }
+            case 't':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Timeout in seconds required if specifying -t/--spot-timeout.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                
+                char* tmp = nullptr;
+                errno = 0;
+                spotTimeoutSeconds = (int)strtol(optarg, &tmp, 10);
+                if (tmp != (optarg + strlen(optarg)) || errno == ERANGE)
+                {
+                    log_error("Provided timeout for -t/--spot-timeout must be a number.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                break;
+            }
             case 'v':
             {
                 // Version already printed above.
@@ -194,6 +217,8 @@ int main(int argc, char** argv)
             }
         }
     }
+    
+    log_info("Spot timeout is %d seconds", spotTimeoutSeconds);
     
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
