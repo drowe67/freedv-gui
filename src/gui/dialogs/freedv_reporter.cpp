@@ -350,7 +350,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     bandFilterSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
-    m_filterStatus = new wxStaticText(this, wxID_ANY, _("Filters Off"));
+    m_filterStatus = new wxStaticText(this, wxID_ANY, _("Idle Off"));
     bandFilterSizer->Add(m_filterStatus, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
@@ -727,15 +727,14 @@ void FreeDVReporterDialog::refreshLayout()
 
 void FreeDVReporterDialog::updateFilterStatus_()
 {
-    FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
-    if (model->filtersEnabled())
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
-        m_filterStatus->SetLabel(_("Filters On"));
+        m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
         m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
     }
     else
     {
-        m_filterStatus->SetLabel(_("Filters Off"));
+        m_filterStatus->SetLabel(_("Idle Off"));
         m_filterStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     }
 }
