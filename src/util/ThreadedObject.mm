@@ -25,9 +25,9 @@
 #include "ThreadedObject.h"
 
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
-    : suppressEnqueue_(false)
-    , parent_(parent)
+    : parent_(parent)
     , name_(std::move(name))
+    , suppressEnqueue_(false)
 {
     dispatch_queue_t parentQueue;
     
