@@ -902,6 +902,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
     * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
     * Flex: add command line option to adjust RX volume. (PR #1159)
+    * Flex: Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
