@@ -49,12 +49,10 @@ protected:
     
     // Waits for all queued tasks to complete.
     void waitForAllTasksComplete_();
-    
-    std::atomic<bool> suppressEnqueue_;
-    
 private:
     ThreadedObject* parent_;
     std::string name_;
+    std::atomic<bool> suppressEnqueue_;
 
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
