@@ -405,8 +405,8 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("Currently maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
-                wxT("codec2 git hash: %s\n")
-                , version, version, FREEDV_GIT_HASH, freedv_get_hash()
+                wxT("Using %s\n")
+                , version, version, FREEDV_GIT_HASH, hamlib_version
                 );
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);

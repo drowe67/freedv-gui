@@ -99,7 +99,7 @@ public:
         waveformAddValidStreamIdentifiersState_ = state;
     }
 
-    void addSpot(std::string const& callsign);
+    void addSpot(std::string const& callsign, int timeoutSeconds);
 
 protected:
     virtual void onConnect_() override;
