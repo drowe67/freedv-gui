@@ -42,6 +42,19 @@ $ SSDR_RADIO_ADDRESS=192.168.1.2 PYTHONPATH=$(pwd)/rade_src src/integrations/fle
 To ensure proper reporting to FreeDV Reporter by the waveform, make sure that your callsign is properly 
 configured in SmartSDR (i.e. it doesn't say "FLEX" when first starting).
 
+## Full list of options
+
+```
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:96: Usage: src/integrations/flex/freedv-flex [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-r|--rx-volume DB] [-t|--spot-timeout SEC] [-h|--help] [-v|--version]
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:97:     -d|--disable-reporting: Disables FreeDV Reporter reporting.
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:98:     -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:99:     -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:100:     -r|--rx-volume: Increases or decreases receive volume by the provided dB figure.
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:101:     -t|--spot-timeout: Timeout for reported spots (default: 600s or 10min).
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:102:     -h|--help: This help message.
+13:42:10 INFO /home/mooneer/freedv-gui/src/integrations/flex/main.cpp:103:     -v|--version: Prints the application version and exits.
+```
+
 ## Questions/issues
 
 Please contact the [FreeDV mailing list](https://groups.google.com/g/digitalvoice).

@@ -529,13 +529,18 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-void FlexTcpTask::addSpot(std::string const& callsign)
+void FlexTcpTask::addSpot(std::string const& callsign, int timeoutSeconds)
 {
     enqueue_([=]() {
         if (activeSlice_ >= 0)
         {
             std::stringstream ss;
-            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV timestamp=" << time(NULL); //lifetime_seconds=300";
+            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV timestamp=" << time(NULL);
+            
+            if (timeoutSeconds > 0)
+            {
+                ss << " lifetime_seconds=" << timeoutSeconds;
+            }
             sendRadioCommand_(ss.str());
         }
     });
