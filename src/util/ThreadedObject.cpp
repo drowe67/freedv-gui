@@ -27,9 +27,9 @@
 using namespace std::chrono_literals;
 
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
-    : suppressEnqueue_(false)
-    , parent_(parent)
+    : parent_(parent)
     , name_(std::move(name))
+    , suppressEnqueue_(false)
     , isDestroying_(false)
 {
     // Instantiate thread here rather than the initializer since otherwise
