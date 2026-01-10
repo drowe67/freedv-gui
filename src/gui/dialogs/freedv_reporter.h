@@ -148,13 +148,18 @@ class FreeDVReporterDialog : public wxFrame
 
         void OnShowColumn(wxCommandEvent& event);
         void OnIdleFilter(wxCommandEvent& event);
+        
+        void OnQRZLookup(wxCommandEvent& event);
+        void OnHamQTHLookup(wxCommandEvent& event);
+        void OnHamCallLookup(wxCommandEvent& event);
                 
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
         wxObjectDataPtr<wxDataViewModel> spotsDataModel_;
         wxMenu* spotsPopupMenu_;
+        wxMenu* callsignPopupMenu_;
         wxString tempUserMessage_; // to store the currently hovering message prior to going on the clipboard
-
+        wxString tempCallsign_; // to store the currently hovering callsign prior to lookup
         // QSY text
         wxTextCtrl* m_qsyText;
         
@@ -238,6 +243,16 @@ class FreeDVReporterDialog : public wxFrame
                  {
                      auto data = (ReporterData*)item.GetID();
                      return data->callsign;
+                 }
+                 return "";
+             }
+             
+             wxString getRxCallsign(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     return data->lastRxCallsign;
                  }
                  return "";
              }
