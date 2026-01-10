@@ -536,6 +536,31 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         wxCommandEventHandler(FreeDVReporterDialog::OnCopyUserMessage),
         NULL,
         this);
+        
+    // Create popup menu for callsign lookups
+    callsignPopupMenu_ = new wxMenu();
+    assert(callsignPopupMenu_ != nullptr);
+    
+    auto qrzMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via QRZ"));
+    callsignPopupMenu_->Connect(
+        qrzMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnQRZLookup),
+        NULL,
+        this);
+        
+    auto hamQthMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via HamQTH"));
+    callsignPopupMenu_->Connect(
+        hamQthMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnHamQTHLookup),
+        NULL,
+        this);
+        
+    auto hamCallMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via HamCall"));
+    callsignPopupMenu_->Connect(
+        hamCallMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnHamCallLookup),
+        NULL,
+        this);
     
     // Hook in events
     this->Connect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
@@ -1312,8 +1337,6 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
     wxRect rect;
-    unsigned int desiredCol = USER_MESSAGE_COL;
-    
     wxDataViewItem item;
     wxDataViewColumn* col;
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
@@ -1324,10 +1347,12 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
 
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
-        tempUserMessage_ = model->getUserMessage(item);
+        tempUserMessage_ = _("");
+        tempCallsign_ = _("");
     
-        if (col->GetModelColumn() == desiredCol && tempUserMessage_ != "")
+        if (col->GetModelColumn() == USER_MESSAGE_COL)
         {
+            tempUserMessage_ = model->getUserMessage(item);
             rect = m_listSpots->GetItemRect(item, col);
             if (tipWindow_ == nullptr)
             {
@@ -1347,15 +1372,19 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
                 }
             }
         }
-        else
+        else if (col->GetModelColumn() == CALLSIGN_COL)
         {
-            tempUserMessage_ = _("");
+            tempCallsign_ = model->getCallsign(item);
+        }
+        else if (col->GetModelColumn() == LAST_RX_CALLSIGN_COL)
+        {
+            tempCallsign_ = model->getRxCallsign(item);
         }
     }
     else
     {
-        isSelectionPossible_ = false;
         tempUserMessage_ = _("");
+        tempCallsign_ = _("");
     }
 }
 
@@ -1448,18 +1477,22 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
         tipWindow_ = nullptr;
     }
 
+    // Only show the popup if we're already hovering over a message or callsign.
+    const wxPoint pt = wxGetMousePosition();
+    int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+    int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+    
     if (tempUserMessage_ != _(""))
     {
-        // Only show the popup if we're already hovering over a message.
-        const wxPoint pt = wxGetMousePosition();
-        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
-        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
-
         // 170 here has been determined via experimentation to avoid an issue 
         // on some KDE installations where the popup menu immediately closes after
         // right-clicking. This in effect causes the popup to open to the left of
         // the mouse pointer.
         m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
+    }
+    else if (tempCallsign_ != _(""))
+    {
+        m_listSpots->PopupMenu(callsignPopupMenu_, wxPoint(mouseX, mouseY));
     }
 }
 
@@ -1473,6 +1506,30 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent&)
         wxTheClipboard->Close();
     }
     DeselectItem();
+}
+
+void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
+    }
+}
+
+void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
+    }
+}
+
+void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
+    }
 }
 
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)

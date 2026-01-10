@@ -906,6 +906,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: add command line option to adjust RX volume. (PR #1159)
     * Flex: Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
     * Display Hamlib version in Help->About. (PR #1169)
+    * FreeDV Reporter: Add right-click menu for callsign lookups. (PR #1171)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
