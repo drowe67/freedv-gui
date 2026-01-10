@@ -335,9 +335,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_bandFilter = new wxComboBox(
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
         sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
-    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
-    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
-    
+    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);    
     bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -352,8 +350,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     bandFilterSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
+    m_filterStatus = new wxStaticText(this, wxID_ANY, _("Idle Off"));
+    bandFilterSizer->Add(m_filterStatus, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
     reportingSettingsSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 0);
+    
+    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
 
     wxBoxSizer* statusMessageSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -735,6 +738,9 @@ void FreeDVReporterDialog::refreshLayout()
     auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + 100 + LAST_RX_MODE_COL);
     menuItem->Enable(wxGetApp().appConfiguration.enableLegacyModes);
 
+    // Update filter status in window
+    updateFilterStatus_();
+
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->refreshAllRows();
@@ -742,6 +748,20 @@ void FreeDVReporterDialog::refreshLayout()
     // Update status controls.
     wxCommandEvent tmpEvent;
     OnStatusTextChange(tmpEvent);
+}
+
+void FreeDVReporterDialog::updateFilterStatus_()
+{
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
+    {
+        m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
+        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
+    }
+    else
+    {
+        m_filterStatus->SetLabel(_("Idle Off"));
+        m_filterStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    }
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
@@ -829,6 +849,9 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     }
+
+    // Update filter status in window
+    updateFilterStatus_();
 
     // Allow changes to take effect.
     FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
@@ -1764,6 +1787,9 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->setBandFilter(freq);
+
+    // Update filter status in window
+    updateFilterStatus_();
 }
 
 #if defined(WIN32)
@@ -2047,6 +2073,15 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     }
     
     return bandForFreq;
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
+{
+    return 
+        (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
+        (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
