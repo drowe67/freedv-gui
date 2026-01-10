@@ -164,6 +164,7 @@ class FreeDVReporterDialog : public wxFrame
         wxTextCtrl* m_qsyText;
         
         // Band filter
+        wxStaticText* m_filterStatus;
         wxComboBox* m_bandFilter;
         wxCheckBox* m_trackFrequency;
         wxRadioButton* m_trackFreqBand;
@@ -298,6 +299,8 @@ class FreeDVReporterDialog : public wxFrame
                  }
                  return false;
              }
+
+             bool filtersEnabled() const;
              
              bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign)
              {
@@ -453,6 +456,8 @@ class FreeDVReporterDialog : public wxFrame
         wxColour txRowForegroundColor;
         wxColour rxRowBackgroundColor;
         wxColour rxRowForegroundColor;
+
+        void updateFilterStatus_();
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
