@@ -124,6 +124,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , isDefaultDevice_(false)
     , parent_(parent)
     , running_(false)
+    , extraTimeSlept_(0)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
@@ -908,12 +909,22 @@ void MacAudioDevice::startRealTimeWork()
         leaveWorkgroup_();
         joinWorkgroup_();
     }
+    
+    start_ = std::chrono::steady_clock::now();
+    startTime_ = dispatch_time(DISPATCH_TIME_NOW, 0);
 }
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
+    auto timeToWaitNanoseconds = (((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0)) * MS_TO_NSEC;
+    dispatch_semaphore_wait(sem_, dispatch_time(startTime_, timeToWaitNanoseconds - extraTimeSlept_));
+    auto end = std::chrono::steady_clock::now();
+    
+    extraTimeSlept_ = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_).count() - timeToWaitNanoseconds;
+    if (extraTimeSlept_ < 0)
+    {
+        extraTimeSlept_ = 0;
+    }
 }
 
 void MacAudioDevice::clearHelperRealTime()

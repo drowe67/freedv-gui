@@ -56,7 +56,7 @@ private:
 
 #if defined(__APPLE__)
     dispatch_queue_t queue_;
-    dispatch_group_t group_;
+    std::atomic<int> numQueued_; // dispatch groups don't fully seem to wait
 #else
     std::atomic<bool> isDestroying_;
     std::thread objectThread_;
