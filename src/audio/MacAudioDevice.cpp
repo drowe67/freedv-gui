@@ -124,6 +124,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , isDefaultDevice_(false)
     , parent_(parent)
     , running_(false)
+    , extraTimeSlept_(0)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
