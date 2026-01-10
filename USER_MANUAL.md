@@ -408,28 +408,6 @@ click the "Log QSO" button on the left side of the window. You will then see a d
 enter any additional information about the contact. Upon clicking the OK button, this information will be 
 transmitted to your logging tool.
 
-# Multiple Mode Support
-
-FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
-
-* 700D/E
-* 1600
-* RADEV1
-
-In addition, FreeDV can allow the user to switch between the above modes with the exception of RADEV1 for transmit without having to push "Stop" first. 
-These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
-this may consume significant additional CPU resources, which can cause decode problems. 
-
-By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
-necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
-and additionally short circuits the list of modes to be checked when in sync.
-
-Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
-(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
-difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
-when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
-
-When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
 
 # FreeDV Modes
 
@@ -439,11 +417,17 @@ analog SSB and Skype as anchors for a rough guide to audio quality:
 Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 --- | :---: | :---: | :---: | :---: | :---:
 SSB | 0 | 8/10 | low | 2600 | 5/10
-1600 | 4 | 3/10 | low | 4000 | 4/10
-700D | -2 | 4/10 | high | 4000 | 3/10
-700E | 1 | 7/10 | medium | 4000 | 3/10
+1600 (*) | 4 | 3/10 | low | 4000 | 4/10
+700D (*) | -2 | 4/10 | high | 4000 | 3/10
+700E (*) | 1 | 7/10 | medium | 4000 | 3/10
 RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
+
+(Note: Modes denoted by (*) above are considered "legacy" modes. These 
+modes are hidden by default and RADEV1 automatically selected as RADEV1's 
+speech quality and resillence to band conditions are superior to the
+other modes. However, usage of the legacy modes is still possible by
+going to Tools->Options->Modem and selecting "Enable Legacy Modes.)
 
 The Min SNR is roughly the SNR where you cannot converse without
 repeating yourself.  The numbers above are on channels without fading
@@ -456,6 +440,27 @@ use of large Forward Error Correction (FEC) codes.  They buffer many
 frames of speech, which combined with PC sound card buffering results
 in end-to-end latencies of 1-2 seconds.  They may take a few seconds to
 sync at the start of an over, especially in fading channels.
+
+## Multiple Mode Support
+
+FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
+
+* 700D
+* 700E
+* 1600
+
+In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
+These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
+this may consume significant additional CPU resources, which can cause decode problems. 
+
+By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
+necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
+and additionally short circuits the list of modes to be checked when in sync.
+
+Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
+(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
+difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
+when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
 
 ## FreeDV 700D
 
@@ -486,6 +491,8 @@ On good channels with high SNR clipping may actually reduce the SNR of the recei
 RADE is a new mode with state-of-the-art performance, it is a contraction of Radio AutoencoDEr so-named because the modulation encoding uses a Machine-Learning method where the modulation and demodulation are achieved by training on a large number of speech samples over a modelled radio channel with typical propagation disturbances in phase and amplitude as found in HF radio. The speech is synthesised using the FARGAN neural vocoder (Frame-wise Auto-Regressive GAN) where GAN is a Generative Adversarial Network).
 
 Unlike the previous FreeDV modes which all use QPSK modulation, the RADEV1 modulation produces an analog phase-amplitude output without defined constellation points. It has been chosen as it offers a combination of high speech quality together with reduced RF bandwidth and good resistance to fading and multipath HF radio channels.
+
+When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
 
 # Tools Menu
 
@@ -655,7 +662,7 @@ an experimental feature is causing problems, please file a bug report!)
 # Tips
 
 1. The space bar can be used to toggle PTT.
-1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current center frequency.  FreeDV will automatically track any drift once it syncs.
+1. For modes other than RADEV1, you can left click on the main window to adjust tuning. The vertical red line on the frequency scale will show the current center frequency and FreeDV will automatically track any drift once it syncs.
 
 # Common Problems
 
