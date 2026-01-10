@@ -864,49 +864,54 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.2.0 TBD TBD
 
 1. Bugfixes:
+    * Radio integrations:
+        * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
+        * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
+        * Flex: use poll() instead of select(). (PR #1143)
+        * Flex: use tanh() for audio limiting. (PR #1156)
+        * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
+        * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
+        * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
+    * FreeDV Reporter:
+        * Left-align cardinal directions. (PR #1139)
+        * Defer row adds and removes until timer fires. (PR #1162)
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
     * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
     * Suppress background for fake rightmost column. (PR #1116)
     * Emit VOX tone only when PTT is enabled. (PR #1122)
-    * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
     * Fix hidden/clipped axis labels on plots. (PR #1110)
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
     * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
-    * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
     * Avoid data race when terminating application. (PR #1140)
-    * FreeDV Reporter: left-align cardinal directions. (PR #1139)
-    * Flex: use poll() instead of select(). (PR #1143)
     * Fix issue saving frequency list on non-English systems. (PR #1152)
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
-    * Flex: use tanh() for audio limiting. (PR #1156)
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
-    * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
-    * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
-    * FreeDV Reporter: Defer row adds and removes until timer fires. (PR #1162)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
-    * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
 2. Enhancements:
+    * FlexRadio support:
+        * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
+        * Use random port for VITA socket after connect. (PR #1141)
+        * Allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
+        * Allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
+        * Add command line option to adjust RX volume. (PR #1159)
+        * Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
+    * FreeDV Reporter:
+        * Allow columns to be rearranged and/or made invisible. (PR #1132)
+        * Sort empty user messages below non-empty ones. (PR #1105)
+        * Add idle filter. (PR #1142)
+        * Add right-click menu for callsign lookups. (PR #1171)
+        * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
-    * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
-    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
-    * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153)
-    * Flex: use random port for VITA socket after connect. (PR #1141)
-    * FreeDV Reporter: Add idle filter. (PR #1142)
-    * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
-    * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
     * Add support for recording decoded audio. (PR #1145)
-    * Flex: add command line option to adjust RX volume. (PR #1159)
-    * Flex: Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
     * Display Hamlib version in Help->About. (PR #1169)
-    * FreeDV Reporter: Add right-click menu for callsign lookups. (PR #1171)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
