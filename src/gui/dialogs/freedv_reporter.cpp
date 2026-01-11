@@ -581,6 +581,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
+    m_listSpots->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
 
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -648,6 +649,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
+    m_listSpots->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
 
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -1386,12 +1388,14 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
                 tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
                 tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                 tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                tipWindow_->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
             
                 // Make sure we actually override behavior of needed events inside the tooltip.
                 for (auto& child : tipWindow_->GetChildren())
                 {
                     child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                     child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                    child->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
                 }
             }
         }
@@ -1417,10 +1421,53 @@ void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent&)
     OnItemRightClick(contextEvent);
 }
 
-void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
+void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
+    
+    // Allow tip window to handle event
+    event.Skip();
+}
+
+void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
+{
+    // Ensure that item is selected after tooltip closes
+    CallAfter([&]() {
+        const wxPoint pt = wxGetMousePosition();
+        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+    
+        wxDataViewItem item;
+        wxDataViewColumn* col;
+        m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
+        if (item.IsOk() && IsActive())
+        {
+            m_listSpots->Select(item);
+        }
+    });
+    
+    // Allow tip window to handle event
+    event.Skip();
+}
+
+void FreeDVReporterDialog::OnSetFocus(wxFocusEvent& event)
+{
+    CallAfter([&]() {
+        const wxPoint pt = wxGetMousePosition();
+        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+
+        wxDataViewItem item;
+        wxDataViewColumn* col;
+        m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
+        if (item.IsOk())
+        {
+            m_listSpots->Select(item);
+        }
+    });
+    
+    event.Skip();
 }
 
 void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
