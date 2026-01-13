@@ -58,6 +58,29 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
 
 FreeDVReporter::~FreeDVReporter()
 {
+    // Make sure all event handlers are nulled out before terminating
+    // the connection just in case stuff tries to get called as we're 
+    // destroying.
+    {
+        std::unique_lock<std::mutex> lk(objMutex_);
+        
+        onReporterConnectFn_ = nullptr;
+        onReporterDisconnectFn_ = nullptr;
+    
+        onUserConnectFn_ = nullptr;
+        onUserDisconnectFn_ = nullptr;
+        onFrequencyChangeFn_ = nullptr;
+        onTransmitUpdateFn_ = nullptr;
+        onReceiveUpdateFn_ = nullptr;
+    
+        onQsyRequestFn_ = nullptr;
+        onMessageUpdateFn_ = nullptr;
+        onConnectionSuccessfulFn_ = nullptr;
+        onAboutToShowSelfFn_ = nullptr;
+    
+        onRecvEndFn_ = nullptr;
+    }
+    
     delete sioClient_;
 }
 

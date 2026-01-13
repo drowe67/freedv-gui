@@ -44,6 +44,11 @@ SocketIoClient::SocketIoClient()
 
 SocketIoClient::~SocketIoClient()
 {
+    // Clear event handlers on disconnect.
+    onConnectFn_ = nullptr;
+    onDisconnectFn_ = nullptr;
+    eventFnMap_.clear();
+    
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
     enableReconnect_.store(false, std::memory_order_release);
