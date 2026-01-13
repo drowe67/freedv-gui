@@ -101,13 +101,43 @@ jobs:
       if: ${{ matrix.target == 'freedv-flex' }}
       uses: docker/setup-buildx-action@v3
 
-    - name: Build freedv-gui using PulseAudio
+    - name: Build instrumented freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          CC=clang-22 CXX=clang++-22 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 CFLAGS=-fprofile-generate CXXFLAGS=-fprofile-generate LDFLAGS=-fprofile-generate ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+
+    - name: Generate optimization profile
+      shell: bash
+      working-directory: ${{github.workspace}}
+      if: ${{ matrix.target == 'all' }}
+      run: |
+          sudo systemctl enable rtkit-daemon
+          sudo systemctl start rtkit-daemon
+          Xvfb :99 -screen 0 1024x768x16 &
+          sleep 5
+          export DISPLAY=:99.0
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          mkdir -p $XDG_RUNTIME_DIR
+          chmod 700 $XDG_RUNTIME_DIR
+          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+          metacity --sm-disable --replace &
+          sleep 5
+          . ./rade-venv/bin/activate
+          cd build_linux
+          LLVM_PROFILE_FILE="code-%p.profraw" ./test/generate_pgo_profiles.sh 2>&1
+          llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+
+    - name: Build PGO optimized freedv-gui 
+      shell: bash
+      working-directory: ${{github.workspace}}
+      if: ${{ matrix.target == 'all' }}
+      run: |
+          . ./rade-venv/bin/activate
+          rm -rf build_linux
+          CC=clang-22 CXX=clang++-22 CFLAGS=-fprofile-use=${{github.workspace}}/code.profdata CXXFLAGS=-fprofile-use=${{github.workspace}}/code.profdata LDFLAGS=-fprofile-use=${{github.workspace}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
