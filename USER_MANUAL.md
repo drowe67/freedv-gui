@@ -408,28 +408,6 @@ click the "Log QSO" button on the left side of the window. You will then see a d
 enter any additional information about the contact. Upon clicking the OK button, this information will be 
 transmitted to your logging tool.
 
-# Multiple Mode Support
-
-FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
-
-* 700D/E
-* 1600
-* RADEV1
-
-In addition, FreeDV can allow the user to switch between the above modes with the exception of RADEV1 for transmit without having to push "Stop" first. 
-These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
-this may consume significant additional CPU resources, which can cause decode problems. 
-
-By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
-necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
-and additionally short circuits the list of modes to be checked when in sync.
-
-Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
-(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
-difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
-when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
-
-When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
 
 # FreeDV Modes
 
@@ -439,11 +417,17 @@ analog SSB and Skype as anchors for a rough guide to audio quality:
 Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 --- | :---: | :---: | :---: | :---: | :---:
 SSB | 0 | 8/10 | low | 2600 | 5/10
-1600 | 4 | 3/10 | low | 4000 | 4/10
-700D | -2 | 4/10 | high | 4000 | 3/10
-700E | 1 | 7/10 | medium | 4000 | 3/10
+1600 (*) | 4 | 3/10 | low | 4000 | 4/10
+700D (*) | -2 | 4/10 | high | 4000 | 3/10
+700E (*) | 1 | 7/10 | medium | 4000 | 3/10
 RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
+
+(Note: Modes denoted by (*) above are considered "legacy" modes. These 
+modes are hidden by default and RADEV1 automatically selected as RADEV1's 
+speech quality and resillence to band conditions are superior to the
+other modes. However, usage of the legacy modes is still possible by
+going to Tools->Options->Modem and selecting "Enable Legacy Modes.)
 
 The Min SNR is roughly the SNR where you cannot converse without
 repeating yourself.  The numbers above are on channels without fading
@@ -456,6 +440,27 @@ use of large Forward Error Correction (FEC) codes.  They buffer many
 frames of speech, which combined with PC sound card buffering results
 in end-to-end latencies of 1-2 seconds.  They may take a few seconds to
 sync at the start of an over, especially in fading channels.
+
+## Multiple Mode Support
+
+FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
+
+* 700D
+* 700E
+* 1600
+
+In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
+These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
+this may consume significant additional CPU resources, which can cause decode problems. 
+
+By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
+necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
+and additionally short circuits the list of modes to be checked when in sync.
+
+Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
+(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
+difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
+when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
 
 ## FreeDV 700D
 
@@ -486,6 +491,8 @@ On good channels with high SNR clipping may actually reduce the SNR of the recei
 RADE is a new mode with state-of-the-art performance, it is a contraction of Radio AutoencoDEr so-named because the modulation encoding uses a Machine-Learning method where the modulation and demodulation are achieved by training on a large number of speech samples over a modelled radio channel with typical propagation disturbances in phase and amplitude as found in HF radio. The speech is synthesised using the FARGAN neural vocoder (Frame-wise Auto-Regressive GAN) where GAN is a Generative Adversarial Network).
 
 Unlike the previous FreeDV modes which all use QPSK modulation, the RADEV1 modulation produces an analog phase-amplitude output without defined constellation points. It has been chosen as it offers a combination of high speech quality together with reduced RF bandwidth and good resistance to fading and multipath HF radio channels.
+
+When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
 
 # Tools Menu
 
@@ -655,7 +662,7 @@ an experimental feature is causing problems, please file a bug report!)
 # Tips
 
 1. The space bar can be used to toggle PTT.
-1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current center frequency.  FreeDV will automatically track any drift once it syncs.
+1. For modes other than RADEV1, you can left click on the main window to adjust tuning. The vertical red line on the frequency scale will show the current center frequency and FreeDV will automatically track any drift once it syncs.
 
 # Common Problems
 
@@ -864,48 +871,54 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.2.0 TBD TBD
 
 1. Bugfixes:
+    * Radio integrations:
+        * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
+        * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
+        * Flex: use poll() instead of select(). (PR #1143)
+        * Flex: use tanh() for audio limiting. (PR #1156)
+        * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
+        * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
+        * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
+    * FreeDV Reporter:
+        * Left-align cardinal directions. (PR #1139)
+        * Defer row adds and removes until timer fires. (PR #1162)
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
     * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
     * Suppress background for fake rightmost column. (PR #1116)
     * Emit VOX tone only when PTT is enabled. (PR #1122)
-    * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
     * Fix hidden/clipped axis labels on plots. (PR #1110)
     * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
     * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
-    * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
     * Avoid data race when terminating application. (PR #1140)
-    * FreeDV Reporter: left-align cardinal directions. (PR #1139)
-    * Flex: use poll() instead of select(). (PR #1143)
     * Fix issue saving frequency list on non-English systems. (PR #1152)
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
-    * Flex: use tanh() for audio limiting. (PR #1156)
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
-    * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
-    * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
-    * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
 2. Enhancements:
+    * FlexRadio support:
+        * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
+        * Use random port for VITA socket after connect. (PR #1141)
+        * Allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
+        * Allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
+        * Add command line option to adjust RX volume. (PR #1159)
+        * Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
+    * FreeDV Reporter:
+        * Allow columns to be rearranged and/or made invisible. (PR #1132)
+        * Sort empty user messages below non-empty ones. (PR #1105)
+        * Add idle filter. (PR #1142)
+        * Add right-click menu for callsign lookups. (PR #1171)
+        * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
-    * Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
-    * FreeDV Reporter: Allow columns to be rearranged and/or made invisible. (PR #1132)
-    * FreeDV Reporter: Sort empty user messages below non-empty ones. (PR #1105)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153)
-    * Flex: use random port for VITA socket after connect. (PR #1141)
-    * FreeDV Reporter: Add idle filter. (PR #1142)
-    * Flex: allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
-    * Flex: allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
     * Add support for recording decoded audio. (PR #1145)
-    * Flex: add command line option to adjust RX volume. (PR #1159)
-    * Flex: Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
     * Display Hamlib version in Help->About. (PR #1169)
-    * FreeDV Reporter: Add right-click menu for callsign lookups. (PR #1171)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)

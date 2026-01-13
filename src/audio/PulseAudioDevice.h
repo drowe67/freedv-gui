@@ -23,6 +23,7 @@
 #ifndef PULSE_AUDIO_DEVICE_H
 #define PULSE_AUDIO_DEVICE_H
 
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
@@ -76,6 +77,7 @@ protected:
     PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
+    std::chrono::time_point<std::chrono::steady_clock> start_;
     std::mutex objLock_;
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
@@ -91,6 +93,7 @@ private:
     sem_t sem_;
     struct timespec ts_;
     bool sleepFallback_;
+    int64_t extraTimeSlept_;
 
     void stopImpl_();
 
