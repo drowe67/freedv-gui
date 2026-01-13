@@ -78,7 +78,15 @@ jobs:
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 22 all
-
+        
+    - name: Install rtkit for RT threading
+      shell: bash
+      run: |
+           sudo apt-get update
+           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
+           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
+           sudo systemctl restart polkit
+           
     - name: Install required packages
       shell: bash
       run: |
@@ -442,7 +450,7 @@ jobs:
            sudo apt install software-properties-common -y
            sudo add-apt-repository ppa:deadsnakes/ppa -y
            sudo apt update
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core libebur128-dev python3.14 python3.14-dev python3.14-venv
+           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio-utils metacity at-spi2-core libebur128-dev python3.14 python3.14-dev python3.14-venv
 
     - name: Install version-specific packages
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
