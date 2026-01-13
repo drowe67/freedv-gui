@@ -127,7 +127,7 @@ jobs:
           sleep 5
           . ./rade-venv/bin/activate
           cd build_linux
-          LLVM_PROFILE_FILE="code-%p.profraw" ./test/generate_pgo_profiles.sh 2>&1
+          LLVM_PROFILE_FILE="code-%p.profraw" ../test/generate_pgo_profiles.sh 2>&1
           llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
 
     - name: Build PGO optimized freedv-gui 
