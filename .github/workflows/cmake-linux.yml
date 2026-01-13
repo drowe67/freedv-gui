@@ -137,7 +137,7 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
-          CC=clang-22 CXX=clang++-22 CFLAGS=-fprofile-use=${{github.workspace}}/code.profdata CXXFLAGS=-fprofile-use=${{github.workspace}}/code.profdata LDFLAGS=-fprofile-use=${{github.workspace}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 CFLAGS=-fprofile-use=${{github.workspace}}/code.profdata CXXFLAGS=-fprofile-use=${{github.workspace}}/code.profdata LDFLAGS=-fprofile-use=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
