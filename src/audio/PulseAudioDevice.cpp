@@ -55,7 +55,6 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
-    , extraTimeSlept_(0)
 {
     // Set default description
     setDescription("PulseAudio Device");
@@ -310,15 +309,15 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
-    {
-        sleepFallback_ = true;
-    }
-    start_ = std::chrono::steady_clock::now();
 }
 
 void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 {
+    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
+    {
+        sleepFallback_ = true;
+    }
+
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
@@ -333,7 +332,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     }
     latency >>= fastMode ? 1 : 0;
 
-    ts_.tv_nsec += latency * 1000 - extraTimeSlept_;
+    ts_.tv_nsec += latency * 1000;
     ts_ = timespec_normalise(ts_);
 
     int rv = 0;
@@ -341,17 +340,11 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     {
         // empty
     }
-    auto end = std::chrono::steady_clock::now();
     if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
         sleepFallback_ = true;
         IAudioDevice::stopRealTimeWork();
-    }
-    extraTimeSlept_ = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_).count() - (latency * 1000);
-    if (extraTimeSlept_ < 0)
-    {
-        extraTimeSlept_ = 0;
     }
 
 #if 0
