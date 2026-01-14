@@ -72,6 +72,8 @@ protected:
     WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
 
 private:
+    std::chrono::time_point<std::chrono::steady_clock> start_;
+    
     ComPtr<IAudioClient> client_;
     ComPtr<IMMDevice> device_;
     ComPtr<IAudioRenderClient> renderClient_;
@@ -92,6 +94,8 @@ private:
     int validBits_;
     bool isFloatingPoint_;
     short* tmpBuf_;
+    
+    int64_t extraTimeSlept_;
 
     void renderAudio_(ComPtr<IAudioRenderClient> renderClient);
     void captureAudio_(ComPtr<IAudioCaptureClient> captureClient);

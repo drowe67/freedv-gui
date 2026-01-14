@@ -590,9 +590,10 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
     }
 }
 
+constexpr int READ_SIZE_BYTES = 1024;
+
 void TcpConnectionHandler::receiveImpl_()
 {
-    constexpr int READ_SIZE_BYTES = 1024;
     char buf[READ_SIZE_BYTES];
 
     SetThreadName("TCPRx");
@@ -626,7 +627,7 @@ void TcpConnectionHandler::receiveImpl_()
             }
             if (numHaveRead > 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
             {
-                enqueue_([&]() {
+                enqueue_([this]() {
                     char tmp[READ_SIZE_BYTES];
                     int toRead = std::min(receiveBuffer_.numUsed(), READ_SIZE_BYTES);
                     while (socket_.load(std::memory_order_acquire) != INVALID_SOCKET && toRead > 0)
@@ -644,7 +645,7 @@ void TcpConnectionHandler::receiveImpl_()
             else if (numRead == 0 && socket_.load(std::memory_order_acquire) != INVALID_SOCKET)
             {
                 log_warn("EOF received");
-                enqueue_([&]() {
+                enqueue_([this]() {
                     disconnectImpl_();
                 });
             }
@@ -655,7 +656,7 @@ void TcpConnectionHandler::receiveImpl_()
 #else
                 log_warn("read failed (errno=%d)", errno);
 #endif // defined(WIN32)
-                enqueue_([&]() {
+                enqueue_([this]() {
                     disconnectImpl_();
                 });
             }
@@ -667,7 +668,7 @@ void TcpConnectionHandler::receiveImpl_()
 #else
             log_warn("read failed (errno=%d)", errno);
 #endif // defined(WIN32)
-            enqueue_([&]() {
+            enqueue_([this]() {
                 disconnectImpl_();
             });
         }
