@@ -23,7 +23,6 @@
 #ifndef MAC_AUDIO_DEVICE_H
 #define MAC_AUDIO_DEVICE_H
 
-#include <chrono>
 #include <thread>
 #include <dispatch/dispatch.h>
 #include <CoreAudio/CoreAudio.h>
@@ -72,8 +71,6 @@ protected:
     MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
     
 private:
-    std::chrono::time_point<std::chrono::steady_clock> start_;
-    dispatch_time_t startTime_;
     int coreAudioId_;
     IAudioEngine::AudioDirection direction_;
     int numChannels_;
@@ -89,7 +86,6 @@ private:
     bool running_;
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
-    int64_t extraTimeSlept_;
 
     void stopImpl_();
     void joinWorkgroup_();
