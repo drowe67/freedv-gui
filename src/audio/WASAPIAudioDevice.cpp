@@ -541,7 +541,7 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
     auto end = std::chrono::steady_clock::now();
     auto sleepTimeMs = 
-        ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0) - 
+        (((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0)) - 
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start_).count() - extraTimeSlept_;
     if (sleepTimeMs > 0)
     {
