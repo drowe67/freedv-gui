@@ -881,7 +881,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
     * FreeDV Reporter:
         * Left-align cardinal directions. (PR #1139)
-        * Defer row adds and removes until timer fires. (PR #1162)
+        * Defer row adds and removes until timer fires to reduce flicker. (PR #1162)
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
@@ -911,7 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * Add idle filter. (PR #1142)
         * Add right-click menu for callsign lookups. (PR #1171)
         * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
-    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)
+    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!

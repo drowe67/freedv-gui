@@ -52,6 +52,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevi
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
     , tmpBuf_(nullptr)
+    , extraTimeSlept_(0)
 {
     // empty
 }
@@ -525,7 +526,7 @@ void WASAPIAudioDevice::setHelperRealTime()
 
 void WASAPIAudioDevice::startRealTimeWork() 
 {
-    // empty
+    start_ = std::chrono::steady_clock::now();
 }
 
 void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
@@ -538,12 +539,31 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     }
 
     // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
-    DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
-
-    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    auto end = std::chrono::steady_clock::now();
+    auto sleepTimeMs = 
+        (((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0)) - 
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start_).count() - extraTimeSlept_;
+    if (sleepTimeMs > 0)
     {
-        // Fallback to a simple sleep.
-        IAudioDevice::stopRealTimeWork(fastMode);
+        start_ = std::chrono::steady_clock::now();
+        DWORD result = WaitForSingleObject(semaphore_, sleepTimeMs);
+        end = std::chrono::steady_clock::now();
+    
+        extraTimeSlept_ = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_).count() - sleepTimeMs;
+        if (extraTimeSlept_ < 0)
+        {
+            extraTimeSlept_ = 0;
+        }
+    
+        if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+        {
+            // Fallback to a simple sleep.
+            IAudioDevice::stopRealTimeWork(fastMode);
+        }
+    }
+    else
+    {
+        extraTimeSlept_ = 0;
     }
 }
 
