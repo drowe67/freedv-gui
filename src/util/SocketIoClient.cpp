@@ -279,13 +279,23 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
         {
             // event received from server
             yyjson_doc* eventDoc = yyjson_read(ptr + 1, strlen(ptr + 1), 0);
-            yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
-            yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
-            yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
+            if (eventDoc != nullptr)
+            {
+                yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
+                yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
+                yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
-            std::string eventNameStr = yyjson_get_str(eventName);
-            fireEvent(eventNameStr, eventArgs);
-            yyjson_doc_free(eventDoc);
+                if (eventName != nullptr)
+                {
+                    auto eventStr = yyjson_get_str(eventName);
+                    if (eventStr != nullptr)
+                    {
+                        std::string eventNameStr = yyjson_get_str(eventName);
+                        fireEvent(eventNameStr, eventArgs);
+                    }
+                }
+                yyjson_doc_free(eventDoc);
+            }
             break;
         }
         case '4':
