@@ -368,6 +368,7 @@ void FreeDVReporter::onFreeDVReporterNewConnection_(yyjson_val* msgParams)
         auto gridSquareJson = yyjson_obj_get(msgParams, "grid_square");
         auto versionJson = yyjson_obj_get(msgParams, "version");
         auto rxOnlyJson = yyjson_obj_get(msgParams, "rx_only");
+        auto connTimeJson = yyjson_obj_get(msgParams, "connect_time");
     
         // Only call event handler if we received the correct data types
         // for the items in the message.
@@ -376,7 +377,8 @@ void FreeDVReporter::onFreeDVReporterNewConnection_(yyjson_val* msgParams)
             yyjson_is_str(callsignJson) &&
             yyjson_is_str(gridSquareJson) &&
             yyjson_is_str(versionJson) &&
-            yyjson_is_bool(rxOnlyJson))
+            yyjson_is_bool(rxOnlyJson) &&
+            yyjson_is_str(connTimeJson))
         {
             onUserConnectFn_(
                 yyjson_get_str(sidJson),
@@ -384,7 +386,8 @@ void FreeDVReporter::onFreeDVReporterNewConnection_(yyjson_val* msgParams)
                 yyjson_get_str(callsignJson),
                 yyjson_get_str(gridSquareJson),
                 yyjson_get_str(versionJson),
-                yyjson_get_bool(rxOnlyJson)
+                yyjson_get_bool(rxOnlyJson),
+                yyjson_get_str(connTimeJson)
             );
         }
     }
@@ -445,7 +448,8 @@ void FreeDVReporter::onFreeDVReporterRemoveConnection_(yyjson_val* msgParams)
                 yyjson_get_str(callsignJson),
                 yyjson_get_str(gridSquareJson),
                 yyjson_get_str(versionJson),
-                yyjson_get_bool(rxOnlyJson)
+                yyjson_get_bool(rxOnlyJson),
+                "" // connect time isn't relevant if disconnecting
             );
         }
     }
