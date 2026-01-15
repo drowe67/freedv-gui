@@ -2792,7 +2792,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
     handler.gridSquare = std::move(gridSquare);
     handler.version = std::move(version);
     handler.rxOnly = rxOnly;
-    handler.connectTime = connectTime;
+    handler.connectTime = std::move(connectTime);
 
     handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
