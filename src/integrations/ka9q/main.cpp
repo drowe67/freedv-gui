@@ -101,6 +101,7 @@ void printUsage(char* appName)
     log_info("    -c|--reporting-callsign: The callsign to use for FreeDV Reporter reporting.");
     log_info("    -l|--reporting-locator: The grid square/locator to use for FreeDV Reporter reporting.");
     log_info("    -f|--reporting-frequency-hz: The frequency to report for FreeDV Reporter reporting, in hertz. (Example: 14236000 for 14.236MHz)");
+    log_info("    -m|--reporting-message: Optional message to report for the Message column on FreeDV Reporter.");
     log_info("    -h|--help: This help message.");
     log_info("    -v|--version: Prints the application version and exits.");
     log_info("");
@@ -114,6 +115,7 @@ int main(int argc, char** argv)
     
     std::string stationCallsign;
     std::string stationGridSquare;
+    std::string stationUserMessage;
     int64_t stationFrequency = 0;
 
     // Environment setup -- make sure we don't use more threads than needed.
@@ -140,11 +142,12 @@ int main(int argc, char** argv)
         {"reporting-callsign",    required_argument, 0,  'c' },
         {"reporting-locator",     required_argument, 0,  'l' },
         {"reporting-freq-hz",     required_argument, 0,  'f' },
+        {"reporting-message",     required_argument, 0,  'm' },
         {"help",                  no_argument,       0,  'h' },
         {"version",               no_argument,       0,  'v' },
         {0,         0,                 0,  0 }
     };
-    constexpr char shortOptions[] = "i:o:c:l:f:hv";
+    constexpr char shortOptions[] = "i:o:c:l:f:m:hv";
     
     int optionIndex = 0;
     int c = 0;
@@ -207,6 +210,18 @@ int main(int argc, char** argv)
                 }
                 stationFrequency = tmpFrequency;
                 log_info("Using frequency %" PRId64 " for FreeDV Reporter reporting", stationFrequency);
+                break;
+            }
+            case 'm':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Message required if specifying -m/--reporting-message.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using '%s' for FreeDV Reporter user message", optarg);
+                stationUserMessage = optarg;
                 break;
             }
             case 'v':
@@ -301,6 +316,7 @@ int main(int argc, char** argv)
     {
         reportController.updateRadioCallsign(stationCallsign);
         reportController.updateRadioGridSquare(stationGridSquare);
+        reportController.updateUserMessage(stationUserMessage);
         reportController.changeFrequency(stationFrequency);
         reportController.showSelf();
     }
