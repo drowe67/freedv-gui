@@ -119,7 +119,7 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          CC=clang-22 CXX=clang++-22 CFLAGS=-fprofile-generate CXXFLAGS=-fprofile-generate LDFLAGS=-fprofile-generate ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
       shell: bash
@@ -141,6 +141,7 @@ jobs:
           cd build_linux
           LLVM_PROFILE_FILE="code-%p.profraw" PYTHONPATH=$(pwd)/rade_src ../test/generate_pgo_profiles.sh 2>&1
           llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+          llvm-profdata-22 order ${{ github.workspace }}/code.profdata -o ${{ github.workspace }}/code.orderfile
 
     - name: Build PGO optimized freedv-gui 
       shell: bash
@@ -149,7 +150,7 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
-          CC=clang-22 CXX=clang++-22 CFLAGS=-O2\ -g\ -fprofile-use=${{github.workspace}}/code.profdata CXXFLAGS=-O2\ -g\ -fprofile-use=${{github.workspace}}/code.profdata LDFLAGS=-fprofile-use=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          CC=clang-22 CXX=clang++-22 CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata -Wl,--symbol-ordering-file=${{ github.workspace }}/code.orderfile" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata -Wl,--symbol-ordering-file=${{ github.workspace }}/code.orderfile" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -Wl,--symbol-ordering-file=${{ github.workspace }}/code.orderfile" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
