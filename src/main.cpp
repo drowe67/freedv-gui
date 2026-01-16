@@ -1278,6 +1278,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_dump_timing = g_dump_fifo_state = 0;
 }
 
+static std::recursive_mutex stoppingMutex;
+
 //-------------------------------------------------------------------------
 // ~MainFrame()
 //-------------------------------------------------------------------------
@@ -1354,11 +1356,14 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
-    if (m_RxRunning)
     {
-        stopRxStream();
-        freedvInterface.stop();
-    } 
+        std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
+        if (m_RxRunning)
+        {
+            stopRxStream();
+            freedvInterface.stop();
+        }  
+    }
     sox_biquad_finish();
 
     auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
@@ -2653,14 +2658,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     }
 }
 
-static std::mutex stoppingMutex;
-
 //-------------------------------------------------------------------------
 // stopRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::stopRxStream()
 {
-    std::unique_lock<std::mutex> lk(stoppingMutex);
+    std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
 
     if(m_RxRunning)
     {
