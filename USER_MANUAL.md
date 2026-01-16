@@ -885,7 +885,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
     * Reduce RADE RX losses due to resampling. (PR #1094)
     * Use same sample rate for both recording RX and TX. (PR #1107)
-    * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115)
+    * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115, #1178)
     * Suppress background for fake rightmost column. (PR #1116)
     * Emit VOX tone only when PTT is enabled. (PR #1122)
     * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
