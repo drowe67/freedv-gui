@@ -81,13 +81,14 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
     if (txt_ptr != nullptr && length > 0)
     {
         std::string callsign(txt_ptr, length);
+        auto snr = reportObj->rxThread->getSnr();
 
         if (reportObj->reporter != nullptr)
         {
-            reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
+            reportObj->reporter->reportCallsign(callsign, snr);
         }
 
-        reportObj->tcpTask->addSpot(callsign, spotTimeoutSeconds);
+        reportObj->tcpTask->addSpot(callsign, snr, spotTimeoutSeconds);
     }
 }
 
