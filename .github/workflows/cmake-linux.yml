@@ -119,7 +119,7 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          CC=clang-22 CXX=clang++-22 CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
       shell: bash
@@ -149,7 +149,7 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
-          CC=clang-22 CXX=clang++-22 CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld-22 -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 CFLAGS="-O3 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O3 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld-22 -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
