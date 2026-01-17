@@ -161,41 +161,17 @@ jobs:
         security find-identity -v macos-build.keychain
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
-    - name: Build instrumented freedv-gui 
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ./build_osx.sh 
-
-    - name: Install VB-Cable
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          brew install vb-cable
-
-    - name: Install other virtual audio devices
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_macos_sound_drivers.sh
-
-    - name: Generate optimization profile
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          cd build_osx
-          LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
-          llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
-
-    - name: Build PGO optimized freedv-gui (unsigned)
+    - name: Build universal freedv-gui (unsigned)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ./build_osx.sh 
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 ./build_osx.sh 
 
-    - name: Build PGO optimized freedv-gui (signed)
+    - name: Build universal freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: CC=clang CXX=clang++ UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ./build_osx.sh
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx

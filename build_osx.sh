@@ -21,10 +21,10 @@ export ENABLE_LTO=${ENABLE_LTO:-0}
 # Prerequisite: build dylibbundler
 if [ ! -d macdylibbundler ]; then
     git clone https://github.com/tmiw/macdylibbundler.git
-    cd macdylibbundler && git checkout main && git pull
-    make -j$(sysctl -n hw.logicalcpu)
-    cd ..
 fi
+cd macdylibbundler && git checkout main && git pull
+make -j$(sysctl -n hw.logicalcpu)
+cd ..
 
 # Prerequisite: Python
 if [ ! -d Python.framework ]; then
@@ -32,12 +32,12 @@ if [ ! -d Python.framework ]; then
     cd relocatable-python
     ./make_relocatable_python_framework.py --python-version 3.14.2 --os-version=11 --destination $PWD/../
     cd ..
-
-    # Prerequisite: Python packages
-    rm -rf pkg-tmp
-    ./generate-univ-pkgs.sh
-    ./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
 fi
+
+# Prerequisite: Python packages
+rm -rf pkg-tmp
+./generate-univ-pkgs.sh
+./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
@@ -48,9 +48,9 @@ if [ $BUILD_DEPS == 1 ]; then
     cd hamlib-code && git checkout 4.6.5 && git pull
     ./bootstrap 
     if [ $UNIV_BUILD == 1 ]; then
-        CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64 ${CFLAGS}" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64 ${CXXFLAGS}" ./configure --enable-shared --prefix $HAMLIBDIR
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
     else
-        CFLAGS="-g -O2 -mmacosx-version-min=10.9 ${CFLAGS}" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 ${CXXFLAGS}" ./configure --enable-shared --prefix $HAMLIBDIR
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
     fi
 
     make -j$(sysctl -n hw.logicalcpu) 
