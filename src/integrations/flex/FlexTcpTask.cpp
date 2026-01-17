@@ -529,13 +529,13 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-void FlexTcpTask::addSpot(std::string const& callsign, int timeoutSeconds)
+void FlexTcpTask::addSpot(std::string const& callsign, int snr, int timeoutSeconds)
 {
     enqueue_([=]() {
         if (activeSlice_ >= 0)
         {
             std::stringstream ss;
-            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV timestamp=" << time(NULL);
+            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV source=FreeDV comment=" << snr << "dB timestamp=" << time(NULL);
             
             if (timeoutSeconds > 0)
             {
