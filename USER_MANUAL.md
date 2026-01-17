@@ -905,6 +905,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * Allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
         * Add command line option to adjust RX volume. (PR #1159)
         * Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
+        * Report SNR in spots added to SmartSDR. (PR #1179)
+    * KA9Q/SDR support:
+        * Allow user message to be reported to FreeDV Reporter. (PR #1179)
     * FreeDV Reporter:
         * Allow columns to be rearranged and/or made invisible. (PR #1132)
         * Sort empty user messages below non-empty ones. (PR #1105)
