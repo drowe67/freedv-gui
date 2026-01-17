@@ -141,11 +141,6 @@ jobs:
         brew install automake libtool numpy sox 
         brew uninstall git # workaround, forces use of Apple git
 
-    - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v2
-      with:
-        version: "20.1"
-
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       env:
@@ -169,7 +164,7 @@ jobs:
     - name: Build instrumented freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CC=clang CXX=clang++ CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ./build_osx.sh 
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CFLAGS="-fprofile-generate -ftemporal-profile" CXXFLAGS="-fprofile-generate -ftemporal-profile" LDFLAGS="-fprofile-generate -ftemporal-profile" ./build_osx.sh 
 
     - name: Install VB-Cable
       shell: bash
@@ -194,7 +189,7 @@ jobs:
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: CC=clang CXX=clang++ UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ./build_osx.sh 
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" CXXFLAGS="-O2 -g -fprofile-use=${{github.workspace}}/code.profdata" LDFLAGS="-fprofile-use=${{github.workspace}}/code.profdata -fuse-ld=lld -Wl,--irpgo-profile=${{github.workspace}}/code.profdata,--bp-startup-sort=function" ./build_osx.sh 
 
     - name: Build PGO optimized freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
