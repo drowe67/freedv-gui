@@ -421,20 +421,20 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     menuBar_->Append(filterMenu_, _("Filter"));
     filterMenu_->Append(wxID_ANY, _("Idle more than (minutes)..."), idleLongerThanMenu_);
 
-    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_RADIO);
+    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     bool foundChecked = menuItem->IsChecked();
     this->Connect(menuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
 
     for (auto& item : idleLongerThanMinutes)
     {
-        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_RADIO);
+        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_CHECK);
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes == item);
         foundChecked |= menuItem->IsChecked();
         this->Connect(wxID_HIGHEST + 200 + item, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
     }
 
-    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_RADIO);
+    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!foundChecked);
     this->Connect(wxID_HIGHEST + 200, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
 
@@ -799,8 +799,6 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
 {
-    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
-
     if (event.GetId() >= (wxID_HIGHEST + 200))
     {
         auto numMinutes = event.GetId() - wxID_HIGHEST - 200;
@@ -819,12 +817,16 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
                     {
                         found = true;
                         item->Check(true);
-                        break;
+                    }
+                    else
+                    {
+                        item->Check(false);
                     }
                 }
                 if (!found)
                 {
-                    menuItem->Check(true);
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
                 }
 
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
@@ -834,12 +836,42 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
             else
             {
                 // No changes needed.
+                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                auto menuItems = idleLongerThanMenu_->GetMenuItems();
+                bool found = false;
+                for (auto& item : menuItems)
+                {
+                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                    {
+                        item->Check(true);
+                    }
+                    else
+                    {
+                        item->Check(false);
+                    }
+                }
+                if (!found)
+                {
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
+                }
                 return;
             }
         }
         else
         {
-            menuItem->Check(true);
+            auto menuItems = idleLongerThanMenu_->GetMenuItems();
+            for (auto& item : menuItems)
+            {
+                if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                {
+                    item->Check(true);
+                }
+                else
+                {
+                    item->Check(false);
+                }
+            }
 
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
                 numMinutes;
@@ -848,8 +880,20 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
     }
     else
     {
+        auto menuItems = idleLongerThanMenu_->GetMenuItems();
+        for (auto& item : menuItems)
+        {
+            if (item->GetId() != event.GetId())
+            {
+                item->Check(false);
+            }
+            else
+            {
+                item->Check(true);
+            }
+        }
+
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
-        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     }
 
     // Update filter status in window
