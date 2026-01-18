@@ -223,6 +223,8 @@ class TopFrame : public wxFrame
         
         virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
         
+        virtual void OnRightClickCallsignList(wxMouseEvent& event) { event.Skip(); }
+        
         void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:

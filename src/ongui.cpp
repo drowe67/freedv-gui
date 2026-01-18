@@ -1333,6 +1333,17 @@ void MainFrame::OnReSync(wxCommandEvent&)
     }
 }
 
+// Deselects item on right-click
+void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    while (index != -1)
+    {
+        m_lastReportedCallsignListView->Select(index, false);
+        index = m_lastReportedCallsignListView->GetFirstSelected();
+    }
+}
+
 void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {

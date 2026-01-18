@@ -429,6 +429,8 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
+
+        void OnRightClickCallsignList(wxMouseEvent& event) override;
         
     private:
         const wxString SNR_FORMAT_STR;
