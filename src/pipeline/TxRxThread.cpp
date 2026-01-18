@@ -91,7 +91,6 @@ extern int g_dump_timing;
 extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
-extern unsigned int g_recFromRadioSamples;
 extern std::atomic<bool> g_playFileFromRadio;
 extern int g_sfFs;
 extern bool g_loopPlayFileFromRadio;
@@ -313,13 +312,8 @@ void TxRxThread::initializePipeline_()
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile; }, 
-            [](int numSamples) {
-                g_recFromRadioSamples -= numSamples;
-                if (g_recFromRadioSamples <= 0)
-                {
-                    // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
-                }
+            [](int) {
+                // empty
             }
         );
         auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, recordRadioStep->getOutputSampleRate());

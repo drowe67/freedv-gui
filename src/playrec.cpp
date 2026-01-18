@@ -18,7 +18,6 @@ int                 g_playFileToMicInEventId;
 
 SNDFILE            *g_sfRecFile;
 bool                g_recFileFromRadio;
-unsigned int        g_recFromRadioSamples;
 int                 g_recFileFromRadioEventId;
 
 SNDFILE            *g_sfRecMicFile;
@@ -300,8 +299,6 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             
             sfInfo.channels   = 1;
             sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
-
-            g_recFromRadioSamples = UINT32_MAX; // record until stopped
 
             if (!recordDialog.isRawRecording())
             {

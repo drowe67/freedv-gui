@@ -161,7 +161,6 @@ extern int                 g_playFileToMicInEventId;
 
 extern SNDFILE            *g_sfRecFile;
 extern bool                g_recFileFromRadio;
-extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 extern int                 g_recFileFromDecoderEventId;
 
