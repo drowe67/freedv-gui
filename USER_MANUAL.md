@@ -911,7 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter:
         * Allow columns to be rearranged and/or made invisible. (PR #1132)
         * Sort empty user messages below non-empty ones. (PR #1105)
-        * Add idle filter. (PR #1142)
+        * Add idle filter. (PR #1142, #1180)
         * Add right-click menu for callsign lookups. (PR #1171)
         * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)

@@ -402,6 +402,7 @@ class FreeDVReporterDialog : public wxFrame
                 float snr;
                 std::string rxMode;
                 std::string message;
+                std::string connectTime;
                 std::function<void(CallbackHandler&)> fn;
             };
 
@@ -423,8 +424,8 @@ class FreeDVReporterDialog : public wxFrame
 
             void onReporterConnect_();
             void onReporterDisconnect_();
-            void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly);
+            void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly, std::string connectTime);
+            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly, std::string const& connectTime);
             void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, uint64_t frequencyHz);
             void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
             void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
