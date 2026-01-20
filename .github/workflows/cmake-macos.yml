@@ -188,7 +188,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang ./build_osx.sh
+          PATH=/usr/local/bin:/usr/bin:$PATH BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
@@ -204,7 +204,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang ./build_osx.sh 
+          PATH=/usr/local/bin:/usr/bin:$PATH BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang ./build_osx.sh 
 
     - name: Build PGO optimized freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -212,7 +212,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang  CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+          PATH=/usr/local/bin:/usr/bin:$PATH UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang  CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
