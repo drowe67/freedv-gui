@@ -140,6 +140,7 @@ jobs:
       run: |
         brew install automake libtool numpy sox 
         brew uninstall git # workaround, forces use of Apple git
+        brew install llvm@21 lld@21
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -161,17 +162,57 @@ jobs:
         security find-identity -v macos-build.keychain
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
-    - name: Build universal freedv-gui (unsigned)
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: ./build_macos_sound_drivers.sh
+
+    - name: Workaround macOS permission issues
+      run: |
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+
+    - name: Make sure resource hogs aren't running
+      shell: bash
+      run: |
+          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
+          sudo mdutil -a -i off
+          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+
+    - name: Build instrumented freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@21)/bin/clang CXX=${brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang ./build_osx.sh
+
+    - name: Generate optimization profile
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          cd build_osx
+          LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
+          $(brew --prefix llvm@21)/bin/llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+
+    - name: Build PGO optimized freedv-gui (unsigned)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 ./build_osx.sh 
+      run: |
+          rm -rf build_osx
+          UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ./build_osx.sh 
 
-    - name: Build universal freedv-gui (signed)
+    - name: Build PGO optimized freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+      run: |
+          rm -rf build_osx
+          UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
