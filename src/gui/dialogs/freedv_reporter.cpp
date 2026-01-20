@@ -757,7 +757,7 @@ void FreeDVReporterDialog::updateFilterStatus_()
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
         m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
-        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
+        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("CORAL"));
     }
     else
     {
