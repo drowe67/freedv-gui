@@ -1280,18 +1280,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
         }
 
-        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
-        {
-            Cleared(); // avoids spurious errors on macOS
-            if (currentSelection.IsOk())
-            {
-                // Reselect after redraw
-                parent_->CallAfter([&, currentSelection]() {
-                    parent_->m_listSpots->Select(currentSelection);
-                });
-            }
-        }
-        else if (itemsChanged.size() > 0)
+        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0 || itemsChanged.size() > 0)
         {
             // Temporarily disable autosizing prior to item updates.
             // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
@@ -1300,9 +1289,23 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 auto col = parent_->m_listSpots->GetColumn(index);
                 col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
             }
-            
+        }
+        
+        if (itemsDeleted.size() > 0)
+        {
+            ItemsDeleted(wxDataViewItem(nullptr), itemsDeleted);
+        }
+        if (itemsAdded.size() > 0)
+        {
+            ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
+        }
+        if (itemsChanged.size() > 0)
+        {
             ItemsChanged(itemsChanged);
+        }
 
+        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0 || itemsChanged.size() > 0)
+        {
             // Re-enable autosizing
             for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
             {
@@ -2763,13 +2766,35 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     
     if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
     {
-        Cleared(); // avoids spurious errors on macOS
-        if (currentSelection.IsOk())
+        // Temporarily disable autosizing prior to item updates.
+        // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
         {
-            // Reselect after redraw
-            parent_->CallAfter([&, currentSelection]() {
-                parent_->m_listSpots->Select(currentSelection);
-            });
+            auto col = parent_->m_listSpots->GetColumn(index);
+            col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
+        }
+    }
+    
+    if (itemsDeleted.size() > 0)
+    {
+        ItemsDeleted(wxDataViewItem(nullptr), itemsDeleted);
+    }
+    
+    if (itemsAdded.size() > 0)
+    {
+        ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
+    }
+    
+    if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+    {
+        // Re-enable autosizing
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        {
+            auto col = parent_->m_listSpots->GetColumn(index);
+            if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
+            {
+                col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+            }
         }
     }
     
