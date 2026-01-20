@@ -1342,6 +1342,8 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
         m_lastReportedCallsignListView->Select(index, false);
         index = m_lastReportedCallsignListView->GetFirstSelected();
     }
+    m_cboLastReportedCallsigns->SetText("");
+    m_BtnCallSignReset->SetFocus();
 }
 
 void MainFrame::resetStats_()

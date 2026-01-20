@@ -49,23 +49,20 @@ wxString wxListViewComboPopup::GetStringValue() const
 // Do mouse hot-tracking (which is typical in list popups)
 void wxListViewComboPopup::OnMouseMove(wxMouseEvent& event)
 {
-    const wxPoint pt(event.GetX(), event.GetY());
+    int flags = 0;
+    auto index = wxListView::HitTest(event.GetPosition(), flags);
 
-    int flags = wxLIST_HITTEST_ONITEM;
-    auto index = wxListView::HitTest(pt, flags);
-
-    if (index != m_value)
+    if (index >= 0)
     {
         if (m_value != -1)
         {
             Select(m_value, false);
         }
         m_value = index;
-        if (m_value != 1)
-        {
-            Select(m_value, true);
-        }
+        Select(m_value, true);
     }
+
+    event.Skip();
 }
 
 // On mouse left up, set the value and close the popup
