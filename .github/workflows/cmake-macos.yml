@@ -139,12 +139,8 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox 
+        brew install llvm@21 lld@21
         brew uninstall git # workaround, forces use of Apple git
-
-    - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v2
-      with:
-        version: "20.1"
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -192,7 +188,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=clang CXX=clang++ OBJCXX=clang ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang AR=$(brew --prefix llvm@21)/bin/llvm-ar ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
@@ -208,7 +204,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=clang CXX=clang++ OBJCXX=clang ./build_osx.sh 
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang AR=$(brew --prefix llvm@21)/bin/llvm-ar ./build_osx.sh 
 
     - name: Build PGO optimized freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
