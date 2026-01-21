@@ -10,7 +10,7 @@ endif()
 if(APPLE)
     set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_AR=${CMAKE_AR} -DCMAKE_RANLIB=${CMAKE_RANLIB})
 endif(APPLE)
-2
+
 include(ExternalProject)
 ExternalProject_Add(sndfile
     URL https://github.com/libsndfile/libsndfile/archive/refs/tags/1.2.2.tar.gz
