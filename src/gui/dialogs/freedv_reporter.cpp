@@ -1465,13 +1465,10 @@ void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent&)
     OnItemRightClick(contextEvent);
 }
 
-void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
+void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
-    
-    // Allow tip window to handle event
-    event.Skip();
 }
 
 void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
