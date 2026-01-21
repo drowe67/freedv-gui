@@ -139,6 +139,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox 
+        brew install llvm@19 # for llvm-profgen
         brew uninstall git # workaround, forces use of Apple git
 
     - name: Initialize code signing infrastructure
@@ -195,7 +196,7 @@ jobs:
       run: |
           cd build_osx
           LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
-          $(brew --prefix llvm@21)/bin/llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+          $(brew --prefix llvm@19)/bin/llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
 
     - name: Build PGO optimized freedv-gui (unsigned)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
@@ -211,7 +212,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang  CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
