@@ -19,6 +19,21 @@ project(CODEC2
   LANGUAGES C CXX
   )
 
+if(APPLE)
+  if(NOT CMAKE_LIBTOOL)
+    find_program(CMAKE_LIBTOOL NAMES libtool)
+  endif()
+  if(CMAKE_LIBTOOL)
+    set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
+    message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
+    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+    foreach(lang ${languages})
+      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
+        "${CMAKE_LIBTOOL} -static -o <TARGET> <LINK_FLAGS> <OBJECTS> ")
+    endforeach()
+  endif()
+endif()
+
 include(GNUInstallDirs)
 mark_as_advanced(CLEAR
     CMAKE_INSTALL_BINDIR
