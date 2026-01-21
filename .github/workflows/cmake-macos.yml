@@ -123,7 +123,7 @@ jobs:
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
-    runs-on: macos-latest
+    runs-on: macos-26
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
     needs: ['lint']
@@ -139,7 +139,6 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox 
-        brew install llvm@21 lld@21
         brew uninstall git # workaround, forces use of Apple git
 
     - name: Initialize code signing infrastructure
@@ -188,7 +187,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang AR=$(brew --prefix llvm@21)/bin/llvm-ar ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_INSTRUMENT=1 ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
@@ -204,7 +203,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata CC=$(brew --prefix llvm@21)/bin/clang CXX=$(brew --prefix llvm@21)/bin/clang++ OBJCXX=$(brew --prefix llvm@21)/bin/clang AR=$(brew --prefix llvm@21)/bin/llvm-ar ./build_osx.sh 
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ./build_osx.sh 
 
     - name: Build PGO optimized freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
