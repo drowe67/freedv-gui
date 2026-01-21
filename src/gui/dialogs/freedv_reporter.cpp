@@ -758,6 +758,7 @@ void FreeDVReporterDialog::updateFilterStatus_()
     {
         m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
         
+#if wxCHECK_VERSION(3,1,3)
         auto appearance = wxSystemSettings::GetAppearance();
         if (appearance.IsDark())
         {
@@ -767,6 +768,7 @@ void FreeDVReporterDialog::updateFilterStatus_()
         {
             m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SEA GREEN"));
         }
+#endif // wxCHECK_VERSION(3,1,3)
     }
     else
     {
