@@ -1480,7 +1480,7 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
 void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
 {
     // Ensure that item is selected after tooltip closes
-    CallAfter([&]() {
+    CallAfter([this]() {
         const wxPoint pt = wxGetMousePosition();
         int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
         int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
@@ -1500,7 +1500,7 @@ void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
 
 void FreeDVReporterDialog::OnSetFocus(wxFocusEvent& event)
 {
-    CallAfter([&]() {
+    CallAfter([this]() {
         const wxPoint pt = wxGetMousePosition();
         int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
         int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
@@ -1523,7 +1523,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     // Note: Windows uses the same indices for model column and GetColumn()
     // so we need to use an alternate implementation for that platform.
 #if defined(WIN32)
-    CallAfter([&]() {
+    CallAfter([this]() {
         std::vector<int> newColPositions;
         std::stringstream ss;
         auto headerCtrl = m_listSpots->GenericGetHeader();
