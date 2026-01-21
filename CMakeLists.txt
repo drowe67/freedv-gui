@@ -44,7 +44,22 @@ else(APPLE)
         HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
         LANGUAGES C CXX
     )
-endif(APPLE)    
+endif(APPLE)
+
+if(APPLE)
+  if(NOT CMAKE_LIBTOOL)
+    find_program(CMAKE_LIBTOOL NAMES libtool)
+  endif()
+  if(CMAKE_LIBTOOL)
+    set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
+    message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
+    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+    foreach(lang ${languages})
+      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
+        "${CMAKE_LIBTOOL} -static -o <TARGET> <LINK_FLAGS> <OBJECTS> ")
+    endforeach()
+  endif()
+endif()
 
 if(NOT DEFINED LINUX)
     string(FIND ${CMAKE_SYSTEM_NAME} "Linux" LINUX_LOC)
