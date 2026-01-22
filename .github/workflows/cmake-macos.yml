@@ -12,31 +12,8 @@ concurrency:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
-  PYTHON_CACHE_ID: macos-python3.14
 
 jobs:
-  python-cache:
-    runs-on: macos-15
-    steps:
-    - uses: actions/checkout@v4
-    - name: Cache FreeDV-included Python for later steps
-      id: freedv-python-cache
-      uses: actions/cache@v4
-      with:
-        path: Python.framework
-        key: ${{ env.PYTHON_CACHE_ID }}
-
-    - name: Generate FreeDV-included Python
-      if: steps.freedv-python-cache.outputs.cache-hit != 'true'
-      run: |
-        git clone https://github.com/gregneagle/relocatable-python.git
-        cd relocatable-python
-        ./make_relocatable_python_framework.py --python-version 3.14.2 --os-version=11 --destination $PWD/../
-        cd ..
-
-        ./generate-univ-pkgs.sh
-        ./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
-
   lint:
     runs-on: macos-15
 
@@ -76,7 +53,7 @@ jobs:
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
-    needs: ['lint', 'python-cache']
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -86,12 +63,6 @@ jobs:
     #  with:
     #    detached: true
 
-    - name: Restore cached Python
-      uses: actions/cache/restore@v4
-      with:
-        path: Python.framework
-        key: ${{ env.PYTHON_CACHE_ID }}
- 
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
@@ -155,17 +126,11 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    needs: ['lint', 'python-cache']
+    needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Restore cached Python
-      uses: actions/cache/restore@v4
-      with:
-        path: Python.framework
-        key: ${{ env.PYTHON_CACHE_ID }}
- 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
     #  with:
