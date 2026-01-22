@@ -24,7 +24,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: Python.framework
-        id: ${{ env.PYTHON_CACHE_ID }}
+        key: ${{ env.PYTHON_CACHE_ID }}
 
     - name: Generate FreeDV-included Python
       if: steps.freedv-python-cache.outputs.cache-hit != 'true'
@@ -39,7 +39,6 @@ jobs:
 
   lint:
     runs-on: macos-15
-    needs: ['python-cache']
 
     steps:
     - uses: actions/checkout@v4
@@ -77,7 +76,7 @@ jobs:
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
-    needs: ['lint']
+    needs: ['lint', 'python-cache']
 
     steps:
     - uses: actions/checkout@v4
@@ -91,7 +90,7 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: Python.framework
-        id: ${{ env.PYTHON_CACHE_ID }}
+        key: ${{ env.PYTHON_CACHE_ID }}
  
     - name: Install needed packages
       run: |
@@ -156,7 +155,7 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    needs: ['lint']
+    needs: ['lint', 'python-cache']
 
     steps:
     - uses: actions/checkout@v4
@@ -165,7 +164,7 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: Python.framework
-        id: ${{ env.PYTHON_CACHE_ID }}
+        key: ${{ env.PYTHON_CACHE_ID }}
  
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
