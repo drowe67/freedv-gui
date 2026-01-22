@@ -126,7 +126,7 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    needs: ['lint']
+    #needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
