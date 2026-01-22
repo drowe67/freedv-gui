@@ -27,6 +27,8 @@
 #include "plot_waterfall.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
+#include "util/logging/ulog.h"
+
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
@@ -191,9 +193,11 @@ bool PlotWaterfall::checkDT(void)
 
     float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y;
     float dy = m_dT * px_per_sec;
+    log_info("dy = %f, m_dT = %f, pxpps = %f", dy, m_dT, px_per_sec);
     
     if (dy < 1.0) {
         m_dT += DT;
+        log_info("new m_DT = %f", m_dT);
         return false;
     }
     else
