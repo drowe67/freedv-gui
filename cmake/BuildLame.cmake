@@ -14,7 +14,7 @@ if(APPLE AND BUILD_OSX_UNIVERSAL)
 ExternalProject_Add(build_mp3lame_x86
     DOWNLOAD_EXTRACT_TIMESTAMP NO
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=x86_64-apple-darwin --target=x86_64-apple-darwin CFLAGS=-arch\ x86_64\ -O2\ -mmacosx-version-min=10.11
+    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=x86_64-apple-darwin --target=x86_64-apple-darwin CFLAGS=-arch\ x86_64\ -O3\ -mmacosx-version-min=11.0
     BUILD_COMMAND $(MAKE) && $(MAKE) install
     INSTALL_COMMAND ""
     URL ${LAME_URL}
@@ -23,7 +23,7 @@ ExternalProject_Add(build_mp3lame_x86
 ExternalProject_Add(build_mp3lame_arm
     DOWNLOAD_EXTRACT_TIMESTAMP NO
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=aarch64-apple-darwin --target=aarch64-apple-darwin CFLAGS=-arch\ arm64\ -O2\ -mmacosx-version-min=10.11
+    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=aarch64-apple-darwin --target=aarch64-apple-darwin CFLAGS=-arch\ arm64\ -O3\ -mmacosx-version-min=11.0
     BUILD_COMMAND $(MAKE) && $(MAKE) install
     INSTALL_COMMAND ""
     URL ${LAME_URL}
