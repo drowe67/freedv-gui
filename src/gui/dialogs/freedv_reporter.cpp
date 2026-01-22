@@ -762,11 +762,11 @@ void FreeDVReporterDialog::updateFilterStatus_()
         auto appearance = wxSystemSettings::GetAppearance();
         if (appearance.IsDark())
         {
-            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("CORAL"));
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SALMON"));
         }
         else
         {
-            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SEA GREEN"));
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("FIREBRICK"));
         }
 #endif // wxCHECK_VERSION(3,1,3)
     }
