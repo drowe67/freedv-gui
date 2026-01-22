@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
+    * Windows: disable microphone check on start. (PR #1191)
 2. Enhancements:
     * FlexRadio support:
         * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
