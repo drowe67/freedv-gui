@@ -119,37 +119,37 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
-    - name: Generate optimization profile
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
-      run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1920x1080x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          metacity --sm-disable --replace &
-          sleep 5
-          . ./rade-venv/bin/activate
-          cd build_linux
-          LLVM_PROFILE_FILE="code-%p.profraw" PYTHONPATH=$(pwd)/rade_src ../test/generate_pgo_profiles.sh 2>&1
-          llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+    #- name: Generate optimization profile
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}
+    #  if: ${{ matrix.target == 'all' }}
+    #  run: |
+    #      sudo systemctl enable rtkit-daemon
+    #      sudo systemctl start rtkit-daemon
+    #      Xvfb :99 -screen 0 1920x1080x16 &
+    #      sleep 5
+    #      export DISPLAY=:99.0
+    #      export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    #      mkdir -p $XDG_RUNTIME_DIR
+    #      chmod 700 $XDG_RUNTIME_DIR
+    #      eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+    #      metacity --sm-disable --replace &
+    #      sleep 5
+    #      . ./rade-venv/bin/activate
+    #      cd build_linux
+    #      LLVM_PROFILE_FILE="code-%p.profraw" PYTHONPATH=$(pwd)/rade_src ../test/generate_pgo_profiles.sh 2>&1
+    #      llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
 
-    - name: Build PGO optimized freedv-gui 
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
-      run: |
-          . ./rade-venv/bin/activate
-          rm -rf build_linux
-          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+    #- name: Build PGO optimized freedv-gui 
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}
+    #  if: ${{ matrix.target == 'all' }}
+    #  run: |
+    #      . ./rade-venv/bin/activate
+    #      rm -rf build_linux
+    #      BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
