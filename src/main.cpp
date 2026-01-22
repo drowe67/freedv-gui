@@ -592,11 +592,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-#if defined(WIN32)
-    // Opt into supporting dark mode on Windows
-    SetAppearance(Appearance::System);
-#endif // defined(WIN32)
-    
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
