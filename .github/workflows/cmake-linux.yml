@@ -128,7 +128,7 @@ jobs:
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
+          Xvfb :99 -screen 0 1920x1080x16 &
           sleep 5
           export DISPLAY=:99.0
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
