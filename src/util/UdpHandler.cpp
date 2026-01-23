@@ -243,6 +243,8 @@ void UdpHandler::receiveImpl_()
 
 struct addrinfo* UdpHandler::resolveIpAddress_(const char* host, int port)
 {
+    log_info("Attempting DNS resolution of %s:%d", host, port);
+    
     std::stringstream portStream;
     portStream << port;
     
@@ -260,7 +262,7 @@ struct addrinfo* UdpHandler::resolveIpAddress_(const char* host, int port)
     int err = getaddrinfo(host, portStream.str().c_str(), &hints, &result);
     if (err != 0) 
     {
-        log_warn("cannot resolve %s:%s (err=%d)", host_.c_str(), port_, err);
+        log_warn("cannot resolve %s:%s (err=%d)", host, portStream.str().c_str(), err);
     }
     
     return result;

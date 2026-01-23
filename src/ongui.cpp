@@ -307,8 +307,11 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
 
         // Initialize FreeDV Reporter if required.
-        initializeFreeDVReporter_();
-
+        if (!m_RxRunning)
+        {
+            initializeFreeDVReporter_();
+        }
+        
         // Refresh distance column label in case setting was changed.
         if (m_reporterDialog != nullptr)
         {

@@ -898,6 +898,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
     * Windows: disable microphone check on start. (PR #1191)
+    * UdpHandler: fix crash when unable to resolve DNS. (PR #1193)
+    * Prevent reset of FreeDV Reporter connection while running. (PR #1193)
+    * Disable UDP Reporting checkbox when running. (PR #1193)
+    * Fix waterfall rendering issue with multiple plots displayed at once. (PR #1193)
 2. Enhancements:
     * FlexRadio support:
         * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
