@@ -1377,6 +1377,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxFreeDVReporterEnable->Enable(true);
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
+            m_ckboxUDPReportingEnable->Enable(true);
             
             if (m_ckboxUDPReportingEnable->GetValue())
             {
@@ -1401,6 +1402,7 @@ void OptionsDlg::updateReportingState()
             m_useCardinalDirections->Enable(true);
             m_udpHostname->Enable(false);
             m_udpPort->Enable(false);
+            m_ckboxUDPReportingEnable->Enable(false);
         }    
     }
     else
@@ -1419,6 +1421,7 @@ void OptionsDlg::updateReportingState()
         m_useCardinalDirections->Enable(false);
         m_udpHostname->Enable(false);
         m_udpPort->Enable(false);
+        m_ckboxUDPReportingEnable->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }

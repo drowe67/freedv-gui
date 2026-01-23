@@ -897,6 +897,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
     * Fix memory corruption when stopping and starting different playback files. (PR #1157)
     * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
+    * Windows: disable microphone check on start. (PR #1191)
+    * UdpHandler: fix crash when unable to resolve DNS. (PR #1193)
+    * Prevent reset of FreeDV Reporter connection while running. (PR #1193)
+    * Disable UDP Reporting checkbox when running. (PR #1193)
+    * Fix waterfall rendering issue with multiple plots displayed at once. (PR #1193)
 2. Enhancements:
     * FlexRadio support:
         * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
@@ -911,7 +916,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter:
         * Allow columns to be rearranged and/or made invisible. (PR #1132)
         * Sort empty user messages below non-empty ones. (PR #1105)
-        * Add idle filter. (PR #1142, #1180, #1183)
+        * Add idle filter. (PR #1142, #1180, #1183, #1189)
         * Add right-click menu for callsign lookups. (PR #1171, #1185)
         * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)
@@ -926,6 +931,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
     * Enable profile-guided optimation for AppImages. (PR #1173)
+4. Other:
+    * Remove 5.3665 MHz as a default frequency. (PR #1187)
 
 *Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
 again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
