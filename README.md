@@ -190,7 +190,7 @@ To build with PGO enabled:
    the relevant environment variables to use the correct version of Clang. Example below with macOS and Homebrew:
 
 ```
-$ BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang ./build_osx.sh 
+$ BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang ./build_osx.sh 
 ```
 
 2. Execute FreeDV and use normally to obtain sufficient profiling data. An automated script is available to do this:
@@ -208,7 +208,7 @@ where PulseAudio/pipewire null sink(s) will be created if these are not provided
 
 ```
 rm -rf build_osx
-BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=$(pwd)/code.profdata CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang  ./build_osx.sh
+BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 PGO_USE_PROFILE=$(pwd)/code.profdata CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang  ./build_osx.sh
 ```
 
 Limitations:
