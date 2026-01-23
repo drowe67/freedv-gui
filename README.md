@@ -176,3 +176,43 @@ cd build_osx
 make release
 ```
 
+## Building with Profile Guided Optimization (PGO)
+
+Profile Guided Optimization is an optimization strategy supported by the Clang compiler that uses profiling data
+to govern optimization decisions. This can significantly improve the runtime performance of many applications, especially
+with higher optimization levels. In testing with FreeDV, the AppImages are able to use up to 25% less CPU using a
+combination of `BUILD_TYPE=Release`, link-time optimization (LTO) and PGO. Currently this is supported for macOS and Linux 
+using the LLVM version of the Clang compiler (*not* the one Apple ships with Xcode).
+
+To build with PGO enabled:
+
+1. Perform an initial instrumented build using the `./build_linux.sh` (or `./build_osx.sh`) script, making sure to overide
+   the relevant environment variables to use the correct version of Clang. Example below with macOS and Homebrew:
+
+```
+$ BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang ./build_osx.sh 
+```
+
+2. Execute FreeDV and use normally to obtain sufficient profiling data. An automated script is available to do this:
+
+```
+cd build_osx
+LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
+$(brew --prefix llvm@20)/bin/llvm-profdata merge -output $(pwd)/../code.profdata code-*.profraw
+```
+
+(`FREEDV_COMPUTER_TO_RADIO_DEVICE`, `FREEDV_RADIO_TO_COMPUTER_DEVICE`, `FREEDV_COMPUTER_TO_SPEAKER_DEVICE` and `FREEDV_MICROPHONE_TO_COMPUTER_DEVICE` are optional on Linux,
+where PulseAudio/pipewire null sink(s) will be created if these are not provided).
+
+3. Perform a final build with the collected profiling data:
+
+```
+rm -rf build_osx
+BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 PGO_USE_PROFILE=$(pwd)/code.profdata CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang  ./build_osx.sh
+```
+
+Limitations:
+
+1. The best results are obtained if having FreeDV build all required dependencies itself (`BUILD_DEPS=1`). The optimization process 
+   is unable to touch already-compiled dyanmic libraries, so performance gains will likely be less without this option.
+2. On that same note, this will not touch most of the RADE modem due to its use of Python. This may change in future releases.
