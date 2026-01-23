@@ -27,6 +27,7 @@
 
 void VerifyMicrophonePermissions(std::promise<bool>& micPromise)
 {
+#if 0
     bool microphonePermissionsGranted = false;
     
     // General Microphone enable/disable (applies to all users)
@@ -42,6 +43,12 @@ void VerifyMicrophonePermissions(std::promise<bool>& micPromise)
     
     microphonePermissionsGranted = localMachineMicrophoneAllowed;
     micPromise.set_value(microphonePermissionsGranted);
+#else
+    // Bypass all microphone checks for now. On some systems, the above registry key isn't correct and I'm
+    // not sure why (or what, if any key, should be used instead). This check will either need to be fixed 
+    // for a future release or fully eliminated.
+    micPromise.set_value(true);
+#endif // 0
 }
 
 void ResetMainWindowColorSpace()

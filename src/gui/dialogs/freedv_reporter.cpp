@@ -757,7 +757,18 @@ void FreeDVReporterDialog::updateFilterStatus_()
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
         m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
-        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
+        
+#if wxCHECK_VERSION(3,1,3)
+        auto appearance = wxSystemSettings::GetAppearance();
+        if (appearance.IsDark())
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SALMON"));
+        }
+        else
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("FIREBRICK"));
+        }
+#endif // wxCHECK_VERSION(3,1,3)
     }
     else
     {
@@ -934,6 +945,7 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 #endif //!defined(WIN32)
 #endif
 
+    updateFilterStatus_();
     event.Skip();
 }
 
