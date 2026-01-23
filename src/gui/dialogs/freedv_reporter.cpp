@@ -421,20 +421,20 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     menuBar_->Append(filterMenu_, _("Filter"));
     filterMenu_->Append(wxID_ANY, _("Idle more than (minutes)..."), idleLongerThanMenu_);
 
-    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_RADIO);
+    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     bool foundChecked = menuItem->IsChecked();
     this->Connect(menuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
 
     for (auto& item : idleLongerThanMinutes)
     {
-        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_RADIO);
+        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_CHECK);
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes == item);
         foundChecked |= menuItem->IsChecked();
         this->Connect(wxID_HIGHEST + 200 + item, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
     }
 
-    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_RADIO);
+    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!foundChecked);
     this->Connect(wxID_HIGHEST + 200, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
 
@@ -757,7 +757,18 @@ void FreeDVReporterDialog::updateFilterStatus_()
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
         m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
-        m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("ORANGE"));
+        
+#if wxCHECK_VERSION(3,1,3)
+        auto appearance = wxSystemSettings::GetAppearance();
+        if (appearance.IsDark())
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SALMON"));
+        }
+        else
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("FIREBRICK"));
+        }
+#endif // wxCHECK_VERSION(3,1,3)
     }
     else
     {
@@ -799,8 +810,6 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
 {
-    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
-
     if (event.GetId() >= (wxID_HIGHEST + 200))
     {
         auto numMinutes = event.GetId() - wxID_HIGHEST - 200;
@@ -819,12 +828,16 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
                     {
                         found = true;
                         item->Check(true);
-                        break;
+                    }
+                    else
+                    {
+                        item->Check(false);
                     }
                 }
                 if (!found)
                 {
-                    menuItem->Check(true);
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
                 }
 
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
@@ -834,12 +847,42 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
             else
             {
                 // No changes needed.
+                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                auto menuItems = idleLongerThanMenu_->GetMenuItems();
+                bool found = false;
+                for (auto& item : menuItems)
+                {
+                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                    {
+                        item->Check(true);
+                    }
+                    else
+                    {
+                        item->Check(false);
+                    }
+                }
+                if (!found)
+                {
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
+                }
                 return;
             }
         }
         else
         {
-            menuItem->Check(true);
+            auto menuItems = idleLongerThanMenu_->GetMenuItems();
+            for (auto& item : menuItems)
+            {
+                if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                {
+                    item->Check(true);
+                }
+                else
+                {
+                    item->Check(false);
+                }
+            }
 
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
                 numMinutes;
@@ -848,8 +891,20 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
     }
     else
     {
+        auto menuItems = idleLongerThanMenu_->GetMenuItems();
+        for (auto& item : menuItems)
+        {
+            if (item->GetId() != event.GetId())
+            {
+                item->Check(false);
+            }
+            else
+            {
+                item->Check(true);
+            }
+        }
+
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
-        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     }
 
     // Update filter status in window
@@ -890,6 +945,7 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 #endif //!defined(WIN32)
 #endif
 
+    updateFilterStatus_();
     event.Skip();
 }
 
@@ -1421,19 +1477,16 @@ void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent&)
     OnItemRightClick(contextEvent);
 }
 
-void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
+void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
-    
-    // Allow tip window to handle event
-    event.Skip();
 }
 
 void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
 {
     // Ensure that item is selected after tooltip closes
-    CallAfter([&]() {
+    CallAfter([this]() {
         const wxPoint pt = wxGetMousePosition();
         int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
         int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
@@ -1453,7 +1506,7 @@ void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
 
 void FreeDVReporterDialog::OnSetFocus(wxFocusEvent& event)
 {
-    CallAfter([&]() {
+    CallAfter([this]() {
         const wxPoint pt = wxGetMousePosition();
         int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
         int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
@@ -1476,7 +1529,7 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
     // Note: Windows uses the same indices for model column and GetColumn()
     // so we need to use an alternate implementation for that platform.
 #if defined(WIN32)
-    CallAfter([&]() {
+    CallAfter([this]() {
         std::vector<int> newColPositions;
         std::stringstream ss;
         auto headerCtrl = m_listSpots->GenericGetHeader();
@@ -2235,8 +2288,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
             reporter_->setOnReporterConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_, this));
             reporter_->setOnReporterDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_, this));
     
-            reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_, this, _1, _2, _3, _4, _5, _6));
-            reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_, this, _1, _2, _3, _4, _5, _6));
+            reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_, this, _1, _2, _3, _4, _5, _6, _7));
+            reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_, this, _1, _2, _3, _4, _5, _6, _7));
             reporter_->setOnFrequencyChangeFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_, this, _1, _2, _3, _4, _5));
             reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
             reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
@@ -2782,7 +2835,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly, std::string connectTime)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2792,6 +2845,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
     handler.gridSquare = std::move(gridSquare);
     handler.version = std::move(version);
     handler.rxOnly = rxOnly;
+    handler.connectTime = std::move(connectTime);
 
     handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
@@ -2802,6 +2856,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         std::string callsign = std::move(handler.callsign);
         std::string gridSquare = std::move(handler.gridSquare);
         std::string version = std::move(handler.version);
+        std::string connectTime = std::move(handler.connectTime);
         bool rxOnly = handler.rxOnly;
 
         log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
@@ -2905,7 +2960,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
-        temp->connectTime = temp->lastUpdateDate;
+        makeValidTime_(connectTime, temp->connectTime);
         // defer visibility until timer update
         temp->isVisible = false;
         temp->isPendingUpdate = false;
@@ -2947,7 +3002,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string const&, std::string const&, std::string const&, std::string const&, bool)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string const&, std::string const&, std::string const&, std::string const&, bool, std::string const&)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
 
