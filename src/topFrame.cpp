@@ -605,7 +605,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
 
     m_cboLastReportedCallsigns = new wxComboCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
-    m_lastReportedCallsignListView = new wxListViewComboPopup();
+    m_lastReportedCallsignListView = new wxListViewComboPopup(m_BtnCallSignReset);
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
     m_cboLastReportedCallsigns->SetSizeHints(wxSize(400,-1));
     m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
@@ -907,6 +907,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboReportFrequency->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
     
+    m_cboLastReportedCallsigns->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
+
     m_auiNbookCtrl->Connect(wxEVT_AUINOTEBOOK_PAGE_CHANGING, wxAuiNotebookEventHandler(TopFrame::OnNotebookPageChanging), NULL, this);
 }
 
@@ -998,6 +1000,8 @@ TopFrame::~TopFrame()
     
     m_cboReportFrequency->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
+
+    m_cboLastReportedCallsigns->Disconnect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

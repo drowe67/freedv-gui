@@ -3,6 +3,12 @@
 #include <wx/combo.h>
 #include <wx/listctrl.h>
 
+wxListViewComboPopup::wxListViewComboPopup(wxWindow* focusCtrlOnDeselect)
+    : focusCtrlOnDeselect_(focusCtrlOnDeselect)
+{
+    // empty
+}
+
 void wxListViewComboPopup::Init()
 {
     m_value = -1;
@@ -22,7 +28,18 @@ void wxListViewComboPopup::SetStringValue(const wxString& s)
 {
     int n = wxListView::FindItem(-1,s);
     if ( n >= 0 && n < wxListView::GetItemCount() )
+    {
         wxListView::Select(n);
+        m_value = n;
+    }
+    else
+    {
+        if (m_value != -1)
+        {
+            wxListView::Select(m_value, false);
+        }
+        m_value = -1;
+    }
 }
 
 // Get list selection as a string
@@ -38,7 +55,21 @@ wxString wxListViewComboPopup::GetStringValue() const
 // Do mouse hot-tracking (which is typical in list popups)
 void wxListViewComboPopup::OnMouseMove(wxMouseEvent& event)
 {
-    // TODO: Move selection to cursor
+    int flags = 0;
+    auto index = wxListView::HitTest(event.GetPosition(), flags);
+
+    if (m_value != -1)
+    {
+        Select(m_value, false);
+        m_value = -1;
+    }
+
+    if (index >= 0)
+    {
+        m_value = index;
+        Select(m_value, true);
+    }
+
     event.Skip();
 }
 
@@ -57,6 +88,20 @@ void wxListViewComboPopup::OnMouseClick(wxMouseEvent& event)
     }
 }
 
+void wxListViewComboPopup::OnRightMouseClick(wxMouseEvent&)
+{
+    m_value = wxListView::GetFirstSelected();
+    if (m_value >= 0)
+    {
+        Select(m_value, false);
+        m_value = -1;
+    }
+    SetStringValue("");
+    Dismiss();
+
+    if (focusCtrlOnDeselect_ != nullptr) focusCtrlOnDeselect_->SetFocus();
+}
+
 wxSize wxListViewComboPopup::GetAdjustedSize(
         int	minWidth,
         int	prefHeight,
@@ -68,4 +113,5 @@ wxSize wxListViewComboPopup::GetAdjustedSize(
 wxBEGIN_EVENT_TABLE(wxListViewComboPopup, wxListView)
     EVT_MOTION(wxListViewComboPopup::OnMouseMove)
     EVT_LEFT_UP(wxListViewComboPopup::OnMouseClick)
+    EVT_RIGHT_UP(wxListViewComboPopup::OnRightMouseClick)
 wxEND_EVENT_TABLE()

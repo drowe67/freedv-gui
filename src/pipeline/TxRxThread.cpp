@@ -522,7 +522,7 @@ void TxRxThread::initializePipeline_()
         recordDecoderPipeline->appendPipelineStep(recordDecoderStep);
         
         auto recordDecoderTap = new TapStep(outputSampleRate_, recordDecoderPipeline);
-        auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordDecoder = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder) && (g_sfRecDecoderFile != NULL); },
