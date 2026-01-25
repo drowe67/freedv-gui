@@ -623,8 +623,6 @@ void MainFrame::OpenOmniRig()
         onFrequencyModeChange_(ptr, freq, mode);
     };
 
-    // Temporarily suppress frequency updates until we're fully connected.
-    suppressFreqModeUpdates_ = true;
     wxGetApp().rigFrequencyController->connect();
 }
 #endif // defined(WIN32)
