@@ -902,6 +902,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent reset of FreeDV Reporter connection while running. (PR #1193)
     * Disable UDP Reporting checkbox when running. (PR #1193)
     * Fix waterfall rendering issue with multiple plots displayed at once. (PR #1193)
+    * Fix inconsistent behavior when selecting/deselecting rows from the main window drop-down list. (PR #1184)
+    * OmniRig: Don't suppresss frequency updates on initial connect. (PR #1184)
 2. Enhancements:
     * FlexRadio support:
         * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
@@ -918,14 +920,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * Sort empty user messages below non-empty ones. (PR #1105)
         * Add idle filter. (PR #1142, #1180, #1183, #1189)
         * Add right-click menu for callsign lookups. (PR #1171, #1185)
-        * FreeDV Reporter: Add filtered indicator to bottom of window. (PR #1166)
+        * Add filtered indicator to bottom of window. (PR #1166)
     * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)
     * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
     * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153)
-    * Add support for recording decoded audio. (PR #1145)
+    * Add support for recording decoded audio. (PR #1145, #1184)
     * Display Hamlib version in Help->About. (PR #1169)
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
