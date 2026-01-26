@@ -408,6 +408,13 @@ click the "Log QSO" button on the left side of the window. You will then see a d
 enter any additional information about the contact. Upon clicking the OK button, this information will be 
 transmitted to your logging tool.
 
+You can also log a contact if they're using FreeDV Reporter. Simply left-click on a row in the FreeDV Reporter
+window and then click on the Log QSO button. This will autofill the callsign, grid square/locator and frequency
+from the FreeDV Reporter servers in the dialog box.
+
+The last selected logging source (either the FreeDV Reporter window or the drop-down callsign list at the bottom
+of the main window) is used for auto-filling of logging data. This is to avoid confusion (for instance, if a row 
+in the main window is selected but it's intended to log from FreeDV Reporter instead).
 
 # FreeDV Modes
 
