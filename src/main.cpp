@@ -599,6 +599,7 @@ bool MainApp::OnInit()
     m_locale.Init();
 #endif // wxCHECK_VERSION(3,2,0)
 
+    lastSelectedLoggingRow = LastSelectedRow::UNSELECTED;
     m_reporters.clear();
     m_reportCounter = 0;
     

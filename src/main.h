@@ -163,6 +163,14 @@ class FreeDVReporterDialog;
 class MainApp : public wxApp
 {
     public:
+        // Indicates which row was last selected (for auto-filling during logging)
+        enum LastSelectedRow 
+        {
+            UNSELECTED,
+            MAIN_WINDOW,
+            FREEDV_REPORTER,
+        };
+
         virtual bool        OnInit();
         virtual void        OnInitCmdLine(wxCmdLineParser& parser);
         virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
@@ -171,6 +179,8 @@ class MainApp : public wxApp
 
         bool                    CanAccessSerialPort(std::string const& portName);
         
+        LastSelectedRow lastSelectedLoggingRow;
+
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         
@@ -431,6 +441,8 @@ class MainFrame : public TopFrame
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
 
         void OnRightClickCallsignList(wxMouseEvent& event) override;
+
+        void OnOpenCallsignList( wxCommandEvent& event ) override;
         
     private:
         const wxString SNR_FORMAT_STR;
