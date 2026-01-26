@@ -405,7 +405,7 @@ void HamlibRigController::connectImpl_()
         const char* MAX_TIMEOUT = "625";
         char currentTimeout[1024];
         result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), currentTimeout);
-        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "NET rigctl"))
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "Hamlib NET rigctl"))
         {
             rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), MAX_TIMEOUT);
         }
