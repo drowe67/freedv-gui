@@ -933,7 +933,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
     * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
     * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
-    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153)
+    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153, #1184, #1196)
     * Add support for recording decoded audio. (PR #1145, #1184)
     * Display Hamlib version in Help->About. (PR #1169)
 3. Build system:
