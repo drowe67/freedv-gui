@@ -623,8 +623,6 @@ void MainFrame::OpenOmniRig()
         onFrequencyModeChange_(ptr, freq, mode);
     };
 
-    // Temporarily suppress frequency updates until we're fully connected.
-    suppressFreqModeUpdates_ = true;
     wxGetApp().rigFrequencyController->connect();
 }
 #endif // defined(WIN32)
@@ -1334,6 +1332,19 @@ void MainFrame::OnReSync(wxCommandEvent&)
         // the next execution of the TX/RX loop.
         g_queueResync.store(true, std::memory_order_release);
     }
+}
+
+// Deselects item on right-click
+void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    while (index != -1)
+    {
+        m_lastReportedCallsignListView->Select(index, false);
+        index = m_lastReportedCallsignListView->GetFirstSelected();
+    }
+    m_cboLastReportedCallsigns->SetText("");
+    m_BtnCallSignReset->SetFocus();
 }
 
 void MainFrame::resetStats_()

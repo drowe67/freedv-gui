@@ -826,9 +826,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
 
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         pipeline->appendPipelineStep(rxStep);
-        
-        // Temporarily disabling BW expander pending further testing.
-#if 0
+     
         auto bwExpandStep = new BandwidthExpandStep();
         auto bwExpandBypass = new AudioPipeline(bwExpandStep->getInputSampleRate(), bwExpandStep->getOutputSampleRate());
         
@@ -838,8 +836,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             bwExpandBypass
         );
         pipeline->appendPipelineStep(eitherOrBwExpandStep);
-#endif // 0
-            
+
         return pipeline;
     }
     else

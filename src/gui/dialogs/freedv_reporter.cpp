@@ -725,13 +725,13 @@ void FreeDVReporterDialog::refreshLayout()
     {
         item->SetTitle("Dir");
         item->SetAlignment(wxALIGN_LEFT);
-        renderer->SetAlignment(wxALIGN_LEFT);
+        renderer->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
     }
     else
     {
         item->SetTitle("Hdg");
         item->SetAlignment(wxALIGN_RIGHT);
-        renderer->SetAlignment(wxALIGN_RIGHT);
+        renderer->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     }
     
     // Hide/show legacy columns
