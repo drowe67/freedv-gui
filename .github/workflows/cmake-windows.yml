@@ -61,15 +61,15 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20250430/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64.tar.xz
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+        tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
 
     - name: Configure freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
         export WINEPREFIX=`pwd`/wine-env
-        export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
         cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..
@@ -78,7 +78,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         make -j$(nproc) package
 
     - name: Calculate installer filename
