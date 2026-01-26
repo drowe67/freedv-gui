@@ -911,6 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix waterfall rendering issue with multiple plots displayed at once. (PR #1193)
     * Fix inconsistent behavior when selecting/deselecting rows from the main window drop-down list. (PR #1184)
     * OmniRig: Don't suppresss frequency updates on initial connect. (PR #1184)
+    * Hamlib: increase timeout to 625ms. (PR #1195)
 2. Enhancements:
     * FlexRadio support:
         * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
