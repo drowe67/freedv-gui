@@ -196,7 +196,10 @@ void HamlibRigController::InitializeHamlibLibrary()
         // Capture names of rigs for configuration use.
         for (auto& rig : RigList_)
         {
-            RigNameList_.push_back(std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name));
+            std::string rigName = 
+                std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name);
+            rigName.erase(rigName.find_last_not_of(" \n\r\t") + 1); // trim whitespace from end
+            RigNameList_.push_back(rigName);
         }
 
         /* Reset debug output. */
@@ -400,7 +403,15 @@ void HamlibRigController::connectImpl_()
         onRigConnected(this);
         
         // Set timeouts so that we don't wait an extremely long time to begin TX.
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), "500");
+        // However, only do so if the default timeout is larger than 625ms and if
+        // not using FLrig/rigctld (as the latter have their own timeout mechanism).
+        const char* MAX_TIMEOUT = "625";
+        char currentTimeout[1024];
+        result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), currentTimeout);
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "Hamlib NET rigctl"))
+        {
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), MAX_TIMEOUT);
+        }
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
             
