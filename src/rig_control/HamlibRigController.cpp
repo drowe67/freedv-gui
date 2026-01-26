@@ -400,7 +400,15 @@ void HamlibRigController::connectImpl_()
         onRigConnected(this);
         
         // Set timeouts so that we don't wait an extremely long time to begin TX.
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), "500");
+        // However, only do so if the default timeout is larger than 625ms and if
+        // not using FLrig/rigctld (as the latter have their own timeout mechanism).
+        const char* MAX_TIMEOUT = "625";
+        char currentTimeout[1024];
+        result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), currentTimeout);
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "NET rigctl"))
+        {
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), "625");
+        }
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
             
