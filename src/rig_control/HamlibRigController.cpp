@@ -196,7 +196,10 @@ void HamlibRigController::InitializeHamlibLibrary()
         // Capture names of rigs for configuration use.
         for (auto& rig : RigList_)
         {
-            RigNameList_.push_back(std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name));
+            std::string rigName = 
+                std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name);
+            rigName.erase(rigName.find_last_not_of(" \n\r\t") + 1); // trim whitespace from end
+            RigNameList_.push_back(rigName);
         }
 
         /* Reset debug output. */
