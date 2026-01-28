@@ -82,8 +82,6 @@ if [ ! -d "$(pwd)/rade_src" ]; then
 fi
 sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
-for FREEDV_MODE in RADEV1 700D 700E 1600; do
-
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
@@ -122,8 +120,6 @@ FDV_PID=$!
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
 cat tmp.log
-
-done
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
