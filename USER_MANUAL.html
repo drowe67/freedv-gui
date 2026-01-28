@@ -515,6 +515,15 @@ the list and click the “Log QSO” button on the left side of the window.
 You will then see a dialog box that will let you enter any additional
 information about the contact. Upon clicking the OK button, this
 information will be transmitted to your logging tool.</p>
+<p>You can also log a contact if they’re using FreeDV Reporter. Simply
+left-click on a row in the FreeDV Reporter window and then click on the
+Log QSO button. This will autofill the callsign, grid square/locator and
+frequency from the FreeDV Reporter servers in the dialog box.</p>
+<p>The last selected logging source (either the FreeDV Reporter window
+or the drop-down callsign list at the bottom of the main window) is used
+for auto-filling of logging data. This is to avoid confusion (for
+instance, if a row in the main window is selected but it’s intended to
+log from FreeDV Reporter instead).</p>
 <h1 data-number="9" id="freedv-modes"><span
 class="header-section-number">9</span> FreeDV Modes</h1>
 <p>The following table is a guide to the different modes, using analog
@@ -1166,8 +1175,8 @@ speech codec bits</td>
 </table>
 <h1 data-number="18" id="release-notes"><span
 class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v2.2.0-tbd-tbd"><span
-class="header-section-number">18.1</span> V2.2.0 TBD TBD</h2>
+<h2 data-number="18.1" id="v2.2.0-january-2026"><span
+class="header-section-number">18.1</span> V2.2.0 January 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1269,7 +1278,7 @@ data-cites="NespaLa">@NespaLa</span>!</li>
 <li>Hamlib: Allow selection of baud rates greater than 115200. (PR
 #1125)</li>
 <li>Add support for loggers that support the WSJT-X networking protocol.
-(PR #1129, #1153)</li>
+(PR #1129, #1153, #1184, #1196)</li>
 <li>Add support for recording decoded audio. (PR #1145, #1184)</li>
 <li>Display Hamlib version in Help-&gt;About. (PR #1169)</li>
 </ul></li>
@@ -1289,60 +1298,11 @@ builds. (PR #1163)</li>
 (PR #1108) You can show them again by going to
 Tools-&gt;Options-&gt;Modem and selecting “Enable Legacy
 Modes”.</em></p>
-<h2 data-number="18.2" id="v2.1.0-november-2025"><span
-class="header-section-number">18.2</span> V2.1.0 November 2025</h2>
-<ol type="1">
-<li>Bugfixes:
-<ul>
-<li>Clean up wxWidgets warnings in Audio Config window. (PR #1044)</li>
-<li>Fix CAT control and frequency formatting problems on non-English
-computers. (PR #1050)</li>
-<li>Clean up ThreadSanitizer warnings in codebase. (PR #1053)</li>
-<li>Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR
-#1061)</li>
-<li>Divide displayed TX Attenuation level by 10 on startup. (PR
-#1060)</li>
-<li>Fix issue preventing FreeDV Reporter from properly being restored to
-the correct display. (PR #1055)</li>
-<li>Fix intermittent FreeDV Reporter related crash on Windows. (PR
-#1075)</li>
-<li>Update Visual Studio Redistributable to version 17 to resolve RADE
-startup crashes. (PR #1074)</li>
-</ul></li>
-<li>Enhancements:
-<ul>
-<li>Additional cleanup of code that runs in real-time. (PR #1039, #1068,
-#1077)</li>
-<li>Print error if one attempts to use a stereo WAV file instead of a
-mono one. (PR #1052)</li>
-<li>Hamlib: Add support for automatically displaying only the valid baud
-rates. (PR #1057)</li>
-<li>CPU reductions when rendering plots, especially on X11/Xwayland
-systems. (PR #1064)</li>
-<li>Add implementation of Flex waveform for Flex 6000/8000/Aurora
-series. (PR #1018, #1088)</li>
-<li>Add ka9q-radio integration for use with web-based SDRs and similar.
-(PR #1066)</li>
-<li>Support bulk updates from FreeDV Reporter server. (PR #1079)</li>
-<li>Hide Stats box by default. (PR #1081)</li>
-<li>Always allow frequency drop-down to be used, even if CAT and
-reporting are disabled. (PR #1080, #1093)</li>
-</ul></li>
-<li>Build system:
-<ul>
-<li>Add support for Thread/Undefined Behavior Sanitizer instrumentation
-on macOS and Linux builds. (PR #1075)</li>
-<li>Force all compiler warnings to be errors. (PR #1076)</li>
-<li>Enable clang-tidy scans on codebase. (PR #1086)</li>
-<li>Update CI process to enable automatic code signing of macOS and
-Linux builds. (PR #1078)</li>
-</ul></li>
-</ol>
-<h2 data-number="18.3" id="earlier-than-v2.1.0"><span
-class="header-section-number">18.3</span> Earlier than V2.1.0</h2>
+<h2 data-number="18.2" id="earlier-than-v2.2.0"><span
+class="header-section-number">18.2</span> Earlier than V2.2.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
-for more information about changes in versions prior to v1.9.0.</p>
+for more information about changes in versions prior to 2.2.0.</p>
 <h1 data-number="19" id="references"><span
 class="header-section-number">19</span> References</h1>
 <ul>
