@@ -933,6 +933,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Use Clang to build AppImages for better performance. (PR #1149)
     * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
+    * Enable profile-guided optimation for AppImages. (PR #1173)
 4. Other:
     * Remove 5.3665 MHz as a default frequency. (PR #1187)
 
