@@ -3081,24 +3081,19 @@ void MainFrame::startRxStream()
         g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
-        if (
-            wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
-            wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
+        if (g_nSoundCards == 1)
         {
-            if (g_nSoundCards == 1)
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
-                    0);
-            }
-            else
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
-            }
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
+                0);
+        }
+        else
+        {
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
         }
 
         m_newMicInFilter = m_newSpkOutFilter = false;
