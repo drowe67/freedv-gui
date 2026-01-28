@@ -927,6 +927,7 @@ void FreeDVReporterDialog::DeselectItem()
     wxDataViewItem item = m_listSpots->GetSelection();
     if (item.IsOk())
     {
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_listSpots->Unselect(item);
     }
 }
@@ -1096,6 +1097,9 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
         // Bring up tooltip for longer reporting messages if the user happened to click on that column.
         wxMouseEvent dummyEvent;
         AdjustToolTip(dummyEvent);
+
+        // For logging: make sure FreeDV Reporter information is used
+        wxGetApp().lastSelectedLoggingRow = MainApp::FREEDV_REPORTER;
     }
     else
     {

@@ -1262,7 +1262,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     uint64_t dxFreqHz = 0;
     
     auto selected = m_lastReportedCallsignListView->GetFirstSelected();
-    if (selected != -1)
+    if (wxGetApp().lastSelectedLoggingRow == MainApp::MAIN_WINDOW && selected != -1)
     {        
         // Get callsign and RX frequency
         dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
@@ -1293,7 +1293,10 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         
         log_info("Logging %s/%s at %" PRIu64 " Hz from main window drop-down list", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
     }
-    else if (m_reporterDialog != nullptr && m_reporterDialog->getSelectedCallsignInfo(dxCall, dxGrid, dxFreqHz))
+    else if (
+        m_reporterDialog != nullptr && 
+        wxGetApp().lastSelectedLoggingRow == MainApp::FREEDV_REPORTER &&
+        m_reporterDialog->getSelectedCallsignInfo(dxCall, dxGrid, dxFreqHz))
     {
         log_info("Logging %s/%s at %" PRIu64 " Hz from FreeDV Reporter", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
     }
@@ -1340,11 +1343,30 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
     auto index = m_lastReportedCallsignListView->GetFirstSelected();
     while (index != -1)
     {
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_lastReportedCallsignListView->Select(index, false);
         index = m_lastReportedCallsignListView->GetFirstSelected();
     }
     m_cboLastReportedCallsigns->SetText("");
     m_BtnCallSignReset->SetFocus();
+}
+
+void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
+{
+    wxGetApp().lastSelectedLoggingRow = MainApp::MAIN_WINDOW;
+    event.Skip();
+}
+
+void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    if (index == -1)
+    {
+        // Make sure we're not selected if no callsigns selected.
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
+        m_BtnCallSignReset->SetFocus();
+    }
+    event.Skip();
 }
 
 void MainFrame::resetStats_()
