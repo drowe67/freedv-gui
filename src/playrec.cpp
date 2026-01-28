@@ -230,13 +230,16 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
     {
         wxString dxCall;
         auto selected = m_lastReportedCallsignListView->GetFirstSelected();
-        if (selected != -1)
+        if (wxGetApp().lastSelectedLoggingRow == MainApp::MAIN_WINDOW && selected != -1)
         {        
             // Get callsign and RX frequency
             dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
             log_info("Using %s from main window drop-down list as default recording suffix", (const char*)dxCall.ToUTF8());
         }
-        else if (m_reporterDialog != nullptr && m_reporterDialog->getSelectedCallsignInfo(dxCall))
+        else if (
+            m_reporterDialog != nullptr && 
+            wxGetApp().lastSelectedLoggingRow == MainApp::FREEDV_REPORTER && 
+            m_reporterDialog->getSelectedCallsignInfo(dxCall))
         {
             log_info("Using %s from FreeDV Reporter as default recording suffix", (const char*)dxCall.ToUTF8());
         }
