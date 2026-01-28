@@ -1357,6 +1357,18 @@ void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
     event.Skip();
 }
 
+void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    if (index == -1)
+    {
+        // Make sure we're not selected if no callsigns selected.
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
+        m_BtnCallSignReset->SetFocus();
+    }
+    event.Skip();
+}
+
 void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {

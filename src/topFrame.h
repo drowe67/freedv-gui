@@ -226,6 +226,7 @@ class TopFrame : public wxFrame
         virtual void OnRightClickCallsignList(wxMouseEvent& event) { event.Skip(); }
 
         virtual void OnOpenCallsignList( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnCloseCallsignList( wxCommandEvent& event ) { event.Skip(); }
         
         void setVoiceKeyerButtonLabel_(wxString filename);
         

@@ -443,6 +443,7 @@ class MainFrame : public TopFrame
         void OnRightClickCallsignList(wxMouseEvent& event) override;
 
         void OnOpenCallsignList( wxCommandEvent& event ) override;
+        void OnCloseCallsignList( wxCommandEvent& event ) override;
         
     private:
         const wxString SNR_FORMAT_STR;
