@@ -118,14 +118,14 @@ void SocketIoClient::emit(std::string const& eventName)
 void SocketIoClient::setOnConnectFn(OnConnectionStateChangeFn fn)
 {
     enqueue_([this, fn = std::move(fn)]() {
-        onConnectFn_ = std::move(fn);
+        onConnectFn_ = fn;
     });
 }
 
 void SocketIoClient::setOnDisconnectFn(OnConnectionStateChangeFn fn)
 {
     enqueue_([this, fn = std::move(fn)]() {
-        onDisconnectFn_ = std::move(fn);
+        onDisconnectFn_ = fn;
     });
 }
 
