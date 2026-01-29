@@ -71,7 +71,9 @@ void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
 
 void SocketIoClient::on(std::string const& eventName, SioMessageReceivedFn fn)
 {
-    eventFnMap_[eventName] = std::move(fn);
+    enqueue_([this, eventName, fn = std::move(fn)]() {
+        eventFnMap_[eventName] = fn;
+    });
 }
 
 void SocketIoClient::emit(std::string const& eventName, yyjson_mut_val* params)
