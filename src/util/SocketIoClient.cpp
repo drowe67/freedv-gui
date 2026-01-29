@@ -45,9 +45,11 @@ SocketIoClient::SocketIoClient()
 SocketIoClient::~SocketIoClient()
 {
     // Clear event handlers on disconnect.
-    onConnectFn_ = nullptr;
-    onDisconnectFn_ = nullptr;
-    eventFnMap_.clear();
+    enqueue_([this]() {
+        onConnectFn_ = nullptr;
+        onDisconnectFn_ = nullptr;
+        eventFnMap_.clear();
+    });
     
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
@@ -115,12 +117,16 @@ void SocketIoClient::emit(std::string const& eventName)
 
 void SocketIoClient::setOnConnectFn(OnConnectionStateChangeFn fn)
 {
-    onConnectFn_ = std::move(fn);
+    enqueue_([this, fn = std::move(fn)]() {
+        onConnectFn_ = std::move(fn);
+    });
 }
 
 void SocketIoClient::setOnDisconnectFn(OnConnectionStateChangeFn fn)
 {
-    onDisconnectFn_ = std::move(fn);
+    enqueue_([this, fn = std::move(fn)]() {
+        onDisconnectFn_ = std::move(fn);
+    });
 }
 
 void SocketIoClient::onConnect_()
@@ -253,10 +259,12 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
 void SocketIoClient::fireEvent(std::string const& eventName, yyjson_val* params)
 {
-    if (eventFnMap_[eventName])
-    {
-        (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
-    }
+    enqueue_([this, eventName, params]() {
+        if (eventFnMap_[eventName])
+        {
+            (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
+        }
+    });
 }
 
 void SocketIoClient::handleSocketIoMessage_(char* ptr, int)

@@ -1028,6 +1028,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     terminating_ = false;
     realigned_ = false;
+    syncState_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -2169,7 +2170,8 @@ void MainFrame::performFreeDVOn_()
     g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
-    
+    syncState_ = false;
+
     executeOnUiThreadAndWait_([&]() 
     {
         // Zero out spectrum plots
