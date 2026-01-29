@@ -259,12 +259,10 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
 void SocketIoClient::fireEvent(std::string const& eventName, yyjson_val* params)
 {
-    enqueue_([this, eventName, params]() {
-        if (eventFnMap_[eventName])
-        {
-            (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
-        }
-    });
+    if (eventFnMap_[eventName])
+    {
+        (eventFnMap_[eventName])(params); // eventArgs is nullptr if not provided
+    }
 }
 
 void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
@@ -289,20 +287,22 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
             yyjson_doc* eventDoc = yyjson_read(ptr + 1, strlen(ptr + 1), 0);
             if (eventDoc != nullptr)
             {
-                yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
-                yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
-                yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
+                enqueue_([this, eventDoc]() {
+                    yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
+                    yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
+                    yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
-                if (eventName != nullptr)
-                {
-                    auto eventStr = yyjson_get_str(eventName);
-                    if (eventStr != nullptr)
+                    if (eventName != nullptr)
                     {
-                        std::string eventNameStr = yyjson_get_str(eventName);
-                        fireEvent(eventNameStr, eventArgs);
+                        auto eventStr = yyjson_get_str(eventName);
+                        if (eventStr != nullptr)
+                        {
+                            std::string eventNameStr = yyjson_get_str(eventName);
+                            fireEvent(eventNameStr, eventArgs);
+                        }
                     }
-                }
-                yyjson_doc_free(eventDoc);
+                    yyjson_doc_free(eventDoc);
+                });
             }
             break;
         }
