@@ -406,11 +406,19 @@ void HamlibRigController::connectImpl_()
         // However, only do so if the default timeout is larger than 625ms and if
         // not using FLrig/rigctld (as the latter have their own timeout mechanism).
         const char* MAX_TIMEOUT = "625";
-        char currentTimeout[1024];
-        result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), currentTimeout);
+        const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
+        constexpr int TIMEOUT_BUF_LEN = 1024;
+        char currentTimeout[TIMEOUT_BUF_LEN];
+#if defined(HAMLIB_USE_FRIENDLY_ERRORS)
+        // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
+        // causes compile errors in FreeDV due to -Werror.
+        result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
+#else
+        result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
+#endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
         if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "Hamlib NET rigctl"))
         {
-            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout"), MAX_TIMEOUT);
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
         }
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
