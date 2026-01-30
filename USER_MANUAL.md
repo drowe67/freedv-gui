@@ -877,9 +877,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V2.2.1 TBD 2026
 
-1. Bugfixes
+1. Bugfixes:
     * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200)
     * Fix compile error when trying to use Hamlib 5.0-git. (PR #1202)
+2. Build system:
+    * macOS: Fix dylibbundler call for compilation. (PR #1204)
 
 ## V2.2.0 January 2026
 
