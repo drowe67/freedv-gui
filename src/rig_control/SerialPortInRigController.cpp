@@ -31,6 +31,7 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
     , ctsPos_(ctsPos)
     , currentPttInputState_(false)
     , firstPoll_(true)
+    , suspendChanges_(false)
 {
     // Perform required initialization on successful connection.
     onRigConnected += [&](IRigController*) {
