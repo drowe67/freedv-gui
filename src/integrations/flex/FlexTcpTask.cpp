@@ -233,7 +233,7 @@ void FlexTcpTask::createWaveform_(std::string const& name, std::string const& sh
 
             // Link waveform to our UDP audio stream.
             std::stringstream ss;
-            ss << "udpport " << vitaPort_;
+            ss << "udpport=" << vitaPort_;
             sendRadioCommand_(setPrefix + ss.str().c_str());
         }
     });
