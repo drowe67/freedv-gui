@@ -526,10 +526,17 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
             resetIcomCIVStatus_();
             
-            auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-            auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-            updateHamlibSerialRates_(minBaudRate, maxBaudRate);
-            
+            auto selected = m_cbRigName->GetCurrentSelection();
+            if (selected >= 0)
+            {
+                auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(selected);
+                auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(selected);
+                updateHamlibSerialRates_(minBaudRate, maxBaudRate);
+            }
+            else
+            {
+                updateHamlibSerialRates_();
+            }
             m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
@@ -650,9 +657,17 @@ void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent&)
 {
     resetIcomCIVStatus_();
     
-    auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-    auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-    updateHamlibSerialRates_(minBaudRate, maxBaudRate);
+    auto selected = m_cbRigName->GetCurrentSelection();
+    if (selected >= 0)
+    {
+        auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(selected);
+        auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(selected);
+        updateHamlibSerialRates_(minBaudRate, maxBaudRate);
+    }
+    else
+    {
+        updateHamlibSerialRates_();
+    }
 }
 
 void EasySetupDialog::resetIcomCIVStatus_()

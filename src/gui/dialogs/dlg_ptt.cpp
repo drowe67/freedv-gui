@@ -572,10 +572,17 @@ void ComPortsDlg::ExchangeData(int inout)
         m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
         m_cbPttSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort);
         
-        auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-        auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-        populateBaudRateList(minBaudRate, maxBaudRate);
-
+        auto selected = m_cbRigName->GetCurrentSelection();
+        if (selected >= 0)
+        {
+            auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(selected);
+            auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(selected);
+            populateBaudRateList(minBaudRate, maxBaudRate);
+        }
+        else
+        {
+            populateBaudRateList();
+        }
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
             m_cbSerialRate->SetSelection(0);
         } else {
@@ -931,9 +938,17 @@ void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent&)
 {
     resetIcomCIVStatus();
     
-    auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-    auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(m_cbRigName->GetCurrentSelection());
-    populateBaudRateList(minBaudRate, maxBaudRate);
+    auto selected = m_cbRigName->GetCurrentSelection();
+    if (selected >= 0)
+    {
+        auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(selected);
+        auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(selected);
+        populateBaudRateList(minBaudRate, maxBaudRate);
+    }
+    else
+    {
+        populateBaudRateList();
+    }
 }
 
 void ComPortsDlg::resetIcomCIVStatus()
