@@ -32,14 +32,12 @@
 class ReportingController : public ThreadedObject
 {
 public:
-    ReportingController(std::string softwareName, bool rxOnly = false);
-    virtual ~ReportingController()
-    {
-        waitForAllTasksComplete_();
-    }
+    ReportingController(std::string softwareName, bool rxOnly = false, bool disableReporting = false);
+    virtual ~ReportingController();
 
     void updateRadioCallsign(std::string const& newCallsign);
     void updateRadioGridSquare(std::string const& newGridSquare);
+    void updateUserMessage(std::string const& newUserMessage);
     void reportCallsign(std::string const& callsign, char snr);
     void showSelf();
     void hideSelf();
@@ -56,9 +54,11 @@ private:
 
     std::string currentGridSquare_;
     std::string radioCallsign_;
+    std::string userMessage_;
     bool userHidden_;
     uint64_t currentFreq_;
     bool rxOnly_;
+    bool reportingDisabled_;
 
     void updateReporterState_();
     std::string getVersionString_();

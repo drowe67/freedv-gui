@@ -515,40 +515,17 @@ the list and click the “Log QSO” button on the left side of the window.
 You will then see a dialog box that will let you enter any additional
 information about the contact. Upon clicking the OK button, this
 information will be transmitted to your logging tool.</p>
-<h1 data-number="9" id="multiple-mode-support"><span
-class="header-section-number">9</span> Multiple Mode Support</h1>
-<p>FreeDV can simultaneously decode the following modes when selected
-prior to pushing “Start”:</p>
-<ul>
-<li>700D/E</li>
-<li>1600</li>
-<li>RADEV1</li>
-</ul>
-<p>In addition, FreeDV can allow the user to switch between the above
-modes with the exception of RADEV1 for transmit without having to push
-“Stop” first. These features can be enabled by going to
-Tools-&gt;Options-&gt;Modem and checking the “Simultaneously Decode All
-HF Modes” option. Note that this may consume significant additional CPU
-resources, which can cause decode problems.</p>
-<p>By default, FreeDV will use as many threads/cores in parallel as
-required to decode all supported HF modes. On some slower systems, it
-may be necessary to enable the “Use single thread for multiple RX
-operation” option as well. This results in FreeDV decoding each mode in
-series and additionally short circuits the list of modes to be checked
-when in sync.</p>
-<p>Additionally, the squelch setting with simultaneous decode enabled is
-relative to the mode that supports the weakest signals (currently 700D).
-The squelch for other modes will be set to a value higher than the
-slider (which is calculated by adding the difference between the “Min
-SNR” of 700D and the mode in question; see “FreeDV Modes” below). For
-example, the squelch for 700E when the squelch slider is set to -2.0
-becomes 1.0dB. This is designed to reduce undesired pops and clicks due
-to false decodes.</p>
-<p>When using RADEV1, the squelch settings in the main window are
-ignored. Instead, FreeDV only passes decoded audio if it’s able to
-synchronize with the incoming signal.</p>
-<h1 data-number="10" id="freedv-modes"><span
-class="header-section-number">10</span> FreeDV Modes</h1>
+<p>You can also log a contact if they’re using FreeDV Reporter. Simply
+left-click on a row in the FreeDV Reporter window and then click on the
+Log QSO button. This will autofill the callsign, grid square/locator and
+frequency from the FreeDV Reporter servers in the dialog box.</p>
+<p>The last selected logging source (either the FreeDV Reporter window
+or the drop-down callsign list at the bottom of the main window) is used
+for auto-filling of logging data. This is to avoid confusion (for
+instance, if a row in the main window is selected but it’s intended to
+log from FreeDV Reporter instead).</p>
+<h1 data-number="9" id="freedv-modes"><span
+class="header-section-number">9</span> FreeDV Modes</h1>
 <p>The following table is a guide to the different modes, using analog
 SSB and Skype as anchors for a rough guide to audio quality:</p>
 <table>
@@ -572,7 +549,7 @@ SSB and Skype as anchors for a rough guide to audio quality:</p>
 <td style="text-align: center;">5/10</td>
 </tr>
 <tr class="even">
-<td>1600</td>
+<td>1600 (*)</td>
 <td style="text-align: center;">4</td>
 <td style="text-align: center;">3/10</td>
 <td style="text-align: center;">low</td>
@@ -580,7 +557,7 @@ SSB and Skype as anchors for a rough guide to audio quality:</p>
 <td style="text-align: center;">4/10</td>
 </tr>
 <tr class="odd">
-<td>700D</td>
+<td>700D (*)</td>
 <td style="text-align: center;">-2</td>
 <td style="text-align: center;">4/10</td>
 <td style="text-align: center;">high</td>
@@ -588,7 +565,7 @@ SSB and Skype as anchors for a rough guide to audio quality:</p>
 <td style="text-align: center;">3/10</td>
 </tr>
 <tr class="even">
-<td>700E</td>
+<td>700E (*)</td>
 <td style="text-align: center;">1</td>
 <td style="text-align: center;">7/10</td>
 <td style="text-align: center;">medium</td>
@@ -613,6 +590,12 @@ SSB and Skype as anchors for a rough guide to audio quality:</p>
 </tr>
 </tbody>
 </table>
+<p>(Note: Modes denoted by (*) above are considered “legacy” modes.
+These modes are hidden by default and RADEV1 automatically selected as
+RADEV1’s speech quality and resillence to band conditions are superior
+to the other modes. However, usage of the legacy modes is still possible
+by going to Tools-&gt;Options-&gt;Modem and selecting “Enable Legacy
+Modes.)</p>
 <p>The Min SNR is roughly the SNR where you cannot converse without
 repeating yourself. The numbers above are on channels without fading
 (AWGN channels like VHF radio). For fading channels the minimum SNR is a
@@ -623,8 +606,37 @@ use of large Forward Error Correction (FEC) codes. They buffer many
 frames of speech, which combined with PC sound card buffering results in
 end-to-end latencies of 1-2 seconds. They may take a few seconds to sync
 at the start of an over, especially in fading channels.</p>
-<h2 data-number="10.1" id="freedv-700d"><span
-class="header-section-number">10.1</span> FreeDV 700D</h2>
+<h2 data-number="9.1" id="multiple-mode-support"><span
+class="header-section-number">9.1</span> Multiple Mode Support</h2>
+<p>FreeDV can simultaneously decode the following modes when selected
+prior to pushing “Start”:</p>
+<ul>
+<li>700D</li>
+<li>700E</li>
+<li>1600</li>
+</ul>
+<p>In addition, FreeDV can allow the user to switch between the above
+modes for transmit without having to push “Stop” first. These features
+can be enabled by going to Tools-&gt;Options-&gt;Modem and checking the
+“Simultaneously Decode All HF Modes” option. Note that this may consume
+significant additional CPU resources, which can cause decode
+problems.</p>
+<p>By default, FreeDV will use as many threads/cores in parallel as
+required to decode all supported HF modes. On some slower systems, it
+may be necessary to enable the “Use single thread for multiple RX
+operation” option as well. This results in FreeDV decoding each mode in
+series and additionally short circuits the list of modes to be checked
+when in sync.</p>
+<p>Additionally, the squelch setting with simultaneous decode enabled is
+relative to the mode that supports the weakest signals (currently 700D).
+The squelch for other modes will be set to a value higher than the
+slider (which is calculated by adding the difference between the “Min
+SNR” of 700D and the mode in question; see “FreeDV Modes” below). For
+example, the squelch for 700E when the squelch slider is set to -2.0
+becomes 1.0dB. This is designed to reduce undesired pops and clicks due
+to false decodes.</p>
+<h2 data-number="9.2" id="freedv-700d"><span
+class="header-section-number">9.2</span> FreeDV 700D</h2>
 <p>In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful
 Forward Error Correction (FEC) and optional interleaving. It uses the
 same 700 bit/s speech codec as the deprecated 700C mode. It operates at
@@ -636,8 +648,8 @@ noise.</p>
 +/- 60Hz of the transmit frequency. This is straightforward with modern
 radios which are generally accurate to +/-1 Hz, but requires skill and
 practice when used with older, VFO based radios.</p>
-<h2 data-number="10.2" id="freedv-700e"><span
-class="header-section-number">10.2</span> FreeDV 700E</h2>
+<h2 data-number="9.3" id="freedv-700e"><span
+class="header-section-number">9.3</span> FreeDV 700E</h2>
 <p>FreeDV 700E was developed in December 2020 using lessons learned from
 on air operation of 700C and 700D. A variant of 700D, it uses a shorter
 frame size (80ms) to reduce latency and sync time. It is optimized for
@@ -658,8 +670,8 @@ pre-distortion in order to increase the RMS power. Forward error
 correction (FEC) will clean up any errors introduced by clipping, and on
 poor channels the benefits of increased signal power outweigh the slight
 reduction in SNR on good channels.</p>
-<h2 data-number="10.3" id="freedv-radev1"><span
-class="header-section-number">10.3</span> FreeDV RADEV1</h2>
+<h2 data-number="9.4" id="freedv-radev1"><span
+class="header-section-number">9.4</span> FreeDV RADEV1</h2>
 <p>RADE is a new mode with state-of-the-art performance, it is a
 contraction of Radio AutoencoDEr so-named because the modulation
 encoding uses a Machine-Learning method where the modulation and
@@ -673,10 +685,13 @@ RADEV1 modulation produces an analog phase-amplitude output without
 defined constellation points. It has been chosen as it offers a
 combination of high speech quality together with reduced RF bandwidth
 and good resistance to fading and multipath HF radio channels.</p>
-<h1 data-number="11" id="tools-menu"><span
-class="header-section-number">11</span> Tools Menu</h1>
-<h2 data-number="11.1" id="tools---filter"><span
-class="header-section-number">11.1</span> Tools - Filter</h2>
+<p>When using RADEV1, the squelch settings in the main window are
+ignored. Instead, FreeDV only passes decoded audio if it’s able to
+synchronize with the incoming signal.</p>
+<h1 data-number="10" id="tools-menu"><span
+class="header-section-number">10</span> Tools Menu</h1>
+<h2 data-number="10.1" id="tools---filter"><span
+class="header-section-number">10.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
 <table>
 <colgroup>
@@ -714,10 +729,10 @@ settings will display in this window as well.</p>
 <li><a href="http://www.rowetel.com/?p=6860">Blog Post on Auto EQ Part
 2</a></li>
 </ul>
-<h2 data-number="11.2" id="tools---options"><span
-class="header-section-number">11.2</span> Tools - Options</h2>
-<h3 data-number="11.2.1" id="modem-options"><span
-class="header-section-number">11.2.1</span> Modem Options</h3>
+<h2 data-number="10.2" id="tools---options"><span
+class="header-section-number">10.2</span> Tools - Options</h2>
+<h3 data-number="10.2.1" id="modem-options"><span
+class="header-section-number">10.2.1</span> Modem Options</h3>
 <table>
 <colgroup>
 <col style="width: 28%" />
@@ -741,8 +756,8 @@ RMS powers before using!</td>
 </tr>
 </tbody>
 </table>
-<h1 data-number="12" id="helping-improve-freedv"><span
-class="header-section-number">12</span> Helping Improve FreeDV</h1>
+<h1 data-number="11" id="helping-improve-freedv"><span
+class="header-section-number">11</span> Helping Improve FreeDV</h1>
 <p>If you have an interesting test case, for example:</p>
 <ol type="1">
 <li>FreeDV working poorly with a particular person or microphone.</li>
@@ -759,8 +774,8 @@ anecdotes or subjective reports like “FreeDV doesn’t work”, “SSB is
 better”, or “On 23 December it didn’t work well on grid location XYZ”.
 With subjective reports problems are impossible to reproduce, cannot be
 fixed, and you are unlikely to get the attention of the developers.</p>
-<h1 data-number="13" id="multiple-panes-in-gui-window"><span
-class="header-section-number">13</span> Multiple Panes in GUI
+<h1 data-number="12" id="multiple-panes-in-gui-window"><span
+class="header-section-number">12</span> Multiple Panes in GUI
 window</h1>
 <p>It is possible to have multiple panes opened within the GUI window
 for example, to observe both the Waterfall and Spectrum Tabs. New panes
@@ -786,10 +801,10 @@ has not been well tested and may have hidden bugs or other issues.</p>
 <img src="contrib/multiple_panes.png" alt="Multiple Panes" />
 <figcaption aria-hidden="true">Multiple Panes</figcaption>
 </figure>
-<h1 data-number="14" id="advanceddeveloper-features"><span
-class="header-section-number">14</span> Advanced/Developer Features</h1>
-<h2 data-number="14.1" id="stats-window"><span
-class="header-section-number">14.1</span> Stats Window</h2>
+<h1 data-number="13" id="advanceddeveloper-features"><span
+class="header-section-number">13</span> Advanced/Developer Features</h1>
+<h2 data-number="13.1" id="stats-window"><span
+class="header-section-number">13.1</span> Stats Window</h2>
 <p>Located on the lower left hand side of the main screen.</p>
 <table>
 <thead>
@@ -834,8 +849,8 @@ modulator (TX) and demodulator (RX) sample clocks. For example if the
 transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.</p>
-<h2 data-number="14.2" id="timing-delta-tab"><span
-class="header-section-number">14.2</span> Timing Delta Tab</h2>
+<h2 data-number="13.2" id="timing-delta-tab"><span
+class="header-section-number">13.2</span> Timing Delta Tab</h2>
 <p>This indicates the symbol timing estimate of the demodulator, in the
 range of +/- 0.5 of a symbol. With off air signals this will have a
 sawtooth appearance, as the demod tracks the modulator sample clock. The
@@ -846,12 +861,12 @@ Offset Bug</a></li>
 <li><a href="http://www.rowetel.com/?p=2433">Testing a FDMDV
 Modem</a></li>
 </ul>
-<h2 data-number="14.3" id="sound-card-debug"><span
-class="header-section-number">14.3</span> Sound Card Debug</h2>
+<h2 data-number="13.3" id="sound-card-debug"><span
+class="header-section-number">13.3</span> Sound Card Debug</h2>
 <p>These features were added for FreeDV 700D, to help diagnose sound
 card issues during development.</p>
-<h3 data-number="14.3.1" id="tools---options-dialog"><span
-class="header-section-number">14.3.1</span> Tools - Options dialog:</h3>
+<h3 data-number="13.3.1" id="tools---options-dialog"><span
+class="header-section-number">13.3.1</span> Tools - Options dialog:</h3>
 <p>Debug FIFO and PortAudio counters: used for debugging audio problems
 on 700D. During beta testing there were problems with break up in the
 700D TX and RX audio on Windows.</p>
@@ -884,8 +899,8 @@ TX FIFO sending samples to the TX. If this hits zero, your TX audio will
 break up and the RX will lose sync. TX audio break up will also occur if
 you see “outfifo1” being incremented on the “Fifo” line during TX. Try
 increasing the FifoSize.</p>
-<h2 data-number="14.4" id="full-duplex-testing-with-loopback"><span
-class="header-section-number">14.4</span> Full Duplex Testing with
+<h2 data-number="13.4" id="full-duplex-testing-with-loopback"><span
+class="header-section-number">13.4</span> Full Duplex Testing with
 loopback</h2>
 <p>Tools - Options - Half Duplex check box</p>
 <p>FreeDV GUI can operate in full duplex mode which is useful for
@@ -899,8 +914,8 @@ the sound cards.</p>
 
   In Tools - Audio Config - Receive Tab  - From Radio select -&gt; Loopback: Loopback PCM (hw:1,0)
                           - Transmit Tab - To Radio select   -&gt; Loopback: Loopback PCM (hw:1,1)</code></pre>
-<h2 data-number="14.5" id="experimental-features"><span
-class="header-section-number">14.5</span> Experimental Features</h2>
+<h2 data-number="13.5" id="experimental-features"><span
+class="header-section-number">13.5</span> Experimental Features</h2>
 <p>Occasionally there are some features that may be unstable or
 otherwise not ready to officially be released. To experiment with these
 features, you can go to Tools-&gt;Options-&gt;Debugging and enable
@@ -909,18 +924,19 @@ enabling this setting, it is recommended to disable it again to verify
 that an experimental feature is not causing trouble. (Additionally, if
 you’re able to confirm that an experimental feature is causing problems,
 please file a bug report!)</p>
-<h1 data-number="15" id="tips"><span
-class="header-section-number">15</span> Tips</h1>
+<h1 data-number="14" id="tips"><span
+class="header-section-number">14</span> Tips</h1>
 <ol type="1">
 <li>The space bar can be used to toggle PTT.</li>
-<li>You can left click on the main window to adjust tuning, the vertical
-red line on the frequency scale will show the current center frequency.
-FreeDV will automatically track any drift once it syncs.</li>
+<li>For modes other than RADEV1, you can left click on the main window
+to adjust tuning. The vertical red line on the frequency scale will show
+the current center frequency and FreeDV will automatically track any
+drift once it syncs.</li>
 </ol>
-<h1 data-number="16" id="common-problems"><span
-class="header-section-number">16</span> Common Problems</h1>
-<h2 data-number="16.1" id="freedv-sets-radio-to-wrong-mode"><span
-class="header-section-number">16.1</span> FreeDV Sets Radio To Wrong
+<h1 data-number="15" id="common-problems"><span
+class="header-section-number">15</span> Common Problems</h1>
+<h2 data-number="15.1" id="freedv-sets-radio-to-wrong-mode"><span
+class="header-section-number">15.1</span> FreeDV Sets Radio To Wrong
 Mode</h2>
 <p>By default, FreeDV attempts to set the radio’s mode to DIGU/USB-D (or
 LSB equivalent for 40 meters and below). Some radios do not support data
@@ -931,8 +947,8 @@ LSB modes for rig control instead.</p>
 <p>Note that for best results, your radio should have all processing
 disabled if you’re using the standard USB/LSB modes. This disabling of
 processing typically takes place when using data mode.</p>
-<h2 data-number="16.2" id="overdriving-transmit-level"><span
-class="header-section-number">16.2</span> Overdriving Transmit
+<h2 data-number="15.2" id="overdriving-transmit-level"><span
+class="header-section-number">15.2</span> Overdriving Transmit
 Level</h2>
 <p>This is a very common problem for first time FreeDV users. Adjust
 your transmit levels so the ALC is just being nudged. More power is not
@@ -940,9 +956,9 @@ better with FreeDV. An overdriven signal will have poor SNR at the
 receiver. For FreeDV 700D/700E operation with the clipper, make sure
 your transmitter can sustain high average power levels without damage
 (e.g. 40W RMS on a 100W PEP radio).</p>
-<h2 data-number="16.3"
+<h2 data-number="15.3"
 id="i-cant-set-up-freedv-especially-the-sound-cards"><span
-class="header-section-number">16.3</span> I can’t set up FreeDV,
+class="header-section-number">15.3</span> I can’t set up FreeDV,
 especially the Sound Cards</h2>
 <p>This can be challenging the first time around:</p>
 <ol type="1">
@@ -952,9 +968,9 @@ especially the Sound Cards</h2>
 mailing list. Be specific about the hardware you have and the exact
 nature of your problem.</p></li>
 </ol>
-<h2 data-number="16.4"
+<h2 data-number="15.4"
 id="hamlib-does-not-work-with-my-icom-radio"><span
-class="header-section-number">16.4</span> Hamlib does not work with my
+class="header-section-number">15.4</span> Hamlib does not work with my
 Icom radio</h2>
 <p>The most common issue with Icom radios is that the CI-V address
 configured in FreeDV does not match the address configured in the radio.
@@ -964,9 +980,9 @@ Transceive” option is enabled on the radio or else the radio will not
 respond to requests directed to that address.</p>
 <p>On newer radios (e.g. 7300, 7610), you may also need to set “CI-V USB
 Echo Back” to ON as this may be set to OFF by default.</p>
-<h2 data-number="16.5"
+<h2 data-number="15.5"
 id="hamlib-seems-not-reliable-on-my-linux-machine"><span
-class="header-section-number">16.5</span> Hamlib seems not reliable on
+class="header-section-number">15.5</span> Hamlib seems not reliable on
 my Linux machine</h2>
 <p>Some Linux distributions come with pre-installed software that may
 try to use serial ports that your radio creates. You may have problems
@@ -988,9 +1004,9 @@ radio.</p>
 <pre><code>sudo systemctl stop ModemManager
 sudo systemctl disable ModemManager
 sudo systemctl mask ModemManager</code></pre>
-<h2 data-number="16.6"
+<h2 data-number="15.6"
 id="i-need-help-with-my-radio-or-rig-interface"><span
-class="header-section-number">16.6</span> I need help with my radio or
+class="header-section-number">15.6</span> I need help with my radio or
 rig interface</h2>
 <p>There are many radios, many computers, and many sound cards. It is
 impossible to test them all. Many radios have intricate menus with
@@ -998,8 +1014,8 @@ custom settings. It is unreasonable to expect the authors of FreeDV to
 have special knowledge of your exact hardware.</p>
 <p>However someone may have worked through the same problem as you. Ask
 on the digital voice mailing list.</p>
-<h2 data-number="16.7" id="cant-hear-anything-on-receive"><span
-class="header-section-number">16.7</span> Can’t hear anything on
+<h2 data-number="15.7" id="cant-hear-anything-on-receive"><span
+class="header-section-number">15.7</span> Can’t hear anything on
 receive</h2>
 <p>Many FreeDV modes will not play any audio if there is no valid
 signal. You may also have squelch set too high. In some modes the
@@ -1007,8 +1023,8 @@ signal. You may also have squelch set too high. In some modes the
 from the SSB radio.</p>
 <p>Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.</p>
-<h2 data-number="16.8" id="hearing-myself-whenever-i-transmit"><span
-class="header-section-number">16.8</span> Hearing myself whenever I
+<h2 data-number="15.8" id="hearing-myself-whenever-i-transmit"><span
+class="header-section-number">15.8</span> Hearing myself whenever I
 transmit</h2>
 <p>Verify audio device settings in FreeDV. If your audio settings are
 correct, there are a few other possibilities:</p>
@@ -1018,23 +1034,23 @@ devices used with FreeDV.</li>
 <li>Turn off TX monitoring (right-click on PTT button and make sure
 “Monitor transmitted audio” is unchecked).</li>
 </ol>
-<h2 data-number="16.9"
+<h2 data-number="15.9"
 id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span
-class="header-section-number">16.9</span> The signal is strong but
+class="header-section-number">15.9</span> The signal is strong but
 FreeDV won’t get sync and decode</h2>
 <p>Do you have the correct sideband? See USB or LSB section.</p>
 <p>Is it a FreeDV signal? SSTV uses similar frequencies. To understand
 what FreeDV sounds like, see the Test Wave Files section.</p>
-<h2 data-number="16.10" id="trouble-getting-sync-with-700d"><span
-class="header-section-number">16.10</span> Trouble getting Sync with
+<h2 data-number="15.10" id="trouble-getting-sync-with-700d"><span
+class="header-section-number">15.10</span> Trouble getting Sync with
 700D</h2>
 <p>You need to be within +/- 60 Hz on the transmit signal. It helps if
 both the TX and RX stations tune to known, exact frequencies such as
 exactly 7.177MHz. On channels with fast fading sync may take a few
 seconds.</p>
-<h2 data-number="16.11"
+<h2 data-number="15.11"
 id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span
-class="header-section-number">16.11</span> PTT doesn’t work. It works
+class="header-section-number">15.11</span> PTT doesn’t work. It works
 with Fldigi and other Hamlib applications.</h2>
 <p>Many people struggle with initial CAT control and PTT setup:</p>
 <ol type="1">
@@ -1050,9 +1066,9 @@ you a member of the <code>dialout</code> group?</p></li>
 hardware, what you have tried, and the exact nature of the
 problem.</p></li>
 </ol>
-<h2 data-number="16.12"
+<h2 data-number="15.12"
 id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span
-class="header-section-number">16.12</span> I’m on Windows and serial
+class="header-section-number">15.12</span> I’m on Windows and serial
 port PTT doesn’t work with my USB to serial adapter.</h2>
 <p>Please verify that you are running the correct drivers for the USB to
 serial adapter that you’re using. Information and download links for the
@@ -1072,22 +1088,22 @@ for instructions on doing so in Windows 10. For Windows 8:</p>
 <li>Check the “automatically get the device app” option, then click Save
 changes to save the settings you just chose.</li>
 </ol>
-<h2 data-number="16.13"
+<h2 data-number="15.13"
 id="i-installed-a-new-version-and-freedv-stopped-working"><span
-class="header-section-number">16.13</span> I installed a new version and
+class="header-section-number">15.13</span> I installed a new version and
 FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools -
 Restore Defaults. Set up your sound cards again with Tools - Audio
 Config.</p>
-<h2 data-number="16.14" id="freedv-crashes-when-i-press-start"><span
-class="header-section-number">16.14</span> FreeDV crashes when I press
+<h2 data-number="15.14" id="freedv-crashes-when-i-press-start"><span
+class="header-section-number">15.14</span> FreeDV crashes when I press
 Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB
 audio devices without pressing Tools - Audio Config, FreeDV may crash.
 See Changing Audio Devices above.</p>
-<h2 data-number="16.15"
+<h2 data-number="15.15"
 id="freedv-cant-be-opened-on-macos-because-the-developer-cannot-be-verified"><span
-class="header-section-number">16.15</span> FreeDV can’t be opened on
+class="header-section-number">15.15</span> FreeDV can’t be opened on
 macOS because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all macOS
 applications. While official releases of FreeDV are signed, other types
@@ -1103,16 +1119,16 @@ execute FreeDV, run the following from Terminal:</p>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
-<h2 data-number="16.16"
+<h2 data-number="15.16"
 id="im-on-a-mac-and-my-preferred-audio-device-isnt-appearing"><span
-class="header-section-number">16.16</span> I’m on a Mac and my preferred
+class="header-section-number">15.16</span> I’m on a Mac and my preferred
 audio device isn’t appearing</h2>
 <p>macOS has a longstanding issue that prevents certain audio devices
 from appearing. More info <a
 href="http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html">here</a>.</p>
-<h2 data-number="16.17"
+<h2 data-number="15.17"
 id="freedv-doesnt-preserve-window-positions-on-linux"><span
-class="header-section-number">16.17</span> FreeDV doesn’t preserve
+class="header-section-number">15.17</span> FreeDV doesn’t preserve
 window positions on Linux</h2>
 <p>Many Linux distributions are switching away from X11 and towards a
 new GUI system known as Wayland. Wayland explicitly does not support
@@ -1121,14 +1137,14 @@ compositor to control window positioning. You can force use of X11 via
 the Xwayland compatibility layer by adding <code>GDK_BACKEND=x11</code>
 to your environment to regain the ability to preserve window positioning
 if desired.</p>
-<h1 data-number="17" id="converting-this-document-to-pdf"><span
-class="header-section-number">17</span> Converting this document to
+<h1 data-number="16" id="converting-this-document-to-pdf"><span
+class="header-section-number">16</span> Converting this document to
 PDF</h1>
 <p>For the Linux inclined:</p>
 <pre><code>$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf &quot;-fmarkdown-implicit_figures -o&quot; \
 --from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso</code></pre>
-<h1 data-number="18" id="glossary"><span
-class="header-section-number">18</span> Glossary</h1>
+<h1 data-number="17" id="glossary"><span
+class="header-section-number">17</span> Glossary</h1>
 <table>
 <colgroup>
 <col style="width: 7%" />
@@ -1157,22 +1173,59 @@ speech codec bits</td>
 </tr>
 </tbody>
 </table>
-<h1 data-number="19" id="release-notes"><span
-class="header-section-number">19</span> Release Notes</h1>
-<h2 data-number="19.1" id="v2.2.0-tbd-tbd"><span
-class="header-section-number">19.1</span> V2.2.0 TBD TBD</h2>
+<h1 data-number="18" id="release-notes"><span
+class="header-section-number">18</span> Release Notes</h1>
+<h2 data-number="18.1" id="v2.2.1-tbd-2026"><span
+class="header-section-number">18.1</span> V2.2.1 TBD 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
+<li>Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)</li>
+<li>Fix compile error when trying to use Hamlib 5.0-git. (PR #1202)</li>
+<li>Fix bug causing PTT input to be initially ignored until pushing the
+PTT button. (PR #1203)</li>
+<li>FlexRadio: Fix command format for UDP port. (PR #1205; thanks <span
+class="citation" data-cites="amcdermond">@amcdermond</span>!)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>macOS: Fix dylibbundler call for compilation. (PR #1204)</li>
+<li>macOS: Add /Applications shortcut to generated DMG. (PR #1206)</li>
+</ul></li>
+</ol>
+<h2 data-number="18.2" id="v2.2.0-january-2026"><span
+class="header-section-number">18.2</span> V2.2.0 January 2026</h2>
+<ol type="1">
+<li>Bugfixes:
+<ul>
+<li>Radio integrations:
+<ul>
+<li>KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)</li>
+<li>Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from
+former. (PR #1140)</li>
+<li>Flex: use poll() instead of select(). (PR #1143)</li>
+<li>Flex: use tanh() for audio limiting. (PR #1156)</li>
+<li>Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry
+Pi OS/Debian bookworm. (PR #1158)</li>
+<li>Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the
+waveform. (PR #1161)</li>
+<li>Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR
+#1168)</li>
+</ul></li>
+<li>FreeDV Reporter:
+<ul>
+<li>Left-align cardinal directions. (PR #1139)</li>
+<li>Defer row adds and removes until timer fires to reduce flicker. (PR
+#1162)</li>
+</ul></li>
 <li>Update VC Redistributable and suppress reboots during its
 installation. (PR #1102)</li>
 <li>Reduce RADE RX losses due to resampling. (PR #1094)</li>
 <li>Use same sample rate for both recording RX and TX. (PR #1107)</li>
 <li>Fix intermittent crash on FreeDV Reporter connection loss. (PR
-#1112, #1115)</li>
+#1112, #1115, #1178)</li>
 <li>Suppress background for fake rightmost column. (PR #1116)</li>
 <li>Emit VOX tone only when PTT is enabled. (PR #1122)</li>
-<li>KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)</li>
 <li>OmniRig: Fix crash when using Test button in CAT config dialog. (PR
 #1126)</li>
 <li>Fix hidden/clipped axis labels on plots. (PR #1110)</li>
@@ -1180,93 +1233,96 @@ installation. (PR #1102)</li>
 class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Zero out waterfall when transmitting and not in full duplex. (PR
 #1136)</li>
-<li>Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from
-former. (PR #1140)</li>
 <li>Avoid data race when terminating application. (PR #1140)</li>
-<li>FreeDV Reporter: left-align cardinal directions. (PR #1139)</li>
+<li>Fix issue saving frequency list on non-English systems. (PR
+#1152)</li>
+<li>Suspend PTT input changes while transitioning TX&lt;-&gt;RX. (PR
+#1151)</li>
+<li>Fix memory corruption when stopping and starting different playback
+files. (PR #1157)</li>
+<li>Update unit test infrastructure to fix initial (within ~2-3s) RADE
+desyncs. (PR #1167)</li>
+<li>Windows: disable microphone check on start. (PR #1191)</li>
+<li>UdpHandler: fix crash when unable to resolve DNS. (PR #1193)</li>
+<li>Prevent reset of FreeDV Reporter connection while running. (PR
+#1193)</li>
+<li>Disable UDP Reporting checkbox when running. (PR #1193)</li>
+<li>Fix waterfall rendering issue with multiple plots displayed at once.
+(PR #1193)</li>
+<li>Fix inconsistent behavior when selecting/deselecting rows from the
+main window drop-down list. (PR #1184)</li>
+<li>OmniRig: Don’t suppresss frequency updates on initial connect. (PR
+#1184)</li>
+<li>Hamlib: increase timeout to 625ms. (PR #1195)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
-<li>Upgrade Python to 3.14.2. (PR #1109, #1118, #1124)</li>
-<li>Flex: Report FreeDV SNR using SmartSDR Meter API. (PR #1119)</li>
+<li>FlexRadio support:
+<ul>
+<li>Report FreeDV SNR using SmartSDR Meter API. (PR #1119)</li>
+<li>Use random port for VITA socket after connect. (PR #1141)</li>
+<li>Allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) -
+thanks <span class="citation"
+data-cites="arodland">@arodland</span>!</li>
+<li>Allow FreeDV Reporter parameters to be overridden via command line.
+(PR #1154)</li>
+<li>Add command line option to adjust RX volume. (PR #1159)</li>
+<li>Allow user-configurable spot timeout (default 10 minutes). (PR
+#1169)</li>
+<li>Report SNR in spots added to SmartSDR. (PR #1179)</li>
+</ul></li>
+<li>KA9Q/SDR support:
+<ul>
+<li>Allow user message to be reported to FreeDV Reporter. (PR
+#1179)</li>
+</ul></li>
+<li>FreeDV Reporter:
+<ul>
+<li>Allow columns to be rearranged and/or made invisible. (PR
+#1132)</li>
+<li>Sort empty user messages below non-empty ones. (PR #1105)</li>
+<li>Add idle filter. (PR #1142, #1180, #1183, #1189)</li>
+<li>Add right-click menu for callsign lookups. (PR #1171, #1185)</li>
+<li>Add filtered indicator to bottom of window. (PR #1166)</li>
+</ul></li>
+<li>Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)</li>
 <li>Add support for BBWENet bandwidth expander for received RADE audio.
 (PR #1113)</li>
 <li>Reduce CPU usage rendering “scalar” plots (i.e. From Mic). (PR
 #1133)</li>
-<li>FreeDV Reporter: Allow columns to be rearranged and/or made
-invisible. (PR #1132)</li>
-<li>FreeDV Reporter: Sort empty user messages below non-empty ones. (PR
-#1105)</li>
 <li>Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106)
 - thanks <span class="citation"
 data-cites="NespaLa">@NespaLa</span>!</li>
 <li>Hamlib: Allow selection of baud rates greater than 115200. (PR
 #1125)</li>
 <li>Add support for loggers that support the WSJT-X networking protocol.
-(PR #1129)</li>
-<li>Flex: use random port for VITA socket after connect. (PR #1141)</li>
+(PR #1129, #1153, #1184, #1196)</li>
+<li>Add support for recording decoded audio. (PR #1145, #1184)</li>
+<li>Display Hamlib version in Help-&gt;About. (PR #1169)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>Use Clang to build AppImages for better performance. (PR #1149)</li>
+<li>Enable link-time optimization for AppImages, DMGs and Windows
+builds. (PR #1163)</li>
+<li>Enable profile-guided optimation for AppImages. (PR #1173)</li>
+</ul></li>
+<li>Other:
+<ul>
+<li>Remove 5.3665 MHz as a default frequency. (PR #1187)</li>
 </ul></li>
 </ol>
 <p><em>Note: Legacy modes (700D, 700E, 1600) are now hidden by default.
 (PR #1108) You can show them again by going to
 Tools-&gt;Options-&gt;Modem and selecting “Enable Legacy
 Modes”.</em></p>
-<h2 data-number="19.2" id="v2.1.0-november-2025"><span
-class="header-section-number">19.2</span> V2.1.0 November 2025</h2>
-<ol type="1">
-<li>Bugfixes:
-<ul>
-<li>Clean up wxWidgets warnings in Audio Config window. (PR #1044)</li>
-<li>Fix CAT control and frequency formatting problems on non-English
-computers. (PR #1050)</li>
-<li>Clean up ThreadSanitizer warnings in codebase. (PR #1053)</li>
-<li>Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR
-#1061)</li>
-<li>Divide displayed TX Attenuation level by 10 on startup. (PR
-#1060)</li>
-<li>Fix issue preventing FreeDV Reporter from properly being restored to
-the correct display. (PR #1055)</li>
-<li>Fix intermittent FreeDV Reporter related crash on Windows. (PR
-#1075)</li>
-<li>Update Visual Studio Redistributable to version 17 to resolve RADE
-startup crashes. (PR #1074)</li>
-</ul></li>
-<li>Enhancements:
-<ul>
-<li>Additional cleanup of code that runs in real-time. (PR #1039, #1068,
-#1077)</li>
-<li>Print error if one attempts to use a stereo WAV file instead of a
-mono one. (PR #1052)</li>
-<li>Hamlib: Add support for automatically displaying only the valid baud
-rates. (PR #1057)</li>
-<li>CPU reductions when rendering plots, especially on X11/Xwayland
-systems. (PR #1064)</li>
-<li>Add implementation of Flex waveform for Flex 6000/8000/Aurora
-series. (PR #1018, #1088)</li>
-<li>Add ka9q-radio integration for use with web-based SDRs and similar.
-(PR #1066)</li>
-<li>Support bulk updates from FreeDV Reporter server. (PR #1079)</li>
-<li>Hide Stats box by default. (PR #1081)</li>
-<li>Always allow frequency drop-down to be used, even if CAT and
-reporting are disabled. (PR #1080, #1093)</li>
-</ul></li>
-<li>Build system:
-<ul>
-<li>Add support for Thread/Undefined Behavior Sanitizer instrumentation
-on macOS and Linux builds. (PR #1075)</li>
-<li>Force all compiler warnings to be errors. (PR #1076)</li>
-<li>Enable clang-tidy scans on codebase. (PR #1086)</li>
-<li>Update CI process to enable automatic code signing of macOS and
-Linux builds. (PR #1078)</li>
-</ul></li>
-</ol>
-<h2 data-number="19.3" id="earlier-than-v2.1.0"><span
-class="header-section-number">19.3</span> Earlier than V2.1.0</h2>
+<h2 data-number="18.3" id="earlier-than-v2.2.0"><span
+class="header-section-number">18.3</span> Earlier than V2.2.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
-for more information about changes in versions prior to v1.9.0.</p>
-<h1 data-number="20" id="references"><span
-class="header-section-number">20</span> References</h1>
+for more information about changes in versions prior to 2.2.0.</p>
+<h1 data-number="19" id="references"><span
+class="header-section-number">19</span> References</h1>
 <ul>
 <li><a href="http://freedv.org">FreeDV Web site</a></li>
 <li><a

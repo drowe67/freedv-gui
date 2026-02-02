@@ -612,6 +612,9 @@ void ComPortsDlg::ExchangeData(int inout)
     }
 
     if (inout == EXCHANGE_DATA_OUT) {
+        // Reset PTT delay as it may be different with the new configuration
+        wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = 0;
+
         wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
 
         /* Hamlib settings. */

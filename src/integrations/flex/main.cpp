@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <getopt.h>
+
 #include <map>
 #include <chrono>
 #include <thread>
@@ -28,6 +30,7 @@
 #include <sstream>
 #include <cinttypes>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "flex_defines.h"
 #include "FlexVitaTask.h"
@@ -40,6 +43,7 @@
 #include "../reporting/FreeDVReporter.h"
 
 #include "rade_api.h"
+#include "git_version.h"
 
 extern "C" 
 {
@@ -54,6 +58,14 @@ using namespace std::chrono_literals;
 
 std::atomic<int> g_tx;
 bool endingTx;
+bool exitingApplication;
+int spotTimeoutSeconds = 600; // 10 minute default
+
+void OnSignalExit(int)
+{
+    // Infinite loop at bottom will check for this and trigger cleanup
+    exitingApplication = true;
+}
 
 struct CallsignReporting
 {
@@ -69,18 +81,146 @@ void ReportReceivedCallsign(rade_text_t, const char *txt_ptr, int length, void *
     if (txt_ptr != nullptr && length > 0)
     {
         std::string callsign(txt_ptr, length);
+        auto snr = reportObj->rxThread->getSnr();
 
         if (reportObj->reporter != nullptr)
         {
-            reportObj->reporter->reportCallsign(callsign, reportObj->rxThread->getSnr());
+            reportObj->reporter->reportCallsign(callsign, snr);
         }
 
-        reportObj->tcpTask->addSpot(callsign);
+        reportObj->tcpTask->addSpot(callsign, snr, spotTimeoutSeconds);
     }
 }
 
-int main(int, char**)
+void printUsage(char* appName)
 {
+    log_info("Usage: %s [-d|--disable-reporting] [-l|--reporting-locator LOCATOR] [-m|--reporting-message MESSAGE] [-r|--rx-volume DB] [-t|--spot-timeout SEC] [-h|--help] [-v|--version]", appName);
+    log_info("    -d|--disable-reporting: Disables FreeDV Reporter reporting.");
+    log_info("    -l|--reporting-locator: Overrides grid square/locator from radio for FreeDV Reporter reporting.");
+    log_info("    -m|--reporting-message: Sets reporting message for FreeDV Reporter reporting.");
+    log_info("    -r|--rx-volume: Increases or decreases receive volume by the provided dB figure.");
+    log_info("    -t|--spot-timeout: Timeout for reported spots (default: 600s or 10min).");
+    log_info("    -h|--help: This help message.");
+    log_info("    -v|--version: Prints the application version and exits.");
+    log_info("");
+}
+
+int main(int argc, char** argv)
+{
+    std::string stationGridSquare;
+    std::string stationUserMessage;
+    bool disableReporting = false;
+    float volumeAdjustmentDecibel = 0.0f;
+    
+    // Print version
+    log_info("%s version %s", SOFTWARE_NAME, GetFreeDVVersion().c_str());
+    
+    // Check command line options
+    static struct option longOptions[] = {
+        {"disable-reporting",     no_argument,       0,  'd' },
+        {"reporting-locator",     required_argument, 0,  'l' },
+        {"reporting-message",     required_argument, 0,  'm' },
+        {"rx-volume",             required_argument, 0,  'r' },
+        {"spot-timeout",          required_argument, 0,  't' },
+        {"help",                  no_argument,       0,  'h' },
+        {"version",               no_argument,       0,  'v' },
+        {0,         0,                 0,  0 }
+    };
+    constexpr char shortOptions[] = "dl:m:r:t:hv";
+    
+    int optionIndex = 0;
+    int c = 0;
+    while ((c = getopt_long(argc, argv, shortOptions, longOptions, &optionIndex)) != -1) // NOLINT
+    {
+        switch(c)
+        {
+            case 'd':
+            {
+                log_info("Disabling FreeDV Reporter reporting");
+                disableReporting = true;
+                break;
+            }
+            case 'm':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Message required if specifying -m/--reporting-message.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using '%s' for FreeDV Reporter user message", optarg);
+                stationUserMessage = optarg;
+                break;
+            }
+            case 'l':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Grid square required if specifying -l/--reporting-locator.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using grid square %s for FreeDV Reporter reporting", optarg);
+                stationGridSquare = optarg;
+                break;
+            }
+            case 'r':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Adjustment level in dB required if specifying -r/--rx-volume.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                
+                char* tmp = nullptr;
+                volumeAdjustmentDecibel = strtof(optarg, &tmp);
+                if (tmp != (optarg + strlen(optarg)) || errno == ERANGE)
+                {
+                    log_error("Provided level for -r/--rx-volume must be a number.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+
+                log_info("Adjusting receive audio volume by %f dB", volumeAdjustmentDecibel);
+                break;
+            }
+            case 't':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Timeout in seconds required if specifying -t/--spot-timeout.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                
+                char* tmp = nullptr;
+                errno = 0;
+                spotTimeoutSeconds = (int)strtol(optarg, &tmp, 10);
+                if (tmp != (optarg + strlen(optarg)) || errno == ERANGE)
+                {
+                    log_error("Provided timeout for -t/--spot-timeout must be a number.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                break;
+            }
+            case 'v':
+            {
+                // Version already printed above.
+                exit(0); // NOLINT
+            }
+            case 'h':
+            default:
+            {
+                printUsage(argv[0]);
+                exit(-1); // NOLINT
+            }
+        }
+    }
+    
+    log_info("Spot timeout is %d seconds", spotTimeoutSeconds);
+    
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
     // improving performance.
@@ -90,11 +230,24 @@ int main(int, char**)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // Enable Python JIT (if version of Python supports it).
+    setenv("PYTHON_JIT", "1", 1);
     // NOLINTEND
 
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
+
+    // Override signal handlers. Needed to ensure we can properly
+    // clean up the waveform if the user wants to exit.
+    log_info("Setting up signal handlers...");
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = &OnSignalExit;
+    action.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &action, nullptr);
+    sigaction(SIGTERM, &action, nullptr);
     
     log_info("Creating RADE object");
     char modelFile[1];
@@ -128,7 +281,7 @@ int main(int, char**)
 
     // Start up VITA task so we can get the list of available radios.
     auto realtimeHelper = std::make_shared<MinimalRealtimeHelper>();
-    FlexVitaTask vitaTask(realtimeHelper);
+    FlexVitaTask vitaTask(realtimeHelper, volumeAdjustmentDecibel);
     
     std::map<std::string, std::string> radioList;
     std::mutex radioMapMutex;
@@ -178,13 +331,22 @@ int main(int, char**)
     FlexTcpTask tcpTask(vitaTask.getPort());
 
     CallsignReporting reportData;
-    ReportingController reportController(SOFTWARE_NAME);
+    ReportingController reportController(SOFTWARE_NAME, false, disableReporting);
     reportData.tcpTask = &tcpTask;
     reportData.reporter = &reportController;
     reportData.rxThread = &rxThread;
 
-    rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
-
+    if (!disableReporting)
+    {
+        rade_text_set_rx_callback(radeTextPtr, &ReportReceivedCallsign, &reportData);
+        if (stationGridSquare != "")
+        {
+            reportController.updateRadioGridSquare(stationGridSquare);
+        }
+    
+        reportController.updateUserMessage(stationUserMessage);
+    }
+ 
     // Set up reporting of actual receive state (prior to getting callsign).
     int rxCounter = 0;
     uint16_t meterMeterId = 0;
@@ -204,8 +366,11 @@ int main(int, char**)
             vitaTask.sendMeter(meterMeterId, -99);
         }        
     }, true);
-    rxNoCallsignReporting.start();
-
+    if (!disableReporting)
+    {
+        rxNoCallsignReporting.start();
+    }
+    
     tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t meterId, void*) {
         meterMeterId = meterId;
     }, nullptr);
@@ -223,7 +388,10 @@ int main(int, char**)
         reportController.updateRadioCallsign(callsign);
     }, nullptr);
     tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const& gridSquare, void*) {
-        reportController.updateRadioGridSquare(gridSquare);
+        if (stationGridSquare == "")
+        {
+            reportController.updateRadioGridSquare(gridSquare);
+        }
     }, nullptr);
     tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
         vitaTask.clearStreamIds();
@@ -261,12 +429,16 @@ int main(int, char**)
 
     tcpTask.connect(radioIp.c_str(), FLEX_TCP_PORT, true);
         
-    for(;;)
+    while (!exitingApplication)
     {
-        std::this_thread::sleep_for(3600s);
+        std::this_thread::sleep_for(100ms);
     }
     
-    // TBD - the below isn't called since we're in an infinite loop above.
+    // Stop TX/RX threads. Needed to prevent RADE calls after finalize.
+    txThread.stop();
+    rxThread.stop();
+
+    // Clean up RADE
     rade_close(radeObj);
     rade_finalize();
     return 0;

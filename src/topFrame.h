@@ -144,7 +144,6 @@ class TopFrame : public wxFrame
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
         
-        wxMenuItem* m_menuItemRecFileFromRadio;
         wxMenuItem* m_menuItemPlayFileFromRadio;
     
         // Virtual event handlers, override them in your derived class
@@ -170,7 +169,6 @@ class TopFrame : public wxFrame
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnRecFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
@@ -224,6 +222,11 @@ class TopFrame : public wxFrame
         virtual void OnNotebookPageChanging(wxAuiNotebookEvent& event) { event.Skip(); }
         
         virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
+        
+        virtual void OnRightClickCallsignList(wxMouseEvent& event) { event.Skip(); }
+
+        virtual void OnOpenCallsignList( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnCloseCallsignList( wxCommandEvent& event ) { event.Skip(); }
         
         void setVoiceKeyerButtonLabel_(wxString filename);
         

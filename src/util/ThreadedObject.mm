@@ -20,11 +20,12 @@
 //
 //=========================================================================
 
+#include <chrono>
 #include <cassert>
 
 #include "ThreadedObject.h"
 
-constexpr static int MS_TO_NSEC = 1000000;
+using namespace std::chrono_literals;
 
 ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     : parent_(parent)
@@ -44,9 +45,8 @@ ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
     
     queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
     assert(queue_ != nil);
-
-    group_ = dispatch_group_create();
-    assert(group_ != nil);
+    
+    numQueued_ = 0;
 }
 
 ThreadedObject::~ThreadedObject()
@@ -55,7 +55,6 @@ ThreadedObject::~ThreadedObject()
     waitForAllTasksComplete_();
 
     // Release GCD objects
-    dispatch_release(group_);
     dispatch_release(queue_);
 }
 
@@ -64,8 +63,10 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int) // NOLINT
     if (suppressEnqueue_.load(std::memory_order_acquire)) return;
 
     // note: timeout not implemented
-    dispatch_group_async(group_, queue_, ^() {
+    numQueued_++;
+    dispatch_async(queue_, ^() {
         fn();
+        numQueued_--;
     });
 }
 
@@ -73,8 +74,13 @@ void ThreadedObject::waitForAllTasksComplete_()
 {
     suppressEnqueue_.store(true, std::memory_order_release);
 
-    constexpr int MAX_TIME_TO_WAIT_NSEC = MS_TO_NSEC * 250;
-    dispatch_group_wait(group_, dispatch_time(DISPATCH_TIME_NOW, MAX_TIME_TO_WAIT_NSEC));
+    // We wait forever here instead of 250ms as with the non-macOS implementation
+    // since we don't have a way to just clear out the queued events in the dispatch
+    // queue after the timeout.
+    while (numQueued_ > 0)
+    {
+        std::this_thread::sleep_for(10ms);
+    }
 
     suppressEnqueue_.store(false, std::memory_order_release);
 }

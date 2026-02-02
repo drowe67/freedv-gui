@@ -162,6 +162,7 @@ extern SNDFILE            *g_sfRecFile;
 extern bool                g_recFileFromRadio;
 extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
+extern int                 g_recFileFromDecoderEventId;
 
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 extern std::atomic<bool>                g_playFileFromRadio;
@@ -192,6 +193,9 @@ wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
 std::atomic<bool> endingTx;
+
+// Running state
+std::atomic<bool> isModemRunning;
 
 // Option test file to log samples
 
@@ -330,16 +334,11 @@ void MainApp::UnitTest_()
     sim.MouseClick();*/
     
     // Wait for FreeDV to start
-    std::this_thread::sleep_for(1s);
-    while (true)
+    while (!isModemRunning.load(std::memory_order_acquire))
     {
-        bool isRunning = false;
-        frame->executeOnUiThreadAndWait_([&]() {
-            isRunning = frame->m_togBtnOnOff->IsEnabled();
-        });
-        if (isRunning) break;
         std::this_thread::sleep_for(20ms);
     }
+    std::this_thread::sleep_for(2s);
     
     constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
@@ -350,15 +349,6 @@ void MainApp::UnitTest_()
             // Fire event to begin TX
             //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             //sim.MouseClick();
-            log_info("Firing PTT");
-            CallAfter([this]() {
-                frame->m_btnTogPTT->SetValue(true);
-                wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
-                txEvent->SetEventObject(frame->m_btnTogPTT);
-                //QueueEvent(txEvent);
-                frame->OnTogBtnPTT(*txEvent);
-                delete txEvent;
-            });
             
             if (utTxFile != "")
             {
@@ -370,6 +360,16 @@ void MainApp::UnitTest_()
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn.store(true, std::memory_order_release);
 
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 int counter = 0;
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
@@ -378,6 +378,16 @@ void MainApp::UnitTest_()
             }
             else
             {
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 // Transmit for user given time period (default 60 seconds)
                 std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
             }
@@ -588,6 +598,7 @@ bool MainApp::OnInit()
     m_locale.Init();
 #endif // wxCHECK_VERSION(3,2,0)
 
+    lastSelectedLoggingRow = LastSelectedRow::UNSELECTED;
     m_reporters.clear();
     m_reportCounter = 0;
     
@@ -607,6 +618,9 @@ bool MainApp::OnInit()
  
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
+
+    // Enable Python JIT if available.
+    wxSetEnv("PYTHON_JIT", "1");
 
 #if _WIN32 || __APPLE__
     // Enable mimalloc in Python interpreter. 
@@ -1013,6 +1027,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     terminating_ = false;
     realigned_ = false;
+    syncState_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1264,6 +1279,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_dump_timing = g_dump_fifo_state = 0;
 }
 
+static std::recursive_mutex stoppingMutex;
+
 //-------------------------------------------------------------------------
 // ~MainFrame()
 //-------------------------------------------------------------------------
@@ -1340,11 +1357,14 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
-    if (m_RxRunning)
     {
-        stopRxStream();
-        freedvInterface.stop();
-    } 
+        std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
+        if (m_RxRunning)
+        {
+            stopRxStream();
+            freedvInterface.stop();
+        }  
+    }
     sox_biquad_finish();
 
     auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
@@ -1825,11 +1845,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
-        
-        if (wxGetApp().logger != nullptr && m_lastReportedCallsignListView->GetItemCount() > 0)
-        {
-            m_logQSO->Enable(true);
-        }
     
         // Run time update of EQ filters -----------------------------------
 
@@ -2154,7 +2169,8 @@ void MainFrame::performFreeDVOn_()
     g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
-    
+    syncState_ = false;
+
     executeOnUiThreadAndWait_([&]() 
     {
         // Zero out spectrum plots
@@ -2313,6 +2329,11 @@ void MainFrame::performFreeDVOn_()
     {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
+        
+        if (wxGetApp().logger != nullptr)
+        {
+            m_logQSO->Enable(true);
+        }
     });
     
     // attempt to start sound cards and tx/rx processing
@@ -2442,6 +2463,8 @@ void MainFrame::performFreeDVOn_()
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
+
+                isModemRunning.store(true, std::memory_order_release);
             }
         }
     }
@@ -2465,6 +2488,8 @@ void MainFrame::performFreeDVOff_()
     //
     // Stop Running -------------------------------------------------
     //
+
+    isModemRunning.store(false, std::memory_order_release);
 
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
@@ -2635,14 +2660,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     }
 }
 
-static std::mutex stoppingMutex;
-
 //-------------------------------------------------------------------------
 // stopRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::stopRxStream()
 {
-    std::unique_lock<std::mutex> lk(stoppingMutex);
+    std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
 
     if(m_RxRunning)
     {
@@ -3059,24 +3082,19 @@ void MainFrame::startRxStream()
         g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
-        if (
-            wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
-            wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
+        if (g_nSoundCards == 1)
         {
-            if (g_nSoundCards == 1)
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
-                    0);
-            }
-            else
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
-            }
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
+                0);
+        }
+        else
+        {
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
         }
 
         m_newMicInFilter = m_newSpkOutFilter = false;
@@ -3541,7 +3559,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         {
             tmpInput[i] = audioData[0];
         }
-        if (cbData->infifo2->write(tmpInput, size)) 
+        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
         {
             g_infifo2_full.fetch_add(1, std::memory_order_release);
         }
@@ -3596,7 +3614,7 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     {
         tmpInput[i] = audioData[0];
     }
-    if (cbData->infifo1->write(tmpInput, size)) 
+    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
     {
         g_infifo1_full.fetch_add(1, std::memory_order_release);
     }

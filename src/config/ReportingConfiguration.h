@@ -60,6 +60,9 @@ public:
     ConfigurationDataElement<std::vector<int> > freedvReporterColumnOrder;
     ConfigurationDataElement<std::vector<bool> > freedvReporterColumnVisibility;
 
+    ConfigurationDataElement<bool> freedvReporterEnableMaxIdleFilter;
+    ConfigurationDataElement<int> freedvReporterMaxIdleMinutes;
+
     ConfigurationDataElement<bool> udpReportingEnabled;
     ConfigurationDataElement<wxString> udpReportingHostname;
     ConfigurationDataElement<int> udpReportingPort;

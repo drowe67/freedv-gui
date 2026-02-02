@@ -1,7 +1,7 @@
 //==========================================================================
-// Name:            log_entry.h
-// Purpose:         Dialog for confirming log entry.
-// Created:         Dec 17, 2025
+// Name:            begin_recording.h
+// Purpose:         Dialog for setting up recordings.
+// Created:         January 4, 2026
 // Authors:         Mooneer Salem
 // 
 // License:
@@ -19,27 +19,25 @@
 //
 //==========================================================================
 
-#ifndef LOG_ENTRY_DIALOG_H
-#define LOG_ENTRY_DIALOG_H
+#ifndef BEGIN_RECORDING_DIALOG_H
+#define BEGIN_RECORDING_DIALOG_H
 
 #include "main.h"
 #include "defines.h"
 #include "../../logging/ILogger.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// Class LogEntryDialog
+// Class BeginRecordingDialog
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class LogEntryDialog : public wxDialog
+class BeginRecordingDialog : public wxDialog
 {
     public:
-        LogEntryDialog( wxWindow* parent,
-                wxWindowID id = wxID_ANY, const wxString& title = _("Confirm Log Entry"), 
-                const wxPoint& pos = wxDefaultPosition, 
-                const wxSize& size = wxSize(250,-1), 
-                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
-        virtual ~LogEntryDialog();
+        BeginRecordingDialog( wxWindow* parent, wxString const& defaultRecordingSuffix );
+        virtual ~BeginRecordingDialog();
 
-        void ShowDialog(wxString const& dxCall, wxString const& dxGrid, wxDateTime const& logTime, int64_t freqHz);
+        bool isRawRecording() const { return rawRecording_->GetValue(); }
+        wxString getRecordingSuffix() const { return recordingSuffix_->GetValue(); }
+        bool isMp3Format() const { return formatMp3_->GetValue(); }
         
     protected:
 
@@ -48,25 +46,17 @@ class LogEntryDialog : public wxDialog
         void    OnCancel(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
+        
+        void OnRecordingTypeChange(wxCommandEvent& event);
        
-        wxTextCtrl *dxCall_;
-        wxTextCtrl *dxGrid_;
-        wxStaticText *myCall_;
-        wxStaticText *myGrid_;
-        wxTextCtrl *frequency_;
-        wxStaticText* labelFrequency_;
-        wxTextCtrl *rxReport_;
-        wxTextCtrl *txReport_;
-        wxTextCtrl *name_;
-        wxTextCtrl *comments_;
-        wxStaticText* labelTimeVal_;
+        wxTextCtrl *recordingSuffix_;
+        wxRadioButton *rawRecording_;
+        wxRadioButton *decodedRecording_;
+        wxRadioButton *formatWav_;
+        wxRadioButton *formatMp3_;
 
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;
-
-     private:
-        std::shared_ptr<ILogger> logger_;
-        wxDateTime logTime_;
 };
 
-#endif // LOG_ENTRY_DIALOG_H
+#endif // BEGIN_RECORDING_DIALOG_H

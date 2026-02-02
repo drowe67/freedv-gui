@@ -273,8 +273,11 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         gc->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
     }
 
-    m_dT = DT;
-
+    if (m_dT >= 1.0)
+    {
+        m_dT = DT;
+    }
+    
     if (!repaintDataOnly)
     {
         drawGraticule(gc);

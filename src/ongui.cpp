@@ -289,7 +289,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
                 wxString newFreq = "";
                 wxString freq = m_lastReportedCallsignListView->GetItemText(index, 1);
                 double freqDouble = 0;
-                freq.ToDouble(&freqDouble);
+                wxNumberFormatter::FromString(freq, &freqDouble);
 
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                 {
@@ -307,8 +307,11 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
 
         // Initialize FreeDV Reporter if required.
-        initializeFreeDVReporter_();
-
+        if (!m_RxRunning)
+        {
+            initializeFreeDVReporter_();
+        }
+        
         // Refresh distance column label in case setting was changed.
         if (m_reporterDialog != nullptr)
         {
@@ -405,8 +408,8 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("Currently maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
-                wxT("codec2 git hash: %s\n")
-                , version, version, FREEDV_GIT_HASH, freedv_get_hash()
+                wxT("Using %s\n")
+                , version, version, FREEDV_GIT_HASH, hamlib_version
                 );
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
@@ -620,8 +623,6 @@ void MainFrame::OpenOmniRig()
         onFrequencyModeChange_(ptr, freq, mode);
     };
 
-    // Temporarily suppress frequency updates until we're fully connected.
-    suppressFreqModeUpdates_ = true;
     wxGetApp().rigFrequencyController->connect();
 }
 #endif // defined(WIN32)
@@ -898,6 +899,12 @@ void MainFrame::togglePTT(void) {
 
     if (g_tx.load(std::memory_order_acquire))
     {
+        // If PTT input is enabled, suspend further changes until after EOO is sent.
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(true);
+        }
+        
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
         log_debug("Sleeping for %d ms prior to ending TX", msSleep);
@@ -987,9 +994,12 @@ void MainFrame::togglePTT(void) {
         {
             // We only need to worry about the time getting to the radio,
             // not the time to get from the radio to us.
-            pttResponseTime = pttController->getRigResponseTimeMicroseconds() / 2;
+            pttResponseTime = std::max(
+                pttController->getRigResponseTimeMicroseconds() / 2,
+                wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds.get());
+            wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = pttResponseTime;
         }
-        
+
         auto totalPauseTime = latency + pttResponseTime;
         log_info(
             "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
@@ -1029,6 +1039,11 @@ void MainFrame::togglePTT(void) {
         }
         g_tx.store(false, std::memory_order_release);
         endingTx.store(false, std::memory_order_release);
+        
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(false);
+        }
 
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
         CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
@@ -1055,6 +1070,12 @@ void MainFrame::togglePTT(void) {
     }
     else
     {
+        // If PTT input is enabled, suspend further changes until we actually start TX.
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(true);
+        }
+        
         // rx-> tx transition, swap to Mic In page to monitor speech
         wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
         
@@ -1146,6 +1167,11 @@ void MainFrame::togglePTT(void) {
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
         wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
+        
+        if (wxGetApp().m_pttInSerialPort)
+        {
+            wxGetApp().m_pttInSerialPort->suspendChanges(false);
+        }
     }
 }
 
@@ -1230,22 +1256,26 @@ void MainFrame::OnCallSignReset(wxCommandEvent&)
 
 void MainFrame::OnLogQSO(wxCommandEvent&)
 {
-    if (m_lastReportedCallsignListView->GetItemCount() > 0)
-    {
-        auto selected = m_lastReportedCallsignListView->GetFirstSelected();
-        if (selected == -1)
-        {
-            // Default to the first/most recent entry if user hasn't explicitly selected
-            // a contact.
-            selected = 0;
-        }
-        
+    wxString dxCall;
+    wxString dxGrid;
+    wxString dxFreq;
+    wxString logTime;
+    wxDateTime logTimeObj = wxDateTime::Now();
+    double dxFreqDouble = 0;
+    uint64_t dxFreqHz = 0;
+    
+    auto selected = m_lastReportedCallsignListView->GetFirstSelected();
+    if (wxGetApp().lastSelectedLoggingRow == MainApp::MAIN_WINDOW && selected != -1)
+    {        
         // Get callsign and RX frequency
-        auto dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
-        auto dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
+        dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
+        logTime = m_lastReportedCallsignListView->GetItemText(selected, 2);
         
-        double dxFreqDouble = 0;
         wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        wxString::const_iterator end;
+        logTimeObj.ParseDateTime(logTime, &end);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
@@ -1257,16 +1287,44 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         }
         
         // If connected to FreeDV Reporter, get DX grid
-        wxString dxGrid;
-        if (m_reporterDialog != nullptr)
+        if (m_reporterDialog != nullptr && dxFreq != "")
         {
             dxGrid = m_reporterDialog->getGridSquareForCallsign(dxCall);
         }
-
-        // Show log contact dialog 
-        auto logDialog = new LogEntryDialog(this);
-        logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), (int64_t)dxFreqDouble);
+        
+        dxFreqHz = (uint64_t)dxFreqDouble;
+        
+        log_info("Logging %s/%s at %" PRIu64 " Hz from main window drop-down list", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
     }
+    else if (
+        m_reporterDialog != nullptr && 
+        wxGetApp().lastSelectedLoggingRow == MainApp::FREEDV_REPORTER &&
+        m_reporterDialog->getSelectedCallsignInfo(dxCall, dxGrid, dxFreqHz))
+    {
+        log_info("Logging %s/%s at %" PRIu64 " Hz from FreeDV Reporter", (const char*)dxCall.ToUTF8(), (const char*)dxGrid.ToUTF8(), dxFreqHz);
+    }
+    else
+    {
+        dxFreq = m_cboReportFrequency->GetValue();
+        wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            dxFreqDouble *= 1000;
+        }
+        else
+        {
+            dxFreqDouble *= 1000000;
+        }
+        
+        dxFreqHz = (uint64_t)dxFreqDouble;
+        
+        log_info("No rows selected, defaulting logging to %" PRIu64 " Hz", dxFreqHz);
+    }
+
+    // Show log contact dialog 
+    auto logDialog = new LogEntryDialog(this);
+    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz);
 }
 
 // Force manual resync, just in case demod gets stuck on false sync
@@ -1280,6 +1338,38 @@ void MainFrame::OnReSync(wxCommandEvent&)
         // the next execution of the TX/RX loop.
         g_queueResync.store(true, std::memory_order_release);
     }
+}
+
+// Deselects item on right-click
+void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    while (index != -1)
+    {
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
+        m_lastReportedCallsignListView->Select(index, false);
+        index = m_lastReportedCallsignListView->GetFirstSelected();
+    }
+    m_cboLastReportedCallsigns->SetText("");
+    m_BtnCallSignReset->SetFocus();
+}
+
+void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
+{
+    wxGetApp().lastSelectedLoggingRow = MainApp::MAIN_WINDOW;
+    event.Skip();
+}
+
+void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
+{
+    auto index = m_lastReportedCallsignListView->GetFirstSelected();
+    if (index == -1)
+    {
+        // Make sure we're not selected if no callsigns selected.
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
+        m_BtnCallSignReset->SetFocus();
+    }
+    event.Skip();
 }
 
 void MainFrame::resetStats_()

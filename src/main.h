@@ -163,6 +163,14 @@ class FreeDVReporterDialog;
 class MainApp : public wxApp
 {
     public:
+        // Indicates which row was last selected (for auto-filling during logging)
+        enum LastSelectedRow 
+        {
+            UNSELECTED,
+            MAIN_WINDOW,
+            FREEDV_REPORTER,
+        };
+
         virtual bool        OnInit();
         virtual void        OnInitCmdLine(wxCmdLineParser& parser);
         virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
@@ -171,6 +179,8 @@ class MainApp : public wxApp
 
         bool                    CanAccessSerialPort(std::string const& portName);
         
+        LastSelectedRow lastSelectedLoggingRow;
+
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         
@@ -254,27 +264,6 @@ private:
     wxCheckBox *m_cb;
 };
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// panel with custom Seconds-to-record control for record file dialog
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class MyExtraRecFilePanel : public wxPanel
-{
-public:
-    MyExtraRecFilePanel(wxWindow *parent);
-    ~MyExtraRecFilePanel()
-    {
-        wxLogDebug("Destructor\n");
-    }
-    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
-    wxString getSecondsToRecord(void)
-    {
-        wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
-        return m_secondsToRecord->GetValue();
-    }
-private:
-    wxTextCtrl *m_secondsToRecord;
-};
-
 class TxRxThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -342,6 +331,7 @@ class MainFrame : public TopFrame
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
+        void StopRecFileFromDecoder();
         
         bool isReceiveOnly();
         
@@ -377,7 +367,6 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnRecFileFromRadio( wxCommandEvent& event ) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
         
         void OnCenterRx(wxCommandEvent& event) override;
@@ -450,6 +439,11 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
+
+        void OnRightClickCallsignList(wxMouseEvent& event) override;
+
+        void OnOpenCallsignList( wxCommandEvent& event ) override;
+        void OnCloseCallsignList( wxCommandEvent& event ) override;
         
     private:
         const wxString SNR_FORMAT_STR;

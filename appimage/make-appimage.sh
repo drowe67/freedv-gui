@@ -24,6 +24,8 @@ APPDIR="$APPNAME.AppDir"
 BUILDDIR="../"
 MACH_ARCH=`uname -m`
 
+export NO_STRIP=1
+
 # Change to the directory where this script is located
 cd "$(dirname "$(realpath "$0")")"
 

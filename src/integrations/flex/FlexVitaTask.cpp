@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <future>
 #include <chrono>
 #include <cmath>
 #include <unistd.h>
@@ -30,10 +31,11 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
+const float TX_SCALE_FACTOR = expf(3.0f/20.0f * logf(10.0f));
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, float volumeAdjustmentDecibel)
     : ThreadedObject("FlexVita")
     , socket_(-1)
     , discoverySocket_(-1)
@@ -46,6 +48,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
     , inputCtr_(0)
     , samplesRequired_(0)
     , helper_(std::move(helper))
+    , volumeAdjustmentScaleFactor_(expf(volumeAdjustmentDecibel/20.0f * logf(10.0f)))
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
     assert(packetArray_ != nullptr);
@@ -66,8 +69,14 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper)
 
 FlexVitaTask::~FlexVitaTask()
 {
-    disconnect_();
-    
+    auto prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        disconnect_();
+        prom->set_value();
+    });
+    fut.wait();
+
     waitForAllTasksComplete_();
     
     delete[] packetArray_;
@@ -148,10 +157,13 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         }
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
-        // Convert short to float samples and save to packet
+        // Convert short to float samples and save to packet.
+        // Amplify signal as required.
         for (int index = 0; index < samplesRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
+            if (transmitChannel) fpSample *= TX_SCALE_FACTOR;
+            else fpSample *= volumeAdjustmentScaleFactor_;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
             uint32_t tmp = htonl(*fpSampleAsInt);
             *ptrOut++ = tmp;
@@ -218,6 +230,12 @@ void FlexVitaTask::openSocket_()
         return;
     }
 
+    const int enable = 1;
+    if (setsockopt(discoverySocket_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        log_warn("Could not set SO_REUSEADDR, other applications may not allow us to listen on the discovery port!");
+    }
+
     // Bind to discovery port (4992)
     struct sockaddr_in ourSocketAddress;
     memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
@@ -269,11 +287,14 @@ void FlexVitaTask::openSocket_()
 
 void FlexVitaTask::disconnect_()
 {
+    rxTxThreadRunning_ = false;
+    if (rxTxThread_.joinable())
+    {
+        rxTxThread_.join();
+    }
+    
     if (socket_ > 0)
     {
-        rxTxThreadRunning_ = false;
-        rxTxThread_.join();
-        
         close(socket_);
         socket_ = -1;
 
@@ -517,7 +538,6 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
-            float maxSampleValue = 1.0;
             while (i < half_num_samples)
             {
                 union {
@@ -526,12 +546,10 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
-            float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)
             {
-                audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
+                audioInput[i] = tanhf(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
             }
             if (!pendingEndTx_)
             {

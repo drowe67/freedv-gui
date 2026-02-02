@@ -5,9 +5,11 @@ OPERATING_SYSTEM=`uname`
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=${FREEDV_BINARY:-src/FreeDV.app/Contents/MacOS/FreeDV}
+    PYTHON_BINARY=${PYTHON_BINARY:-src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3}
 else
     SOX_DRIVER=alsa
-    FREEDV_BINARY=src/freedv
+    FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
+    PYTHON_BINARY=${PYTHON_BINARY:-python3}
 fi
 
 createVirtualAudioCable () {
@@ -17,7 +19,7 @@ createVirtualAudioCable () {
 
 waitForCableUp () {
     CABLE_NAME=$1
-    until (pactl list short sinks | grep -E "^[0-9]+\\s+${CABLE_NAME}\\s+")
+    until (pactl list short sinks | grep -E "^[0-9]+\\s+${CABLE_NAME}\\s+" >/dev/null)
     do
         echo "Waiting for $CABLE_NAME to come up..."
         sleep 1;
@@ -45,12 +47,9 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
 fi
 
 # Determine correct record device to retrieve TX data
-if [ "$2" == "mpp" ]; then
-    FREEDV_CONF_FILE=freedv-ctest-reporting-mpp.conf 
-else
-    FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
-fi
+FREEDV_CONF_FILE=freedv-pgo.conf 
 
+PLAY_DEVICE="$FREEDV_RADIO_TO_COMPUTER_DEVICE"
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     REC_DEVICE="$FREEDV_COMPUTER_TO_RADIO_DEVICE.monitor"
 else
@@ -77,35 +76,28 @@ else
 fi
 mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
+# Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
+if [ ! -d "$(pwd)/rade_src" ]; then
+    git clone -b main https://github.com/drowe67/radae.git rade_src
+fi
+sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
+
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" test.wav &
+    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
 else
-    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
-# Start "radio"
-if [ "$2" == "mpp" ]; then
-    TIMES_BEFORE_KILL=6
-else
-    TIMES_BEFORE_KILL=1
-fi
-python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
-RADIO_PID=$!
-
 # Start FreeDV in test mode to record TX
-if [ "$2" == "mpp" ]; then
-    TX_ARGS="-txtime 1 -txattempts 7 "
-else
-    TX_ARGS="-txtime 1 -txattempts 2 "
-fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS >tmp.log 2>&1 &
+TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 
 #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
 #fi
 
 #sleep 30 
@@ -117,24 +109,13 @@ cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
+#cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
-if [ "$1" != "" ]; then
-    FADING_DIR="$SCRIPTPATH/fading"
-
-    # Add noise to recording to test performance
-    if [ "$2" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    elif [ "$2" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    fi
-    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
-fi
-
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
 FDV_PID=$!
 
 #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
 #fi
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
@@ -148,8 +129,5 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
-
-# End radio process as it's no longer needed
-kill $RADIO_PID
 
 exit $FREEDV_EXIT_CODE

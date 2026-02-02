@@ -59,6 +59,13 @@ public:
     ConfigurationDataElement<bool> serialPTTInputPolarityCTS;
     
     ConfigurationDataElement<bool> leftChannelVoxTone;
+
+    // Not directly modifiable by the user -- this is a cached version
+    // so that the first TX after a restart of FreeDV will wait the same
+    // amount of time as during the previous run (ensuring that only the
+    // absolute first TX or the first TX after a CAT/PTT config change
+    // will have zero wait).
+    ConfigurationDataElement<int> rigResponseTimeMicroseconds;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
