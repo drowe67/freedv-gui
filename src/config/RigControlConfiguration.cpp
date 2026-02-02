@@ -64,9 +64,6 @@ void RigControlConfiguration::load(wxConfigBase* config)
     load_(config, hamlibIcomCIVAddress);
     load_(config, hamlibRigName);
 
-    // 2.1.0 -> 2.2.x migration: Remove whitespace from end of name.
-    hamlibRigName->erase(hamlibRigName->find_last_not_of(" \n\r\t") + 1);
-
     load_(config, hamlibPTTType);
     load_(config, hamlibSerialRate);
     load_(config, hamlibSerialPort);
