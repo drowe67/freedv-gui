@@ -31,7 +31,7 @@ extern int g_mode;
 extern int   g_SquelchActive;
 extern float g_SquelchLevel;
 extern int   g_analog;
-extern std::atomic<int>   g_tx;
+extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern std::atomic<bool> g_queueResync;

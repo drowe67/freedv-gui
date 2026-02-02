@@ -16,7 +16,7 @@
 extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
 extern FreeDVInterface freedvInterface;
-extern std::atomic<int>             g_tx;
+extern std::atomic<bool>             g_tx;
 
 void clickTune(float freq) {
 

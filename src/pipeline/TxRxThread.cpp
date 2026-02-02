@@ -73,7 +73,7 @@ extern paCallBackData* g_rxUserdata;
 extern int g_analog;
 extern int g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
-extern std::atomic<int> g_tx;
+extern std::atomic<bool> g_tx;
 extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
