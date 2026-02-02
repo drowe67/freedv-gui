@@ -882,6 +882,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix compile error when trying to use Hamlib 5.0-git. (PR #1202)
     * Fix bug causing PTT input to be initially ignored until pushing the PTT button. (PR #1203)
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
+    * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
