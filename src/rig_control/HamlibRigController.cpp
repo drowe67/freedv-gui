@@ -198,7 +198,6 @@ void HamlibRigController::InitializeHamlibLibrary()
         {
             std::string rigName = 
                 std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name);
-            rigName.erase(rigName.find_last_not_of(" \n\r\t") + 1); // trim whitespace from end
             RigNameList_.push_back(rigName);
         }
 
@@ -254,10 +253,14 @@ int HamlibRigController::RigNameToIndex(std::string const& rigName)
 {
     InitializeHamlibLibrary();
 
+    std::string trimmedRigName = rigName;
+    trimmedRigName.erase(trimmedRigName.find_last_not_of(" \n\r\t") + 1);
     int index = 0;
     for (auto& entry : RigNameList_)
     {
-        if (rigName == entry)
+        std::string trimmedEntry = entry;
+        trimmedEntry.erase(trimmedEntry.find_last_not_of(" \n\r\t") + 1);
+        if (trimmedRigName == trimmedEntry)
         {
             return index;
         }
@@ -416,7 +419,7 @@ void HamlibRigController::connectImpl_()
 #else
         result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
-        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_ != "FLRig" && rigName_ != "Hamlib NET rigctl"))
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_.find("FLRig") != 0 && rigName_ != "Hamlib NET rigctl"))
         {
             rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
         }

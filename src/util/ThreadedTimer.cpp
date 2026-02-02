@@ -120,7 +120,12 @@ void ThreadedTimer::TimerServer::eventLoop_()
             // Set next fire time if repeating, otherwise deregister
             if (tmpTimer->repeat_)
             {
-                tmpTimer->nextFireTime_ += std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
+                lk.unlock();
+                {
+                    std::unique_lock<std::mutex> lk2(tmpTimer->timerMutex_);
+                    tmpTimer->nextFireTime_ += std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
+                }
+                lk.lock();
                 timerQueue_.push(tmpTimer);
             }
             else
@@ -134,7 +139,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
             tmpTimer->fn_(*tmpTimer);
             lk.lock();
             currentTime = std::chrono::steady_clock::now();
-        }        
+        }
     }
 }
 #endif // !defined(__APPLE__)
@@ -239,7 +244,10 @@ void ThreadedTimer::stop()
 #else
     if (isRunning_.load(std::memory_order_acquire))
     {
+        // Temporarily unlock here to avoid deadlocks.
+        lk.unlock();
         TheTimerServer_.unregisterTimer(this);
+        lk.lock();
         isRunning_.store(false, std::memory_order_release);
     }
 #endif // defined(__APPLE__)
