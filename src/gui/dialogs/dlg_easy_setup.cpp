@@ -573,6 +573,9 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
+        // Reset PTT delay data as it may be different with this new configuration
+        wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = 0;
+
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT = m_ckUseSerialPTT->GetValue();
