@@ -88,7 +88,7 @@ extern bool g_recFileFromModulator;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
-extern bool g_queueResync;
+extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
@@ -130,10 +130,12 @@ extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
+extern SNDFILE* g_sfRecDecoderFile;
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 
 extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
+extern bool g_recFileFromDecoder;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -339,7 +341,7 @@ void TxRxThread::initializePipeline_()
         auto playRadio = new PlaybackStep(
             inputSampleRate_, 
             []() { return g_sfFs; },
-            []() { return g_sfPlayFileFromRadio.load(std::memory_order_acquire); },
+            []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
             []() {
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
@@ -506,6 +508,28 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutVol,
             g_rxUserdata->spkEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
+
+        // Record from decoder step (optional)
+        auto recordDecoderStep = new RecordStep(
+            outputSampleRate_, 
+            []() { return g_sfRecDecoderFile; }, 
+            [](int) {
+                // Recording stops when the user explicitly tells us to,
+                // no action required here.
+            }
+        );
+        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        recordDecoderPipeline->appendPipelineStep(recordDecoderStep);
+        
+        auto recordDecoderTap = new TapStep(outputSampleRate_, recordDecoderPipeline);
+        auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        
+        auto eitherOrRecordDecoder = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder) && (g_sfRecDecoderFile != NULL); },
+            recordDecoderTap,
+            bypassRecordDecoder
+        );
+        pipeline_->appendPipelineStep(eitherOrRecordDecoder);
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
@@ -806,9 +830,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //  RX side processing --------------------------------------------
     //
     
-    if (g_queueResync)
+    if (g_queueResync.load(std::memory_order_acquire))
     {
-        g_queueResync = false;
+        g_queueResync.store(false, std::memory_order_release);
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }

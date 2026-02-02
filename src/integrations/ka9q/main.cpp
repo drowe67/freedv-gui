@@ -39,10 +39,6 @@
 #include <fcntl.h>
 #endif // _WIN32
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "../common/MinimalTxRxThread.h"
 #include "../common/MinimalRealTimeHelper.h"
 #include "../common/ReportingController.h"
@@ -105,6 +101,7 @@ void printUsage(char* appName)
     log_info("    -c|--reporting-callsign: The callsign to use for FreeDV Reporter reporting.");
     log_info("    -l|--reporting-locator: The grid square/locator to use for FreeDV Reporter reporting.");
     log_info("    -f|--reporting-frequency-hz: The frequency to report for FreeDV Reporter reporting, in hertz. (Example: 14236000 for 14.236MHz)");
+    log_info("    -m|--reporting-message: Optional message to report for the Message column on FreeDV Reporter.");
     log_info("    -h|--help: This help message.");
     log_info("    -v|--version: Prints the application version and exits.");
     log_info("");
@@ -118,14 +115,8 @@ int main(int argc, char** argv)
     
     std::string stationCallsign;
     std::string stationGridSquare;
+    std::string stationUserMessage;
     int64_t stationFrequency = 0;
-
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
 
     // Environment setup -- make sure we don't use more threads than needed.
     // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
@@ -136,6 +127,9 @@ int main(int argc, char** argv)
  
     // Enable maximum optimization for Python.
     setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // Enable Python JIT (if version of Python supports it).
+    setenv("PYTHON_JIT", "1", 1);
     // NOLINTEND
 
     // Print version
@@ -148,11 +142,12 @@ int main(int argc, char** argv)
         {"reporting-callsign",    required_argument, 0,  'c' },
         {"reporting-locator",     required_argument, 0,  'l' },
         {"reporting-freq-hz",     required_argument, 0,  'f' },
+        {"reporting-message",     required_argument, 0,  'm' },
         {"help",                  no_argument,       0,  'h' },
         {"version",               no_argument,       0,  'v' },
         {0,         0,                 0,  0 }
     };
-    constexpr char shortOptions[] = "i:o:c:l:f:hv";
+    constexpr char shortOptions[] = "i:o:c:l:f:m:hv";
     
     int optionIndex = 0;
     int c = 0;
@@ -215,6 +210,18 @@ int main(int argc, char** argv)
                 }
                 stationFrequency = tmpFrequency;
                 log_info("Using frequency %" PRId64 " for FreeDV Reporter reporting", stationFrequency);
+                break;
+            }
+            case 'm':
+            {
+                if (optarg == nullptr || strlen(optarg) == 0)
+                {
+                    log_error("Message required if specifying -m/--reporting-message.");
+                    printUsage(argv[0]);
+                    exit(-1); // NOLINT
+                }
+                log_info("Using '%s' for FreeDV Reporter user message", optarg);
+                stationUserMessage = optarg;
                 break;
             }
             case 'v':
@@ -293,7 +300,7 @@ int main(int argc, char** argv)
     // Set up reporting of actual receive state (prior to getting callsign).
     int rxCounter = 0;    
     ThreadedTimer rxNoCallsignReporting(100, [&](ThreadedTimer&) {
-        if (rxThread.getSync())
+        if (rxThread.getSync() && !reportController.isHidden())
         {
             rxCounter = (rxCounter + 1) % 10;
             if (rxCounter == 0)
@@ -309,6 +316,7 @@ int main(int argc, char** argv)
     {
         reportController.updateRadioCallsign(stationCallsign);
         reportController.updateRadioGridSquare(stationGridSquare);
+        reportController.updateUserMessage(stationUserMessage);
         reportController.changeFrequency(stationFrequency);
         reportController.showSelf();
     }

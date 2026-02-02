@@ -70,10 +70,6 @@ public:
     ConfigurationDataElement<int> transmitLevel;
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
-    ConfigurationDataElement<wxString> recFileFromRadioPath;
-    ConfigurationDataElement<unsigned int> recFileFromRadioSecs;
-    ConfigurationDataElement<wxString> recFileFromModulatorPath;
-    ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
     ConfigurationDataElement<wxString> playFileFromRadioPath;
     
     ConfigurationDataElement<bool> enableSpaceBarForPTT;
@@ -87,7 +83,8 @@ public:
     ConfigurationDataElement<bool> multipleReceiveEnabled;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
     
-    ConfigurationDataElement<wxString> quickRecordPath;
+    ConfigurationDataElement<wxString> quickRecordRawPath;
+    ConfigurationDataElement<wxString> quickRecordDecodedPath;
     
     ConfigurationDataElement<bool> freedv700Clip;
     ConfigurationDataElement<bool> freedv700TxBPF;
@@ -121,6 +118,8 @@ public:
     ConfigurationDataElement<int> reportingUserMsgColWidth;
     
     ConfigurationDataElement<bool> showDecodeStats;
+    
+    ConfigurationDataElement<bool> enableLegacyModes;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

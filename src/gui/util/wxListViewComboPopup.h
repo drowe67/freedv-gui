@@ -7,6 +7,9 @@
 class wxListViewComboPopup : public wxListView, public wxComboPopup
 {
 public:
+    wxListViewComboPopup(wxWindow* focusCtrlOnDeselect = nullptr);
+    virtual ~wxListViewComboPopup() = default;
+
     // Initialize member variables
     virtual void Init();
     
@@ -27,7 +30,10 @@ public:
     
     // On mouse left up, set the value and close the popup
     void OnMouseClick(wxMouseEvent& WXUNUSED(event));
-    
+
+    // On right mouse click, deselect and close
+    void OnRightMouseClick(wxMouseEvent& WXUNUSED(event));
+
     virtual wxSize GetAdjustedSize(
         int	minWidth,
         int	prefHeight,
@@ -35,7 +41,9 @@ public:
 
 protected:
     int m_value; // current item index
+
 private:
+    wxWindow* focusCtrlOnDeselect_;
     wxDECLARE_EVENT_TABLE();
 };
 

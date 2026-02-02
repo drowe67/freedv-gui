@@ -57,6 +57,16 @@ public:
     ConfigurationDataElement<wxString> freedvReporterStatusText;
     ConfigurationDataElement<std::vector<wxString> > freedvReporterRecentStatusTexts;
     
+    ConfigurationDataElement<std::vector<int> > freedvReporterColumnOrder;
+    ConfigurationDataElement<std::vector<bool> > freedvReporterColumnVisibility;
+
+    ConfigurationDataElement<bool> freedvReporterEnableMaxIdleFilter;
+    ConfigurationDataElement<int> freedvReporterMaxIdleMinutes;
+
+    ConfigurationDataElement<bool> udpReportingEnabled;
+    ConfigurationDataElement<wxString> udpReportingHostname;
+    ConfigurationDataElement<int> udpReportingPort;
+    
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;

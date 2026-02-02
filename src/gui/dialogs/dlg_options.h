@@ -119,8 +119,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
 
         /* Quick Record */
-        wxButton     *m_buttonChooseQuickRecordPath;
-        wxTextCtrl   *m_txtCtrlQuickRecordPath;
+        wxButton     *m_buttonChooseQuickRecordRawPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordRawPath;
+        wxButton     *m_buttonChooseQuickRecordDecodedPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordDecodedPath;
         
         /* test frames, other simulated channel impairments */
 
@@ -136,6 +138,7 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
+        wxCheckBox   *m_ckboxEnableLegacyModes;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
@@ -153,6 +156,10 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_useMetricDistances;
         wxCheckBox    *m_useCardinalDirections;
         wxCheckBox    *m_ckboxFreeDVReporterForceReceiveOnly;
+        
+        wxCheckBox    *m_ckboxUDPReportingEnable;
+        wxTextCtrl    *m_udpHostname;
+        wxTextCtrl    *m_udpPort;
         
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;

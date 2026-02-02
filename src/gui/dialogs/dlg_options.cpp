@@ -141,6 +141,22 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingRows->Add(sbSizerReportingFreeDV, 0, wxALL | wxEXPAND, 5);
     
+    // UDP reporting options
+    wxBoxSizer* sbSizerReportingUDP = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxUDPReportingEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Enable QSO Logging"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxUDPReportingEnable->SetToolTip(_("Enables QSO logging using the WSJT-X support in your preferred logging program."));
+    sbSizerReportingUDP->Add(m_ckboxUDPReportingEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPHostName = new wxStaticText(sbReporting, wxID_ANY, wxT("IP Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDP->Add(labelUDPHostName, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpHostname = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(150,-1), 0);
+    sbSizerReportingUDP->Add(m_udpHostname, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPPort = new wxStaticText(sbReporting, wxID_ANY, wxT("Port:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDP->Add(labelUDPPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpPort = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0);
+    sbSizerReportingUDP->Add(m_udpPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbSizerReportingRows->Add(sbSizerReportingUDP, 0, wxALL | wxEXPAND, 5);
+    
     sizerReporting->Add(sbSizerReportingRows, 0, wxALL | wxEXPAND, 5);
     
     // FreeDV Reporter options that don't depend on Reporting checkboxes
@@ -419,18 +435,30 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* quickRecordBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record"));
     wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer(quickRecordBox, wxVERTICAL);
 
-    wxBoxSizer* quickRecordSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxFlexGridSizer* quickRecordSizer = new wxFlexGridSizer(2, 3, 5, 5);
+    quickRecordSizer->AddGrowableCol(1);
 
-    wxStaticText *staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save raw recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlQuickRecordPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
-    m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
-    quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlQuickRecordRawPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlQuickRecordRawPath->SetToolTip(_("Location which to save raw recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonChooseQuickRecordPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
-    m_buttonChooseQuickRecordPath->SetMinSize(wxSize(120, -1));
-    quickRecordSizer->Add(m_buttonChooseQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonChooseQuickRecordRawPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordRawPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save decoded recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlQuickRecordDecodedPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlQuickRecordDecodedPath->SetToolTip(_("Location which to save decoded recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_buttonChooseQuickRecordDecodedPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordDecodedPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sbsQuickRecord->Add(quickRecordSizer);
     
@@ -453,6 +481,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txBPF = new wxCheckBox(sb_freedv700, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
+    m_ckboxEnableLegacyModes = new wxCheckBox(sb_freedv700, wxID_ANY, _("Enable Legacy Modes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedv700->Add(m_ckboxEnableLegacyModes, 0, wxALL | wxALIGN_LEFT, 5);
+    
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
     //------------------------------
@@ -765,12 +796,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_buttonChooseVoiceKeyerWaveFilePath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
 
-    m_buttonChooseQuickRecordPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordRawPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordDecodedPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
     m_ckboxReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -809,7 +842,8 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
-    m_buttonChooseQuickRecordPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseQuickRecordDecodedPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
@@ -819,6 +853,7 @@ OptionsDlg::~OptionsDlg()
     
     m_ckboxReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -883,7 +918,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
-        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().appConfiguration.quickRecordPath);
+        m_txtCtrlQuickRecordRawPath->SetValue(wxGetApp().appConfiguration.quickRecordRawPath);
+        m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
@@ -915,7 +951,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
        
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
-
+        m_ckboxEnableLegacyModes->SetValue(wxGetApp().appConfiguration.enableLegacyModes);
+        
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
 #endif
@@ -935,6 +972,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_useMetricDistances->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances);
         m_useCardinalDirections->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal);
         m_ckboxFreeDVReporterForceReceiveOnly->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly);
+        
+        // UDP reporting options
+        m_ckboxUDPReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled);
+        m_udpHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname);
+        m_udpPort->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort.get()));
         
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
@@ -1055,7 +1097,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().appConfiguration.voiceKeyerRepeats = (int)tmp;
         
-        wxGetApp().appConfiguration.quickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
+        wxGetApp().appConfiguration.quickRecordRawPath = m_txtCtrlQuickRecordRawPath->GetValue();
+        wxGetApp().appConfiguration.quickRecordDecodedPath = m_txtCtrlQuickRecordDecodedPath->GetValue();
         
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
@@ -1097,7 +1140,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.showDecodeStats = m_showDecodeStats->GetValue();
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
-
+        wxGetApp().appConfiguration.enableLegacyModes = m_ckboxEnableLegacyModes->GetValue();
+        
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
@@ -1119,7 +1163,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances = m_useMetricDistances->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly = m_ckboxFreeDVReporterForceReceiveOnly->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal = m_useCardinalDirections->GetValue();
-                
+        
+        // UDP reporting options
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled = m_ckboxUDPReportingEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname = m_udpHostname->GetValue();
+        
+        long udpPort;
+        m_udpPort->GetValue().ToLong(&udpPort);
+        wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort = (int)udpPort;
+            
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
@@ -1200,17 +1252,17 @@ void OptionsDlg::OnApply(wxCommandEvent&)
     if (freqString.Length() > 0 && khzChanged)
     {
         double freqDouble = 0;
-        freqString.ToDouble(&freqDouble);
+        wxNumberFormatter::FromString(freqString, &freqDouble);
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
             freqDouble *= 1000;
-            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.01f", freqDouble));
+            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 1));
         }
         else
         {
             freqDouble /= 1000.0;
-            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.04f", freqDouble));
+            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 1));
         }
     }
         
@@ -1253,17 +1305,28 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
 }
 
-void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent&) {
+void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
+    wxString defaultLocation = 
+        (event.GetEventObject() == m_buttonChooseQuickRecordRawPath) ?
+        wxGetApp().appConfiguration.quickRecordRawPath :
+        wxGetApp().appConfiguration.quickRecordDecodedPath;
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
-                                 wxGetApp().appConfiguration.quickRecordPath
+                                 defaultLocation
                                  );
      if(pathDialog.ShowModal() == wxID_CANCEL) {
          return;     // the user changed their mind...
      }
 
-     m_txtCtrlQuickRecordPath->SetValue(pathDialog.GetPath());
+     if (event.GetEventObject() == m_buttonChooseQuickRecordRawPath)
+     {
+        m_txtCtrlQuickRecordRawPath->SetValue(pathDialog.GetPath());
+     }
+     else
+     {
+        m_txtCtrlQuickRecordDecodedPath->SetValue(pathDialog.GetPath());
+     }
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {
@@ -1296,7 +1359,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent&)
 }
 
 void OptionsDlg::updateReportingState()
-{
+{    
     if (!sessionActive_)
     {
         m_ckbox_use_utc_time->Enable(true);
@@ -1314,6 +1377,18 @@ void OptionsDlg::updateReportingState()
             m_ckboxFreeDVReporterEnable->Enable(true);
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
+            m_ckboxUDPReportingEnable->Enable(true);
+            
+            if (m_ckboxUDPReportingEnable->GetValue())
+            {
+                m_udpHostname->Enable(true);
+                m_udpPort->Enable(true);
+            }
+            else
+            {
+                m_udpHostname->Enable(false);
+                m_udpPort->Enable(false);
+            }
         }
         else
         {
@@ -1325,6 +1400,9 @@ void OptionsDlg::updateReportingState()
             m_ckboxManualFrequencyReporting->Enable(false);
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
+            m_udpHostname->Enable(false);
+            m_udpPort->Enable(false);
+            m_ckboxUDPReportingEnable->Enable(false);
         }    
     }
     else
@@ -1341,6 +1419,9 @@ void OptionsDlg::updateReportingState()
         m_freedvReporterHostname->Enable(false);
         m_ckboxFreeDVReporterForceReceiveOnly->Enable(false);
         m_useCardinalDirections->Enable(false);
+        m_udpHostname->Enable(false);
+        m_udpPort->Enable(false);
+        m_ckboxUDPReportingEnable->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }

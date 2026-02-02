@@ -44,6 +44,13 @@ SocketIoClient::SocketIoClient()
 
 SocketIoClient::~SocketIoClient()
 {
+    // Clear event handlers on disconnect.
+    enqueue_([this]() {
+        onConnectFn_ = nullptr;
+        onDisconnectFn_ = nullptr;
+        eventFnMap_.clear();
+    });
+    
     // Note: not currently done in the underlying object due to
     // "pure virtual" function exceptions.
     enableReconnect_.store(false, std::memory_order_release);
@@ -64,7 +71,9 @@ void SocketIoClient::setAuthDictionary(yyjson_mut_doc* authJson)
 
 void SocketIoClient::on(std::string const& eventName, SioMessageReceivedFn fn)
 {
-    eventFnMap_[eventName] = std::move(fn);
+    enqueue_([this, eventName, fn = std::move(fn)]() {
+        eventFnMap_[eventName] = fn;
+    });
 }
 
 void SocketIoClient::emit(std::string const& eventName, yyjson_mut_val* params)
@@ -110,12 +119,16 @@ void SocketIoClient::emit(std::string const& eventName)
 
 void SocketIoClient::setOnConnectFn(OnConnectionStateChangeFn fn)
 {
-    onConnectFn_ = std::move(fn);
+    enqueue_([this, fn = std::move(fn)]() {
+        onConnectFn_ = fn;
+    });
 }
 
 void SocketIoClient::setOnDisconnectFn(OnConnectionStateChangeFn fn)
 {
-    onDisconnectFn_ = std::move(fn);
+    enqueue_([this, fn = std::move(fn)]() {
+        onDisconnectFn_ = fn;
+    });
 }
 
 void SocketIoClient::onConnect_()
@@ -274,13 +287,25 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int)
         {
             // event received from server
             yyjson_doc* eventDoc = yyjson_read(ptr + 1, strlen(ptr + 1), 0);
-            yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
-            yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
-            yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
+            if (eventDoc != nullptr)
+            {
+                enqueue_([this, eventDoc]() {
+                    yyjson_val* eventRoot = yyjson_doc_get_root(eventDoc);
+                    yyjson_val* eventName = yyjson_arr_get(eventRoot, 0);
+                    yyjson_val* eventArgs = yyjson_arr_get(eventRoot, 1);
 
-            std::string eventNameStr = yyjson_get_str(eventName);
-            fireEvent(eventNameStr, eventArgs);
-            yyjson_doc_free(eventDoc);
+                    if (eventName != nullptr)
+                    {
+                        auto eventStr = yyjson_get_str(eventName);
+                        if (eventStr != nullptr)
+                        {
+                            std::string eventNameStr = yyjson_get_str(eventName);
+                            fireEvent(eventNameStr, eventArgs);
+                        }
+                    }
+                    yyjson_doc_free(eventDoc);
+                });
+            }
             break;
         }
         case '4':

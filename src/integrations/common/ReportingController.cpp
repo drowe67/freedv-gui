@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <future>
 #include <cinttypes>
 #include <sstream>
 #include "git_version.h"
@@ -38,7 +39,7 @@ std::string ReportingController::getVersionString_()
 
 #define PSKREPORTER_REPORT_INTERVAL_MS (5*60*1000)
 
-ReportingController::ReportingController(std::string softwareName, bool rxOnly)
+ReportingController::ReportingController(std::string softwareName, bool rxOnly, bool disableReporting)
     : ThreadedObject("Reporting")
     , softwareName_(std::move(softwareName))
     , pskReporterSendTimer_(PSKREPORTER_REPORT_INTERVAL_MS, [&](ThreadedTimer&) {
@@ -56,8 +57,35 @@ ReportingController::ReportingController(std::string softwareName, bool rxOnly)
     , userHidden_(true)
     , currentFreq_(0)
     , rxOnly_(rxOnly)
+    , reportingDisabled_(disableReporting)
 {   
     // empty
+}
+
+ReportingController::~ReportingController()
+{   
+    enqueue_([&]() {
+        if (freedvReporterConnection_ != nullptr)
+        {
+            delete freedvReporterConnection_;
+        }
+        if (pskReporterConnection_ != nullptr)
+        {
+            delete pskReporterConnection_;
+        }
+    });
+        
+    waitForAllTasksComplete_();
+}
+
+bool ReportingController::isHidden()
+{
+    auto prom = std::make_shared<std::promise<bool>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        prom->set_value(userHidden_);
+    });
+    return fut.get();
 }
 
 void ReportingController::transmit(bool transmit)
@@ -118,14 +146,15 @@ void ReportingController::updateReporterState_()
         pskReporterConnection_ = nullptr;
     }
 
-    if (freedvReporterConnection_ == nullptr && !userHidden_)
+    if (freedvReporterConnection_ == nullptr && !userHidden_ && !reportingDisabled_)
     {
         log_info("Connecting to FreeDV Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
         freedvReporterConnection_ = new FreeDVReporter("", radioCallsign_, currentGridSquare_, getVersionString_(), rxOnly_, true);
         freedvReporterConnection_->connect();
+        freedvReporterConnection_->updateMessage(userMessage_);
     }
 
-    if (pskReporterConnection_ == nullptr && currentGridSquare_ != SOFTWARE_GRID_SQUARE)
+    if (pskReporterConnection_ == nullptr && currentGridSquare_ != SOFTWARE_GRID_SQUARE && !reportingDisabled_)
     {
         log_info("Connecting to PSK Reporter (callsign = %s, grid square = %s, version = %s)", radioCallsign_.c_str(), currentGridSquare_.c_str(), getVersionString_().c_str());
         pskReporterConnection_ = new PskReporter(radioCallsign_, currentGridSquare_, getVersionString_());
@@ -187,3 +216,14 @@ void ReportingController::updateRadioGridSquare(std::string const& newGridSquare
     });
 }
 
+void ReportingController::updateUserMessage(std::string const& newUserMessage)
+{
+    enqueue_([&, newUserMessage]() {
+        log_info("User message updated to %s", newUserMessage.c_str());
+        userMessage_ = newUserMessage;
+        if (freedvReporterConnection_ != nullptr)
+        {
+            freedvReporterConnection_->updateMessage(newUserMessage);
+        }
+    });
+}

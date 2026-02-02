@@ -1,5 +1,32 @@
 # Changes in older releases
 
+## V2.1.0 November 2025
+
+1. Bugfixes:
+    * Clean up wxWidgets warnings in Audio Config window. (PR #1044)
+    * Fix CAT control and frequency formatting problems on non-English computers. (PR #1050)
+    * Clean up ThreadSanitizer warnings in codebase. (PR #1053)
+    * Clean up UndefinedBehaviorSanitizer warnings in codebase. (PR #1061)
+    * Divide displayed TX Attenuation level by 10 on startup. (PR #1060)
+    * Fix issue preventing FreeDV Reporter from properly being restored to the correct display. (PR #1055)
+    * Fix intermittent FreeDV Reporter related crash on Windows. (PR #1075)
+    * Update Visual Studio Redistributable to version 17 to resolve RADE startup crashes. (PR #1074)
+2. Enhancements:
+    * Additional cleanup of code that runs in real-time. (PR #1039, #1068, #1077)
+    * Print error if one attempts to use a stereo WAV file instead of a mono one. (PR #1052)
+    * Hamlib: Add support for automatically displaying only the valid baud rates. (PR #1057)
+    * CPU reductions when rendering plots, especially on X11/Xwayland systems. (PR #1064)
+    * Add implementation of Flex waveform for Flex 6000/8000/Aurora series. (PR #1018, #1088)
+    * Add ka9q-radio integration for use with web-based SDRs and similar. (PR #1066)
+    * Support bulk updates from FreeDV Reporter server. (PR #1079)
+    * Hide Stats box by default. (PR #1081)
+    * Always allow frequency drop-down to be used, even if CAT and reporting are disabled. (PR #1080, #1093)
+3. Build system:
+    * Add support for Thread/Undefined Behavior Sanitizer instrumentation on macOS and Linux builds. (PR #1075)
+    * Force all compiler warnings to be errors. (PR #1076)
+    * Enable clang-tidy scans on codebase. (PR #1086)
+    * Update CI process to enable automatic code signing of macOS and Linux builds. (PR #1078)
+
 ## V2.0.2 October 2025
 
 1. Bugfixes:

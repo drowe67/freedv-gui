@@ -22,6 +22,7 @@
 #include <map>
 #include <set>
 #include <functional>
+#include <future>
 
 #include "../util/TcpConnectionHandler.h"
 #include "../util/ThreadedTimer.h"
@@ -39,9 +40,16 @@ public:
     using WaveformUserConnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformUserDisconnectedFn = std::function<void(FlexTcpTask&, void*)>;
     using WaveformAddValidStreamIdentifiersFn = std::function<void(FlexTcpTask&, uint32_t, uint32_t, uint32_t, uint32_t, void*)>;
+    using WaveformSnrMeterIdentifiersFn = std::function<void(FlexTcpTask&, uint16_t, void*)>;
 
     FlexTcpTask(int vitaPort);
     virtual ~FlexTcpTask();
+    
+    void setWaveformSnrMeterIdentifiersFn(WaveformSnrMeterIdentifiersFn fn, void* state)
+    {
+        waveformSnrMeterIdentifiersFn_ = std::move(fn);
+        waveformSnrMeterIdentifiersState_ = state;
+    }
     
     void setWaveformConnectedFn(WaveformConnectedFn fn, void* state)
     {
@@ -91,7 +99,7 @@ public:
         waveformAddValidStreamIdentifiersState_ = state;
     }
 
-    void addSpot(std::string const& callsign);
+    void addSpot(std::string const& callsign, int snr, int timeoutSeconds);
 
 protected:
     virtual void onConnect_() override;
@@ -123,6 +131,9 @@ private:
     WaveformAddValidStreamIdentifiersFn waveformAddValidStreamIdentifiersFn_;
     void* waveformAddValidStreamIdentifiersState_;
 
+    WaveformSnrMeterIdentifiersFn waveformSnrMeterIdentifiersFn_;
+    void* waveformSnrMeterIdentifiersState_;
+
     std::stringstream inputBuffer_;
     ThreadedTimer commandHandlingTimer_;
     ThreadedTimer pingTimer_;
@@ -134,6 +145,7 @@ private:
     bool isTransmitting_;
     bool isConnecting_;
     int vitaPort_;
+    std::shared_ptr<std::promise<void>> deregisterPromise_;   // so we don't need to wait a fixed amount of time during deinit
 
     std::map<int, std::string> sliceFrequencies_;
     std::map<int, bool> activeSlices_;

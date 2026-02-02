@@ -90,6 +90,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
+#include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
 #include "util/sanitizers.h"
@@ -106,12 +107,9 @@ enum {
         ID_START = wxID_HIGHEST,
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
-        ID_TIMER_SCATTER,
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
-        ID_TIMER_TIME_OFFSET,
-        ID_TIMER_FREQ_OFFSET,
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
@@ -165,6 +163,14 @@ class FreeDVReporterDialog;
 class MainApp : public wxApp
 {
     public:
+        // Indicates which row was last selected (for auto-filling during logging)
+        enum LastSelectedRow 
+        {
+            UNSELECTED,
+            MAIN_WINDOW,
+            FREEDV_REPORTER,
+        };
+
         virtual bool        OnInit();
         virtual void        OnInitCmdLine(wxCmdLineParser& parser);
         virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
@@ -173,6 +179,8 @@ class MainApp : public wxApp
 
         bool                    CanAccessSerialPort(std::string const& portName);
         
+        LastSelectedRow lastSelectedLoggingRow;
+
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         
@@ -183,6 +191,9 @@ class MainApp : public wxApp
 
         // PTT Input
         std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
+        
+        // Logging
+        std::shared_ptr<ILogger> logger;
 
         wxRect              m_rTopWindow;
 
@@ -253,27 +264,6 @@ private:
     wxCheckBox *m_cb;
 };
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// panel with custom Seconds-to-record control for record file dialog
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class MyExtraRecFilePanel : public wxPanel
-{
-public:
-    MyExtraRecFilePanel(wxWindow *parent);
-    ~MyExtraRecFilePanel()
-    {
-        wxLogDebug("Destructor\n");
-    }
-    void setSecondsToRecord(wxString const& value) { m_secondsToRecord->SetValue(value); }
-    wxString getSecondsToRecord(void)
-    {
-        wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
-        return m_secondsToRecord->GetValue();
-    }
-private:
-    wxTextCtrl *m_secondsToRecord;
-};
-
 class TxRxThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -296,19 +286,11 @@ class MainFrame : public TopFrame
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
-        PlotScatter*            m_panelScatter;
-        PlotScalar*             m_panelTimeOffset;
-        PlotScalar*             m_panelFreqOffset;
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
-        PlotScalar*             m_panelTestFrameErrors;
-        PlotScalar*             m_panelTestFrameErrorsHist;
 
         bool                    m_RxRunning;
-
-        TxRxThread*             m_txThread;
-        TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
@@ -333,8 +315,6 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechInTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
-        wxTimer                 m_plotTimeOffsetTimer;
-        wxTimer                 m_plotFreqOffsetTimer;
 #endif
 
     void destroy_fifos(void);
@@ -351,6 +331,7 @@ class MainFrame : public TopFrame
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
+        void StopRecFileFromDecoder();
         
         bool isReceiveOnly();
         
@@ -386,7 +367,6 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnRecFileFromRadio( wxCommandEvent& event ) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
         
         void OnCenterRx(wxCommandEvent& event) override;
@@ -412,6 +392,8 @@ class MainFrame : public TopFrame
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
+        virtual void OnLogQSO(wxCommandEvent& event) override;
+        
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
         void OnReSync( wxCommandEvent& event ) override;
@@ -457,6 +439,11 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
         void OnResetMicSpkrLevel(wxMouseEvent& event) override;
+
+        void OnRightClickCallsignList(wxMouseEvent& event) override;
+
+        void OnOpenCallsignList( wxCommandEvent& event ) override;
+        void OnCloseCallsignList( wxCommandEvent& event ) override;
         
     private:
         const wxString SNR_FORMAT_STR;

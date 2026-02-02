@@ -42,10 +42,6 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
-#if defined(USING_MIMALLOC)
-#include <mimalloc.h>
-#endif // defined(USING_MIMALLOC)
-
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -55,6 +51,8 @@
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
+
+#include "logging/WSJTXNetworkLogger.h"
 
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_filter.h"
@@ -92,10 +90,12 @@ int                 g_Nc;
 int                 g_mode;
 
 FreeDVInterface     freedvInterface;
+std::shared_ptr<TxRxThread> m_txThread;
+std::shared_ptr<TxRxThread> m_rxThread;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
-bool                g_queueResync;
+std::atomic<bool>   g_queueResync;
 
 // test Frames
 int                 g_testFrames;
@@ -168,6 +168,7 @@ extern SNDFILE            *g_sfRecFile;
 extern bool                g_recFileFromRadio;
 extern unsigned int        g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
+extern int                 g_recFileFromDecoderEventId;
 
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 extern std::atomic<bool>                g_playFileFromRadio;
@@ -198,6 +199,9 @@ wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
 std::atomic<bool> endingTx;
+
+// Running state
+std::atomic<bool> isModemRunning;
 
 // Option test file to log samples
 
@@ -336,16 +340,11 @@ void MainApp::UnitTest_()
     sim.MouseClick();*/
     
     // Wait for FreeDV to start
-    std::this_thread::sleep_for(1s);
-    while (true)
+    while (!isModemRunning.load(std::memory_order_acquire))
     {
-        bool isRunning = false;
-        frame->executeOnUiThreadAndWait_([&]() {
-            isRunning = frame->m_togBtnOnOff->IsEnabled();
-        });
-        if (isRunning) break;
         std::this_thread::sleep_for(20ms);
     }
+    std::this_thread::sleep_for(2s);
     
     constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
@@ -356,15 +355,6 @@ void MainApp::UnitTest_()
             // Fire event to begin TX
             //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
             //sim.MouseClick();
-            log_info("Firing PTT");
-            CallAfter([this]() {
-                frame->m_btnTogPTT->SetValue(true);
-                wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
-                txEvent->SetEventObject(frame->m_btnTogPTT);
-                //QueueEvent(txEvent);
-                frame->OnTogBtnPTT(*txEvent);
-                delete txEvent;
-            });
             
             if (utTxFile != "")
             {
@@ -376,6 +366,16 @@ void MainApp::UnitTest_()
                 g_loopPlayFileToMicIn = false;
                 g_playFileToMicIn.store(true, std::memory_order_release);
 
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 int counter = 0;
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
@@ -384,6 +384,16 @@ void MainApp::UnitTest_()
             }
             else
             {
+                log_info("Firing PTT");
+                CallAfter([this]() {
+                    frame->m_btnTogPTT->SetValue(true);
+                    wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                    txEvent->SetEventObject(frame->m_btnTogPTT);
+                    //QueueEvent(txEvent);
+                    frame->OnTogBtnPTT(*txEvent);
+                    delete txEvent;
+                });
+
                 // Transmit for user given time period (default 60 seconds)
                 std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
             }
@@ -587,13 +597,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-#if defined(USING_MIMALLOC)
-    // Decrease purge interval to 100ms to improve performance (default = 10ms).
-    mi_option_set(mi_option_purge_delay, 100);
-    mi_option_set(mi_option_purge_extend_delay, 10);
-    //mi_option_enable(mi_option_verbose);
-#endif // defined(USING_MIMALLOC)
-
 #if defined(__linux__)
     // Set default CPU affinity to all but the last two cores
     // (those cores are reserved for the TX/RX threads).
@@ -620,6 +623,7 @@ bool MainApp::OnInit()
     m_locale.Init();
 #endif // wxCHECK_VERSION(3,2,0)
 
+    lastSelectedLoggingRow = LastSelectedRow::UNSELECTED;
     m_reporters.clear();
     m_reportCounter = 0;
     
@@ -639,8 +643,14 @@ bool MainApp::OnInit()
  
     // Enable maximum optimization for Python.
     wxSetEnv("PYTHONOPTIMIZE", "2");
- 
+
+    // Enable Python JIT if available.
+    wxSetEnv("PYTHON_JIT", "1");
+
 #if _WIN32 || __APPLE__
+    // Enable mimalloc in Python interpreter. 
+    wxSetEnv("PYTHONMALLOC", "mimalloc");
+
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
@@ -664,9 +674,6 @@ bool MainApp::OnInit()
     wxGetEnv("PYTHONPATH", &ppath);
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
-
-    // Turn on optimization for Python code
-    wxSetEnv("PYTHONOPTIMIZE", "2");
 
 #endif // _WIN32 || __APPLE__ 
 
@@ -887,12 +894,16 @@ setDefaultMode:
     }
     
     // Disable controls not supported by RADE.
-    bool isEnabled = mode != FREEDV_MODE_RADE;
+    bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
+    squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
     m_sliderSQ->Enable(isEnabled);
     m_ckboxSQ->Enable(isEnabled);
     m_textSQ->Enable(isEnabled);
     m_btnCenterRx->Enable(isEnabled);
-    
+    m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Enable(isEnabled);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
+
     if (!isEnabled)
     {
         m_textBits->SetLabel("Bits: unk");
@@ -983,6 +994,8 @@ setDefaultMode:
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
+    modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
+    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1020,7 +1033,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SYNC_UNK_LABEL("Sync: unk"),
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
-    TOO_HIGH_LABEL("Too High"),
+    TOO_HIGH_LABEL("Clip"),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
@@ -1039,6 +1052,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     terminating_ = false;
     realigned_ = false;
+    syncState_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1094,28 +1108,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
-    
-    // Add Scatter Plot window
-    m_panelScatter = new PlotScatter(m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
-
-    // Add Timing Offset window
-    m_panelTimeOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", false, wxNullBitmap);
-
-    // Add Frequency Offset window
-    m_panelFreqOffset = new PlotScalar(m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", false, wxNullBitmap);
-
-    // Add Test Frame Errors window
-    m_panelTestFrameErrors = new PlotScalar(m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", false, wxNullBitmap);
-
-    // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
-    m_panelTestFrameErrorsHist = new PlotScalar(m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", false, wxNullBitmap);
-    m_panelTestFrameErrorsHist->setBarGraph(1);
-    m_panelTestFrameErrorsHist->setLogY(1);
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
@@ -1128,12 +1120,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotWaterfallTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_plotSpectrumTimer.SetOwner(this, ID_TIMER_SPECTRUM);
-    m_plotScatterTimer.SetOwner(this, ID_TIMER_SCATTER);
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
-    m_plotTimeOffsetTimer.SetOwner(this, ID_TIMER_TIME_OFFSET);
-    m_plotFreqOffsetTimer.SetOwner(this, ID_TIMER_FREQ_OFFSET);
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
@@ -1235,6 +1224,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
@@ -1314,6 +1304,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_dump_timing = g_dump_fifo_state = 0;
 }
 
+static std::recursive_mutex stoppingMutex;
+
 //-------------------------------------------------------------------------
 // ~MainFrame()
 //-------------------------------------------------------------------------
@@ -1390,11 +1382,14 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
-    if (m_RxRunning)
     {
-        stopRxStream();
-        freedvInterface.stop();
-    } 
+        std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
+        if (m_RxRunning)
+        {
+            stopRxStream();
+            freedvInterface.stop();
+        }  
+    }
     sox_biquad_finish();
 
     auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
@@ -1423,12 +1418,9 @@ MainFrame::~MainFrame()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         Unbind(wxEVT_TIMER, &MainFrame::OnTimer, this);
     }
 #endif //_USE_TIMER
@@ -1474,6 +1466,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
     bool txState = false;
+    bool halfDuplexState = false;
     int syncState = 0;
 
     auto& timer = evt.GetTimer();
@@ -1487,6 +1480,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
+        halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
         syncState_ = freedvInterface.getSync();
     }
     syncState = syncState_;
@@ -1545,49 +1539,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelSpectrum->m_newdata = true;
           m_panelSpectrum->refreshData();
       }
-      else if (timerId == ID_TIMER_SCATTER)
-      {
-          if (freedvInterface.isRunning()) {
-              int currentMode = freedvInterface.getCurrentMode();
-              if (currentMode != wxGetApp().m_prevMode)
-              {
-                  // Force recreation of EQ filters.
-                  m_newMicInFilter = true;
-                  m_newSpkOutFilter = true;
-
-                  // The receive mode changed, so the previous samples are no longer valid.
-                  m_panelScatter->clearCurrentSamples();
-              }
-              wxGetApp().m_prevMode = currentMode;
-    
-              // Reset g_Nc accordingly.
-              switch(currentMode)
-              {
-                  case FREEDV_MODE_1600:
-                      g_Nc = 16;
-                      m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                      break;
-                  case FREEDV_MODE_700D:
-                  case FREEDV_MODE_700E:
-                      g_Nc = 17; 
-                      m_panelScatter->setNc(g_Nc);
-                      break;
-              }
-    
-              /* PSK Modes - scatter plot -------------------------------------------------------*/
-              for (int r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
-
-                  if ((currentMode == FREEDV_MODE_1600) ||
-                      (currentMode == FREEDV_MODE_700D) ||
-                      (currentMode == FREEDV_MODE_700E)
-                  ) {
-                      m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                  }
-              }
-          }
-
-          m_panelScatter->refreshData();
-      }
       else if (timerId == ID_TIMER_SPEECH_IN)
       {
           if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
@@ -1611,29 +1562,29 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
-      else if (timerId == ID_TIMER_TIME_OFFSET)
+      else
       {
-          m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-          m_panelTimeOffset->refreshData();
-      }
-      else if (timerId == ID_TIMER_FREQ_OFFSET)
-      {
-          m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-          m_panelFreqOffset->refreshData();
-      }
-     else
-     {
          // Update average magnitudes
          float rxSpectrum[MODEM_STATS_NSPEC];
          memset(rxSpectrum, 0, sizeof(float) * MODEM_STATS_NSPEC);
-         while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
+         bool txNotInFullDuplex = halfDuplexState && txState;
+         if (!txNotInFullDuplex)
          {
-             g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
-             for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+             while (g_avmag.numUsed() >= MODEM_STATS_NSPEC)
              {
-                 g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
-             }
-             memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+                 g_avmag.read(rxSpectrum, MODEM_STATS_NSPEC);
+                 for (int index = 0; index < MODEM_STATS_NSPEC; index++)
+                 {
+                     g_avmag_waterfall[index] = BETA * g_avmag_waterfall[index] + (1.0 - BETA) * rxSpectrum[index];
+                 }
+                 memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
+              }
+         }
+         else
+         {
+            // Assume zero spectrum to avoid waterfall artifacts
+            memset(g_avmag_waterfall, 0, sizeof(float) * MODEM_STATS_NSPEC);
+            memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
          }
 
          // Synchronize changes with Filter dialog
@@ -2046,44 +1997,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
                 m_textClockOffset->SetLabel(clockOffset);
             }
-            
-            // update error pattern plots if supported
-            short* error_pattern = nullptr;
-            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
-            if (sz_error_pattern) {
-                int i,b;
-
-                /* both modes map IQ to alternate bits, but on same carrier */
-
-                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
-                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                    for(b=0; b<g_Nc*2; b++) {
-                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                            g_error_hist[b] += error_pattern[i];
-                            g_error_histn[b]++;
-                        }
-                    }
-
-                     /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<g_Nc*2; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                m_panelTestFrameErrors->Refresh();
-                m_panelTestFrameErrorsHist->Refresh();
-            
-                delete[] error_pattern;
-            }
         }
 
         /* FIFO and PortAudio under/overflow debug counters */
@@ -2268,17 +2181,21 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_ckboxSQ->Enable(isEnabled);
         m_textSQ->Enable(isEnabled);
         m_btnCenterRx->Enable(isEnabled);
+        m_BtnReSync->Enable(isEnabled);
     }
 }
 
 void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
-    g_queueResync = false;
+    g_queueResync.store(false, std::memory_order_release);
     endingTx.store(false, std::memory_order_release);
+    g_voice_keyer_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_release);
     
     m_timeSinceSyncLoss = 0;
-    
+    syncState_ = false;
+
     executeOnUiThreadAndWait_([&]() 
     {
         // Zero out spectrum plots
@@ -2295,6 +2212,8 @@ void MainFrame::performFreeDVOn_()
         m_cboLastReportedCallsigns->Enable(false);
             
         m_cboLastReportedCallsigns->SetText(wxT(""));
+        
+        m_logQSO->Disable();
     });
     
     memset(m_callsign, 0, MAX_CALLSIGN);
@@ -2318,12 +2237,18 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
+        if (!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
             m_rbRADE->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
+            
+            if (!wxGetApp().appConfiguration.enableLegacyModes)
+            {
+                // If legacy modes are not enabled, RADE is the only option.
+                g_mode = FREEDV_MODE_RADE;
+            }
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -2376,6 +2301,14 @@ void MainFrame::performFreeDVOn_()
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
+            
+            // Create logger object
+            if (wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
+            {
+                wxGetApp().logger = std::make_shared<WSJTXNetworkLogger>(
+                    (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                    wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+            }
         }
     
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
@@ -2406,12 +2339,10 @@ void MainFrame::performFreeDVOn_()
         // Init text msg decoding
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             freedvInterface.setTextVaricodeNum(1);
-
-        m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
@@ -2423,6 +2354,11 @@ void MainFrame::performFreeDVOn_()
     {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
+        
+        if (wxGetApp().logger != nullptr)
+        {
+            m_logQSO->Enable(true);
+        }
     });
     
     // attempt to start sound cards and tx/rx processing
@@ -2546,15 +2482,14 @@ void MainFrame::performFreeDVOn_()
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpectrumTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotScatterTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotTimeOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_plotFreqOffsetTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
+
+                isModemRunning.store(true, std::memory_order_release);
             }
         }
     }
@@ -2579,6 +2514,8 @@ void MainFrame::performFreeDVOff_()
     // Stop Running -------------------------------------------------
     //
 
+    isModemRunning.store(false, std::memory_order_release);
+
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
     {
@@ -2587,12 +2524,9 @@ void MainFrame::performFreeDVOff_()
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
-        m_plotScatterTimer.Stop();
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
-        m_plotTimeOffsetTimer.Stop();
-        m_plotFreqOffsetTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
@@ -2637,6 +2571,8 @@ void MainFrame::performFreeDVOff_()
     freedvInterface.stop();
     
     m_newMicInFilter = m_newSpkOutFilter = true;
+    
+    wxGetApp().logger = nullptr;
 
     executeOnUiThreadAndWait_([&]() 
     {
@@ -2651,6 +2587,8 @@ void MainFrame::performFreeDVOff_()
         m_rb1600->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
+        
+        m_logQSO->Disable();
         
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
@@ -2747,14 +2685,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     }
 }
 
-static std::mutex stoppingMutex;
-
 //-------------------------------------------------------------------------
 // stopRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::stopRxStream()
 {
-    std::unique_lock<std::mutex> lk(stoppingMutex);
+    std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
 
     if(m_RxRunning)
     {
@@ -2778,7 +2714,6 @@ void MainFrame::stopRxStream()
                 txOutSoundDevice.reset();
             }
             
-            delete m_txThread;
             m_txThread = nullptr;
         }
 
@@ -2798,7 +2733,6 @@ void MainFrame::stopRxStream()
                 rxOutSoundDevice.reset();
             }
             
-            delete m_rxThread;
             m_rxThread = nullptr;
         }
 
@@ -3173,24 +3107,19 @@ void MainFrame::startRxStream()
         g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
-        if (
-            wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
-            wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
+        if (g_nSoundCards == 1)
         {
-            if (g_nSoundCards == 1)
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
-                    0);
-            }
-            else
-            {
-                designEQFilters(
-                    g_rxUserdata, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
-            }
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
+                0);
+        }
+        else
+        {
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
         }
 
         m_newMicInFilter = m_newSpkOutFilter = false;
@@ -3272,7 +3201,7 @@ void MainFrame::startRxStream()
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
+            m_txThread = std::make_shared<TxRxThread>(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
             
             if (!txInSoundDevice->isRunning())
             {
@@ -3299,7 +3228,7 @@ void MainFrame::startRxStream()
             m_txThread->start();
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
+        m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
 
         rxInSoundDevice->start();
         if (!rxInSoundDevice->isRunning())
@@ -3655,7 +3584,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         {
             tmpInput[i] = audioData[0];
         }
-        if (cbData->infifo2->write(tmpInput, size)) 
+        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
         {
             g_infifo2_full.fetch_add(1, std::memory_order_release);
         }
@@ -3710,7 +3639,7 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     {
         tmpInput[i] = audioData[0];
     }
-    if (cbData->infifo1->write(tmpInput, size)) 
+    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
     {
         g_infifo1_full.fetch_add(1, std::memory_order_release);
     }

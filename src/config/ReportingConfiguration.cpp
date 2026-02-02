@@ -50,8 +50,19 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
     , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
-    , useUTCForReporting("/CallsignList/UseUTCTime", false)
+    
+    , freedvReporterColumnOrder("/Reporting/FreeDV/ColumnOrder", { }) /* empty means default ordering */
+    , freedvReporterColumnVisibility("/Reporting/FreeDV/ColumnVisibility", { })
+
+    , freedvReporterEnableMaxIdleFilter("/Reporting/FreeDV/EnableMaxIdleFilter", false)
+    , freedvReporterMaxIdleMinutes("/Reporting/FreeDV/MaxIdleMinutes", 120)
+
+    , udpReportingEnabled("/Reporting/UDP/Enable", false)
+    , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
+    , udpReportingPort("/Reporting/UDP/Port", 2237)
         
+    , useUTCForReporting("/CallsignList/UseUTCTime", false)
+
     , reportingFrequencyList("/Reporting/FrequencyList", {
         _("1.8700"),
         _("3.6250"),
@@ -60,7 +71,6 @@ ReportingConfiguration::ReportingConfiguration()
         _("3.6970"),
         _("3.8030"),
         _("5.4035"),
-        _("5.3665"),
         _("5.3685"),
         _("7.1770"),
         _("7.1970"),
@@ -180,6 +190,16 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterBandFilterTracksExactFreq);
     load_(config, freedvReporterStatusText);
     load_(config, freedvReporterRecentStatusTexts);
+    
+    load_(config, udpReportingEnabled);
+    load_(config, udpReportingHostname);
+    load_(config, udpReportingPort);
+
+    load_(config, freedvReporterColumnOrder);
+    load_(config, freedvReporterColumnVisibility);
+
+    load_(config, freedvReporterEnableMaxIdleFilter);
+    load_(config, freedvReporterMaxIdleMinutes);
 
     load_(config, useUTCForReporting);
     
@@ -225,6 +245,16 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterBandFilterTracksExactFreq);
     save_(config, freedvReporterStatusText);
     save_(config, freedvReporterRecentStatusTexts);
+    
+    save_(config, freedvReporterColumnOrder);
+    save_(config, freedvReporterColumnVisibility);
+
+    save_(config, freedvReporterEnableMaxIdleFilter);
+    save_(config, freedvReporterMaxIdleMinutes);
+
+    save_(config, udpReportingEnabled);
+    save_(config, udpReportingHostname);
+    save_(config, udpReportingPort);
     
     save_(config, useUTCForReporting);
     

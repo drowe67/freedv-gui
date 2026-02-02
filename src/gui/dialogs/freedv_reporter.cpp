@@ -19,14 +19,22 @@
 //
 //==========================================================================
 
+#include <sstream>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
 #include <wx/clipbrd.h>
+#include <wx/wrapsizer.h>
+#include <wx/menuitem.h>
+#include <wx/numdlg.h> 
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
+
+#if defined(WIN32)
+#include <wx/headerctrl.h>
+#endif // defined(WIN32)
 
 #include "freedv_reporter.h"
 #include "freedv_interface.h"
@@ -61,6 +69,115 @@ extern FreeDVInterface freedvInterface;
 
 using namespace std::placeholders;
 
+void FreeDVReporterDialog::createColumn_(int col, bool visible)
+{
+    wxDataViewColumn* colObj = nullptr;
+    int minWidth = 0;
+    int alignment = wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL;
+    wxString colName = "";
+    bool ellipsize = false;
+
+    switch (col)
+    {
+        case CALLSIGN_COL:
+            colName = wxT("Callsign");
+            minWidth = 70;
+            break;
+        case GRID_SQUARE_COL:
+            colName = wxT("Locator");
+            minWidth = 65;
+            break;
+        case DISTANCE_COL:
+            colName = wxT("km");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case HEADING_COL:
+            colName = wxT("Hdg");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case VERSION_COL:
+            colName = wxT("Version");
+            minWidth = 70;
+            break;
+        case FREQUENCY_COL:
+            colName = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz");
+            minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
+            break;
+        case TX_MODE_COL:
+            colName = wxT("Mode");
+            minWidth = 65;
+            break;
+        case STATUS_COL:
+            colName = wxT("Status");
+            minWidth = 60;
+            break;
+        case USER_MESSAGE_COL:
+            // Note: there's Windows specific logic here, so we create the column
+            // here rather than farther down.
+#if defined(WIN32)
+            // Use ReportMessageRenderer only on Windows so that we can render emojis in color.
+            colObj = new wxDataViewColumn(wxT("Msg"), new ReportMessageRenderer(), col, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+            m_listSpots->AppendColumn(colObj);
+#else
+            colObj = m_listSpots->AppendTextColumn(wxT("Msg"), col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+#endif // defined(WIN32)
+            colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
+            minWidth = 130;
+            ellipsize = true;
+            break;
+        case LAST_TX_DATE_COL:
+            colName = wxT("Last TX");
+            minWidth = 60;
+            break;
+        case LAST_RX_CALLSIGN_COL:
+            colName = wxT("RX Call");
+            minWidth = 65;
+            break;
+        case LAST_RX_MODE_COL:
+            colName = wxT("Mode");
+            minWidth = 60;
+            break;
+        case SNR_COL:
+            colName = wxT("SNR");
+            minWidth = 60;
+            break;
+        case LAST_UPDATE_DATE_COL:
+            colName = wxT("Last Update");
+            minWidth = 100;
+            break;
+        default:
+            return;
+    }
+
+    if (colObj == nullptr)
+    {
+        colObj = m_listSpots->AppendTextColumn(colName, col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+    }
+    auto renderer = colObj->GetRenderer();
+    renderer->SetAlignment(alignment);
+    if (ellipsize)
+    {
+        renderer->EnableEllipsize(wxELLIPSIZE_END);
+    }
+    else
+    {
+        renderer->DisableEllipsize();
+    }
+    colObj->SetMinWidth(minWidth);
+    if (col == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    {
+        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+    }
+
+    if (!visible)
+    {
+        colObj->SetHidden(true);
+    }
+}
+
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
@@ -89,172 +206,113 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         
     // Main list box
     // =============================
-    int col = 0;
-
     m_listSpots = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 
     // Associate data model.
     spotsDataModel_ = new FreeDVReporterDataModel(this);
     m_listSpots->AssociateModel(spotsDataModel_.get());
 
-    auto colObj = m_listSpots->AppendTextColumn(wxT("Callsign"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->SetMinWidth(70);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() != NUM_COLS)
     {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+        // Generate default column ordering
+        log_info("Generating missing column ordering");
+        auto iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
+        while (iter != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end())
+        {
+            if (*iter >= RIGHTMOST_COL)
+            {
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->erase(iter);
+                iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        auto maxIndex = 
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0 ? 
+            -1 : 
+            *std::max_element(
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
+            );
+
+        for (auto index = maxIndex + 1; index < NUM_COLS; index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
+        }
     }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Locator"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
+
+    while (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->size() < NUM_COLS)
     {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+        // Generate default column visibility
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->push_back(true);
     }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("km"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Hdg"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Version"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(70);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), 
-        col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Mode"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Status"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
+
+    // Windows seems to have the model column ID equal to the actual column ID regardless of the 
+    // actual ordering, so we just use wxHeaderCtrl to save/restore the column ordering.
 #if defined(WIN32)
-    // Use ReportMessageRenderer only on Windows so that we can render emojis in color.
-    colObj = new wxDataViewColumn(wxT("Msg"), new ReportMessageRenderer(), col++, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    m_listSpots->AppendColumn(colObj);
-#else
-    colObj = m_listSpots->AppendTextColumn(wxT("Msg"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    for (auto col = 0; col < NUM_COLS; col++)
+#else    
+    for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
 #endif // defined(WIN32)
-    colObj->GetRenderer()->EnableEllipsize(wxELLIPSIZE_END);
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(130);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
     {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Last TX"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("RX Call"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(65);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Mode"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("SNR"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(60);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
-    
-    colObj = m_listSpots->AppendTextColumn(wxT("Last Update"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    colObj->GetRenderer()->DisableEllipsize();
-    colObj->GetRenderer()->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
-    colObj->SetMinWidth(100);
-    if ((col - 1) == wxGetApp().appConfiguration.reporterWindowCurrentSort)
-    {
-        colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
-    }
+        if (col < NUM_COLS)
+        {
+            log_info("Creating col %d", col);
+            auto visible = (bool)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col);
 
-    m_listSpots->AppendTextColumn(wxT(" "), col++, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
+            // Hide RX Mode column if legacy modes aren't enabled
+            if (col == LAST_RX_MODE_COL)
+            {
+                visible &= wxGetApp().appConfiguration.enableLegacyModes;
+            }
+            createColumn_(col, visible);
+        }
+    }
+    m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
+#if defined(WIN32)
+    auto headerCtrl = m_listSpots->GenericGetHeader();
+    wxArrayInt wxColumnOrder;
+    for (auto& col : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.get())
+    {
+        if (col < NUM_COLS)
+        {
+            wxColumnOrder.Add(col);
+        }
+    }
+    wxColumnOrder.Add(RIGHTMOST_COL); // All columns need to be in the list to actually take effect.
+    headerCtrl->SetColumnsOrder(wxColumnOrder);
+#endif // defined(WIN32)
+    
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
     // Bottom buttons
     // =============================
-    wxBoxSizer* bottomRowSizer = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* reportingSettingsSizer = new wxBoxSizer(wxHORIZONTAL);
+    auto reportingSettingsSizer = new wxWrapSizer(wxHORIZONTAL);
+
+    wxBoxSizer* leftButtonSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     m_buttonOK->SetToolTip(_("Closes FreeDV Reporter window."));
-    reportingSettingsSizer->Add(m_buttonOK, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonOK, 0, wxALL, 5);
 
     m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
     m_buttonSendQSY->SetToolTip(_("Asks selected user to switch to your frequency."));
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
-    reportingSettingsSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
 
     m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Website"));
     m_buttonDisplayWebpage->SetToolTip(_("Opens FreeDV Reporter in your Web browser."));
-    reportingSettingsSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
+    leftButtonSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
 
-    // Band filter list    
+    reportingSettingsSizer->Add(leftButtonSizer, 0, wxALL | wxEXPAND, 0);
+
+    // Band filter list
+    wxBoxSizer* bandFilterSizer = new wxBoxSizer(wxHORIZONTAL);
+
     wxString bandList[] = {
         _("All"),
         _("160 m"),
@@ -271,50 +329,115 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         _("Other"),
     };
     
-    reportingSettingsSizer->Add(new wxStaticText(this, wxID_ANY, _("Band:"), wxDefaultPosition, wxDefaultSize, 0), 
+    bandFilterSizer->Add(new wxStaticText(this, wxID_ANY, _("Band:"), wxDefaultPosition, wxDefaultSize, 0), 
                           0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_bandFilter = new wxComboBox(
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
         sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
-    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
-    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
-    
-    reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);    
+    bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    m_trackFrequency->SetToolTip(_("Filters FreeDV Reporter list based on radio's current frequency or band."));
+    bandFilterSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    reportingSettingsSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    bandFilterSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackFreqBand->Enable(false);
     
     m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("freq."), wxDefaultPosition, wxDefaultSize, 0);
-    reportingSettingsSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    bandFilterSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
+    m_filterStatus = new wxStaticText(this, wxID_ANY, _("Idle Off"));
+    bandFilterSizer->Add(m_filterStatus, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    reportingSettingsSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 0);
+    
+    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
+
+    wxBoxSizer* statusMessageSizer = new wxBoxSizer(wxHORIZONTAL);
 
     auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Message:"), wxDefaultPosition, wxDefaultSize);
-    reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_statusMessage = new wxComboBox(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), 0, nullptr, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
-    reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonSend = new wxButton(this, wxID_ANY, _("Send"));
     m_buttonSend->SetToolTip(_("Sends message to FreeDV Reporter. Right-click for additional options."));
-    reportingSettingsSizer->Add(m_buttonSend, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_buttonSend, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonClear = new wxButton(this, wxID_ANY, _("Clear"));
     m_buttonClear->SetToolTip(_("Clears message from FreeDV Reporter. Right-click for additional options."));
-    reportingSettingsSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    statusMessageSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
-
-    sectionSizer->Add(bottomRowSizer, 0, wxALL | wxALIGN_CENTER, 2);
+    reportingSettingsSizer->Add(statusMessageSizer, 0, wxALL | wxEXPAND, 0);
+    sectionSizer->Add(reportingSettingsSizer, 0, wxALL | wxEXPAND | wxFIXED_MINSIZE, 2);
     
     this->SetMinSize(GetBestSize());
-    
+
+    // Menu bar
+    menuBar_ = new wxMenuBar();
+    this->SetMenuBar(menuBar_);
+
+    showMenu_ = new wxMenu();
+    menuBar_->Append(showMenu_, _("Show"));
+
+    std::vector<std::pair<int, wxString> > menus {
+        {CALLSIGN_COL, _("Callsign")},
+        {GRID_SQUARE_COL, _("Locator")},
+        {DISTANCE_COL, _("Distance")},
+        {VERSION_COL, _("Version")},
+        {HEADING_COL, _("Heading")},
+        {FREQUENCY_COL, _("Frequency")},
+        {TX_MODE_COL, _("TX Mode")},
+        {STATUS_COL, _("Status")},
+        {USER_MESSAGE_COL, _("User Message")},
+        {LAST_TX_DATE_COL, _("Last TX Date")},
+        {LAST_RX_CALLSIGN_COL, _("Last RX Callsign")},
+        {LAST_RX_MODE_COL, _("Last RX Mode")},
+        {SNR_COL, _("SNR")},
+        {LAST_UPDATE_DATE_COL, _("Last Update")},
+    };
+
+    for (auto& item : menus)
+    {
+        auto menuItem = showMenu_->Append(wxID_HIGHEST + 100 + item.first, item.second, wxEmptyString, wxITEM_CHECK);
+        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(item.first));
+        this->Connect(wxID_HIGHEST + 100 + item.first, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnShowColumn));
+
+        if (item.first == LAST_RX_MODE_COL && !wxGetApp().appConfiguration.enableLegacyModes)
+        {
+            menuItem->Enable(false);
+        }
+    }
+
+    std::vector<int> idleLongerThanMinutes { 30, 60, 90, 120 };
+    filterMenu_ = new wxMenu();
+    idleLongerThanMenu_ = new wxMenu();
+    menuBar_->Append(filterMenu_, _("Filter"));
+    filterMenu_->Append(wxID_ANY, _("Idle more than (minutes)..."), idleLongerThanMenu_);
+
+    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_CHECK);
+    menuItem->Check(!wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
+    bool foundChecked = menuItem->IsChecked();
+    this->Connect(menuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+
+    for (auto& item : idleLongerThanMinutes)
+    {
+        auto menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200 + item, wxString::Format("%d", item), wxEmptyString, wxITEM_CHECK);
+        menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes == item);
+        foundChecked |= menuItem->IsChecked();
+        this->Connect(wxID_HIGHEST + 200 + item, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+    }
+
+    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_CHECK);
+    menuItem->Check(!foundChecked);
+    this->Connect(wxID_HIGHEST + 200, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
+
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
@@ -416,6 +539,31 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         wxCommandEventHandler(FreeDVReporterDialog::OnCopyUserMessage),
         NULL,
         this);
+        
+    // Create popup menu for callsign lookups
+    callsignPopupMenu_ = new wxMenu();
+    assert(callsignPopupMenu_ != nullptr);
+    
+    auto qrzMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via QRZ"));
+    callsignPopupMenu_->Connect(
+        qrzMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnQRZLookup),
+        NULL,
+        this);
+        
+    auto hamQthMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via HamQTH"));
+    callsignPopupMenu_->Connect(
+        hamQthMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnHamQTHLookup),
+        NULL,
+        this);
+        
+    auto hamCallMenuItem = callsignPopupMenu_->Append(wxID_ANY, _("Lookup via HamCall"));
+    callsignPopupMenu_->Connect(
+        hamCallMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnHamCallLookup),
+        NULL,
+        this);
     
     // Hook in events
     this->Connect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
@@ -432,6 +580,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
+    m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
+    m_listSpots->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
 
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -498,7 +648,9 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
-    
+    m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
+    m_listSpots->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
+
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
     m_buttonClear->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
@@ -517,6 +669,23 @@ bool FreeDVReporterDialog::isTextMessageFieldInFocus()
     return m_statusMessage->HasFocus();
 }
 
+wxDataViewColumn* FreeDVReporterDialog::getColumnForModelColId_(unsigned int col)
+{
+    wxDataViewColumn* item = nullptr;
+
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        item = m_listSpots->GetColumn(index);
+        if (item->GetModelColumn() == col)
+        {
+            break;
+        }
+        item = nullptr;
+    }
+    assert(item != nullptr);
+    return item;
+}
+
 void FreeDVReporterDialog::refreshLayout()
 {
     // Update row colors
@@ -527,7 +696,7 @@ void FreeDVReporterDialog::refreshLayout()
     rxRowBackgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
     rxRowForegroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
  
-    wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
+    wxDataViewColumn* item = getColumnForModelColId_(DISTANCE_COL);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
@@ -539,7 +708,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
     
     // Refresh frequency units as appropriate.
-    item = m_listSpots->GetColumn(FREQUENCY_COL);
+    item = getColumnForModelColId_(FREQUENCY_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         item->SetTitle("kHz");
@@ -550,17 +719,29 @@ void FreeDVReporterDialog::refreshLayout()
     }
 
     // Change direction/heading column label based on preferences
-    item = m_listSpots->GetColumn(HEADING_COL);
+    item = getColumnForModelColId_(HEADING_COL);
+    auto renderer = item->GetRenderer();
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item->SetTitle("Dir");
         item->SetAlignment(wxALIGN_LEFT);
+        renderer->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
     }
     else
     {
         item->SetTitle("Hdg");
         item->SetAlignment(wxALIGN_RIGHT);
+        renderer->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     }
+    
+    // Hide/show legacy columns
+    item = getColumnForModelColId_(LAST_RX_MODE_COL);
+    item->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(LAST_RX_MODE_COL));
+    auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + 100 + LAST_RX_MODE_COL);
+    menuItem->Enable(wxGetApp().appConfiguration.enableLegacyModes);
+
+    // Update filter status in window
+    updateFilterStatus_();
 
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
@@ -569,6 +750,31 @@ void FreeDVReporterDialog::refreshLayout()
     // Update status controls.
     wxCommandEvent tmpEvent;
     OnStatusTextChange(tmpEvent);
+}
+
+void FreeDVReporterDialog::updateFilterStatus_()
+{
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
+    {
+        m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
+        
+#if wxCHECK_VERSION(3,1,3)
+        auto appearance = wxSystemSettings::GetAppearance();
+        if (appearance.IsDark())
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("SALMON"));
+        }
+        else
+        {
+            m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("FIREBRICK"));
+        }
+#endif // wxCHECK_VERSION(3,1,3)
+    }
+    else
+    {
+        m_filterStatus->SetLabel(_("Idle Off"));
+        m_filterStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    }
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
@@ -584,6 +790,131 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& re
     }
 }
 
+void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
+{
+    // Invert visibility value
+    auto columnId = event.GetId() - wxID_HIGHEST - 100;
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId) = 
+        !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
+
+    auto newColValue =
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
+
+    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
+    menuItem->Check(newColValue);
+
+    // Set column visibility in wxDataViewCtl.
+    auto col = getColumnForModelColId_(columnId);
+    col->SetHidden(!newColValue);
+}
+
+void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
+{
+    if (event.GetId() >= (wxID_HIGHEST + 200))
+    {
+        auto numMinutes = event.GetId() - wxID_HIGHEST - 200;
+        if (numMinutes == 0)
+        {
+            // need to ask user for number of minutes
+            numMinutes = 
+                wxGetNumberFromUser(wxEmptyString, _("Enter number of minutes: "), _("Max Idle Time"), wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes, 1, 1440, this);
+            if (numMinutes > -1)
+            {
+                auto menuItems = idleLongerThanMenu_->GetMenuItems();
+                bool found = false;
+                for (auto& item : menuItems)
+                {
+                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                    {
+                        found = true;
+                        item->Check(true);
+                    }
+                    else
+                    {
+                        item->Check(false);
+                    }
+                }
+                if (!found)
+                {
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
+                }
+
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
+                    numMinutes;
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = true;
+            }
+            else
+            {
+                // No changes needed.
+                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                auto menuItems = idleLongerThanMenu_->GetMenuItems();
+                bool found = false;
+                for (auto& item : menuItems)
+                {
+                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                    {
+                        item->Check(true);
+                    }
+                    else
+                    {
+                        item->Check(false);
+                    }
+                }
+                if (!found)
+                {
+                    auto item = idleLongerThanMenu_->FindItem(event.GetId());
+                    item->Check(true);
+                }
+                return;
+            }
+        }
+        else
+        {
+            auto menuItems = idleLongerThanMenu_->GetMenuItems();
+            for (auto& item : menuItems)
+            {
+                if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
+                {
+                    item->Check(true);
+                }
+                else
+                {
+                    item->Check(false);
+                }
+            }
+
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes =
+                numMinutes;
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = true;
+        }
+    }
+    else
+    {
+        auto menuItems = idleLongerThanMenu_->GetMenuItems();
+        for (auto& item : menuItems)
+        {
+            if (item->GetId() != event.GetId())
+            {
+                item->Check(false);
+            }
+            else
+            {
+                item->Check(true);
+            }
+        }
+
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter = false;
+    }
+
+    // Update filter status in window
+    updateFilterStatus_();
+
+    // Allow changes to take effect.
+    FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+    model->refreshAllRows();
+}
+
 void FreeDVReporterDialog::DeselectItem(wxMouseEvent& event)
 {
     DeselectItem();
@@ -596,6 +927,7 @@ void FreeDVReporterDialog::DeselectItem()
     wxDataViewItem item = m_listSpots->GetSelection();
     if (item.IsOk())
     {
+        wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_listSpots->Unselect(item);
     }
 }
@@ -614,6 +946,7 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 #endif //!defined(WIN32)
 #endif
 
+    updateFilterStatus_();
     event.Skip();
 }
 
@@ -670,17 +1003,23 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent&)
     // Preserve sort column/ordering
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
-        auto colObj = m_listSpots->GetColumn(index);
+        auto colObj = getColumnForModelColId_(index);
         if (colObj != nullptr && colObj->IsSortKey())
         {
-            wxGetApp().appConfiguration.reporterWindowCurrentSort = index;
+            wxGetApp().appConfiguration.reporterWindowCurrentSort = colObj->GetModelColumn();
             wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = colObj->IsSortOrderAscending();
             break;
         }
     }
-    
+   
+    // Preserve column ordering
+#if !defined(WIN32)
+    wxDataViewEvent tmp;
+    OnColumnReordered(tmp);
+#endif // !defined(WIN32)
+ 
     // Preserve Msg column width
-    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
+    auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
 
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -715,11 +1054,11 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
     bool found = false;
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
-        auto colObj = m_listSpots->GetColumn(index);
+        auto colObj = getColumnForModelColId_(index);
         if (colObj != nullptr && colObj->IsSortKey())
         {
             found = true;
-            wxGetApp().appConfiguration.reporterWindowCurrentSort = index;
+            wxGetApp().appConfiguration.reporterWindowCurrentSort = colObj->GetModelColumn();
             wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = colObj->IsSortOrderAscending();
             break;
         }
@@ -731,8 +1070,14 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent&)
         wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = true;
     }
 
+    // Preserve column ordering
+#if !defined(WIN32)
+    wxDataViewEvent tmp;
+    OnColumnReordered(tmp);
+#endif // !defined(WIN32)
+ 
     // Preserve Msg column width
-    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
+    auto userMsgCol = getColumnForModelColId_(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
     
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -752,6 +1097,9 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
         // Bring up tooltip for longer reporting messages if the user happened to click on that column.
         wxMouseEvent dummyEvent;
         AdjustToolTip(dummyEvent);
+
+        // For logging: make sure FreeDV Reporter information is used
+        wxGetApp().lastSelectedLoggingRow = MainApp::FREEDV_REPORTER;
     }
     else
     {
@@ -831,13 +1179,29 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         // green and it's been more than >20 seconds, clear coloring.
         auto curDate = wxDateTime::Now().ToUTC();
 
+        wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
+        
+        wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
+        wxDataViewItemArray itemsDeleted;
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
             {
+                if (item.second->isVisible)
+                {
+                    wxDataViewItem dvi(item.second);
+                    item.second->isVisible = false;
+                    parent_->Unselect(dvi);
+                    itemsDeleted.Add(dvi);
+                    
+                    if (currentSelection.IsOk() && dvi.GetID() == currentSelection.GetID())
+                    {
+                        // Selection is no longer valid.
+                        currentSelection = wxDataViewItem(nullptr);
+                    }
+                }
                 continue;
-                
             }
             auto reportData = item.second;
 
@@ -893,20 +1257,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
             if (parent_->IsShownOnScreen())
             {
-                bool newVisibility = !isFiltered_(reportData->frequency);
+                bool newVisibility = !isFiltered_(reportData);
                 if (newVisibility != reportData->isVisible)
                 {
                     reportData->isVisible = newVisibility;
                     if (newVisibility)
                     {
-                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        itemsAdded.Add(wxDataViewItem(reportData));
 #if defined(WIN32)
                         doAutoSizeColumns = true;
 #endif // defined(WIN32)
                     }
                     else
                     {
-                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                        wxDataViewItem dvi(reportData);
+                        itemsDeleted.Add(dvi);
+                        if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
+                        {
+                            // Selection no longer valid
+                            currentSelection = wxDataViewItem(nullptr);
+                        }
                     }
                     sortOnNextTimerInterval = true;
                 }
@@ -926,7 +1296,39 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
         }
 
-        ItemsChanged(itemsChanged);
+        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+        {
+            Cleared(); // avoids spurious errors on macOS
+            if (currentSelection.IsOk())
+            {
+                // Reselect after redraw
+                parent_->CallAfter([&, currentSelection]() {
+                    parent_->m_listSpots->Select(currentSelection);
+                });
+            }
+        }
+        else if (itemsChanged.size() > 0)
+        {
+            // Temporarily disable autosizing prior to item updates.
+            // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
+            for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+            {
+                auto col = parent_->m_listSpots->GetColumn(index);
+                col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
+            }
+            
+            ItemsChanged(itemsChanged);
+
+            // Re-enable autosizing
+            for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+            {
+                auto col = parent_->m_listSpots->GetColumn(index);
+                if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
+                {
+                    col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+                }
+            }
+        }
         
 #if defined(WIN32)
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
@@ -1020,24 +1422,24 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
     wxRect rect;
-    unsigned int desiredCol = USER_MESSAGE_COL;
-    
     wxDataViewItem item;
     wxDataViewColumn* col;
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
-    if (item.IsOk())
+    if (item.IsOk() && IsActive())
     {
         // Linux workaround to avoid inadvertent selections.
         isSelectionPossible_ = true;
 
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
-        tempUserMessage_ = model->getUserMessage(item);
+        tempUserMessage_ = _("");
+        tempCallsign_ = _("");
     
-        if (col->GetModelColumn() == desiredCol)
+        if (col->GetModelColumn() == USER_MESSAGE_COL)
         {
+            tempUserMessage_ = model->getUserMessage(item);
             rect = m_listSpots->GetItemRect(item, col);
-            if (tipWindow_ == nullptr)
+            if (tipWindow_ == nullptr && tempUserMessage_ != _(""))
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();
@@ -1046,24 +1448,30 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
                 tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
                 tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                 tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                tipWindow_->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
             
                 // Make sure we actually override behavior of needed events inside the tooltip.
                 for (auto& child : tipWindow_->GetChildren())
                 {
                     child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                     child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                    child->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
                 }
             }
         }
-        else
+        else if (col->GetModelColumn() == CALLSIGN_COL)
         {
-            tempUserMessage_ = _("");
+            tempCallsign_ = model->getCallsign(item);
+        }
+        else if (col->GetModelColumn() == LAST_RX_CALLSIGN_COL)
+        {
+            tempCallsign_ = model->getRxCallsign(item);
         }
     }
     else
     {
-        isSelectionPossible_ = false;
         tempUserMessage_ = _("");
+        tempCallsign_ = _("");
     }
 }
 
@@ -1077,6 +1485,85 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
+}
+
+void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
+{
+    // Ensure that item is selected after tooltip closes
+    CallAfter([this]() {
+        const wxPoint pt = wxGetMousePosition();
+        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+    
+        wxDataViewItem item;
+        wxDataViewColumn* col;
+        m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
+        if (item.IsOk() && IsActive())
+        {
+            m_listSpots->Select(item);
+        }
+    });
+    
+    // Allow tip window to handle event
+    event.Skip();
+}
+
+void FreeDVReporterDialog::OnSetFocus(wxFocusEvent& event)
+{
+    CallAfter([this]() {
+        const wxPoint pt = wxGetMousePosition();
+        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+
+        wxDataViewItem item;
+        wxDataViewColumn* col;
+        m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
+        if (item.IsOk())
+        {
+            m_listSpots->Select(item);
+        }
+    });
+    
+    event.Skip();
+}
+
+void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
+{
+    // Preserve new column ordering
+    // Note: Windows uses the same indices for model column and GetColumn()
+    // so we need to use an alternate implementation for that platform.
+#if defined(WIN32)
+    CallAfter([this]() {
+        std::vector<int> newColPositions;
+        std::stringstream ss;
+        auto headerCtrl = m_listSpots->GenericGetHeader();
+        wxArrayInt wxColumnOrder = headerCtrl->GetColumnsOrder();
+        for (unsigned int index = 0; index < wxColumnOrder.GetCount(); index++)
+        {
+            auto col = wxColumnOrder.Item(index);
+            if (col < NUM_COLS)
+            {
+                newColPositions.push_back(col);
+                ss << col << " ";
+            }
+        }
+
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
+        log_info("New column ordering: %s", ss.str().c_str());
+    });
+#else
+    std::stringstream ss;
+    std::vector<int> newColPositions;
+    for (unsigned int index = 0; index < NUM_COLS; index++)
+    {
+        auto dvc = m_listSpots->GetColumn(index);
+        newColPositions.push_back(dvc->GetModelColumn());
+        ss << dvc->GetModelColumn() << " ";
+    }
+    
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
+    log_info("New column ordering: %s", ss.str().c_str());
+#endif // defined(WIN32)
 }
 
 void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
@@ -1117,18 +1604,22 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
         tipWindow_ = nullptr;
     }
 
+    // Only show the popup if we're already hovering over a message or callsign.
+    const wxPoint pt = wxGetMousePosition();
+    int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+    int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+    
     if (tempUserMessage_ != _(""))
     {
-        // Only show the popup if we're already hovering over a message.
-        const wxPoint pt = wxGetMousePosition();
-        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
-        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
-
         // 170 here has been determined via experimentation to avoid an issue 
         // on some KDE installations where the popup menu immediately closes after
         // right-clicking. This in effect causes the popup to open to the left of
         // the mouse pointer.
         m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
+    }
+    else if (tempCallsign_ != _(""))
+    {
+        m_listSpots->PopupMenu(callsignPopupMenu_, wxPoint(mouseX, mouseY));
     }
 }
 
@@ -1142,6 +1633,30 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent&)
         wxTheClipboard->Close();
     }
     DeselectItem();
+}
+
+void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
+    }
+}
+
+void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
+    }
+}
+
+void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
+{
+    if (tempCallsign_ != _(""))
+    {
+        wxLaunchDefaultBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
+    }
 }
 
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)
@@ -1376,6 +1891,9 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->setBandFilter(freq);
+
+    // Update filter status in window
+    updateFilterStatus_();
 }
 
 #if defined(WIN32)
@@ -1386,7 +1904,7 @@ void FreeDVReporterDialog::autosizeColumns()
         if (index != USER_MESSAGE_COL)
         {
             // USER_MESSAGE_COL width is preserved and should not be messed with.
-            auto col = m_listSpots->GetColumn(index);
+            auto col = getColumnForModelColId_(index);
             col->SetWidth(wxCOL_WIDTH_DEFAULT);
             col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
         }
@@ -1661,27 +2179,58 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     return bandForFreq;
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
+bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
 {
-    auto bandForFreq = parent_->getFilterForFrequency_(freq);
-   
+    return 
+        (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
+        (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
+{
+    bool isHidden = false;
     if (!parent_->IsShownOnScreen())
     {
         return true;
     }
 
-    if (currentBandFilter_ == FilterFrequency::BAND_ALL)
+    if (currentBandFilter_ != FilterFrequency::BAND_ALL)
     {
-        return false;
-    }
-    else
-    {
-        return 
+        auto freq = data->frequency;
+        auto bandForFreq = parent_->getFilterForFrequency_(freq);
+
+        isHidden =  
             (bandForFreq != currentBandFilter_) ||
             (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq &&
                 freq != filteredFrequency_);
     }
+
+    // If enabled, hide rows that exceed the max idle time.
+    if (!isHidden && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
+    {
+        // "Idle" is defined as someone who either:
+        // * Connected more than X minutes ago and has yet to transmit, or
+        // * Last transmitted more than X minutes ago.
+        int maxIdleTimeMins = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+        wxDateTime maxIdleDate;
+        wxDateTime origDate;
+        if (data->lastTxDate.IsValid())
+        {
+            origDate = data->lastTxDate;
+        }
+        else
+        {
+            origDate = data->connectTime;
+        }
+
+        maxIdleDate = origDate.Add(wxTimeSpan(maxIdleTimeMins / 60, maxIdleTimeMins % 60));
+        isHidden = maxIdleDate.IsEarlierThan(wxDateTime::Now());
+    }
+
+    return isHidden;
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetCardinalDirection_(int degrees)
@@ -1743,8 +2292,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
             reporter_->setOnReporterConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_, this));
             reporter_->setOnReporterDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_, this));
     
-            reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_, this, _1, _2, _3, _4, _5, _6));
-            reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_, this, _1, _2, _3, _4, _5, _6));
+            reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_, this, _1, _2, _3, _4, _5, _6, _7));
+            reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_, this, _1, _2, _3, _4, _5, _6, _7));
             reporter_->setOnFrequencyChangeFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_, this, _1, _2, _3, _4, _5));
             reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
             reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
@@ -2149,6 +2698,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     bool doAutoSizeColumns = false;
 #endif // defined(WIN32)
     
+    wxDataViewItemArray itemsAdded;
+    wxDataViewItemArray itemsDeleted;
+    wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
+    
     for (auto& kvp : allReporterData_)
     {
     	if (kvp.second->isPendingDelete)
@@ -2191,26 +2744,45 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         }
 
         // Refresh filter state
-        bool newVisibility = !isFiltered_(kvp.second->frequency);
+        bool newVisibility = !isFiltered_(kvp.second);
         if (newVisibility != kvp.second->isVisible)
         {
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
-                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                itemsAdded.Add(wxDataViewItem(kvp.second));
 #if defined(WIN32)
                 doAutoSizeColumns = true;
 #endif // defined(WIN32)
             }
             else
             {
-                ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                wxDataViewItem dvi(kvp.second);
+                itemsDeleted.Add(dvi);
+                
+                if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
+                {
+                    // Selection no longer valid
+                    currentSelection = wxDataViewItem(nullptr);
+                }
             }
             sortOnNextTimerInterval = true;
         }
         else if (updated && kvp.second->isVisible)
         {
             kvp.second->isPendingUpdate = true;
+        }
+    }
+    
+    if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+    {
+        Cleared(); // avoids spurious errors on macOS
+        if (currentSelection.IsOk())
+        {
+            // Reselect after redraw
+            parent_->CallAfter([&, currentSelection]() {
+                parent_->m_listSpots->Select(currentSelection);
+            });
         }
     }
     
@@ -2267,7 +2839,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly, std::string connectTime)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
@@ -2277,6 +2849,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
     handler.gridSquare = std::move(gridSquare);
     handler.version = std::move(version);
     handler.rxOnly = rxOnly;
+    handler.connectTime = std::move(connectTime);
 
     handler.fn = [this](CallbackHandler& handler) {
         std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
@@ -2287,6 +2860,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         std::string callsign = std::move(handler.callsign);
         std::string gridSquare = std::move(handler.gridSquare);
         std::string version = std::move(handler.version);
+        std::string connectTime = std::move(handler.connectTime);
         bool rxOnly = handler.rxOnly;
 
         log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
@@ -2390,8 +2964,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
-        temp->connectTime = temp->lastUpdateDate;
-        temp->isVisible = !isFiltered_(temp->frequency);
+        makeValidTime_(connectTime, temp->connectTime);
+        // defer visibility until timer update
+        temp->isVisible = false;
         temp->isPendingUpdate = false;
 
         if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
@@ -2409,17 +2984,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             delete existsIter->second;
         }
         allReporterData_[sid] = temp;
-
-        if (temp->isVisible)
-        {
-            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
-#if defined(WIN32)
-            // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-            // platforms causes excessive CPU usage for no benefit.
-            parent_->autosizeColumns();
-#endif // defined(WIN32)
-            sortOnNextTimerInterval = true;
-        }
     };
 
     fnQueue_.push_back(std::move(handler));
@@ -2442,7 +3006,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     fnQueue_.push_back(std::move(handler));
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string const&, std::string const&, std::string const&, std::string const&, bool)
+void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string const&, std::string const&, std::string const&, std::string const&, bool, std::string const&)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
 
@@ -2460,13 +3024,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         {
             auto item = iter->second;
             wxDataViewItem dvi(item);
-            if (item->isVisible)
-            {
-                item->isVisible = false;
-                parent_->Unselect(dvi);
-                Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
-            }
-
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
         }
@@ -2514,8 +3071,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->m_listSpots->GetColumn(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
+                (sortingColumn == parent_->getColumnForModelColId_(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             bool isDataChanged = 
                 (iter->second->frequency != frequencyHz ||
                  iter->second->lastUpdate != lastUpdateTime);
@@ -2524,27 +3081,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
 
-            wxDataViewItem dvi(iter->second);
-            bool newVisibility = !isFiltered_(iter->second->frequency);
-            if (newVisibility != iter->second->isVisible)
-            {
-                iter->second->isVisible = newVisibility;
-                if (newVisibility)
-                {
-                    ItemAdded(wxDataViewItem(nullptr), dvi);
-#if defined(WIN32)
-                    // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-                    // platforms causes excessive CPU usage for no benefit.
-                    parent_->autosizeColumns();
-#endif // defined(WIN32)
-                }
-                else
-                {
-                    ItemDeleted(wxDataViewItem(nullptr), dvi);
-                }
-                sortOnNextTimerInterval = true;
-            }
-            else if (newVisibility)
+            if (iter->second->isVisible)
             {            
                 iter->second->isPendingUpdate = isDataChanged;
                 sortOnNextTimerInterval |= isChanged;
@@ -2597,8 +3134,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(STATUS_COL) && iter->second->status != txStatus) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(TX_MODE_COL) && iter->second->txMode != txMode);
+                    (sortingColumn == parent_->getColumnForModelColId_(STATUS_COL) && iter->second->status != txStatus) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(TX_MODE_COL) && iter->second->txMode != txMode);
                 isDataChanged |=
                     iter->second->status != txStatus ||
                     iter->second->txMode != txMode;
@@ -2607,7 +3144,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 iter->second->txMode = txMode;
             
                 auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
                 isDataChanged |= iter->second->lastTx != lastTxTime;
                 iter->second->lastTx = lastTxTime;
             }
@@ -2658,8 +3195,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
-                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
             bool isDataChanged =
                 iter->second->lastRxCallsign != receivedCallsignWx ||
                 iter->second->lastRxMode != rxModeWx;
@@ -2672,9 +3209,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
+                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=
                     iter->second->lastRxCallsign != parent_->UNKNOWN_STR ||
@@ -2691,7 +3228,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString);
+                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != snrString);
                 isDataChanged |=
                     iter->second->snr != snrString;
                 
@@ -2741,13 +3278,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
                 iter->second->userMessage = parent_->UNKNOWN_STR;
             }
             else
             {
                 auto msgAsWxString = wxString::FromUTF8(message.c_str());
-                isChanged |= (sortingColumn == parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
+                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
                 iter->second->userMessage = msgAsWxString;
             }
         

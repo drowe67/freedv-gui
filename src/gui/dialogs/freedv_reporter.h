@@ -74,7 +74,35 @@ class FreeDVReporterDialog : public wxFrame
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-    
+        
+        bool getSelectedCallsignInfo(wxString& callsign, wxString& gridSquare, uint64_t& freqHz)
+        {
+            auto selectedItem = m_listSpots->GetSelection();
+            if (selectedItem.IsOk())
+            {
+                FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+                return model->getSelectedCallsignInfo(selectedItem, callsign, gridSquare, freqHz);
+            }
+            return false;
+        }
+        
+        bool getSelectedCallsignInfo(wxString& callsign)
+        {
+            auto selectedItem = m_listSpots->GetSelection();
+            if (selectedItem.IsOk())
+            {
+                FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+                return model->getSelectedCallsignInfo(selectedItem, callsign);
+            }
+            return false;
+        }
+
+        wxString getGridSquareForCallsign(wxString const& callsign)
+        {
+            FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+            return model->getGridSquareForCallsign(callsign);
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
@@ -106,6 +134,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
+        void OnColumnReordered(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
         void DeselectItem();
@@ -116,17 +145,29 @@ class FreeDVReporterDialog : public wxFrame
         void SkipMouseEvent(wxMouseEvent& event);
         void AdjustMsgColWidth(wxListEvent& event);
         void OnRightClickSpotsList(wxContextMenuEvent& event);
+
+        void OnShowColumn(wxCommandEvent& event);
+        void OnIdleFilter(wxCommandEvent& event);
+        
+        void OnQRZLookup(wxCommandEvent& event);
+        void OnHamQTHLookup(wxCommandEvent& event);
+        void OnHamCallLookup(wxCommandEvent& event);
+        
+        void OnLeftClickTooltip(wxMouseEvent& event);
+        void OnSetFocus(wxFocusEvent& event);
                 
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
         wxObjectDataPtr<wxDataViewModel> spotsDataModel_;
         wxMenu* spotsPopupMenu_;
+        wxMenu* callsignPopupMenu_;
         wxString tempUserMessage_; // to store the currently hovering message prior to going on the clipboard
-
+        wxString tempCallsign_; // to store the currently hovering callsign prior to lookup
         // QSY text
         wxTextCtrl* m_qsyText;
         
         // Band filter
+        wxStaticText* m_filterStatus;
         wxComboBox* m_bandFilter;
         wxCheckBox* m_trackFrequency;
         wxRadioButton* m_trackFreqBand;
@@ -150,6 +191,12 @@ class FreeDVReporterDialog : public wxFrame
         wxTimer* m_deleteTimer;
 
         wxTipWindow* tipWindow_;
+
+        // Menu bar and menu options
+        wxMenuBar* menuBar_;
+        wxMenu* showMenu_;
+        wxMenu* filterMenu_;
+        wxMenu* idleLongerThanMenu_;
         
      private:
         const wxString UNKNOWN_STR;
@@ -204,6 +251,16 @@ class FreeDVReporterDialog : public wxFrame
                  return "";
              }
              
+             wxString getRxCallsign(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     return data->lastRxCallsign;
+                 }
+                 return "";
+             }
+             
              wxString getUserMessage(wxDataViewItem& item)
              {
                  if (item.IsOk())
@@ -214,9 +271,49 @@ class FreeDVReporterDialog : public wxFrame
                  return "";
              }
              
+             wxString getGridSquareForCallsign(wxString const& callsign)
+             {
+                 for (auto& kvp : allReporterData_)
+                 {
+                     auto reportData = kvp.second;
+                     if (reportData->callsign == callsign)
+                     {
+                         return reportData->gridSquare;
+                     }
+                 }
+                 
+                 return "";
+             }
+             
              bool isValidForReporting()
              {
                  return reporter_ && reporter_->isValidForReporting();
+             }
+             
+             bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign, wxString& gridSquare, uint64_t& freqHz)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     callsign = data->callsign;
+                     gridSquare = data->gridSquare;
+                     freqHz = data->frequency;
+                     return true;
+                 }
+                 return false;
+             }
+
+             bool filtersEnabled() const;
+             
+             bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     callsign = data->callsign;
+                     return true;
+                 }
+                 return false;
              }
              
              // Required overrides to implement functionality
@@ -305,6 +402,7 @@ class FreeDVReporterDialog : public wxFrame
                 float snr;
                 std::string rxMode;
                 std::string message;
+                std::string connectTime;
                 std::function<void(CallbackHandler&)> fn;
             };
 
@@ -320,14 +418,14 @@ class FreeDVReporterDialog : public wxFrame
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
 
-            bool isFiltered_(uint64_t freq);
+            bool isFiltered_(ReporterData* data);
 
             void clearAllEntries_();
 
             void onReporterConnect_();
             void onReporterDisconnect_();
-            void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly);
+            void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly, std::string connectTime);
+            void onUserDisconnectFn_(std::string sid, std::string const& lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string const& version, bool rxOnly, std::string const& connectTime);
             void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, uint64_t frequencyHz);
             void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
             void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string const& callsign, std::string const& gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
@@ -352,6 +450,9 @@ class FreeDVReporterDialog : public wxFrame
 
         bool isSelectionPossible_;
 
+        void createColumn_(int col, bool visible);
+        wxDataViewColumn* getColumnForModelColId_(unsigned int col);
+
         FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;
         wxColour msgRowForegroundColor;
@@ -359,6 +460,8 @@ class FreeDVReporterDialog : public wxFrame
         wxColour txRowForegroundColor;
         wxColour rxRowBackgroundColor;
         wxColour rxRowForegroundColor;
+
+        void updateFilterStatus_();
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

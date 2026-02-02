@@ -64,10 +64,6 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     /* Recording settings */
     , playFileToMicInPath("/File/playFileToMicInPath", _(""))
-    , recFileFromRadioPath("/File/recFileFromRadioPath", _(""))
-    , recFileFromRadioSecs("/File/recFileFromRadioSecs", 60)
-    , recFileFromModulatorPath("/File/recFileFromModulatorPath", _(""))
-    , recFileFromModulatorSecs("/File/recFileFromModulatorSecs", 60)
     , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
         
     , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
@@ -81,7 +77,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , multipleReceiveEnabled("/Rig/MultipleRx", true)
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
         
-    , quickRecordPath("/QuickRecord/SavePath", _(""))
+    , quickRecordRawPath("/QuickRecord/SavePath", _(""))
+    , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", _(""))
         
     , freedv700Clip("/FreeDV700/txClip", true)
     , freedv700TxBPF("/FreeDV700/txBPF", true)
@@ -115,6 +112,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
         
     , showDecodeStats("/Debug/showDecodeStats", false)
+    , enableLegacyModes("/Modem/enableLegacyModes", false)
 {
     // empty
 }
@@ -155,10 +153,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, transmitLevel);
     
     load_(config, playFileToMicInPath);
-    load_(config, recFileFromRadioPath);
-    load_(config, recFileFromRadioSecs);
-    load_(config, recFileFromModulatorPath);
-    load_(config, recFileFromModulatorSecs);
     load_(config, playFileFromRadioPath);
     
     load_(config, enableSpaceBarForPTT);
@@ -232,8 +226,10 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, monitorVoiceKeyerAudioVol);
     load_(config, monitorTxAudioVol);
     
-    quickRecordPath.setDefaultVal(documentsDir);
-    load_(config, quickRecordPath);
+    quickRecordRawPath.setDefaultVal(documentsDir);
+    quickRecordDecodedPath.setDefaultVal(documentsDir);
+    load_(config, quickRecordRawPath);
+    load_(config, quickRecordDecodedPath);
     
     load_(config, experimentalFeatures);
     load_(config, tabLayout);
@@ -243,6 +239,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reportingUserMsgColWidth);
     
     load_(config, showDecodeStats);
+    load_(config, enableLegacyModes);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -281,10 +278,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, transmitLevel);
     
     save_(config, playFileToMicInPath);
-    save_(config, recFileFromRadioPath);
-    save_(config, recFileFromRadioSecs);
-    save_(config, recFileFromModulatorPath);
-    save_(config, recFileFromModulatorSecs);
     save_(config, playFileFromRadioPath);
     
     save_(config, enableSpaceBarForPTT);
@@ -298,7 +291,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, multipleReceiveEnabled);
     save_(config, multipleReceiveOnSingleThread);
     
-    save_(config, quickRecordPath);
+    save_(config, quickRecordRawPath);
+    save_(config, quickRecordDecodedPath);
     
     save_(config, freedv700Clip);
     save_(config, freedv700TxBPF);
@@ -332,6 +326,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reportingUserMsgColWidth);
     
     save_(config, showDecodeStats);
+    save_(config, enableLegacyModes);
     
     config->Flush();
 }

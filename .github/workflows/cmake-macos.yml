@@ -23,6 +23,7 @@ jobs:
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+          brew uninstall git # workaround, forces use of Apple git
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -37,7 +38,7 @@ jobs:
         cd build_osx
         CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_mimalloc build_rade build_codec2 build_rade_integ
+        make -j$(sysctl -n hw.logicalcpu) build_rade build_codec2 build_rade_integ
     
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
@@ -65,6 +66,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash
@@ -124,7 +126,7 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    needs: ['lint']
+    #needs: ['lint']
 
     steps:
     - uses: actions/checkout@v4
@@ -136,7 +138,8 @@ jobs:
 
     - name: Install needed packages
       run: |
-        brew install automake libtool numpy sox 
+        brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -158,17 +161,57 @@ jobs:
         security find-identity -v macos-build.keychain
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
-    - name: Build universal freedv-gui (unsigned)
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: ./build_macos_sound_drivers.sh
+
+    - name: Workaround macOS permission issues
+      run: |
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+
+    - name: Make sure resource hogs aren't running
+      shell: bash
+      run: |
+          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
+          sudo mdutil -a -i off
+          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+
+    #- name: Build instrumented freedv-gui
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}
+    #  run: |
+    #      BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang ./build_osx.sh
+
+    #- name: Generate optimization profile
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}
+    #  run: |
+    #      cd build_osx
+    #      LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
+    #      $(brew --prefix llvm@20)/bin/llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+
+    - name: Build freedv-gui (unsigned)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+      run: |
+          rm -rf build_osx
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
 
-    - name: Build universal freedv-gui (signed)
+    - name: Build freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+      run: |
+          rm -rf build_osx
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
@@ -214,6 +257,7 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool sox
+        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash

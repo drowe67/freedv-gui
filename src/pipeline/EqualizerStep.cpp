@@ -62,7 +62,7 @@ short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* num
 
     // Note: if we can't lock, an update is in progress. Just assume no filters enabled
     // until update completes.
-    if (filterLock_.try_lock())
+    if (numInputSamples > 0 && filterLock_.try_lock())
     {
         if (*volFilter_ != nullptr)
         {
@@ -98,7 +98,12 @@ short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* num
             return inputSamples;
         }
         filterLock_.unlock();
-    }
 
-    return outputSamples_.get();
+        return outputSamples_.get();
+    }
+    else
+    {
+        *numOutputSamples = numInputSamples;
+        return inputSamples;
+    }
 }

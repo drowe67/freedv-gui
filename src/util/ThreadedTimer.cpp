@@ -99,8 +99,13 @@ void ThreadedTimer::TimerServer::eventLoop_()
         else
         {
             ThreadedTimer* tmpTimer = timerQueue_.top();
-            nextFireTime = tmpTimer->nextFireTime_;
-            timerCV_.wait_until(lk, tmpTimer->nextFireTime_);
+            lk.unlock();
+            {
+                std::unique_lock<std::mutex> lk2(tmpTimer->timerMutex_);
+                nextFireTime = tmpTimer->nextFireTime_;
+            }
+            lk.lock();
+            timerCV_.wait_until(lk, nextFireTime);
         }
 
         // Execute timers that have fired.

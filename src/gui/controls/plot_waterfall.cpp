@@ -30,6 +30,8 @@
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
+constexpr int STR_LENGTH = 15;
+
 extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -78,6 +80,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int
     dyImageData_ = nullptr;
     dy_ = 0;
     tmpImage_ = nullptr;
+    leftOffset_ = 0;
 
     SetLabelSize(10.0);
 
@@ -91,14 +94,29 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
     // resize bit map
-
     m_rCtrl  = GetClientRect();
+
+    // Calculate maximum text width and use that for left offset
+    int text_w = 0;
+    int text_h = 0;
+    int y = 0;
+    float time = 0;
+    leftOffset_ = 0;
+    for(y = PLOT_BORDER + YBOTTOM_TEXT_OFFSET, time=0.0f;
+        y < m_rCtrl.GetHeight();
+        time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP)
+    {
+        char buf[STR_LENGTH];
+        snprintf(buf, STR_LENGTH, "%3.0fs", time);
+        GetTextExtent(buf, &text_w, &text_h);
+        leftOffset_ = std::max(leftOffset_, text_w);
+    }
 
     // m_rGrid is coords of inner window we actually plot to.  We deflate it a bit
     // to leave room for axis labels.
 
     m_rGrid  = m_rCtrl;
-    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
 
@@ -184,7 +202,7 @@ bool PlotWaterfall::checkDT(void)
 
 bool PlotWaterfall::repaintAll_(wxPaintEvent&)
 {
-    wxRect waterfallRegion(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    wxRect waterfallRegion(PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     wxRegionIterator upd(GetUpdateRegion());
     while (upd)
     {   
@@ -205,7 +223,7 @@ void PlotWaterfall::refreshData()
     // redraw properly.
     if (m_rxFreq == 0)
     {
-        int screenX = PLOT_BORDER + XLEFT_OFFSET;
+        int screenX = PLOT_BORDER + leftOffset_;
         int screenY = PLOT_BORDER + YBOTTOM_OFFSET;
         RefreshRect(wxRect(screenX, screenY, m_imgWidth, m_imgHeight), false);
     }
@@ -226,7 +244,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     // to leave room for axis labels.
 
     m_rGrid = m_rCtrl;
-    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
@@ -241,7 +259,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     gc->BeginLayer(1.0);
     for (auto& bmp : waterfallSlices_)
     {
-        gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
+        gc->DrawBitmap(*bmp, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
         yOffset += bmp->GetHeight();
     }
     gc->EndLayer();
@@ -252,11 +270,14 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
+        gc->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
     }
 
-    m_dT = DT;
-
+    if (m_dT >= 1.0)
+    {
+        m_dT = DT;
+    }
+    
     if (!repaintDataOnly)
     {
         drawGraticule(gc);
@@ -268,8 +289,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
 //-------------------------------------------------------------------------
 void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 {
-    const int STR_LENGTH = 15;
-    
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
     float    f, time, freq_hz_to_px;
@@ -286,8 +305,8 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     
     freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
 
-    // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
-    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
+    // upper LH coords of plot area are (PLOT_BORDER + leftOffset_, PLOT_BORDER)
+    // lower RH coords of plot area are (PLOT_BORDER + leftOffset_ + m_rGrid.GetWidth(), 
     //                                   PLOT_BORDER + m_rGrid.GetHeight())
 
     // Check if small screen size means text will overlap
@@ -303,7 +322,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) 
     {
         x = f*freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
+        x += PLOT_BORDER + leftOffset_;
 
         if (m_graticule)
             ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
@@ -319,7 +338,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
-        x += PLOT_BORDER + XLEFT_OFFSET;
+        x += PLOT_BORDER + leftOffset_;
         ctx->StrokeLine(x, PLOT_BORDER + 13, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
     
@@ -330,12 +349,17 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP) 
     {
         if (m_graticule)
-            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-                        (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+            ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
+                        (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         snprintf(buf, STR_LENGTH, "%3.0fs", time);
-	    GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
+        auto top = y - text_h / 2;
+        if (time == 0)
+        {
+            top += text_h;
+        }
         if (!overlappedText)
-            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
    }
    
    float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
@@ -353,14 +377,14 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
        {
            ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
            x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-           x += PLOT_BORDER + XLEFT_OFFSET;
+           x += PLOT_BORDER + leftOffset_;
            ctx->StrokeLine(x, 0, x, verticalBarLength);
        }
    
        // red rx tuning line
        ctx->SetPen(wxPen(RED_COLOR, 3));
        x = m_rxFreq*freq_hz_to_px;
-       x += PLOT_BORDER + XLEFT_OFFSET;
+       x += PLOT_BORDER + leftOffset_;
        ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
    }
 }
@@ -517,7 +541,7 @@ void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
     wxPoint pt(event.GetLogicalPosition(dc));
 
     // map x coord to edges of actual plot
-    pt.x -= PLOT_BORDER + XLEFT_OFFSET;
+    pt.x -= PLOT_BORDER + leftOffset_;
     pt.y -= PLOT_BORDER;
 
     // valid click if inside of plot

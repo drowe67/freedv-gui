@@ -51,17 +51,23 @@ FlexTcpTask::FlexTcpTask(int vitaPort)
 
 FlexTcpTask::~FlexTcpTask()
 {
+    deregisterPromise_ = std::make_shared<std::promise<void>>();
+    auto fut = deregisterPromise_->get_future();
+
     enqueue_([&]() {
         cleanupWaveform_();
     });
-    std::this_thread::sleep_for(1s);
-    
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-    enqueue_([prom]() {
-        prom->set_value();
-    });
+
     fut.wait();
+    deregisterPromise_ = nullptr;
+
+    // Note: not currently done in the underlying object due to
+    // "pure virtual" function exceptions.
+    enableReconnect_.store(false, std::memory_order_release);
+    auto fut2 = disconnect();
+    fut2.wait();
+
+    waitForAllTasksComplete_();
 }
 
 void FlexTcpTask::onReceive_(char* buf, int length)
@@ -98,6 +104,11 @@ void FlexTcpTask::socketFinalCleanup_(bool)
     commandHandlingTimer_.stop();
     pingTimer_.stop();
     isConnecting_ = false;
+
+    if (deregisterPromise_)
+    {
+        deregisterPromise_->set_value();
+    }
 }
 
 void FlexTcpTask::onConnect_()
@@ -136,6 +147,21 @@ void FlexTcpTask::initializeWaveform_()
 
     // subscribe to GPS updates, needed for FreeDV Reporter
     sendRadioCommand_("sub gps all");
+
+    // Create SNR meter
+    sendRadioCommand_("meter create name=FreeDV_SNR type=WAVEFORM min=-99 max=99 unit=DB", [&](unsigned int rv, std::string const& res) {
+        if (rv == 0)
+        {
+            // success, get meter number and stream ID
+            uint16_t meterNumber = (uint16_t)strtol(res.c_str(), nullptr, 0);
+
+            // Pass these to caller to use in VITA packets
+            if (waveformSnrMeterIdentifiersFn_)
+            {
+                waveformSnrMeterIdentifiersFn_(*this, meterNumber, waveformSnrMeterIdentifiersState_);
+            }
+        }
+    });
 }
 
 void FlexTcpTask::cleanupWaveform_()
@@ -160,9 +186,10 @@ void FlexTcpTask::cleanupWaveform_()
         return;
     }
     
-    sendRadioCommand_("unsub slice all");
-    sendRadioCommand_("waveform remove FreeDV-USB");
-    sendRadioCommand_("waveform remove FreeDV-LSB", [&](unsigned int, std::string const&) {
+    // We shouldn't really have to do this, but the radio seems to get confused by a client registering
+    // more than one waveform, and only cleans up the last one created.
+    // Even more interestingly, if we try to remove FreeDV-LSB as well, the radio will crash.
+    sendRadioCommand_("waveform remove FreeDV-USB", [&](unsigned int, std::string const&) {
         // We can disconnect after we've fully unregistered the waveforms.
         socketFinalCleanup_(false);
     });
@@ -502,13 +529,18 @@ void FlexTcpTask::processCommand_(std::string& command)
     }
 }
 
-void FlexTcpTask::addSpot(std::string const& callsign)
+void FlexTcpTask::addSpot(std::string const& callsign, int snr, int timeoutSeconds)
 {
     enqueue_([=]() {
         if (activeSlice_ >= 0)
         {
             std::stringstream ss;
-            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV timestamp=" << time(NULL); //lifetime_seconds=300";
+            ss << "spot add rx_freq=" << sliceFrequencies_[activeSlice_] << " callsign=" << callsign << " mode=FREEDV source=FreeDV comment=" << snr << "dB timestamp=" << time(NULL);
+            
+            if (timeoutSeconds > 0)
+            {
+                ss << " lifetime_seconds=" << timeoutSeconds;
+            }
             sendRadioCommand_(ss.str());
         }
     });

@@ -15,11 +15,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <future>
 #include <chrono>
 #include <cmath>
 #include <unistd.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#include <poll.h>
 
 #include "../pipeline/pipeline_defines.h"
 #include "flex_defines.h"
@@ -29,12 +31,14 @@
 
 constexpr float SHORT_TO_FLOAT_DIVIDER = 32767.0;
 constexpr short FLOAT_TO_SHORT_MULTIPLIER = 32767;
+const float TX_SCALE_FACTOR = expf(3.0f/20.0f * logf(10.0f));
 
 using namespace std::placeholders;
 
-FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomUdpPort)
+FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, float volumeAdjustmentDecibel)
     : ThreadedObject("FlexVita")
     , socket_(-1)
+    , discoverySocket_(-1)
     , rxStreamId_(0)
     , txStreamId_(0)
     , audioSeqNum_(0)
@@ -44,7 +48,7 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
     , inputCtr_(0)
     , samplesRequired_(0)
     , helper_(std::move(helper))
-    , randomUdpPort_(randomUdpPort)
+    , volumeAdjustmentScaleFactor_(expf(volumeAdjustmentDecibel/20.0f * logf(10.0f)))
 {
     packetArray_ = new vita_packet[MAX_VITA_PACKETS];
     assert(packetArray_ != nullptr);
@@ -65,8 +69,14 @@ FlexVitaTask::FlexVitaTask(std::shared_ptr<IRealtimeHelper> helper, bool randomU
 
 FlexVitaTask::~FlexVitaTask()
 {
-    disconnect_();
-    
+    auto prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        disconnect_();
+        prom->set_value();
+    });
+    fut.wait();
+
     waitForAllTasksComplete_();
     
     delete[] packetArray_;
@@ -74,6 +84,41 @@ FlexVitaTask::~FlexVitaTask()
     delete callbackData_.infifo2;
     delete callbackData_.outfifo1;
     delete callbackData_.outfifo2;
+}
+
+void FlexVitaTask::sendMeter(uint16_t meterId, float valueDb)
+{
+    enqueue_([this, meterId, valueDb]() {
+        // Get free packet
+        vita_packet* packet = &packetArray_[packetIndex_++];
+        assert(packet != nullptr);
+        if (packetIndex_ == MAX_VITA_PACKETS)
+        {
+            packetIndex_ = 0;
+        }
+
+        // Fil in packet with data
+        packet->packet_type = VITA_PACKET_TYPE_EXT_DATA_WITH_STREAM_ID;
+        packet->stream_id = METER_STREAM_ID;
+        packet->class_id = METER_CLASS_ID;
+        packet->timestamp_type = 0;
+        packet->timestamp_int = 0;
+        packet->timestamp_frac = 0;
+        packet->meter[0].id = htons(meterId);
+        packet->meter[0].value = htons((int32_t)(valueDb * 128) & 0xFFFF);
+        
+        size_t packet_len = VITA_PACKET_HEADER_SIZE + sizeof(uint32_t);
+        packet->length = htons(packet_len >> 2); // Length is in 32-bit words
+
+        int rv = send(socket_, (char*)packet, packet_len, 0);
+        if (rv < 0)
+        {
+            // TBD: close and reopen socket
+            constexpr int ERROR_BUFFER_LEN = 1024;
+            char tmpBuf[ERROR_BUFFER_LEN];
+            log_error("Got socket error %d (%s) while sending", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        }
+    });
 }
 
 GenericFIFO<short>* FlexVitaTask::getAudioInput_(bool tx)
@@ -112,22 +157,25 @@ void FlexVitaTask::generateVitaPackets_(bool transmitChannel, uint32_t streamId)
         }
         uint32_t* ptrOut = (uint32_t*)packet->if_samples;
 
-        // Convert short to float samples and save to packet
+        // Convert short to float samples and save to packet.
+        // Amplify signal as required.
         for (int index = 0; index < samplesRequired_; index++)
         {
             float fpSample = inputBuffer[index] / SHORT_TO_FLOAT_DIVIDER;
+            if (transmitChannel) fpSample *= TX_SCALE_FACTOR;
+            else fpSample *= volumeAdjustmentScaleFactor_;
             uint32_t* fpSampleAsInt = (uint32_t*)&fpSample;
             uint32_t tmp = htonl(*fpSampleAsInt);
             *ptrOut++ = tmp;
             *ptrOut++ = tmp;
         }
                 
+
         // Fil in packet with data
         packet->packet_type = VITA_PACKET_TYPE_IF_DATA_WITH_STREAM_ID;
         packet->stream_id = streamId;
         packet->class_id = AUDIO_CLASS_ID;
         packet->timestamp_type = audioSeqNum_++;
-
         size_t packet_len = VITA_PACKET_HEADER_SIZE + samplesRequired_ * 2 * sizeof(float);
 
         constexpr uint8_t FRACTIONAL_TIMESTAMP_REAL_TIME = 0x02;
@@ -174,41 +222,62 @@ void FlexVitaTask::openSocket_()
         return;
     }
 
-    // Listen on our hardcoded VITA port (or a random one if we already know the radio's IP)
+    discoverySocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (discoverySocket_ == -1)
+    {
+        log_error("Got socket error %d (%s) while creating discovery socket", errno, strerror_r(errno, tmpBuf, ERROR_BUFFER_LEN));
+        assert(socket_ != -1);
+        return;
+    }
+
+    const int enable = 1;
+    if (setsockopt(discoverySocket_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    {
+        log_warn("Could not set SO_REUSEADDR, other applications may not allow us to listen on the discovery port!");
+    }
+
+    // Bind to discovery port (4992)
     struct sockaddr_in ourSocketAddress;
     memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
     ourSocketAddress.sin_family = AF_INET;
     ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    if (!randomUdpPort_)
-    {
-        ourSocketAddress.sin_port = htons(VITA_PORT);
+    ourSocketAddress.sin_port = htons(VITA_PORT);
         
-        auto rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
-        if (rv == -1)
-        {
-            auto err = errno;
-            log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
-        }
-        assert(rv != -1);
-
-        udpPort_ = VITA_PORT;
-    }
-    else
+    auto rv = bind(discoverySocket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
+    if (rv == -1)
     {
-        socklen_t bindAddrLen = sizeof(ourSocketAddress);
-        auto rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
-        if (rv == -1)
-        {
-            auto err = errno;
-            log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
-        }
-        assert(rv != -1);
-
-        udpPort_ = ntohl(ourSocketAddress.sin_port);
+        auto err = errno;
+        log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
     }
+    assert(rv != -1);
+
+    // Get local port for main socket
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    ourSocketAddress.sin_family = AF_INET;
+    ourSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    ourSocketAddress.sin_port = htons(0);
+    rv = bind(socket_, (struct sockaddr*)&ourSocketAddress, sizeof(ourSocketAddress));
+    if (rv == -1)
+    {
+        auto err = errno;
+        log_error("Got socket error %d (%s) while binding", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+    }
+    assert(rv != -1);
+
+    socklen_t bindAddrLen = sizeof(ourSocketAddress);
+    memset((char *) &ourSocketAddress, 0, sizeof(ourSocketAddress));
+    rv = getsockname(socket_, (struct sockaddr*) &ourSocketAddress, &bindAddrLen);
+    if (rv == -1)
+    {
+        auto err = errno;
+        log_error("Got socket error %d (%s) while calling getsockname", err, strerror_r(err, tmpBuf, ERROR_BUFFER_LEN));
+    }
+    assert(rv != -1);
+
+    udpPort_ = ntohs(ourSocketAddress.sin_port);
 
     fcntl (socket_, F_SETFL , O_NONBLOCK);
+    fcntl (discoverySocket_, F_SETFL , O_NONBLOCK);
 
     rxTxThreadRunning_ = true;
     rxTxThread_ = std::thread(std::bind(&FlexVitaTask::rxTxThreadEntry_, this));
@@ -218,13 +287,22 @@ void FlexVitaTask::openSocket_()
 
 void FlexVitaTask::disconnect_()
 {
+    rxTxThreadRunning_ = false;
+    if (rxTxThread_.joinable())
+    {
+        rxTxThread_.join();
+    }
+    
     if (socket_ > 0)
     {
-        rxTxThreadRunning_ = false;
-        rxTxThread_.join();
-        
         close(socket_);
         socket_ = -1;
+
+        if (discoverySocket_ > -1)
+        {
+            close(discoverySocket_);
+            discoverySocket_ = -1;
+        }
         
         rxStreamId_ = 0;
         txStreamId_ = 0;
@@ -239,27 +317,36 @@ void FlexVitaTask::rxTxThreadEntry_()
 {
     helper_->setHelperRealTime();
 
+    struct pollfd fds[2];
+    int numFds = 0;
+
     while (rxTxThreadRunning_)
     {
-        fd_set fds;
-        struct timeval timeout;
-        
-        timeout.tv_sec = 0;
-        timeout.tv_usec = VITA_IO_TIME_INTERVAL_US;
-        
-        FD_ZERO(&fds);
-        FD_SET(socket_, &fds);
-        
-        if (select(socket_ + 1, &fds, nullptr, nullptr, &timeout) > 0)
+        memset(fds, 0, sizeof(fds));
+        fds[0].fd = socket_;
+        fds[0].events = POLLIN;
+
+        if (discoverySocket_ > -1)
         {
-            readPendingPackets_();
+            fds[1].fd = discoverySocket_;
+            fds[1].events = POLLIN;
+            numFds = 2;
+        }
+        else
+        {
+            numFds = 1;
+        }
+        
+        if (poll(fds, numFds, VITA_IO_TIME_INTERVAL_US / 1000) > 0)
+        {
+            readPendingPackets_(fds, numFds);
         }
     }
 
     helper_->clearHelperRealTime();
 }
 
-void FlexVitaTask::readPendingPackets_()
+void FlexVitaTask::readPendingPackets_(struct pollfd* fds, int numFds)
 { 
     // Process if there are pending datagrams in the buffer
     int ctr = MAX_VITA_PACKETS_TO_SEND;
@@ -273,15 +360,41 @@ void FlexVitaTask::readPendingPackets_()
             packetIndex_ = 0;
         }
     
-        auto rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
-        if (rv > 0)
+        int rv = 0;
+        if (fds[0].revents != 0)
         {
-            // Queue up packet for future processing.
-            onReceiveVitaMessage_(packet, rv);
+            rv = recv(socket_, (char*)packet, sizeof(vita_packet), 0);
+            if (rv > 0)
+            {
+                // Queue up packet for future processing.
+                onReceiveVitaMessage_(packet, rv);
+            }
+            else
+            {
+                break;
+            }
         }
-        else
+
+        if (numFds > 1 && fds[1].revents != 0)
         {
-            break;
+            packet = &packetArray_[packetIndex_++];
+            assert(packet != nullptr);
+
+            if (packetIndex_ == MAX_VITA_PACKETS)
+            {
+                packetIndex_ = 0;
+            }
+
+            rv = recv(discoverySocket_, (char*)packet, sizeof(vita_packet), 0);
+            if (rv > 0)
+            {
+                // Queue up packet for future processing.
+                onReceiveVitaMessage_(packet, rv);
+            }
+            else
+            {
+                break;
+            }
         }
     }
 }
@@ -347,6 +460,13 @@ void FlexVitaTask::radioConnected(const char* ip)
         else
         {
             log_info("Connected to radio successfully");
+        }
+
+        // Close discovery socket as it's no longer needed
+        if (discoverySocket_ > -1)
+        {
+            close(discoverySocket_);
+            discoverySocket_ = -1;
         }
     });
 }
@@ -418,7 +538,6 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
             unsigned int i = 0;
             short audioInput[MAX_VITA_SAMPLES];
             float audioInputFloat[MAX_VITA_SAMPLES];
-            float maxSampleValue = 1.0;
             while (i < half_num_samples)
             {
                 union {
@@ -427,12 +546,10 @@ void FlexVitaTask::onReceiveVitaMessage_(vita_packet* packet, int length)
                 } temp;
                 temp.intVal = ntohl(packet->if_samples[i << 1]);
                 audioInputFloat[i++] = temp.floatVal;
-                maxSampleValue = std::max((float)fabsf(temp.floatVal), maxSampleValue);
             }
-            float multiplier = (1.0 / maxSampleValue);
             for (i = 0; i < half_num_samples; i++)
             {
-                audioInput[i] = audioInputFloat[i] * multiplier * FLOAT_TO_SHORT_MULTIPLIER;
+                audioInput[i] = tanhf(audioInputFloat[i]) * FLOAT_TO_SHORT_MULTIPLIER;
             }
             if (!pendingEndTx_)
             {

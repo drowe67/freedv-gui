@@ -35,6 +35,8 @@ BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
     EVT_SHOW            (PlotScalar::OnShow)
 END_EVENT_TABLE()
 
+constexpr int STR_LENGTH = 15;
+
 //----------------------------------------------------------------
 // PlotScalar()
 //----------------------------------------------------------------
@@ -73,7 +75,9 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_mini = mini;
     m_bar_graph = 0;
     m_logy = 0;
-    
+    leftOffset_ = 0;
+    bottomOffset_ = 0;
+
     // work out number of samples we will store and allocate storage
 
     m_samples = m_t_secs/m_sample_period_secs;
@@ -149,7 +153,7 @@ bool PlotScalar::repaintAll_(wxPaintEvent&)
     if (m_mini) return true;
 
     wxRect plotRegion(
-        PLOT_BORDER + XLEFT_OFFSET, 
+        PLOT_BORDER + leftOffset_, 
         PLOT_BORDER,
         m_rGrid.GetWidth(),
         m_rGrid.GetHeight());
@@ -171,7 +175,7 @@ void PlotScalar::refreshData()
     if (!m_mini)
     {
         wxRect plotRegion(
-            PLOT_BORDER + XLEFT_OFFSET, 
+            PLOT_BORDER + leftOffset_, 
             PLOT_BORDER,
             m_rGrid.GetWidth(),
             m_rGrid.GetHeight());
@@ -196,13 +200,13 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
     if (!m_mini)
-        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
     // black background
     int plotX = 0, plotY = 0, plotWidth = 0, plotHeight = 0;
     if (!m_mini)
     {
-        plotX = PLOT_BORDER + XLEFT_OFFSET;
+        plotX = PLOT_BORDER + leftOffset_;
         plotY = PLOT_BORDER;
     }
 
@@ -282,7 +286,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
                 x1 = index_to_px * ((float)i - 0.5);
                 x2 = index_to_px * ((float)i + 0.5);
                 y1 = plotHeight;
-                x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
+                x1 += PLOT_BORDER + leftOffset_; x2 += PLOT_BORDER + leftOffset_;
                 y1 += PLOT_BORDER;
 
                 wxGraphicsPath path = ctx->CreatePath();
@@ -309,7 +313,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         int offsetY = 0;
         if (!m_mini)
         {
-            offsetX = PLOT_BORDER + XLEFT_OFFSET;
+            offsetX = PLOT_BORDER + leftOffset_;
             offsetY = PLOT_BORDER;
         }
         wxGraphicsPath path = ctx->CreatePath();
@@ -327,7 +331,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             path.AddLineToPoint(x, item->y2 + offsetY);
         }
         path.AddLineToPoint(offsetX, lineMap_[0].y1 + offsetY);
-        ctx->DrawPath(path);
+        ctx->FillPath(path);
     }
  
     ctx->EndLayer();
@@ -340,8 +344,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 //-------------------------------------------------------------------------
 void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 {
-    const int STR_LENGTH = 15;
-    
     float    t, a;
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
@@ -362,8 +364,8 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     sec_to_px = (float)plotWidth/m_t_secs;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
-    // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
-    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + plotWidth, 
+    // upper LH coords of plot area are (PLOT_BORDER + leftOffset_, PLOT_BORDER)
+    // lower RH coords of plot area are (PLOT_BORDER + leftOffset_ + plotWidth, 
     //                                   PLOT_BORDER + plotHeight)
 
     // Vertical gridlines
@@ -378,13 +380,22 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         }
         else 
         {
-            x += PLOT_BORDER + XLEFT_OFFSET;
+            x += PLOT_BORDER + leftOffset_;
             ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
             if (!repaintDataOnly) 
             {
                 snprintf(buf, STR_LENGTH, "%2.1fs", t);
                 GetTextExtent(buf, &text_w, &text_h);
-                ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+                int left = x - text_w/2;
+                if (t == 0)
+                {
+                    left += text_w/2;
+                }
+                else if (t == m_t_secs)
+                {
+                    left -= text_w/2;
+                }
+                ctx->DrawText(buf, left, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
             }
         }
     }
@@ -410,13 +421,23 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         else 
         {
             y += PLOT_BORDER;
-            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-                        (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
+            ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
+                        (plotWidth + PLOT_BORDER + leftOffset_), y);
             if (!repaintDataOnly) 
             {
+                auto top = y-text_h/2;
+                if (a == m_a_min)
+                {
+                    top -= text_h/2;
+                }
+                else if ((a + m_graticule_a_step) >= m_a_max)
+                {
+                    top += text_h/2;
+                }
+
                 snprintf(buf, STR_LENGTH, m_a_fmt, a);
                 GetTextExtent(buf, &text_w, &text_h);
-                ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+                ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
             }
         }
  
@@ -443,10 +464,34 @@ void PlotScalar::clearSamples()
 //----------------------------------------------------------------
 void PlotScalar::OnSize(wxSizeEvent&)
 {
+    // Determine correct left offset based on max text width
+    leftOffset_ = 0;
+    bottomOffset_ = 0;
+    for(auto a=m_a_min; a<m_a_max; )
+    {
+        int      text_w, text_h;
+        char     buf[STR_LENGTH];
+        snprintf(buf, STR_LENGTH, m_a_fmt, a);
+        GetTextExtent(buf, &text_w, &text_h);
+        leftOffset_ = std::max(leftOffset_, text_w);
+        bottomOffset_ = std::max(bottomOffset_, text_h);
+
+        if (m_logy)
+        {
+            // m_graticule_a_step ==  0.1 means 10 steps/decade
+            float log10_step_size = floor(log10(a));
+            a += pow(10,log10_step_size);
+        }
+        else
+        {
+            a += m_graticule_a_step;
+        }
+    }
+
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
     if (!m_mini)
-        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
+        m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
     int plotWidth = m_rGrid.GetWidth();
     delete[] lineMap_;
