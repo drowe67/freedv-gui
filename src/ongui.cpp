@@ -994,9 +994,12 @@ void MainFrame::togglePTT(void) {
         {
             // We only need to worry about the time getting to the radio,
             // not the time to get from the radio to us.
-            pttResponseTime = pttController->getRigResponseTimeMicroseconds() / 2;
+            pttResponseTime = std::max(
+                pttController->getRigResponseTimeMicroseconds() / 2,
+                wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds.get());
+            wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = pttResponseTime;
         }
-        
+
         auto totalPauseTime = latency + pttResponseTime;
         log_info(
             "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
