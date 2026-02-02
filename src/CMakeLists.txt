@@ -180,20 +180,14 @@ if(APPLE)
 
     if (MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
-            COMMAND mkdir dist_tmp
-            COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
-            COMMAND rm -rf dist_tmp
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
             COMMAND codesign --timestamp -i org.freedv.freedv --sign ${MACOS_CODESIGN_IDENTITY} FreeDV.dmg
             COMMAND xcrun notarytool submit ./FreeDV.dmg --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
             COMMAND xcrun stapler staple ./FreeDV.dmg
             DEPENDS FreeDV)
     else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
         add_custom_target(release
-            COMMAND mkdir dist_tmp
-            COMMAND cp -a FreeDV.app dist_tmp 
-            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh dist_tmp/
-            COMMAND rm -rf dist_tmp
+            COMMAND ${CMAKE_SOURCE_DIR}/cmake/macos_build_dmg.sh ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
             DEPENDS FreeDV)
     endif (MACOS_CODESIGN_KEYCHAIN_PROFILE)
 endif(APPLE)

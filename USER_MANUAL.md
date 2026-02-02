@@ -878,12 +878,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.2.1 TBD 2026
 
 1. Bugfixes:
-    * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200)
+    * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)
     * Fix compile error when trying to use Hamlib 5.0-git. (PR #1202)
     * Fix bug causing PTT input to be initially ignored until pushing the PTT button. (PR #1203)
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
+    * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
 
 ## V2.2.0 January 2026
 
