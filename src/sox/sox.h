@@ -631,7 +631,7 @@ for example, SOX_INT_MIN(8) = 0x80, SOX_INT_MIN(16) = 0x8000, etc.
 @returns the smallest (negative) value storable in a twos-complement signed
 integer with the specified number of bits, cast to an unsigned integer.
 */
-#define SOX_INT_MIN(bits) (1 <<((bits)-1))
+#define SOX_INT_MIN(bits) ((unsigned)1 <<((bits)-1))
 
 /**
 Client API:
