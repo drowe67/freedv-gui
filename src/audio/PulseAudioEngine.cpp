@@ -82,7 +82,6 @@ void PulseAudioEngine::start()
 
         if (pa_threaded_mainloop_in_thread(threadedML))
         {
-#if 0
             auto numCpusAvailable = get_nprocs();
             if (numCpusAvailable > 2)
             {
@@ -95,7 +94,6 @@ void PulseAudioEngine::start()
                     log_warn("Could not pin thread to CPU %d and %d (errno = %d)", numCpusAvailable - 2, numCpusAvailable - 1, errno);
                 }
             }
-#endif //0
 
 #if defined(USE_RTKIT)
             DBusError error;
