@@ -1191,6 +1191,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 if (item.second->isVisible)
                 {
                     wxDataViewItem dvi(item.second);
+                    ItemDeleted(wxDataViewItem(nullptr), dvi);
                     item.second->isVisible = false;
                     parent_->Unselect(dvi);
                     itemsDeleted.Add(dvi);
@@ -1255,7 +1256,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 reportData->foregroundColor = foregroundColor;
             }
 
-            if (parent_->IsShownOnScreen())
+            //if (parent_->IsShownOnScreen())
             {
                 bool newVisibility = !isFiltered_(reportData);
                 if (newVisibility != reportData->isVisible)
@@ -1263,7 +1264,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     reportData->isVisible = newVisibility;
                     if (newVisibility)
                     {
-                        itemsAdded.Add(wxDataViewItem(reportData));
+                        wxDataViewItem dvi(reportData);
+                        ItemAdded(wxDataViewItem(nullptr), dvi);
+                        itemsAdded.Add(dvi);
 #if defined(WIN32)
                         doAutoSizeColumns = true;
 #endif // defined(WIN32)
@@ -1296,37 +1299,36 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
         }
 
-        if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
+        // Temporarily disable autosizing prior to item updates.
+        // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
         {
-            Cleared(); // avoids spurious errors on macOS
-            if (currentSelection.IsOk())
-            {
-                // Reselect after redraw
-                parent_->CallAfter([&, currentSelection]() {
-                    parent_->m_listSpots->Select(currentSelection);
-                });
-            }
+            auto col = parent_->m_listSpots->GetColumn(index);
+            col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
         }
-        else if (itemsChanged.size() > 0)
-        {
-            // Temporarily disable autosizing prior to item updates.
-            // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
-            for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
-            {
-                auto col = parent_->m_listSpots->GetColumn(index);
-                col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
-            }
             
-            ItemsChanged(itemsChanged);
+        /*if (itemsAdded.size() > 0)
+        {
+            ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
+        }
 
-            // Re-enable autosizing
-            for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        if (itemsDeleted.size() > 0)
+        {
+            ItemsDeleted(wxDataViewItem(nullptr), itemsDeleted);
+        }*/
+
+        if (itemsChanged.size() > 0)
+        {
+            ItemsChanged(itemsChanged);
+        }
+
+        // Re-enable autosizing
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        {
+            auto col = parent_->m_listSpots->GetColumn(index);
+            if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
             {
-                auto col = parent_->m_listSpots->GetColumn(index);
-                if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
-                {
-                    col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
-                }
+                col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
             }
         }
         
@@ -1357,7 +1359,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     else
     {
-        if (!IsShownOnScreen()) return;
+        //if (!IsShownOnScreen()) return;
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
@@ -2191,10 +2193,10 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
 {
     bool isHidden = false;
-    if (!parent_->IsShownOnScreen())
+    /*if (!parent_->IsShownOnScreen())
     {
         return true;
-    }
+    }*/
 
     if (currentBandFilter_ != FilterFrequency::BAND_ALL)
     {
@@ -3023,7 +3025,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         if (iter != allReporterData_.end())
         {
             auto item = iter->second;
-            wxDataViewItem dvi(item);
+            if (item->isVisible)
+            {
+                wxDataViewItem dvi(item);
+                ItemDeleted(wxDataViewItem(nullptr), dvi);
+                item->isVisible = false;
+            }
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
         }
