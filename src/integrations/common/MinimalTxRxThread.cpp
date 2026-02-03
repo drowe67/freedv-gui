@@ -40,7 +40,7 @@ using namespace std::chrono_literals;
 
 #include "codec2_alloc.h"
 
-extern std::atomic<int> g_tx;
+extern std::atomic<bool> g_tx;
 extern bool endingTx;
 bool g_eoo_enqueued;
 

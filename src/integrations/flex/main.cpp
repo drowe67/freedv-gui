@@ -56,7 +56,7 @@ extern "C"
 
 using namespace std::chrono_literals;
 
-std::atomic<int> g_tx;
+std::atomic<bool> g_tx;
 bool endingTx;
 bool exitingApplication;
 int spotTimeoutSeconds = 600; // 10 minute default

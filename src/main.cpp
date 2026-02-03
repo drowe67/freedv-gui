@@ -120,7 +120,7 @@ std::atomic<float> g_txLevelScale;
 int   g_SquelchActive;
 float g_SquelchLevel;
 int   g_analog;
-std::atomic<int>   g_tx;
+std::atomic<bool>   g_tx;
 float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;

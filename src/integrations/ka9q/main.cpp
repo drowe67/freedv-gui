@@ -69,7 +69,7 @@ constexpr int DEFAULT_OUTPUT_SAMPLE_RATE = 16000;
 
 using namespace std::chrono_literals;
 
-std::atomic<int> g_tx;
+std::atomic<bool> g_tx;
 bool endingTx;
 
 struct CallsignReporting
