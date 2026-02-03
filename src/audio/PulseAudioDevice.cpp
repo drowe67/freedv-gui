@@ -331,16 +331,16 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
-    startTime_ = std::chrono::steady_clock::now();
-}
-
-void PulseAudioDevice::stopRealTimeWork(bool fastMode)
-{
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
 
+    startTime_ = std::chrono::steady_clock::now();
+}
+
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
+{
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
