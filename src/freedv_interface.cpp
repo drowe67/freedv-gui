@@ -547,7 +547,7 @@ int FreeDVInterface::getTxNumSpeechSamples() const
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        return LPCNET_FRAME_SIZE;
+        return rade_n_features_in_out(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
     }
 
     assert(currentTxMode_ != nullptr);
@@ -611,7 +611,7 @@ int FreeDVInterface::getRxNumModemSamples() const
 {
     if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
-        return 960;
+        return rade_nin_max(rade_);
     }
 
     int result = 0;
@@ -627,7 +627,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 {
     if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
-        return 1920;
+        return rade_nin_max(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
     }
 
     int result = 0;
