@@ -1163,6 +1163,32 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
+void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
+{
+    if (autosize)
+    {
+        // Re-enable autosizing
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        {
+            auto col = parent_->m_listSpots->GetColumn(index);
+            if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
+            {
+                col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+            }
+        }
+    }
+    else
+    {
+        // Temporarily disable autosizing prior to item updates.
+        // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
+        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        {
+            auto col = parent_->m_listSpots->GetColumn(index);
+            col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
+        }
+    }
+}
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
@@ -1261,6 +1287,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 bool newVisibility = !isFiltered_(reportData);
                 if (newVisibility != reportData->isVisible)
                 {
+                    setColumnAutosize_(false);
+                    
                     reportData->isVisible = newVisibility;
                     if (newVisibility)
                     {
@@ -1274,6 +1302,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     else
                     {
                         wxDataViewItem dvi(reportData);
+                        ItemDeleted(wxDataViewItem(nullptr), dvi);
                         itemsDeleted.Add(dvi);
                         if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
                         {
@@ -1298,38 +1327,16 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 }
             }
         }
-
-        // Temporarily disable autosizing prior to item updates.
-        // This is due to performance issues on macOS -- see https://github.com/wxWidgets/wxWidgets/issues/25972
-        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
-        {
-            auto col = parent_->m_listSpots->GetColumn(index);
-            col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
-        }
             
-        /*if (itemsAdded.size() > 0)
-        {
-            ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
-        }
-
-        if (itemsDeleted.size() > 0)
-        {
-            ItemsDeleted(wxDataViewItem(nullptr), itemsDeleted);
-        }*/
-
         if (itemsChanged.size() > 0)
         {
+            setColumnAutosize_(false);
             ItemsChanged(itemsChanged);
         }
-
-        // Re-enable autosizing
-        for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+        
+        if (itemsAdded.size() > 0 || itemsDeleted.size() > 0 || itemsChanged.size() > 0)
         {
-            auto col = parent_->m_listSpots->GetColumn(index);
-            if (col->GetModelColumn() != USER_MESSAGE_COL && index != RIGHTMOST_COL)
-            {
-                col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
-            }
+            setColumnAutosize_(true);
         }
         
 #if defined(WIN32)
@@ -2332,14 +2339,27 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
     {
         if (row.second->isVisible)
         {
+#if !defined(__linux__)
+            // For non-Linux/GTK, isVisible must be set to false prior to removal
+            // to avoid referencing deallocated memory during table updates (i.e.
+            // by macOS when adjusting column widths).
             row.second->isVisible = false;
+#endif // !defined(__linux__)
+                
+            wxDataViewItem dvi(row.second);
+            ItemDeleted(wxDataViewItem(nullptr), dvi);
+                
+#if defined(__linux__)
+            // For Linux/GTK, isVisible must still remain true during
+            // actual removal from the GUI or else assertion failures
+            // are thrown. We can set it to false once the item's removed.
+            row.second->isVisible = false;
+#endif // defined(__linux__)
         }
 
         row.second->isPendingDelete = true;
         row.second->deleteTime = wxDateTime::Now();
     }
-    
-    Cleared();
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::HasDefaultCompare() const
@@ -3027,9 +3047,22 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             auto item = iter->second;
             if (item->isVisible)
             {
+#if !defined(__linux__)
+                // For non-Linux/GTK, isVisible must be set to false prior to removal
+                // to avoid referencing deallocated memory during table updates (i.e.
+                // by macOS when adjusting column widths).
+                item->isVisible = false;
+#endif // !defined(__linux__)
+                
                 wxDataViewItem dvi(item);
                 ItemDeleted(wxDataViewItem(nullptr), dvi);
+                
+#if defined(__linux__)
+                // For Linux/GTK, isVisible must still remain true during
+                // actual removal from the GUI or else assertion failures
+                // are thrown. We can set it to false once the item's removed.
                 item->isVisible = false;
+#endif // defined(__linux__)
             }
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
