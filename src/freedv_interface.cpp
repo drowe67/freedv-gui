@@ -627,7 +627,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const FREEDV_NONBLOCKING
 {
     if (rxMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
-        return rade_nin_max(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
+        return rade_n_features_in_out(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
     }
 
     int result = 0;
