@@ -331,16 +331,15 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
+}
+
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
+{
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
 
-    startTime_ = std::chrono::steady_clock::now();
-}
-
-void PulseAudioDevice::stopRealTimeWork(bool fastMode)
-{
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
@@ -359,7 +358,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     auto nsec = latency * 1000 - extraTimeNs_;
     if (nsec <= 0)
     {
-        extraTimeNs_ = 0; //std::max((long)0, extraTimeNs_ - latency * 1000);
+        extraTimeNs_ = 0;
         return;
     }
 
@@ -367,6 +366,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     ts_ = timespec_normalise(ts_);
 
     int rv = 0;
+    startTime_ = std::chrono::steady_clock::now();
     while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts_)) == -1 && errno == EINTR)
     {
         // empty
@@ -374,7 +374,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime_).count() - nsec;
     extraTimeNs_ = std::max((long)0, duration - nsec); // cap extra time to >= 0.
-    //if (extraTimeNs_ > 1000000) log_warn("exceeded wait by %" PRId64 " ns", extraTimeNs_);
+
     if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
