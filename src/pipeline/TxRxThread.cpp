@@ -57,6 +57,10 @@ using namespace std::chrono_literals;
 
 #include "codec2_alloc.h"
 
+#if defined(__linux__)
+#include <sys/sysinfo.h>
+#endif // defined(__linux__)
+
 // Experimental options for potential future release:
 //
 // * ENABLE_FASTER_PLOTS: This uses a faster resampling algorithm to reduce the CPU
@@ -545,7 +549,25 @@ void* TxRxThread::Entry() noexcept
     // Ensure that O(1) memory allocator is used for Codec2
     // instead of standard malloc().
     codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
-    
+
+#if defined(__linux__)
+    // Set thread affinity to one of the last two cores of a user's system.
+    // This is because of measured thread migration times in Linux being
+    // large enough to cause dropouts.
+    auto numCpusAvailable = get_nprocs();
+    auto cpuToUse = numCpusAvailable - (m_tx ? 1 : 0) - 1;
+    if (numCpusAvailable > 2)
+    {
+        cpu_set_t cpus;
+        CPU_ZERO(&cpus);
+        CPU_SET(cpuToUse, &cpus);
+        if (sched_setaffinity(0, sizeof(cpus), &cpus) == -1)
+        {
+            log_warn("Could not pin thread to CPU %d (errno = %d)", cpuToUse, errno);
+        }
+    }
+#endif // defined(__linux__)
+
     initializePipeline_();
     
     // Request real-time scheduling from the operating system.

@@ -197,6 +197,7 @@ int64_t PulseAudioDevice::getLatencyInMicroseconds()
 
 void PulseAudioDevice::setHelperRealTime()
 {
+#if 0
     // Set thread affinity to the last two cores of a user's system.
     // This is because of measured thread migration times in Linux being
     // large enough to cause dropouts.
@@ -213,6 +214,7 @@ void PulseAudioDevice::setHelperRealTime()
             log_warn("Could not pin thread to CPU %d (errno = %d)", cpuToUse, errno);
         }
     }
+#endif //0
 
     // XXX: We can't currently enable RT scheduling on Linux
     // due to unreliable behavior surrounding how long it takes to
