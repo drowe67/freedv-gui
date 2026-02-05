@@ -875,7 +875,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.2.1 TBD 2026
+## V2.2.1 February 2026
 
 1. Bugfixes:
     * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)
