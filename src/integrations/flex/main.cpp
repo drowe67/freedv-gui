@@ -246,6 +246,7 @@ int main(int argc, char** argv)
     memset(&action, 0, sizeof(action));
     action.sa_handler = &OnSignalExit;
     action.sa_flags = SA_RESTART;
+    sigaction(SIGHUP, &action, nullptr);
     sigaction(SIGINT, &action, nullptr);
     sigaction(SIGTERM, &action, nullptr);
     
