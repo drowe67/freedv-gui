@@ -884,6 +884,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
     * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
     * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
+    * Linux: Reduce audio dropouts by using CPU affinity. (PR #1123)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
