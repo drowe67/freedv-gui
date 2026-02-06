@@ -2028,7 +2028,7 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::calculateDistance_(wxStrin
     return EARTH_RADIUS * c;
 }
 
-void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquare_(wxString const& gridSquare, double& lat, double& lon)
+void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon)
 {
     char charA = 'A';
     char char0 = '0';

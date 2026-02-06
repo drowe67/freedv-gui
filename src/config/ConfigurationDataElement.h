@@ -37,14 +37,14 @@ public:
     UnderlyingDataType& getDefaultVal();
     
     // Allows usage of class as though it were defined directly as UnderlyingDataType.
-    ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType const& val);
+    ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType val);
     operator UnderlyingDataType();
     
     UnderlyingDataType* operator->();
     
     UnderlyingDataType get();
     UnderlyingDataType getWithoutProcessing();
-    void setWithoutProcessing(UnderlyingDataType val);
+    void setWithoutProcessing(UnderlyingDataType const& val);
     
     void setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);
     void setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);

@@ -441,7 +441,7 @@ class FreeDVReporterDialog : public wxFrame
             wxString makeValidTime_(std::string const& timeStr, wxDateTime& timeObj);
             double calculateDistance_(wxString const& gridSquare1, wxString const& gridSquare2);
             double calculateBearingInDegrees_(wxString const& gridSquare1, wxString const& gridSquare2);
-            void calculateLatLonFromGridSquare_(wxString const& gridSquare, double& lat, double& lon);
+            void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
             static double DegreesToRadians_(double degrees);
             static double RadiansToDegrees_(double radians);
