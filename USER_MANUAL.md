@@ -875,7 +875,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.2.1 TBD 2026
+## V2.2.1 February 2026
 
 1. Bugfixes:
     * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)
@@ -884,6 +884,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
     * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
     * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
+    * Autosize columns in main window drop-down list. (PR #1213)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)

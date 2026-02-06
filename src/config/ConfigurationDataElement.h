@@ -44,7 +44,7 @@ public:
     
     UnderlyingDataType get();
     UnderlyingDataType getWithoutProcessing();
-    void setWithoutProcessing(UnderlyingDataType val);
+    void setWithoutProcessing(UnderlyingDataType const& val);
     
     void setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);
     void setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);
@@ -105,9 +105,9 @@ UnderlyingDataType* ConfigurationDataElement<UnderlyingDataType>::operator->()
 }
 
 template<typename UnderlyingDataType>
-void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType val)
+void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType const& val)
 {
-    data_ = std::move(val);
+    data_ = val;
 }
 
 template<typename UnderlyingDataType>
