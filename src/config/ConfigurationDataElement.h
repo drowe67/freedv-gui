@@ -37,7 +37,7 @@ public:
     UnderlyingDataType& getDefaultVal();
     
     // Allows usage of class as though it were defined directly as UnderlyingDataType.
-    ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType val);
+    ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType const& val);
     operator UnderlyingDataType();
     
     UnderlyingDataType* operator->();
@@ -105,9 +105,9 @@ UnderlyingDataType* ConfigurationDataElement<UnderlyingDataType>::operator->()
 }
 
 template<typename UnderlyingDataType>
-void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType val)
+void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType const& val)
 {
-    data_ = std::move(val);
+    data_ = val;
 }
 
 template<typename UnderlyingDataType>

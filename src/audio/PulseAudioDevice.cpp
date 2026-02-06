@@ -47,11 +47,11 @@ using namespace std::chrono_literals;
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 #endif // 0
  
-PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
     , mainloop_(mainloop)
     , stream_(nullptr)
-    , devName_(std::move(devName))
+    , devName_(devName)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
