@@ -2013,7 +2013,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
     }
 }
 
-double FreeDVReporterDialog::FreeDVReporterDataModel::calculateDistance_(wxString gridSquare1, wxString gridSquare2)
+double FreeDVReporterDialog::FreeDVReporterDataModel::calculateDistance_(wxString const& gridSquare1, wxString const& gridSquare2)
 {
     double lat1 = 0;
     double lon1 = 0;
@@ -2021,8 +2021,8 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::calculateDistance_(wxStrin
     double lon2 = 0;
     
     // Grab latitudes and longitudes for the two locations.
-    calculateLatLonFromGridSquare_(std::move(gridSquare1), lat1, lon1);
-    calculateLatLonFromGridSquare_(std::move(gridSquare2), lat2, lon2);
+    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
+    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
     
     // Use Haversine formula to calculate distance. See
     // https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula.
@@ -2077,7 +2077,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::calculateLatLonFromGridSquar
     }
 }
 
-double FreeDVReporterDialog::FreeDVReporterDataModel::calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2)
+double FreeDVReporterDialog::FreeDVReporterDataModel::calculateBearingInDegrees_(wxString const& gridSquare1, wxString const& gridSquare2)
 {
     double lat1 = 0;
     double lon1 = 0;
@@ -2085,8 +2085,8 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::calculateBearingInDegrees_
     double lon2 = 0;
     
     // Grab latitudes and longitudes for the two locations.
-    calculateLatLonFromGridSquare_(std::move(gridSquare1), lat1, lon1);
-    calculateLatLonFromGridSquare_(std::move(gridSquare2), lat2, lon2);
+    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
+    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
 
     // Convert latitudes and longitudes into radians
     lat1 = DegreesToRadians_(lat1);
