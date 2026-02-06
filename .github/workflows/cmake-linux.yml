@@ -20,7 +20,7 @@ env:
 
 jobs:
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
 
@@ -28,7 +28,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core libebur128-dev libwxgtk3.2-dev pipewire pipewire-pulse wireplumber python3-numpy python3-numpy-dev python3-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.0-gtk3-dev python3-numpy python3-numpy-dev python3-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -446,7 +446,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22
+        sudo ./llvm.sh 21
 
     - name: Install rtkit for RT threading
       shell: bash
@@ -500,7 +500,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -508,7 +508,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-22 CXX=clang++-22 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash

@@ -74,7 +74,7 @@ protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
     
-    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     std::mutex objLock_;
