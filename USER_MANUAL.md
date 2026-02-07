@@ -884,7 +884,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
     * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
     * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
-    * Linux: Reduce audio dropouts by using CPU affinity. (PR #1123)
     * Autosize columns in main window drop-down list. (PR #1213)
     * PulseAudio/pipewire: Use fixed wait time between processing cycles. (PR #1216)
     * Slow down waterfall display when waterfall is small (i.e. displayed with other plots). (PR #1216)
