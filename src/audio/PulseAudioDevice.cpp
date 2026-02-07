@@ -55,6 +55,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
+    , extraTimeNs_(0)
 {
     // Set default description
     setDescription("PulseAudio Device");
