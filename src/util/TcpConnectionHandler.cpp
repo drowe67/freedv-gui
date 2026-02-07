@@ -345,11 +345,15 @@ void TcpConnectionHandler::connectImpl_()
             constexpr int ERROR_BUFFER_LEN = 1024;
             char tmpBuf[ERROR_BUFFER_LEN];
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-            strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            auto rv = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+            if (rv != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
             log_warn("cannot start connection to %s (err=%d: %s)", buf, err, tmpBuf);
 #else
             auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
-            if (ptr != 0)
+            if (ptr == nullptr)
             {
                 strncpy(tmpBuf, "(null)", 7);
             }
@@ -743,11 +747,15 @@ socket_error:
                 closesocket(sock);
 #else
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                auto rv = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
+                if (rv != 0)
+                {
+                    strncpy(tmpBuf, "(null)", 7);
+                }
                 log_warn("Got socket error %d (%s) while connecting", err, tmpBuf);
 #else
                 auto ptr = strerror_r(err, tmpBuf, ERROR_BUFFER_LEN);
-                if (ptr != 0)
+                if (ptr != nullptr)
                 {
                     strncpy(tmpBuf, "(null)", 7);
                 }

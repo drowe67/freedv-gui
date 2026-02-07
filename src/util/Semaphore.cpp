@@ -25,6 +25,10 @@
 #include "Semaphore.h"
 #include "logging/ulog.h"
 
+#if defined(__linux__)
+#include "../util/timespec.h"
+#endif // defined(__linux__)
+
 Semaphore::Semaphore()
 {
 #if defined(_WIN32)
@@ -90,6 +94,44 @@ void Semaphore::signal() FREEDV_NONBLOCKING
 #endif // defined(_WIN32) || defined(__APPLE__)
 
     FREEDV_END_VERIFIED_SAFE
+}
+
+void Semaphore::waitFor(int timeMilliseconds)
+{
+    const int MS_TO_NS = 1000000;
+#if defined(_WIN32)
+    DWORD result = WaitForSingleObject(sem_, timeMilliseconds);
+    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    {
+        std::stringstream ss;
+        ss << "Could not wait on semaphore (err = " << GetLastError() << ")";
+        log_error(ss.str().c_str());
+    }
+#elif defined(__APPLE__)
+    if (sem_ != nullptr)
+    {
+        dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, timeMilliseconds * MS_TO_NS);
+    }
+#else
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1)
+    {
+        return;
+    }
+
+    // Skip wait if we spent too much time last time
+    auto nsec = timeMilliseconds * MS_TO_NS;
+    struct timespec ts2;
+    ts2.tv_nsec = nsec;
+    ts2.tv_sec = 0;
+    ts2 = timespec_normalise(ts2);
+    ts = timespec_add(ts, ts2);
+
+    if (sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts) < 0 && errno != ETIMEDOUT)
+    {
+        log_error("Could not wait on semaphore (errno = %d)", errno);
+    }
+#endif // defined(_WIN32) || defined(__APPLE__)
 }
 
 void Semaphore::wait()

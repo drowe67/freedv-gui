@@ -272,13 +272,21 @@ void PulseAudioDevice::setHelperRealTime()
         if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
         {
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            if (rv != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
             log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #else
             auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-            if (ptr != 0)
+            if (ptr == nullptr)
             {
                 strncpy(tmpBuf, "(null)", 7);
+            }
+            else
+            {
+                strncpy(tmpBuf, ptr, strlen(ptr) + 1);
             }
             log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
@@ -286,13 +294,21 @@ void PulseAudioDevice::setHelperRealTime()
         else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
         {
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-            strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+            if (rv != 0)
+            {
+                strncpy(tmpBuf, "(null)", 7);
+            }
             log_warn("rtkit could not make high priority: %s", tmpBuf);
 #else
             auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-            if (ptr != 0)
+            if (ptr == nullptr)
             {
                 strncpy(tmpBuf, "(null)", 7);
+            }
+            else
+            {
+                strncpy(tmpBuf, ptr, strlen(ptr) + 1);
             }
             log_warn("rtkit could not make high priority: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
@@ -309,15 +325,16 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
-}
-
-void PulseAudioDevice::stopRealTimeWork(bool fastMode)
-{
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
 
+    startTime_ = std::chrono::steady_clock::now();
+}
+
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
+{
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
@@ -325,21 +342,33 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
         return;
     }
 
-    auto latency = getLatencyInMicroseconds();
-    if (latency == 0)
-    {
-        latency = PULSE_TARGET_LATENCY_US;
-    }
+    int64_t latency = PULSE_TARGET_LATENCY_US;
     latency >>= fastMode ? 1 : 0;
 
-    ts_.tv_nsec += latency * 1000;
-    ts_ = timespec_normalise(ts_);
+    // Skip wait if we spent too much time last time
+    int64_t nsec = latency * 1000 - extraTimeNs_;
+    if (nsec <= 0)
+    {
+        extraTimeNs_ = 0;
+        return;
+    }
+    //log_info("wait %" PRIu64 " ns", (uint64_t)nsec);
+    struct timespec ts2;
+    ts2.tv_nsec = nsec;
+    ts2.tv_sec = 0;
+    ts2 = timespec_normalise(ts2);
+    ts_ = timespec_add(ts_, ts2);
 
     int rv = 0;
     while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts_)) == -1 && errno == EINTR)
     {
         // empty
     }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime_).count() - nsec;
+    extraTimeNs_ = std::max((long)0, duration); // cap extra time to >= 0.
+
     if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.

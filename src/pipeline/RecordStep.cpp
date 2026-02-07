@@ -115,7 +115,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        fileIoThreadSem_.wait();
+        fileIoThreadSem_.waitFor(100);
     }
     
     delete[] buf;

@@ -106,7 +106,7 @@ void PlaybackStep::nonRtThreadEntry_()
 
     while (!nonRtThreadEnding_.load(std::memory_order_acquire))
     {
-        g_mutexProtectingCallbackData.Lock();
+        if (g_mutexProtectingCallbackData.TryLock() == wxMUTEX_NO_ERROR) {
         auto playFile = getSndFileFn_();
         if (playFile != nullptr)
         {
@@ -186,8 +186,8 @@ void PlaybackStep::nonRtThreadEntry_()
             outputFifo_.reset();
         }
 
-        g_mutexProtectingCallbackData.Unlock();
-        fileIoThreadSem_.wait();
+        g_mutexProtectingCallbackData.Unlock(); }
+        fileIoThreadSem_.waitFor(100);
     }
 
     if (playbackResampler_ != nullptr)
