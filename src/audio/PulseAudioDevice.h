@@ -95,6 +95,9 @@ private:
     int extraTimeNs_;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
+    int extraTimeNs_;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
+
     void stopImpl_();
 
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);

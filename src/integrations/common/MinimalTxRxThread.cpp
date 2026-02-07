@@ -54,7 +54,7 @@ int MinimalTxRxThread::getTxNNomModemSamples() const
 
 int MinimalTxRxThread::getRxNumSpeechSamples() const
 {
-    return 1920;
+    return rade_n_features_in_out(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
 }
 
 // Experimental options for potential future release:

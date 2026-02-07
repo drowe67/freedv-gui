@@ -886,6 +886,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
     * Linux: Reduce audio dropouts by using CPU affinity. (PR #1123)
     * Autosize columns in main window drop-down list. (PR #1213)
+    * PulseAudio/pipewire: Use fixed wait time between processing cycles. (PR #1216)
+    * Slow down waterfall display when waterfall is small (i.e. displayed with other plots). (PR #1216)
+    * FlexRadio: Terminate on SIGHUP to avoid hangs on exit. (PR #1214)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
