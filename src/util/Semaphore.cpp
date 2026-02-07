@@ -113,7 +113,7 @@ void Semaphore::waitFor(int timeMilliseconds)
 #elif defined(__APPLE__)
     if (sem_ != nullptr)
     {
-        dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, timeMilliseconds * MS_TO_NS);
+        dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, timeMilliseconds * MS_TO_NS));
     }
 #else
     struct timespec ts;
