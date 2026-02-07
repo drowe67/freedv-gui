@@ -92,8 +92,6 @@ private:
     sem_t sem_;
     struct timespec ts_;
     bool sleepFallback_;
-    int extraTimeNs_;
-    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     int extraTimeNs_;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
