@@ -385,7 +385,6 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     ts_ = timespec_add(ts_, ts2);
 
     int rv = 0;
-    startTime_ = std::chrono::steady_clock::now();
     while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts_)) == -1 && errno == EINTR)
     {
         // empty
