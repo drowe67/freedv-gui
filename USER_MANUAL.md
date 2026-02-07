@@ -885,6 +885,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
     * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
     * Autosize columns in main window drop-down list. (PR #1213)
+    * PulseAudio/pipewire: Use fixed wait time between processing cycles. (PR #1216)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
