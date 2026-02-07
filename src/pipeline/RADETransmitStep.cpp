@@ -181,7 +181,7 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
                 featureListIdx_ = 0;
 
                 // RADE TX handling
-		FREEDV_BEGIN_REALTIME_UNSAFE
+                FREEDV_BEGIN_REALTIME_UNSAFE
                     rade_tx(dv_, radeOut_, &featureList_[0]);
                 FREEDV_END_REALTIME_UNSAFE
 

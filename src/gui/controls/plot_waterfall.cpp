@@ -189,7 +189,7 @@ bool PlotWaterfall::checkDT(void)
     // block per pixel.  In this case increase m_dT and perform draw
     // less often
 
-    float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y;
+    float px_per_sec = Y_PER_SECOND;
     float dy = m_dT * px_per_sec;
     
     if (dy < 1.0) {
@@ -273,11 +273,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
         gc->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET + yOffset, m_imgWidth, m_imgHeight - yOffset); 
     }
 
-    if (m_dT >= 1.0)
-    {
-        m_dT = DT;
-    }
-    
     if (!repaintDataOnly)
     {
         drawGraticule(gc);

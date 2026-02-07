@@ -98,13 +98,21 @@ void PulseAudioEngine::start()
                 if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
                 {
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    if (rv != 0)
+                    {
+                        strncpy(tmpBuf, "(null)", 7);
+                    }
                     log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #else
                     auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (ptr != 0)
+                    if (ptr == nullptr)
                     {
                         strncpy(tmpBuf, "(null)", 7);
+                    }
+                    else
+                    {
+                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
                     }
                     log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
@@ -112,13 +120,21 @@ void PulseAudioEngine::start()
                 else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
                 {
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                    if (rv != 0)
+                    {
+                        strncpy(tmpBuf, "(null)", 7);
+                    }
                     log_warn("rtkit could not make high priority: %s", tmpBuf);
 #else
                     auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (ptr != 0)
-                    {
+		    if (ptr == nullptr)
+		    {
                         strncpy(tmpBuf, "(null)", 7);
+                    }
+                    else
+                    {
+                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
                     }
                     log_warn("rtkit could not make high priority: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE

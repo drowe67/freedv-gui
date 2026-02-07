@@ -40,6 +40,7 @@ public:
     virtual ~Semaphore();
     
     void wait();
+    void waitFor(int timeMilliseconds);
     void signal() FREEDV_NONBLOCKING;
     
 private:
