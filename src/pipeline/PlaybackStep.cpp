@@ -40,6 +40,8 @@ using namespace std::chrono_literals;
 
 #define NUM_SECONDS_TO_READ 1
 
+static constexpr int NUM_MILLISECONDS_TO_WAIT = 100;
+
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
@@ -106,7 +108,7 @@ void PlaybackStep::nonRtThreadEntry_()
 
     while (!nonRtThreadEnding_.load(std::memory_order_acquire))
     {
-        if (g_mutexProtectingCallbackData.TryLock() == wxMUTEX_NO_ERROR) {
+        g_mutexProtectingCallbackData.Lock();
         auto playFile = getSndFileFn_();
         if (playFile != nullptr)
         {
@@ -186,8 +188,8 @@ void PlaybackStep::nonRtThreadEntry_()
             outputFifo_.reset();
         }
 
-        g_mutexProtectingCallbackData.Unlock(); }
-        fileIoThreadSem_.waitFor(100);
+        g_mutexProtectingCallbackData.Unlock();
+        fileIoThreadSem_.waitFor(NUM_MILLISECONDS_TO_WAIT);
     }
 
     if (playbackResampler_ != nullptr)

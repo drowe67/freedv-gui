@@ -33,6 +33,8 @@
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+static constexpr int NUM_MILLISECONDS_TO_WAIT = 100;
+
 using namespace std::chrono_literals;
 
 RecordStep::RecordStep(
@@ -115,7 +117,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        fileIoThreadSem_.waitFor(100);
+        fileIoThreadSem_.waitFor(NUM_MILLISECONDS_TO_WAIT);
     }
     
     delete[] buf;
