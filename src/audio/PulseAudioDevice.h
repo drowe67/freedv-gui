@@ -23,6 +23,7 @@
 #ifndef PULSE_AUDIO_DEVICE_H
 #define PULSE_AUDIO_DEVICE_H
 
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
@@ -91,6 +92,9 @@ private:
     sem_t sem_;
     struct timespec ts_;
     bool sleepFallback_;
+
+    int extraTimeNs_;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();
 

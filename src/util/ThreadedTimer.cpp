@@ -123,7 +123,7 @@ void ThreadedTimer::TimerServer::eventLoop_()
                 lk.unlock();
                 {
                     std::unique_lock<std::mutex> lk2(tmpTimer->timerMutex_);
-                    tmpTimer->nextFireTime_ += std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_);
+                    tmpTimer->nextFireTime_ += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(tmpTimer->timeoutMilliseconds_));
                 }
                 lk.lock();
                 timerQueue_.push(tmpTimer);
@@ -224,7 +224,7 @@ void ThreadedTimer::start()
 #else
     {
         std::unique_lock<std::mutex> lk(timerMutex_);
-        nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMilliseconds_);
+        nextFireTime_ = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(timeoutMilliseconds_));
         isRunning_.store(true, std::memory_order_release);
     }
     TheTimerServer_.registerTimer(this);
