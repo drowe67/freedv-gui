@@ -98,7 +98,10 @@ void Semaphore::signal() FREEDV_NONBLOCKING
 
 void Semaphore::waitFor(int timeMilliseconds)
 {
+#if !defined(_WIN32)
     const int MS_TO_NS = 1000000;
+#endif // !defined(_WIN32)
+
 #if defined(_WIN32)
     DWORD result = WaitForSingleObject(sem_, timeMilliseconds);
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)

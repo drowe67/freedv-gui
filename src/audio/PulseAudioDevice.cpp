@@ -287,7 +287,7 @@ void PulseAudioDevice::setHelperRealTime()
             }
             else
             {
-                strncpy(tmpBuf, ptr, strlen(ptr) + 1);
+                memmove(tmpBuf, ptr, strlen(ptr) + 1);
             }
             log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
@@ -309,7 +309,7 @@ void PulseAudioDevice::setHelperRealTime()
             }
             else
             {
-                strncpy(tmpBuf, ptr, strlen(ptr) + 1);
+                memmove(tmpBuf, ptr, strlen(ptr) + 1);
             }
             log_warn("rtkit could not make high priority: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
