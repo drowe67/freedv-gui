@@ -182,7 +182,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
     , UNKNOWN_STR("")
-    , SNR_FORMAT_STR("%.01f")
     , ALL_LETTERS_RGX("^[A-Z]{2}$")
     , MS_REMOVAL_RGX("\\.[^+-]+")
     , TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$")
@@ -2736,7 +2735,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             }
             else
             {
-                newHeading = wxString::Format("%.0f", kvp.second->headingVal);
+                newHeading = wxNumberFormatter::ToString(kvp.second->headingVal, 0);
             }
 
             updated |= kvp.second->heading != newHeading;
@@ -2922,7 +2921,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
                 }
                 else
                 {
-                    temp->heading = wxString::Format("%.0f", temp->headingVal);
+                    temp->heading = wxNumberFormatter::ToString(temp->headingVal, 0);
                 }
             }
         }
@@ -3204,7 +3203,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
 
-            wxString snrString = wxString::Format(parent_->SNR_FORMAT_STR, snr);
+            wxString snrString = wxNumberFormatter::ToString(snr, 1);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
