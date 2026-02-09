@@ -1282,47 +1282,44 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 reportData->foregroundColor = foregroundColor;
             }
 
-            //if (parent_->IsShownOnScreen())
+            bool newVisibility = !isFiltered_(reportData);
+            if (newVisibility != reportData->isVisible)
             {
-                bool newVisibility = !isFiltered_(reportData);
-                if (newVisibility != reportData->isVisible)
+                setColumnAutosize_(false);
+                
+                reportData->isVisible = newVisibility;
+                if (newVisibility)
                 {
-                    setColumnAutosize_(false);
-                    
-                    reportData->isVisible = newVisibility;
-                    if (newVisibility)
-                    {
-                        wxDataViewItem dvi(reportData);
-                        ItemAdded(wxDataViewItem(nullptr), dvi);
-                        itemsAdded.Add(dvi);
+                    wxDataViewItem dvi(reportData);
+                    ItemAdded(wxDataViewItem(nullptr), dvi);
+                    itemsAdded.Add(dvi);
 #if defined(WIN32)
-                        doAutoSizeColumns = true;
+                    doAutoSizeColumns = true;
 #endif // defined(WIN32)
-                    }
-                    else
-                    {
-                        wxDataViewItem dvi(reportData);
-                        ItemDeleted(wxDataViewItem(nullptr), dvi);
-                        itemsDeleted.Add(dvi);
-                        if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
-                        {
-                            // Selection no longer valid
-                            currentSelection = wxDataViewItem(nullptr);
-                        }
-                    }
-                    sortOnNextTimerInterval = true;
                 }
                 else
                 {
-                    if (isHighlightUpdated || reportData->isPendingUpdate)
+                    wxDataViewItem dvi(reportData);
+                    ItemDeleted(wxDataViewItem(nullptr), dvi);
+                    itemsDeleted.Add(dvi);
+                    if (currentSelection.IsOk() && currentSelection.GetID() == dvi.GetID())
                     {
-                        if (reportData->isVisible)
-                        {
-                            reportData->isPendingUpdate = false;
+                        // Selection no longer valid
+                        currentSelection = wxDataViewItem(nullptr);
+                    }
+                }
+                sortOnNextTimerInterval = true;
+            }
+            else
+            {
+                if (isHighlightUpdated || reportData->isPendingUpdate)
+                {
+                    if (reportData->isVisible)
+                    {
+                        reportData->isPendingUpdate = false;
 
-                            wxDataViewItem dvi(reportData);
-                            itemsChanged.Add(dvi);
-                        }
+                        wxDataViewItem dvi(reportData);
+                        itemsChanged.Add(dvi);
                     }
                 }
             }
@@ -1366,7 +1363,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     else
     {
-        //if (!IsShownOnScreen()) return;
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
@@ -2200,10 +2196,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
 {
     bool isHidden = false;
-    /*if (!parent_->IsShownOnScreen())
-    {
-        return true;
-    }*/
 
     if (currentBandFilter_ != FilterFrequency::BAND_ALL)
     {
