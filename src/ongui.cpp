@@ -1407,6 +1407,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
+    log_info("Got request for frequency %s, currently %" PRIu64, (const char*)freqStr.ToUTF8(), oldFreq.get());
+
     if (freqStr.Length() > 0)
     {
         double tmp = 0;
@@ -1440,6 +1442,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         {
             m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
         }
+
+        log_info("Converted frequency is %" PRIu64, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get());
     }
     else
     {
