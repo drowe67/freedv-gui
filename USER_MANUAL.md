@@ -875,6 +875,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.3.0 TBD 2026
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
+
 ## V2.2.1 February 2026
 
 1. Bugfixes:
