@@ -98,10 +98,6 @@ void Semaphore::signal() FREEDV_NONBLOCKING
 
 void Semaphore::waitFor(int timeMilliseconds)
 {
-#if !defined(_WIN32)
-    const int MS_TO_NS = 1000000;
-#endif // !defined(_WIN32)
-
 #if defined(_WIN32)
     DWORD result = WaitForSingleObject(sem_, timeMilliseconds);
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
@@ -111,6 +107,7 @@ void Semaphore::waitFor(int timeMilliseconds)
         log_error(ss.str().c_str());
     }
 #elif defined(__APPLE__)
+    const int MS_TO_NS = 1000000;
     if (sem_ != nullptr)
     {
         dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, timeMilliseconds * MS_TO_NS));
@@ -123,14 +120,13 @@ void Semaphore::waitFor(int timeMilliseconds)
     }
 
     // Skip wait if we spent too much time last time
-    auto nsec = timeMilliseconds * MS_TO_NS;
-    struct timespec ts2;
-    ts2.tv_nsec = nsec;
-    ts2.tv_sec = 0;
-    ts2 = timespec_normalise(ts2);
-    ts = timespec_add(ts, ts2);
-
-    if (sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts) < 0 && errno != ETIMEDOUT)
+    ts = timespec_add(ts, timespec_from_ms(timeMilliseconds));
+    int rv = 0;
+    while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts)) == -1 && errno == EINTR)
+    {
+        // empty
+    }
+    if (rv == -1 && errno != ETIMEDOUT)
     {
         log_error("Could not wait on semaphore (errno = %d)", errno);
     }
