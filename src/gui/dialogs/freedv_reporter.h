@@ -439,10 +439,12 @@ class FreeDVReporterDialog : public wxFrame
             void execQueuedAction_();
 
             wxString makeValidTime_(std::string const& timeStr, wxDateTime& timeObj);
-            double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
-            double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
+            double calculateDistance_(wxString const& gridSquare1, wxString const& gridSquare2);
+            double calculateBearingInDegrees_(wxString const& gridSquare1, wxString const& gridSquare2);
             void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
+            void setColumnAutosize_(bool autosize);
+            
             static double DegreesToRadians_(double degrees);
             static double RadiansToDegrees_(double radians);
             static wxString GetCardinalDirection_(int degrees);

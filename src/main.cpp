@@ -1776,12 +1776,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
                         m_lastReportedCallsignListView->SetItem(index, 1, freqString);
                         m_lastReportedCallsignListView->SetItem(index, 2, currentTimeAsString);
+
+                        // Make sure all columns are wide enough to show contents
+                        m_lastReportedCallsignListView->SetColumnWidth(0, wxLIST_AUTOSIZE);
+                        m_lastReportedCallsignListView->SetColumnWidth(1, wxLIST_AUTOSIZE);
+                        m_lastReportedCallsignListView->SetColumnWidth(2, wxLIST_AUTOSIZE);
                     }
                     
                     wxString snrAsString;
                     snrAsString.Printf(SNR_FORMAT_STR_NO_DB, g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
+                    m_lastReportedCallsignListView->SetColumnWidth(3, wxLIST_AUTOSIZE);
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);

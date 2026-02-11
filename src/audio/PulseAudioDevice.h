@@ -23,6 +23,7 @@
 #ifndef PULSE_AUDIO_DEVICE_H
 #define PULSE_AUDIO_DEVICE_H
 
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
@@ -73,7 +74,7 @@ protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
     
-    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     std::mutex objLock_;
@@ -91,6 +92,9 @@ private:
     sem_t sem_;
     struct timespec ts_;
     bool sleepFallback_;
+
+    int extraTimeNs_;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();
 

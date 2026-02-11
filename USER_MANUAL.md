@@ -875,7 +875,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.2.1 TBD 2026
+## V2.3.0 TBD 2026
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
+
+## V2.2.1 February 2026
 
 1. Bugfixes:
     * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)
@@ -883,6 +890,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug causing PTT input to be initially ignored until pushing the PTT button. (PR #1203)
     * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
     * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
+    * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
+    * Autosize columns in main window drop-down list. (PR #1213)
+    * PulseAudio/pipewire: Use fixed wait time between processing cycles. (PR #1216)
+    * Slow down waterfall display when waterfall is small (i.e. displayed with other plots). (PR #1216)
+    * FlexRadio: Terminate on SIGHUP to avoid hangs on exit. (PR #1214)
 2. Build system:
     * macOS: Fix dylibbundler call for compilation. (PR #1204)
     * macOS: Add /Applications shortcut to generated DMG. (PR #1206)

@@ -63,6 +63,7 @@ void RigControlConfiguration::load(wxConfigBase* config)
     load_(config, hamlibUseAnalogModes);
     load_(config, hamlibIcomCIVAddress);
     load_(config, hamlibRigName);
+
     load_(config, hamlibPTTType);
     load_(config, hamlibSerialRate);
     load_(config, hamlibSerialPort);

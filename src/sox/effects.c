@@ -102,8 +102,11 @@ void sox_delete_effects_chain(sox_effects_chain_t *ecp)
 {
     if (ecp && ecp->length)
         sox_delete_effects(ecp);
-    free(ecp->effects);
-    free(ecp);
+    if (ecp)
+    {
+        free(ecp->effects);
+        free(ecp);
+    }
 } /* sox_delete_effects_chain */
 
 /* Effect can call in start() or flow() to set minimum input size to flow() */
