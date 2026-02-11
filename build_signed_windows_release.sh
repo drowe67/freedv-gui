@@ -27,9 +27,9 @@ cd $WIN_BUILD_DIR
 # Install Wine environment
 export WINEPREFIX=`pwd`/wine-env
 WINEARCH=win64 DISPLAY= winecfg /v win10
-wget https://www.python.org/ftp/python/3.14.2/python-3.14.2-amd64.exe
+wget https://www.python.org/ftp/python/3.14.3/python-3.14.3-amd64.exe
 Xvfb :99 -screen 0 1024x768x16 &
-DISPLAY=:99.0 wine ./python-3.14.2-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0
+DISPLAY=:99.0 wine ./python-3.14.3-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0
 DISPLAY=:99.0 wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
 killall Xvfb
 

@@ -881,6 +881,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * TBD
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
+3. Build system:
+    * Windows/macOS: Update Python to 3.14.3. (PR #1221)
 
 ## V2.2.1 February 2026
 
