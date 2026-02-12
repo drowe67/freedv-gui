@@ -33,8 +33,6 @@
 
 extern wxMutex g_mutexProtectingCallbackData;
 
-static constexpr int NUM_MILLISECONDS_TO_WAIT = 100;
-
 using namespace std::chrono_literals;
 
 RecordStep::RecordStep(
@@ -43,11 +41,9 @@ RecordStep::RecordStep(
     : inputSampleRate_(inputSampleRate)
     , getSndFileFn_(std::move(getSndFileFn))
     , isFileCompleteFn_(std::move(isFileCompleteFn))
+    , inputFifo_(inputSampleRate_)
     , fileIoThreadEnding_(false)
 {
-    inputFifo_ = codec2_fifo_create(inputSampleRate_);
-    assert(inputFifo_ != nullptr);
-    
     fileIoThread_ = std::thread(std::bind(&RecordStep::fileIoThreadEntry_, this));
 }
 
@@ -59,8 +55,6 @@ RecordStep::~RecordStep()
     {
         fileIoThread_.join();
     }
-    
-    codec2_fifo_destroy(inputFifo_);
 }
 
 int RecordStep::getInputSampleRate() const FREEDV_NONBLOCKING
@@ -75,7 +69,7 @@ int RecordStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 
 short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {    
-    codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
+    inputFifo_.write(inputSamples, numInputSamples);
     fileIoThreadSem_.signal();
     
     *numOutputSamples = 0;
@@ -84,11 +78,7 @@ short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOut
 
 void RecordStep::reset() FREEDV_NONBLOCKING
 {
-    short buf;
-    while (codec2_fifo_used(inputFifo_) > 0)
-    {
-        codec2_fifo_read(inputFifo_, &buf, 1);
-    }
+    inputFifo_.reset();
 }
 
 void RecordStep::fileIoThreadEntry_()
@@ -109,15 +99,15 @@ void RecordStep::fileIoThreadEntry_()
         auto recordFile = getSndFileFn_();
         if (recordFile != nullptr)
         {
-            int numInputSamples = codec2_fifo_used(inputFifo_);
-            codec2_fifo_read(inputFifo_, buf, numInputSamples);
+            int numInputSamples = inputFifo_.numUsed();
+            inputFifo_.read(buf, numInputSamples);
             
             sf_write_short(recordFile, buf, numInputSamples);
             isFileCompleteFn_(numInputSamples);
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        fileIoThreadSem_.waitFor(NUM_MILLISECONDS_TO_WAIT);
+        fileIoThreadSem_.wait();
     }
     
     delete[] buf;

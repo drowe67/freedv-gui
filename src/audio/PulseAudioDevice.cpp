@@ -336,6 +336,8 @@ void PulseAudioDevice::startRealTimeWork()
 
 void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 {
+    constexpr int64_t NSEC_TO_SEC = 1000000000;
+
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
@@ -355,9 +357,8 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     }
     //log_info("wait %" PRIu64 " ns", (uint64_t)nsec);
     struct timespec ts2;
-    ts2.tv_nsec = nsec;
-    ts2.tv_sec = 0;
-    ts2 = timespec_normalise(ts2);
+    ts2.tv_nsec = nsec % NSEC_TO_SEC;
+    ts2.tv_sec = nsec / NSEC_TO_SEC;
     ts_ = timespec_add(ts_, ts2);
 
     int rv = 0;
