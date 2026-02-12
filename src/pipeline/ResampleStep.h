@@ -28,6 +28,8 @@
 #include <memory>
 #include <speex/speex_resampler.h>
 
+#include "../util/GenericFIFO.h"
+
 class ResampleStep : public IPipelineStep
 {
 public:
@@ -38,14 +40,17 @@ public:
     virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     
+    void reset() FREEDV_NONBLOCKING override;
+    
 private:
     int inputSampleRate_;
     int outputSampleRate_;
     SpeexResamplerState* resampleState_;
 
-    float* tempInput_;
-    float* tempOutput_;
+    short* tempInput_;
     std::unique_ptr<short[]> outputSamples_;
+    
+    GenericFIFO<short> inputFifo_;
 };
 
 #endif // AUDIO_PIPELINE__RESAMPLE_STEP_H
