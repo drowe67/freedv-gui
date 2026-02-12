@@ -875,6 +875,15 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.3.0 TBD 2026
+
+1. Bugfixes:
+    * Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR #1220)
+2. Enhancements:
+    * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
+3. Build system:
+    * Windows/macOS: Update Python to 3.14.3. (PR #1221)
+
 ## V2.2.1 February 2026
 
 1. Bugfixes:

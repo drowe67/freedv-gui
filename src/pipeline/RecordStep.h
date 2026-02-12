@@ -31,6 +31,7 @@
 #include <atomic>
 #include "codec2_fifo.h"
 #include "../util/Semaphore.h"
+#include "../util/GenericFIFO.h"
 
 class RecordStep : public IPipelineStep
 {
@@ -50,7 +51,7 @@ private:
     std::function<SNDFILE*()> getSndFileFn_;
     std::function<void(int)> isFileCompleteFn_;
     std::thread fileIoThread_;
-    FIFO* inputFifo_;
+    GenericFIFO<short> inputFifo_;
     std::atomic<bool> fileIoThreadEnding_;
     Semaphore fileIoThreadSem_;
     

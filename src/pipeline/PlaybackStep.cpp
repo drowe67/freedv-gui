@@ -40,8 +40,6 @@ using namespace std::chrono_literals;
 
 #define NUM_SECONDS_TO_READ 1
 
-static constexpr int NUM_MILLISECONDS_TO_WAIT = 100;
-
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
@@ -189,7 +187,7 @@ void PlaybackStep::nonRtThreadEntry_()
         }
 
         g_mutexProtectingCallbackData.Unlock();
-        fileIoThreadSem_.waitFor(NUM_MILLISECONDS_TO_WAIT);
+        fileIoThreadSem_.wait();
     }
 
     if (playbackResampler_ != nullptr)
