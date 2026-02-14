@@ -857,8 +857,8 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                 auto pttType = (HamlibRigController::PttType)m_cbPttMethod->GetSelection();
                 
                 hamlibTestObject_ = std::make_shared<HamlibRigController>(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType);
-                hamlibTestObject_->onRigError += [&](IRigController*, std::string error) {
-                    CallAfter([&]() {
+                hamlibTestObject_->onRigError += [this](IRigController*, std::string error) {
+                    CallAfter([this, error = std::move(error)]() {
                         wxMessageBox(
                             wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -877,7 +877,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
 
                 if (!wxGetApp().CanAccessSerialPort((const char*)serialPort.ToUTF8()))
                 {
-                    CallAfter([&]() {
+                    CallAfter([this]() {
                         wxMessageBox(
                             "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -897,8 +897,8 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                     useDTR,
                     DTRPos
                 );
-                serialPortTestObject_->onRigError += [&](IRigController*, std::string error) {
-                    CallAfter([&]() {
+                serialPortTestObject_->onRigError += [this](IRigController*, std::string error) {
+                    CallAfter([this, error = std::move(error)]() {
                         wxMessageBox(
                             wxString::Format("Couldn't connect to Radio (%s).  Make sure the serial Device and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
