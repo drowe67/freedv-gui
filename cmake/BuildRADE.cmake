@@ -4,33 +4,29 @@ elseif(APPLE)
     set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DPython3_ROOT_DIR=${Python3_ROOT_DIR})
 endif()
 
-if(BUILD_OSX_UNIVERSAL)
-    set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DBUILD_OSX_UNIVERSAL=1)
-endif(BUILD_OSX_UNIVERSAL)
-
 set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip)
 
 include(ExternalProject)
 ExternalProject_Add(build_rade
    SOURCE_DIR rade_src
    BINARY_DIR rade_build
-   GIT_REPOSITORY https://github.com/drowe67/radae.git
+   GIT_REPOSITORY https://github.com/peterbmarks/radae_nopy/ #https://github.com/drowe67/radae.git
    GIT_TAG main
    GIT_SUBMODULES ""
    GIT_SUBMODULES_RECURSE NO
    CMAKE_ARGS ${RADE_CMAKE_ARGS}
-   #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
+   CMAKE_CACHE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET} -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
    INSTALL_COMMAND ""
 )
 
 ExternalProject_Get_Property(build_rade BINARY_DIR)
 ExternalProject_Get_Property(build_rade SOURCE_DIR)
-add_library(rade SHARED IMPORTED)
+add_library(rade STATIC IMPORTED)
 add_dependencies(rade build_rade)
 include_directories(${SOURCE_DIR}/src)
 
 set_target_properties(rade PROPERTIES
-    IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_STATIC_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/librade${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
