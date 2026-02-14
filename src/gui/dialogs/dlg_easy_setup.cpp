@@ -1237,6 +1237,11 @@ void EasySetupDialog::updateAudioDevices_()
     std::map<wxString, SoundDeviceData*> finalAnalogRxDeviceList;
     std::map<wxString, SoundDeviceData*> finalAnalogTxDeviceList;
 
+    // Clear device list first
+    m_radioDevice->Clear();
+    m_analogDeviceRecord->Clear();
+    m_analogDevicePlayback->Clear();
+
     auto audioEngine = AudioEngineFactory::GetAudioEngine();
     audioEngine->start();
 
