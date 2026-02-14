@@ -858,7 +858,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                 
                 hamlibTestObject_ = std::make_shared<HamlibRigController>(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType);
                 hamlibTestObject_->onRigError += [this](IRigController*, std::string error) {
-                    CallAfter([this, error]() {
+                    CallAfter([this, error = std::move(error)]() {
                         wxMessageBox(
                             wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -898,7 +898,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                     DTRPos
                 );
                 serialPortTestObject_->onRigError += [this](IRigController*, std::string error) {
-                    CallAfter([this, error]() {
+                    CallAfter([this, error = std::move(error)]() {
                         wxMessageBox(
                             wxString::Format("Couldn't connect to Radio (%s).  Make sure the serial Device and Params match your radio", error), 
                             wxT("Error"), wxOK | wxICON_ERROR, this);
