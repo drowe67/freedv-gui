@@ -50,9 +50,9 @@ if [ $BUILD_DEPS == 1 ]; then
     cd hamlib-code && git checkout Hamlib-4.7 && git pull
     ./bootstrap 
     if [ $UNIV_BUILD == 1 ]; then
-        CFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" CXXFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
+        CFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" CXXFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR --without-libusb
     else
-        CFLAGS="-g -O3 -mmacosx-version-min=11.0" CXXFLAGS="-g -O3 -mmacosx-version-min=11.0" ./configure --enable-shared --prefix $HAMLIBDIR
+        CFLAGS="-g -O3 -mmacosx-version-min=11.0" CXXFLAGS="-g -O3 -mmacosx-version-min=11.0" ./configure --enable-shared --prefix $HAMLIBDIR --without-libusb
     fi
 
     make -j$(sysctl -n hw.logicalcpu) 
