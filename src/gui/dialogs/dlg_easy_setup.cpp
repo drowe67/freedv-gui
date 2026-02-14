@@ -742,6 +742,11 @@ void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
     
     AudioOptsDialog *dlg = new AudioOptsDialog(this);
     int rv = dlg->ShowModal();
+    
+    // If the user pushed Refresh in the window, update device list here just in case
+    // there were any device changes.
+    updateAudioDevices_();
+    
     if(rv == wxOK)
     {
         dlg->ExchangeData(EXCHANGE_DATA_OUT);
@@ -1231,6 +1236,11 @@ void EasySetupDialog::updateAudioDevices_()
     std::map<wxString, SoundDeviceData*> finalRadioDeviceList;
     std::map<wxString, SoundDeviceData*> finalAnalogRxDeviceList;
     std::map<wxString, SoundDeviceData*> finalAnalogTxDeviceList;
+
+    // Clear device list first
+    m_radioDevice->Clear();
+    m_analogDeviceRecord->Clear();
+    m_analogDevicePlayback->Clear();
 
     auto audioEngine = AudioEngineFactory::GetAudioEngine();
     audioEngine->start();
