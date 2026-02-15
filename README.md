@@ -141,14 +141,33 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 
 ### Instructions
 
-1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
-2. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
-3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
-4. Create a build folder inside freedv-gui: `mkdir build_windows`
-5. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake ..`
-   * Valid architectures are: aarch64 (64 bit ARM), i686 (32 bit Intel/AMD), x86_64 (64 bit Intel/AMD)
-6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
-7. Create FreeDV installer: `make package`
+1. Install WINE (example commands for Ubuntu below):
+
+```
+    sudo dpkg --add-architecture i386
+    sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
+    sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+    sudo apt-get update
+    sudo apt install -y --install-recommends winehq-staging
+    WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
+```
+
+2. Install Python inside the WINE environment:
+
+```
+    export WINEPREFIX=`pwd`/wine-env
+    wget https://www.python.org/ftp/python/3.14.3/python-3.14.3-amd64.exe
+    DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
+```
+
+3. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
+4. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
+5. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
+6. Create a build folder inside freedv-gui: `mkdir build_windows`
+7. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..`
+   * Valid architectures are: aarch64 (64 bit ARM), x86_64 (64 bit Intel/AMD)
+8. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
+9. Create FreeDV installer: `make package`
 
 ## Building and installing on macOS
 
