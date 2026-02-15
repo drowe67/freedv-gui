@@ -36,12 +36,12 @@ cp ../delocating.py.patched pkg-venv/lib/python3.12/site-packages/delocate/deloc
 # Download RADE dependencies appropriate for both architectures (x86_64 and arm64)
 
 mkdir arm64
-pip3 download --platform macosx_11_0_arm64 --python-version 3.14 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy matplotlib
+pip3 download --platform macosx_11_0_arm64 --python-version 3.14 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy==2.3 matplotlib
 wget -O arm64/torch-2.9.1a0+gitd38164a-cp314-cp314-macosx_11_0_arm64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/v2.9.1-20251129/torch-2.9.1a0+gitd38164a-cp314-cp314-macosx_11_0_arm64.whl
 mv *arm64.whl arm64
 
 mkdir x86_64
-pip3 download --platform macosx_11_0_x86_64 --python-version 3.14 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy matplotlib
+pip3 download --platform macosx_11_0_x86_64 --python-version 3.14 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy==2.3 matplotlib
 wget -O x86_64/torch-2.9.1a0+gitd38164a-cp314-cp314-macosx_11_0_x86_64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/v2.9.1-20251129/torch-2.9.1a0+gitd38164a-cp314-cp314-macosx_11_0_x86_64.whl
 #rm numpy*
 #wget -O x86_64/numpy-2.3.2-cp312-cp312-macosx_11_0_x86_64.whl https://k6aq.net/freedv-build/numpy-2.3.2-cp312-cp312-macosx_11_0_x86_64.whl
