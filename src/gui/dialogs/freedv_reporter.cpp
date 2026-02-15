@@ -1162,13 +1162,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__)
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
 #else
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
-#endif // defined(__APPLE__) || defined(WIN32)
+#endif // defined(__APPLE__)
 {
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__)
     if (autosize)
     {
         // Re-enable autosizing
@@ -1191,7 +1191,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
             col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
         }
     }
-#endif // defined(__APPLE__) || defined(WIN32)
+#endif // defined(__APPLE__)
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
