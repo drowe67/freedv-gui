@@ -419,7 +419,7 @@ void HamlibRigController::connectImpl_()
 #else
         result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
-        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_.find("FLRig") != 0 && rigName_ != "Hamlib NET rigctl"))
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
         {
             rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
         }
