@@ -1162,7 +1162,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
+#if defined(__APPLE__) || defined(WIN32)
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
+#else
+void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
+#endif // defined(__APPLE__) || defined(WIN32)
 {
 #if defined(__APPLE__) || defined(WIN32)
     if (autosize)
