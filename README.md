@@ -157,8 +157,11 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 ```
     export WINEPREFIX=`pwd`/wine-env
     wget https://www.python.org/ftp/python/3.14.3/python-3.14.3-amd64.exe
-    DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
+    WINEARCH=win64 DISPLAY= wine ./python-3.14.3-amd64.exe
+    DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy==2.3.5
 ```
+
+(*Note: if using WSL2, you will need to choose "Customize Installation", skip "Optional Features" (hit Next), and then in "Advanced Options" check "Install Python 3.14 for all users" inside Python setup.*)
 
 3. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
 4. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
