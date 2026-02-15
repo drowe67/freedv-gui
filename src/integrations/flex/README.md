@@ -42,6 +42,20 @@ $ SSDR_RADIO_ADDRESS=192.168.1.2 PYTHONPATH=$(pwd)/rade_src src/integrations/fle
 To ensure proper reporting to FreeDV Reporter by the waveform, make sure that your callsign is properly 
 configured in SmartSDR (i.e. it doesn't say "FLEX" when first starting).
 
+### Executing on Windows Subsystem For Linux (WSL)
+
+Prior to building the waveform, WSL needs some settings changes to allow it to have the required network
+support. Edit .wslconfig to contain the following:
+
+```
+[wsl2]
+networkingMode=Mirrored
+firewall=false
+```
+
+Then, from a PowerShell session running as Administrator, execute `Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow`.
+You will then need to restart WSL by executing `wsl.exe --shutdown` and then reopening the Linux instance.
+
 ## Full list of options
 
 ```
