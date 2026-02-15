@@ -1164,6 +1164,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
 {
+#if defined(__APPLE__) || defined(WIN32)
     if (autosize)
     {
         // Re-enable autosizing
@@ -1186,6 +1187,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool auto
             col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
         }
     }
+#endif // defined(__APPLE__) || defined(WIN32)
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
