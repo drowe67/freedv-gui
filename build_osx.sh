@@ -47,7 +47,7 @@ if [ $BUILD_DEPS == 1 ]; then
     if [ ! -d hamlib-code ]; then
         git clone https://github.com/Hamlib/Hamlib.git hamlib-code
     fi
-    cd hamlib-code && git checkout Hamlib-4.7 && git pull
+    cd hamlib-code && git checkout 4.7.0 && git pull
     ./bootstrap 
     if [ $UNIV_BUILD == 1 ]; then
         CFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" CXXFLAGS="-g -O3 -mmacosx-version-min=11.0 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR --without-libusb
