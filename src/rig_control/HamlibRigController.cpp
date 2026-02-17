@@ -408,9 +408,9 @@ void HamlibRigController::connectImpl_()
 #if defined(HAMLIB_USE_FRIENDLY_ERRORS)
     // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
     // causes compile errors in FreeDV due to -Werror.
-    result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
+    auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
 #else
-    result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
+    auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
     if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
     {
@@ -419,7 +419,7 @@ void HamlibRigController::connectImpl_()
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
             
-    auto result = rig_open(tmpRig);
+    result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
         log_debug("hamlib: rig_open() OK");
