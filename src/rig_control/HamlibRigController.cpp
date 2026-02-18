@@ -412,8 +412,10 @@ void HamlibRigController::connectImpl_()
 #else
     auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
+    log_info("Current rig timeout: %s ms", currentTimeout);
     if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
     {
+        log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
     }
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
