@@ -773,14 +773,19 @@ void MainFrame::loadConfiguration_()
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
     // Adjust frequency entry labels
+    wxListItem colInfo;
+    m_lastReportedCallsignListView->GetColumn(1, colInfo);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
+        colInfo.SetText(_("kHz"));
     }
     else
     {
         m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
+        colInfo.SetText(_("MHz"));
     }
+    m_lastReportedCallsignListView->SetColumn(1, colInfo);
     
     // PTT -------------------------------------------------------------------
     
