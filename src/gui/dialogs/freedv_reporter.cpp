@@ -440,6 +440,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
+    this->Layout();
     
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
@@ -448,8 +449,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-
-    this->Layout();
     
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
@@ -965,9 +964,9 @@ void FreeDVReporterDialog::OnShow(wxShowEvent&)
     }
 }
 
-void FreeDVReporterDialog::OnSize(wxSizeEvent&)
+void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
 {
-    auto sz = GetSize();
+    auto sz = event.GetSize();
     
     wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
