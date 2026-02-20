@@ -38,7 +38,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 21
+        sudo ./llvm.sh 22
         sudo apt-get install clang-tidy
 
     - name: Generate compile_commands.json
@@ -77,7 +77,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 21 all
+        sudo ./llvm.sh 22 all
         
     - name: Install rtkit for RT threading
       shell: bash
