@@ -3303,7 +3303,7 @@ bool MainFrame::validateSoundCardSetup()
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
-        CallAfter([this, error]() {
+        CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
                 "Error encountered while initializing the audio engine: %s.", 
                 error), wxT("Error"), wxOK, this); 
