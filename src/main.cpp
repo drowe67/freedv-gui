@@ -773,14 +773,19 @@ void MainFrame::loadConfiguration_()
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
     // Adjust frequency entry labels
+    wxListItem colInfo;
+    m_lastReportedCallsignListView->GetColumn(1, colInfo);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
+        colInfo.SetText(_("kHz"));
     }
     else
     {
         m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
+        colInfo.SetText(_("MHz"));
     }
+    m_lastReportedCallsignListView->SetColumn(1, colInfo);
     
     // PTT -------------------------------------------------------------------
     
@@ -1428,6 +1433,21 @@ void MainFrame::OnIdle(wxIdleEvent &) {
 }
 #endif
 
+int MainFrame::getIdealStationsHeardColumnLength_(int col)
+{
+    int curColWidth = m_lastReportedCallsignListView->GetColumnWidth(col);
+    
+    for (int index = 0; index < m_lastReportedCallsignListView->GetItemCount(); index++)
+    {
+        auto itemText = m_lastReportedCallsignListView->GetItemText(index, col);
+        wxSize itemSize = m_togBtnVoiceKeyer->GetTextExtent(itemText);
+        
+        curColWidth = std::max(curColWidth, itemSize.GetWidth() + 10); // 10px buffer around text
+    }
+    
+    return curColWidth;
+}
+
 #ifdef _USE_TIMER
 //----------------------------------------------------------------
 // OnTimer()
@@ -1779,16 +1799,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->SetItem(index, 2, currentTimeAsString);
 
                         // Make sure all columns are wide enough to show contents
-                        m_lastReportedCallsignListView->SetColumnWidth(0, wxLIST_AUTOSIZE);
-                        m_lastReportedCallsignListView->SetColumnWidth(1, wxLIST_AUTOSIZE);
-                        m_lastReportedCallsignListView->SetColumnWidth(2, wxLIST_AUTOSIZE);
+                        m_lastReportedCallsignListView->SetColumnWidth(0, getIdealStationsHeardColumnLength_(0));
+                        m_lastReportedCallsignListView->SetColumnWidth(1, getIdealStationsHeardColumnLength_(1));
+                        m_lastReportedCallsignListView->SetColumnWidth(2, getIdealStationsHeardColumnLength_(2));
                     }
                     
                     wxString snrAsString;
                     snrAsString.Printf(SNR_FORMAT_STR_NO_DB, g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
-                    m_lastReportedCallsignListView->SetColumnWidth(3, wxLIST_AUTOSIZE);
+                    m_lastReportedCallsignListView->SetColumnWidth(3, getIdealStationsHeardColumnLength_(3));
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
@@ -3282,8 +3302,8 @@ bool MainFrame::validateSoundCardSetup()
     
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([&](IAudioEngine&, std::string error, void*) {
-        CallAfter([&]() {
+    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
+        CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
                 "Error encountered while initializing the audio engine: %s.", 
                 error), wxT("Error"), wxOK, this); 
