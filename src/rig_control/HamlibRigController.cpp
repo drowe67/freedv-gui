@@ -87,6 +87,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , freqOnly_(freqOnly)
     , destroying_(false)
     , rigResponseTime_(0)
+    , errorEncountered_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -111,6 +112,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , freqOnly_(freqOnly)
     , destroying_(false)
     , rigResponseTime_(0)
+    , errorEncountered_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -317,6 +319,7 @@ void HamlibRigController::connectImpl_()
     /* Initialise, configure and open. */
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
+    errorEncountered_ = false;
 
     auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
     if (!tmpRig) 
@@ -444,6 +447,7 @@ void HamlibRigController::connectImpl_()
     {
         std::string errMsg = std::string("Could not connect to radio: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
         onRigError(this, errMsg);
+        errorEncountered_ = true;
     }
     log_debug("hamlib: rig_open() failed: %s", rigerror(result));
 
@@ -515,8 +519,12 @@ void HamlibRigController::pttImpl_(bool state)
     {
         log_debug("rig_set_ptt: error = %s ", rigerror(result));
         
-        std::string errMsg = "Cannot set PTT: " + std::string(HAMLIB_FRIENDLY_ERROR_FN(result));
-        onRigError(this, errMsg);
+        if (!errorEncountered_)
+        {
+            std::string errMsg = "Cannot set PTT: " + std::string(HAMLIB_FRIENDLY_ERROR_FN(result));
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else
     {
@@ -559,8 +567,12 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
 
-            std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
             
             return;
         }
@@ -579,8 +591,12 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not enable PTT after frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
     }
 }
@@ -633,9 +649,13 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
-
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
+            
             return;
         }
     }
@@ -653,8 +673,12 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not enable PTT after mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
     }
 }
@@ -693,6 +717,13 @@ freqAttempt:
         if (result != RIG_OK && currVfo == RIG_VFO_CURR)
         {
             log_debug("rig_get_freq: error = %s ", rigerror(result));
+            
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not get current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
         else if (result != RIG_OK)
         {
@@ -792,6 +823,13 @@ freqAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_freq: error = %s ", rigerror(result));
+        
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not set current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
@@ -840,6 +878,13 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_mode: error = %s ", rigerror(result));
+        
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not set mode frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
