@@ -462,14 +462,14 @@ jobs:
     #    detached: true
 
     - name: Install LLVM/Clang >=20.0 
-      if: ${{ matrix.os == "ubuntu-24.04"  || matrix.os == "ubuntu-24.04-arm" }
+      if: ${{ matrix.os == "ubuntu-24.04"  || matrix.os == "ubuntu-24.04-arm" }}
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 21
 
     - name: Install LLVM/Clang >=20.0
-      if: ${{ matrix.os == "ubuntu-22.04"  || matrix.os == "ubuntu-22.04-arm" }
+      if: ${{ matrix.os == "ubuntu-22.04"  || matrix.os == "ubuntu-22.04-arm" }}
       run: |
         set -euxo pipefail
 
