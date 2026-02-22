@@ -24,6 +24,7 @@
 #include <wx/graphics.h>
 
 #include <map>
+#include <vector>
 
 #include "plot_scalar.h"
 
@@ -343,13 +344,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!m_bar_graph)
     {
-        //int offsetX = 0;
-        //int offsetY = 0;
-        //if (!m_mini)
-        //{
-        //    offsetX = PLOT_BORDER + leftOffset_;
-        //    offsetY = PLOT_BORDER;
-        //}
         std::vector<wxPoint> points;
         int from = addedPoints_ > 0 ? plotWidth - pixelsUpdated : 0;
         for (int index = from; index < plotWidth; index++)
