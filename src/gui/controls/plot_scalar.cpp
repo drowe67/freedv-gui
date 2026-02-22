@@ -56,6 +56,9 @@ PlotScalar::PlotScalar(wxWindow* parent,
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
     
+    plotArea_ = nullptr;
+    addedPoints_ = 0;
+
     int i;
 
     m_rCtrl = GetClientRect();
@@ -84,6 +87,9 @@ PlotScalar::PlotScalar(wxWindow* parent,
     {
         m_mem[i] = 0.0;
     }
+
+    plotAreaDC_ = new wxMemoryDC();
+    assert(plotAreaDC_ != nullptr);
 }
 
 //----------------------------------------------------------------
@@ -93,6 +99,14 @@ PlotScalar::~PlotScalar()
 {
     delete[] m_mem;
     delete[] lineMap_;
+
+    delete plotAreaDC_;
+
+    if (plotArea_ != nullptr)
+    {
+        delete plotArea_;
+        plotArea_ = nullptr;
+    }
 }
 
 //----------------------------------------------------------------
@@ -106,6 +120,7 @@ void PlotScalar::add_new_sample(float sample)
     }
     
     m_mem[m_samples-1] = sample;
+    addedPoints_++;
 }
 
 //----------------------------------------------------------------
@@ -120,6 +135,8 @@ void  PlotScalar::add_new_samples(float samples[], int length)
     
     for(i = m_samples-length; i < m_samples; i++)
         m_mem[i] = *samples++;
+
+    addedPoints_ += length;
 }
 
 //----------------------------------------------------------------
@@ -134,6 +151,8 @@ void  PlotScalar::add_new_short_samples(short samples[], int length, float scale
     
     for(i = m_samples-length; i < m_samples; i++)
         m_mem[i] = (float)*samples++/scale_factor;
+
+    addedPoints_ += length;
 }
 
 bool PlotScalar::repaintAll_(wxPaintEvent&)
@@ -203,19 +222,41 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (plotWidth <= 0 || plotHeight <= 0) return;
  
+    if (plotArea_ == nullptr)
+    {
+        plotArea_ = new wxBitmap(plotWidth, plotHeight);
+        assert(plotArea_ != nullptr);
+
+        addedPoints_ = 0; // force rendering of all points
+    }
+
+    plotAreaDC_->SelectObject(*plotArea_);
+
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    ctx->SetBrush(ltGraphBkgBrush);
-    ctx->SetPen(wxPen(BLACK_COLOR, 0));
-    ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
-    
+    plotAreaDC_->SetBrush(ltGraphBkgBrush);
+    plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
+
     index_to_px = (float)plotWidth/m_samples;
+    int pixelsUpdated = index_to_px * addedPoints_;
+
+    if (addedPoints_ == 0)
+    {
+        plotAreaDC_->DrawRectangle(0, 0, plotWidth, plotHeight);
+    }
+    else
+    {
+        // Clear only the area that we're updating
+        plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
+        plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+    }
+    
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    ctx->SetPen(pen);
-    ctx->SetBrush(wxBrush(DARK_GREEN_COLOR));
+    plotAreaDC_->SetPen(pen);
+    plotAreaDC_->SetBrush(wxBrush(DARK_GREEN_COLOR));
 
     // plot each channel     
 
@@ -295,33 +336,38 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!m_bar_graph)
     {
-        int offsetX = 0;
-        int offsetY = 0;
-        if (!m_mini)
-        {
-            offsetX = PLOT_BORDER + leftOffset_;
-            offsetY = PLOT_BORDER;
-        }
-        wxGraphicsPath path = ctx->CreatePath();
-        for (int index = 0; index < plotWidth; index++)
-        {
-            auto item = &lineMap_[index];
-            int x = index + offsetX;
-            if (index == 0) path.MoveToPoint(x, item->y1 + offsetY);
-            else path.AddLineToPoint(x, item->y1 + offsetY);
-        }
-        for (int index = plotWidth - 1; index >= 0; index--)
+        //int offsetX = 0;
+        //int offsetY = 0;
+        //if (!m_mini)
+        //{
+        //    offsetX = PLOT_BORDER + leftOffset_;
+        //    offsetY = PLOT_BORDER;
+        //}
+        std::vector<wxPoint> points;
+        int from = addedPoints_ > 0 ? plotWidth - pixelsUpdated : 0;
+        for (int index = from; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
-            int x = index + offsetX;
-            path.AddLineToPoint(x, item->y2 + offsetY);
+            int x = index;
+            if (index == from) points.push_back(wxPoint(x, item->y1));
+            else points.push_back(wxPoint(x, item->y1));
         }
-        path.AddLineToPoint(offsetX, lineMap_[0].y1 + offsetY);
-        ctx->FillPath(path);
+        for (int index = plotWidth - 1; index >= from; index--)
+        {
+            auto item = &lineMap_[index];
+            int x = index;
+            points.push_back(wxPoint(x, item->y2));
+        }
+        points.push_back(wxPoint(from, lineMap_[from].y1));
+
+        plotAreaDC_->DrawPolygon(points.size(), &points[0]);
     }
- 
+
+    plotAreaDC_->SelectObject(wxNullBitmap);
+    ctx->DrawBitmap(*plotArea_, plotX, plotY, plotWidth, plotHeight); 
     ctx->EndLayer();
 
+    addedPoints_ = 0;
     drawGraticuleFast(ctx, repaintDataOnly);
 }
 
@@ -478,11 +524,23 @@ void PlotScalar::OnSize(wxSizeEvent&)
     if (!m_mini)
         m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (leftOffset_/2), (PLOT_BORDER + (bottomOffset_/2)));
 
+    if (plotArea_ != nullptr)
+    {
+        delete plotArea_;
+        plotArea_ = nullptr;
+    }
+
     int plotWidth = m_rGrid.GetWidth();
     delete[] lineMap_;
 
     lineMap_ = new MinMaxPoints[plotWidth];
     assert(lineMap_ != nullptr);
+
+    int plotHeight = m_rGrid.GetHeight();
+    if (plotWidth <= 0 || plotHeight <= 0) return;
+
+    plotArea_ = new wxBitmap(plotWidth, plotHeight);
+    assert(plotArea_ != nullptr);
 }
 
 //----------------------------------------------------------------
