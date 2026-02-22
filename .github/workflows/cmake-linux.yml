@@ -147,7 +147,7 @@ jobs:
       if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
       shell: bash
@@ -168,7 +168,7 @@ jobs:
           . ./rade-venv/bin/activate
           cd build_linux
           LLVM_PROFILE_FILE="code-%p.profraw" PYTHONPATH=$(pwd)/rade_src ../test/generate_pgo_profiles.sh 2>&1
-          llvm-profdata-22 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+          llvm-profdata-21 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
 
     - name: Build PGO optimized freedv-gui 
       shell: bash
@@ -177,7 +177,7 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
-          BUILD_TYPE=Release CC=clang-22 CXX=clang++-22 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Build target
       shell: bash
@@ -187,7 +187,7 @@ jobs:
           . ./rade-venv/bin/activate
           mkdir build_linux
           cd build_linux
-          CC=clang-22 CXX=clang++-22 cmake -DENABLE_LTO=1 -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
+          CC=clang-21 CXX=clang++-21 cmake -DENABLE_LTO=1 -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
           make -j$(nproc) ${{ matrix.target }}
 
     - name: Initialize GPG keys
