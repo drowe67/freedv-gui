@@ -41,8 +41,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 21
-        sudo apt-get install clang-tidy
+        sudo ./llvm.sh 21 all
 
     - name: Generate compile_commands.json
       run: |
@@ -99,7 +98,7 @@ jobs:
         for pkg in \
           clang-21 clang-tools-21 lld-21 \
           libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
-          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
+          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools 
         do
           fetch "$pkg"
         done
