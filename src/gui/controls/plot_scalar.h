@@ -81,7 +81,7 @@ class PlotScalar: public PlotPanel
          int      bottomOffset_;
 
          wxBitmap* plotArea_;
-         wxBitmap* plotLines_;
+         wxImage* plotLines_;
          int addedPoints_;
          wxMemoryDC* plotAreaDC_;
          wxGraphicsBitmap plotLinesBMP_;
