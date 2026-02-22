@@ -41,7 +41,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22
+        sudo ./llvm.sh 21
         sudo apt-get install clang-tidy
 
     - name: Generate compile_commands.json
@@ -55,7 +55,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
       run: |
-        run-clang-tidy-22 -p .
+        run-clang-tidy-21 -p .
 
   build-appimage:
     #needs: lint
@@ -105,7 +105,7 @@ jobs:
         done
 
         # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
-        sudo apt-get install -y --no-install-recommends ./*.deb`
+        sudo apt-get install -y --no-install-recommends ./*.deb
         
     - name: Install rtkit for RT threading
       shell: bash
@@ -497,7 +497,7 @@ jobs:
         done
 
         # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
-        sudo apt-get install -y --no-install-recommends ./*.deb`
+        sudo apt-get install -y --no-install-recommends ./*.deb
 
     - name: Install rtkit for RT threading
       shell: bash
