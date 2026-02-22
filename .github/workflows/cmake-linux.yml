@@ -18,6 +18,9 @@ env:
   # See https://github.com/alexmurray/emacs-snap/issues/60
   NO_AT_BRIDGE: 1
 
+  # Work around LLVM apt failure on Ubuntu 22.04
+  LLVM_POOL: https://apt.llvm.org/jammy/pool/main/l/llvm-toolchain-21/
+
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -39,7 +42,6 @@ jobs:
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 21 all
-        sudo apt-get install clang-tidy
 
     - name: Generate compile_commands.json
       run: |
@@ -58,6 +60,7 @@ jobs:
     #needs: lint
     env:
       FREEDV_LINUX_CODE_SIGNING_KEY_ID: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}
+      LLVM_ARCH: ${{ matrix.os == 'ubuntu-22.04-arm' && 'arm64' || 'amd64' }}
 
     strategy:
       fail-fast: false
@@ -75,9 +78,33 @@ jobs:
 
     - name: Install LLVM/Clang >=20.0 
       run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 21 all
+        set -euxo pipefail
+
+        # Install the newest version that actually exists in the pool.
+        # We derive the exact version string from one known package filename.
+        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
+        VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
+          | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
+        echo "Using pool version: $VER"
+
+        mkdir -p /tmp/llvm21 && cd /tmp/llvm21
+
+        fetch() {
+          local pkg="$1"
+          local file="${pkg}_${VER}_${{ env.LLVM_ARCH }}.deb"
+          curl -fsSLO "${LLVM_POOL}${file}"
+        }
+
+        for pkg in \
+          clang-21 clang-tools-21 lld-21 \
+          libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
+          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools 
+        do
+          fetch "$pkg"
+        done
+
+        # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
+        sudo apt-get install -y --no-install-recommends ./*.deb
         
     - name: Install rtkit for RT threading
       shell: bash
@@ -422,6 +449,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: lint
 
+    env:
+      LLVM_ARCH: ${{ matrix.os == 'ubuntu-22.04-arm' && 'arm64' || 'amd64' }}
+
     steps:
     - uses: actions/checkout@v4
 
@@ -431,10 +461,42 @@ jobs:
     #    detached: true
 
     - name: Install LLVM/Clang >=20.0 
+      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 21 all
+        sudo ./llvm.sh 21
+
+    - name: Install LLVM/Clang >=20.0
+      if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
+      run: |
+        set -euxo pipefail
+
+        # Install the newest version that actually exists in the pool.
+        # We derive the exact version string from one known package filename.
+        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
+        VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
+          | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
+        echo "Using pool version: $VER"
+
+        mkdir -p /tmp/llvm21 && cd /tmp/llvm21
+
+        fetch() {
+          local pkg="$1"
+          local file="${pkg}_${VER}_${{ env.LLVM_ARCH }}.deb"
+          curl -fsSLO "${LLVM_POOL}${file}"
+        }
+
+        for pkg in \
+          clang-21 clang-tools-21 lld-21 \
+          libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
+          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
+        do
+          fetch "$pkg"
+        done
+
+        # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
+        sudo apt-get install -y --no-install-recommends ./*.deb
 
     - name: Install rtkit for RT threading
       shell: bash
