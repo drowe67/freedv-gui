@@ -83,7 +83,7 @@ jobs:
 
         # Install the newest version that actually exists in the pool.
         # We derive the exact version string from one known package filename.
-        HTML="$(curl -fsSL --compressed "$POOL")"
+        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
         VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
           | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
         echo "Using pool version: $VER"
@@ -475,7 +475,7 @@ jobs:
 
         # Install the newest version that actually exists in the pool.
         # We derive the exact version string from one known package filename.
-        HTML="$(curl -fsSL --compressed "$POOL")"
+        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
         VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
           | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
         echo "Using pool version: $VER"
