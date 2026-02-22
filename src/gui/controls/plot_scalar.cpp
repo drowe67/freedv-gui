@@ -57,6 +57,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     SetLayoutDirection(wxLayout_LeftToRight);
     
     plotArea_ = nullptr;
+    plotLines_ = nullptr;
     addedPoints_ = 0;
 
     int i;
@@ -106,6 +107,12 @@ PlotScalar::~PlotScalar()
     {
         delete plotArea_;
         plotArea_ = nullptr;
+    }
+
+    if (plotLines_ != nullptr)
+    {
+        delete plotLines_;
+        plotLines_ = nullptr;
     }
 }
 
@@ -385,6 +392,17 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     int plotWidth = m_rGrid.GetWidth();
     int plotHeight = m_rGrid.GetHeight();
 
+    bool drawPlotLines = false;
+    if (plotLines_ == nullptr)
+    {
+        plotLines_ = new wxBitmap(plotWidth, plotHeight, 32); // to ensure alpha channel is set
+        assert(plotLines_ != nullptr);
+        drawPlotLines = true;
+        plotAreaDC_->SelectObject(*plotLines_);
+        plotAreaDC_->SetBackground(*wxTRANSPARENT_BRUSH);
+        plotAreaDC_->Clear();
+    }
+
     ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
     if (!repaintDataOnly)
@@ -402,18 +420,18 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // Vertical gridlines
 
-    ctx->SetPen(m_penShortDash);
+    if (drawPlotLines) plotAreaDC_->SetPen(m_penShortDash);
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step)
     {
         x = t*sec_to_px;
-        if (m_mini) 
+        if (m_mini && drawPlotLines) 
         {
-            ctx->StrokeLine(x, plotHeight, x, 0);
+            plotAreaDC_->DrawLine(x, plotHeight, x, 0);
         }
         else 
         {
+            if (drawPlotLines) plotAreaDC_->DrawLine(x, plotHeight, x, 0);
             x += PLOT_BORDER + leftOffset_;
-            ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
             if (!repaintDataOnly) 
             {
                 snprintf(buf, STR_LENGTH, "%2.1fs", t);
@@ -434,7 +452,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // Horizontal gridlines
 
-    ctx->SetPen(m_penDotDash);
+    if (drawPlotLines) plotAreaDC_->SetPen(m_penDotDash);
     for(a=m_a_min; a<m_a_max; ) 
     {
         if (m_logy) 
@@ -446,15 +464,14 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
-        if (m_mini) 
+        if (m_mini && drawPlotLines) 
         {
-            ctx->StrokeLine(0, y, plotWidth, y);
+            plotAreaDC_->DrawLine(0, y, plotWidth, y);
         }
         else 
         {
+            if (drawPlotLines) plotAreaDC_->DrawLine(0, y, plotWidth, y);
             y += PLOT_BORDER;
-            ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
-                        (plotWidth + PLOT_BORDER + leftOffset_), y);
             if (!repaintDataOnly) 
             {
                 auto top = y-text_h/2;
@@ -484,6 +501,14 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
             a += m_graticule_a_step;
         }
    }
+
+   if (drawPlotLines) 
+   {
+       plotAreaDC_->SelectObject(wxNullBitmap);
+       plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
+   }
+
+   ctx->DrawBitmap(plotLinesBMP_, PLOT_BORDER + leftOffset_, PLOT_BORDER, plotWidth, plotHeight);
 }
 
 void PlotScalar::clearSamples()
@@ -528,6 +553,12 @@ void PlotScalar::OnSize(wxSizeEvent&)
     {
         delete plotArea_;
         plotArea_ = nullptr;
+    }
+
+    if (plotLines_ != nullptr)
+    {
+        delete plotLines_;
+        plotLines_ = nullptr;
     }
 
     int plotWidth = m_rGrid.GetWidth();

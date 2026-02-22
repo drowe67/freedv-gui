@@ -81,8 +81,10 @@ class PlotScalar: public PlotPanel
          int      bottomOffset_;
 
          wxBitmap* plotArea_;
+         wxBitmap* plotLines_;
          int addedPoints_;
          wxMemoryDC* plotAreaDC_;
+         wxGraphicsBitmap plotLinesBMP_;
 
          void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
          void drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);
