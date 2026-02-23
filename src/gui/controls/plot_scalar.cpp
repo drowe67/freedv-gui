@@ -395,6 +395,9 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         drawPlotLines = true;
         
         plotCtx = wxGraphicsContext::Create(*plotLines_);
+        assert(plotCtx != nullptr);
+        plotCtx->SetInterpolationQuality(wxINTERPOLATION_NONE);
+        plotCtx->SetAntialiasMode(wxANTIALIAS_NONE);
     }
 
     ctx->SetPen(wxPen(BLACK_COLOR, 1));
