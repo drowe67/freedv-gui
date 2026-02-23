@@ -509,7 +509,14 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
        plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
    }
 
-   ctx->DrawBitmap(plotLinesBMP_, PLOT_BORDER + leftOffset_, PLOT_BORDER, plotWidth, plotHeight);
+   if (m_mini)
+   {
+       ctx->DrawBitmap(plotLinesBMP_, 0, 0, plotWidth, plotHeight);
+   }
+   else
+   {
+       ctx->DrawBitmap(plotLinesBMP_, PLOT_BORDER + leftOffset_, PLOT_BORDER, plotWidth, plotHeight);
+   }
 }
 
 void PlotScalar::clearSamples()
