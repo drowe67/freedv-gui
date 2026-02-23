@@ -700,6 +700,12 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_get_mode: error = %s ", rigerror(result));
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not retrieve current radio mode: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
