@@ -592,6 +592,8 @@ class MainFrame : public TopFrame
             return true;
 #endif // 0
         }
+        
+        int getIdealStationsHeardColumnLength_(int col);
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
