@@ -271,14 +271,19 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
         
         // Adjust frequency labels on main window
+        wxListItem colInfo;
+        m_lastReportedCallsignListView->GetColumn(1, colInfo);
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
             m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
+            colInfo.SetText(_("kHz"));
         }
         else
         {
             m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
+            colInfo.SetText(_("MHz"));
         }
+        m_lastReportedCallsignListView->SetColumn(1, colInfo);
 
         // If the "Frequency as kHz" option has changed, update the frequencies
         // in the main window's callsign list.
