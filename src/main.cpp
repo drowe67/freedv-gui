@@ -772,14 +772,19 @@ void MainFrame::loadConfiguration_()
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 
     // Adjust frequency entry labels
+    wxListItem colInfo;
+    m_lastReportedCallsignListView->GetColumn(1, colInfo);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
+        colInfo.SetText(_("kHz"));
     }
     else
     {
         m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
+        colInfo.SetText(_("MHz"));
     }
+    m_lastReportedCallsignListView->SetColumn(1, colInfo);
     
     // PTT -------------------------------------------------------------------
     
@@ -1073,15 +1078,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
 
     // Add Demod Input window
-    m_panelDemodIn = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelDemodIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
 
     // Add Speech Input window
-    m_panelSpeechIn = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelSpeechIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
 
     // Add Speech Output window
-    m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
@@ -1427,6 +1432,21 @@ void MainFrame::OnIdle(wxIdleEvent &) {
 }
 #endif
 
+int MainFrame::getIdealStationsHeardColumnLength_(int col)
+{
+    int curColWidth = m_lastReportedCallsignListView->GetColumnWidth(col);
+    
+    for (int index = 0; index < m_lastReportedCallsignListView->GetItemCount(); index++)
+    {
+        auto itemText = m_lastReportedCallsignListView->GetItemText(index, col);
+        wxSize itemSize = m_togBtnVoiceKeyer->GetTextExtent(itemText);
+        
+        curColWidth = std::max(curColWidth, itemSize.GetWidth() + 10); // 10px buffer around text
+    }
+    
+    return curColWidth;
+}
+
 #ifdef _USE_TIMER
 //----------------------------------------------------------------
 // OnTimer()
@@ -1519,14 +1539,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           if (g_plotSpeechInFifo.read(speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
-          m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechIn->add_new_short_samples(speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechIn->refreshData();
       }
       else if (timerId == ID_TIMER_SPEECH_OUT)
       {
           if (g_plotSpeechOutFifo.read(speechOutPlotSamples, WAVEFORM_PLOT_BUF))
               memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-          m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechOut->add_new_short_samples(speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechOut->refreshData();
       }
       else if (timerId == ID_TIMER_DEMOD_IN)
@@ -1534,7 +1554,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           if (g_plotDemodInFifo.read(demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
               memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
-          m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+          m_panelDemodIn->add_new_short_samples(demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
       else
@@ -1778,16 +1798,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->SetItem(index, 2, currentTimeAsString);
 
                         // Make sure all columns are wide enough to show contents
-                        m_lastReportedCallsignListView->SetColumnWidth(0, wxLIST_AUTOSIZE);
-                        m_lastReportedCallsignListView->SetColumnWidth(1, wxLIST_AUTOSIZE);
-                        m_lastReportedCallsignListView->SetColumnWidth(2, wxLIST_AUTOSIZE);
+                        m_lastReportedCallsignListView->SetColumnWidth(0, getIdealStationsHeardColumnLength_(0));
+                        m_lastReportedCallsignListView->SetColumnWidth(1, getIdealStationsHeardColumnLength_(1));
+                        m_lastReportedCallsignListView->SetColumnWidth(2, getIdealStationsHeardColumnLength_(2));
                     }
                     
                     wxString snrAsString;
                     snrAsString.Printf(SNR_FORMAT_STR_NO_DB, g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
-                    m_lastReportedCallsignListView->SetColumnWidth(3, wxLIST_AUTOSIZE);
+                    m_lastReportedCallsignListView->SetColumnWidth(3, getIdealStationsHeardColumnLength_(3));
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
@@ -3281,8 +3301,8 @@ bool MainFrame::validateSoundCardSetup()
     
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([&](IAudioEngine&, std::string error, void*) {
-        CallAfter([&]() {
+    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
+        CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
                 "Error encountered while initializing the audio engine: %s.", 
                 error), wxT("Error"), wxOK, this); 

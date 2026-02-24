@@ -200,7 +200,6 @@ class FreeDVReporterDialog : public wxFrame
         
      private:
         const wxString UNKNOWN_STR;
-        const wxString SNR_FORMAT_STR;
         const wxString ALL_LETTERS_RGX;
         const wxString MS_REMOVAL_RGX;
         const wxString TIMEZONE_RGX;

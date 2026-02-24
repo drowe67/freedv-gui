@@ -79,7 +79,7 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
     wxBoxSizer* bSizer1 = new wxBoxSizer(wxVERTICAL);
 
     //wxPanel *panel = new wxPanel(parentPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    *plotScalar = new PlotScalar(parentPanel, 1, TEST_WAVEFORM_PLOT_TIME, 1.0/TEST_WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "", 1, "Test audio plot");
+    *plotScalar = new PlotScalar(parentPanel, TEST_WAVEFORM_PLOT_TIME, 1.0/TEST_WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "", 1, "Test audio plot");
     (*plotScalar)->SetToolTip("Shows test audio waveform");
     (*plotScalar)->SetClientSize(wxSize(TEST_WAVEFORM_X,TEST_WAVEFORM_Y));
     (*plotScalar)->SetMinSize(wxSize(150,150));
@@ -934,7 +934,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotSc
                         std::condition_variable plotUpdateCV;
                         CallAfter([&]() {
                             {
-                                ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                                ps->add_new_short_samples(plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
                                 UpdatePlot(ps);
                             }
                             plotUpdateCV.notify_one();
@@ -1080,7 +1080,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotS
                         std::condition_variable plotUpdateCV;
                         CallAfter([&]() {
                             {
-                                ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                                ps->add_new_short_samples(plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
                                 UpdatePlot(ps);
                             }
                             plotUpdateCV.notify_one();

@@ -879,10 +879,19 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR #1220)
+    * FreeDV Reporter: Fix display issues on non-English systems. (PR #1217)
+    * Update audio device list in Easy Setup after opening advanced audio setup. (PR #1223)
+    * Easy Setup: Fix crash while displaying Hamlib error. (PR #1224)
+    * Force numpy to 2.3.x due to illegal instruction errors. (PR #1230)
+    * FreeDV Reporter: Disable autosizing enable/disable on Linux. (PR #1231)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
+    * Optimize "From XXX" plot performance. (PR #1238)
 3. Build system:
     * Windows/macOS: Update Python to 3.14.3. (PR #1221)
+    * Update Hamlib to 4.7.0. (PR #1226)
+4. Documentation:
+    * Update README instructions to reflect current Windows build steps. (PR #1232)
 
 ## V2.2.1 February 2026
 

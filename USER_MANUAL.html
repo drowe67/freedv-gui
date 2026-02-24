@@ -1180,7 +1180,17 @@ class="header-section-number">18.1</span> V2.3.0 TBD 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
-<li>TBD</li>
+<li>Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR
+#1220)</li>
+<li>FreeDV Reporter: Fix display issues on non-English systems. (PR
+#1217)</li>
+<li>Update audio device list in Easy Setup after opening advanced audio
+setup. (PR #1223)</li>
+<li>Easy Setup: Fix crash while displaying Hamlib error. (PR #1224)</li>
+<li>Force numpy to 2.3.x due to illegal instruction errors. (PR
+#1230)</li>
+<li>FreeDV Reporter: Disable autosizing enable/disable on Linux. (PR
+#1231)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1190,6 +1200,12 @@ for performance. (PR #1212)</li>
 <li>Build system:
 <ul>
 <li>Windows/macOS: Update Python to 3.14.3. (PR #1221)</li>
+<li>Update Hamlib to 4.7.0. (PR #1226)</li>
+</ul></li>
+<li>Documentation:
+<ul>
+<li>Update README instructions to reflect current Windows build steps.
+(PR #1232)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v2.2.1-february-2026"><span

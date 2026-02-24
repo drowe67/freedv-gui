@@ -182,7 +182,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
     , UNKNOWN_STR("")
-    , SNR_FORMAT_STR("%.01f")
     , ALL_LETTERS_RGX("^[A-Z]{2}$")
     , MS_REMOVAL_RGX("\\.[^+-]+")
     , TIMEZONE_RGX("([+-])([0-9]+):([0-9]+)$")
@@ -441,6 +440,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
+    this->Layout();
     
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
@@ -449,8 +449,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-
-    this->Layout();
     
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
@@ -966,9 +964,9 @@ void FreeDVReporterDialog::OnShow(wxShowEvent&)
     }
 }
 
-void FreeDVReporterDialog::OnSize(wxSizeEvent&)
+void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
 {
-    auto sz = GetSize();
+    auto sz = event.GetSize();
     
     wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
@@ -1163,8 +1161,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
+#if defined(__APPLE__)
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
+#else
+void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
+#endif // defined(__APPLE__)
 {
+#if defined(__APPLE__)
     if (autosize)
     {
         // Re-enable autosizing
@@ -1187,6 +1190,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool auto
             col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
         }
     }
+#endif // defined(__APPLE__)
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
@@ -2750,7 +2754,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             }
             else
             {
-                newHeading = wxString::Format("%.0f", kvp.second->headingVal);
+                newHeading = wxNumberFormatter::ToString(kvp.second->headingVal, 0);
             }
 
             updated |= kvp.second->heading != newHeading;
@@ -2936,7 +2940,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
                 }
                 else
                 {
-                    temp->heading = wxString::Format("%.0f", temp->headingVal);
+                    temp->heading = wxNumberFormatter::ToString(temp->headingVal, 0);
                 }
             }
         }
@@ -3236,7 +3240,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
 
-            wxString snrString = wxString::Format(parent_->SNR_FORMAT_STR, snr);
+            wxString snrString = wxNumberFormatter::ToString(snr, 1);
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
