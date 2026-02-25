@@ -245,7 +245,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
 
     index_to_px = (float)plotWidth/m_samples;
-    int pixelsUpdated = index_to_px * addedPoints_;
+    int pixelsUpdated = std::min(plotWidth, (int)std::ceil(index_to_px * addedPoints_));
 
     if (repaintDataOnly)
     {
