@@ -245,17 +245,21 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
 
     index_to_px = (float)plotWidth/m_samples;
-    int pixelsUpdated = index_to_px * addedPoints_;
+    int pixelsUpdated = std::min(plotWidth, (int)std::ceil(index_to_px * addedPoints_));
 
-    if (addedPoints_ == 0)
+    if (repaintDataOnly)
     {
-        plotAreaDC_->DrawRectangle(0, 0, plotWidth, plotHeight);
+        // Clear only the area that we're updating
+        if (pixelsUpdated > 0)
+        {
+            plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
+            plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+        }
     }
     else
     {
-        // Clear only the area that we're updating
-        plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
-        plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+        plotAreaDC_->DrawRectangle(0, 0, plotWidth, plotHeight);
+        addedPoints_ = 0;
     }
     
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
@@ -344,24 +348,33 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!m_bar_graph)
     {
-        std::vector<wxPoint> points;
-        int from = addedPoints_ > 0 ? plotWidth - pixelsUpdated : 0;
+        wxGraphicsContext* plotCtx = wxGraphicsContext::Create(*plotAreaDC_);
+        assert(plotCtx != nullptr);
+
+        plotCtx->SetInterpolationQuality(wxINTERPOLATION_NONE);
+        plotCtx->SetAntialiasMode(wxANTIALIAS_NONE);
+        plotCtx->SetPen(pen);
+        plotCtx->SetBrush(wxBrush(DARK_GREEN_COLOR));
+
+        wxGraphicsPath path = plotCtx->CreatePath();
+        int from = repaintDataOnly ? plotWidth - pixelsUpdated - 1: 0;
         for (int index = from; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
             int x = index;
-            if (index == from) points.push_back(wxPoint(x, item->y1));
-            else points.push_back(wxPoint(x, item->y1));
+            if (index == from) path.MoveToPoint(x, item->y1);
+            else path.AddLineToPoint(x, item->y1);
         }
         for (int index = plotWidth - 1; index >= from; index--)
         {
             auto item = &lineMap_[index];
             int x = index;
-            points.push_back(wxPoint(x, item->y2));
+            path.AddLineToPoint(x, item->y2);
         }
-        points.push_back(wxPoint(from, lineMap_[from].y1));
+        path.AddLineToPoint(from, lineMap_[from].y1);
 
-        plotAreaDC_->DrawPolygon(points.size(), &points[0]);
+        plotCtx->FillPath(path);
+        delete plotCtx;
     }
 
     plotAreaDC_->SelectObject(wxNullBitmap);
