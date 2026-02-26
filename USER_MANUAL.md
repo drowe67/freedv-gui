@@ -884,6 +884,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Easy Setup: Fix crash while displaying Hamlib error. (PR #1224)
     * Force numpy to 2.3.x due to illegal instruction errors. (PR #1230)
     * FreeDV Reporter: Disable autosizing enable/disable on Linux. (PR #1231)
+    * Hamlib: Reenable FLRig/rigctl timeouts. (PR #1233)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
