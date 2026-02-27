@@ -343,6 +343,7 @@ class MainFrame : public TopFrame
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
+        virtual void OnActivateWindow(wxActivateEvent& event) override;
         void OnExitClick(wxCommandEvent& event);
 
         void startTxStream();

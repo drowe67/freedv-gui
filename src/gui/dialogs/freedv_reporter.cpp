@@ -1448,7 +1448,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
         {
             tempUserMessage_ = model->getUserMessage(item);
             rect = m_listSpots->GetItemRect(item, col);
-            if (tipWindow_ == nullptr && tempUserMessage_ != _(""))
+            if (IsActive() && tipWindow_ == nullptr && tempUserMessage_ != _(""))
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();

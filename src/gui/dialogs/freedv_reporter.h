@@ -103,6 +103,15 @@ class FreeDVReporterDialog : public wxFrame
             return model->getGridSquareForCallsign(callsign);
         }
         
+        void closeTooltip()
+        {
+            if (tipWindow_ != nullptr)
+            {
+                tipWindow_->Close();
+                tipWindow_ = nullptr;
+            }
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
