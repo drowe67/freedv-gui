@@ -87,6 +87,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , freqOnly_(freqOnly)
     , destroying_(false)
     , rigResponseTime_(0)
+    , errorEncountered_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -111,6 +112,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , freqOnly_(freqOnly)
     , destroying_(false)
     , rigResponseTime_(0)
+    , errorEncountered_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -317,6 +319,7 @@ void HamlibRigController::connectImpl_()
     /* Initialise, configure and open. */
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
+    errorEncountered_ = false;
 
     auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
     if (!tmpRig) 
@@ -399,33 +402,34 @@ void HamlibRigController::connectImpl_()
     // FreeDV doesn't do split.
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "no_xchg"), "1");
 
-    auto result = rig_open(tmpRig);
+    // Set timeouts so that we don't wait an extremely long time to begin TX.
+    // However, only do so if the default timeout is larger than 625ms.
+    const char* MAX_TIMEOUT = "625";
+    const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
+    constexpr int TIMEOUT_BUF_LEN = 1024;
+    char currentTimeout[TIMEOUT_BUF_LEN];
+#if defined(HAMLIB_USE_FRIENDLY_ERRORS)
+    // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
+    // causes compile errors in FreeDV due to -Werror.
+    auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
+#else
+    auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
+#endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
+    log_info("Current rig timeout: %s ms", currentTimeout);
+    if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
+    {
+        log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
+    }
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
+            
+    result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
-        // Set timeouts so that we don't wait an extremely long time to begin TX.
-        // However, only do so if the default timeout is larger than 625ms and if
-        // not using FLrig/rigctld (as the latter have their own timeout mechanism).
-        const char* MAX_TIMEOUT = "625";
-        const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
-        constexpr int TIMEOUT_BUF_LEN = 1024;
-        char currentTimeout[TIMEOUT_BUF_LEN];
-#if defined(HAMLIB_USE_FRIENDLY_ERRORS)
-        // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
-        // causes compile errors in FreeDV due to -Werror.
-        result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
-#else
-        result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
-#endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
-        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT) && rigName_.find("FLRig") != 0 && rigName_ != "Hamlib NET rigctl"))
-        {
-            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
-        }
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
-            
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
@@ -443,6 +447,7 @@ void HamlibRigController::connectImpl_()
     {
         std::string errMsg = std::string("Could not connect to radio: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
         onRigError(this, errMsg);
+        errorEncountered_ = true;
     }
     log_debug("hamlib: rig_open() failed: %s", rigerror(result));
 
@@ -514,8 +519,12 @@ void HamlibRigController::pttImpl_(bool state)
     {
         log_debug("rig_set_ptt: error = %s ", rigerror(result));
         
-        std::string errMsg = "Cannot set PTT: " + std::string(HAMLIB_FRIENDLY_ERROR_FN(result));
-        onRigError(this, errMsg);
+        if (!errorEncountered_)
+        {
+            std::string errMsg = "Cannot set PTT: " + std::string(HAMLIB_FRIENDLY_ERROR_FN(result));
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else
     {
@@ -558,8 +567,12 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
 
-            std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
             
             return;
         }
@@ -578,8 +591,12 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not enable PTT after frequency change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
     }
 }
@@ -632,9 +649,13 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
-
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
+            
             return;
         }
     }
@@ -652,8 +673,12 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // as it'll fail on some radios.
             log_debug("rig_set_ptt: error = %s ", rigerror(result));
             
-            std::string errMsg = std::string("Could not enable PTT after mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
-            onRigError(this, errMsg);
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not enable PTT after mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
     }
 }
@@ -675,6 +700,12 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_get_mode: error = %s ", rigerror(result));
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not retrieve current radio mode: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
@@ -692,6 +723,13 @@ freqAttempt:
         if (result != RIG_OK && currVfo == RIG_VFO_CURR)
         {
             log_debug("rig_get_freq: error = %s ", rigerror(result));
+            
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not get current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
         }
         else if (result != RIG_OK)
         {
@@ -791,6 +829,13 @@ freqAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_freq: error = %s ", rigerror(result));
+        
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not set current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
@@ -839,6 +884,13 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_set_mode: error = %s ", rigerror(result));
+        
+        if (!errorEncountered_)
+        {
+            std::string errMsg = std::string("Could not set mode frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+            onRigError(this, errMsg);
+            errorEncountered_ = true;
+        }
     }
     else if (result != RIG_OK)
     {
