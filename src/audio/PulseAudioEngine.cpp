@@ -33,11 +33,12 @@
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
 {
-    // empty
+    log_info("PulseAudioEngine construct");
 }
 
 PulseAudioEngine::~PulseAudioEngine()
 {
+    log_info("PulseAudioEngine destruct");
     if (initialized_)
     {
         stopImpl_();
@@ -49,6 +50,7 @@ void PulseAudioEngine::start()
     std::unique_lock<std::mutex> lk(startStopMtx_);
 
     // Allocate PA main loop and context.
+    log_info("new mainloop");
     mainloop_ = pa_threaded_mainloop_new();
     
     if (mainloop_ == nullptr)
@@ -60,6 +62,7 @@ void PulseAudioEngine::start()
         return;
     }
     
+    log_info("new context");
     mainloopApi_ = pa_threaded_mainloop_get_api(mainloop_);
     context_ = pa_context_new(mainloopApi_, "FreeDV");
     
@@ -75,6 +78,7 @@ void PulseAudioEngine::start()
         return;
     }
     
+    log_info("set state callback");
     pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
@@ -152,6 +156,7 @@ void PulseAudioEngine::start()
     }, mainloop_);
     
     // Start main loop.
+    log_info("mainloop start");
     pa_threaded_mainloop_lock(mainloop_);
     if (pa_threaded_mainloop_start(mainloop_) != 0)
     {
@@ -170,6 +175,7 @@ void PulseAudioEngine::start()
     }
     
     // Connect context to default PA server.
+    log_info("server connect");
     if (pa_context_connect(context_, NULL, PA_CONTEXT_NOFLAGS, NULL) != 0)
     {
         pa_threaded_mainloop_unlock(mainloop_);
@@ -209,10 +215,12 @@ void PulseAudioEngine::stopImpl_()
 
     if (initialized_)
     {
+        log_info("disconnect");
         pa_threaded_mainloop_lock(mainloop_);
         pa_context_disconnect(context_);
         pa_threaded_mainloop_unlock(mainloop_);
     
+        log_info("stop mainloop");
         pa_threaded_mainloop_stop(mainloop_);
         pa_context_unref(context_);
         pa_threaded_mainloop_free(mainloop_);
@@ -238,6 +246,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     
     pa_operation* op = nullptr;
     
+    log_info("getting device list");
     pa_threaded_mainloop_lock(mainloop_);
     if (direction == AUDIO_ENGINE_OUT)
     {
