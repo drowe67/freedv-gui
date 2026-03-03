@@ -296,7 +296,9 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
+          sudo podman exec fedora-test sudo useradd -m github
+          sudo podman exec fedora-test sudo passwd -d github
+          sudo podman exec --env-file ./tmp.env fedora-test su -l github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
   test-appimage-ubuntu:

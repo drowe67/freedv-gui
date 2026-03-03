@@ -125,7 +125,6 @@ cat tmp.log
 $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
 
 ps auxww
-env
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then

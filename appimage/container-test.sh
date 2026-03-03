@@ -12,9 +12,9 @@ Xvfb :99 -screen 0 1024x768x16 &
 sleep 5
 export DISPLAY=:99.0
 eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-sudo systemctl restart polkit
-sudo systemctl enable rtkit-daemon
-sudo systemctl start rtkit-daemon
+#sudo systemctl restart polkit
+#sudo systemctl enable rtkit-daemon
+#sudo systemctl start rtkit-daemon
 pipewire &
 pipewire-pulse &
 wireplumber &
