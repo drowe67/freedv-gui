@@ -46,9 +46,6 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
-pactl list sinks
-pactl list sources
-
 # Determine correct record device to retrieve TX data
 FREEDV_CONF_FILE=freedv-ctest-loss.conf 
 
