@@ -6,8 +6,6 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 export GIO_USE_VFS=local
-mkdir -p $XDG_RUNTIME_DIR
-chmod 700 $XDG_RUNTIME_DIR
 Xvfb :99 -screen 0 1024x768x16 &
 sleep 5
 export DISPLAY=:99.0

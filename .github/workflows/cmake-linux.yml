@@ -298,6 +298,9 @@ jobs:
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
           sudo podman exec fedora-test sudo useradd -m -u $(id -u) github
           sudo podman exec fedora-test sudo passwd -d github
+          sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chmod 700 $XDG_RUNTIME_DIR
+          sudo podman exec fedora-test sudo chown github:github $XDG_RUNTIME_DIR
           sudo podman exec --env-file ./tmp.env fedora-test su -m github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
