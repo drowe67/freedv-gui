@@ -298,7 +298,7 @@ jobs:
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
           sudo podman exec fedora-test sudo useradd -m -u $(id -u) github
           sudo podman exec fedora-test sudo passwd -d github
-          sudo podman exec --env-file ./tmp.env fedora-test su -l github /workspace/appimage/container-test.sh | tee tmp.log
+          sudo podman exec --env-file ./tmp.env fedora-test su -m github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
   test-appimage-ubuntu:
