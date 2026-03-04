@@ -180,7 +180,9 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
+#if !wxCHECK_VERSION(3,3,2)
     , tipWindow_(nullptr)
+#endif // !wxCHECK_VERSION(3,3,2)
     , UNKNOWN_STR("")
     , ALL_LETTERS_RGX("^[A-Z]{2}$")
     , MS_REMOVAL_RGX("\\.[^+-]+")
@@ -440,6 +442,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
+    this->Layout();
     
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
@@ -448,8 +451,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-
-    this->Layout();
     
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
@@ -965,9 +966,9 @@ void FreeDVReporterDialog::OnShow(wxShowEvent&)
     }
 }
 
-void FreeDVReporterDialog::OnSize(wxSizeEvent&)
+void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
 {
-    auto sz = GetSize();
+    auto sz = event.GetSize();
     
     wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
@@ -1162,8 +1163,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
+#if defined(__APPLE__)
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool autosize)
+#else
+void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
+#endif // defined(__APPLE__)
 {
+#if defined(__APPLE__)
     if (autosize)
     {
         // Re-enable autosizing
@@ -1186,6 +1192,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool auto
             col->SetWidth(col->GetWidth()); // GetWidth doesn't return AUTOSIZE
         }
     }
+#endif // defined(__APPLE__)
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
@@ -1443,13 +1450,22 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
         {
             tempUserMessage_ = model->getUserMessage(item);
             rect = m_listSpots->GetItemRect(item, col);
+#if wxCHECK_VERSION(3,3,2)
+            if (!tipWindow_ && tempUserMessage_ != _(""))
+#else
             if (tipWindow_ == nullptr && tempUserMessage_ != _(""))
+#endif  // wxCHECK_VERSION(3,3,2)
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();
                 rect.SetPosition(ClientToScreen(pos));
-        
+
+#if wxCHECK_VERSION(3,3,2)
+                tipWindow_ = wxTipWindow::New(m_listSpots, tempUserMessage_, 1000, &rect);
+#else
                 tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
+#endif // wxCHECK_VERSION(3,3,2)
+                
                 tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                 tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                 tipWindow_->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);

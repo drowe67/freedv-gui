@@ -94,6 +94,10 @@ private:
     
     int rigResponseTime_;
     
+    // Tracks errors encountered during/after rig_open() so that
+    // we only display the error box once.
+    bool errorEncountered_;
+    
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
     void setModeHelper_(vfo_t currVfo, rmode_t mode);

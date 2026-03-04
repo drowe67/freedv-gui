@@ -34,7 +34,6 @@ class PlotScalar: public PlotPanel
     public:
 
     PlotScalar(wxWindow* parent,
-               int   channels,
                float t_secs, 
                float sample_period_secs,
                float a_min,
@@ -46,9 +45,9 @@ class PlotScalar: public PlotPanel
                const char* plotName = ""
                );
         ~PlotScalar();
-         void add_new_sample(int channel, float sample);
-         void add_new_samples(int channel, float samples[], int length);
-         void add_new_short_samples(int channel, short samples[], int length, float scale_factor);
+         void add_new_sample(float sample);
+         void add_new_samples(float samples[], int length);
+         void add_new_short_samples(short samples[], int length, float scale_factor);
          void setBarGraph(int bar_graph) { m_bar_graph = bar_graph; }
          void setLogY(int logy) { m_logy = logy; }
 
@@ -66,7 +65,6 @@ class PlotScalar: public PlotPanel
  
     protected:
 
-         int      m_channels;
          float    m_t_secs;
          float    m_sample_period_secs;
          float    m_a_min;
@@ -81,6 +79,12 @@ class PlotScalar: public PlotPanel
          int      m_logy;                      // plot graph on log scale
          int      leftOffset_;
          int      bottomOffset_;
+
+         wxBitmap* plotArea_;
+         wxImage* plotLines_;
+         int addedPoints_;
+         wxMemoryDC* plotAreaDC_;
+         wxGraphicsBitmap plotLinesBMP_;
 
          void draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) override;
          void drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly);

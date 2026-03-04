@@ -190,8 +190,12 @@ class FreeDVReporterDialog : public wxFrame
         wxTimer* m_highlightClearTimer;
         wxTimer* m_deleteTimer;
 
+#if wxCHECK_VERSION(3,3,2)
+        wxTipWindow::Ref tipWindow_;
+#else
         wxTipWindow* tipWindow_;
-
+#endif // wxCHECK_VERSION(3,3,2)
+        
         // Menu bar and menu options
         wxMenuBar* menuBar_;
         wxMenu* showMenu_;
