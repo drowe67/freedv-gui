@@ -4,13 +4,13 @@ elseif(APPLE)
     set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DPython3_ROOT_DIR=${Python3_ROOT_DIR})
 endif()
 
-set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip)
+set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DBUILD_OSX_UNIVERSAL=${BUILD_OSX_UNIVERSAL} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip)
 
 include(ExternalProject)
 ExternalProject_Add(build_rade
    SOURCE_DIR rade_src
    BINARY_DIR rade_build
-   GIT_REPOSITORY https://github.com/peterbmarks/radae_nopy/ #https://github.com/drowe67/radae.git
+   GIT_REPOSITORY https://github.com/tmiw/radae_nopy/ #https://github.com/drowe67/radae.git
    GIT_TAG main
    GIT_SUBMODULES ""
    GIT_SUBMODULES_RECURSE NO
