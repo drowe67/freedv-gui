@@ -124,8 +124,6 @@ cat tmp.log
 # Run feature files through loss tool
 $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
 
-ps auxww
-
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_LOOPBACK
