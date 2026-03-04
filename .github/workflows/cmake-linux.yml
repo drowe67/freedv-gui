@@ -301,6 +301,7 @@ jobs:
           sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
           sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
           sudo podman exec fedora-test sudo chown github:github /run/user/$(id -u)
+          sudo podman exec fedora-test echo "github ALL=(ALL) NOPASSWD: ALL" | (EDITOR="tee -a" sudo visudo)
           sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE  github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
