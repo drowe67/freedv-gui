@@ -254,6 +254,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04-arm, ubuntu-24.04]
+        fedora-version: [42, 43]
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
@@ -274,7 +275,7 @@ jobs:
     - name: Start Fedora container
       shell: bash
       run: |
-          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
+          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:${{ matrix.fedora-version }}
 
     - name: Install rtkit for RT threading
       shell: bash
@@ -295,7 +296,15 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
+          sudo podman exec fedora-test sudo useradd -m -u $(id -u) github
+          sudo podman exec fedora-test sudo passwd -d github
+          sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chown github:github /run/user/$(id -u)
+          sudo podman exec fedora-test sudo systemctl restart polkit
+          sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
+          sudo podman exec fedora-test sudo systemctl start rtkit-daemon
+          sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE  github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
   test-appimage-ubuntu:
