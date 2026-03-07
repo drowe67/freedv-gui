@@ -147,6 +147,7 @@ class TopFrame : public wxFrame
         wxMenuItem* m_menuItemPlayFileFromRadio;
     
         // Virtual event handlers, override them in your derived class
+        virtual void OnActivateWindow(wxActivateEvent& event) { event.Skip(); }
         virtual void topFrame_OnClose( wxCloseEvent& event ) { event.Skip(); }
         virtual void topFrame_OnPaint( wxPaintEvent& event ) { event.Skip(); }
         virtual void topFrame_OnSize( wxSizeEvent& event ) { event.Skip(); }

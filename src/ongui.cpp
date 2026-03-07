@@ -116,6 +116,14 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
     event.Enable(!m_RxRunning);
 }
 
+void MainFrame::OnActivateWindow(wxActivateEvent&)
+{
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->closeTooltip();
+    }
+}
+
 //-------------------------------------------------------------------------
 // OnToolsFreeDVReporter()
 //-------------------------------------------------------------------------
@@ -883,15 +891,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
     else
-    {
-        // wxWidgets should already be doing the below logic,
-        // but for some reason this intermittently doesn't happen
-        // on Windows. Just to be sure, we force the correct state
-        // here (similar to what's already done for ending TX while
-        // using the voice keyer).
-        m_btnTogPTT->SetValue(!g_tx.load(std::memory_order_acquire));
-        m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-        
+    {        
         togglePTT();
     }
     event.Skip();
@@ -1178,6 +1178,14 @@ void MainFrame::togglePTT(void) {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
     }
+    
+    // wxWidgets should already be doing the below logic,
+    // but for some reason this intermittently doesn't happen
+    // on Windows. Just to be sure, we force the correct state
+    // here (similar to what's already done for ending TX while
+    // using the voice keyer).
+    m_btnTogPTT->SetValue(newTx);
+    m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
