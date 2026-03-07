@@ -2620,7 +2620,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
         
     // we are attempting to start
 
-    if (m_togBtnOnOff->GetValue())
+    if (!m_RxRunning)
     {
         std::thread onOffExec([this]() 
         {
