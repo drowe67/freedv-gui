@@ -21,12 +21,12 @@ ExternalProject_Add(build_rade
 
 ExternalProject_Get_Property(build_rade BINARY_DIR)
 ExternalProject_Get_Property(build_rade SOURCE_DIR)
-add_library(rade STATIC IMPORTED)
+add_library(rade SHARED IMPORTED)
 add_dependencies(rade build_rade)
 include_directories(${SOURCE_DIR}/src)
 
 set_target_properties(rade PROPERTIES
-    IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_SHARED_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/librade${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
