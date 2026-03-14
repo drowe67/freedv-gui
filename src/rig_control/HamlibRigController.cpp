@@ -686,8 +686,13 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
 void HamlibRigController::requestCurrentFrequencyModeImpl_()
 {
     auto tmpRig = rig_.load(std::memory_order_acquire);
-    if (tmpRig == nullptr)
+    if (tmpRig == nullptr || pttSet_)
     {
+        // Note: we ignore attempts to retrieve frequency/mode during
+        // TX for several reasons:
+        //   a. Some radios do not respond to commands during TX (ex: FT-817)
+        //   b. Some radios on their own accord will briefly stop TX to handle the command,
+        //      causing distortion of the transmitted signal (ex: Red Pitaya with Thetis).
         return;
     }
     
