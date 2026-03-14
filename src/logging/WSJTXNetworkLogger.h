@@ -57,7 +57,7 @@ public:
     WSJTXNetworkLogger(std::string hostname, int port);
     virtual ~WSJTXNetworkLogger();
     
-    virtual void logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments) override;
+    virtual void logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments, int snr) override;
 
 protected:
     virtual void onReceive_(const char*, int, char*, int) override { /* not used */ }
