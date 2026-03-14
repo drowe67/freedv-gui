@@ -59,6 +59,17 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
 }
 
 template<>
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<double>(const double& obj)
+{
+    char* ptr = reallocPacket_(sizeof(double));
+    assert(ptr != nullptr);
+    
+    memcpy(ptr, &obj, sizeof(double));
+
+    return *this;
+}
+
+template<>
 WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<char>(const char& obj)
 {
     char* ptr = reallocPacket_(sizeof(char));
@@ -203,7 +214,7 @@ WSJTXNetworkLogger::~WSJTXNetworkLogger()
     close();
 }
 
-void WSJTXNetworkLogger::logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments)
+void WSJTXNetworkLogger::logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments, int snr)
 {
     auto currentTimeAsJulian = sys_to_jdate(logTime);
 
@@ -234,6 +245,33 @@ void WSJTXNetworkLogger::logContact(std::chrono::time_point<std::chrono::system_
                   << std::string("") // TX message - TBD
                   ;
     send(reportHostname_.c_str(), reportPort_, statusBuilder.getPacket(), statusBuilder.getPacketSize()).wait();
+    
+    // Not using C++20, so we need to manually define this.
+    using day_duration = std::chrono::duration<int64_t, std::ratio<86400>>;
+    
+    auto julianEpoch = currentTimeAsJulian.time_since_epoch();
+    auto julianDays = std::chrono::floor<day_duration>(julianEpoch);
+    auto julianFracDay = julianEpoch - julianDays;
+    auto msSinceMidnight = std::chrono::duration_cast<std::chrono::milliseconds>(julianFracDay).count();
+    
+    // Send decode message for SNR
+    if (snr > UNKNOWN_SNR)
+    {
+        PacketBuilder decodeBuilder;
+        decodeBuilder << (uint32_t)2
+                      << UNIQUE_ID
+                      << false
+                      << (uint32_t)msSinceMidnight // time
+                      << (int32_t)snr
+                      << (double)0.0 // delta time
+                      << (uint32_t)0 // delta freq
+                      << LOG_MODE
+                      << std::string("") // message
+                      << false // low confidence 
+                      << false // off air
+                      ;
+        send(reportHostname_.c_str(), reportPort_, decodeBuilder.getPacket(), decodeBuilder.getPacketSize()).wait();
+    }
     
     // Send actual log request
     PacketBuilder builder;
