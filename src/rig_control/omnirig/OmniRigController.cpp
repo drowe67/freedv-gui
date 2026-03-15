@@ -47,6 +47,7 @@ OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool f
     , freqOnly_(freqOnly)
     , rigResponseTime_(0)
     , destroying_(false)
+    , pttSet_(false)
 {
     // empty
 }
@@ -196,7 +197,8 @@ void OmniRigController::pttImpl_(bool state)
         auto newTime = std::chrono::steady_clock::now();
         auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
         rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
-        
+        pttSet_ = state;
+
         onPttChange(this, state);
     }
 }
@@ -347,7 +349,12 @@ void OmniRigController::requestCurrentFrequencyModeImpl_()
     RigParamX omniRigMode;
     long freq;
 
-    if (rig_ != nullptr)
+    // Note: we ignore attempts to retrieve frequency/mode during
+    // TX for several reasons:
+    //   a. Some radios do not respond to commands during TX (ex: FT-817)
+    //   b. Some radios on their own accord will briefly stop TX to handle the command,
+    //      causing distortion of the transmitted signal (ex: Red Pitaya with Thetis).
+    if (rig_ != nullptr && !pttSet_)
     {
         rig_->get_Freq(&freq);
         rig_->get_Mode(&omniRigMode);

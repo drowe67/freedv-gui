@@ -142,6 +142,9 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOC
     e->handler.flow(e, ibuf, obuf, &isamp, &osamp);
     for(i=0; i<n; i++)
         out[i] = SOX_SAMPLE_TO_SIGNED_16BIT(obuf[i], clips); 
+
+    // To suppress warnings.
+    (void)clips;
 }
 
 
