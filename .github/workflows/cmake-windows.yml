@@ -26,36 +26,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install WINE
-      run: |
-        sudo dpkg --add-architecture i386
-        sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
-        sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
-        sudo apt-get update
-        #echo "/opt/wine-staging/bin" >> $GITHUB_PATH
-        sudo apt install -y --install-recommends winehq-staging
-        #sudo apt install -y --install-recommends wine64 wine32
-
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
       run: sudo apt-get install nsis autoconf automake libtool libltdl-dev
-
-    - name: Configure WINE
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
-
-    - name: Create Windows Python environment for build
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          export WINEPREFIX=`pwd`/wine-env
-          wget https://www.python.org/ftp/python/3.14.3/python-3.14.3-amd64.exe
-          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.14.3-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
-          cat $WINEPREFIX/drive_c/python.log
-          DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
@@ -72,7 +46,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
 
     - name: Build freedv-gui
       shell: bash
