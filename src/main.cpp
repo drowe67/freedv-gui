@@ -1078,6 +1078,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));    
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
 
+    // Add SNR window
+    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL);
+    m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
+
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
@@ -1104,6 +1108,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
+    m_plotSNRTimer.SetOwner(this, ID_TIMER_SNR);
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
@@ -1402,6 +1407,7 @@ MainFrame::~MainFrame()
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
+        m_plotSNRTimer.Stop();
         Unbind(wxEVT_TIMER, &MainFrame::OnTimer, this);
     }
 #endif //_USE_TIMER
@@ -1639,6 +1645,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
+        if (timerId == ID_TIMER_SNR)
+        {
+            float snr = freedvInterface.getSync() ? snr_limited : NO_SNR_VAL;
+            m_panelSNR->add_new_sample(snr);
+            m_panelSNR->refreshData();
+        }
+        
         // sync LED (Colours don't work on Windows) ------------------------
 
         auto state = g_State.load(std::memory_order_acquire);
@@ -2487,6 +2500,8 @@ void MainFrame::performFreeDVOn_()
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_plotSNRTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
@@ -2529,6 +2544,7 @@ void MainFrame::performFreeDVOff_()
         m_plotSpeechInTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
+        m_plotSNRTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
     });
