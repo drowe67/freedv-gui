@@ -1186,6 +1186,9 @@ void MainFrame::togglePTT(void) {
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+    
+    // The Report Frequency drop-down should not be modifiable during TX.
+    m_cboReportFrequency->Enable(!newTx);
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
