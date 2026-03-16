@@ -1648,8 +1648,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (timerId == ID_TIMER_SNR)
         {
             float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, MAX_SNR_VAL);
-            snr = std::max(snr, NO_SNR_VAL);
+            snr = std::min(snr, (float)MAX_SNR_VAL);
+            snr = std::max(snr, (float)NO_SNR_VAL);
             m_panelSNR->add_new_sample(snr);
             m_panelSNR->refreshData();
         }
