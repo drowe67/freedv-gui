@@ -256,7 +256,7 @@ jobs:
           
     - name: Install needed packages
       run: |
-        brew install automake libtool sox pytorch python-matplotlib
+        brew install automake libtool sox 
         brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
@@ -284,5 +284,8 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHON_BINARY=$(brew --prefix python@3.14)/bin/python3 PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
+          python3 -m venv rade_venv
+          . ./rade_venv/bin/activate
+          pip3 install torch matplotlib
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           grep "PASS" temp-test.txt
