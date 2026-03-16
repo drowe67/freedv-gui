@@ -250,16 +250,13 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
 
     index_to_px = (float)plotWidth/m_samples;
-    int pixelsUpdated = std::min(plotWidth, (int)std::ceil(index_to_px * addedPoints_));
+    int pixelsUpdated = std::min(plotWidth, (int)std::floor(index_to_px * addedPoints_));
 
-    if (repaintDataOnly)
+    if (repaintDataOnly && pixelsUpdated > 0)
     {
         // Clear only the area that we're updating
-        if (pixelsUpdated > 0)
-        {
-            plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
-            plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
-        }
+        plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
+        plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
     }
     else
     {
@@ -369,15 +366,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         plotCtx->SetBrush(wxBrush(DARK_GREEN_COLOR));
 
         wxGraphicsPath path = plotCtx->CreatePath();
-        int from = repaintDataOnly ? plotWidth - pixelsUpdated - 1: 0;
+        int from = repaintDataOnly && pixelsUpdated > 0 ? plotWidth - pixelsUpdated - 1: 0;
         for (int index = from; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
             int x = index;
-            /*if (m_t_secs == 60)
-            {
-                log_info("(%d, %d)", x, item->y1);
-            }*/
             if (index == from) path.MoveToPoint(x, item->y1);
             else path.AddLineToPoint(x, item->y1);
         }
