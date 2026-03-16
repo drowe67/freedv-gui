@@ -459,7 +459,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
             x += PLOT_BORDER + leftOffset_;
             if (!repaintDataOnly) 
             {
-                snprintf(buf, STR_LENGTH, "%2.1fs", t);
+                snprintf(buf, STR_LENGTH, "%2.1fs", -(m_t_secs - t));
                 GetTextExtent(buf, &text_w, &text_h);
                 int left = x - text_w/2;
                 if (t == 0)
