@@ -154,6 +154,10 @@ jobs:
       run: |
           Get-CimInstance win32_sounddevice
 
+    - name: Install Python dependencies
+      run: |
+          python.exe -m pip install torch matplotlib
+
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
@@ -162,13 +166,13 @@ jobs:
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1
       timeout-minutes: 10
 
-    #- name: Test RADE Reporting
-    #  shell: pwsh
-    #  working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-    #  if: ${{ !cancelled() }}
-    #  run: |
-    #      .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
-    #  timeout-minutes: 10
+    - name: Test RADE Reporting
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
+      timeout-minutes: 10
 
     - name: Test 700D
       shell: pwsh
