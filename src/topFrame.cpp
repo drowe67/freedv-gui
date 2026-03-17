@@ -20,6 +20,8 @@
 //
 //==========================================================================
 
+#include <set>
+
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
@@ -228,6 +230,7 @@ wxString TabFreeAuiNotebook::SavePerspective() {
 bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     // Remove all tab ctrls (but still keep them in main index)
     const size_t tab_count = m_tabs.GetPageCount();
+    std::set<size_t> readdedTabs;
     for (size_t i = 0; i < tab_count; ++i) {
        wxWindow* wnd = m_tabs.GetWindowFromIdx(i);
 
@@ -246,6 +249,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     size_t sel_page = 0;
 
     wxString tabs = layout.BeforeFirst(wxT('@'));
+    wxAuiTabCtrl *dest_tabs = nullptr;
     while (1)
      {
        const wxString tab_part = tabs.BeforeFirst(wxT('|'));
@@ -267,7 +271,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
        new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
        new_tabs->m_tabCtrlHeight = m_tabCtrlHeight;
        new_tabs->m_tabs->SetFlags(m_flags);
-       wxAuiTabCtrl *dest_tabs = new_tabs->m_tabs;
+       dest_tabs = new_tabs->m_tabs;
 
        // create a pane info structure with the information
        // about where the pane should be added
@@ -295,6 +299,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
           wxAuiNotebookPage& page = m_tabs.GetPage(tab_idx);
           const size_t newpage_idx = dest_tabs->GetPageCount();
           dest_tabs->InsertPage(page.window, page, newpage_idx);
+          readdedTabs.insert(tab_idx);
 
           if (c == wxT('+')) activePage = newpage_idx;
           else if ( c == wxT('*')) sel_page = tab_idx;
@@ -308,6 +313,17 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     // Load the frame perspective
     const wxString frames = layout.AfterFirst(wxT('@'));
     m_mgr.LoadPerspective(frames);
+
+    // Reinsert tabs that weren't persisted before
+    for (size_t i = 0; i < tab_count; ++i) {
+        if (readdedTabs.find(i) != readdedTabs.end())
+        {
+            continue;
+        }
+        wxAuiNotebookPage& page = m_tabs.GetPage(i);
+        const size_t newpage_idx = dest_tabs->GetPageCount();
+        dest_tabs->InsertPage(page.window, page, newpage_idx);
+    }
 
     // Force refresh of selection
     m_curPage = -1;
