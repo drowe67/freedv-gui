@@ -315,6 +315,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     m_mgr.LoadPerspective(frames);
 
     // Reinsert tabs that weren't persisted before
+    assert(dest_tabs != nullptr); // We should have found/created at least one tab group already.
     for (size_t i = 0; i < tab_count; ++i) {
         if (readdedTabs.find(i) != readdedTabs.end())
         {
