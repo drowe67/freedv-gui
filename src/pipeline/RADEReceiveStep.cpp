@@ -186,7 +186,7 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                     FREEDV_END_VERIFIED_SAFE 
                     for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
                     {
-                        pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
+                        pcm[i] = (int)floor(.5 + std::min(32767.f, std::max(-32767.f, 32768.f*fpcm[i])));
                     }
 
                     *numOutputSamples += LPCNET_FRAME_SIZE;
