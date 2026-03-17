@@ -46,52 +46,11 @@ else
 fi
 
 ./linuxdeploy-${MACH_ARCH}.AppImage \
---executable /usr/bin/python3.14 \
 --executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
 --custom-apprun=$APPRUN \
 --desktop-file $DESKTOP_FILE
-
-# create the virtual environment (copied from Brian's build script)
-cd $APPDIR
-python3.14 -m venv rade-venv # || { echo "ERROR: create venv failed"; exit 1; }
-# Activate it
-source rade-venv/bin/activate # || { echo "ERROR: activate venv failed"; exit 1; }
-
-# Clear cache in venv
-pip3 cache purge
-pip3 install --upgrade pip || echo "WARNING: pip upgrade failed"
-pip3 install numpy==2.3.5
-pip3 install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
-pip3 install matplotlib
-cd -
-
-echo "Fix venv python links..."
-echo "Now in $(pwd)"
-cd "$APPDIR/rade-venv/bin"
-echo "Now in $(pwd)"
-ln -s -f ../../usr/bin/python3.14 python
-ln -s -f ../../usr/bin/python3.14 python3
-cd - # back to the previous directory
-echo "### Now in $(pwd)"
-
-# Copy /usr/lib/python3.14 to image
-cd $APPDIR/usr
-cp -a /usr/lib/python3.14 lib/
-cd -
-
-# Copy the models and symlink
-echo "Copying rade_src..."
-# ls freedv-rade/freedv-gui/build_linux/rade_src/model
-# model05/        model17/        model18/        model19/        model19_check3/ model_bbfm_01/  
-cp -r "$BUILDDIR/build_linux/$RADE_SRC" "$APPDIR/."
-if [[ -e "$APPDIR/rade_integ_src" ]]; then
-    mv $APPDIR/rade_integ_src $APPDIR/rade_src
-fi
-cd "$APPDIR/usr/bin"
-ln -s "../../rade_src/model19_check3" "model19_check3"
-cd -
 
 # Create the output
 if [[ "${TARGET}" == "all" ]]; then

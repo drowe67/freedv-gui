@@ -353,6 +353,8 @@ void MainApp::UnitTest_()
             
             if (utTxFile != "")
             {
+                log_info("Using audio from file %s", (const char*)utTxFile.ToUTF8());
+                
                 // Transmit until file has finished playing
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
@@ -390,6 +392,7 @@ void MainApp::UnitTest_()
                 });
 
                 // Transmit for user given time period (default 60 seconds)
+                log_info("Sleeping for %d seconds", utTxTimeSeconds);
                 std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
             }
             
