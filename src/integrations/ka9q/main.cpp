@@ -55,7 +55,7 @@
 
 extern "C" 
 {
-    #include "fargan_config_integ.h"
+    #include "fargan_config.h"
     #include "fargan.h"
     #include "lpcnet.h"
 }
