@@ -895,6 +895,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
     * Update wxWidgets to 3.3.2. (PR #1244)
+    * Flex: Update Docker container version to match AppImage version. (PR #1256)
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
 
