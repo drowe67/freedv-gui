@@ -234,7 +234,7 @@ jobs:
         ./FreeDV-FlexRadio.AppImage --appimage-extract
         ls -lR squashfs-root
         export FREEDV_VERSION=`cat ${{github.workspace}}/build_linux/freedv-version.txt`
-        docker buildx build -label com.flexradio.waveform.version=$FREEDV_VERSION --output type=oci,compression=gzip,dest=freedv-waveform-${FREEDV_VERSION}.tar.gz --tag=freedv-waveform .
+        docker buildx build --label com.flexradio.waveform.version=$FREEDV_VERSION --output type=oci,compression=gzip,dest=freedv-waveform-${FREEDV_VERSION}.tar.gz --tag=freedv-waveform .
 
     - name: Calculate waveform filename
       shell: bash
