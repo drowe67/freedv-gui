@@ -1,6 +1,6 @@
 //=========================================================================
 // Name:            FlexKeyValueParser.cpp
-// Purpose:         Key/value parser for Flex waveform repsonses.
+// Purpose:         Key/value parser for Flex waveform responses.
 //
 // Authors:         Mooneer Salem
 // License:
