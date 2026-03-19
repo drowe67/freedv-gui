@@ -689,7 +689,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_btnTogTune = new wxToggleButton(txLevelBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning."));
-    txLevelSizer->Add(m_btnTogTune, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    txLevelSizer->Add(m_btnTogTune, 1, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
     m_btnTogTune->Enable(false); // disable by default
     
     rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
