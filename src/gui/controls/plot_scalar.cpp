@@ -28,6 +28,8 @@
 
 #include "plot_scalar.h"
 
+#include "util/logging/ulog.h"
+
 BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
     EVT_PAINT           (PlotScalar::OnPaint)
     EVT_MOTION          (PlotScalar::OnMouseMove)
@@ -50,7 +52,9 @@ PlotScalar::PlotScalar(wxWindow* parent,
                        float  graticule_a_step,   // step of amplitude axis graticule
                        const char a_fmt[],        // printf format string for amplitude axis labels
                        int    mini,               // true for mini-plot - don't draw graticule
-                       const char* plotName)
+                       const char* plotName,
+                       bool halfPlot,
+                       float defaultVal)
     : PlotPanel(parent, plotName)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
@@ -60,6 +64,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     plotArea_ = nullptr;
     plotLines_ = nullptr;
     addedPoints_ = 0;
+    halfPlot_ = halfPlot;
 
     int i;
 
@@ -87,7 +92,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_mem = new float[m_samples];
     for(i = 0; i < m_samples; i++)
     {
-        m_mem[i] = 0.0;
+        m_mem[i] = defaultVal;
     }
 
     plotAreaDC_ = new wxMemoryDC();
@@ -245,16 +250,13 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
 
     index_to_px = (float)plotWidth/m_samples;
-    int pixelsUpdated = std::min(plotWidth, (int)std::ceil(index_to_px * addedPoints_));
+    int pixelsUpdated = std::min(plotWidth, (int)std::floor(index_to_px * addedPoints_));
 
-    if (repaintDataOnly)
+    if (repaintDataOnly && pixelsUpdated > 0)
     {
         // Clear only the area that we're updating
-        if (pixelsUpdated > 0)
-        {
-            plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
-            plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
-        }
+        plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
+        plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
     }
     else
     {
@@ -339,9 +341,16 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         else {
             if (i)
             {
-                auto item = &lineMap_[x];
-                item->y1 = std::min(item->y1, y);
-                item->y2 = std::max(item->y2, y);
+                for (int x2 = x; x2 <= std::ceil(index_to_px * (i + 1)) && x2 < plotWidth; x2++)
+                {
+                    auto item = &lineMap_[x2];
+                    item->y1 = std::min(item->y1, y);
+
+                    if (!halfPlot_)
+                    {
+                        item->y2 = std::max(item->y2, y);
+                    }
+                }
             }
         }
     }
@@ -357,7 +366,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         plotCtx->SetBrush(wxBrush(DARK_GREEN_COLOR));
 
         wxGraphicsPath path = plotCtx->CreatePath();
-        int from = repaintDataOnly ? plotWidth - pixelsUpdated - 1: 0;
+        int from = repaintDataOnly && pixelsUpdated > 0 ? plotWidth - pixelsUpdated - 1: 0;
         for (int index = from; index < plotWidth; index++)
         {
             auto item = &lineMap_[index];
@@ -365,15 +374,21 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             if (index == from) path.MoveToPoint(x, item->y1);
             else path.AddLineToPoint(x, item->y1);
         }
-        for (int index = plotWidth - 1; index >= from; index--)
+        if (!halfPlot_)
         {
-            auto item = &lineMap_[index];
-            int x = index;
-            path.AddLineToPoint(x, item->y2);
+            for (int index = plotWidth - 1; index >= from; index--)
+            {
+                auto item = &lineMap_[index];
+                int x = index;
+                path.AddLineToPoint(x, item->y2);
+            }
+            path.AddLineToPoint(from, lineMap_[from].y1);
+            plotCtx->FillPath(path);
         }
-        path.AddLineToPoint(from, lineMap_[from].y1);
-
-        plotCtx->FillPath(path);
+        else
+        {
+            plotCtx->StrokePath(path);
+        }
         delete plotCtx;
     }
 
@@ -444,7 +459,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
             x += PLOT_BORDER + leftOffset_;
             if (!repaintDataOnly) 
             {
-                snprintf(buf, STR_LENGTH, "%2.1fs", t);
+                snprintf(buf, STR_LENGTH, "%2.0fs", -(m_t_secs - t));
                 GetTextExtent(buf, &text_w, &text_h);
                 int left = x - text_w/2;
                 if (t == 0)
