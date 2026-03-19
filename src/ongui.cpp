@@ -1188,7 +1188,32 @@ void MainFrame::togglePTT(void) {
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
     
     // The Report Frequency drop-down should not be modifiable during TX.
+    // Additionally, tuning during normal TX is verboten.
     m_cboReportFrequency->Enable(!newTx);
+    m_btnTogTune->Enable(!newTx);
+}
+
+void MainFrame::OnTogBtnTune(wxCommandEvent&)
+{
+    // Ensure background is correct for button.
+    bool newTx = m_btnTogTune->GetValue();
+    m_btnTogTune->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
+
+    // Update PTT state
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    {
+        wxGetApp().rigPttController->ptt(newTx);
+    }
+
+    // Disable actual TX controls if needed
+    m_togBtnOnOff->Enable(!newTx);
+    m_togBtnVoiceKeyer->Enable(!newTx);
+    m_btnTogPTT->Enable(!newTx);
+    m_cboReportFrequency->Enable(!newTx);
+
+    // Enable tuning carrier
+    g_rxUserdata->tuneSineWaveSampleNumber = 0;
+    g_rxUserdata->isTuning.store(true, std::memory_order_release);
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()

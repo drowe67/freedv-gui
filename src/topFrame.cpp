@@ -686,6 +686,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+
+    m_btnTogTune = new wxToggleButton(txLevelBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning."));
+    txLevelSizer->Add(m_btnTogTune, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    m_btnTogTune->Enable(false); // disable by default
     
     rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
     
@@ -913,6 +918,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboLastReportedCallsigns->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
 
     m_auiNbookCtrl->Connect(wxEVT_AUINOTEBOOK_PAGE_CHANGING, wxAuiNotebookEventHandler(TopFrame::OnNotebookPageChanging), NULL, this);
+
+    m_btnTogTune->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -1008,6 +1015,8 @@ TopFrame::~TopFrame()
     m_cboLastReportedCallsigns->Disconnect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_DROPDOWN, wxCommandEventHandler(TopFrame::OnOpenCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnCloseCallsignList), NULL, this);
+
+    m_btnTogTune->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

@@ -229,6 +229,8 @@ class TopFrame : public wxFrame
         virtual void OnOpenCallsignList( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCloseCallsignList( wxCommandEvent& event ) { event.Skip(); }
         
+        virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
+        
         void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:
@@ -236,6 +238,7 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
         wxToggleButton* m_btnTogPTT;
+        wxToggleButton* m_btnTogTune;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
         wxStaticBox*  m_freqBox;

@@ -2393,6 +2393,14 @@ void MainFrame::performFreeDVOn_()
 
             if (m_RxRunning)
             {
+                // Enable Tune button if TX is valid.
+                if (g_nSoundCards > 1)
+                {
+                    executeOnUiThreadAndWait_([&]() {
+                        m_btnTogTune->Enable(true);
+                    });
+                }
+
                 // attempt to start PTT ......            
                 if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                 {
@@ -2525,6 +2533,7 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_sliderMicSpkrLevel->Enable(false);
+        m_btnTogTune->Enable(true);
 
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
@@ -3611,24 +3620,46 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     cbData->outfifo1->read(tmpOutput, toRead);
     auto numChannels = dev.getNumChannels();
     auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-    for (size_t count = 0; count < size; count++, audioData += numChannels)
-    {
-        auto output = (count < toRead) ? tmpOutput[count] : 0;
+    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    auto sr = dev.getSampleRate();
 
-        // write signal to all channels to start. This is so that
-        // the compiler can optimize for the most common case.
-        for (auto j = 0; j < numChannels; j++)
+    if (isTuning)
+    {
+        // This may be better as a pipeline step but would also add additional
+        // complexity (i.e. additional decision steps to let through the sine wave
+        // vs. regular TX).
+        auto txLevel = g_txLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+        for (unsigned long index = 0; index < size; index++)
         {
-            audioData[j] = output;
+            auto carrierSample = txLevel * sin(2 * M_PI * (1500) * cbData->tuneSineWaveSampleNumber / sr);
+            for (int i = 0; i < numChannels; i++)
+            {
+                *audioData++ = carrierSample;
+            }
+            cbData->tuneSineWaveSampleNumber = (cbData->tuneSineWaveSampleNumber + 1) % sr;
         }
-                    
-        // If VOX tone is enabled, go back through and add the VOX tone
-        // on the left channel.
-        if (enableVoxTone)
+    }
+    else
+    {
+        for (size_t count = 0; count < size; count++, audioData += numChannels)
         {
-            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
-            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+            auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+            // write signal to all channels to start. This is so that
+            // the compiler can optimize for the most common case.
+            for (auto j = 0; j < numChannels; j++)
+            {
+                audioData[j] = output;
+            }
+                        
+            // If VOX tone is enabled, go back through and add the VOX tone
+            // on the left channel.
+            if (enableVoxTone)
+            {
+                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
+                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+            }
         }
     }
 }
