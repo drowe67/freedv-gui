@@ -2533,7 +2533,7 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_sliderMicSpkrLevel->Enable(false);
-        m_btnTogTune->Enable(true);
+        m_btnTogTune->Enable(false);
 
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
