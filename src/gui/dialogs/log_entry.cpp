@@ -151,10 +151,11 @@ void LogEntryDialog::OnInitDialog(wxInitDialogEvent&)
     // empty
 }
 
-void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, wxDateTime const& logTime, int64_t freqHz)
+void LogEntryDialog::ShowDialog(wxString const& dxCall, wxString const& dxGrid, wxDateTime const& logTime, int64_t freqHz, int snr)
 {
     logTime_ = logTime;
     labelTimeVal_->SetLabel(logTime_.ToUTC().FormatISOTime());
+    snr_ = snr;
     
     logger_ = wxGetApp().logger;
     dxCall_->SetValue(dxCall);
@@ -218,7 +219,8 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
             (const char*)rxReport_->GetValue().ToUTF8(),
             (const char*)txReport_->GetValue().ToUTF8(),
             (const char*)name_->GetValue().ToUTF8(),
-            (const char*)comments_->GetValue().ToUTF8());
+            (const char*)comments_->GetValue().ToUTF8(),
+            snr_);
         this->EndModal(wxOK);
     }
 }
