@@ -526,7 +526,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizerAudioRecordPlay->Add(m_audioRecord, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
    
     leftSizer->Add(sbSizerAudioRecordPlay, 0, wxALL|wxEXPAND, 2);
-    
+
     //------------------------------
     // QSO logging
     //------------------------------
@@ -539,6 +539,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizerLogging->Add(m_logQSO, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
     
     leftSizer->Add(sbSizerLogging, 0, wxALL|wxEXPAND, 2);
+
+    //------------------------------
+    // FreeDV Reporter quick options
+    //------------------------------
+    wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FreeDV Reporter"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
+
+    m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Hide"), wxDefaultPosition, wxDefaultSize, 0);
+    m_reporterHidden->SetToolTip(_("Removes self from other FreeDV Reporter users when enabled."));
+    sbSizerReporterBox->Add(m_reporterHidden, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+
+    leftSizer->Add(sbSizerReporterBox, 0, wxALL|wxEXPAND, 2);
     
     //------------------------------
     // BER Frames box
@@ -930,6 +942,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboLastReportedCallsigns->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
 
     m_auiNbookCtrl->Connect(wxEVT_AUINOTEBOOK_PAGE_CHANGING, wxAuiNotebookEventHandler(TopFrame::OnNotebookPageChanging), NULL, this);
+
+    m_reporterHidden->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnToggleReporterVisibility), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -1025,6 +1039,8 @@ TopFrame::~TopFrame()
     m_cboLastReportedCallsigns->Disconnect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_DROPDOWN, wxCommandEventHandler(TopFrame::OnOpenCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnCloseCallsignList), NULL, this);
+
+    m_reporterHidden->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnToggleReporterVisibility), NULL, this);
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

@@ -931,6 +931,9 @@ setDefaultMode:
         m_cboLastReportedCallsigns->Hide();
         m_txtCtrlCallSign->Show();
     }
+
+    // Enable/disable FreeDV Reporter quick options
+    m_reporterHidden->Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
     
     // Ensure that sound card count is correct. Otherwise the Audio Options won't show
     // the correct devices prior to start.
@@ -2458,7 +2461,11 @@ void MainFrame::performFreeDVOn_()
                         if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                         {
                             wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-                            wxGetApp().m_sharedReporterObject->showOurselves();
+                            
+                            if (!m_reporterHidden->GetValue())
+                            {
+                                wxGetApp().m_sharedReporterObject->showOurselves();
+                            }
                         }
 
                         // Enable FreeDV Reporter timer (every 5 minutes).
