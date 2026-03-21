@@ -3660,7 +3660,8 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
         for (unsigned long index = 0; index < size; index++)
         {
-            auto carrierSample = txLevel * sin(2 * M_PI * (1500) * cbData->tuneSineWaveSampleNumber / sr);
+            // Center of RADE signal is actually 1475, not 1500 Hz.
+            auto carrierSample = txLevel * sin(2 * M_PI * (1475) * cbData->tuneSineWaveSampleNumber / sr);
             for (int i = 0; i < numChannels; i++)
             {
                 *audioData++ = carrierSample;
