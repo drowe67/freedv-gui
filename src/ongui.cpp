@@ -1301,9 +1301,11 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     wxString dxGrid;
     wxString dxFreq;
     wxString logTime;
+    wxString snrString;
     wxDateTime logTimeObj = wxDateTime::Now();
     double dxFreqDouble = 0;
     uint64_t dxFreqHz = 0;
+    double snr = ILogger::UNKNOWN_SNR;
     
     auto selected = m_lastReportedCallsignListView->GetFirstSelected();
     if (wxGetApp().lastSelectedLoggingRow == MainApp::MAIN_WINDOW && selected != -1)
@@ -1312,8 +1314,10 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
         dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
         logTime = m_lastReportedCallsignListView->GetItemText(selected, 2);
+        snrString = m_lastReportedCallsignListView->GetItemText(selected, 3);
         
         wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        wxNumberFormatter::FromString(snrString, &snr);
         
         wxString::const_iterator end;
         logTimeObj.ParseDateTime(logTime, &end);
@@ -1365,7 +1369,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 
     // Show log contact dialog 
     auto logDialog = new LogEntryDialog(this);
-    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz);
+    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz, (int)snr);
 }
 
 // Force manual resync, just in case demod gets stuck on false sync
