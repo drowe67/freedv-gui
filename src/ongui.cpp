@@ -40,6 +40,8 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
+extern int g_tuneLevel;
+extern std::atomic<float> g_tuneLevelScale;
 
 extern wxConfigBase *pConfig;
 extern std::atomic<bool> endingTx;
@@ -750,15 +752,38 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeTxLevel( wxScrollEvent& )
 {
-    g_txLevel = m_sliderTxLevel->GetValue();
-    float dbLoss = g_txLevel / 10.0;
-    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+    bool isTuning = m_btnTogTune->GetValue();
+    wxString fmtString;
 
-    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+    if (isTuning)
+    {
+        g_tuneLevel = m_sliderTxLevel->GetValue();
+        float dbLoss = g_tuneLevel / 10.0;
+        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+        g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
+
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
+    }
+    else
+    {
+        g_txLevel = m_sliderTxLevel->GetValue();
+        float dbLoss = g_txLevel / 10.0;
+        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+        g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+    }
+
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+    if (isTuning)
+    {
+        wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
+    }
+    else
+    {
+        wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -1214,6 +1239,20 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     // Enable tuning carrier
     g_rxUserdata->tuneSineWaveSampleNumber = 0;
     g_rxUserdata->isTuning.store(true, std::memory_order_release);
+
+    wxString fmtString;
+    if (newTx)
+    {
+        m_sliderTxLevel->SetValue(g_tuneLevel);
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
+    }
+    else
+    {
+        m_sliderTxLevel->SetValue(g_txLevel);
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+    }
+
+    m_txtTxLevelNum->SetLabel(fmtString);
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()

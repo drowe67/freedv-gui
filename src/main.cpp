@@ -110,6 +110,8 @@ float               g_avmag_spectrum[MODEM_STATS_NSPEC];
 // TX level for attenuation
 int g_txLevel = 0;
 std::atomic<float> g_txLevelScale;
+int g_tuneLevel = 0;
+std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -767,9 +769,15 @@ void MainFrame::loadConfiguration_()
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    m_sliderTxLevel->SetValue(g_txLevel);
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
+
+    g_tuneLevel = wxGetApp().appConfiguration.tuneLevel;
+    dbLoss = g_tuneLevel / 10.0;
+    scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
+
+    m_sliderTxLevel->SetValue(g_txLevel);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
     fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
@@ -3646,7 +3654,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         // This may be better as a pipeline step but would also add additional
         // complexity (i.e. additional decision steps to let through the sine wave
         // vs. regular TX).
-        auto txLevel = g_txLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+        auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
         for (unsigned long index = 0; index < size; index++)
         {
             auto carrierSample = txLevel * sin(2 * M_PI * (1500) * cbData->tuneSineWaveSampleNumber / sr);
