@@ -1601,29 +1601,32 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          }
 
          // Synchronize changes with Filter dialog
-         auto sliderVal = 0.0;
-         if (txState)
+         if (m_filterDialog != nullptr)
          {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
-         }
-         else
-         {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-         }
+             // Sync Filter dialog as well
+             m_filterDialog->syncVolumes();
 
-         if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
-         {
-             m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             m_sliderMicSpkrLevel->Refresh();
-             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
-             m_txtMicSpkrLevelNum->SetLabel(fmt);
-         
-             if (m_filterDialog != nullptr)
+             if (m_filterDialog->haveVolumesBeenChanged())
              {
-                 // Sync Filter dialog as well
-                 m_filterDialog->syncVolumes();
-             }
-        }
+                auto sliderVal = 0.0;
+                if (txState)
+                {
+                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
+                }
+                else
+                {
+                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+                }
+
+                if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
+                {
+                    m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+                    m_sliderMicSpkrLevel->Refresh();
+                    wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
+                    m_txtMicSpkrLevelNum->SetLabel(fmt);
+                }
+            }
+         }
 
         // SNR text box and gauge ------------------------------------------------------------
 

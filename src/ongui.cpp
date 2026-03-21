@@ -1074,11 +1074,6 @@ void MainFrame::togglePTT(void) {
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
-
-        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-        CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
-        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
-        m_txtMicSpkrLevelNum->SetLabel(fmtString);
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
@@ -1193,11 +1188,7 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
-        
-        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
-        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
-        m_txtMicSpkrLevelNum->SetLabel(fmtString);
-        
+                
         if (wxGetApp().m_pttInSerialPort)
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
@@ -1220,11 +1211,21 @@ void MainFrame::togglePTT(void) {
     if (newTx)
     {
         micSpeakerBox->SetLabel("Mic &Level");
+
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
     else
     {
         micSpeakerBox->SetLabel("Speaker &Level");
+
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
+
+    CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
