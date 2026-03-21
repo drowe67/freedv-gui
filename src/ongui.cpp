@@ -1248,7 +1248,7 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
     // Enable tuning carrier
     g_rxUserdata->tuneSineWaveSampleNumber = 0;
-    g_rxUserdata->isTuning.store(true, std::memory_order_release);
+    g_rxUserdata->isTuning.store(newTx, std::memory_order_release);
 
     wxString fmtString;
     if (newTx)
