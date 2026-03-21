@@ -1265,6 +1265,10 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
+
+    // Make sure focus on Tune button is actually cleared once tune state is switched.
+    // Seems to be a common problem on some Linux systems for some reason.
+    m_auiNbookCtrl->SetFocus();
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
