@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
     * Add SNR plot to main window. (PR #1250)
+    * Add Tune button to allow tuning antennas/rigs. (PR #1259)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
