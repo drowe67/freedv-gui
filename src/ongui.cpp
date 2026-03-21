@@ -1216,6 +1216,15 @@ void MainFrame::togglePTT(void) {
     // Additionally, tuning during normal TX is verboten.
     m_cboReportFrequency->Enable(!newTx);
     m_btnTogTune->Enable(!newTx);
+
+    if (newTx)
+    {
+        micSpeakerBox->SetLabel("Mic &Level");
+    }
+    else
+    {
+        micSpeakerBox->SetLabel("Speaker &Level");
+    }
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
@@ -1245,11 +1254,13 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     {
         m_sliderTxLevel->SetValue(g_tuneLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
+        m_txLevelBox->SetLabel("Tune &Attenuation");
     }
     else
     {
         m_sliderTxLevel->SetValue(g_txLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+        m_txLevelBox->SetLabel("TX &Attenuation");
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
