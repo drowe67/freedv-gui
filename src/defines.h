@@ -59,7 +59,7 @@
 #define NO_SNR_VAL (-10)
 #define MAX_SNR_VAL (40)
 #define SNR_PLOT_SECONDS (180)
-#define SNR_PLOT_SECOND_SEGMENTS (10)
+#define SNR_PLOT_SECOND_SEGMENTS (6)
 #define SNR_PLOT_DT (0.1)
 
 // sample rate I/O & conversion constants

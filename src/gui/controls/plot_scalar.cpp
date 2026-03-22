@@ -478,7 +478,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     // Horizontal gridlines
 
     if (drawPlotLines) plotCtx->SetPen(m_penDotDash);
-    for(a=m_a_min; a<m_a_max; ) 
+    for(a=m_a_min; a<=m_a_max; ) 
     {
         if (m_logy) 
         {
@@ -504,7 +504,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
                 {
                     top -= text_h/2;
                 }
-                else if ((a + m_graticule_a_step) >= m_a_max)
+                else if ((a + m_graticule_a_step) > m_a_max)
                 {
                     top += text_h/2;
                 }

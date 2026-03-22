@@ -1482,7 +1482,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     
     // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER)
+    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -1648,7 +1648,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR)
+        if (timerId == ID_TIMER_SNR && !txState)
         {
             float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
             snr = std::min(snr, (float)MAX_SNR_VAL);
