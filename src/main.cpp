@@ -933,7 +933,9 @@ setDefaultMode:
     }
 
     // Enable/disable FreeDV Reporter quick options
-    m_reporterHidden->Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+    m_reporterHidden->Enable(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
     
     // Ensure that sound card count is correct. Otherwise the Audio Options won't show
     // the correct devices prior to start.

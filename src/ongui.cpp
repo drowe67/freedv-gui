@@ -214,7 +214,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
-        m_reporterHidden->Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+        m_reporterHidden->Enable(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
 
         // Update reporting list.
         updateReportingFreqList_();
