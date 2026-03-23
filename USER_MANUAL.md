@@ -742,6 +742,13 @@ sudo systemctl disable ModemManager
 sudo systemctl mask ModemManager
 ```
 
+## I'm using OmniRig and have problems with rig control
+
+If you're using OmniRig and have problems getting rig control to work, please attempt
+to update the INI files for OmniRig. These can be found by going [here](https://dxatlas.com/Download.asp)
+and clicking on the "INI files for OmniRig" link. There may also be a newer OmniRig version
+available at that same link which could work better if you are running an older version.
+
 ## I need help with my radio or rig interface
 
 There are many radios, many computers, and many sound cards.  It is
