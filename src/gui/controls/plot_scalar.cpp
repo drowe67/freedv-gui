@@ -54,7 +54,8 @@ PlotScalar::PlotScalar(wxWindow* parent,
                        int    mini,               // true for mini-plot - don't draw graticule
                        const char* plotName,
                        bool halfPlot,
-                       float defaultVal)
+                       float defaultVal,
+                       bool disableFirstLastLabels)
     : PlotPanel(parent, plotName)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
@@ -65,6 +66,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     plotLines_ = nullptr;
     addedPoints_ = 0;
     halfPlot_ = halfPlot;
+    disableFirstLastLabels_ = disableFirstLastLabels;
 
     int i;
 
@@ -470,7 +472,11 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
                 {
                     left -= text_w/2;
                 }
-                ctx->DrawText(buf, left, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+                
+                if (!disableFirstLastLabels_ || (t > 0 && t < m_t_secs))
+                {
+                    ctx->DrawText(buf, left, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+                }
             }
         }
     }
@@ -511,7 +517,11 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
                 snprintf(buf, STR_LENGTH, m_a_fmt, a);
                 GetTextExtent(buf, &text_w, &text_h);
-                ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
+                
+                if (!disableFirstLastLabels_ || (a > m_a_min && a < m_a_max))
+                {
+                    ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
+                }
             }
         }
  
