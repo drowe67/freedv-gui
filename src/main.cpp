@@ -1648,7 +1648,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR && !txState)
+        if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
         {
             float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
             snr = std::min(snr, (float)MAX_SNR_VAL);
