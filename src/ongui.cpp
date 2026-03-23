@@ -1631,10 +1631,10 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 
     if (m_reporterHidden->GetValue())
     {
-        m_reporterHidden->SetLabel("Show");
+        m_reporterHidden->SetLabel("Turn On");
     }
     else
     {
-        m_reporterHidden->SetLabel("Hide");
+        m_reporterHidden->SetLabel("Turn Off");
     }
 }

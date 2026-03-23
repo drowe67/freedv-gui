@@ -546,7 +546,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FreeDV Reporter"), wxDefaultPosition, wxSize(100,-1));
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
-    m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Hide"), wxDefaultPosition, wxDefaultSize, 0);
+    m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
     m_reporterHidden->SetToolTip(_("Removes self from other FreeDV Reporter users when enabled."));
     sbSizerReporterBox->Add(m_reporterHidden, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
