@@ -44,7 +44,8 @@ class PlotScalar: public PlotPanel
                int   mini,
                const char* plotName = "",
                bool halfPlot = false,
-               float defaultVal = 0
+               float defaultVal = 0,
+               bool disableFirstLastLabels = false
                );
         ~PlotScalar();
          void add_new_sample(float sample);
@@ -82,6 +83,7 @@ class PlotScalar: public PlotPanel
          int      leftOffset_;
          int      bottomOffset_;
          bool halfPlot_;
+         bool disableFirstLastLabels_;
 
          wxBitmap* plotArea_;
          wxImage* plotLines_;
