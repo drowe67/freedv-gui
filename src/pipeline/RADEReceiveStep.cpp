@@ -47,6 +47,8 @@
 
 #include "../os/os_interface.h"
 
+#include "freedv_api.h" // for COMP
+
 using namespace std::chrono_literals;
 
 #if !defined(DISABLE_UNIT_TEST)
@@ -56,7 +58,45 @@ extern wxString utRxFeatureFile;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn)
+// reimplementations of below to use RADE_COMP instead of COMP.
+inline static RADE_COMP cmult(RADE_COMP a, RADE_COMP b)
+{
+    RADE_COMP res;
+
+    res.real = a.real*b.real - a.imag*b.imag;
+    res.imag = a.real*b.imag + a.imag*b.real;
+
+    return res;
+}
+
+inline static float cabsolute(RADE_COMP a)
+{
+    return sqrtf((a.real * a.real) + (a.imag * a.imag) );
+}
+
+static void freq_shift_coh(RADE_COMP rx_fdm_fcorr[], RADE_COMP rx_fdm[], float foff, float Fs, RADE_COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING
+{
+    RADE_COMP  foff_rect;
+    float mag;
+    int   i;
+
+    foff_rect.real = cosf(2.0*M_PI*foff/Fs);
+    foff_rect.imag = sinf(2.0*M_PI*foff/Fs);
+    for(i=0; i<nin; i++) {
+	*foff_phase_rect = cmult(*foff_phase_rect, foff_rect);
+	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
+    }
+
+    /* normalise digital oscillator as the magnitude can drift over time */
+
+    mag = cabsolute(*foff_phase_rect);
+    foff_phase_rect->real /= mag;
+    foff_phase_rect->imag /= mag;
+}
+
+RADEReceiveStep::RADEReceiveStep(
+    struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn,
+    realtime_fp<float()> const& freqOffsetFn)
     : dv_(dv)
     , fargan_(fargan)
     , pendingFeatures_(nullptr)
@@ -65,6 +105,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , textPtr_(textPtr)
     , syncFn_(syncFn)
     , exitingFeatureThread_(false)
+    , freqOffsetFn_(freqOffsetFn)
 {
     assert(syncState_.is_lock_free());
 
@@ -99,10 +140,17 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 
     pendingFeatures_ = new float[NB_TOTAL_FEATURES];
     assert(pendingFeatures_ != nullptr);
+
+    rxFdmOffset_ = new RADE_COMP[rade_nin_max(dv_)];
+    assert(rxFdmOffset_ != nullptr);
+    
+    rxFreqOffsetPhaseRectObjs_.real = cos(0.0);
+    rxFreqOffsetPhaseRectObjs_.imag = sin(0.0);
 }
 
 RADEReceiveStep::~RADEReceiveStep()
 {
+    delete[] rxFdmOffset_;
     delete[] inputBuf_;
     delete[] inputBufCplx_;
     delete[] featuresOut_;
@@ -156,11 +204,14 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             inputBufCplx_[i].imag = 0.0;
         }
 
+        // Optional frequency shifting
+        freq_shift_coh(rxFdmOffset_, inputBufCplx_, freqOffsetFn_(), RADE_MODEM_SAMPLE_RATE, &rxFreqOffsetPhaseRectObjs_, nin);
+        
         // RADE processing (input signal->features).
         int hasEooOut = 0;
 
         FREEDV_BEGIN_REALTIME_UNSAFE
-            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, rxFdmOffset_);
         FREEDV_END_REALTIME_UNSAFE
 
         if (hasEooOut && textPtr_ != nullptr)

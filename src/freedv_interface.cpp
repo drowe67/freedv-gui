@@ -820,7 +820,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
-	    });
+	    }, getFreqOffsetFn);
         rxStep->setStateObj(this);
         rxStep->setRxStateFn(getRxStateFn);
 
