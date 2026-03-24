@@ -101,7 +101,7 @@ void MinimalTxRxThread::initializePipeline_()
             MinimalTxRxThread* thisObj = (MinimalTxRxThread*)step->getStateObj();
             thisObj->snr_.store(step->getSnr(), std::memory_order_release);
             thisObj->sync_.store(step->getSync(), std::memory_order_release); 
-        });
+        }, +[]() FREEDV_NONBLOCKING { return 0.0f; /* no freq shift */ });
         radeRxStep->setStateObj(this);
         pipeline_->appendPipelineStep(radeRxStep);
       
