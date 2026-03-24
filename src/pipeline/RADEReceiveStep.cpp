@@ -32,6 +32,7 @@
 //
 //=========================================================================
 
+#include <math.h>
 #include <cassert>
 #include <functional>
 #include "RADEReceiveStep.h"
