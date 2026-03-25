@@ -133,7 +133,7 @@ int RADEReceiveStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 
 short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = getOutputSampleRate();
     *numOutputSamples = 0;
     
     inputSampleFifo_.write(inputSamples, numInputSamples);

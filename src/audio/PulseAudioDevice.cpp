@@ -105,7 +105,7 @@ void PulseAudioDevice::start()
     buffer_attr.tlength = pa_usec_to_bytes(PULSE_TARGET_LATENCY_US, &sample_specification);
     buffer_attr.maxlength = (uint32_t)-1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
-    buffer_attr.minreq = (uint32_t) -1;
+    buffer_attr.minreq = buffer_attr.tlength; //(uint32_t) -1;
     buffer_attr.fragsize = buffer_attr.tlength;
     
     // Stream flags
@@ -420,21 +420,24 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
 {
-    if (length > 0)
+    PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+    while (length > 0)
     {
-        // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
-        int numSamples = length / sizeof(short);
-        short *data = (short*)alloca(length); // auto-freed on exit
-        assert(data != nullptr);
-        memset(data, 0, length);
+        size_t writeLength = std::min(length, (size_t)(thisObj->getSampleRate() * thisObj->getNumChannels() * PULSE_TARGET_LATENCY_US * sizeof(short) / 1000000));
 
-        PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+        // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
+        short *data = nullptr;
+        pa_stream_begin_write(s, (void**)&data, &writeLength);
+        assert(data != nullptr);
+        memset(data, 0, writeLength);
+        int numSamples = writeLength / sizeof(short);
 
         if (thisObj->onAudioDataFunction)
         {
             thisObj->onAudioDataFunction(*thisObj, data, numSamples / thisObj->getNumChannels(), thisObj->onAudioDataState);
         } 
-        pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
+        pa_stream_write(s, &data[0], writeLength, NULL, 0LL, PA_SEEK_RELATIVE);
+        length -= writeLength;
     }
 }
 
