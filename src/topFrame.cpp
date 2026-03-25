@@ -543,7 +543,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // FreeDV Reporter quick options
     //------------------------------
-    wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FreeDV Reporter"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FDV Reporting"), wxDefaultPosition, wxSize(100,-1));
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
