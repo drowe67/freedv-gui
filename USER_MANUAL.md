@@ -908,6 +908,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
+    * Add OmniRig troubleshooting to the user manual. (PR #1264)
 
 ## V2.2.1 February 2026
 
