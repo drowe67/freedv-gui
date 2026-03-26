@@ -1717,4 +1717,6 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
     {
         m_reporterHidden->SetLabel("Turn Off");
     }
+    
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
 }

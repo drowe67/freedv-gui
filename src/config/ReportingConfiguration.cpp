@@ -41,6 +41,7 @@ ReportingConfiguration::ReportingConfiguration()
     , pskReporterEnabled("/Reporting/PSKReporter/Enable", true)
         
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
+    , freedvReporterForcedOff("/Reporting/FreeDV/ForcedOff", false)
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
     , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
@@ -181,6 +182,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, pskReporterEnabled);
     
     load_(config, freedvReporterEnabled);
+    load_(config, freedvReporterForcedOff);
     load_(config, freedvReporterHostname);
     load_(config, freedvReporterBandFilter);
     load_(config, useMetricDistances);
@@ -236,6 +238,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, pskReporterEnabled);
     
     save_(config, freedvReporterEnabled);
+    save_(config, freedvReporterForcedOff);
     save_(config, freedvReporterHostname);
     save_(config, freedvReporterBandFilter);
     save_(config, useMetricDistances);

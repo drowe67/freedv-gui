@@ -944,6 +944,16 @@ setDefaultMode:
     m_reporterHidden->Enable(
         wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+    m_reporterHidden->SetValue(
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff);
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff)
+    {
+        m_reporterHidden->SetLabel(_("Turn On"));
+    }
+    else
+    {
+        m_reporterHidden->SetLabel(_("Turn Off"));
+    }
     
     // Ensure that sound card count is correct. Otherwise the Audio Options won't show
     // the correct devices prior to start.
