@@ -68,6 +68,7 @@ public:
     
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
+    ConfigurationDataElement<int> tuneLevel;
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
     ConfigurationDataElement<wxString> playFileFromRadioPath;

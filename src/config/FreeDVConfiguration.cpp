@@ -61,6 +61,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Misc. audio settings */
     , fifoSizeMs("/Audio/fifoSize_ms", (int)FIFO_SIZE)
     , transmitLevel("/Audio/transmitLevel", 0)
+    , tuneLevel("/Audio/tuneLevel", 0)
         
     /* Recording settings */
     , playFileToMicInPath("/File/playFileToMicInPath", _(""))
@@ -151,6 +152,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, fifoSizeMs);
     load_(config, transmitLevel);
+    load_(config, tuneLevel);
     
     load_(config, playFileToMicInPath);
     load_(config, playFileFromRadioPath);
@@ -276,6 +278,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, fifoSizeMs);
     save_(config, transmitLevel);
+    save_(config, tuneLevel);
     
     save_(config, playFileToMicInPath);
     save_(config, playFileFromRadioPath);
