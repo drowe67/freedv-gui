@@ -110,6 +110,8 @@ float               g_avmag_spectrum[MODEM_STATS_NSPEC];
 // TX level for attenuation
 int g_txLevel = 0;
 std::atomic<float> g_txLevelScale;
+int g_tuneLevel = 0;
+std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -767,9 +769,15 @@ void MainFrame::loadConfiguration_()
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    m_sliderTxLevel->SetValue(g_txLevel);
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
+
+    g_tuneLevel = wxGetApp().appConfiguration.tuneLevel;
+    dbLoss = g_tuneLevel / 10.0;
+    scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
+
+    m_sliderTxLevel->SetValue(g_txLevel);
     
     m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
     fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
@@ -1094,7 +1102,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
 
     // Add SNR window
-    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL);
+    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, true);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
@@ -1482,7 +1490,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     
     // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER)
+    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -1593,29 +1601,32 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          }
 
          // Synchronize changes with Filter dialog
-         auto sliderVal = 0.0;
-         if (txState)
+         if (m_filterDialog != nullptr)
          {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
-         }
-         else
-         {
-             sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-         }
+             // Sync Filter dialog as well
+             m_filterDialog->syncVolumes();
 
-         if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
-         {
-             m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             m_sliderMicSpkrLevel->Refresh();
-             wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
-             m_txtMicSpkrLevelNum->SetLabel(fmt);
-         
-             if (m_filterDialog != nullptr)
+             if (m_filterDialog->haveVolumesBeenChanged())
              {
-                 // Sync Filter dialog as well
-                 m_filterDialog->syncVolumes();
-             }
-        }
+                auto sliderVal = 0.0;
+                if (txState)
+                {
+                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
+                }
+                else
+                {
+                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+                }
+
+                if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
+                {
+                    m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+                    m_sliderMicSpkrLevel->Refresh();
+                    wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
+                    m_txtMicSpkrLevelNum->SetLabel(fmt);
+                }
+            }
+         }
 
         // SNR text box and gauge ------------------------------------------------------------
 
@@ -1648,7 +1659,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR)
+        if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
         {
             float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
             snr = std::min(snr, (float)MAX_SNR_VAL);
@@ -2408,6 +2419,14 @@ void MainFrame::performFreeDVOn_()
 
             if (m_RxRunning)
             {
+                // Enable Tune button if TX is valid.
+                if (g_nSoundCards > 1)
+                {
+                    executeOnUiThreadAndWait_([&]() {
+                        m_btnTogTune->Enable(true);
+                    });
+                }
+
                 // attempt to start PTT ......            
                 if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                 {
@@ -2542,6 +2561,7 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_sliderMicSpkrLevel->Enable(false);
+        m_btnTogTune->Enable(false);
 
         m_plotTimer.Stop();
         m_plotWaterfallTimer.Stop();
@@ -3629,24 +3649,47 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     cbData->outfifo1->read(tmpOutput, toRead);
     auto numChannels = dev.getNumChannels();
     auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-    for (size_t count = 0; count < size; count++, audioData += numChannels)
-    {
-        auto output = (count < toRead) ? tmpOutput[count] : 0;
+    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    auto sr = dev.getSampleRate();
 
-        // write signal to all channels to start. This is so that
-        // the compiler can optimize for the most common case.
-        for (auto j = 0; j < numChannels; j++)
+    if (isTuning)
+    {
+        // This may be better as a pipeline step but would also add additional
+        // complexity (i.e. additional decision steps to let through the sine wave
+        // vs. regular TX).
+        auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+        for (unsigned long index = 0; index < size; index++)
         {
-            audioData[j] = output;
+            // Center of RADE signal is actually 1475, not 1500 Hz.
+            auto carrierSample = txLevel * sin(2 * M_PI * (1475) * cbData->tuneSineWaveSampleNumber / sr);
+            for (int i = 0; i < numChannels; i++)
+            {
+                *audioData++ = carrierSample;
+            }
+            cbData->tuneSineWaveSampleNumber = (cbData->tuneSineWaveSampleNumber + 1) % sr;
         }
-                    
-        // If VOX tone is enabled, go back through and add the VOX tone
-        // on the left channel.
-        if (enableVoxTone)
+    }
+    else
+    {
+        for (size_t count = 0; count < size; count++, audioData += numChannels)
         {
-            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/dev.getSampleRate();
-            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+            auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+            // write signal to all channels to start. This is so that
+            // the compiler can optimize for the most common case.
+            for (auto j = 0; j < numChannels; j++)
+            {
+                audioData[j] = output;
+            }
+                        
+            // If VOX tone is enabled, go back through and add the VOX tone
+            // on the left channel.
+            if (enableVoxTone)
+            {
+                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
+                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+            }
         }
     }
 }

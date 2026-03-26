@@ -62,6 +62,15 @@ class FilterDlg : public wxDialog
         
         void syncVolumes();
 
+        bool haveVolumesBeenChanged()
+        {
+            // Clear flag every time it's queried so we don't repeatedly try
+            // to sync.
+            bool result = volsChanged_;
+            volsChanged_ = false;
+            return result;
+        }
+
     protected:
         // Handlers for events.
         void    OnOK(wxCommandEvent& event);
@@ -173,6 +182,8 @@ class FilterDlg : public wxDialog
  
         bool          *m_newMicInFilter;
         bool          *m_newSpkOutFilter;
+
+        bool volsChanged_;
 private:
         void updateControlState();
 };
