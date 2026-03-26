@@ -450,6 +450,7 @@ class MainFrame : public TopFrame
         void OnCloseCallsignList( wxCommandEvent& event ) override;
 
         void OnToggleReporterVisibility (wxCommandEvent& event) override;
+        void OnTogBtnTune(wxCommandEvent& event) override;
         
     private:
         const wxString SNR_FORMAT_STR;
