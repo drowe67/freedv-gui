@@ -45,20 +45,7 @@ This document describes how to build the FreeDV GUI program for various operatin
 
 ## Running FreeDV on Linux
 
-1. Install PyTorch, TorchAudio and matplotlib Python packages. Some distros have packages for one or more of these,
-   but you can also use pip in a Python virtual environment (recommended to ensure the latest versions):
-
-   ```
-   $ cd freedv-gui
-   $ python3 -m venv rade-venv
-   $ . ./rade-venv/bin/activate
-   (rade-venv) $ pip3 install torch --index-url https://download.pytorch.org/whl/cpu
-   (rade-venv) $ pip3 install matplotlib
-   ```
-
-   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments. Python 3.9+ is also required for PyTorch to work.*
-
-2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
+1. Build FreeDV to make sure the correct dependencies are linked in:
 
    ```
    (rade-venv) $ pwd
@@ -66,22 +53,13 @@ This document describes how to build the FreeDV GUI program for various operatin
    (rade-venv) $ ./build_linux.sh
    ```
 
-3. Make sure FreeDV can find the ML model:
-
-   ```
-   (rade-venv) $ pwd
-   /home/<user>/freedv-gui
-   (rade-venv) $ cd build_linux
-   (rade-venv) $ ln -s $(pwd)/rade_src/model19_check3 model19_check3
-   ```
-
-4. Execute FreeDV:
+2. Execute FreeDV:
 
    ```
    (rade-venv) $ pwd
    /home/<user>/freedv-gui/build_linux
    (rade-venv) $ export GDK_BACKEND=x11 # optional, see (*) below
-   (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
+   (rade-venv) $ src/freedv
    ```
 
 (*) If your Linux distribution and/or desktop environment uses Wayland, FreeDV will always open in the middle 
@@ -141,36 +119,14 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 
 ### Instructions
 
-1. Install WINE (example commands for Ubuntu below):
-
-```
-    sudo dpkg --add-architecture i386
-    sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
-    sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
-    sudo apt-get update
-    sudo apt install -y --install-recommends winehq-staging
-    WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
-```
-
-2. Install Python inside the WINE environment:
-
-```
-    export WINEPREFIX=`pwd`/wine-env
-    wget https://www.python.org/ftp/python/3.14.3/python-3.14.3-amd64.exe
-    WINEARCH=win64 DISPLAY= wine ./python-3.14.3-amd64.exe
-    DISPLAY= wine c:\\Program\ Files\\Python314\\Scripts\\pip.exe install numpy==2.3.5
-```
-
-(*Note: if using WSL2, you will need to choose "Customize Installation", skip "Optional Features" (hit Next), and then in "Advanced Options" check "Install Python 3.14 for all users" inside Python setup.*)
-
-3. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
-4. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
-5. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
-6. Create a build folder inside freedv-gui: `mkdir build_windows`
-7. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python314 ..`
+1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
+2. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
+3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
+4. Create a build folder inside freedv-gui: `mkdir build_windows`
+5. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake ..`
    * Valid architectures are: aarch64 (64 bit ARM), x86_64 (64 bit Intel/AMD)
-8. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
-9. Create FreeDV installer: `make package`
+6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
+7. Create FreeDV installer: `make package`
 
 ## Building and installing on macOS
 
@@ -237,4 +193,3 @@ Limitations:
 
 1. The best results are obtained if having FreeDV build all required dependencies itself (`BUILD_DEPS=1`). The optimization process 
    is unable to touch already-compiled dyanmic libraries, so performance gains will likely be less without this option.
-2. On that same note, this will not touch most of the RADE modem due to its use of Python. This may change in future releases.

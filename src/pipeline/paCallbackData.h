@@ -26,6 +26,8 @@ typedef struct paCallBackData
         , spkOutEQEnable(false)
         , leftChannelVoxTone(false)
         , voxTonePhase(0.0)
+        , isTuning(false)
+        , tuneSineWaveSampleNumber(0)
     {
         // empty
     }
@@ -62,6 +64,10 @@ typedef struct paCallBackData
     std::unique_ptr<short[]> tmpReadTxBuffer_;
     std::unique_ptr<short[]> tmpWriteRxBuffer_;
     std::unique_ptr<short[]> tmpWriteTxBuffer_;
+
+    // Tune state
+    std::atomic<bool> isTuning;
+    int tuneSineWaveSampleNumber;
 } paCallBackData;
 
 #endif // AUDIO_PIPELINE_PA_CALLBACK_DATA_H

@@ -57,6 +57,7 @@ private:
     bool freqOnly_;
     int rigResponseTime_;
     bool destroying_;
+    bool pttSet_;
 
     void connectImpl_();
     void disconnectImpl_();

@@ -40,6 +40,8 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
+extern int g_tuneLevel;
+extern std::atomic<float> g_tuneLevelScale;
 
 extern wxConfigBase *pConfig;
 extern std::atomic<bool> endingTx;
@@ -114,6 +116,14 @@ void MainFrame::OnToolsEasySetup(wxCommandEvent&)
 void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 {
     event.Enable(!m_RxRunning);
+}
+
+void MainFrame::OnActivateWindow(wxActivateEvent&)
+{
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->closeTooltip();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -742,15 +752,38 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeTxLevel( wxScrollEvent& )
 {
-    g_txLevel = m_sliderTxLevel->GetValue();
-    float dbLoss = g_txLevel / 10.0;
-    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+    bool isTuning = m_btnTogTune->GetValue();
+    wxString fmtString;
 
-    wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+    if (isTuning)
+    {
+        g_tuneLevel = m_sliderTxLevel->GetValue();
+        float dbLoss = g_tuneLevel / 10.0;
+        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+        g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
+
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
+    }
+    else
+    {
+        g_txLevel = m_sliderTxLevel->GetValue();
+        float dbLoss = g_txLevel / 10.0;
+        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+        g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+    }
+
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+    if (isTuning)
+    {
+        wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
+    }
+    else
+    {
+        wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -883,15 +916,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
     else
-    {
-        // wxWidgets should already be doing the below logic,
-        // but for some reason this intermittently doesn't happen
-        // on Windows. Just to be sure, we force the correct state
-        // here (similar to what's already done for ending TX while
-        // using the voice keyer).
-        m_btnTogPTT->SetValue(!g_tx.load(std::memory_order_acquire));
-        m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-        
+    {        
         togglePTT();
     }
     event.Skip();
@@ -1049,11 +1074,6 @@ void MainFrame::togglePTT(void) {
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
-
-        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
-        CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
-        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
-        m_txtMicSpkrLevelNum->SetLabel(fmtString);
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
@@ -1168,16 +1188,87 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
-        
-        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
-        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
-        m_txtMicSpkrLevelNum->SetLabel(fmtString);
-        
+                
         if (wxGetApp().m_pttInSerialPort)
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
     }
+    
+    // wxWidgets should already be doing the below logic,
+    // but for some reason this intermittently doesn't happen
+    // on Windows. Just to be sure, we force the correct state
+    // here (similar to what's already done for ending TX while
+    // using the voice keyer).
+    m_btnTogPTT->SetValue(newTx);
+    m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+    
+    // The Report Frequency drop-down should not be modifiable during TX.
+    // Additionally, tuning during normal TX is verboten.
+    m_cboReportFrequency->Enable(!newTx);
+    m_btnTogTune->Enable(!newTx);
+
+    if (newTx)
+    {
+        micSpeakerBox->SetLabel("Mic &Level");
+
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    }
+    else
+    {
+        micSpeakerBox->SetLabel("Speaker &Level");
+
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
+        wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    }
+
+    CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
+}
+
+void MainFrame::OnTogBtnTune(wxCommandEvent&)
+{
+    // Ensure background is correct for button.
+    bool newTx = m_btnTogTune->GetValue();
+    m_btnTogTune->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
+
+    // Update PTT state
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    {
+        wxGetApp().rigPttController->ptt(newTx);
+    }
+
+    // Disable actual TX controls if needed
+    m_togBtnOnOff->Enable(!newTx);
+    m_togBtnVoiceKeyer->Enable(!newTx);
+    m_btnTogPTT->Enable(!newTx);
+    m_cboReportFrequency->Enable(!newTx);
+
+    // Enable tuning carrier
+    g_rxUserdata->tuneSineWaveSampleNumber = 0;
+    g_rxUserdata->isTuning.store(newTx, std::memory_order_release);
+
+    wxString fmtString;
+    if (newTx)
+    {
+        m_sliderTxLevel->SetValue(g_tuneLevel);
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
+        m_txLevelBox->SetLabel("Tune &Attenuation");
+    }
+    else
+    {
+        m_sliderTxLevel->SetValue(g_txLevel);
+        fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
+        m_txLevelBox->SetLabel("TX &Attenuation");
+    }
+
+    m_txtTxLevelNum->SetLabel(fmtString);
+
+    // Make sure focus on Tune button is actually cleared once tune state is switched.
+    // Seems to be a common problem on some Linux systems for some reason.
+    m_auiNbookCtrl->SetFocus();
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
@@ -1265,9 +1356,11 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     wxString dxGrid;
     wxString dxFreq;
     wxString logTime;
+    wxString snrString;
     wxDateTime logTimeObj = wxDateTime::Now();
     double dxFreqDouble = 0;
     uint64_t dxFreqHz = 0;
+    double snr = ILogger::UNKNOWN_SNR;
     
     auto selected = m_lastReportedCallsignListView->GetFirstSelected();
     if (wxGetApp().lastSelectedLoggingRow == MainApp::MAIN_WINDOW && selected != -1)
@@ -1276,8 +1369,10 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         dxCall = m_lastReportedCallsignListView->GetItemText(selected, 0);
         dxFreq = m_lastReportedCallsignListView->GetItemText(selected, 1);
         logTime = m_lastReportedCallsignListView->GetItemText(selected, 2);
+        snrString = m_lastReportedCallsignListView->GetItemText(selected, 3);
         
         wxNumberFormatter::FromString(dxFreq, &dxFreqDouble);
+        wxNumberFormatter::FromString(snrString, &snr);
         
         wxString::const_iterator end;
         logTimeObj.ParseDateTime(logTime, &end);
@@ -1329,7 +1424,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 
     // Show log contact dialog 
     auto logDialog = new LogEntryDialog(this);
-    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz);
+    logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz, (int)snr);
 }
 
 // Force manual resync, just in case demod gets stuck on false sync

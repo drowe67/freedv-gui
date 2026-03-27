@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install libexpat1
 
 COPY squashfs-root/ /app/
 
-LABEL com.flexradio.waveform.name=freedv-waveform
-LABEL com.flexradio.waveform.version=1.0.0
+LABEL com.flexradio.waveform.name=freedv-flex
+#LABEL com.flexradio.waveform.version=2.3.0
 
 ENV APPDIR=/app
 ENTRYPOINT exec /app/AppRun

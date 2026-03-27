@@ -103,6 +103,15 @@ class FreeDVReporterDialog : public wxFrame
             return model->getGridSquareForCallsign(callsign);
         }
         
+        void closeTooltip()
+        {
+            if (tipWindow_ != nullptr)
+            {
+                tipWindow_->Close();
+                tipWindow_ = nullptr;
+            }
+        }
+        
 #if defined(WIN32)
         void autosizeColumns();
 #endif // defined(WIN32)
@@ -190,8 +199,12 @@ class FreeDVReporterDialog : public wxFrame
         wxTimer* m_highlightClearTimer;
         wxTimer* m_deleteTimer;
 
+#if wxCHECK_VERSION(3,3,2)
+        wxTipWindow::Ref tipWindow_;
+#else
         wxTipWindow* tipWindow_;
-
+#endif // wxCHECK_VERSION(3,3,2)
+        
         // Menu bar and menu options
         wxMenuBar* menuBar_;
         wxMenu* showMenu_;

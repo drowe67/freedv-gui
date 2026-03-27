@@ -110,6 +110,7 @@ enum {
         ID_TIMER_SPEECH_IN,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
+        ID_TIMER_SNR,
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
@@ -289,6 +290,7 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelSpeechIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
+        PlotScalar*             m_panelSNR;
 
         bool                    m_RxRunning;
         
@@ -315,6 +317,7 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechInTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
+        wxTimer                 m_plotSNRTimer;
 #endif
 
     void destroy_fifos(void);
@@ -343,6 +346,7 @@ class MainFrame : public TopFrame
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
+        virtual void OnActivateWindow(wxActivateEvent& event) override;
         void OnExitClick(wxCommandEvent& event);
 
         void startTxStream();
@@ -444,6 +448,8 @@ class MainFrame : public TopFrame
 
         void OnOpenCallsignList( wxCommandEvent& event ) override;
         void OnCloseCallsignList( wxCommandEvent& event ) override;
+
+        virtual void OnTogBtnTune(wxCommandEvent& event) override;
         
     private:
         const wxString SNR_FORMAT_STR;

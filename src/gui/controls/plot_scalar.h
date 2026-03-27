@@ -42,7 +42,10 @@ class PlotScalar: public PlotPanel
                float graticule_a_step,
                const char  a_fmt[],
                int   mini,
-               const char* plotName = ""
+               const char* plotName = "",
+               bool halfPlot = false,
+               float defaultVal = 0,
+               bool disableFirstLastLabels = false
                );
         ~PlotScalar();
          void add_new_sample(float sample);
@@ -79,6 +82,8 @@ class PlotScalar: public PlotPanel
          int      m_logy;                      // plot graph on log scale
          int      leftOffset_;
          int      bottomOffset_;
+         bool halfPlot_;
+         bool disableFirstLastLabels_;
 
          wxBitmap* plotArea_;
          wxImage* plotLines_;

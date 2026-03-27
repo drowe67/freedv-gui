@@ -89,7 +89,7 @@ function Test-FreeDV {
     $rigctlPsi.UseShellExecute = $false
     $rigctlPsi.RedirectStandardError = $true
     $rigctlPsi.RedirectStandardOutput = $true
-    $rigctlPsi.FileName = "$current_loc\python.exe"
+    $rigctlPsi.FileName = "python.exe"
     $rigctlPsi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + "hamlibserver.py" + "`""
     $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $soxProcess.Id)

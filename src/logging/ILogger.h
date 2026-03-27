@@ -29,7 +29,9 @@
 class ILogger
 {
 public:
-    virtual void logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments) = 0;
+    static const int UNKNOWN_SNR = -99;
+    
+    virtual void logContact(std::chrono::time_point<std::chrono::system_clock> logTime, std::string dxCall, std::string dxGrid, std::string myCall, std::string myGrid, uint64_t freqHz, std::string reportRx, std::string reportTx, std::string name, std::string comments, int snr) = 0;
 };
 
 #endif // I_LOGGER_H

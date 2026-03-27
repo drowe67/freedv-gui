@@ -20,6 +20,8 @@
 //
 //==========================================================================
 
+#include <set>
+
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
@@ -228,6 +230,7 @@ wxString TabFreeAuiNotebook::SavePerspective() {
 bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     // Remove all tab ctrls (but still keep them in main index)
     const size_t tab_count = m_tabs.GetPageCount();
+    std::set<size_t> readdedTabs;
     for (size_t i = 0; i < tab_count; ++i) {
        wxWindow* wnd = m_tabs.GetWindowFromIdx(i);
 
@@ -246,6 +249,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     size_t sel_page = 0;
 
     wxString tabs = layout.BeforeFirst(wxT('@'));
+    wxAuiTabCtrl *dest_tabs = nullptr;
     while (1)
      {
        const wxString tab_part = tabs.BeforeFirst(wxT('|'));
@@ -267,7 +271,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
        new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
        new_tabs->m_tabCtrlHeight = m_tabCtrlHeight;
        new_tabs->m_tabs->SetFlags(m_flags);
-       wxAuiTabCtrl *dest_tabs = new_tabs->m_tabs;
+       dest_tabs = new_tabs->m_tabs;
 
        // create a pane info structure with the information
        // about where the pane should be added
@@ -295,6 +299,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
           wxAuiNotebookPage& page = m_tabs.GetPage(tab_idx);
           const size_t newpage_idx = dest_tabs->GetPageCount();
           dest_tabs->InsertPage(page.window, page, newpage_idx);
+          readdedTabs.insert(tab_idx);
 
           if (c == wxT('+')) activePage = newpage_idx;
           else if ( c == wxT('*')) sel_page = tab_idx;
@@ -308,6 +313,18 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     // Load the frame perspective
     const wxString frames = layout.AfterFirst(wxT('@'));
     m_mgr.LoadPerspective(frames);
+
+    // Reinsert tabs that weren't persisted before
+    assert(dest_tabs != nullptr); // We should have found/created at least one tab group already.
+    for (size_t i = 0; i < tab_count; ++i) {
+        if (readdedTabs.find(i) != readdedTabs.end())
+        {
+            continue;
+        }
+        wxAuiNotebookPage& page = m_tabs.GetPage(i);
+        const size_t newpage_idx = dest_tabs->GetPageCount();
+        dest_tabs->InsertPage(page.window, page, newpage_idx);
+    }
 
     // Force refresh of selection
     m_curPage = -1;
@@ -665,11 +682,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 0, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
-    wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
-    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
+    m_txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
+    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(m_txLevelBox, wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
+    m_sliderTxLevel = new wxSlider(m_txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
@@ -683,14 +700,19 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)0, 1), DECIBEL_STR);
  
-    m_txtTxLevelNum = new wxStaticText(txLevelBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_txtTxLevelNum = new wxStaticText(m_txLevelBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+
+    m_btnTogTune = new wxToggleButton(m_txLevelBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning."));
+    txLevelSizer->Add(m_btnTogTune, 1, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    m_btnTogTune->Enable(false); // disable by default
     
     rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
     
     // Mic/Speaker Level slider
-    wxStaticBox* micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
+    micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Speaker &Level"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
@@ -819,6 +841,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     this->Connect(wxEVT_PAINT, wxPaintEventHandler(TopFrame::topFrame_OnPaint));
     this->Connect(wxEVT_SIZE, wxSizeEventHandler(TopFrame::topFrame_OnSize));
     this->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::topFrame_OnUpdateUI));
+    this->Connect(wxEVT_ACTIVATE, wxActivateEventHandler(TopFrame::OnActivateWindow));
     this->Connect(wxEVT_SYS_COLOUR_CHANGED, wxSysColourChangedEventHandler(TopFrame::OnSystemColorChanged));
     this->Connect(m_menuItemExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnExit));
 
@@ -912,6 +935,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboLastReportedCallsigns->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
 
     m_auiNbookCtrl->Connect(wxEVT_AUINOTEBOOK_PAGE_CHANGING, wxAuiNotebookEventHandler(TopFrame::OnNotebookPageChanging), NULL, this);
+
+    m_btnTogTune->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -925,6 +950,7 @@ TopFrame::~TopFrame()
     this->Disconnect(wxEVT_PAINT, wxPaintEventHandler(TopFrame::topFrame_OnPaint));
     this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(TopFrame::topFrame_OnSize));
     this->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::topFrame_OnUpdateUI));
+    this->Disconnect(wxEVT_ACTIVATE, wxActivateEventHandler(TopFrame::OnActivateWindow));
     this->Disconnect(ID_EXIT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnExit));
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsEasySetup));
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsEasySetupUI));
@@ -1006,6 +1032,8 @@ TopFrame::~TopFrame()
     m_cboLastReportedCallsigns->Disconnect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_DROPDOWN, wxCommandEventHandler(TopFrame::OnOpenCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnCloseCallsignList), NULL, this);
+
+    m_btnTogTune->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

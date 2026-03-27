@@ -55,6 +55,13 @@
 #define WAVEFORM_PLOT_TIME  5                              // length or entire waveform on screen
 #define WAVEFORM_PLOT_BUF   ((int)(DT*WAVEFORM_PLOT_FS))   // number of new samples we plot per DT
 
+// SNR plot constants
+#define NO_SNR_VAL (-10)
+#define MAX_SNR_VAL (35)
+#define SNR_PLOT_SECONDS (180)
+#define SNR_PLOT_SECOND_SEGMENTS (6)
+#define SNR_PLOT_DT (0.1)
+
 // sample rate I/O & conversion constants
 
 #define SAMPLE_RATE         48000                          // 48 kHz sampling rate rec. as we can trust accuracy of sound card

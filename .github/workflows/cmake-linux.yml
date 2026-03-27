@@ -49,7 +49,7 @@ jobs:
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_rade build_codec2 build_rade_integ
+        make -j$(nproc) build_rade build_codec2
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
@@ -233,7 +233,15 @@ jobs:
         cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
         ./FreeDV-FlexRadio.AppImage --appimage-extract
         ls -lR squashfs-root
-        docker buildx build --output type=oci,compression=gzip,dest=freedv-waveform.tar.gz --tag=freedv-waveform .
+        export FREEDV_VERSION=`cat ${{github.workspace}}/build_linux/freedv-version.txt`
+        docker buildx build --label com.flexradio.waveform.version=$FREEDV_VERSION --output type=oci,compression=gzip,dest=freedv-waveform-${FREEDV_VERSION}.tar.gz --tag=freedv-waveform .
+
+    - name: Calculate waveform filename
+      shell: bash
+      id: flex-waveform-filename
+      working-directory: ${{github.workspace}}/src/integrations/flex
+      run: |
+          echo "FLEX_WAVEFORM_FILENAME=$(echo -n freedv-waveform*.tar.gz)" >> "$GITHUB_OUTPUT"
 
     - name: Upload AppImage
       uses: actions/upload-artifact@v4
@@ -246,14 +254,15 @@ jobs:
       uses: actions/upload-artifact@v4
       if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
       with:
-        name: freedv-waveform.tar.gz
-        path: ${{github.workspace}}/src/integrations/flex/freedv-waveform.tar.gz
+        name: ${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
+        path: ${{github.workspace}}/src/integrations/flex/${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
 
   test-appimage-fedora:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04-arm, ubuntu-24.04]
+        fedora-version: [42, 43]
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
@@ -274,7 +283,7 @@ jobs:
     - name: Start Fedora container
       shell: bash
       run: |
-          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
+          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:${{ matrix.fedora-version }}
 
     - name: Install rtkit for RT threading
       shell: bash
@@ -295,7 +304,15 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
+          sudo podman exec fedora-test sudo useradd -m -u $(id -u) github
+          sudo podman exec fedora-test sudo passwd -d github
+          sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chown github:github /run/user/$(id -u)
+          sudo podman exec fedora-test sudo systemctl restart polkit
+          sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
+          sudo podman exec fedora-test sudo systemctl start rtkit-daemon
+          sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE  github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
   test-appimage-ubuntu:
