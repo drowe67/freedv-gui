@@ -742,6 +742,13 @@ sudo systemctl disable ModemManager
 sudo systemctl mask ModemManager
 ```
 
+## I'm using OmniRig and have problems with rig control
+
+If you're using OmniRig and have problems getting rig control to work, please attempt
+to update the INI files for OmniRig. These can be found by going [here](https://dxatlas.com/Download.asp)
+and clicking on the "INI files for OmniRig" link. There may also be a newer OmniRig version
+available at that same link which could work better if you are running an older version.
+
 ## I need help with my radio or rig interface
 
 There are many radios, many computers, and many sound cards.  It is
@@ -892,6 +899,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
+    * Add Tune button to allow tuning antennas/rigs. (PR #1259)
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265)
 3. Build system:
@@ -901,6 +909,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
+    * Add OmniRig troubleshooting to the user manual. (PR #1264)
 
 ## V2.2.1 February 2026
 
