@@ -686,10 +686,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(m_txLevelBox, wxVERTICAL);
     
     wxBoxSizer* txBtnSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_btnTxLevelMM = new wxButton(m_txLevelBox, wxID_ANY, _("--"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("-"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _("+"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _("++"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelMM = new wxButton(m_txLevelBox, wxID_ANY, _("▼▼"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("▼"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _("▲"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _("▲▲"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     txBtnSizer->Add(m_btnTxLevelMM, 1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelM,  1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelP,  1, wxEXPAND, 0);
