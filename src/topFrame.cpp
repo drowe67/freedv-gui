@@ -685,18 +685,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(txLevelBox, wxVERTICAL);
     
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
-    m_sliderTxLevel->SetMinSize(wxSize(150,-1));
-    txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
-
-#if wxUSE_ACCESSIBILITY 
-    // Add accessibility class so that the values are read back correctly.
-    auto txSliderAccessibility = new LabelOverrideAccessible([&]() {
-        return m_txtTxLevelNum->GetLabel();
-    });
-    m_sliderTxLevel->SetAccessible(txSliderAccessibility);
-#endif // wxUSE_ACCESSIBILITY
+    wxBoxSizer* txBtnSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_btnTxLevelMM = new wxButton(txLevelBox, wxID_ANY, _("--"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelM  = new wxButton(txLevelBox, wxID_ANY, _("-"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelP  = new wxButton(txLevelBox, wxID_ANY, _("+"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelPP = new wxButton(txLevelBox, wxID_ANY, _("++"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    txBtnSizer->Add(m_btnTxLevelMM, 1, wxEXPAND, 0);
+    txBtnSizer->Add(m_btnTxLevelM,  1, wxEXPAND, 0);
+    txBtnSizer->Add(m_btnTxLevelP,  1, wxEXPAND, 0);
+    txBtnSizer->Add(m_btnTxLevelPP, 1, wxEXPAND, 0);
+    txLevelSizer->Add(txBtnSizer, 0, wxEXPAND, 0);
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)0, 1), DECIBEL_STR);
  
@@ -894,17 +892,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb700d->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
         
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_LINEDOWN, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_PAGEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_PAGEDOWN, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_THUMBRELEASE, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
+    m_btnTxLevelMM->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecrBig), NULL, this);
+    m_btnTxLevelM->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecr), NULL, this);
+    m_btnTxLevelP->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncr), NULL, this);
+    m_btnTxLevelPP->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncrBig), NULL, this);
     
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
@@ -992,15 +983,10 @@ TopFrame::~TopFrame()
     m_rb700d->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
         
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_LINEDOWN, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_PAGEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_PAGEDOWN, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_THUMBRELEASE, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
-    m_sliderTxLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
+    m_btnTxLevelMM->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecrBig), NULL, this);
+    m_btnTxLevelM->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecr), NULL, this);
+    m_btnTxLevelP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncr), NULL, this);
+    m_btnTxLevelPP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncrBig), NULL, this);
     
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);

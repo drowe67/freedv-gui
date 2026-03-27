@@ -767,7 +767,6 @@ void MainFrame::loadConfiguration_()
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
-    m_sliderTxLevel->SetValue(g_txLevel);
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
     

@@ -746,20 +746,27 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnChangeTxLevel()
+// applyTxLevel() - shared helper to apply g_txLevel and update the UI
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeTxLevel( wxScrollEvent& )
+void MainFrame::applyTxLevel()
 {
-    g_txLevel = m_sliderTxLevel->GetValue();
+    if (g_txLevel < -300) g_txLevel = -300;
+    if (g_txLevel > 0)    g_txLevel = 0;
+
     float dbLoss = g_txLevel / 10.0;
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
 
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
-    
+
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
 }
+
+void MainFrame::OnTxLevelDecrBig( wxCommandEvent& ) { g_txLevel -= 10; applyTxLevel(); }
+void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { g_txLevel -= 1;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { g_txLevel += 1;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncrBig( wxCommandEvent& ) { g_txLevel += 10; applyTxLevel(); }
 
 //-------------------------------------------------------------------------
 // OnChangeMicSpkrLevel()
