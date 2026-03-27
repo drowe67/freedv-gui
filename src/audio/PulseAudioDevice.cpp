@@ -105,7 +105,7 @@ void PulseAudioDevice::start()
     buffer_attr.tlength = pa_usec_to_bytes(PULSE_TARGET_LATENCY_US, &sample_specification);
     buffer_attr.maxlength = (uint32_t)-1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
-    buffer_attr.minreq = buffer_attr.tlength; //(uint32_t) -1;
+    buffer_attr.minreq = buffer_attr.tlength;
     buffer_attr.fragsize = buffer_attr.tlength;
     
     // Stream flags
@@ -421,13 +421,20 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
-    while (length > 0)
+    
+    while ((length = pa_stream_writable_size(s)) > 0 && (length != (uint32_t)-1))
     {
-        size_t writeLength = std::min(length, (size_t)(thisObj->getSampleRate() * thisObj->getNumChannels() * PULSE_TARGET_LATENCY_US * sizeof(short) / 1000000));
+        size_t writeLength = length;
 
         // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
         short *data = nullptr;
-        pa_stream_begin_write(s, (void**)&data, &writeLength);
+        if (pa_stream_begin_write(s, (void**)&data, &writeLength) != 0 || data == nullptr)
+        {
+            // PulseAudio didn't give us a block to write to for some reason.
+            log_warn("No memory block available to write audio to, will try again later");
+            break;
+        }
+
         assert(data != nullptr);
         memset(data, 0, writeLength);
         int numSamples = writeLength / sizeof(short);
@@ -436,8 +443,12 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
         {
             thisObj->onAudioDataFunction(*thisObj, data, numSamples / thisObj->getNumChannels(), thisObj->onAudioDataState);
         } 
-        pa_stream_write(s, &data[0], writeLength, NULL, 0LL, PA_SEEK_RELATIVE);
-        length -= writeLength;
+
+        if (pa_stream_write(s, &data[0], writeLength, NULL, 0LL, PA_SEEK_RELATIVE) != 0)
+        {
+            log_warn("Could not write audio to stream");
+            break;
+        }
     }
 }
 
