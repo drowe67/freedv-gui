@@ -452,6 +452,8 @@ class MainFrame : public TopFrame
 
         void OnOpenCallsignList( wxCommandEvent& event ) override;
         void OnCloseCallsignList( wxCommandEvent& event ) override;
+
+        virtual void OnTogBtnTune(wxCommandEvent& event) override;
         
     private:
         const wxString SNR_FORMAT_STR;
