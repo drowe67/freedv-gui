@@ -467,11 +467,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                     }
 
                     activeFreeDVSlices_.erase(sliceId);
-                    if (activeFreeDVSlices_.size() > 0)
-                    {
-                        activeSlice_ = *activeFreeDVSlices_.begin();
-                    }
-                    else
+                    if (activeFreeDVSlices_.size() == 0)
                     {
                         activeSlice_ = -1;
                     }
