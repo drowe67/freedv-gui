@@ -215,6 +215,11 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     if (optionsDlg->ShowModal() == wxOK)
     {
+        // Enable/disable FreeDV Reporter quick options
+        m_reporterHidden->Enable(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+
         // Update reporting list.
         updateReportingFreqList_();
     
@@ -1688,4 +1693,30 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
+}
+
+void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
+{
+    if (m_RxRunning && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+    {
+        if (m_reporterHidden->GetValue())
+        {
+            wxGetApp().m_sharedReporterObject->hideFromView();
+        }
+        else
+        {
+            wxGetApp().m_sharedReporterObject->showOurselves();
+        }
+    }
+
+    if (m_reporterHidden->GetValue())
+    {
+        m_reporterHidden->SetLabel("Turn On");
+    }
+    else
+    {
+        m_reporterHidden->SetLabel("Turn Off");
+    }
+    
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
 }
