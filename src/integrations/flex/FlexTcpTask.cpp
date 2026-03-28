@@ -426,7 +426,20 @@ void FlexTcpTask::processCommand_(std::string& command)
                         }
                         else 
                         {
+                            // Force current slice back to non-FreeDV mode if not TX slice
                             log_warn("Attempted to activate FDVU/FDVL from a second slice (id = %d, active = %d)", sliceId, activeSlice_);
+                            std::stringstream modeRevertCommand;
+                            if (sliceId != txSlice_)
+                            {
+                                modeRevertCommand << "slice set " << sliceId << " mode=" << (isLSB_ ? "LSB" : "USB");
+                                sendRadioCommand_(modeRevertCommand.str());
+                                return;
+                            }
+                            else if (activeSlice_ != txSlice_)
+                            {
+                                modeRevertCommand << "slice set " << activeSlice_ << " mode=" << (isLSB_ ? "LSB" : "USB");
+                                sendRadioCommand_(modeRevertCommand.str());
+                            }
                         }
 
                         // User wants to use the waveform.
