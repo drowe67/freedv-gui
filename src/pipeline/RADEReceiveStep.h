@@ -39,6 +39,7 @@
 #include <cstdio>
 #include <thread>
 #include <functional>
+#include <cmath>
 
 #include "IPipelineStep.h"
 #include "rade_api.h"
@@ -63,7 +64,12 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, realtime_fp<void(RADEReceiveStep*)> const& syncFn);
+    RADEReceiveStep(
+        struct rade* dv, 
+        FARGANState* fargan, 
+        rade_text_t textPtr, 
+        realtime_fp<void(RADEReceiveStep*)> const& syncFn,
+        realtime_fp<float()> const& freqOffsetFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -103,6 +109,10 @@ private:
    
     realtime_fp<std::atomic<int>*()> rxStateFn_;
     void* stateObj_;
+    
+    realtime_fp<float()> freqOffsetFn_;
+    RADE_COMP rxFreqOffsetPhaseRectObjs_;
+    RADE_COMP* rxFdmOffset_;
 
     void utFeatureThreadEntry_();
 };
