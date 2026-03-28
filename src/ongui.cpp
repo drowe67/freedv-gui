@@ -1259,12 +1259,10 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     if (newTx)
     {
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("Tune &Attenuation");
     }
     else
     {
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("TX &Attenuation");
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
