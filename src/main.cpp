@@ -211,6 +211,7 @@ wxConfigBase *pConfig = NULL;
 wxString testName;
 wxString utFreeDVMode;
 wxString utTxFile;
+wxString utTxOutFile;
 wxString utRxFile;
 wxString utTxFeatureFile;
 wxString utRxFeatureFile;
@@ -346,6 +347,17 @@ void MainApp::UnitTest_()
     constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
     if (testName == "tx")
     {
+        if (utTxOutFile != "")
+        {
+            SF_INFO recSf;
+            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            recSf.channels   = 1;
+            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+            g_sfRecFileFromModulator = sf_open((const char*)utTxOutFile.ToUTF8(), SFM_WRITE, &recSf);
+            g_recFileFromModulator = true;
+        }
+
         log_info("Transmitting %d times", utTxAttempts);
         for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
@@ -419,6 +431,12 @@ void MainApp::UnitTest_()
             std::mt19937 gen(rd());
             std::uniform_int_distribution<> distrib(0, 500);
             std::this_thread::sleep_for(5s + std::chrono::milliseconds(distrib(gen)));
+        }
+
+        if (g_sfRecFileFromModulator)
+        {
+            g_recFileFromModulator = false;
+            sf_close(g_sfRecFileFromModulator);
         }
     }
     else
@@ -507,6 +525,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
     parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
+    parser.AddOption("txoutfile", wxEmptyString, "In UT mode, records TX output to the given WAV file.");
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
@@ -558,6 +577,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("txfile", &utTxFile))
         {
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
+        }
+
+        if (parser.Found("txoutfile", &utTxOutFile))
+        {
+            log_info("Recording TX output to %s", (const char*)utTxOutFile.ToUTF8());
         }
 
         if (parser.Found("txtime", &utTxTimeSeconds))
