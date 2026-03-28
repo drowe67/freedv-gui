@@ -105,7 +105,10 @@ class TopFrame : public wxFrame
         wxStaticText* m_txtModeStatus;
 
         wxStaticText* m_txtTxLevelNum;
-        wxSlider* m_sliderTxLevel;
+        wxButton* m_btnTxLevelMM;
+        wxButton* m_btnTxLevelM;
+        wxButton* m_btnTxLevelP;
+        wxButton* m_btnTxLevelPP;
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
@@ -208,7 +211,10 @@ class TopFrame : public wxFrame
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
         
-        virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
+        virtual void OnTxLevelDecrBig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTxLevelDecr( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTxLevelIncr( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnTxLevelIncrBig( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeMicSpkrLevel( wxScrollEvent& event ) { event.Skip(); }
         

@@ -748,34 +748,34 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnChangeTxLevel()
+// applyTxLevel() - shared helper to apply g_txLevel and update the UI
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeTxLevel( wxScrollEvent& )
+void MainFrame::applyTxLevel()
 {
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
     if (isTuning)
     {
-        g_tuneLevel = m_sliderTxLevel->GetValue();
+        if (g_tuneLevel < -300) g_tuneLevel = -300;
+        if (g_tuneLevel > 0)    g_tuneLevel = 0;
         float dbLoss = g_tuneLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
-
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
     }
     else
     {
-        g_txLevel = m_sliderTxLevel->GetValue();
+        if (g_txLevel < -300) g_txLevel = -300;
+        if (g_txLevel > 0)    g_txLevel = 0;
         float dbLoss = g_txLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_txLevelScale.store(scaleFactor, std::memory_order_release);
-
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
-    
+
     if (isTuning)
     {
         wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
@@ -785,6 +785,11 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& )
         wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     }
 }
+
+void MainFrame::OnTxLevelDecrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel -= 10; else g_txLevel -= 10; applyTxLevel(); }
+void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel -= 1;  else g_txLevel -= 1;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel += 1;  else g_txLevel += 1;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel += 10; else g_txLevel += 10; applyTxLevel(); }
 
 //-------------------------------------------------------------------------
 // OnChangeMicSpkrLevel()
@@ -1253,15 +1258,11 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     wxString fmtString;
     if (newTx)
     {
-        m_sliderTxLevel->SetValue(g_tuneLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("Tune &Attenuation");
     }
     else
     {
-        m_sliderTxLevel->SetValue(g_txLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("TX &Attenuation");
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
