@@ -1516,14 +1516,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      else if (timerId == ID_TIMER_WATERFALL)
      {
           if (m_panelWaterfall->checkDT()) {
-              if (g_mode == FREEDV_MODE_RADE)
-              {
-                  m_panelWaterfall->setRxFreq(0);
-              }
-              else
-              {
-                  m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-              }
+              m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
               m_panelWaterfall->m_newdata = true;
               m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
               m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
@@ -1533,14 +1526,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (timerId == ID_TIMER_SPECTRUM)
       {
-          if (g_mode == FREEDV_MODE_RADE)
-          {
-              m_panelSpectrum->setRxFreq(0);
-          }
-          else
-          {
-              m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-          }
+          m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
     
           // Note: each element in this combo box is a numeric value starting from 1,
           // so just incrementing the selected index should get us the correct results.
@@ -3658,8 +3644,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
         for (unsigned long index = 0; index < size; index++)
         {
-            // Center of RADE signal is actually 1475, not 1500 Hz.
-            auto carrierSample = txLevel * sin(2 * M_PI * (1475) * cbData->tuneSineWaveSampleNumber / sr);
+            auto carrierSample = txLevel * sin(2 * M_PI * FDMDV_FCENTRE * cbData->tuneSineWaveSampleNumber / sr);
             for (int i = 0; i < numChannels; i++)
             {
                 *audioData++ = carrierSample;
