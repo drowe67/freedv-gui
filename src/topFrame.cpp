@@ -690,17 +690,21 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("▼"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _("▲"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _("▲▲"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelMM->SetToolTip(_("Decrease output by 1.0dB"));
+    m_btnTxLevelM ->SetToolTip(_("Decrease output by 0.1dB"));
+    m_btnTxLevelP ->SetToolTip(_("Increase output by 0.1dB"));
+    m_btnTxLevelPP->SetToolTip(_("Increase output by 1.0dB"));
     txBtnSizer->Add(m_btnTxLevelMM, 1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelM,  1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelP,  1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelPP, 1, wxEXPAND, 0);
-    txLevelSizer->Add(txBtnSizer, 0, wxEXPAND, 0);
-    
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)0, 1), DECIBEL_STR);
- 
+
     m_txtTxLevelNum = new wxStaticText(m_txLevelBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+
+    txLevelSizer->Add(txBtnSizer, 0, wxEXPAND, 0);
 
     m_btnTogTune = new wxToggleButton(m_txLevelBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning."));
