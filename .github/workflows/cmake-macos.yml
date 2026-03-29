@@ -86,14 +86,12 @@ jobs:
 
     - name: Workaround macOS permission issues
       run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
 
     - name: Make sure resource hogs aren't running
       shell: bash
       run: |
-          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
-          sudo mdutil -a -i off
-          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
 
     - name: Execute unit tests
       shell: bash
@@ -182,9 +180,7 @@ jobs:
     - name: Make sure resource hogs aren't running
       shell: bash
       run: |
-          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
-          sudo mdutil -a -i off
-          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
 
     #- name: Build instrumented freedv-gui
     #  shell: bash
@@ -275,14 +271,12 @@ jobs:
 
     - name: Workaround macOS permission issues
       run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
 
     - name: Make sure resource hogs aren't running
       shell: bash
       run: |
-          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.cloudd.plist
-          sudo mdutil -a -i off
-          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
 
     - name: Sanity check RADE
       shell: bash
