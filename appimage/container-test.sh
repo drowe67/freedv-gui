@@ -12,6 +12,7 @@ export DISPLAY=:99.0
 eval "$(dbus-launch --sh-syntax --exit-with-x11)"
 env
 ls -la $XDG_RUNTIME_DIR
+systemd-run --user --scope --shell
 systemctl --user enable --now pipewire-pulse.socket
 systemctl --user enable --now pipewire.service
 systemctl --user enable --now wireplumber.service
