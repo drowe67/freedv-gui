@@ -18,12 +18,14 @@ body:
               - "Linux"
               - "macOS"
               - "Windows"
+              - "FlexRadio 8xxx/Aurora"
+              - "FlexRadio 6xxx"
               - "Other (not supported)"
     - type: input
       id: platform-version
       attributes:
           label: Platform Version
-          description: What version of your operating system are you using?
+          description: What version of your operating system are you using? (For FlexRadio, use the SmartSDR version.)
       validations:
           required: true
     - type: input
