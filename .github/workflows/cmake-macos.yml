@@ -85,6 +85,7 @@ jobs:
       run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
 
     - name: Workaround macOS permission issues
+      timeout-minutes: 1
       run: |
           ${{github.workspace}}/ci/macos-set-mic-permissions.sh
 
@@ -174,8 +175,9 @@ jobs:
       run: ./build_macos_sound_drivers.sh
 
     - name: Workaround macOS permission issues
+      timeout-minutes: 1
       run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "BEGIN TRANSACTION; INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159); COMMIT;"
+          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
 
     - name: Make sure resource hogs aren't running
       shell: bash
@@ -270,6 +272,7 @@ jobs:
       run: ./build_macos_sound_drivers.sh
 
     - name: Workaround macOS permission issues
+      timeout-minutes: 1
       run: |
           ${{github.workspace}}/ci/macos-set-mic-permissions.sh
 
