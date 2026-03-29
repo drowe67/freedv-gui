@@ -313,6 +313,8 @@ jobs:
           sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
           sudo podman exec fedora-test sudo systemctl start rtkit-daemon
           sudo podman exec fedora-test sudo systemctl start user@$(id -u) || true
+          sudo podman exec fedora-test sudo systemctl status user@1001.service
+          sudo podman exec fedora-test sudo journalctl -xeu user@1001.service
           sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE  github /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
