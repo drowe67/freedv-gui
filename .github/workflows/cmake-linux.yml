@@ -420,9 +420,9 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
+          systemctl --user enable --now pipewire-pulse.socket
+          systemctl --user enable --now pipewire.service
+          systemctl --user enable --now wireplumber.service
           metacity --sm-disable --replace &
           sleep 5
           . ./rade-venv/bin/activate
@@ -616,9 +616,9 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
+          systemctl --user enable --now pipewire-pulse.socket
+          systemctl --user enable --now pipewire.service
+          systemctl --user enable --now wireplumber.service
           metacity --sm-disable --replace &
           sleep 5
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
