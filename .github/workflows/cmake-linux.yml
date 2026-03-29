@@ -312,6 +312,7 @@ jobs:
           sudo podman exec fedora-test sudo systemctl restart polkit
           sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
           sudo podman exec fedora-test sudo systemctl start rtkit-daemon
+          sudo podman exec fedora-test sudo setenforce 0
           sudo podman exec fedora-test sudo systemctl start user@$(id -u) || true
           sudo podman exec fedora-test sudo systemctl status user@1001.service
           sudo podman exec fedora-test sudo journalctl -xeu user@1001.service
