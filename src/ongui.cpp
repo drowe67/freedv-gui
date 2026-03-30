@@ -752,6 +752,20 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
     event.Skip();
 }
 
+int MainFrame::roundTxLevelSliderValue_(int configuredValue)
+{
+    int tmpLevel = configuredValue;
+    int tmpBaseLevel = tmpLevel / 5;
+    int roundFactor = 0;
+    if ((tmpLevel - tmpBaseLevel) > 2)
+    {
+        // Round up to next level
+        roundFactor = 5;
+    }
+    tmpBaseLevel -= roundFactor;
+    return tmpBaseLevel * 5;
+}
+
 //-------------------------------------------------------------------------
 // OnChangeTxLevel()
 //-------------------------------------------------------------------------
@@ -760,9 +774,13 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& )
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
+    // Adjust in 0.5 dB increments. The range of the slider isn't changed here
+    // to maintain compatibility with existing configurations.
+    int tmpLevel = roundTxLevelSliderValue_(m_sliderTxLevel->GetValue());
+
     if (isTuning)
     {
-        g_tuneLevel = m_sliderTxLevel->GetValue();
+        g_tuneLevel = tmpLevel;
         float dbLoss = g_tuneLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
@@ -771,7 +789,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& )
     }
     else
     {
-        g_txLevel = m_sliderTxLevel->GetValue();
+        g_txLevel = tmpLevel;
         float dbLoss = g_txLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_txLevelScale.store(scaleFactor, std::memory_order_release);

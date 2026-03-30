@@ -788,7 +788,7 @@ void MainFrame::loadConfiguration_()
     // Load BW expander state
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release);
     
-    g_txLevel = wxGetApp().appConfiguration.transmitLevel;
+    g_txLevel = roundTxLevelSliderValue_(wxGetApp().appConfiguration.transmitLevel);
     float dbLoss = g_txLevel / 10.0;
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_txLevelScale.store(scaleFactor, std::memory_order_release);
@@ -796,7 +796,7 @@ void MainFrame::loadConfiguration_()
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)dbLoss, 1), DECIBEL_STR);
     m_txtTxLevelNum->SetLabel(fmtString);
 
-    g_tuneLevel = wxGetApp().appConfiguration.tuneLevel;
+    g_tuneLevel = roundTxLevelSliderValue_(wxGetApp().appConfiguration.tuneLevel);
     dbLoss = g_tuneLevel / 10.0;
     scaleFactor = exp(dbLoss/20.0 * log(10.0));
     g_tuneLevelScale.store(scaleFactor, std::memory_order_release);

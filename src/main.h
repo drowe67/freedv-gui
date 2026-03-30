@@ -601,6 +601,8 @@ class MainFrame : public TopFrame
         }
         
         int getIdealStationsHeardColumnLength_(int col);
+
+        int roundTxLevelSliderValue_(int configuredValue); 
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
