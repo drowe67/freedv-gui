@@ -304,11 +304,12 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
+          sudo podman exec fedora-test sudo groupadd -g $(id -g) $(id -gn)
           sudo podman exec fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
           sudo podman exec fedora-test sudo passwd -d $(id -un)
           sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
           sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
-          sudo podman exec fedora-test sudo chown $(id -un):$(id -un) /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
           sudo podman exec fedora-test sudo systemctl restart systemd-logind
           sudo podman exec fedora-test sudo systemctl restart polkit
           sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
