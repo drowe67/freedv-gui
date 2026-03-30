@@ -269,6 +269,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
+
+    - name: Disable AppArmor (needed for Fedora systemd)
+      run: |
+          sudo apparmor_parser -R /etc/apparmor.d/* || true
+
     - name: Save correct architecture
       id: save-arch
       run: |
@@ -304,15 +313,18 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec fedora-test sudo useradd -m -u $(id -u) github
-          sudo podman exec fedora-test sudo passwd -d github
+          sudo podman exec fedora-test sudo groupadd -g $(id -g) $(id -gn)
+          sudo podman exec fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
+          sudo podman exec fedora-test sudo passwd -d $(id -un)
           sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
           sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
-          sudo podman exec fedora-test sudo chown github:github /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
+          sudo podman exec fedora-test sudo systemctl restart systemd-logind
           sudo podman exec fedora-test sudo systemctl restart polkit
           sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
           sudo podman exec fedora-test sudo systemctl start rtkit-daemon
-          sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE  github /workspace/appimage/container-test.sh | tee tmp.log
+          sudo podman exec fedora-test sudo systemctl start user@$(id -u)
+          sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE $(id -un) /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
   test-appimage-ubuntu:
@@ -420,9 +432,9 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
+          systemctl --user enable --now pipewire-pulse.socket
+          systemctl --user enable --now pipewire.service
+          systemctl --user enable --now wireplumber.service
           metacity --sm-disable --replace &
           sleep 5
           . ./rade-venv/bin/activate
@@ -616,9 +628,9 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
+          systemctl --user enable --now pipewire-pulse.socket
+          systemctl --user enable --now pipewire.service
+          systemctl --user enable --now wireplumber.service
           metacity --sm-disable --replace &
           sleep 5
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
