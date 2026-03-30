@@ -359,7 +359,28 @@ void OmniRigController::requestCurrentFrequencyModeImpl_()
         rig_->get_Freq(&freq);
         rig_->get_Mode(&omniRigMode);
 
-        log_info("Got frequency as %ld", freq);;
+        if (freq == 0)
+        {
+            // FREQ in OmniRig is not being set. This is probably because we need to 
+            // read the frequency for the actual VFO.
+            RigParamX rigVfo;
+            rig_->get_Vfo(&rigVfo);
+
+            switch (rigVfo)
+            {
+                case PM_VFOA:
+                    rig_->get_FreqA(&freq);
+                    break;
+                case PM_VFOB:
+                    rig_->get_FreqB(&freq);
+                    break;
+                default:
+                    log_warn("Got VFO %d that we don't know about", (int)rigVfo);
+                    break;
+            }
+        }
+        
+        log_info("Got frequency as %ld", freq);
 
         // Convert OmniRig mode to our mode
         IRigFrequencyController::Mode mode;
