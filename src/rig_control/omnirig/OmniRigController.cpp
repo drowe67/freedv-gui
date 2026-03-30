@@ -197,9 +197,20 @@ void OmniRigController::pttImpl_(bool state)
         auto newTime = std::chrono::steady_clock::now();
         auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
         rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+        
+        bool changed = false;
+        if (pttSet_ != state)
+        {
+            changed = true;
+            onPttChange(this, state);
+        }
+        
         pttSet_ = state;
-
-        onPttChange(this, state);
+        
+        if (changed && !state && !destroying_)
+        {
+            requestCurrentFrequencyMode();
+        }
     }
 }
 
