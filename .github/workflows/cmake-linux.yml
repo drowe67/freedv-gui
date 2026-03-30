@@ -276,7 +276,7 @@ jobs:
 
     - name: Disable AppArmor (needed for Fedora systemd)
       run: |
-          sudo apparmor_parse -R /etc/apparmor.d/* || true
+          sudo apparmor_parser -R /etc/apparmor.d/* || true
 
     - name: Save correct architecture
       id: save-arch
@@ -313,19 +313,17 @@ jobs:
           chmod +x *.AppImage
           echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
           echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec -it fedora-test sudo groupadd -g $(id -g) $(id -gn)
-          sudo podman exec -it fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
-          sudo podman exec -it fedora-test sudo passwd -d $(id -un)
-          sudo podman exec -it fedora-test sudo mkdir -p /run/user/$(id -u)
-          sudo podman exec -it fedora-test sudo chmod 700 /run/user/$(id -u)
-          sudo podman exec -it fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
-          sudo podman exec -it fedora-test sudo systemctl restart systemd-logind
-          sudo podman exec -it fedora-test sudo systemctl restart polkit
-          sudo podman exec -it fedora-test sudo systemctl enable rtkit-daemon
-          sudo podman exec -it fedora-test sudo systemctl start rtkit-daemon
-          sudo podman exec -it fedora-test sudo systemctl start user@$(id -u) || true
-          sudo podman exec -it fedora-test sudo journalctl -xeu user@$(id -u).service || true
-          sudo podman exec -it fedora-test sudo systemctl status user@$(id -u).service
+          sudo podman exec fedora-test sudo groupadd -g $(id -g) $(id -gn)
+          sudo podman exec fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
+          sudo podman exec fedora-test sudo passwd -d $(id -un)
+          sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
+          sudo podman exec fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
+          sudo podman exec fedora-test sudo systemctl restart systemd-logind
+          sudo podman exec fedora-test sudo systemctl restart polkit
+          sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
+          sudo podman exec fedora-test sudo systemctl start rtkit-daemon
+          sudo podman exec fedora-test sudo systemctl start user@$(id -u)
           sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE $(id -un) /workspace/appimage/container-test.sh | tee tmp.log
           grep "PASS" tmp.log
 
