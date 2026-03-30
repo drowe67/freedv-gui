@@ -269,10 +269,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        detached: true
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
+
+    - name: Disable AppArmor (needed for Fedora systemd)
+      run: |
+          sudo apparmor_parse -R /etc/apparmor.d/* || true
 
     - name: Save correct architecture
       id: save-arch
