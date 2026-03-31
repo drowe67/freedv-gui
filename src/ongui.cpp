@@ -1325,7 +1325,10 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     // Report analog change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->inAnalogMode(g_analog);
+        if (obj != wxGetApp().m_sharedReporterObject || !m_reporterHidden->GetValue())
+        {
+            obj->inAnalogMode(g_analog);
+        }
     }
     
     if (wxGetApp().rigFrequencyController != nullptr && 
@@ -1697,7 +1700,7 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 
 void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 {
-    if (m_RxRunning && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+    if (m_RxRunning && !g_analog && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
     {
         if (m_reporterHidden->GetValue())
         {
