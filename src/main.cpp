@@ -2382,9 +2382,6 @@ void MainFrame::performFreeDVOn_()
                                        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta,
                                        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma);
 
-        // Init Speex pre-processor states
-        // by inspecting Speex source it seems that only denoiser is on by default
-
         log_debug("freedv_get_n_speech_samples(tx): %d", freedvInterface.getTxNumSpeechSamples());
         log_debug("freedv_get_speech_sample_rate(tx): %d", freedvInterface.getTxSpeechSampleRate());
     

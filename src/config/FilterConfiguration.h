@@ -88,7 +88,7 @@ public:
     ConfigurationDataElement<float> codec2LPCPostFilterGamma;
     ConfigurationDataElement<float> codec2LPCPostFilterBeta;
     
-    ConfigurationDataElement<bool> speexppEnable;
+    ConfigurationDataElement<bool> noiseReductionEnable;
     ConfigurationDataElement<bool> agcEnabled;
     ConfigurationDataElement<bool> bwExpandEnabled;
     ConfigurationDataElement<bool> enable700CEqualizer;

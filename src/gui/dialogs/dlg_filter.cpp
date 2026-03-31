@@ -104,25 +104,25 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 5);
 
-    // Speex pre-processor --------------------------------------------------
+    // RNNoise pre-processor --------------------------------------------------
 
-    wxStaticBoxSizer* sbSizer_speexpp;
-    wxStaticBox *sb_speexpp = new wxStaticBox(this, wxID_ANY, _("Mic Audio Pre-Processing"));
-    sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxHORIZONTAL);
+    wxStaticBoxSizer* sbSizer_rnnoise;
+    wxStaticBox *sb_rnnoise = new wxStaticBox(this, wxID_ANY, _("Mic Audio Pre-Processing"));
+    sbSizer_rnnoise = new wxStaticBoxSizer(sb_rnnoise, wxHORIZONTAL);
 
-    m_ckboxSpeexpp = new wxCheckBox(sb_speexpp, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
+    m_ckboxNoiseReduction = new wxCheckBox(sb_rnnoise, wxID_ANY, _("Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_rnnoise->Add(m_ckboxNoiseReduction, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckboxNoiseReduction->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
     
-    m_ckboxAgcEnabled = new wxCheckBox(sb_speexpp, wxID_ANY, _("AGC"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckboxAgcEnabled, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckboxAgcEnabled = new wxCheckBox(sb_rnnoise, wxID_ANY, _("AGC"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_rnnoise->Add(m_ckboxAgcEnabled, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxAgcEnabled->SetToolTip(_("Automatic gain control for microphone"));
     
-    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckbox700C_EQ = new wxCheckBox(sb_rnnoise, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_rnnoise->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
 
-    bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
+    bSizer30->Add(sbSizer_rnnoise, 0, wxALL | wxEXPAND, 5);   
 
     // Speaker audio post-processing
     wxStaticBox* sbSpeakerAudio = new wxStaticBox(this, wxID_ANY, _("Speaker Audio Post-Processing"));
@@ -267,7 +267,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_codec2LPCPostFilterBassBoost->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
     m_LPCPostFilterDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
-    m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
+    m_ckboxNoiseReduction->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnNoiseReductionEnable), NULL, this);
     m_ckboxAgcEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
     m_ckboxBwExpandEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
@@ -328,7 +328,7 @@ FilterDlg::~FilterDlg()
     m_codec2LPCPostFilterBassBoost->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
     m_LPCPostFilterDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
-    m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
+    m_ckboxNoiseReduction->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnNoiseReductionEnable), NULL, this);
     m_ckboxAgcEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
     m_ckboxBwExpandEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
     
@@ -491,9 +491,9 @@ void FilterDlg::ExchangeData(int inout)
         m_beta = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta; setBeta();
         m_gamma = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma; setGamma();
 
-        // Speex Pre-Processor
+        // RNNoise Pre-Processor
 
-        m_ckboxSpeexpp->SetValue(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
+        m_ckboxNoiseReduction->SetValue(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable);
         
         // AGC
         m_ckboxAgcEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.agcEnabled);
@@ -583,8 +583,8 @@ void FilterDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta       = m_beta;
         wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma      = m_gamma;
 
-        // Speex Pre-Processor
-        wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
+        // RNNoise Pre-Processor
+        wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
         
         // AGC
         wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
@@ -765,8 +765,8 @@ void FilterDlg::OnGammaScroll(wxScrollEvent&) {
     setCodec2();
 }
 
-void FilterDlg::OnSpeexppEnable(wxScrollEvent&) {
-    wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
+void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
+    wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
     ExchangeData(EXCHANGE_DATA_OUT);
     updateControlState();
 }

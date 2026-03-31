@@ -50,7 +50,7 @@ using namespace std::chrono_literals;
 
 #include "PlaybackStep.h"
 #include "EitherOrStep.h"
-#include "SpeexStep.h"
+#include "RNNoiseStep.h"
 #include "EqualizerStep.h"
 #include "ResamplePlotStep.h"
 #include "ResampleStep.h"
@@ -118,8 +118,6 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
-
-#include <speex/speex_preprocess.h>
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
@@ -212,18 +210,18 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
         
-        // Speex step (optional)
-        auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        auto eitherOrBypassSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        // RNNoise step (optional)
+        auto eitherOrProcessRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto eitherOrBypassRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
-        auto speexStep = new SpeexStep(inputSampleRate_);
-        eitherOrProcessSpeex->appendPipelineStep(speexStep);
+        auto rnnoiseStep = new RNNoiseStep();
+        eitherOrProcessRNNoise->appendPipelineStep(rnnoiseStep);
         
-        auto eitherOrSpeexStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.speexppEnable.getWithoutProcessing(); },
-            eitherOrProcessSpeex,
-            eitherOrBypassSpeex);
-        pipeline_->appendPipelineStep(eitherOrSpeexStep);
+        auto eitherOrRNNoiseStep = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            eitherOrProcessRNNoise,
+            eitherOrBypassRNNoise);
+        pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
 
         // AGC step (optional)
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);

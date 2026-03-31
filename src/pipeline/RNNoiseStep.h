@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            SpeexStep.h
+// Name:            RNNoiseStep.h
 // Purpose:         Describes a noise reduction step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
@@ -32,20 +32,20 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__SPEEX_STEP_H
-#define AUDIO_PIPELINE__SPEEX_STEP_H
+#ifndef AUDIO_PIPELINE__RNNOISE_STEP_H
+#define AUDIO_PIPELINE__RNNOISE_STEP_H
 
 #include "IPipelineStep.h"
 #include "../util/GenericFIFO.h"
 
 #include <memory>
-#include <speex/speex_preprocess.h>
+#include "rnnoise.h"
 
-class SpeexStep : public IPipelineStep
+class RNNoiseStep : public IPipelineStep
 {
 public:
-    SpeexStep(int sampleRate);
-    virtual ~SpeexStep();
+    RNNoiseStep();
+    virtual ~RNNoiseStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
     virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
@@ -53,12 +53,10 @@ public:
     virtual void reset() FREEDV_NONBLOCKING override;
     
 private:
-    int sampleRate_;
-    SpeexPreprocessState* speexStateObj_;
-    int numSamplesPerSpeexRun_;
+    DenoiseState* rnnoise_;
     GenericFIFO<short> inputSampleFifo_;
     std::unique_ptr<short[]> outputSamples_;
 };
 
 
-#endif // AUDIO_PIPELINE__SPEEX_STEP_H
+#endif // AUDIO_PIPELINE__RNNOISE_STEP_H

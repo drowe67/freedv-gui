@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            SpeexStep.cpp
+// Name:            RNNoiseStep.cpp
 // Purpose:         Describes a noise reduction step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
@@ -34,69 +34,75 @@
 
 #include <atomic>
 
-#include "SpeexStep.h"
+#include "RNNoiseStep.h"
 #include "pipeline_defines.h"
 
 #include <assert.h>
 
-SpeexStep::SpeexStep(int sampleRate)
-    : sampleRate_(sampleRate)
-    , numSamplesPerSpeexRun_((FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC)
-    , inputSampleFifo_(sampleRate / 2)
+#define RNNOISE_SAMPLE_RATE (48000)
+#define RNNOISE_FRAME_SIZE (480) /* 1ms */
+
+RNNoiseStep::RNNoiseStep()
+    : inputSampleFifo_(RNNOISE_SAMPLE_RATE / 2)
 {
-    assert(numSamplesPerSpeexRun_ > 0);
-    
-    speexStateObj_ = speex_preprocess_state_init(
-                numSamplesPerSpeexRun_,
-                sampleRate_);
-    assert(speexStateObj_ != nullptr);
-    
+    rnnoise_ = rnnoise_create(nullptr);
+    assert(rnnoise_ != nullptr);
+
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::make_unique<short[]>(sampleRate);
+    outputSamples_ = std::make_unique<short[]>(RNNOISE_SAMPLE_RATE);
     assert(outputSamples_ != nullptr);
 }
 
-SpeexStep::~SpeexStep()
+RNNoiseStep::~RNNoiseStep()
 {
     outputSamples_ = nullptr;
-    speex_preprocess_state_destroy(speexStateObj_);
+    rnnoise_destroy(rnnoise_);
 }
 
-int SpeexStep::getInputSampleRate() const FREEDV_NONBLOCKING
+int RNNoiseStep::getInputSampleRate() const FREEDV_NONBLOCKING
 {
-    return sampleRate_;
+    return RNNOISE_SAMPLE_RATE;
 }
 
-int SpeexStep::getOutputSampleRate() const FREEDV_NONBLOCKING
+int RNNoiseStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 {
-    return sampleRate_;
+    return RNNOISE_SAMPLE_RATE;
 }
 
-short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     *numOutputSamples = 0;
 
     short* outputSamples = outputSamples_.get();
 
-    int numSpeexRuns = (inputSampleFifo_.numUsed() + numInputSamples) / numSamplesPerSpeexRun_;
-    if (numSpeexRuns > 0)
+    int numRNNoiseRuns = (inputSampleFifo_.numUsed() + numInputSamples) / RNNOISE_FRAME_SIZE;
+    if (numRNNoiseRuns > 0)
     {
-        *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
+        *numOutputSamples = numRNNoiseRuns * RNNOISE_FRAME_SIZE;
         
         short* tmpOutput = outputSamples;
         
         inputSampleFifo_.write(inputSamples, numInputSamples);
-        while (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
+        while (inputSampleFifo_.numUsed() >= RNNOISE_FRAME_SIZE)
         {
-            inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
+            inputSampleFifo_.read(tmpOutput, RNNOISE_FRAME_SIZE);
 
-            // Note: Speex is unlikely to use RT-unsafe constructs in normal operation
+            float tmpFloat[RNNOISE_FRAME_SIZE];
+            for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
+            {
+                tmpFloat[index] = (float)tmpOutput[index] / SHRT_MAX;
+            }
+
+            // Note: RNNoise is unlikely to use RT-unsafe constructs in normal operation
             // (per existing RTSan-enabled tests). Verified on 2025-09-30.
             FREEDV_BEGIN_VERIFIED_SAFE
-            speex_preprocess_run(speexStateObj_, tmpOutput);
+            rnnoise_process_frame(rnnoise_, tmpFloat, tmpFloat);
             FREEDV_END_VERIFIED_SAFE
 
-            tmpOutput += numSamplesPerSpeexRun_;
+            for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
+            {
+                *tmpOutput++ = (short)(tmpFloat[index] * SHRT_MAX);
+            }
         }
     }
     else if (numInputSamples > 0 && inputSamples != nullptr)
@@ -107,7 +113,7 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
     return outputSamples;
 }
 
-void SpeexStep::reset() FREEDV_NONBLOCKING
+void RNNoiseStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
 }
