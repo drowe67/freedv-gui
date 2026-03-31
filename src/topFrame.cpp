@@ -700,6 +700,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
     m_sliderTxLevel = new wxSlider(m_txLevelBox, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
+    m_sliderTxLevel->SetLineSize(5); // 0.5dB steps
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
 #if wxUSE_ACCESSIBILITY 
