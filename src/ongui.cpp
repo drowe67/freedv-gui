@@ -792,13 +792,13 @@ void MainFrame::applyTxLevel()
 }
 
 void MainFrame::OnTxLevelDecrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel -= 10; else g_txLevel -= 10; applyTxLevel(); }
-void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel -= 1;  else g_txLevel -= 1;  applyTxLevel(); }
-void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel += 1;  else g_txLevel += 1;  applyTxLevel(); }
+void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel -= 2;  else g_txLevel -= 2;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel += 2;  else g_txLevel += 2;  applyTxLevel(); }
 void MainFrame::OnTxLevelIncrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel += 10; else g_txLevel += 10; applyTxLevel(); }
 
 void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
 {
-    int delta = (event.GetWheelRotation() > 0) ? 1 : -1;
+    int delta = (event.GetWheelRotation() > 0) ? 2 : -2;
     if (m_btnTogTune->GetValue()) g_tuneLevel += delta; else g_txLevel += delta;
     applyTxLevel();
 }

@@ -703,8 +703,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _("▶"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _("▶▶"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelMM->SetToolTip(_("Decrease output by 1.0dB"));
-    m_btnTxLevelM ->SetToolTip(_("Decrease output by 0.1dB"));
-    m_btnTxLevelP ->SetToolTip(_("Increase output by 0.1dB"));
+    m_btnTxLevelM ->SetToolTip(_("Decrease output by 0.2dB"));
+    m_btnTxLevelP ->SetToolTip(_("Increase output by 0.2dB"));
     m_btnTxLevelPP->SetToolTip(_("Increase output by 1.0dB"));
     txBtnSizer->Add(m_btnTxLevelMM, 1, wxEXPAND, 0);
     txBtnSizer->Add(m_btnTxLevelM,  1, wxEXPAND, 0);
