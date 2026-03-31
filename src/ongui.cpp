@@ -796,6 +796,13 @@ void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { if (m_btnTogTune->GetValue
 void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel += 1;  else g_txLevel += 1;  applyTxLevel(); }
 void MainFrame::OnTxLevelIncrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel += 10; else g_txLevel += 10; applyTxLevel(); }
 
+void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
+{
+    int delta = (event.GetWheelRotation() > 0) ? 1 : -1;
+    if (m_btnTogTune->GetValue()) g_tuneLevel += delta; else g_txLevel += delta;
+    applyTxLevel();
+}
+
 //-------------------------------------------------------------------------
 // OnChangeMicSpkrLevel()
 //-------------------------------------------------------------------------

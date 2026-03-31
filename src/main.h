@@ -424,6 +424,7 @@ class MainFrame : public TopFrame
         void OnTxLevelDecr( wxCommandEvent& event ) override;
         void OnTxLevelIncr( wxCommandEvent& event ) override;
         void OnTxLevelIncrBig( wxCommandEvent& event ) override;
+        void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         
