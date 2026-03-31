@@ -80,9 +80,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 #endif // !defined(DISABLE_UNIT_TEST)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(
-        RADE_SPEECH_SAMPLE_RATE,
-        RADE_MODEM_SAMPLE_RATE);
+    auto maxSamples = RADE_MODEM_SAMPLE_RATE;
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
@@ -141,7 +139,7 @@ int RADETransmitStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 
 short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSamples = getOutputSampleRate();
     FREEDV_BEGIN_VERIFIED_SAFE
     int numSamplesPerTx = rade_n_tx_out(dv_);
     FREEDV_END_VERIFIED_SAFE
@@ -193,16 +191,17 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
                 featureListIdx_ = 0;
 
                 // RADE TX handling
+                int numOut = 0;
                 FREEDV_BEGIN_REALTIME_UNSAFE
-                    rade_tx(dv_, radeOut_, &featureList_[0]);
+                    numOut = rade_tx(dv_, radeOut_, &featureList_[0]);
                 FREEDV_END_REALTIME_UNSAFE
 
-                for (int index = 0; index < numSamplesPerTx; index++)
+                for (int index = 0; index < numOut; index++)
                 {
                     // We only need the real component for TX.
                     radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
                 }
-                outputSampleFifo_.write(radeOutShort_, numSamplesPerTx);
+                outputSampleFifo_.write(radeOutShort_, numOut);
             }
         }
 

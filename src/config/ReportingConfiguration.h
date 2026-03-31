@@ -47,6 +47,7 @@ public:
     ConfigurationDataElement<bool> pskReporterEnabled;
     
     ConfigurationDataElement<bool> freedvReporterEnabled;
+    ConfigurationDataElement<bool> freedvReporterForcedOff;
     ConfigurationDataElement<wxString> freedvReporterHostname;
     ConfigurationDataElement<int> freedvReporterBandFilter;
     ConfigurationDataElement<bool> useMetricDistances;

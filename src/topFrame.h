@@ -148,6 +148,8 @@ class TopFrame : public wxFrame
         wxStaticBoxSizer* sbSizer_mode;
         
         wxMenuItem* m_menuItemPlayFileFromRadio;
+
+        wxToggleButton *m_reporterHidden;
     
         // Virtual event handlers, override them in your derived class
         virtual void OnActivateWindow(wxActivateEvent& event) { event.Skip(); }
@@ -234,6 +236,8 @@ class TopFrame : public wxFrame
 
         virtual void OnOpenCallsignList( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCloseCallsignList( wxCommandEvent& event ) { event.Skip(); }
+
+        virtual void OnToggleReporterVisibility (wxCommandEvent& event) { event.Skip(); }
         
         virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
         
