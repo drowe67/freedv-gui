@@ -88,6 +88,11 @@
 #define FROM_MIC_MAX         0.8
 #define LEVEL_BETA           0.99
 
+// TX Attenuation
+#define TX_ATTENUATION_MIN (-300)
+#define TX_ATTENUATION_MAX (0)
+#define TX_ATTENUATION_DEFAULT TX_ATTENUATION_MAX
+
 // SNR
 #define SNRSLOW_BETA        0.5                           // time constant for slow SNR for display
 

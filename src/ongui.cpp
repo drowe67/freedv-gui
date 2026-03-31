@@ -762,8 +762,8 @@ void MainFrame::applyTxLevel()
 
     if (isTuning)
     {
-        if (g_tuneLevel < -300) g_tuneLevel = -300;
-        if (g_tuneLevel > 0)    g_tuneLevel = 0;
+        if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
+        if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
         float dbLoss = g_tuneLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
@@ -771,8 +771,8 @@ void MainFrame::applyTxLevel()
     }
     else
     {
-        if (g_txLevel < -300) g_txLevel = -300;
-        if (g_txLevel > 0)    g_txLevel = 0;
+        if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
+        if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
         float dbLoss = g_txLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_txLevelScale.store(scaleFactor, std::memory_order_release);
