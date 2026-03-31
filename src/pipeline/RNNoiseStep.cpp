@@ -37,6 +37,7 @@
 #include "RNNoiseStep.h"
 #include "pipeline_defines.h"
 
+#include <limits.h>
 #include <assert.h>
 
 #define RNNOISE_SAMPLE_RATE (48000)
