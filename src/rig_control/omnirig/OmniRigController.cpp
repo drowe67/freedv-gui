@@ -367,31 +367,47 @@ void OmniRigController::requestCurrentFrequencyModeImpl_()
     //      causing distortion of the transmitted signal (ex: Red Pitaya with Thetis).
     if (rig_ != nullptr && !pttSet_)
     {
-        rig_->get_Freq(&freq);
-        rig_->get_Mode(&omniRigMode);
-
-        if (freq == 0)
+        RigParamX vfo;
+        HRESULT result = rig_->get_Vfo(&vfo);
+        
+        if (result == S_OK)
         {
-            // FREQ in OmniRig is not being set. This is probably because we need to 
-            // read the frequency for the actual VFO.
-            RigParamX rigVfo;
-            rig_->get_Vfo(&rigVfo);
+            log_info("Got VFO = %d", (int)vfo);
 
-            switch (rigVfo)
+            if (vfo == PM_UNKNOWN)
             {
-                case PM_VFOA:
-                    rig_->get_FreqA(&freq);
-                    break;
-                case PM_VFOB:
-                    rig_->get_FreqB(&freq);
-                    break;
-                default:
-                    log_warn("Got VFO %d that we don't know about", (int)rigVfo);
-                    break;
+                log_warn("Forcing VFO to VFOA");
+                rig_->put_Vfo(PM_VFOA);
+                vfo = PM_VFOA;
+            }
+            
+            if (vfo == PM_VFOA || vfo == PM_VFOAA || vfo == PM_VFOAB)
+            {
+                log_debug("Getting frequency on VFOA");
+                result = rig_->get_FreqA(&freq);
+            }
+            else if (vfo == PM_VFOB || vfo == PM_VFOBB || vfo == PM_VFOBA)
+            {
+                log_debug("Getting frequency on VFOB");
+                result = rig_->get_FreqB(&freq);
+            }
+            else
+            {
+                log_error("Neither VFOA nor VFOB are writable");
+                result = E_FAIL; // force use of fallback
             }
         }
         
+        if (result != S_OK || freq == 0)
+        {
+            // FREQA/FREQB aren't being set. Use FREQ instead.
+            rig_->get_Freq(&freq);
+        }
+        
         log_info("Got frequency as %ld", freq);
+        
+        // Mode isn't dependent on VFO in the current OmniRig API (!)        
+        rig_->get_Mode(&omniRigMode);
 
         // Convert OmniRig mode to our mode
         IRigFrequencyController::Mode mode;
