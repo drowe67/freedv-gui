@@ -895,6 +895,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Reenable FLRig/rigctl timeouts. (PR #1233)
     * Hamlib/OmniRig: Ignore frequency/mode query during TX. (PR #1246)
     * Fix audio dropouts on Linux. (PR #1266)
+    * OmniRig: Use frequency from VFO if we get a zero frequency. (PR #1274)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
