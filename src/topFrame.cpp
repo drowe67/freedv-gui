@@ -935,7 +935,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
-    
+    m_txtMicSpkrLevelNum->Connect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
+
     m_cboReportFrequency->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
@@ -1035,6 +1036,7 @@ TopFrame::~TopFrame()
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
+    m_txtMicSpkrLevelNum->Disconnect(wxEVT_MIDDLE_DOWN, wxMouseEventHandler(TopFrame::OnResetMicSpkrLevel), NULL, this);
     
     m_cboReportFrequency->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
