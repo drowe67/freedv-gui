@@ -698,10 +698,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(m_txLevelBox, wxVERTICAL);
     
     wxBoxSizer* txBtnSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_btnTxLevelMM = new wxButton(m_txLevelBox, wxID_ANY, _("◀◀"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("◀"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _("▶"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _("▶▶"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelMM = new wxButton(m_txLevelBox, wxID_ANY, _("<<"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("<"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelP  = new wxButton(m_txLevelBox, wxID_ANY, _(">"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnTxLevelPP = new wxButton(m_txLevelBox, wxID_ANY, _(">>"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelMM->SetToolTip(_("Decrease output by 1.0dB"));
     m_btnTxLevelM ->SetToolTip(_("Decrease output by 0.2dB"));
     m_btnTxLevelP ->SetToolTip(_("Increase output by 0.2dB"));
