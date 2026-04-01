@@ -57,6 +57,12 @@ set_target_properties(rnnoise PROPERTIES
 )
 
 else(APPLE AND BUILD_OSX_UNIVERSAL)
+
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86")
+message(STATUS "RNNoise: Enabling optimizations if available on user's system")
+set(CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --enable-x86-rtcd)
+endif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86")
+
 ExternalProject_Add(build_rnnoise
     BUILD_IN_SOURCE 1
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
