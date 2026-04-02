@@ -373,6 +373,14 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             auto item = &lineMap_[index];
             int x = index;
+            
+            if (item->y1 == item->y2)
+            {
+                // workaround due to line at y=0 not appearing when fully silent
+                // ensures there's at least a pixel or two difference between them
+                item->y1++;
+            }
+            
             if (index == from) path.MoveToPoint(x, item->y1);
             else path.AddLineToPoint(x, item->y1);
         }
