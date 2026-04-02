@@ -894,15 +894,20 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Improve reliability of Start/Stop and PTT buttons. (PR #1236)
     * Hamlib: Reenable FLRig/rigctl timeouts. (PR #1233)
     * Hamlib/OmniRig: Ignore frequency/mode query during TX. (PR #1246)
+    * Fix audio dropouts on Linux. (PR #1266)
+    * OmniRig: Use frequency from VFO if we get a zero frequency. (PR #1274)
+    * Fix bugs related to display of Mic/Speaker Level slider. (PR #1281) - thanks @barjac!
+    * Fix bug causing main window's menu to disappear when Reporter is displayed. (PR #1282)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
-    * Add ability to hide self from FreeDV Reporter list. (PR #1260)
+    * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
     * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265)
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265)
+    * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)

@@ -118,12 +118,14 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
     event.Enable(!m_RxRunning);
 }
 
-void MainFrame::OnActivateWindow(wxActivateEvent&)
+void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->closeTooltip();
     }
+    
+    event.Skip();
 }
 
 //-------------------------------------------------------------------------
@@ -753,34 +755,34 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnChangeTxLevel()
+// applyTxLevel() - shared helper to apply g_txLevel and update the UI
 //-------------------------------------------------------------------------
-void MainFrame::OnChangeTxLevel( wxScrollEvent& )
+void MainFrame::applyTxLevel()
 {
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
     if (isTuning)
     {
-        g_tuneLevel = m_sliderTxLevel->GetValue();
+        if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
+        if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
         float dbLoss = g_tuneLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
-
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
     }
     else
     {
-        g_txLevel = m_sliderTxLevel->GetValue();
+        if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
+        if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
         float dbLoss = g_txLevel / 10.0;
         float scaleFactor = exp(dbLoss/20.0 * log(10.0));
         g_txLevelScale.store(scaleFactor, std::memory_order_release);
-
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
-    
+
     if (isTuning)
     {
         wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
@@ -789,6 +791,18 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& )
     {
         wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     }
+}
+
+void MainFrame::OnTxLevelDecrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel -= TX_ATTENUATION_LARGE_STEP; else g_txLevel -= TX_ATTENUATION_LARGE_STEP; applyTxLevel(); }
+void MainFrame::OnTxLevelDecr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel -= TX_ATTENUATION_SMALL_STEP;  else g_txLevel -= TX_ATTENUATION_SMALL_STEP;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncr( wxCommandEvent& )    { if (m_btnTogTune->GetValue()) g_tuneLevel += TX_ATTENUATION_SMALL_STEP;  else g_txLevel += TX_ATTENUATION_SMALL_STEP;  applyTxLevel(); }
+void MainFrame::OnTxLevelIncrBig( wxCommandEvent& ) { if (m_btnTogTune->GetValue()) g_tuneLevel += TX_ATTENUATION_LARGE_STEP; else g_txLevel += TX_ATTENUATION_LARGE_STEP; applyTxLevel(); }
+
+void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
+{
+    int delta = (event.GetWheelRotation() > 0) ? TX_ATTENUATION_SMALL_STEP : -TX_ATTENUATION_SMALL_STEP;
+    if (m_btnTogTune->GetValue()) g_tuneLevel += delta; else g_txLevel += delta;
+    applyTxLevel();
 }
 
 //-------------------------------------------------------------------------
@@ -1258,13 +1272,11 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     wxString fmtString;
     if (newTx)
     {
-        m_sliderTxLevel->SetValue(g_tuneLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
         m_txLevelBox->SetLabel("Tune &Attenuation");
     }
     else
     {
-        m_sliderTxLevel->SetValue(g_txLevel);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
         m_txLevelBox->SetLabel("TX &Attenuation");
     }
@@ -1325,7 +1337,10 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     // Report analog change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->inAnalogMode(g_analog);
+        if (obj != wxGetApp().m_sharedReporterObject || !m_reporterHidden->GetValue())
+        {
+            obj->inAnalogMode(g_analog);
+        }
     }
     
     if (wxGetApp().rigFrequencyController != nullptr && 
@@ -1693,11 +1708,12 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    m_sliderMicSpkrLevel->SetValue(sliderLevel);
 }
 
 void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 {
-    if (m_RxRunning && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+    if (m_RxRunning && !g_analog && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
     {
         if (m_reporterHidden->GetValue())
         {
