@@ -54,6 +54,7 @@ public:
     
 private:
     DenoiseState* rnnoise_;
+    bool firstFrame_;
     GenericFIFO<short> inputSampleFifo_;
     std::unique_ptr<short[]> outputSamples_;
 };

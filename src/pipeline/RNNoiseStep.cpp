@@ -44,7 +44,8 @@
 #define RNNOISE_FRAME_SIZE (480) /* 1ms */
 
 RNNoiseStep::RNNoiseStep()
-    : inputSampleFifo_(RNNOISE_SAMPLE_RATE / 2)
+    : firstFrame_(true)
+    , inputSampleFifo_(RNNOISE_SAMPLE_RATE / 2)
 {
     rnnoise_ = rnnoise_create(nullptr);
     assert(rnnoise_ != nullptr);
@@ -91,7 +92,7 @@ short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOu
             float tmpFloat[RNNOISE_FRAME_SIZE];
             for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
             {
-                tmpFloat[index] = (float)tmpOutput[index] / SHRT_MAX;
+                tmpFloat[index] = (float)tmpOutput[index];
             }
 
             // Note: RNNoise is unlikely to use RT-unsafe constructs in normal operation
@@ -100,10 +101,14 @@ short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOu
             rnnoise_process_frame(rnnoise_, tmpFloat, tmpFloat);
             FREEDV_END_VERIFIED_SAFE
 
-            for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
+            if (!firstFrame_)
             {
-                *tmpOutput++ = (short)(tmpFloat[index] * SHRT_MAX);
+                for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
+                {
+                    *tmpOutput++ = tmpFloat[index];
+                }
             }
+            firstFrame_ = false;
         }
     }
     else if (numInputSamples > 0 && inputSamples != nullptr)
@@ -117,4 +122,6 @@ short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOu
 void RNNoiseStep::reset() FREEDV_NONBLOCKING
 {
     inputSampleFifo_.reset();
+    firstFrame_ = true;
+    rnnoise_init(rnnoise_, nullptr);
 }
