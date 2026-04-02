@@ -118,12 +118,14 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
     event.Enable(!m_RxRunning);
 }
 
-void MainFrame::OnActivateWindow(wxActivateEvent&)
+void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->closeTooltip();
     }
+    
+    event.Skip();
 }
 
 //-------------------------------------------------------------------------

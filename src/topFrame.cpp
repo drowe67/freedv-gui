@@ -373,7 +373,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 #endif // !defined(__WXGTK__)
 
     wxMenuItem* m_menuItemExit;
-    m_menuItemExit = new wxMenuItem(file, ID_EXIT, wxString(_("E&xit")) , _("Exit Program"), wxITEM_NORMAL);
+    m_menuItemExit = new wxMenuItem(file, wxID_EXIT, wxString(_("E&xit")) , _("Exit Program"), wxITEM_NORMAL);
     file->Append(m_menuItemExit);
 
     m_menubarMain->Append(file, _("&File"));
@@ -422,7 +422,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_menuItemHelpUpdates->Enable(false);
     
     wxMenuItem* m_menuItemAbout;
-    m_menuItemAbout = new wxMenuItem(help, ID_ABOUT, wxString(_("&About...")) , _("About this program"), wxITEM_NORMAL);
+    m_menuItemAbout = new wxMenuItem(help, wxID_ABOUT, wxString(_("&About FreeDV")) , _("About this program"), wxITEM_NORMAL);
     help->Append(m_menuItemAbout);
 
     wxMenuItem* m_menuItemHelpManual;
