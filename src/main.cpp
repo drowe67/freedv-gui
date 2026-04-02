@@ -640,47 +640,6 @@ bool MainApp::OnInit()
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();
-    
-    // Prevent conflicts between numpy/OpenBLAS threading and Python/C++ threading,
-    // improving performance.
-    wxSetEnv("OMP_NUM_THREADS", "1");
-    wxSetEnv("OPENBLAS_NUM_THREADS", "1");
- 
-    // Enable maximum optimization for Python.
-    wxSetEnv("PYTHONOPTIMIZE", "2");
-
-    // Enable Python JIT if available.
-    wxSetEnv("PYTHON_JIT", "1");
-
-#if _WIN32 || __APPLE__
-    // Enable mimalloc in Python interpreter. 
-    wxSetEnv("PYTHONMALLOC", "mimalloc");
-
-    // Change current folder to the folder containing freedv.exe.
-    // This is needed so that Python can find RADE properly. 
-    wxFileName f(wxStandardPaths::Get().GetExecutablePath());
-    wxString appPath(f.GetPath());
-    wxSetWorkingDirectory(appPath);
-
-    // Make sure PYTHONHOME is not set. If it is, it may use the user's
-    // local Python installation for stuff like torch/torchaudio, causing
-    // problems running RADE.
-    wxUnsetEnv("PYTHONHOME");
-
-#if __APPLE__
-    // Set PYTHONPATH accordingly. We mainly want to be able to access
-    // the model (,pth) as well as the RADE Python code.
-    wxFileName path(appPath);
-    path.AppendDir("Resources");
-    wxSetWorkingDirectory(path.GetPath());
-    wxSetEnv("PYTHONPATH", path.GetPath());
-
-    wxString ppath;
-    wxGetEnv("PYTHONPATH", &ppath);
-    log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
-#endif // __APPLE__
-
-#endif // _WIN32 || __APPLE__ 
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date

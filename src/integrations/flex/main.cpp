@@ -233,20 +233,6 @@ int main(int argc, char** argv)
     
     log_info("Spot timeout is %d seconds", spotTimeoutSeconds);
     
-    // Environment setup -- make sure we don't use more threads than needed.
-    // Prevents conflicts between numpy/OpenBLAS threading and Python/C++ threading,
-    // improving performance.
-    // NOLINTBEGIN
-    setenv("OMP_NUM_THREADS", "1", 1);
-    setenv("OPENBLAS_NUM_THREADS", "1", 1);
- 
-    // Enable maximum optimization for Python.
-    setenv("PYTHONOPTIMIZE", "2", 1);
-
-    // Enable Python JIT (if version of Python supports it).
-    setenv("PYTHON_JIT", "1", 1);
-    // NOLINTEND
-
     // Initialize and start RADE.
     log_info("Initializing RADE library...");
     rade_initialize();
