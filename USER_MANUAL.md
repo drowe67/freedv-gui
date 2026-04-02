@@ -907,6 +907,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
+    * Use RNNoise for improved noise canceling during TX. (PR #1276)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
