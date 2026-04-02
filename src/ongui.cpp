@@ -1706,6 +1706,7 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    m_sliderMicSpkrLevel->SetValue(sliderLevel);
 }
 
 void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
