@@ -428,6 +428,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                         {
                             // Force current slice back to non-FreeDV mode if not TX slice
                             log_warn("Attempted to activate FDVU/FDVL from a second slice (id = %d, active = %d)", sliceId, activeSlice_);
+                            sendRadioCommand_("message severity=warning \"Only one FDVU or FDVL slice can be active at a time. Non-TX slices have been set to USB and/or LSB.\"");
                             std::stringstream modeRevertCommand;
                             if (sliceId != txSlice_)
                             {
