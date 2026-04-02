@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix audio dropouts on Linux. (PR #1266)
     * OmniRig: Use frequency from VFO if we get a zero frequency. (PR #1274)
     * Fix bugs related to display of Mic/Speaker Level slider. (PR #1281) - thanks @barjac!
+    * Fix bug causing main window's menu to disappear when Reporter is displayed. (PR #1282)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
