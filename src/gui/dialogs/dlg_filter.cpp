@@ -110,7 +110,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     wxStaticBox *sb_rnnoise = new wxStaticBox(this, wxID_ANY, _("Mic Audio Pre-Processing"));
     sbSizer_rnnoise = new wxStaticBoxSizer(sb_rnnoise, wxHORIZONTAL);
 
-    m_ckboxNoiseReduction = new wxCheckBox(sb_rnnoise, wxID_ANY, _("Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxNoiseReduction = new wxCheckBox(sb_rnnoise, wxID_ANY, _("TX Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_rnnoise->Add(m_ckboxNoiseReduction, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxNoiseReduction->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
     
