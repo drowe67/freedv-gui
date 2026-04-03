@@ -39,7 +39,7 @@ using namespace std::chrono_literals;
 #include "../pipeline/paCallbackData.h"
 
 #include "../../pipeline/AgcStep.h"
-#include "../../pipeline/SpeexStep.h"
+#include "../../pipeline/RNNoiseStep.h"
 #include "../../pipeline/ResampleStep.h"
 #include "../../pipeline/LevelAdjustStep.h"
 #include "../../pipeline/RADEReceiveStep.h"
@@ -87,8 +87,8 @@ void MinimalTxRxThread::initializePipeline_()
     {
         txStep_ = new RADETransmitStep(rade_, encState_);
         auto agcStep = new AgcStep(txStep_->getInputSampleRate());
-        auto speexStep = new SpeexStep(txStep_->getInputSampleRate());
-        pipeline_->appendPipelineStep(speexStep);
+        auto rnnoiseStep = new RNNoiseStep();
+        pipeline_->appendPipelineStep(rnnoiseStep);
         pipeline_->appendPipelineStep(agcStep);
         pipeline_->appendPipelineStep(txStep_);
         

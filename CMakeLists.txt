@@ -403,6 +403,11 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 include(cmake/BuildRADE.cmake)
 
 #
+# Build RNNoise
+# (TBD - allow override with own build)
+include(cmake/BuildRNNoise.cmake)
+
+#
 # Build codec2
 #
 include(cmake/BuildCodec2.cmake)
@@ -609,30 +614,6 @@ if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
 endif(wxWidgets_FOUND)
-
-#
-# Find speex library
-#
-if(NOT USE_STATIC_SPEEXDSP)
-    message(STATUS "Looking for Speex DSP library.")
-    find_path(SPEEXDSP_INCLUDE_DIR NAMES speex/speex.h speex/speexdsp_types.h)
-    find_library(SPEEXDSP_LIBRARY speexdsp)
-    message(STATUS "  Speex DSP headers: ${SPEEXDSP_INCLUDE_DIR}")
-    message(STATUS "  Speex DSP library: ${SPEEXDSP_LIBRARY}")
-    if(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
-        include_directories(${SPEEXDSP_INCLUDE_DIR})
-        list(APPEND FREEDV_LINK_LIBS ${SPEEXDSP_LIBRARY})
-    elseif(MINGW)
-        message(STATUS "Could not find speexdsp, reverting to static build.")
-        include(cmake/BuildSpeex.cmake)
-    else(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
-        message(STATUS "Will attempt static build of speex.")
-        include(cmake/BuildSpeex.cmake)
-    endif(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
-else()
-    message(STATUS "Will attempt static build of speex.")
-    include(cmake/BuildSpeex.cmake)
-endif()
 
 #
 # Find libdl for dlopen/dlclose
