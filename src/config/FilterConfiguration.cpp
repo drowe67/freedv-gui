@@ -41,7 +41,7 @@ FilterConfiguration::FilterConfiguration()
     , codec2LPCPostFilterBassBoost("/Filter/codec2LPCPostFilterBassBoost", true)
     , codec2LPCPostFilterGamma("/Filter/codec2LPCPostFilter/Gamma", CODEC2_LPC_PF_GAMMA*100)
     , codec2LPCPostFilterBeta("/Filter/codec2LPCPostFilter/Beta", CODEC2_LPC_PF_BETA*100)
-    , speexppEnable("/Filter/speexpp_enable", true)
+    , noiseReductionEnable("/Filter/speexpp_enable", true)
     , agcEnabled("/Filter/agcEnable", true)
     , bwExpandEnabled("/Filter/bwExpandEnable", true)
     , enable700CEqualizer("/Filter/700C_EQ", true)
@@ -77,7 +77,7 @@ void FilterConfiguration::load(wxConfigBase* config)
     load_(config, codec2LPCPostFilterGamma);
     load_(config, codec2LPCPostFilterBeta);
     
-    load_(config, speexppEnable);
+    load_(config, noiseReductionEnable);
     load_(config, enable700CEqualizer);
     load_(config, agcEnabled);
     load_(config, bwExpandEnabled);
@@ -93,7 +93,7 @@ void FilterConfiguration::save(wxConfigBase* config)
     save_(config, codec2LPCPostFilterGamma);
     save_(config, codec2LPCPostFilterBeta);
     
-    save_(config, speexppEnable);
+    save_(config, noiseReductionEnable);
     save_(config, enable700CEqualizer);
     save_(config, agcEnabled);
     save_(config, bwExpandEnabled);

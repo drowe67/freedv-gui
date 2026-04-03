@@ -83,7 +83,7 @@ class FilterDlg : public wxDialog
         void    OnEnable(wxScrollEvent& event);
         void    OnBassBoost(wxScrollEvent& event);
 
-        void    OnSpeexppEnable(wxScrollEvent& event);
+        void    OnNoiseReductionEnable(wxScrollEvent& event);
         void    OnAgcEnable(wxScrollEvent& event);
         void    OnBwExpandEnable(wxScrollEvent& event);
         void    On700C_EQ(wxScrollEvent& event);
@@ -124,7 +124,7 @@ class FilterDlg : public wxDialog
         wxStaticText* m_staticTextGamma;
         wxButton*     m_LPCPostFilterDefault;
 
-        wxCheckBox*   m_ckboxSpeexpp;
+        wxCheckBox*   m_ckboxNoiseReduction;
         wxCheckBox*   m_ckbox700C_EQ;
         wxCheckBox*   m_ckboxAgcEnabled;
         wxCheckBox*   m_ckboxBwExpandEnabled;
