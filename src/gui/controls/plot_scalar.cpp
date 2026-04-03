@@ -378,7 +378,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
             {
                 // workaround due to line at y=0 not appearing when fully silent
                 // ensures there's at least a pixel or two difference between them
-                item->y1++;
+                item->y1--;
             }
             
             if (index == from) path.MoveToPoint(x, item->y1);
