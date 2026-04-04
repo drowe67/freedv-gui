@@ -432,7 +432,35 @@ int main(int argc, char** argv)
     {
         std::this_thread::sleep_for(100ms);
     }
-    
+   
+    // Clear event handlers to prevent inadvertent calls during shutdown
+    tcpTask.setWaveformSnrMeterIdentifiersFn([&](FlexTcpTask&, uint16_t, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformCallsignRxFn([&](FlexTcpTask&, std::string const&, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformGridSquareUpdateFn([&](FlexTcpTask&, std::string const&, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformConnectedFn([&](FlexTcpTask&, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformUserConnectedFn([&](FlexTcpTask&, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformUserDisconnectedFn([&](FlexTcpTask&, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformFreqChangeFn([&](FlexTcpTask&, uint64_t, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformTransmitFn([&](FlexTcpTask&, FlexTcpTask::TxState, void*) {
+    }, nullptr);
+
+    tcpTask.setWaveformAddValidStreamIdentifiersFn([&](FlexTcpTask&, uint32_t, uint32_t, uint32_t, uint32_t, void*) {
+    }, nullptr);
+
     // Stop TX/RX threads. Needed to prevent RADE calls after finalize.
     txThread.stop();
     rxThread.stop();

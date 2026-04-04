@@ -115,7 +115,6 @@ void FlexTcpTask::socketFinalCleanup_(bool)
 
     responseHandlers_.clear();
     inputBuffer_.clear();
-    activeFreeDVSlices_.clear();
 
     commandHandlingTimer_.stop();
     pingTimer_.stop();
@@ -195,7 +194,6 @@ void FlexTcpTask::cleanupWaveform_()
             // Recursively call ourselves again to actually remove the waveform
             // once we get a response for this command.
             activeSlice_ = -1;
-            activeFreeDVSlices_.clear();
             cleanupWaveform_();
         });
         
@@ -396,15 +394,7 @@ void FlexTcpTask::processCommand_(std::string& command)
                     {
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
                     }
-                    activeFreeDVSlices_.erase(sliceId);
-                    if (activeFreeDVSlices_.size() > 0)
-                    {
-                        activeSlice_ = *activeFreeDVSlices_.begin();
-                    }
-                    else
-                    {
-                        activeSlice_ = -1;
-                    }
+                    activeSlice_ = -1;
                 }
             }
             
@@ -426,12 +416,25 @@ void FlexTcpTask::processCommand_(std::string& command)
                         }
                         else 
                         {
+                            // Force current slice back to non-FreeDV mode if not TX slice
                             log_warn("Attempted to activate FDVU/FDVL from a second slice (id = %d, active = %d)", sliceId, activeSlice_);
+                            sendRadioCommand_("message severity=warning \"Only one FDVU or FDVL slice can be active at a time. Non-TX slices have been set to USB and/or LSB.\"");
+                            std::stringstream modeRevertCommand;
+                            if (sliceId != txSlice_)
+                            {
+                                modeRevertCommand << "slice set " << sliceId << " mode=" << (isLSB_ ? "LSB" : "USB");
+                                sendRadioCommand_(modeRevertCommand.str());
+                                return;
+                            }
+                            else if (activeSlice_ != txSlice_)
+                            {
+                                modeRevertCommand << "slice set " << activeSlice_ << " mode=" << (isLSB_ ? "LSB" : "USB");
+                                sendRadioCommand_(modeRevertCommand.str());
+                            }
                         }
 
                         // User wants to use the waveform.
                         activeSlice_ = sliceId;
-                        activeFreeDVSlices_.insert(sliceId);
 
                         // Ensure that we connect to any reporting services as appropriate
                         uint64_t freqHz = atof(sliceFrequencies_[activeSlice_].c_str()) * 1000000;
@@ -447,20 +450,12 @@ void FlexTcpTask::processCommand_(std::string& command)
                 }
                 else if (sliceId == activeSlice_)
                 {
+                    activeSlice_ = -1;
+
                     // Ensure that we disconnect from any reporting services as appropriate
                     if (waveformUserDisconnectedFn_)
                     {
                         waveformUserDisconnectedFn_(*this, waveformUserDisconnectedState_);
-                    }
-
-                    activeFreeDVSlices_.erase(sliceId);
-                    if (activeFreeDVSlices_.size() > 0)
-                    {
-                        activeSlice_ = *activeFreeDVSlices_.begin();
-                    }
-                    else
-                    {
-                        activeSlice_ = -1;
                     }
                 }
             }
