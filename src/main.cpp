@@ -1517,9 +1517,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
               m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
               m_panelWaterfall->m_newdata = true;
               m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
-              m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+              m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemOffset());
               m_panelWaterfall->setSync(syncState ? true : false);
-              m_panelWaterfall->refreshData();
+              m_panelWaterfall->Refresh();
           }
       }
       else if (timerId == ID_TIMER_SPECTRUM)
@@ -1529,10 +1529,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           // Note: each element in this combo box is a numeric value starting from 1,
           // so just incrementing the selected index should get us the correct results.
           m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
-          m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+          m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemOffset());
           m_panelSpectrum->setSync(syncState ? true : false);
           m_panelSpectrum->m_newdata = true;
-          m_panelSpectrum->refreshData();
+          m_panelSpectrum->Refresh();
       }
       else if (timerId == ID_TIMER_SPEECH_IN)
       {
@@ -1963,12 +1963,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             realigned_ = true;
         }
 
+        wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemOffset());
+        m_textFreqOffset->SetLabel(freqOffset);
+
         if (g_mode == FREEDV_MODE_RADE)
         {
             m_textBits->SetLabel(BITS_UNK_LABEL);
             m_textErrors->SetLabel(ERRS_UNK_LABEL);
             m_textBER->SetLabel(BER_UNK_LABEL);
-            m_textFreqOffset->SetLabel(FRQ_OFF_UNK_LABEL);
             m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
             m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
         }
@@ -1986,9 +1988,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
             m_textResyncs->SetLabel(resyncs);
-
-            wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemStats()->foff);
-            m_textFreqOffset->SetLabel(freqOffset);
 
             wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
             m_textSyncMetric->SetLabel(syncMetric);
