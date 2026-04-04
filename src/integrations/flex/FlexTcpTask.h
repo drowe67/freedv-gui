@@ -166,7 +166,6 @@ private:
 
     std::map<int, std::string> sliceFrequencies_;
     std::map<int, bool> activeSlices_;
-    std::set<int> activeFreeDVSlices_;
     
     using FilterPair_ = std::pair<int, int>; // Low/high cut in Hz.
     std::vector<FilterPair_> filterWidths_;
