@@ -320,7 +320,8 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             {
                 sum += f;
             }
-            float averageOffset = sum / rxOffsets_.size();
+
+            float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
    
             // get average offset and draw sync tuning line
             ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
