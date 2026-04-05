@@ -865,7 +865,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     restoreItem->Enable(hasSaved);
     clearItem->Enable(hasSaved);
 
-    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
         wxGetApp().appConfiguration.txAttenByBand[bandName] = g_txLevel;
     }, saveItem->GetId());
 
@@ -873,7 +873,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
         loadTxAttenForBand_(bandName);
     }, restoreItem->GetId());
 
-    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
         wxGetApp().appConfiguration.txAttenByBand.erase(bandName);
     }, clearItem->GetId());
 
