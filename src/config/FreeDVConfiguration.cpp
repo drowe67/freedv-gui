@@ -242,6 +242,21 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, showDecodeStats);
     load_(config, enableLegacyModes);
+
+    // Load per-band TX attenuation values
+    txAttenByBand.clear();
+    config->SetPath("/TXatten");
+    wxString key;
+    long cookie;
+    bool hasMore = config->GetFirstEntry(key, cookie);
+    while (hasMore)
+    {
+        long val;
+        if (config->Read(key, &val))
+            txAttenByBand[key] = (int)val;
+        hasMore = config->GetNextEntry(key, cookie);
+    }
+    config->SetPath("/");
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -330,6 +345,14 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, showDecodeStats);
     save_(config, enableLegacyModes);
-    
+
+    // Save per-band TX attenuation values
+    config->SetPath("/");
+    config->DeleteGroup("TXatten");
+    config->SetPath("/TXatten");
+    for (auto& kv : txAttenByBand)
+        config->Write(kv.first, (long)kv.second);
+    config->SetPath("/");
+
     config->Flush();
 }

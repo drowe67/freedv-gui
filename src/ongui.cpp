@@ -58,6 +58,8 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+static wxString bandNameForFilter(FreeDVReporterDialog::FilterFrequency band);
+
 std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
@@ -522,6 +524,14 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             m_cboReportFrequency->SetValue(freqString);
         }
         m_txtModeStatus->Refresh();
+
+        // Load per-band TX attenuation if the band has changed
+        auto newBand = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(freq));
+        if (!newBand.IsEmpty() && newBand != lastBand_)
+        {
+            lastBand_ = newBand;
+            loadTxAttenForBand_(newBand);
+        }
     });
 }
 
@@ -755,6 +765,37 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// bandNameForFilter() - maps FilterFrequency enum to config key string
+//-------------------------------------------------------------------------
+static wxString bandNameForFilter(FreeDVReporterDialog::FilterFrequency band)
+{
+    switch (band)
+    {
+        case FreeDVReporterDialog::BAND_160M:    return "160m";
+        case FreeDVReporterDialog::BAND_80M:     return "80m";
+        case FreeDVReporterDialog::BAND_60M:     return "60m";
+        case FreeDVReporterDialog::BAND_40M:     return "40m";
+        case FreeDVReporterDialog::BAND_30M:     return "30m";
+        case FreeDVReporterDialog::BAND_20M:     return "20m";
+        case FreeDVReporterDialog::BAND_17M:     return "17m";
+        case FreeDVReporterDialog::BAND_15M:     return "15m";
+        case FreeDVReporterDialog::BAND_12M:     return "12m";
+        case FreeDVReporterDialog::BAND_10M:     return "10m";
+        case FreeDVReporterDialog::BAND_VHF_UHF: return "vhfuhf";
+        default:                                 return "";
+    }
+}
+
+// loadTxAttenForBand_() - load saved TX attenuation for the given band
+//-------------------------------------------------------------------------
+void MainFrame::loadTxAttenForBand_(const wxString& bandName)
+{
+    auto& map = wxGetApp().appConfiguration.txAttenByBand;
+    auto it = map.find(bandName);
+    g_txLevel = (it != map.end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
+    applyTxLevel();
+}
+
 // applyTxLevel() - shared helper to apply g_txLevel and update the UI
 //-------------------------------------------------------------------------
 void MainFrame::applyTxLevel()
@@ -803,6 +844,40 @@ void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
     int delta = (event.GetWheelRotation() > 0) ? TX_ATTENUATION_SMALL_STEP : -TX_ATTENUATION_SMALL_STEP;
     if (m_btnTogTune->GetValue()) g_tuneLevel += delta; else g_txLevel += delta;
     applyTxLevel();
+}
+
+void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
+{
+    uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(freq));
+
+    if (bandName.IsEmpty())
+        return;
+
+    auto& map = wxGetApp().appConfiguration.txAttenByBand;
+    bool hasSaved = (map.find(bandName) != map.end());
+
+    wxMenu menu;
+    auto saveItem    = menu.Append(wxID_ANY, wxString::Format(_("Save current TX level for %s"), bandName));
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Load saved TX level for %s"), bandName));
+    auto clearItem   = menu.Append(wxID_ANY, wxString::Format(_("Remove saved TX level for %s"), bandName));
+
+    restoreItem->Enable(hasSaved);
+    clearItem->Enable(hasSaved);
+
+    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.txAttenByBand[bandName] = g_txLevel;
+    }, saveItem->GetId());
+
+    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+        loadTxAttenForBand_(bandName);
+    }, restoreItem->GetId());
+
+    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.txAttenByBand.erase(bandName);
+    }, clearItem->GetId());
+
+    PopupMenu(&menu);
 }
 
 //-------------------------------------------------------------------------
@@ -1591,6 +1666,18 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->refreshQSYButtonState();
+    }
+
+    // Load per-band TX attenuation if the band has changed
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        auto newBand = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency));
+        if (!newBand.IsEmpty() && newBand != lastBand_)
+        {
+            lastBand_ = newBand;
+            loadTxAttenForBand_(newBand);
+        }
     }
 }
 

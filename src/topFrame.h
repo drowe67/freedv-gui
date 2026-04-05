@@ -218,7 +218,8 @@ class TopFrame : public wxFrame
         virtual void OnTxLevelIncr( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTxLevelIncrBig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTxLevelMouseWheel( wxMouseEvent& event ) { event.Skip(); }
-        
+        virtual void OnTxLevelContextMenu( wxContextMenuEvent& event ) { event.Skip(); }
+
         virtual void OnChangeMicSpkrLevel( wxScrollEvent& event ) { event.Skip(); }
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }

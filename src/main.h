@@ -424,6 +424,8 @@ class MainFrame : public TopFrame
         void OnTxLevelIncr( wxCommandEvent& event ) override;
         void OnTxLevelIncrBig( wxCommandEvent& event ) override;
         void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
+        void OnTxLevelContextMenu( wxContextMenuEvent& event ) override;
+        void loadTxAttenForBand_(const wxString& bandName);
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         
@@ -527,6 +529,7 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
+        wxString lastBand_;
         
         std::string vkFileName_;
         

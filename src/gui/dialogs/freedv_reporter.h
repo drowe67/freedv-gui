@@ -70,7 +70,9 @@ class FreeDVReporterDialog : public wxFrame
         void refreshLayout();
         
         void setBandFilter(FilterFrequency freq);
-        
+
+        static FilterFrequency getFilterForFrequency_(uint64_t freq);
+
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
@@ -467,7 +469,6 @@ class FreeDVReporterDialog : public wxFrame
         void createColumn_(int col, bool visible);
         wxDataViewColumn* getColumnForModelColId_(unsigned int col);
 
-        FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;
         wxColour msgRowForegroundColor;
         wxColour txRowBackgroundColor;
