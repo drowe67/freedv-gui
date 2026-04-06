@@ -22,6 +22,7 @@ add_definitions(-DULOG_NO_COLOR)
 
 # Include third party headers and components
 include_directories(3rdparty)
+include_directories(3rdparty/r8brain)
 add_subdirectory(3rdparty)
 
 # Include generated headers

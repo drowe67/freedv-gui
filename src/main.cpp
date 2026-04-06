@@ -123,8 +123,6 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
 std::atomic<bool>  g_bwExpandEnabled;
-SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
-
 // sending and receiving Call Sign data
 std::atomic<GenericFIFO<short>*> g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;

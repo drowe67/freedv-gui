@@ -38,25 +38,24 @@
 #include "IPipelineStep.h"
 
 #include <memory>
-#include <samplerate.h>
+#include "CDSPResampler.h"
 
 class ResampleStep : public IPipelineStep
 {
 public:
     ResampleStep(int inputSampleRate, int outputSampleRate, bool forPlotsOnly = false);
     virtual ~ResampleStep();
-    
+
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
     virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
-    
+
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    SRC_STATE* resampleState_;
+    r8b::CDSPResampler16* resampleState_;
 
-    float* tempInput_;
-    float* tempOutput_;
+    double* tempInput_;
     std::unique_ptr<short[]> outputSamples_;
 };
 

@@ -48,8 +48,6 @@
 #include <wx/socket.h>
 #include <wx/numformatter.h>
 
-#include <samplerate.h>
-
 #include <stdint.h>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 #include <cpuid.h>
@@ -609,14 +607,6 @@ class MainFrame : public TopFrame
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
 
-int resample(SRC_STATE *src,
-             short      output_short[],
-             short      input_short[],
-             int        output_sample_rate,
-             int        input_sample_rate,
-             int        length_output_short, // maximum output array length in samples
-             int        length_input_short
-             );
 void txRxProcessing();
 
 // FreeDv API calls this when there is a test frame that needs a-plottin'
