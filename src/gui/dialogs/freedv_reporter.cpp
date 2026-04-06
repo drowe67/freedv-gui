@@ -1699,10 +1699,9 @@ void FreeDVReporterDialog::OnColumnHeaderRightClick(wxDataViewEvent& event)
             menuItem->Check(true);
         }
         ColumnFilterOperator op = opItem.op;
-        wxString initVal = currentVal; // pre-populate with current value
-        menu.Bind(wxEVT_MENU, [this, modelCol, op, initVal](wxCommandEvent&) {
+        menu.Bind(wxEVT_MENU, [this, modelCol, op, currentVal](wxCommandEvent&) {
             wxTextEntryDialog dlg(this, _("Enter value for column filter:"),
-                _("Set Column Filter"), initVal);
+                _("Set Column Filter"), currentVal);
             if (dlg.ShowModal() == wxID_OK)
             {
                 FreeDVReporterDataModel* m = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
