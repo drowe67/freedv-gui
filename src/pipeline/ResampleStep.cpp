@@ -67,14 +67,15 @@ static int resample_step(r8b::CDSPResampler16* resampler,
     return outputCount;
 }
 
-ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool /*forPlotsOnly*/)
+ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
     int maxInputLen = inputSampleRate * 10 / 1000;
 
-    // Use a wider transition band (lower quality, faster) for plot resampling.
-    double reqTransBand = /*forPlotsOnly ? 45.0 : */ 2.0;
+    // r8brain is fast enough that we don't need special transition bands
+    // for plots.
+    double reqTransBand = 4.0;
 
     resampleState_ = new r8b::CDSPResampler16(
         inputSampleRate, outputSampleRate, maxInputLen, reqTransBand);
