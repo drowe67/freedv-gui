@@ -12,6 +12,7 @@ add_library(fdv_gui_dialogs STATIC
 target_include_directories(fdv_gui_dialogs PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 
 add_dependencies(fdv_gui_dialogs rade opus codec2)
+target_link_libraries(fdv_gui_dialogs PRIVATE r8brain)
 
 target_compile_options(fdv_gui_dialogs PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 
