@@ -245,8 +245,23 @@ shift keying (PSK) so is not sensitive to amplitude.
 1. The transmit level from your computer to your radio is important.
 On transmit, adjust your level so that the ALC is **just** being
 nudged.  More **is not better** with the FreeDV transmit signal.
-Overdriving your transmitter will lead to a distorted transit signal, and
+Overdriving your transmitter will lead to a distorted transmit signal, and
 a poor SNR at the receiver.  This is a very common problem.
+
+   Right-clicking on the **TX Attenuation** control opens a context menu
+   with the following options for the currently active amateur band:
+
+   * **Save current TX level for [band]** — stores the current attenuation
+     value in memory for that band.
+   * **Load saved TX level for [band]** — applies the attenuation value that
+     was saved for that band in a previous session.
+   * **Remove saved TX level for [band]** — discards the saved value for that
+     band. The default global level will be used.
+
+   FreeDV will automatically detect band changes (via Hamlib CAT or manual
+   frequency entry) and load any saved attenuation value for the new band.
+   Note that values saved during a session are held in memory and only written
+   to the configuration file when the program is closed.
 
 1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
@@ -270,7 +285,7 @@ demodulator.
 
 ## USB or LSB?
 
-On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
+On bands below 10MHz (except 5MHz), LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
