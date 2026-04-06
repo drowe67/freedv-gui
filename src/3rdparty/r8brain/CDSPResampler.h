@@ -132,6 +132,7 @@ public:
 			"att=%.2f ph=%i\n", SrcSampleRate, DstSampleRate, aMaxInLen,
 			ReqTransBand, ReqAtten, (int) ReqPhase );
 
+		CurTmpBuf = 0;
 		if( SrcSampleRate == DstSampleRate )
 		{
 			return;
@@ -139,7 +140,6 @@ public:
 
 		TmpBufCapacities[ 0 ] = 0;
 		TmpBufCapacities[ 1 ] = 0;
-		CurTmpBuf = 0;
 
 		// Try some common efficient ratios requiring only a single step.
 

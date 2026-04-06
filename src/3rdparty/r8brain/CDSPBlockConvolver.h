@@ -176,7 +176,7 @@ public:
 			// CurOutput are address-aligned.
 		PrevInput = &WorkBlocks[ BlockLen2 * 2 ];
 
-		clear();
+		clear(); // NOLINT
 
 		R8BCONSOLE( "CDSPBlockConvolver: flt_len=%i in_len=%i io=%i/%i "
 			"fft=%i/%i latency=%i\n", Filter -> getKernelLen(), InputLen,
