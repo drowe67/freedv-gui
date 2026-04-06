@@ -274,6 +274,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     }
     m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
+    // Apply column filter indicators if filters were loaded from config
+    // (called after all columns are created so getColumnForModelColId_ works)
+    updateColumnFilterIndicators_();
+
 #if defined(WIN32)
     auto headerCtrl = m_listSpots->GenericGetHeader();
     wxArrayInt wxColumnOrder;
@@ -580,6 +584,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
+    m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnHeaderRightClick), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
     m_listSpots->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
 
@@ -648,6 +653,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
+    m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnHeaderRightClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_REORDERED, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnReordered), NULL, this);
     m_listSpots->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(FreeDVReporterDialog::OnSetFocus), NULL, this);
 
@@ -743,6 +749,9 @@ void FreeDVReporterDialog::refreshLayout()
     // Update filter status in window
     updateFilterStatus_();
 
+    // Update column filter indicators (must happen after dynamic titles are set above)
+    updateColumnFilterIndicators_();
+
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->refreshAllRows();
@@ -754,11 +763,21 @@ void FreeDVReporterDialog::refreshLayout()
 
 void FreeDVReporterDialog::updateFilterStatus_()
 {
+    wxString labelText;
+
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
-        m_filterStatus->SetLabel(wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes));
-        
+        labelText = wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes);
+    }
+    else
+    {
+        labelText = _("Idle Off");
+    }
+    m_filterStatus->SetLabel(labelText);
+
 #if wxCHECK_VERSION(3,1,3)
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
+    {
         auto appearance = wxSystemSettings::GetAppearance();
         if (appearance.IsDark())
         {
@@ -768,13 +787,12 @@ void FreeDVReporterDialog::updateFilterStatus_()
         {
             m_filterStatus->SetForegroundColour(wxTheColourDatabase->Find("FIREBRICK"));
         }
-#endif // wxCHECK_VERSION(3,1,3)
     }
     else
     {
-        m_filterStatus->SetLabel(_("Idle Off"));
         m_filterStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     }
+#endif // wxCHECK_VERSION(3,1,3)
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> const& reporter)
@@ -1586,6 +1604,133 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
 #endif // defined(WIN32)
 }
 
+void FreeDVReporterDialog::saveColumnFilters_()
+{
+    FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+
+    std::vector<int> ops(NUM_COLS, FreeDVReporterDialog::FILTER_NONE);
+    std::vector<wxString> vals(NUM_COLS, "");
+
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        int op;
+        wxString val;
+        if (model->getColumnFilter(col, op, val))
+        {
+            ops[col] = op;
+            vals[col] = val;
+        }
+    }
+
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnFilterOperators = ops;
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnFilterValues = vals;
+}
+
+void FreeDVReporterDialog::updateColumnFilterIndicators_()
+{
+    FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(spotsDataModel_.get());
+    if (!model) return;
+
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        wxDataViewColumn* colObj = nullptr;
+        for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+        {
+            auto c = m_listSpots->GetColumn(index);
+            if (c && (int)c->GetModelColumn() == col)
+            {
+                colObj = c;
+                break;
+            }
+        }
+        if (!colObj) continue;
+
+        int op;
+        wxString val;
+        bool hasFilter = model->getColumnFilter(col, op, val);
+
+        wxString title = colObj->GetTitle();
+        // Strip any existing filter indicator
+        if (title.EndsWith(" *"))
+        {
+            title = title.Left(title.Length() - 2);
+        }
+        if (hasFilter)
+        {
+            title += " *";
+        }
+        colObj->SetTitle(title);
+    }
+}
+
+void FreeDVReporterDialog::OnColumnHeaderRightClick(wxDataViewEvent& event)
+{
+    auto col = event.GetDataViewColumn();
+    if (col == nullptr) { event.Skip(); return; }
+
+    int modelCol = (int)col->GetModelColumn();
+    if (modelCol >= NUM_COLS) { event.Skip(); return; }
+
+    FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+
+    int currentOp = FreeDVReporterDialog::FILTER_NONE;
+    wxString currentVal;
+    bool hasFilter = model->getColumnFilter(modelCol, currentOp, currentVal);
+
+    wxMenu menu;
+
+    static const struct {
+        ColumnFilterOperator op;
+        const char* label;
+    } opItems[] = {
+        {FILTER_GTE, ">= (Greater or equal to)"},
+        {FILTER_GT,  ">  (Greater than)"},
+        {FILTER_EQ,  "=  (Equal to)"},
+        {FILTER_NEQ, "!= (Not equal to)"},
+        {FILTER_LT,  "<  (Less than)"},
+        {FILTER_LTE, "<= (Less or equal to)"},
+    };
+
+    for (auto& opItem : opItems)
+    {
+        auto menuItem = menu.Append(wxID_ANY, wxString(opItem.label), wxEmptyString, wxITEM_CHECK);
+        if (hasFilter && currentOp == opItem.op)
+        {
+            menuItem->Check(true);
+        }
+        ColumnFilterOperator op = opItem.op;
+        wxString initVal = currentVal; // pre-populate with current value
+        menu.Bind(wxEVT_MENU, [this, modelCol, op, initVal](wxCommandEvent&) {
+            wxTextEntryDialog dlg(this, _("Enter value for column filter:"),
+                _("Set Column Filter"), initVal);
+            if (dlg.ShowModal() == wxID_OK)
+            {
+                FreeDVReporterDataModel* m = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+                m->setColumnFilter(modelCol, op, dlg.GetValue());
+                saveColumnFilters_();
+                updateColumnFilterIndicators_();
+                updateFilterStatus_();
+                m->refreshAllRows();
+            }
+        }, menuItem->GetId());
+    }
+
+    menu.AppendSeparator();
+    auto clearItem = menu.Append(wxID_ANY, _("Clear Column Filter"));
+    clearItem->Enable(hasFilter);
+    menu.Bind(wxEVT_MENU, [this, modelCol](wxCommandEvent&) {
+        FreeDVReporterDataModel* m = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
+        m->clearColumnFilter(modelCol);
+        saveColumnFilters_();
+        updateColumnFilterIndicators_();
+        updateFilterStatus_();
+        m->refreshAllRows();
+    }, clearItem->GetId());
+
+    m_listSpots->PopupMenu(&menu);
+    event.Skip();
+}
+
 void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
 {
     DeselectItem();
@@ -2201,11 +2346,80 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
 {
-    return 
+    return
         (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
         (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter ||
+        hasAnyColumnFilter();
+}
+
+void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnFilter(int col, int op, const wxString& val)
+{
+    if (col >= 0 && col < NUM_COLS)
+    {
+        columnFilterOperators_[col] = op;
+        columnFilterValues_[col] = val;
+    }
+}
+
+void FreeDVReporterDialog::FreeDVReporterDataModel::clearColumnFilter(int col)
+{
+    if (col >= 0 && col < NUM_COLS)
+    {
+        columnFilterOperators_[col] = FreeDVReporterDialog::FILTER_NONE;
+        columnFilterValues_[col] = "";
+    }
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::getColumnFilter(int col, int& op, wxString& val) const
+{
+    if (col >= 0 && col < NUM_COLS && columnFilterOperators_[col] != FreeDVReporterDialog::FILTER_NONE)
+    {
+        op = columnFilterOperators_[col];
+        val = columnFilterValues_[col];
+        return true;
+    }
+    return false;
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::hasAnyColumnFilter() const
+{
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        if (columnFilterOperators_[col] != FreeDVReporterDialog::FILTER_NONE)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FreeDVReporterDialog::FreeDVReporterDataModel::isNumericColumn_(int col)
+{
+    return col == DISTANCE_COL || col == HEADING_COL || col == FREQUENCY_COL || col == SNR_COL;
+}
+
+wxString FreeDVReporterDialog::FreeDVReporterDataModel::getColumnDisplayValue_(ReporterData* data, int col) const
+{
+    switch (col)
+    {
+        case CALLSIGN_COL:       return data->callsign;
+        case GRID_SQUARE_COL:    return data->gridSquare;
+        case DISTANCE_COL:       return data->distance;
+        case HEADING_COL:        return data->heading;
+        case VERSION_COL:        return data->version;
+        case FREQUENCY_COL:      return data->freqString;
+        case TX_MODE_COL:        return data->txMode;
+        case STATUS_COL:         return data->status;
+        case USER_MESSAGE_COL:   return data->userMessage;
+        case LAST_TX_DATE_COL:   return data->lastTx;
+        case LAST_RX_CALLSIGN_COL: return data->lastRxCallsign;
+        case LAST_RX_MODE_COL:   return data->lastRxMode;
+        case SNR_COL:            return data->snr;
+        case LAST_UPDATE_DATE_COL: return data->lastUpdate;
+        default:                 return "";
+    }
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* data)
@@ -2246,6 +2460,76 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* da
         isHidden = maxIdleDate.IsEarlierThan(wxDateTime::Now());
     }
 
+    // Apply per-column filters
+    for (int col = 0; col < NUM_COLS && !isHidden; col++)
+    {
+        int op = columnFilterOperators_[col];
+        if (op == FreeDVReporterDialog::FILTER_NONE) continue;
+
+        wxString filterVal = columnFilterValues_[col];
+        wxString rowVal = getColumnDisplayValue_(data, col);
+
+        int cmpResult = 0;
+        if (isNumericColumn_(col))
+        {
+            double filterNum = 0.0;
+            if (!wxNumberFormatter::FromString(filterVal, &filterNum))
+            {
+                // Can't parse filter value as a number; skip this filter
+                continue;
+            }
+
+            double rowNum = 0.0;
+            switch (col)
+            {
+                case DISTANCE_COL:
+                    rowNum = data->distanceVal;
+                    break;
+                case HEADING_COL:
+                    rowNum = data->headingVal;
+                    break;
+                case SNR_COL:
+                    rowNum = data->snrVal;
+                    break;
+                case FREQUENCY_COL:
+                    // Filter value is entered in the same display units as the column (kHz or MHz)
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                    {
+                        rowNum = data->frequency / 1000.0;
+                    }
+                    else
+                    {
+                        rowNum = data->frequency / 1000000.0;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            if (rowNum < filterNum) cmpResult = -1;
+            else if (rowNum > filterNum) cmpResult = 1;
+            else cmpResult = 0;
+        }
+        else
+        {
+            cmpResult = rowVal.CmpNoCase(filterVal);
+        }
+
+        bool passesFilter = false;
+        switch (op)
+        {
+            case FreeDVReporterDialog::FILTER_GTE: passesFilter = (cmpResult >= 0); break;
+            case FreeDVReporterDialog::FILTER_GT:  passesFilter = (cmpResult > 0);  break;
+            case FreeDVReporterDialog::FILTER_EQ:  passesFilter = (cmpResult == 0); break;
+            case FreeDVReporterDialog::FILTER_NEQ: passesFilter = (cmpResult != 0); break;
+            case FreeDVReporterDialog::FILTER_LT:  passesFilter = (cmpResult < 0);  break;
+            case FreeDVReporterDialog::FILTER_LTE: passesFilter = (cmpResult <= 0); break;
+            default: passesFilter = true; break;
+        }
+
+        isHidden |= !passesFilter;
+    }
+
     return isHidden;
 }
 
@@ -2264,7 +2548,21 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
 {
-    // empty
+    // Initialize column filter state from config
+    columnFilterOperators_.resize(NUM_COLS, FreeDVReporterDialog::FILTER_NONE);
+    columnFilterValues_.resize(NUM_COLS, "");
+
+    auto savedOps = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnFilterOperators.get();
+    auto savedVals = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnFilterValues.get();
+
+    for (int i = 0; i < NUM_COLS && i < (int)savedOps.size(); i++)
+    {
+        columnFilterOperators_[i] = savedOps[i];
+    }
+    for (int i = 0; i < NUM_COLS && i < (int)savedVals.size(); i++)
+    {
+        columnFilterValues_[i] = savedVals[i];
+    }
 }
 
 FreeDVReporterDialog::FreeDVReporterDataModel::~FreeDVReporterDataModel()
