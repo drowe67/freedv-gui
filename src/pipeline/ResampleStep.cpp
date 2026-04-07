@@ -71,7 +71,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
-    int maxInputLen = inputSampleRate * 10 / 1000;
+    int maxInputLen = inputSampleRate; // * 10 / 1000;
 
     // r8brain is fast enough that we don't need special transition bands
     // for plots.
