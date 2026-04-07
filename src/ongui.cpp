@@ -527,9 +527,10 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
 
         // Load per-band TX attenuation if the band has changed
         auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
-        if (newBandEnum != FreeDVReporterDialog::BAND_OTHER && newBandEnum != lastBand_)
+        if (newBandEnum != FreeDVReporterDialog::BAND_OTHER &&
+            newBandEnum != static_cast<FreeDVReporterDialog::FilterFrequency>(lastBand_))
         {
-            lastBand_ = newBandEnum;
+            lastBand_ = static_cast<int>(newBandEnum);
             loadTxAttenForBand_(bandNameForFilter(newBandEnum));
         }
     });
@@ -1673,9 +1674,10 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     {
         auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        if (newBandEnum != FreeDVReporterDialog::BAND_OTHER && newBandEnum != lastBand_)
+        if (newBandEnum != FreeDVReporterDialog::BAND_OTHER &&
+            newBandEnum != static_cast<FreeDVReporterDialog::FilterFrequency>(lastBand_))
         {
-            lastBand_ = newBandEnum;
+            lastBand_ = static_cast<int>(newBandEnum);
             loadTxAttenForBand_(bandNameForFilter(newBandEnum));
         }
     }

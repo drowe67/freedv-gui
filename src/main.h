@@ -529,7 +529,11 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
-        FreeDVReporterDialog::FilterFrequency lastBand_;
+        // Stores a FreeDVReporterDialog::FilterFrequency value. Declared as int
+        // because freedv_reporter.h includes main.h, preventing us from including
+        // it here. Extracting FilterFrequency to its own header would allow using
+        // the enum type directly.
+        int lastBand_;
         
         std::string vkFileName_;
         
