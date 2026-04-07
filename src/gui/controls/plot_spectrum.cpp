@@ -148,7 +148,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
-    ctx->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+    ctx->DrawRectangle(PLOT_BORDER + leftOffset_, PLOT_BORDER + bottomOffset_, m_rGrid.GetWidth(), m_rGrid.GetHeight());
 
     // draw spectrum
 
@@ -200,7 +200,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
 
         x += PLOT_BORDER + leftOffset_;
-        y += PLOT_BORDER;
+        y += PLOT_BORDER + bottomOffset_;
 
         if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px))
         {
@@ -265,14 +265,14 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
         x += PLOT_BORDER + leftOffset_;
 
         ctx->SetPen(m_penShortDash);
-        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER + bottomOffset_, x, PLOT_BORDER + bottomOffset_);
 
         if (!repaintDataOnly)
         {
             snprintf(buf, STR_LENGTH, "%4.0fHz", f);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedText)
-                ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER);
+                ctx->DrawText(buf, x - text_w/2, PLOT_BORDER);
         }
     }
 
@@ -281,7 +281,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
-        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET-5);
+        ctx->StrokeLine(x, PLOT_BORDER + bottomOffset_, x, PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET);
     }
     
     // Horizontal gridlines
@@ -289,7 +289,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
-        y += PLOT_BORDER;
+        y += PLOT_BORDER + bottomOffset_;
         ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
                 (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         if (!repaintDataOnly)
@@ -314,7 +314,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     if (!repaintDataOnly)
     {
         if (m_rxFreq != 0.0) {
-            float verticalBarLength = m_rCtrl.GetHeight() - (m_rGrid.GetHeight()+ PLOT_BORDER);
+            float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
             float sum = 0.0;
             for (auto& f : rxOffsets_)
             {
@@ -327,13 +327,13 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
             x = (m_rxFreq + averageOffset) * freq_hz_to_px;
             x += PLOT_BORDER + leftOffset_;
-            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
+            ctx->StrokeLine(x, 0, x, PLOT_BORDER + bottomOffset_);
    
             // red rx tuning line
             ctx->SetPen(wxPen(RED_COLOR, 3));
             x = m_rxFreq*freq_hz_to_px;
             x += PLOT_BORDER + leftOffset_;
-            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
+            ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
         }
     }
 }
