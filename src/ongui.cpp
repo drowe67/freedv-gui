@@ -790,9 +790,9 @@ static wxString bandNameForFilter(FreeDVReporterDialog::FilterFrequency band)
 //-------------------------------------------------------------------------
 void MainFrame::loadTxAttenForBand_(const wxString& bandName)
 {
-    auto& map = wxGetApp().appConfiguration.txAttenByBand;
-    auto it = map.find(bandName);
-    g_txLevel = (it != map.end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
+    auto& atten = wxGetApp().appConfiguration.txAttenByBand;
+    auto it = atten->find(bandName);
+    g_txLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
     applyTxLevel();
 }
 
@@ -854,8 +854,8 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     if (bandName.IsEmpty())
         return;
 
-    auto& map = wxGetApp().appConfiguration.txAttenByBand;
-    bool hasSaved = (map.find(bandName) != map.end());
+    auto& atten = wxGetApp().appConfiguration.txAttenByBand;
+    bool hasSaved = (atten->find(bandName) != atten->end());
 
     wxMenu menu;
     auto saveItem    = menu.Append(wxID_ANY, wxString::Format(_("Save current TX level for %s"), bandName));
@@ -866,7 +866,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     clearItem->Enable(hasSaved);
 
     menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-        wxGetApp().appConfiguration.txAttenByBand[bandName] = g_txLevel;
+        wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
     }, saveItem->GetId());
 
     menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
@@ -874,7 +874,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     }, restoreItem->GetId());
 
     menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-        wxGetApp().appConfiguration.txAttenByBand.erase(bandName);
+        wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
     }, clearItem->GetId());
 
     PopupMenu(&menu);
