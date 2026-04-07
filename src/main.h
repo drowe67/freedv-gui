@@ -529,7 +529,7 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
-        wxString lastBand_;
+        FreeDVReporterDialog::FilterFrequency lastBand_;
         
         std::string vkFileName_;
         
