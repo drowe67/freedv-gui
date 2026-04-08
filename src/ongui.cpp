@@ -794,10 +794,7 @@ void MainFrame::loadTxAttenForBand_(const wxString& bandName)
     auto& atten = wxGetApp().appConfiguration.txAttenByBand;
     auto it = atten->find(bandName);
     g_txLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
-    int savedDefault = wxGetApp().appConfiguration.transmitLevel;
     applyTxLevel();
-    // Prevent per-band load from overwriting the global default
-    wxGetApp().appConfiguration.transmitLevel = savedDefault;
 }
 
 // loadTuneAttenForBand_() - load saved tune attenuation for the given band
@@ -807,10 +804,7 @@ void MainFrame::loadTuneAttenForBand_(const wxString& bandName)
     auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
     auto it = atten->find(bandName);
     g_tuneLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.tuneLevel;
-    int savedDefault = wxGetApp().appConfiguration.tuneLevel;
     applyTxLevel();
-    // Prevent per-band load from overwriting the global default
-    wxGetApp().appConfiguration.tuneLevel = savedDefault;
 }
 
 // applyTxLevel() - shared helper to apply g_txLevel and update the UI
@@ -841,13 +835,19 @@ void MainFrame::applyTxLevel()
 
     m_txtTxLevelNum->SetLabel(fmtString);
 
+    // Only update the global defaults when the current band has no per-band
+    // override, so that per-band values don't contaminate the global default.
+    wxString bandName = bandNameForFilter(lastBand_);
+    bool hasBandOverride = !bandName.IsEmpty();
     if (isTuning)
     {
-        wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
+        if (!hasBandOverride || wxGetApp().appConfiguration.tuneAttenByBand->find(bandName) == wxGetApp().appConfiguration.tuneAttenByBand->end())
+            wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
     }
     else
     {
-        wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+        if (!hasBandOverride || wxGetApp().appConfiguration.txAttenByBand->find(bandName) == wxGetApp().appConfiguration.txAttenByBand->end())
+            wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     }
 }
 
@@ -871,48 +871,56 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     if (bandName.IsEmpty())
         return;
 
-    bool isTuning = m_btnTogTune->GetValue();
-    auto& atten = isTuning ? wxGetApp().appConfiguration.tuneAttenByBand
-                           : wxGetApp().appConfiguration.txAttenByBand;
+    auto& atten = wxGetApp().appConfiguration.txAttenByBand;
     bool hasSaved = (atten->find(bandName) != atten->end());
-    wxString levelLabel = isTuning ? _("tune level") : _("TX level");
 
     wxMenu menu;
-    auto saveItem    = menu.Append(wxID_ANY, wxString::Format(_("Save current %s for %s"), levelLabel, bandName));
-    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Load saved %s for %s"), levelLabel, bandName));
-    auto clearItem   = menu.Append(wxID_ANY, wxString::Format(_("Remove saved %s for %s"), levelLabel, bandName));
-
+    auto saveItem    = menu.Append(wxID_ANY, wxString::Format(_("Save current TX level for %s"),  bandName));
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Load saved TX level for %s"),    bandName));
+    auto clearItem   = menu.Append(wxID_ANY, wxString::Format(_("Remove saved TX level for %s"), bandName));
     restoreItem->Enable(hasSaved);
     clearItem->Enable(hasSaved);
 
-    if (isTuning)
-    {
-        menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-            wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
-        }, saveItem->GetId());
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
+    }, saveItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+        loadTxAttenForBand_(bandName);
+    }, restoreItem->GetId());
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
+    }, clearItem->GetId());
 
-        menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
-            loadTuneAttenForBand_(bandName);
-        }, restoreItem->GetId());
+    PopupMenu(&menu);
+}
 
-        menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-            wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
-        }, clearItem->GetId());
-    }
-    else
-    {
-        menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-            wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
-        }, saveItem->GetId());
+void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
+{
+    uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(freq));
 
-        menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
-            loadTxAttenForBand_(bandName);
-        }, restoreItem->GetId());
+    if (bandName.IsEmpty())
+        return;
 
-        menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
-            wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
-        }, clearItem->GetId());
-    }
+    auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
+    bool hasSaved = (atten->find(bandName) != atten->end());
+
+    wxMenu menu;
+    auto saveItem    = menu.Append(wxID_ANY, wxString::Format(_("Save current tune level for %s"),  bandName));
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Load saved tune level for %s"),    bandName));
+    auto clearItem   = menu.Append(wxID_ANY, wxString::Format(_("Remove saved tune level for %s"), bandName));
+    restoreItem->Enable(hasSaved);
+    clearItem->Enable(hasSaved);
+
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+    }, saveItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
+        loadTuneAttenForBand_(bandName);
+    }, restoreItem->GetId());
+    menu.Bind(wxEVT_MENU, [bandName](wxCommandEvent&) {
+        wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
+    }, clearItem->GetId());
 
     PopupMenu(&menu);
 }

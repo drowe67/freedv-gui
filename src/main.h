@@ -426,6 +426,7 @@ class MainFrame : public TopFrame
         void OnTxLevelIncrBig( wxCommandEvent& event ) override;
         void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
         void OnTxLevelContextMenu( wxContextMenuEvent& event ) override;
+        void OnTuneAttenContextMenu( wxContextMenuEvent& event ) override;
         void loadTxAttenForBand_(const wxString& bandName);
         void loadTuneAttenForBand_(const wxString& bandName);
         
