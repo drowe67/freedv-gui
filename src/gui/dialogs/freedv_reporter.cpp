@@ -2543,7 +2543,7 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     : sortOnNextTimerInterval(false)
     , isConnected_(false)
     , parent_(parent)
-    , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
+    , currentBandFilter_(BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
 {
