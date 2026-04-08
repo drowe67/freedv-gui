@@ -232,8 +232,9 @@ Panel or Settings, or in some cases via controls on your rig interface
 hardware or menus on your radio. In-app adjustments can also be done
 using the **TX Attenuation** control on the right-hand side of the main
 window. The `<<` and `>>` buttons adjust by 1.0 dB and the `<` and `>`
-buttons adjust by 0.2 dB; the mouse scroll wheel can also be used over
-the control. Values below 0 dB attenuate the transmit signal.
+buttons adjust by 0.2 dB; the mouse scroll wheel can also be used to 
+generate 0.2dB steps whilst hovering anywhere over the TX Attenuation
+control area. Values below 0 dB attenuate the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
@@ -251,24 +252,20 @@ a poor SNR at the receiver.  This is a very common problem.
    Right-clicking on the **TX Attenuation** control top row opens a context menu
    with the following options for the currently active amateur band:
 
-   * **Save current TX level for [band]** — stores the current attenuation
-     value in memory for that band.
-   * **Load saved TX level for [band]** — applies the attenuation value that
+   * **Enable/Disable auto-save of TX atten for [band]** — performs the action described
+     When enabled the current level for that band will be saved on leaving the band or closing the program.
+   * **Restore TX atten level for [band]** — applies the attenuation value that
      was saved for that band in a previous session.
-   * **Remove saved TX level for [band]** — discards the saved value for that
-     band. The default global level will be used.
-     
+    
    Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
    The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
-   To save a new level for the band in use, right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
+   Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
    
    FreeDV will automatically detect band changes (via Hamlib CAT or manual
    frequency entry) and load any saved attenuation value for the new band.
+   When a band is left the current values for that band are saved immediately.
    
-   Note that all values saved during a session are held in memory and only written
-   to the configuration file when the program is closed.
-
-1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+ 1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.

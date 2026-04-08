@@ -429,6 +429,7 @@ class MainFrame : public TopFrame
         void OnTuneAttenContextMenu( wxContextMenuEvent& event ) override;
         void loadTxAttenForBand_(const wxString& bandName);
         void loadTuneAttenForBand_(const wxString& bandName);
+        void autoSaveCurrentBandLevels_();
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         

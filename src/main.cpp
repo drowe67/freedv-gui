@@ -1359,7 +1359,8 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
-    
+    autoSaveCurrentBandLevels_();
+
     int mode = FREEDV_MODE_RADE;
     if (m_rb1600->GetValue())
         mode = 0;
