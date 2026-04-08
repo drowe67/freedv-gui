@@ -71,6 +71,7 @@ public:
     ConfigurationDataElement<int> transmitLevel;
     ConfigurationDataElement<int> tuneLevel;
     ConfigurationDataElement<std::map<wxString, int>> txAttenByBand;
+    ConfigurationDataElement<std::map<wxString, int>> tuneAttenByBand;
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
     ConfigurationDataElement<wxString> playFileFromRadioPath;

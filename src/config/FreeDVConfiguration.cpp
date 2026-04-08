@@ -62,7 +62,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , fifoSizeMs("/Audio/fifoSize_ms", (int)FIFO_SIZE)
     , transmitLevel("/Audio/transmitLevel", 0)
     , tuneLevel("/Audio/tuneLevel", 0)
-    , txAttenByBand("/TXatten", {})
+    , txAttenByBand("/Audio/transmitLevelByBand", {})
+    , tuneAttenByBand("/Audio/tuneLevelByBand", {})
         
     /* Recording settings */
     , playFileToMicInPath("/File/playFileToMicInPath", _(""))
@@ -245,6 +246,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, enableLegacyModes);
 
     load_(config, txAttenByBand);
+    load_(config, tuneAttenByBand);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -335,6 +337,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, enableLegacyModes);
 
     save_(config, txAttenByBand);
+    save_(config, tuneAttenByBand);
 
     config->Flush();
 }

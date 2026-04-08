@@ -1065,7 +1065,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
-    lastBand_ = FreeDVReporterDialog::BAND_OTHER;
+    lastBand_ = BAND_OTHER;
     
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;

@@ -72,6 +72,7 @@
 #include "modem_stats.h"
 
 #include "topFrame.h"
+#include "gui/dialogs/filter_frequency.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
 #include "gui/controls/plot_scatter.h"
@@ -426,6 +427,7 @@ class MainFrame : public TopFrame
         void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
         void OnTxLevelContextMenu( wxContextMenuEvent& event ) override;
         void loadTxAttenForBand_(const wxString& bandName);
+        void loadTuneAttenForBand_(const wxString& bandName);
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         
@@ -529,11 +531,7 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
-        // Stores a FreeDVReporterDialog::FilterFrequency value. Declared as int
-        // because freedv_reporter.h includes main.h, preventing us from including
-        // it here. Extracting FilterFrequency to its own header would allow using
-        // the enum type directly.
-        int lastBand_;
+        FilterFrequency lastBand_;
         
         std::string vkFileName_;
         

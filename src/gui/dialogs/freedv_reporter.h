@@ -32,6 +32,7 @@
 
 #include "../../main.h"
 #include "defines.h"
+#include "filter_frequency.h"
 #include "reporting/FreeDVReporter.h"
 #include "../controls/ReportMessageRenderer.h"
 
@@ -41,22 +42,7 @@
 class FreeDVReporterDialog : public wxFrame
 {
     public:
-        enum FilterFrequency
-        {
-            BAND_ALL,
-            BAND_160M,
-            BAND_80M,
-            BAND_60M,
-            BAND_40M,
-            BAND_30M,
-            BAND_20M,
-            BAND_17M,
-            BAND_15M,
-            BAND_12M,
-            BAND_10M,
-            BAND_VHF_UHF,
-            BAND_OTHER,
-        };
+        using FilterFrequency = ::FilterFrequency;
 
         enum ColumnFilterOperator
         {
