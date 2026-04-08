@@ -168,7 +168,7 @@
 	 * fast, and which provide the highest precision.
 	 */
 
-	#define R8B_PFFFT_DOUBLE 1
+	#define R8B_PFFFT_DOUBLE 0
 #endif // !defined( R8B_PFFFT_DOUBLE )
 
 #if !defined( R8B_PFFFT )

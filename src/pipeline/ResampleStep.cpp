@@ -61,7 +61,7 @@ static int resample_step(r8b::CDSPResampler24* resampler,
         double val = outputPtr[i] * 32768.0;
         if (val > 32767.0) val = 32767.0;
         else if (val < -32768.0) val = -32768.0;
-        output_short[i] = static_cast<short>(val + (val >= 0 ? 0.5 : -0.5));
+        output_short[i] = static_cast<short>(val);
     }
 
     return outputCount;
@@ -71,7 +71,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
-    int maxInputLen = inputSampleRate; // * 10 / 1000;
+    int maxInputLen = inputSampleRate * 10 / 1000;
 
     // r8brain is fast enough that we don't need special transition bands
     // for plots.
