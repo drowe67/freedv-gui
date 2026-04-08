@@ -837,16 +837,18 @@ void MainFrame::applyTxLevel()
 
     // Only update the global defaults when the current band has no per-band
     // override, so that per-band values don't contaminate the global default.
-    wxString bandName = bandNameForFilter(lastBand_);
-    bool hasBandOverride = !bandName.IsEmpty();
+    // Use the current reporting frequency directly rather than lastBand_ to
+    // avoid stale state before the first band-change event fires.
+    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency));
     if (isTuning)
     {
-        if (!hasBandOverride || wxGetApp().appConfiguration.tuneAttenByBand->find(bandName) == wxGetApp().appConfiguration.tuneAttenByBand->end())
+        if (bandName.IsEmpty() || wxGetApp().appConfiguration.tuneAttenByBand->find(bandName) == wxGetApp().appConfiguration.tuneAttenByBand->end())
             wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
     }
     else
     {
-        if (!hasBandOverride || wxGetApp().appConfiguration.txAttenByBand->find(bandName) == wxGetApp().appConfiguration.txAttenByBand->end())
+        if (bandName.IsEmpty() || wxGetApp().appConfiguration.txAttenByBand->find(bandName) == wxGetApp().appConfiguration.txAttenByBand->end())
             wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     }
 }
