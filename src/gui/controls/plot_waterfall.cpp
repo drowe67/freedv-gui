@@ -364,17 +364,14 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
    {
        sum += f;
    }
-   float averageOffset = rxOffsets_.size() == 0 ? -1 : sum / rxOffsets_.size();
+   float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
    
    if (m_rxFreq != 0.0) {
        // get average offset and draw sync tuning line
-       if (averageOffset > 0)
-       {
-           ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-           x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-           x += PLOT_BORDER + leftOffset_;
-           ctx->StrokeLine(x, 0, x, verticalBarLength);
-       }
+        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+        x += PLOT_BORDER + leftOffset_;
+        ctx->StrokeLine(x, 0, x, verticalBarLength);
    
        // red rx tuning line
        ctx->SetPen(wxPen(RED_COLOR, 3));

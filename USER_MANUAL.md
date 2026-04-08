@@ -924,9 +924,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
     * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265)
     * Add SNR plot to main window. (PR #1250, #1261)
-    * Bring back RX frequency indicator for RADE. (PR #1265)
+    * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
     * Use RNNoise for improved noise canceling during TX. (PR #1276)
+    * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)

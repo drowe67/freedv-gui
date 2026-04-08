@@ -57,6 +57,8 @@ ReportingConfiguration::ReportingConfiguration()
 
     , freedvReporterEnableMaxIdleFilter("/Reporting/FreeDV/EnableMaxIdleFilter", false)
     , freedvReporterMaxIdleMinutes("/Reporting/FreeDV/MaxIdleMinutes", 120)
+    , freedvReporterColumnFilterOperators("/Reporting/FreeDV/ColumnFilterOperators", {})
+    , freedvReporterColumnFilterValues("/Reporting/FreeDV/ColumnFilterValues", {})
 
     , udpReportingEnabled("/Reporting/UDP/Enable", false)
     , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
@@ -203,6 +205,9 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterEnableMaxIdleFilter);
     load_(config, freedvReporterMaxIdleMinutes);
 
+    load_(config, freedvReporterColumnFilterOperators);
+    load_(config, freedvReporterColumnFilterValues);
+
     load_(config, useUTCForReporting);
     
     // Note: this needs to be loaded before the frequency list so that
@@ -254,6 +259,9 @@ void ReportingConfiguration::save(wxConfigBase* config)
 
     save_(config, freedvReporterEnableMaxIdleFilter);
     save_(config, freedvReporterMaxIdleMinutes);
+
+    save_(config, freedvReporterColumnFilterOperators);
+    save_(config, freedvReporterColumnFilterValues);
 
     save_(config, udpReportingEnabled);
     save_(config, udpReportingHostname);
