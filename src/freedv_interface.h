@@ -120,6 +120,8 @@ public:
     void setSquelch(bool enable, float level) FREEDV_NONBLOCKING;
     
     void setCarrierAmplitude(int c, float amp);
+
+    float getCurrentRxModemOffset();
     
     struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
     

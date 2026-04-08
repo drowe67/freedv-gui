@@ -731,6 +731,19 @@ float FreeDVInterface::getSNREstimate()
     }
 }
 
+float FreeDVInterface::getCurrentRxModemOffset()
+{
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // Special handling for RADE
+        return rade_freq_offset(rade_);
+    }
+    else
+    {
+        return getCurrentRxModemStats()->foff;
+    }
+}
+
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
     int inputSampleRate, 
     int outputSampleRate, 
