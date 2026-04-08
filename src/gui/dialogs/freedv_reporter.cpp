@@ -2466,7 +2466,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* da
         if (op == FreeDVReporterDialog::FILTER_NONE) continue;
 
         wxString filterVal = columnFilterValues_[col];
-        wxString rowVal = getColumnDisplayValue_(data, col);
 
         int cmpResult = 0;
         if (isNumericColumn_(col))
@@ -2511,6 +2510,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* da
         }
         else
         {
+            wxString rowVal = getColumnDisplayValue_(data, col);
             cmpResult = rowVal.CmpNoCase(filterVal);
         }
 
