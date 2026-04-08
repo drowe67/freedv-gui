@@ -41,7 +41,7 @@
 class FreeDVReporterDialog : public wxFrame
 {
     public:
-        enum FilterFrequency 
+        enum FilterFrequency
         {
             BAND_ALL,
             BAND_160M,
@@ -55,7 +55,18 @@ class FreeDVReporterDialog : public wxFrame
             BAND_12M,
             BAND_10M,
             BAND_VHF_UHF,
-            BAND_OTHER,            
+            BAND_OTHER,
+        };
+
+        enum ColumnFilterOperator
+        {
+            FILTER_GTE = 0,   // >=
+            FILTER_GT  = 1,   // >
+            FILTER_EQ  = 2,   // ==
+            FILTER_NEQ = 3,   // !=
+            FILTER_LT  = 4,   // <
+            FILTER_LTE = 5,   // <=
+            FILTER_NONE = -1, // no filter
         };
         
         FreeDVReporterDialog( wxWindow* parent,
@@ -157,6 +168,7 @@ class FreeDVReporterDialog : public wxFrame
 
         void OnShowColumn(wxCommandEvent& event);
         void OnIdleFilter(wxCommandEvent& event);
+        void OnColumnHeaderRightClick(wxDataViewEvent& event);
         
         void OnQRZLookup(wxCommandEvent& event);
         void OnHamQTHLookup(wxCommandEvent& event);
@@ -316,6 +328,11 @@ class FreeDVReporterDialog : public wxFrame
              }
 
              bool filtersEnabled() const;
+
+             void setColumnFilter(int col, int op, const wxString& val);
+             void clearColumnFilter(int col);
+             bool getColumnFilter(int col, int& op, wxString& val) const;
+             bool hasAnyColumnFilter() const;
              
              bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign)
              {
@@ -430,7 +447,12 @@ class FreeDVReporterDialog : public wxFrame
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
 
+            std::vector<int> columnFilterOperators_;
+            std::vector<wxString> columnFilterValues_;
+
             bool isFiltered_(ReporterData* data);
+            static bool isNumericColumn_(int col);
+            wxString getColumnDisplayValue_(ReporterData* data, int col) const;
 
             void clearAllEntries_();
 
@@ -476,6 +498,8 @@ class FreeDVReporterDialog : public wxFrame
         wxColour rxRowForegroundColor;
 
         void updateFilterStatus_();
+        void saveColumnFilters_();
+        void updateColumnFilterIndicators_();
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
