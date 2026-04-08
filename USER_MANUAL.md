@@ -252,10 +252,13 @@ a poor SNR at the receiver.  This is a very common problem.
    Right-clicking on the **TX Attenuation** control top row opens a context menu
    with the following options for the currently active amateur band:
 
-   * **Enable/Disable auto-save of TX atten for [band]** — performs the action described
-     When enabled the current level for that band will be saved on leaving the band or closing the program.
-   * **Restore TX atten level for [band]** — applies the attenuation value that
-     was saved for that band in a previous session.
+   * **Enable auto-save of TX atten for [band]** — saves the current level for
+     that band and enables automatic saving whenever the band is left or the
+     program is closed. The menu item changes to **Disable auto-save of TX atten
+     for [band]** once enabled, which removes the saved value and stops auto-saving.
+   * **Restore TX atten level for [band]** — reverts the attenuation to the last
+     auto-saved value for that band, useful for recovering a known good level
+     after experimenting during a session.
     
    Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
    The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.

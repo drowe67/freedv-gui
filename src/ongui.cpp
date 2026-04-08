@@ -793,16 +793,26 @@ static wxString bandNameForFilter(FilterFrequency band)
 //-------------------------------------------------------------------------
 void MainFrame::autoSaveCurrentBandLevels_()
 {
-    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency));
+    // Use lastBand_ (not the current reporting frequency) so that on a band
+    // change we save the *outgoing* band's levels before loading the new one.
+    wxString bandName = bandNameForFilter(lastBand_);
     if (bandName.IsEmpty())
         return;
+    bool changed = false;
     auto& txAtten = wxGetApp().appConfiguration.txAttenByBand;
     if (txAtten->find(bandName) != txAtten->end())
+    {
         txAtten->insert_or_assign(bandName, g_txLevel);
+        changed = true;
+    }
     auto& tuneAtten = wxGetApp().appConfiguration.tuneAttenByBand;
     if (tuneAtten->find(bandName) != tuneAtten->end())
+    {
         tuneAtten->insert_or_assign(bandName, g_tuneLevel);
+        changed = true;
+    }
+    if (changed)
+        wxGetApp().appConfiguration.save(pConfig);
 }
 
 // loadTxAttenForBand_() - load saved TX attenuation for the given band
@@ -907,6 +917,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
             wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
         else
             wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
+        wxGetApp().appConfiguration.save(pConfig);
     }, toggleItem->GetId());
     menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
         loadTxAttenForBand_(bandName);
@@ -939,6 +950,7 @@ void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
             wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
         else
             wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+        wxGetApp().appConfiguration.save(pConfig);
     }, toggleItem->GetId());
     menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
         loadTuneAttenForBand_(bandName);
