@@ -50,7 +50,7 @@ extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
 
-#define NUM_SECONDS_TO_READ 1
+#define NUM_SECONDS_TO_READ 5
 
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 

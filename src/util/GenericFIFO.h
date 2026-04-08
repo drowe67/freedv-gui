@@ -76,6 +76,11 @@ private:
     int nelem;
     bool ownBuffer_;
 
+    // Serializes concurrent reset() calls and signals canWrite_()/canRead_()
+    // to bail out early rather than racing against a partially-reset FIFO.
+    // Kept on its own cache line to avoid false-sharing with pin/pout.
+    alignas(hardware_destructive_interference_size) std::atomic<bool> resetting_;
+
     T* canWrite_(int len) noexcept;
     T* canRead_(int len) noexcept;
 };
@@ -91,6 +96,7 @@ GenericFIFO<T>::GenericFIFO(int len, T* inBuf)
     , resetInCache(false)
     , nelem(len)
     , ownBuffer_(inBuf == nullptr ? true : false)
+    , resetting_(false)
 {
     if (ownBuffer_)
     {
@@ -116,11 +122,12 @@ GenericFIFO<T>::~GenericFIFO() noexcept
 template<typename T>
 GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs) noexcept
     : buf(rhs.buf)
-    , pin(rhs.pin)
+    , pin(rhs.pin.load())
     , poutCache(rhs.poutCache)
-    , pout(rhs.pout)
+    , pout(rhs.pout.load())
     , pinCache(rhs.pinCache)
     , nelem(rhs.nelem)
+    , resetting_(false)
 {
     rhs.buf = nullptr;
     rhs.pin = nullptr;
@@ -133,10 +140,32 @@ GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs) noexcept
 template<typename T>
 void GenericFIFO<T>::reset() noexcept
 {
-    pin.store(buf, std::memory_order_release);
-    resetOutCache.store(true, std::memory_order_release);
-    pout.store(buf, std::memory_order_release);
-    resetInCache.store(true, std::memory_order_release);
+    // Serialise concurrent reset() calls.  Two threads calling reset()
+    // simultaneously would interleave their four independent stores, which can
+    // leave the FIFO in a state where one pointer has been reset while the
+    // other still holds an old value.
+    bool expected = false;
+    while (!resetting_.compare_exchange_weak(
+               expected, true,
+               std::memory_order_acquire,
+               std::memory_order_relaxed))
+    {
+        expected = false;
+    }
+
+    // Invalidate both caches BEFORE resetting the pointers.
+    //
+    // If canWrite_() or canRead_() runs between the pointer reset and the flag
+    // set it would pair a freshly-reset pointer against a stale cache value,
+    // producing a nonsensical "used" count.  Setting the flags first forces
+    // both sides to reload from the atomic pin/pout after the pointers land.
+    resetOutCache.store(true, std::memory_order_seq_cst);
+    resetInCache.store(true,  std::memory_order_seq_cst);
+
+    pin.store(buf,  std::memory_order_seq_cst);
+    pout.store(buf, std::memory_order_seq_cst);
+
+    resetting_.store(false, std::memory_order_release);
 }
 
 #define CALCULATE_ENTRIES_USED(in, out, used)     \
@@ -152,6 +181,10 @@ void GenericFIFO<T>::reset() noexcept
 template<typename T>
 T* GenericFIFO<T>::canWrite_(int len) noexcept
 {
+    // Bail immediately if a reset() is in progress.  The write will be lost,
+    // but that is preferable to working with a partially-reset FIFO state.
+    if (resetting_.load(std::memory_order_acquire)) return nullptr;
+
     T *ppin = pin.load(std::memory_order_acquire);
     unsigned int used = 0;
 
@@ -181,6 +214,10 @@ T* GenericFIFO<T>::canWrite_(int len) noexcept
 template<typename T>
 T* GenericFIFO<T>::canRead_(int len) noexcept
 {
+    // Bail immediately if a reset() is in progress.  Returning stale data from
+    // a partially-reset FIFO is worse than returning nothing.
+    if (resetting_.load(std::memory_order_acquire)) return nullptr;
+
     T* ppout = pout.load(std::memory_order_acquire);
     unsigned int used = 0;
 
