@@ -69,9 +69,6 @@ private:
     alignas(hardware_destructive_interference_size) std::atomic<T*> pout;
     T* pinCache;
     std::atomic<bool> resetInCache;
-#if !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif // !defined(__clang__) && defined(__cpp_lib_hardware_interference_size)
 
     int nelem;
     bool ownBuffer_;
@@ -80,6 +77,9 @@ private:
     // to bail out early rather than racing against a partially-reset FIFO.
     // Kept on its own cache line to avoid false-sharing with pin/pout.
     alignas(hardware_destructive_interference_size) std::atomic<bool> resetting_;
+#if !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif // !defined(__clang__) && defined(__cpp_lib_hardware_interference_size)
 
     T* canWrite_(int len) noexcept;
     T* canRead_(int len) noexcept;
