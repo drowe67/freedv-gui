@@ -322,7 +322,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
             x = (m_rxFreq + averageOffset) * freq_hz_to_px;
             x += PLOT_BORDER + leftOffset_;
-            ctx->StrokeLine(x, 0, x, verticalBarLength);
+            ctx->StrokeLine(x, 0, x, PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET / 2);
    
             // red rx tuning line
             ctx->SetPen(wxPen(RED_COLOR, 3));
