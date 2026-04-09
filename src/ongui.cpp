@@ -531,8 +531,9 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         {
             autoSaveCurrentBandLevels_();
             lastBand_ = newBandEnum;
-            loadTxAttenForBand_(bandNameForFilter(newBandEnum));
-            loadTuneAttenForBand_(bandNameForFilter(newBandEnum));
+            loadTxAttenForBand_(newBandEnum);
+            loadTuneAttenForBand_(newBandEnum);
+            applyTxLevel(); // apply both loaded values in one call
         }
     });
 }
@@ -817,22 +818,26 @@ void MainFrame::autoSaveCurrentBandLevels_()
 
 // loadTxAttenForBand_() - load saved TX attenuation for the given band
 //-------------------------------------------------------------------------
-void MainFrame::loadTxAttenForBand_(const wxString& bandName)
+void MainFrame::loadTxAttenForBand_(FilterFrequency band)
 {
+    wxString bandName = bandNameForFilter(band);
     auto& atten = wxGetApp().appConfiguration.txAttenByBand;
     auto it = atten->find(bandName);
     g_txLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
-    applyTxLevel();
+    txLoadedLevel_ = g_txLevel; // snapshot for Restore
+    // Caller is responsible for calling applyTxLevel() after all band values are loaded.
 }
 
 // loadTuneAttenForBand_() - load saved tune attenuation for the given band
 //-------------------------------------------------------------------------
-void MainFrame::loadTuneAttenForBand_(const wxString& bandName)
+void MainFrame::loadTuneAttenForBand_(FilterFrequency band)
 {
+    wxString bandName = bandNameForFilter(band);
     auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
     auto it = atten->find(bandName);
     g_tuneLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.tuneLevel;
-    applyTxLevel();
+    tuneLoadedLevel_ = g_tuneLevel; // snapshot for Restore
+    // Caller is responsible for calling applyTxLevel() after all band values are loaded.
 }
 
 // applyTxLevel() - shared helper to apply g_txLevel and update the UI
@@ -896,7 +901,8 @@ void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
 void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
 {
     uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(freq));
+    FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
 
     if (bandName.IsEmpty())
         return;
@@ -912,15 +918,25 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore TX atten level for %s"), bandName));
     restoreItem->Enable(hasSaved);
 
-    menu.Bind(wxEVT_MENU, [bandName, hasSaved](wxCommandEvent&) {
+    // Toggle: Enable saves the current level and opts the band into auto-save;
+    // Disable removes the entry so the band reverts to the global default.
+    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
         if (hasSaved)
             wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
         else
+        {
+            txLoadedLevel_ = g_txLevel; // record restore point at Enable time
             wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
+        }
         wxGetApp().appConfiguration.save(pConfig);
     }, toggleItem->GetId());
-    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
-        loadTxAttenForBand_(bandName);
+    // Restore reverts to txLoadedLevel_: the value active when this band was
+    // entered or when Enable was last clicked, whichever is more recent.
+    // Using a snapshot avoids the case where auto-save on band departure has
+    // already overwritten the map entry with the adjusted value.
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_txLevel = txLoadedLevel_;
+        applyTxLevel();
     }, restoreItem->GetId());
 
     PopupMenu(&menu);
@@ -929,7 +945,8 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
 void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
 {
     uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(freq));
+    FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
 
     if (bandName.IsEmpty())
         return;
@@ -945,15 +962,19 @@ void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
     auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
     restoreItem->Enable(hasSaved);
 
-    menu.Bind(wxEVT_MENU, [bandName, hasSaved](wxCommandEvent&) {
+    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
         if (hasSaved)
             wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
         else
+        {
+            tuneLoadedLevel_ = g_tuneLevel; // record restore point at Enable time
             wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+        }
         wxGetApp().appConfiguration.save(pConfig);
     }, toggleItem->GetId());
-    menu.Bind(wxEVT_MENU, [this, bandName](wxCommandEvent&) {
-        loadTuneAttenForBand_(bandName);
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_tuneLevel = tuneLoadedLevel_;
+        applyTxLevel();
     }, restoreItem->GetId());
 
     PopupMenu(&menu);
@@ -1756,8 +1777,9 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         {
             autoSaveCurrentBandLevels_();
             lastBand_ = newBandEnum;
-            loadTxAttenForBand_(bandNameForFilter(newBandEnum));
-            loadTuneAttenForBand_(bandNameForFilter(newBandEnum));
+            loadTxAttenForBand_(newBandEnum);
+            loadTuneAttenForBand_(newBandEnum);
+            applyTxLevel(); // apply both loaded values in one call
         }
     }
 }

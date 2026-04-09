@@ -427,8 +427,8 @@ class MainFrame : public TopFrame
         void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
         void OnTxLevelContextMenu( wxContextMenuEvent& event ) override;
         void OnTuneAttenContextMenu( wxContextMenuEvent& event ) override;
-        void loadTxAttenForBand_(const wxString& bandName);
-        void loadTuneAttenForBand_(const wxString& bandName);
+        void loadTxAttenForBand_(FilterFrequency band);
+        void loadTuneAttenForBand_(FilterFrequency band);
         void autoSaveCurrentBandLevels_();
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
@@ -534,6 +534,14 @@ class MainFrame : public TopFrame
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
         FilterFrequency lastBand_;
+        // Restore-point: the TX/tune level that was active when we entered the
+        // current band (or when Enable was first clicked for that band). Restore
+        // reverts to this rather than re-reading the map, which may already have
+        // been overwritten by auto-save on a prior band departure.
+        // Initialised to -20 dB (units are tenths of dB) as a safe default in
+        // case Restore is invoked before any band load or Enable has occurred.
+        int txLoadedLevel_{-200};
+        int tuneLoadedLevel_{-200};
         
         std::string vkFileName_;
         

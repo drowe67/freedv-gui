@@ -60,7 +60,7 @@ the "Advanced" button and proceed to "Advanced Setup" below.
 Easy Setup supports three methods of radio control:
 
 1. No radio control (e.g. using a VOX audio device such as SignaLink),
-2. Hamlib CAT control, and
+2. Hamlib or OmniRig CAT control, and
 3. Serial port PTT control.
 
 Simply select the option that matches your radio setup and the required fields will
@@ -264,7 +264,7 @@ a poor SNR at the receiver.  This is a very common problem.
    The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
    Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
    
-   FreeDV will automatically detect band changes (via Hamlib CAT or manual
+   FreeDV will automatically detect band changes (via Hamlib or OmniRig CAT, or manual
    frequency entry) and load any saved attenuation value for the new band.
    When a band is left the current values for that band are saved immediately.
    
@@ -290,9 +290,7 @@ demodulator.
 
 ## USB or LSB?
 
-FreeDV currently follows the same conventions for upper and lower sideband as are used for amateur SSB.
-As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
-
+FreeDV currently follows the same conventions for upper and lower sideband as are used for amateur SSB. As an aid to this, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 ## Transceiver Filters
 
 For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 kHz). 
