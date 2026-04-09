@@ -307,11 +307,21 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     // Check if small screen size means text will overlap
 
     int textXStep = STEP_F_HZ * freq_hz_to_px;
-    int textYStep = Y_PER_SECOND; // labels at 1s intervals
     snprintf(buf, STR_LENGTH, "%.1fk", ((float)MAX_F_HZ - STEP_F_HZ)/1000.0f);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedX = (text_w > textXStep);
-    int overlappedY = (text_h > textYStep);
+
+    // Pick the coarsest Y label interval that still shows at least 4 labels
+    static const int labelStepPresets[] = {5, 2, 1};
+    int labelSecs = labelStepPresets[2]; // default finest
+    for (int preset : labelStepPresets)
+    {
+        if (m_imgHeight / (preset * Y_PER_SECOND) >= 4)
+        {
+            labelSecs = preset;
+            break;
+        }
+    }
 
     // Major Vertical gridlines and legend
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ)
@@ -363,7 +373,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 
         snprintf(buf, STR_LENGTH, "%3.0fs", time);
         GetTextExtent(buf, &text_w, &text_h);
-        if (!overlappedY)
+        if ((int)(time + 0.5f) % labelSecs == 0)
             ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET,
                           y - text_h / 2);
     }
