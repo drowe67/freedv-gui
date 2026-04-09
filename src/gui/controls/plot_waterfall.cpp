@@ -308,13 +308,13 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 
     int textXStep = STEP_F_HZ * freq_hz_to_px;
     int textYStep = WATERFALL_SECS_STEP * Y_PER_SECOND;
-    snprintf(buf, STR_LENGTH, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
+    snprintf(buf, STR_LENGTH, "%.1fk", ((float)MAX_F_HZ - STEP_F_HZ)/1000.0f);
     GetTextExtent(buf, &text_w, &text_h);
-    int overlappedText = (text_w > textXStep) || (text_h > textYStep);
+    int overlappedX = (text_w > textXStep);
+    int overlappedY = (text_h > textYStep);
 
     // Major Vertical gridlines and legend
-    //dc.SetPen(m_penShortDash);
-    for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) 
+    for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ)
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
@@ -323,28 +323,28 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
             ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
         else
             ctx->StrokeLine(x, PLOT_BORDER + 8, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
-            
-        snprintf(buf, STR_LENGTH, "%4.0fHz", f);
+
+        snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
         GetTextExtent(buf, &text_w, &text_h);
-        if (!overlappedText)
+        if (!overlappedX)
             ctx->DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2) - 5);
     }
 
-    for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
+    for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ)
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
         ctx->StrokeLine(x, PLOT_BORDER + 13, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
-    
+
     // Horizontal gridlines
     ctx->SetPen(m_penDotDash);
-    for(y = PLOT_BORDER + YBOTTOM_TEXT_OFFSET, time=0; 
-        y < m_rGrid.GetHeight(); 
-        time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP) 
+    for(y = PLOT_BORDER + YBOTTOM_TEXT_OFFSET, time=0;
+        y < m_rGrid.GetHeight();
+        time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP)
     {
         if (m_graticule)
-            ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
+            ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
                         (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         snprintf(buf, STR_LENGTH, "%3.0fs", time);
         GetTextExtent(buf, &text_w, &text_h);
@@ -353,7 +353,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         {
             top += text_h;
         }
-        if (!overlappedText)
+        if (!overlappedY)
             ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
    }
    

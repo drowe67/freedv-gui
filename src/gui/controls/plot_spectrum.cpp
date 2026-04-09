@@ -252,11 +252,10 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
     int textXStep = STEP_F_HZ*freq_hz_to_px;
     int textYStep = STEP_MAG_DB*mag_dB_to_py;
-    snprintf(buf, STR_LENGTH, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
+    snprintf(buf, STR_LENGTH, "%.1fk", ((float)MAX_F_HZ - STEP_F_HZ)/1000.0f);
     GetTextExtent(buf, &text_w, &text_h);
-    int overlappedText = (text_w > textXStep) || (text_h > textYStep);
-    //printf("text_w: %d textXStep: %d text_h: %d textYStep: %d  overlappedText: %d\n", text_w, textXStep, 
-    //      text_h, textYStep, overlappedText);
+    int overlappedX = (text_w > textXStep);
+    int overlappedY = (text_h > textYStep);
 
     // Vertical gridlines
 
@@ -269,28 +268,28 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
         if (!repaintDataOnly)
         {
-            snprintf(buf, STR_LENGTH, "%4.0fHz", f);
+            snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
             GetTextExtent(buf, &text_w, &text_h);
-            if (!overlappedText)
+            if (!overlappedX)
                 ctx->DrawText(buf, x - text_w/2, PLOT_BORDER);
         }
     }
 
     ctx->SetPen(wxPen(foregroundColor, 1));
-    for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
+    for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ)
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
         ctx->StrokeLine(x, PLOT_BORDER + bottomOffset_, x, PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET);
     }
-    
+
     // Horizontal gridlines
 
     ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
         y += PLOT_BORDER + bottomOffset_;
-        ctx->StrokeLine(PLOT_BORDER + leftOffset_, y, 
+        ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
                 (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         if (!repaintDataOnly)
         {
@@ -305,7 +304,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             {
                 top += text_h/2;
             }
-            if (!overlappedText)
+            if (!overlappedY)
                  ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
         }
     }
