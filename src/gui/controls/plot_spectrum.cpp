@@ -289,14 +289,14 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
     ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
+        if (mag == m_min_mag_db || mag == m_max_mag_db)
+            continue;
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
         y += PLOT_BORDER + bottomOffset_;
         ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
                 (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         if (!repaintDataOnly)
         {
-            if (mag == m_min_mag_db || mag == m_max_mag_db)
-                continue;
             snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
             GetTextExtent(buf, &text_w, &text_h);
             auto top = y - text_h / 2;
@@ -322,7 +322,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
             x = (m_rxFreq + averageOffset) * freq_hz_to_px;
             x += PLOT_BORDER + leftOffset_;
-            ctx->StrokeLine(x, 0, x, PLOT_BORDER + bottomOffset_);
+            ctx->StrokeLine(x, 0, x, verticalBarLength);
    
             // red rx tuning line
             ctx->SetPen(wxPen(RED_COLOR, 3));
