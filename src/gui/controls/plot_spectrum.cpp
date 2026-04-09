@@ -119,6 +119,7 @@ void PlotSpectrum::OnSize(wxSizeEvent&) {
         leftOffset_ = std::max(leftOffset_, text_w);
         bottomOffset_ = std::max(bottomOffset_, text_h);
     }
+    bottomOffset_ = std::max(bottomOffset_, (int)YBOTTOM_OFFSET);
 }
 
 //----------------------------------------------------------------
@@ -271,7 +272,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedX)
-                ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + bottomOffset_ - text_h) / 2);
+                ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET * 2 - text_h) / 2);
         }
     }
 
@@ -294,17 +295,11 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
                 (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
         if (!repaintDataOnly)
         {
+            if (mag == m_min_mag_db || mag == m_max_mag_db)
+                continue;
             snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
             GetTextExtent(buf, &text_w, &text_h);
             auto top = y - text_h / 2;
-            if (mag == m_min_mag_db)
-            {
-                top -= text_h/2;
-            }
-            else if (mag == m_max_mag_db)
-            {
-                top += text_h/2;
-            }
             if (!overlappedY)
                  ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
         }

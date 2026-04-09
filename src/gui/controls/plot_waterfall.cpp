@@ -307,7 +307,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     // Check if small screen size means text will overlap
 
     int textXStep = STEP_F_HZ * freq_hz_to_px;
-    int textYStep = WATERFALL_SECS_STEP * Y_PER_SECOND;
+    int textYStep = Y_PER_SECOND; // labels at 1s intervals
     snprintf(buf, STR_LENGTH, "%.1fk", ((float)MAX_F_HZ - STEP_F_HZ)/1000.0f);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedX = (text_w > textXStep);
@@ -337,25 +337,36 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         ctx->StrokeLine(x, PLOT_BORDER + YBOTTOM_OFFSET, x, PLOT_BORDER + YBOTTOM_OFFSET * 3 / 4);
     }
 
-    // Horizontal gridlines
+    int dataY0   = PLOT_BORDER + YBOTTOM_OFFSET;
+    int dataYEnd = dataY0 + m_imgHeight;
+
+    // Horizontal gridlines at 5s intervals (graticule mode only)
     ctx->SetPen(m_penDotDash);
-    for(y = PLOT_BORDER + YBOTTOM_TEXT_OFFSET, time=0;
-        y < m_rGrid.GetHeight();
+    for(y = dataY0, time=0;
+        y < dataYEnd;
         time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP)
     {
         if (m_graticule)
             ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
                         (m_rGrid.GetWidth() + PLOT_BORDER + leftOffset_), y);
+    }
+
+    // Y axis ticks and labels at 1s intervals
+    ctx->SetPen(wxPen(foregroundColor, 1));
+    for(y = dataY0, time=0;
+        y < dataYEnd;
+        time += 1.0f, y += Y_PER_SECOND)
+    {
+        bool isMajor = (fmodf(time, (float)WATERFALL_SECS_STEP) < 0.5f);
+        ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
+                        PLOT_BORDER + leftOffset_ + (isMajor ? 8 : 4), y);
+
         snprintf(buf, STR_LENGTH, "%3.0fs", time);
         GetTextExtent(buf, &text_w, &text_h);
-        auto top = y - text_h / 2;
-        if (time == 0)
-        {
-            top += text_h;
-        }
         if (!overlappedY)
-            ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
-   }
+            ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET,
+                          y - text_h / 2);
+    }
    
    float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
    
