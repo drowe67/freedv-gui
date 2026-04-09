@@ -322,19 +322,19 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         if (m_graticule)
             ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
         else
-            ctx->StrokeLine(x, PLOT_BORDER + 8, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+            ctx->StrokeLine(x, PLOT_BORDER + YBOTTOM_OFFSET, x, PLOT_BORDER + YBOTTOM_OFFSET / 2);
 
         snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedX)
-            ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + 8 - text_h) / 2);
+            ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + YBOTTOM_OFFSET / 2 - text_h) / 2);
     }
 
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ)
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
-        ctx->StrokeLine(x, PLOT_BORDER + 13, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+        ctx->StrokeLine(x, PLOT_BORDER + YBOTTOM_OFFSET, x, PLOT_BORDER + YBOTTOM_OFFSET * 3 / 4);
     }
 
     // Horizontal gridlines

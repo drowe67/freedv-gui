@@ -280,7 +280,8 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + leftOffset_;
-        ctx->StrokeLine(x, PLOT_BORDER + bottomOffset_, x, PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET);
+        int tickLen = (fmodf(f, (float)STEP_F_HZ) < 1.0f) ? YBOTTOM_TEXT_OFFSET * 2 : YBOTTOM_TEXT_OFFSET;
+        ctx->StrokeLine(x, PLOT_BORDER + bottomOffset_, x, PLOT_BORDER + bottomOffset_ - tickLen);
     }
 
     // Horizontal gridlines
