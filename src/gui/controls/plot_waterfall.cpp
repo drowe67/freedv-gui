@@ -327,7 +327,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedX)
-            ctx->DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2) - 5);
+            ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + 8 - text_h) / 2);
     }
 
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ)

@@ -271,7 +271,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedX)
-                ctx->DrawText(buf, x - text_w/2, PLOT_BORDER);
+                ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + bottomOffset_ - text_h) / 2);
         }
     }
 
