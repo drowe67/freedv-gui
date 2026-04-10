@@ -139,3 +139,8 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
     
     return outputSamples_.get();
 }
+
+void ResampleStep::reset() FREEDV_NONBLOCKING
+{
+    resampleState_->clear();
+}
