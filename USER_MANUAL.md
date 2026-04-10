@@ -60,7 +60,7 @@ the "Advanced" button and proceed to "Advanced Setup" below.
 Easy Setup supports three methods of radio control:
 
 1. No radio control (e.g. using a VOX audio device such as SignaLink),
-2. Hamlib CAT control, and
+2. Hamlib or OmniRig CAT control, and
 3. Serial port PTT control.
 
 Simply select the option that matches your radio setup and the required fields will
@@ -230,8 +230,11 @@ and for the basic operation of the FreeDV software.
 Sound card levels are generally adjusted in the computer's Control
 Panel or Settings, or in some cases via controls on your rig interface
 hardware or menus on your radio. In-app adjustments can also be done
-by using the 'TX Level' slider at the bottom of the main screen; anything
-below 0 dB attenuates the transmit signal.
+using the **TX Attenuation** control on the right-hand side of the main
+window. The `<<` and `>>` buttons adjust by 1.0 dB and the `<` and `>`
+buttons adjust by 0.2 dB; the mouse scroll wheel can also be used to 
+generate 0.2dB steps whilst hovering anywhere over the TX Attenuation
+control area. Values below 0 dB attenuate the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
@@ -243,10 +246,29 @@ shift keying (PSK) so is not sensitive to amplitude.
 1. The transmit level from your computer to your radio is important.
 On transmit, adjust your level so that the ALC is **just** being
 nudged.  More **is not better** with the FreeDV transmit signal.
-Overdriving your transmitter will lead to a distorted transit signal, and
+Overdriving your transmitter will lead to a distorted transmit signal, and
 a poor SNR at the receiver.  This is a very common problem.
 
-1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+   Right-clicking on the **TX Attenuation** control top row opens a context menu
+   with the following options for the currently active amateur band:
+
+   * **Enable auto-save of TX atten for [band]** — saves the current level for
+     that band and enables automatic saving whenever the band is left or the
+     program is closed. The menu item changes to **Disable auto-save of TX atten
+     for [band]** once enabled, which removes the saved value and stops auto-saving.
+   * **Restore TX atten level for [band]** — reverts the attenuation to the last
+     auto-saved value for that band, useful for recovering a known good level
+     after experimenting during a session.
+    
+   Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
+   The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
+   Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
+   
+   FreeDV will automatically detect band changes (via Hamlib or OmniRig CAT, or manual
+   frequency entry) and load any saved attenuation value for the new band.
+   When a band is left the current values for that band are saved immediately.
+   
+ 1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.
@@ -268,10 +290,7 @@ demodulator.
 
 ## USB or LSB?
 
-On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
-
-As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
-
+FreeDV currently follows the same conventions for upper and lower sideband as are used for amateur SSB. As an aid to this, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 ## Transceiver Filters
 
 For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 kHz). 
@@ -912,6 +931,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use RNNoise for improved noise canceling during TX. (PR #1276)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
+    * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)

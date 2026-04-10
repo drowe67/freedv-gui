@@ -1065,6 +1065,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
+    lastBand_ = BAND_OTHER;
     
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
@@ -1358,7 +1359,8 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
-    
+    autoSaveCurrentBandLevels_();
+
     int mode = FREEDV_MODE_RADE;
     if (m_rb1600->GetValue())
         mode = 0;

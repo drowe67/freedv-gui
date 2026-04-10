@@ -58,6 +58,8 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+static wxString bandNameForFilter(FilterFrequency band);
+
 std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
@@ -522,6 +524,17 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             m_cboReportFrequency->SetValue(freqString);
         }
         m_txtModeStatus->Refresh();
+
+        // Auto-save outgoing band levels, then load the new band's levels
+        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+        if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
+        {
+            autoSaveCurrentBandLevels_();
+            lastBand_ = newBandEnum;
+            loadTxAttenForBand_(newBandEnum);
+            loadTuneAttenForBand_(newBandEnum);
+            applyTxLevel(); // apply both loaded values in one call
+        }
     });
 }
 
@@ -755,6 +768,78 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// bandNameForFilter() - maps FilterFrequency enum to config key string
+//-------------------------------------------------------------------------
+static wxString bandNameForFilter(FilterFrequency band)
+{
+    switch (band)
+    {
+        case BAND_160M:    return "160m";
+        case BAND_80M:     return "80m";
+        case BAND_60M:     return "60m";
+        case BAND_40M:     return "40m";
+        case BAND_30M:     return "30m";
+        case BAND_20M:     return "20m";
+        case BAND_17M:     return "17m";
+        case BAND_15M:     return "15m";
+        case BAND_12M:     return "12m";
+        case BAND_10M:     return "10m";
+        case BAND_VHF_UHF: return "vhfuhf";
+        default:           return "";
+    }
+}
+
+// autoSaveCurrentBandLevels_() - if the current band has saved per-band
+// values, update them with the current live levels.
+//-------------------------------------------------------------------------
+void MainFrame::autoSaveCurrentBandLevels_()
+{
+    // Use lastBand_ (not the current reporting frequency) so that on a band
+    // change we save the *outgoing* band's levels before loading the new one.
+    wxString bandName = bandNameForFilter(lastBand_);
+    if (bandName.IsEmpty())
+        return;
+    bool changed = false;
+    auto& txAtten = wxGetApp().appConfiguration.txAttenByBand;
+    if (txAtten->find(bandName) != txAtten->end())
+    {
+        txAtten->insert_or_assign(bandName, g_txLevel);
+        changed = true;
+    }
+    auto& tuneAtten = wxGetApp().appConfiguration.tuneAttenByBand;
+    if (tuneAtten->find(bandName) != tuneAtten->end())
+    {
+        tuneAtten->insert_or_assign(bandName, g_tuneLevel);
+        changed = true;
+    }
+    if (changed)
+        wxGetApp().appConfiguration.save(pConfig);
+}
+
+// loadTxAttenForBand_() - load saved TX attenuation for the given band
+//-------------------------------------------------------------------------
+void MainFrame::loadTxAttenForBand_(FilterFrequency band)
+{
+    wxString bandName = bandNameForFilter(band);
+    auto& atten = wxGetApp().appConfiguration.txAttenByBand;
+    auto it = atten->find(bandName);
+    g_txLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.transmitLevel;
+    txLoadedLevel_ = g_txLevel; // snapshot for Restore
+    // Caller is responsible for calling applyTxLevel() after all band values are loaded.
+}
+
+// loadTuneAttenForBand_() - load saved tune attenuation for the given band
+//-------------------------------------------------------------------------
+void MainFrame::loadTuneAttenForBand_(FilterFrequency band)
+{
+    wxString bandName = bandNameForFilter(band);
+    auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
+    auto it = atten->find(bandName);
+    g_tuneLevel = (it != atten->end()) ? it->second : (int)wxGetApp().appConfiguration.tuneLevel;
+    tuneLoadedLevel_ = g_tuneLevel; // snapshot for Restore
+    // Caller is responsible for calling applyTxLevel() after all band values are loaded.
+}
+
 // applyTxLevel() - shared helper to apply g_txLevel and update the UI
 //-------------------------------------------------------------------------
 void MainFrame::applyTxLevel()
@@ -783,13 +868,21 @@ void MainFrame::applyTxLevel()
 
     m_txtTxLevelNum->SetLabel(fmtString);
 
+    // Only update the global defaults when the current band has no per-band
+    // override, so that per-band values don't contaminate the global default.
+    // Use the current reporting frequency directly rather than lastBand_ to
+    // avoid stale state before the first band-change event fires.
+    wxString bandName = bandNameForFilter(FreeDVReporterDialog::getFilterForFrequency_(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency));
     if (isTuning)
     {
-        wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
+        if (bandName.IsEmpty() || wxGetApp().appConfiguration.tuneAttenByBand->find(bandName) == wxGetApp().appConfiguration.tuneAttenByBand->end())
+            wxGetApp().appConfiguration.tuneLevel = g_tuneLevel;
     }
     else
     {
-        wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+        if (bandName.IsEmpty() || wxGetApp().appConfiguration.txAttenByBand->find(bandName) == wxGetApp().appConfiguration.txAttenByBand->end())
+            wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     }
 }
 
@@ -803,6 +896,88 @@ void MainFrame::OnTxLevelMouseWheel( wxMouseEvent& event )
     int delta = (event.GetWheelRotation() > 0) ? TX_ATTENUATION_SMALL_STEP : -TX_ATTENUATION_SMALL_STEP;
     if (m_btnTogTune->GetValue()) g_tuneLevel += delta; else g_txLevel += delta;
     applyTxLevel();
+}
+
+void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
+{
+    uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
+
+    if (bandName.IsEmpty())
+        return;
+
+    auto& atten = wxGetApp().appConfiguration.txAttenByBand;
+    bool hasSaved = (atten->find(bandName) != atten->end());
+
+    wxMenu menu;
+    wxString toggleLabel = hasSaved
+        ? wxString::Format(_("Disable auto-save of TX atten for %s"), bandName)
+        : wxString::Format(_("Enable auto-save of TX atten for %s"),  bandName);
+    auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore TX atten level for %s"), bandName));
+    restoreItem->Enable(hasSaved);
+
+    // Toggle: Enable saves the current level and opts the band into auto-save;
+    // Disable removes the entry so the band reverts to the global default.
+    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
+        if (hasSaved)
+            wxGetApp().appConfiguration.txAttenByBand->erase(bandName);
+        else
+        {
+            txLoadedLevel_ = g_txLevel; // record restore point at Enable time
+            wxGetApp().appConfiguration.txAttenByBand->insert_or_assign(bandName, g_txLevel);
+        }
+        wxGetApp().appConfiguration.save(pConfig);
+    }, toggleItem->GetId());
+    // Restore reverts to txLoadedLevel_: the value active when this band was
+    // entered or when Enable was last clicked, whichever is more recent.
+    // Using a snapshot avoids the case where auto-save on band departure has
+    // already overwritten the map entry with the adjusted value.
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_txLevel = txLoadedLevel_;
+        applyTxLevel();
+    }, restoreItem->GetId());
+
+    PopupMenu(&menu);
+}
+
+void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
+{
+    uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
+
+    if (bandName.IsEmpty())
+        return;
+
+    auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
+    bool hasSaved = (atten->find(bandName) != atten->end());
+
+    wxMenu menu;
+    wxString toggleLabel = hasSaved
+        ? wxString::Format(_("Disable auto-save of tune atten for %s"), bandName)
+        : wxString::Format(_("Enable auto-save of tune atten for %s"),  bandName);
+    auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
+    restoreItem->Enable(hasSaved);
+
+    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
+        if (hasSaved)
+            wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
+        else
+        {
+            tuneLoadedLevel_ = g_tuneLevel; // record restore point at Enable time
+            wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+        }
+        wxGetApp().appConfiguration.save(pConfig);
+    }, toggleItem->GetId());
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_tuneLevel = tuneLoadedLevel_;
+        applyTxLevel();
+    }, restoreItem->GetId());
+
+    PopupMenu(&menu);
 }
 
 //-------------------------------------------------------------------------
@@ -1591,6 +1766,21 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->refreshQSYButtonState();
+    }
+
+    // Auto-save outgoing band levels, then load the new band's levels
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
+        {
+            autoSaveCurrentBandLevels_();
+            lastBand_ = newBandEnum;
+            loadTxAttenForBand_(newBandEnum);
+            loadTuneAttenForBand_(newBandEnum);
+            applyTxLevel(); // apply both loaded values in one call
+        }
     }
 }
 
