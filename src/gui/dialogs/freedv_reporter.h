@@ -32,6 +32,7 @@
 
 #include "../../main.h"
 #include "defines.h"
+#include "filter_frequency.h"
 #include "reporting/FreeDVReporter.h"
 #include "../controls/ReportMessageRenderer.h"
 
@@ -41,22 +42,7 @@
 class FreeDVReporterDialog : public wxFrame
 {
     public:
-        enum FilterFrequency
-        {
-            BAND_ALL,
-            BAND_160M,
-            BAND_80M,
-            BAND_60M,
-            BAND_40M,
-            BAND_30M,
-            BAND_20M,
-            BAND_17M,
-            BAND_15M,
-            BAND_12M,
-            BAND_10M,
-            BAND_VHF_UHF,
-            BAND_OTHER,
-        };
+        using FilterFrequency = ::FilterFrequency;
 
         enum ColumnFilterOperator
         {
@@ -81,7 +67,9 @@ class FreeDVReporterDialog : public wxFrame
         void refreshLayout();
         
         void setBandFilter(FilterFrequency freq);
-        
+
+        static FilterFrequency getFilterForFrequency_(uint64_t freq);
+
         bool isTextMessageFieldInFocus();
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
@@ -489,7 +477,6 @@ class FreeDVReporterDialog : public wxFrame
         void createColumn_(int col, bool visible);
         wxDataViewColumn* getColumnForModelColId_(unsigned int col);
 
-        FilterFrequency getFilterForFrequency_(uint64_t freq);
         wxColour msgRowBackgroundColor;
         wxColour msgRowForegroundColor;
         wxColour txRowBackgroundColor;

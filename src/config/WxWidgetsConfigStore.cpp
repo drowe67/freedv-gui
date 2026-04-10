@@ -84,6 +84,41 @@ void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, C
     config->Write(configElement.getElementName(), val);
 }
 
+template<>
+void WxWidgetsConfigStore::load_<std::map<wxString, int> >(wxConfigBase* config, ConfigurationDataElement<std::map<wxString, int> >& configElement)
+{
+    std::map<wxString, int> result;
+    config->SetPath(configElement.getElementName());
+    wxString key;
+    long cookie;
+    bool hasMore = config->GetFirstEntry(key, cookie);
+    while (hasMore)
+    {
+        long val;
+        if (config->Read(key, &val))
+            result[key] = (int)val;
+        hasMore = config->GetNextEntry(key, cookie);
+    }
+    config->SetPath("/");
+    configElement.setWithoutProcessing(result);
+}
+
+template<>
+void WxWidgetsConfigStore::save_<std::map<wxString, int> >(wxConfigBase* config, ConfigurationDataElement<std::map<wxString, int> >& configElement)
+{
+    wxString path = configElement.getElementName();
+    wxString groupName = path.AfterLast('/');
+    wxString parentPath = path.BeforeLast('/');
+    if (parentPath.IsEmpty()) parentPath = "/";
+
+    config->SetPath(parentPath);
+    config->DeleteGroup(groupName);
+    config->SetPath(path);
+    for (auto& kv : configElement.getWithoutProcessing())
+        config->Write(kv.first, (long)kv.second);
+    config->SetPath("/");
+}
+
 wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<int> const& vec)
 {
     wxString rv = "";

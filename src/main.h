@@ -70,6 +70,7 @@
 #include "modem_stats.h"
 
 #include "topFrame.h"
+#include "gui/dialogs/filter_frequency.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
 #include "gui/controls/plot_scatter.h"
@@ -422,6 +423,11 @@ class MainFrame : public TopFrame
         void OnTxLevelIncr( wxCommandEvent& event ) override;
         void OnTxLevelIncrBig( wxCommandEvent& event ) override;
         void OnTxLevelMouseWheel( wxMouseEvent& event ) override;
+        void OnTxLevelContextMenu( wxContextMenuEvent& event ) override;
+        void OnTuneAttenContextMenu( wxContextMenuEvent& event ) override;
+        void loadTxAttenForBand_(FilterFrequency band);
+        void loadTuneAttenForBand_(FilterFrequency band);
+        void autoSaveCurrentBandLevels_();
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         
@@ -525,6 +531,15 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
         bool firstFreqUpdateOnConnect_;
+        FilterFrequency lastBand_;
+        // Restore-point: the TX/tune level that was active when we entered the
+        // current band (or when Enable was first clicked for that band). Restore
+        // reverts to this rather than re-reading the map, which may already have
+        // been overwritten by auto-save on a prior band departure.
+        // Initialised to -20 dB (units are tenths of dB) as a safe default in
+        // case Restore is invoked before any band load or Enable has occurred.
+        int txLoadedLevel_{-200};
+        int tuneLoadedLevel_{-200};
         
         std::string vkFileName_;
         

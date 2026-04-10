@@ -23,6 +23,7 @@
 #define FREEDV_CONFIGURATION_H
 
 #include <inttypes.h>
+#include <wx/string.h>
 #include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
 #include "AudioConfiguration.h"
@@ -69,6 +70,8 @@ public:
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
     ConfigurationDataElement<int> tuneLevel;
+    ConfigurationDataElement<std::map<wxString, int>> txAttenByBand;
+    ConfigurationDataElement<std::map<wxString, int>> tuneAttenByBand;
     
     ConfigurationDataElement<wxString> playFileToMicInPath;
     ConfigurationDataElement<wxString> playFileFromRadioPath;

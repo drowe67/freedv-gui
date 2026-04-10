@@ -22,8 +22,10 @@
 #ifndef WXWIDGETS_CONFIG_STORE_H
 #define WXWIDGETS_CONFIG_STORE_H
 
+#include <map>
 #include <vector>
 #include <wx/config.h>
+#include <wx/string.h>
 #include "ConfigurationDataElement.h"
 
 class WxWidgetsConfigStore
@@ -85,5 +87,11 @@ template<>
 void WxWidgetsConfigStore::load_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement);
 template<>
 void WxWidgetsConfigStore::save_<std::vector<bool> >(wxConfigBase* config, ConfigurationDataElement<std::vector<bool> >& configElement);
+
+// Special handling for loading and saving a string-keyed int map (stored as a config group).
+template<>
+void WxWidgetsConfigStore::load_<std::map<wxString, int> >(wxConfigBase* config, ConfigurationDataElement<std::map<wxString, int> >& configElement);
+template<>
+void WxWidgetsConfigStore::save_<std::map<wxString, int> >(wxConfigBase* config, ConfigurationDataElement<std::map<wxString, int> >& configElement);
 
 #endif // WXWIDGETS_CONFIG_STORE_H
