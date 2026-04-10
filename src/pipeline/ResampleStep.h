@@ -53,7 +53,7 @@ public:
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    r8b::CDSPResampler24* resampleState_;
+    r8b::CDSPResampler16* resampleState_;
 
     double* tempInput_;
     std::unique_ptr<short[]> outputSamples_;
