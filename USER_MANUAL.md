@@ -930,6 +930,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
     * Use RNNoise for improved noise canceling during TX. (PR #1276)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
+    * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
