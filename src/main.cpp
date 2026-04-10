@@ -180,6 +180,9 @@ extern SNDFILE            *g_sfRecMicFile;
 extern bool                g_recFileFromMic;
 extern bool                g_recVoiceKeyerFile;
 
+extern SNDFILE* g_sfRecDecoderFile;
+extern bool g_recFileFromDecoder;
+
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
@@ -211,6 +214,7 @@ wxString utFreeDVMode;
 wxString utTxFile;
 wxString utTxOutFile;
 wxString utRxFile;
+wxString utRxOutFile;
 wxString utTxFeatureFile;
 wxString utRxFeatureFile;
 long utTxTimeSeconds;
@@ -439,6 +443,17 @@ void MainApp::UnitTest_()
     }
     else
     {
+        if (utRxOutFile != "")
+        {
+            SF_INFO recSf;
+            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            recSf.channels   = 1;
+            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+            g_sfRecDecoderFile = sf_open((const char*)utRxOutFile.ToUTF8(), SFM_WRITE, &recSf);
+            g_recFileFromDecoder = true;
+        }
+
         if (utRxFile != "")
         {
             // Receive until file has finished playing
@@ -476,6 +491,12 @@ void MainApp::UnitTest_()
                     sync = newSync;
                 }
             } 
+        }
+
+        if (g_recFileFromDecoder)
+        {
+            g_recFileFromDecoder = false;
+            sf_close(g_sfRecDecoderFile);
         }
     }
     
@@ -522,6 +543,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
+    parser.AddOption("rxoutfile", wxEmptyString, "In UT mode, records RX output to the given WAV file.");
     parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
     parser.AddOption("txoutfile", wxEmptyString, "In UT mode, records TX output to the given WAV file.");
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
@@ -572,6 +594,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             log_info("Piping %s through RX pipeline", (const char*)utRxFile.ToUTF8());
         }
         
+        if (parser.Found("rxoutfile", &utRxOutFile))
+        {
+            log_info("Recording RX output to %s", (const char*)utRxOutFile.ToUTF8());
+        }
+
         if (parser.Found("txfile", &utTxFile))
         {
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
