@@ -33,6 +33,7 @@
 //=========================================================================
 
 #include <atomic>
+#include <cmath>
 
 #include "RNNoiseStep.h"
 #include "pipeline_defines.h"
@@ -105,9 +106,14 @@ short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOu
             {
                 for (int index = 0; index < RNNOISE_FRAME_SIZE; index++)
                 {
-                    *tmpOutput++ = tmpFloat[index];
+                    float val = tmpFloat[index] * 32768.0;
+                    if (val > 32767.0f) *tmpOutput = 32767;
+                    else if (val < -32768.0f) *tmpOutput = -32768;
+                    else *tmpOutput = static_cast<short>(lrintf(val));
+                    tmpOutput++;
                 }
             }
+
             firstFrame_ = false;
         }
     }

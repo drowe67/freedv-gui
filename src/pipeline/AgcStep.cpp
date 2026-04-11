@@ -170,7 +170,10 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             float scaleFactor = exp(currentGainDb_/20.0 * log(10.0));
             for (auto ctr = 0; ctr < numSamplesPerRun_; ctr++)
             {
-                tmpInput[ctr] *= scaleFactor;
+                float val = (float)tmpInput[ctr] * scaleFactor;
+                if (val > 32767.0f) tmpInput[ctr] = 32767;
+                else if (val < -32768.0f) tmpInput[ctr] = -32768;
+                else tmpInput[ctr] = lrintf(val);
             }
 
             // Run WebRTC to make sure we don't clip.
