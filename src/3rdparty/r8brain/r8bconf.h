@@ -112,7 +112,7 @@
 	 * CDSPFracInterpolator object instead of being a global static object.
 	 */
 
-	#define R8B_FLTTEST 0
+	#define R8B_FLTTEST 1
 #endif // !defined( R8B_FLTTEST )
 
 #if !defined( R8B_FASTTIMING )
@@ -129,7 +129,7 @@
 	 * use.
 	 */
 
-	#define R8B_FASTTIMING 0
+	#define R8B_FASTTIMING 1
 #endif // !defined( R8B_FASTTIMING )
 
 #if !defined( R8B_EXTFFT )

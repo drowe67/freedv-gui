@@ -1070,8 +1070,10 @@ private:
 	{
 		const CDSPFracDelayFilterBank& fb = *FilterBank;
 		const int fltlen = FilterLen;
+#if !R8B_FASTTIMING
 		const double ssr = SrcSampleRate;
 		const double dsr = DstSampleRate;
+#endif // !R8B_FASTTIMING
 		double fpos = InPosFrac;
 		int rpos = ReadPos;
 		int bl = BufLeft - fl2;
