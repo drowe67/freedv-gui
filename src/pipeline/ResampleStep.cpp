@@ -52,7 +52,7 @@ static int resample_step(r8b::CDSPResampler16* resampler,
 
     for (int i = 0; i < length_input_short; i++)
     {
-        tmpInput[i] = input_short[i] / 32768.0;
+        tmpInput[i] = input_short[i] * (1.0 / 0x8000); // / 32768.0;
     }
 
     double* outputPtr = nullptr;
@@ -61,9 +61,9 @@ static int resample_step(r8b::CDSPResampler16* resampler,
     for (int i = 0; i < outputCount; i++)
     {
         double val = outputPtr[i] * 32768.0;
-        if (val > 32767.0) val = 32767.0;
-        else if (val < -32768.0) val = -32768.0;
-        output_short[i] = static_cast<short>(val);
+        if (val > 32767.0) output_short[i] = 32767;
+        else if (val < -32768.0) output_short[i] = -32768;
+        else output_short[i] = static_cast<short>(lrint(val));
     }
 
     return outputCount;
