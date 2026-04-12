@@ -1487,6 +1487,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
                 tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                 tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                 tipWindow_->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
+                tipWindow_->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(FreeDVReporterDialog::OnMouseWheelTooltip), NULL, this);
             
                 // Make sure we actually override behavior of needed events inside the tooltip.
                 for (auto& child : tipWindow_->GetChildren())
@@ -1494,6 +1495,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
                     child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                     child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                     child->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::OnLeftClickTooltip), NULL, this);
+                    child->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(FreeDVReporterDialog::OnMouseWheelTooltip), NULL, this);
                 }
             }
         }
@@ -1523,6 +1525,14 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
+}
+
+void FreeDVReporterDialog::OnMouseWheelTooltip(wxMouseEvent&)
+{
+    if (tipWindow_)
+    {
+        tipWindow_->Close();
+    }
 }
 
 void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
