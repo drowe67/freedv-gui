@@ -50,7 +50,8 @@ extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
 
-#define NUM_SECONDS_TO_READ 1
+#define NUM_SECONDS_TO_READ 5
+#define NUM_SECONDS_PER_OPERATION 1 /* to ensure we don't overflow ResampleStep buffer */
 
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
@@ -147,9 +148,10 @@ void PlaybackStep::nonRtThreadEntry_()
 
             unsigned int nsf = outputFifo_.numFree();
             //log_info("nsf = %d", (int)nsf);
-            if (nsf > 0)
+            while (nsf > 0)
             {
                 int samplesAtSourceRate = nsf * fileSampleRate / inputSampleRate_;
+                samplesAtSourceRate = std::min(samplesAtSourceRate, NUM_SECONDS_PER_OPERATION * fileSampleRate);
                 unsigned int numRead = sf_read_short(playFile, buf.get(), samplesAtSourceRate);
          
                 //log_info("samplesAtSource = %d, numRead = %u", samplesAtSourceRate, numRead);
@@ -186,6 +188,14 @@ void PlaybackStep::nonRtThreadEntry_()
                     fileCompleteFn_();
                     g_mutexProtectingCallbackData.Lock();
                 }
+
+                if ((int)numRead == 0)
+                {
+                    // early break out of loop if nothing more to read
+                    break;
+                }
+
+                nsf = outputFifo_.numFree();
             }
         }
         else if (playbackResampler_ != nullptr)
