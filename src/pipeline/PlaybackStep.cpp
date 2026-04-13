@@ -220,5 +220,10 @@ void PlaybackStep::nonRtThreadEntry_()
 
 void PlaybackStep::reset() FREEDV_NONBLOCKING
 {
+    if (playbackResampler_ != nullptr)
+    {
+        playbackResampler_->reset();
+    }
+
     outputFifo_.reset();
 }

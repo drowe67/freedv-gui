@@ -56,8 +56,6 @@ extern "C"
 #include "util/sanitizers.h"
 #include "util/realtime_fp.h"
 
-#include <samplerate.h>
-
 class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
