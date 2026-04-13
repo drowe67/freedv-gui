@@ -70,7 +70,7 @@ void CsvReporter::addReceiveRecord(std::string callsign, std::string mode, uint6
     }
 
     std::time_t now = std::time(nullptr);
-    std::tm* curTime = std::localtime(&now);
+    std::tm* curTime = std::gmtime(&now); // NOLINT
 
     char dateBuf[11]; // YYYY-MM-DD\0
     char timeBuf[9];  // HH:MM:SS\0
