@@ -39,7 +39,7 @@
 #include "CsvReporter.h"
 #include "../util/logging/ulog.h"
 
-CsvReporter::CsvReporter(std::string filename)
+CsvReporter::CsvReporter(std::string const& filename)
     : file_(filename, std::ios::app)
 {
     if (!file_.is_open())
@@ -70,12 +70,12 @@ void CsvReporter::addReceiveRecord(std::string callsign, std::string mode, uint6
     }
 
     std::time_t now = std::time(nullptr);
-    std::tm* utc = std::gmtime(&now);
+    std::tm* curTime = std::localtime(&now);
 
     char dateBuf[11]; // YYYY-MM-DD\0
     char timeBuf[9];  // HH:MM:SS\0
-    std::strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d", utc);
-    std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", utc);
+    std::strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d", curTime);
+    std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", curTime);
 
     log_info("CsvReporter: adding record for callsign %s, mode %s, frequency %" PRIu64 ", SNR %d",
              callsign.c_str(), mode.c_str(), frequency, static_cast<int>(snr));

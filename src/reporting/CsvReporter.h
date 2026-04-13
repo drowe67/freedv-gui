@@ -42,7 +42,7 @@
 class CsvReporter : public IReporter
 {
 public:
-    CsvReporter(std::string filename);
+    CsvReporter(std::string const& filename);
     virtual ~CsvReporter() = default;
 
     virtual void freqChange(uint64_t frequency) override;
