@@ -82,15 +82,15 @@ fi
 sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording
-#if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-#    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
-#else
-#    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
-#fi
+if [ "$OPERATING_SYSTEM" == "Linux" ]; then
+    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
+else
+    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 -txoutfile $(pwd)/test.wav "
+TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
@@ -107,7 +107,7 @@ wait $FDV_PID
 cat tmp.log
 
 # Stop recording, play back in RX mode
-#kill $RECORD_PID
+kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
