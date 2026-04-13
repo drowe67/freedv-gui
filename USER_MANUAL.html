@@ -64,7 +64,7 @@ class="header-section-number">2.2.2</span> CAT/PTT control</h3>
 <ol type="1">
 <li>No radio control (e.g. using a VOX audio device such as
 SignaLink),</li>
-<li>Hamlib CAT control, and</li>
+<li>Hamlib or OmniRig CAT control, and</li>
 <li>Serial port PTT control.</li>
 </ol>
 <p>Simply select the option that matches your radio setup and the
@@ -283,9 +283,13 @@ and for the basic operation of the FreeDV software.</p>
 class="header-section-number">2.5</span> Sound Card Levels</h2>
 <p>Sound card levels are generally adjusted in the computer’s Control
 Panel or Settings, or in some cases via controls on your rig interface
-hardware or menus on your radio. In-app adjustments can also be done by
-using the ‘TX Level’ slider at the bottom of the main screen; anything
-below 0 dB attenuates the transmit signal.</p>
+hardware or menus on your radio. In-app adjustments can also be done
+using the <strong>TX Attenuation</strong> control on the right-hand side
+of the main window. The <code>&lt;&lt;</code> and <code>&gt;&gt;</code>
+buttons adjust by 1.0 dB and the <code>&lt;</code> and <code>&gt;</code>
+buttons adjust by 0.2 dB; the mouse scroll wheel can also be used to
+generate 0.2dB steps whilst hovering anywhere over the TX Attenuation
+control area. Values below 0 dB attenuate the transmit signal.</p>
 <p>When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).</p>
 <ol type="1">
@@ -296,8 +300,31 @@ uses phase shift keying (PSK) so is not sensitive to amplitude.</p></li>
 On transmit, adjust your level so that the ALC is <strong>just</strong>
 being nudged. More <strong>is not better</strong> with the FreeDV
 transmit signal. Overdriving your transmitter will lead to a distorted
-transit signal, and a poor SNR at the receiver. This is a very common
-problem.</p></li>
+transmit signal, and a poor SNR at the receiver. This is a very common
+problem.</p>
+<p>Right-clicking on the <strong>TX Attenuation</strong> control top row
+opens a context menu with the following options for the currently active
+amateur band:</p>
+<ul>
+<li><strong>Enable auto-save of TX atten for [band]</strong> — saves the
+current level for that band and enables automatic saving whenever the
+band is left or the program is closed. The menu item changes to
+<strong>Disable auto-save of TX atten for [band]</strong> once enabled,
+which removes the saved value and stops auto-saving.</li>
+<li><strong>Restore TX atten level for [band]</strong> — reverts the
+attenuation to the last auto-saved value for that band, useful for
+recovering a known good level after experimenting during a session.</li>
+</ul>
+<p>Within the TX Attenuation dialog there is also a Tune button which
+will output a continuous single tone at 1500Hz for antenna matching,
+netting etc. The level of this signal while active may also be adjusted
+using the same controls as for the TX Attenuation. Right click on the
+tune button to see a different context menu with similar options to the
+TX attenuation described above.</p>
+<p>FreeDV will automatically detect band changes (via Hamlib or OmniRig
+CAT, or manual frequency entry) and load any saved attenuation value for
+the new band. When a band is left the current values for that band are
+saved immediately.</p></li>
 <li><p>FreeDV 700D and 700E can drive your transmitter at an average
 power of 40% of its peak power rating. For example 40W RMS for a 100W
 PEP radio. Make sure your transmitter can handle continuous power output
@@ -320,21 +347,17 @@ demodulator.</p></li>
 </ul>
 <h2 data-number="2.7" id="usb-or-lsb"><span
 class="header-section-number">2.7</span> USB or LSB?</h2>
-<p>On bands below 10 MHz, LSB is used for FreeDV. On 10MHz and above,
-USB is used. After much debate, the FreeDV community has adopted the
-same conventions as SSB, based on the reasoning that FreeDV is a voice
-mode.</p>
-<p>As an aid to the above, FreeDV will show the current mode on the
-bottom of the window upon pressing the Start button if Hamlib is enabled
-and your radio supports retrieving frequency and mode information over
-CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters),
-it will display that mode on the bottom of the window next to the Clear
-button in red letters. When a session is not active, Hamlib isn’t
-enabled, or if your radio doesn’t support retrieving frequency and mode
-over CAT, it will remain grayed out with “unk” displaying instead of the
-mode (for “unknown”).</p>
-<h2 data-number="2.8" id="transceiver-filters"><span
-class="header-section-number">2.8</span> Transceiver Filters</h2>
+<p>FreeDV currently follows the same conventions for upper and lower
+sideband as are used for amateur SSB. As an aid to this, FreeDV will
+show the current mode on the bottom of the window upon pressing the
+Start button if Hamlib is enabled and your radio supports retrieving
+frequency and mode information over CAT. If your radio is using an
+unexpected mode (e.g. LSB on 20 meters), it will display that mode on
+the bottom of the window next to the Clear button in red letters. When a
+session is not active, Hamlib isn’t enabled, or if your radio doesn’t
+support retrieving frequency and mode over CAT, it will remain grayed
+out with “unk” displaying instead of the mode (for “unknown”). ##
+Transceiver Filters</p>
 <p>For most FreeDV use, your radio’s receive and transmit filters should
 be set to the widest possible (typically around 3 kHz). This allows easy
 switching between analog mode as well as the various FreeDV modes. There
@@ -1214,6 +1237,7 @@ setup. (PR #1223)</li>
 displayed. (PR #1282)</li>
 <li>Flex: Prevent multiple slices from being in FreeDV mode. (PR
 #1270)</li>
+<li>Further improve audio dropouts. (PR #1287)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1236,6 +1260,11 @@ data-cites="barjac">@barjac</span>!</li>
 <li>Use RNNoise for improved noise canceling during TX. (PR #1276)</li>
 <li>FreeDV Reporter: Add ability to filter based on individual columns.
 (PR #1285)</li>
+<li>Improve spectrum and waterfall plot appearance on small displays.
+(PR #1288) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
+<li>Add optional per-band TX attenuation saving. (PR #1284) - thanks
+<span class="citation" data-cites="barjac">@barjac</span>!</li>
 </ul></li>
 <li>Build system:
 <ul>
