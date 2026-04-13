@@ -50,7 +50,7 @@ public:
     virtual int getOutputSampleRate() const FREEDV_NONBLOCKING override;
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING override;
     virtual void reset() FREEDV_NONBLOCKING override;
-
+    
 private:
     int inputSampleRate_;
     int outputSampleRate_;

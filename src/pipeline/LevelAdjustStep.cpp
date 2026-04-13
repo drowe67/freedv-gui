@@ -66,9 +66,12 @@ short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* n
     float scaleFactor = scaleFactorFn_();
     short* outPtr = outputSamples_.get();
 
+    float temp = 0;
     for (int index = 0; index < numInputSamples; index++)
     {
-        outPtr[index] = inputSamples[index] * scaleFactor;
+        ConvertToFloatSampleType_<float, short, 1>(&inputSamples[index], &temp, 1);
+        temp *= scaleFactor;
+        ConvertToIntSampleType_<short, float, 1>(&temp, &outPtr[index], 1);
     }
     
     *numOutputSamples = numInputSamples;
