@@ -168,9 +168,12 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
 
             // Scale samples based on current gain.
             float scaleFactor = exp(currentGainDb_/20.0 * log(10.0));
+            float temp = 0;
             for (auto ctr = 0; ctr < numSamplesPerRun_; ctr++)
             {
-                tmpInput[ctr] *= scaleFactor;
+                ConvertToFloatSampleType_<float, short>(&tmpInput[ctr], &temp, 1);
+                temp *= scaleFactor;
+                ConvertToIntSampleType_<short, float>(&temp, &tmpInput[ctr], 1);
             }
 
             // Run WebRTC to make sure we don't clip.
