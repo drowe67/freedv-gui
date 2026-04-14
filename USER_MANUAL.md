@@ -941,6 +941,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
+5. Other:
+    * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286)
 
 ## V2.2.1 February 2026
 

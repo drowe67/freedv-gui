@@ -72,7 +72,7 @@ using namespace std::chrono_literals;
 // Experimental options for potential future release:
 //
 // * ENABLE_FASTER_PLOTS: This uses a faster resampling algorithm to reduce the CPU
-//   usage required to generate various plots in the user interface. (Tech note: When 
+//   usage required to generate various plots in the user interface. (Tech note: When
 //   enabled, libsamplerate is directed to use SRC_LINEAR for the plot resampling.)
 // * ENABLE_PROCESSING_STATS: This causes execution statistics to be collected for RX and TX
 //   processing and output in the log after the user pushes Stop. (Define in .h file.)
@@ -147,15 +147,6 @@ extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
 extern bool g_recFileFromDecoder;
 
-// TBD -- shouldn't be needed once we've fully converted over
-extern int resample(SRC_STATE *src,
-            short      output_short[],
-            short      input_short[],
-            int        output_sample_rate,
-            int        input_sample_rate,
-            int        length_output_short, // maximum output array length in samples
-            int        length_input_short
-            );
 #include "sox_biquad.h"
 
 void TxRxThread::initializePipeline_()
