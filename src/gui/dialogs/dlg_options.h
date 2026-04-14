@@ -160,6 +160,9 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_ckboxUDPReportingEnable;
         wxTextCtrl    *m_udpHostname;
         wxTextCtrl    *m_udpPort;
+
+        wxTextCtrl    *m_txtCtrlCsvLogFilePath;
+        wxButton      *m_buttonChooseCsvLogFilePath;
         
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;
@@ -198,6 +201,7 @@ class OptionsDlg : public wxDialog
 
         void OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event);
         void OnChooseQuickRecordPath(wxCommandEvent& event);
+        void OnChooseCsvLogFilePath(wxCommandEvent& event);
         
         void OnReportingFreqSelectionChange(wxCommandEvent& event);
         void OnReportingFreqTextChange(wxCommandEvent& event);

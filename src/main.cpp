@@ -2469,7 +2469,7 @@ void MainFrame::performFreeDVOn_()
                     }
                     else
                     {
-                        auto csvPath = wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + "freedv_rx_log.csv";
+                        auto csvPath = wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath.get();
                         wxGetApp().m_reporters.push_back(std::make_shared<CsvReporter>(csvPath.ToStdString()));
 
                         if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)

@@ -156,7 +156,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizerReportingUDP->Add(m_udpPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sbSizerReportingRows->Add(sbSizerReportingUDP, 0, wxALL | wxEXPAND, 5);
-    
+
+    // CSV log file path
+    wxBoxSizer* sbSizerCsvLog = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText* labelCsvLogPath = new wxStaticText(sbReporting, wxID_ANY, wxT("CSV Log File:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerCsvLog->Add(labelCsvLogPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlCsvLogFilePath = new wxTextCtrl(sbReporting, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300, -1), 0);
+    sbSizerCsvLog->Add(m_txtCtrlCsvLogFilePath, 1, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonChooseCsvLogFilePath = new wxButton(sbReporting, wxID_ANY, _("Choose"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_buttonChooseCsvLogFilePath->SetMinSize(wxSize(120, -1));
+    sbSizerCsvLog->Add(m_buttonChooseCsvLogFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingRows->Add(sbSizerCsvLog, 0, wxALL | wxEXPAND, 5);
+
     sizerReporting->Add(sbSizerReportingRows, 0, wxALL | wxEXPAND, 5);
     
     // FreeDV Reporter options that don't depend on Reporting checkboxes
@@ -800,6 +811,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordRawPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
     m_buttonChooseQuickRecordDecodedPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
+    m_buttonChooseCsvLogFilePath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseCsvLogFilePath), NULL, this);
+
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
     m_ckboxReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
@@ -845,6 +858,7 @@ OptionsDlg::~OptionsDlg()
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
     m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
     m_buttonChooseQuickRecordDecodedPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+    m_buttonChooseCsvLogFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseCsvLogFilePath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
@@ -978,7 +992,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxUDPReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled);
         m_udpHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname);
         m_udpPort->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort.get()));
-        
+
+        // CSV log file path
+        m_txtCtrlCsvLogFilePath->SetValue(wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath);
+
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
         
@@ -1168,11 +1185,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // UDP reporting options
         wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled = m_ckboxUDPReportingEnable->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname = m_udpHostname->GetValue();
-        
+
         long udpPort;
         m_udpPort->GetValue().ToLong(&udpPort);
         wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort = (int)udpPort;
-            
+
+        // CSV log file path
+        wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath = m_txtCtrlCsvLogFilePath->GetValue();
+
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
@@ -1328,6 +1348,23 @@ void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
      {
         m_txtCtrlQuickRecordDecodedPath->SetValue(pathDialog.GetPath());
      }
+}
+
+void OptionsDlg::OnChooseCsvLogFilePath(wxCommandEvent&) {
+    wxFileDialog fileDialog(
+        this,
+        wxT("Choose CSV log file location"),
+        wxPathOnly(m_txtCtrlCsvLogFilePath->GetValue()),
+        wxFileNameFromPath(m_txtCtrlCsvLogFilePath->GetValue()),
+        wxT("CSV files (*.csv)|*.csv|All files (*.*)|*.*"),
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+    );
+
+    if (fileDialog.ShowModal() == wxID_CANCEL) {
+        return;
+    }
+
+    m_txtCtrlCsvLogFilePath->SetValue(fileDialog.GetPath());
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {

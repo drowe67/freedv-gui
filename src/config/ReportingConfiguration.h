@@ -84,7 +84,9 @@ public:
     
     ConfigurationDataElement<bool> reportingFrequencyAsKhz;
     ConfigurationDataElement<bool> reportingDirectionAsCardinal;
-    
+
+    ConfigurationDataElement<wxString> csvLogFilePath;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
