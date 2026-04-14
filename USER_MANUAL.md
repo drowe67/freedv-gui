@@ -919,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug causing main window's menu to disappear when Reporter is displayed. (PR #1282)
     * Flex: Prevent multiple slices from being in FreeDV mode. (PR #1270)
     * Further improve audio dropouts. (PR #1287)
+    * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
