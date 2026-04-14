@@ -163,6 +163,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnHamCallLookup(wxCommandEvent& event);
         
         void OnLeftClickTooltip(wxMouseEvent& event);
+        void OnMouseWheelTooltip(wxMouseEvent& event);
         void OnSetFocus(wxFocusEvent& event);
                 
         // Main list box that shows spots
