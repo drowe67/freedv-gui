@@ -18,12 +18,11 @@ jobs:
     runs-on: macos-15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
-          brew uninstall git # workaround, forces use of Apple git
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -56,7 +55,7 @@ jobs:
     needs: ['lint']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -66,7 +65,6 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
-        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash
@@ -116,7 +114,7 @@ jobs:
     #      zip -r InstrumentsTraces.zip instruments_trace_*
 
     #- name: Stash instrumented results
-    #  uses: actions/upload-artifact@v4
+    #  uses: actions/upload-artifact@v7
     #  if: ${{ !cancelled() }}
     #  with:
     #    name: InstrumentsTraces-${{matrix.os}}
@@ -131,7 +129,7 @@ jobs:
     #needs: ['lint']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -141,7 +139,6 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
-        brew uninstall git # workaround, forces use of Apple git
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -225,7 +222,7 @@ jobs:
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg --verbose
 
     - name: Stash disk image
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: FreeDV
         path: ${{github.workspace}}/build_osx/src/FreeDV.dmg
@@ -241,9 +238,9 @@ jobs:
     needs: ['dist', 'lint']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: FreeDV
         path: ${{github.workspace}}
@@ -258,7 +255,6 @@ jobs:
     - name: Install needed packages
       run: |
         brew install automake libtool sox 
-        brew uninstall git # workaround, forces use of Apple git
 
     - name: Install VB-Cable
       shell: bash

@@ -31,6 +31,7 @@
 #include "audio/IAudioDevice.h"
 
 #include "../../main.h"
+#include "../../pipeline/ResampleStep.h"
 
 using namespace std::chrono_literals;
 
@@ -851,19 +852,16 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotSc
     m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
-        SRC_STATE          *src;
         GenericFIFO<short>               *fifo, *callbackFifo;
-        int src_error;
-        
+
         // Reset plot before starting.
         CallAfter([&]() {
             ps->clearSamples();
             ps->Refresh();
         });
-        
+
         fifo = new GenericFIFO<short>((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-        
+
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
@@ -872,6 +870,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotSc
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                ResampleStep resampler(sampleRate, 8000);
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_IN, 
@@ -916,10 +915,11 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotSc
                             }
                         }
                     
-                        int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        int n8k = 0;
+                        short* resampled = resampler.execute(in48k_short, TEST_BUF_SIZE, &n8k);
                         short* tmp = new short[n8k];
                         assert(tmp != nullptr);
-                        resample_for_plot(fifo, in8k_short, tmp, n8k, FS);
+                        resample_for_plot(fifo, resampled, tmp, n8k, FS);
                         delete[] tmp;
  
                         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
@@ -954,7 +954,6 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString const& devName, PlotSc
         }
 
         delete fifo;
-        src_delete(src);
 
         CallAfter([&]() {
             m_audioPlotThread->join();
@@ -984,19 +983,17 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotS
     m_btnTxOutTest->Enable(false);
     
     m_audioPlotThread = new std::thread([&](wxString const& devName, PlotScalar* ps) {
-        SRC_STATE          *src;
         GenericFIFO<short>               *fifo, *callbackFifo;
-        int src_error, n = 0;
-        
+        int n = 0;
+
         // Reset plot before starting.
         CallAfter([&]() {
             ps->clearSamples();
             ps->Refresh();
         });
-        
+
         fifo = new GenericFIFO<short>((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-        
+
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
@@ -1005,6 +1002,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotS
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                ResampleStep resampler(sampleRate, 8000);
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_OUT, 
@@ -1057,10 +1055,11 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotS
                             }
                         }
                     
-                        int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        int n8k = 0;
+                        short* resampled = resampler.execute(out48k_short, TEST_BUF_SIZE, &n8k);
                         short* tmp = new short[n8k];
                         assert(tmp != nullptr);
-                        resample_for_plot(fifo, out8k_short, tmp, n8k, FS);
+                        resample_for_plot(fifo, resampled, tmp, n8k, FS);
                         delete[] tmp;
  
                         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
@@ -1095,8 +1094,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString const& devName, PlotS
         }
         
         delete fifo;
-        src_delete(src);
-        
+
         CallAfter([&]() {
             m_audioPlotThread->join();
             delete m_audioPlotThread;
