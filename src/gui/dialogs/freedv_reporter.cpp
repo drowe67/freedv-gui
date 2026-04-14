@@ -1527,12 +1527,14 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent&)
     OnItemRightClick(contextEvent);
 }
 
-void FreeDVReporterDialog::OnMouseWheelTooltip(wxMouseEvent&)
+void FreeDVReporterDialog::OnMouseWheelTooltip(wxMouseEvent& event)
 {
     if (tipWindow_)
     {
         tipWindow_->Close();
     }
+
+    event.Skip();
 }
 
 void FreeDVReporterDialog::OnLeftClickTooltip(wxMouseEvent& event)
