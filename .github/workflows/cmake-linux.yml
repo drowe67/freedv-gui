@@ -25,7 +25,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install required packages
       shell: bash
@@ -74,7 +74,7 @@ jobs:
       APPIMAGE_FILENAME: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install LLVM/Clang >=20.0 
       run: |
@@ -138,7 +138,7 @@ jobs:
 
     - name: Set up Docker Buildx
       if: ${{ matrix.target == 'freedv-flex' }}
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build instrumented freedv-gui 
       shell: bash
@@ -244,14 +244,14 @@ jobs:
           echo "FLEX_WAVEFORM_FILENAME=$(echo -n freedv-waveform*.tar.gz)" >> "$GITHUB_OUTPUT"
 
     - name: Upload AppImage
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         compression-level: 0
 
     - name: Upload waveform file
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
       with:
         name: ${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
@@ -267,7 +267,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -283,7 +283,7 @@ jobs:
       run: |
         echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
     
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         merge-multiple: true
         pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
@@ -336,7 +336,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -348,7 +348,7 @@ jobs:
       run: |
         echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
     
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         merge-multiple: true
         pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
@@ -482,7 +482,7 @@ jobs:
       LLVM_ARCH: ${{ matrix.os == 'ubuntu-22.04-arm' && 'arm64' || 'amd64' }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
