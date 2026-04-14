@@ -84,7 +84,9 @@ jobs:
         name: ${{needs.build.outputs.INSTALLER_FILENAME}}
         path: ${{github.workspace}}
   
-    - uses: ilammy/msvc-dev-cmd@v1
+    - uses: TheMrMilchmann/setup-msvc-dev@v4
+      with:
+        arch: x64
  
     - name: Install VB-Cable ("Radio" sound device)
       uses: LABSN/sound-ci-helpers@v1
