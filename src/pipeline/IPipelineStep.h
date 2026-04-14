@@ -64,15 +64,15 @@ public:
 protected:
     // Helper method that converts integer samples to floating point samples
     template<typename DstType, typename SrcType, SrcType SampleDivisor = std::numeric_limits<SrcType>::max()>
-    static void ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* destSamples, size_t numSamples);
+    static void ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* destSamples, std::size_t numSamples);
 
     // Helper method that converts floating point samples to integer samples
     template<typename DstType, typename SrcType, DstType SampleMultiplier = std::numeric_limits<DstType>::max()>
-    static void ConvertToIntSampleType_(SrcType* sourceSamples, DstType* destSamples, size_t numSamples);
+    static void ConvertToIntSampleType_(SrcType* sourceSamples, DstType* destSamples, std::size_t numSamples);
 };
 
 template<typename DstType, typename SrcType, SrcType SampleDivisor>
-void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* destSamples, size_t numSamples)
+void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* destSamples, std::size_t numSamples)
 {
     // Make sure template types are correct
     static_assert(std::numeric_limits<DstType>::is_iec559);
@@ -82,21 +82,21 @@ void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* d
     static_assert(SampleDivisor != 0);
 
     // Iterate through samples, performing division (if needed) and typecasting
-    for (size_t index = 0; index < numSamples; index++)
+    for (std::size_t index = 0; index < numSamples; index++)
     {
         destSamples[index] = (DstType)sourceSamples[index] / ((DstType)SampleDivisor);
     }
 }
 
 template<typename DstType, typename SrcType, DstType SampleMultiplier>
-void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* destSamples, size_t numSamples)
+void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* destSamples, std::size_t numSamples)
 {
     // Make sure template types are correct
     static_assert(std::numeric_limits<SrcType>::is_iec559);
     static_assert(std::numeric_limits<DstType>::is_integer);
 
     // Iterate through samples, performing multiplication (if needed) and typecasting
-    for (size_t index = 0; index < numSamples; index++)
+    for (std::size_t index = 0; index < numSamples; index++)
     {
         SrcType temp = sourceSamples[index] * (SrcType)SampleMultiplier;
         if (temp <= std::numeric_limits<DstType>::min())
