@@ -32,6 +32,8 @@ RigControlConfiguration::RigControlConfiguration()
     , hamlibSerialRate("/Hamlib/SerialRate", 0)
     , hamlibSerialPort("/Hamlib/SerialPort", "")
     , hamlibPttSerialPort("/Hamlib/PttSerialPort", "")
+    , hamlibForceRTSOn("/Hamlib/ForceRTSOn", false)
+    , hamlibForceDTROn("/Hamlib/ForceDTROn", false)
         
     , useSerialPTT("/Rig/UseSerialPTT", false)
     , serialPTTPort("/Rig/Port", "")
@@ -73,7 +75,9 @@ void RigControlConfiguration::load(wxConfigBase* config)
     auto tmp = hamlibSerialPort.getWithoutProcessing();
     hamlibPttSerialPort.setDefaultVal(tmp);
     load_(config, hamlibPttSerialPort);
-    
+    load_(config, hamlibForceRTSOn);
+    load_(config, hamlibForceDTROn);
+
     load_(config, useSerialPTT);
     load_(config, serialPTTPort);
     load_(config, serialPTTUseRTS);
@@ -107,7 +111,9 @@ void RigControlConfiguration::save(wxConfigBase* config)
     save_(config, hamlibSerialRate);
     save_(config, hamlibSerialPort);
     save_(config, hamlibPttSerialPort);
-    
+    save_(config, hamlibForceRTSOn);
+    save_(config, hamlibForceDTROn);
+
     save_(config, useSerialPTT);
     save_(config, serialPTTPort);
     save_(config, serialPTTUseRTS);
