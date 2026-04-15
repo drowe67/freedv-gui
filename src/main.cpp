@@ -46,6 +46,7 @@
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
+#include "reporting/CsvReporter.h"
 
 #include "logging/WSJTXNetworkLogger.h"
 
@@ -2468,11 +2469,14 @@ void MainFrame::performFreeDVOn_()
                     }
                     else
                     {
+                        auto csvPath = wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath.get();
+                        wxGetApp().m_reporters.push_back(std::make_shared<CsvReporter>(csvPath.ToStdString()));
+
                         if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
                         {
-                            auto pskReporter = 
+                            auto pskReporter =
                                 std::make_shared<PskReporter>(
-                                    wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                    wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
                                     wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                     std::string("FreeDV ") + GetFreeDVVersion());
                             assert(pskReporter != nullptr);

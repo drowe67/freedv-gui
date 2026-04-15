@@ -21,6 +21,7 @@
 
 #include <wx/tokenzr.h>
 #include <wx/numformatter.h>
+#include <wx/stdpaths.h>
 #include <inttypes.h>
 
 #include "../defines.h"
@@ -95,6 +96,7 @@ ReportingConfiguration::ReportingConfiguration()
         
     , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
     , reportingDirectionAsCardinal("/Reporting/DirectionAsCardinal", false)
+    , csvLogFilePath("/Reporting/CSV/LogFilePath", _(""))
 {
     // Special handling for the frequency list to properly handle locales
     reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> const& list) {
@@ -227,6 +229,15 @@ void ReportingConfiguration::load(wxConfigBase* config)
 
     load_(config, reportingDirectionAsCardinal);
 
+    load_(config, csvLogFilePath);
+
+    // Set default CSV log file path to Documents/freedv_rx_log.csv if not configured.
+    if (csvLogFilePath->IsEmpty())
+    {
+        csvLogFilePath.setWithoutProcessing(
+            wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv"));
+    }
+
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -282,7 +293,9 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterMsgRowForegroundColor);
 
     save_(config, reportingDirectionAsCardinal);
-    
+
+    save_(config, csvLogFilePath);
+
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());
     config->Write(reportingFrequency.getElementName(), tempFreqStr);

@@ -3,6 +3,8 @@ add_library(fdv_reporting STATIC
     pskreporter.h
     FreeDVReporter.cpp
     FreeDVReporter.h
+    CsvReporter.cpp
+    CsvReporter.h
 )
 
 if(SIOCLIENT_ADD_DEPENDENCY)
