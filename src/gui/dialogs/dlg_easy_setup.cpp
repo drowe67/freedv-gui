@@ -131,7 +131,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_hamlibBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"));
     m_hamlibBox->Hide();
     wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(7, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(6, 2, 0, 0);
     hamlibBoxSizer->Add(gridSizerhl);
 
     /* Hamlib Rig Type combobox. */
@@ -180,19 +180,22 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("CAT via Data port"));
     m_cbPttMethod->SetSelection(0);
 
-    /* Force RTS on checkbox */
-    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force serial RTS on:"), wxDefaultPosition, wxDefaultSize, 0),
-                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    /* Force RTS / Force DTR checkboxes on one row */
+    wxBoxSizer* forceRtsSizer = new wxBoxSizer(wxHORIZONTAL);
     m_ckForceRTSOn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
     m_ckForceRTSOn->SetToolTip(_("Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"));
-    gridSizerhl->Add(m_ckForceRTSOn, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    forceRtsSizer->Add(m_ckForceRTSOn, 0, wxALIGN_CENTER_VERTICAL, 0);
+    forceRtsSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force RTS"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceRtsSizer, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    /* Force DTR on checkbox */
-    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force serial DTR on:"), wxDefaultPosition, wxDefaultSize, 0),
-                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    wxBoxSizer* forceDtrSizer = new wxBoxSizer(wxHORIZONTAL);
     m_ckForceDTROn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
     m_ckForceDTROn->SetToolTip(_("Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"));
-    gridSizerhl->Add(m_ckForceDTROn, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    forceDtrSizer->Add(m_ckForceDTROn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+    forceDtrSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force DTR"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceDtrSizer, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
 
     setupCatControlBoxSizer->Add(hamlibBoxSizer, 0, wxALL | wxEXPAND, 2);
 
