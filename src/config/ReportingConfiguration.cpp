@@ -234,8 +234,14 @@ void ReportingConfiguration::load(wxConfigBase* config)
     // Set default CSV log file path to Documents/freedv_rx_log.csv if not configured.
     if (csvLogFilePath->IsEmpty())
     {
-        csvLogFilePath.setWithoutProcessing(
-            wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Documents) + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv"));
+#if wxCHECK_VERSION(3,1,0)
+        wxString defaultPath = 
+            wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Documents) + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv");
+#else
+        wxString defaultPath = 
+            wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv");
+#endif // wxCHECK_VERSION(3,1,0)
+        csvLogFilePath.setWithoutProcessing(defaultPath);
     }
 
     // Special load handling for reporting below.
