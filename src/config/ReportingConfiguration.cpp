@@ -235,7 +235,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     if (csvLogFilePath->IsEmpty())
     {
         csvLogFilePath.setWithoutProcessing(
-            wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv"));
+            wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Documents) + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv"));
     }
 
     // Special load handling for reporting below.
