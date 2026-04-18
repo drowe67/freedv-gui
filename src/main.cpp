@@ -74,7 +74,6 @@ extern "C" {
     extern void golay23_init(void);
 }
 
-#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call

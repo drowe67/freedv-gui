@@ -1993,5 +1993,17 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
         return;
     }
 
+    // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
+    wxFileName fn(path);        
+    wxGetApp().customConfigFileName = fn.GetFullName();
+
+    SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate(wxInvalidDateTime);
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
+#endif // defined(UNOFFICIAL_RELEASE)
     setConfiguration_(importConfig);
 }

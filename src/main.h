@@ -99,6 +99,10 @@
 //#define _AUDIO_PASSTHROUGH    1
 #define _REFRESH_TIMER_PERIOD   (DT*1000)
 
+#if defined(UNOFFICIAL_RELEASE)
+#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
+#endif // defined(UNOFFICIAL_RELEASE)
+
 //#define _USE_ABOUT_DIALOG       1
 
 enum {
