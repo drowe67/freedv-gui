@@ -22,6 +22,7 @@
 #include <wx/tokenzr.h>
 #include <wx/numformatter.h>
 #include <wx/stdpaths.h>
+#include <wx/filename.h>
 #include <inttypes.h>
 
 #include "../defines.h"
