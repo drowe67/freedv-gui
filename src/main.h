@@ -370,6 +370,8 @@ class MainFrame : public TopFrame
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
+        void OnToolsExportConfig( wxCommandEvent& event ) override;
+        void OnToolsImportConfig( wxCommandEvent& event ) override;
         
         void OnCenterRx(wxCommandEvent& event) override;
 
@@ -427,7 +429,7 @@ class MainFrame : public TopFrame
         void OnTuneAttenContextMenu( wxContextMenuEvent& event ) override;
         void loadTxAttenForBand_(FilterFrequency band);
         void loadTuneAttenForBand_(FilterFrequency band);
-        void autoSaveCurrentBandLevels_();
+        void autoSaveCurrentBandLevels_(bool writeConfig = true);
         
         void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
         
@@ -559,6 +561,8 @@ class MainFrame : public TopFrame
         
         void loadConfiguration_();
         void resetStats_();
+        void exportConfiguration_(wxConfigBase* config);
+        void setConfiguration_(wxFileConfig* config);
 
         HamlibRigController::Mode getCurrentMode_();
         

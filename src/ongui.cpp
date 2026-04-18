@@ -792,7 +792,7 @@ static wxString bandNameForFilter(FilterFrequency band)
 // autoSaveCurrentBandLevels_() - if the current band has saved per-band
 // values, update them with the current live levels.
 //-------------------------------------------------------------------------
-void MainFrame::autoSaveCurrentBandLevels_()
+void MainFrame::autoSaveCurrentBandLevels_(bool writeConfig)
 {
     // Use lastBand_ (not the current reporting frequency) so that on a band
     // change we save the *outgoing* band's levels before loading the new one.
@@ -812,7 +812,7 @@ void MainFrame::autoSaveCurrentBandLevels_()
         tuneAtten->insert_or_assign(bandName, g_tuneLevel);
         changed = true;
     }
-    if (changed)
+    if (changed && writeConfig)
         wxGetApp().appConfiguration.save(pConfig);
 }
 
@@ -1925,4 +1925,63 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
     }
     
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
+}
+
+void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    wxFileDialog saveFileDialog(
+        this,
+        _("Export FreeDV Configuration"),
+        wxEmptyString,
+        wxEmptyString,
+        wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+    );
+
+    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    wxString path = saveFileDialog.GetPath();
+    wxFileConfig* exportConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), path, path, wxCONFIG_USE_LOCAL_FILE);
+    exportConfiguration_(exportConfig);
+    exportConfig->Flush();
+    delete exportConfig;
+}
+
+void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    wxFileDialog openFileDialog(
+        this,
+        _("Import FreeDV Configuration"),
+        wxEmptyString,
+        wxEmptyString,
+        wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
+        wxFD_OPEN | wxFD_FILE_MUST_EXIST
+    );
+
+    if (openFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    wxString path = openFileDialog.GetPath();
+
+    if (!wxFileExists(path))
+    {
+        wxMessageBox(_("The selected file does not exist."), _("Import Error"), wxOK | wxICON_ERROR, this);
+        return;
+    }
+
+    wxFileConfig* importConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), path, path, wxCONFIG_USE_LOCAL_FILE);
+
+    if (importConfig->GetNumberOfGroups() == 0 && importConfig->GetNumberOfEntries() == 0)
+    {
+        delete importConfig;
+        wxMessageBox(_("The selected file could not be parsed as a FreeDV configuration."), _("Import Error"), wxOK | wxICON_ERROR, this);
+        return;
+    }
+
+    setConfiguration_(importConfig);
 }
