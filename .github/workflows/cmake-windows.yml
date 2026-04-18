@@ -106,7 +106,12 @@ jobs:
     - uses: TheMrMilchmann/setup-msvc-dev@v4
       with:
         arch: x64
- 
+
+    - name: Create certificate stores
+      if: ${{ matrix.runner }} == "windows-11-arm"
+      run: |
+          New-Item -Path Cert:\LocalMachine\TrustedPublisher
+          
     - name: Install VB-Cable ("Radio" sound device)
       uses: LABSN/sound-ci-helpers@v1
   
