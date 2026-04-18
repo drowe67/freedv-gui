@@ -581,7 +581,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         } 
         else 
         {
-            log_warn("Migrating old config failed: %s.", res.error.ToUTF8());
+            log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
         }
     }
  
