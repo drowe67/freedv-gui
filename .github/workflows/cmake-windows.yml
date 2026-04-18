@@ -108,7 +108,7 @@ jobs:
         arch: x64
 
     - name: Create certificate stores
-      if: ${{ matrix.runner }} == "windows-11-arm"
+      if: ${{ matrix.runner == "windows-11-arm" }}
       run: |
           New-Item -Path Cert:\LocalMachine\TrustedPublisher
           
