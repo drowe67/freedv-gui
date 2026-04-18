@@ -251,10 +251,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
 
         defaultPath = wxString::Format("%s/freedv", xdgDataHome);
 #else
-        defaultPath = wxString::Format(
-            "%s%sfreedv", 
-            wxStandardPaths::Get().GetDocumentsDir(),
-            wxFILE_SEP_PATH);
+        defaultPath = wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + "freedv";
 #endif // wxCHECK_VERSION(3,1,0)
 
         // Make folder (including parents as needed)
