@@ -179,7 +179,9 @@ class TopFrame : public wxFrame
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsImportConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsImportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }

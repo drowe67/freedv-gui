@@ -1927,6 +1927,16 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
 }
 
+void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
+}
+
+void MainFrame::OnToolsImportConfigUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
+}
+
 void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
 {
     wxUnusedVar(event);
