@@ -419,7 +419,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_menuItemExportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
     tools->Append(m_menuItemExportConfig);
 
-    m_menuItemImportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Import Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
+    m_menuItemImportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
     tools->Append(m_menuItemImportConfig);
 
     m_menubarMain->Append(tools, _("&Tools"));
