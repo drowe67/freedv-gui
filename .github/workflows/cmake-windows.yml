@@ -19,9 +19,15 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-24.04
     outputs: 
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v6
@@ -46,7 +52,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Build freedv-gui
       shell: bash
@@ -70,18 +76,31 @@ jobs:
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
   test:
-    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-11-arm]
+        arch: [x86_64, aarch64]
+        exclude:
+        - runner: windows-2022
+          arch: aarch64
+        - runner: windows-11-arm
+          arch: x86_64
+
+    runs-on: ${{ matrix.runner }}
     needs: build
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
       MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
       COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+
     steps: 
     - uses: actions/checkout@v6
     - uses: actions/download-artifact@v8
       with:
-        name: ${{needs.build.outputs.INSTALLER_FILENAME}}
+        merge-multiple: true
+        pattern: FreeDV-2*-${{ matrix.arch }}.exe
         path: ${{github.workspace}}
   
     - uses: TheMrMilchmann/setup-msvc-dev@v4
