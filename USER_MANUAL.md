@@ -345,11 +345,11 @@ saved. By default, this is inside the current user's Documents folder.
 
 By default, FreeDV uses the following locations to store configuration:
 
-* Linux: $XDG_DATA_HOME/freedv.conf (see below)
+* Linux: $XDG_CONFIG_HOME/freedv.conf (see below)
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
 * Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
 
-On Linux, XDG_DATA_HOME defaults to ~/.config if not explicitly overridden. Note that 
+On Linux, XDG_CONFIG_HOME defaults to ~/.config if not explicitly overridden. Note that 
 if you are not running the AppImage, the behavior is different if your distro does not 
 include wxWidgets 3.3 or newer. In those cases, the default configuration file location
 is ~/.freedv, which is the same as in prior versions of FreeDV.
