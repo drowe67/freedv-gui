@@ -45,7 +45,6 @@
 #include "../pipeline/AudioPipeline.h"
 #include "../util/IRealtimeHelper.h"
 #include "../util/Semaphore.h"
-#include "rade_api.h"
 #include "../pipeline/paCallbackData.h"
 #include "../pipeline/rade_text.h"
 #include "../pipeline/RADETransmitStep.h"
@@ -61,6 +60,8 @@ extern "C"
     #include "fargan.h"
     #include "lpcnet.h"
 }
+
+#include "rade_api.h"
 
 //#define ENABLE_PROCESSING_STATS
 
