@@ -42,9 +42,15 @@
 #include <condition_variable>
 #include <atomic>
 
+extern "C"
+{
+    #include "fargan_config.h"
+}
+
 #include "../pipeline/AudioPipeline.h"
 #include "../util/IRealtimeHelper.h"
 #include "../util/Semaphore.h"
+#include "rade_api.h"
 #include "../pipeline/paCallbackData.h"
 #include "../pipeline/rade_text.h"
 #include "../pipeline/RADETransmitStep.h"
@@ -52,16 +58,9 @@
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C"
 {
-#if defined(FREEDV_INTEGRATION)
-    #include "fargan_config_integ.h"
-#else
-    #include "fargan_config.h"
-#endif // defined(FREEDV_INTEGRATION)
     #include "fargan.h"
     #include "lpcnet.h"
 }
-
-#include "rade_api.h"
 
 //#define ENABLE_PROCESSING_STATS
 
