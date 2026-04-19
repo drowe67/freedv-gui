@@ -573,9 +573,9 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     // global wxConfig object is created.
     bool migrateSuccess = true;
     log_info("Determining if we need to migrate config file to standard location...");
-    log_info("   Old location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_HOME).GetFullPath().ToUTF8());
+    log_info("   Old location: %s", (const char*)wxFileConfig::GetLocalFile("freedv").GetFullPath().ToUTF8());
     log_info("   New location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG).GetFullPath().ToUTF8());
-    const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG);
+    const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG, 0); // wxCONFIG_USE_HOME uses ~/freedv/.freedv instead of ~/.freedv
     if ( !res.oldPath.empty() ) 
     {
         if ( res.error.empty() ) 
