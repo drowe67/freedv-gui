@@ -571,6 +571,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #if wxCHECK_VERSION(3,3,0)
     // Execute this early during the application startup, before the
     // global wxConfig object is created.
+    bool migrateSuccess = true;
     log_info("Determining if we need to migrate config file to standard location...");
     log_info("   Old location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_HOME).GetFullPath().ToUTF8());
     log_info("   New location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG).GetFullPath().ToUTF8());
@@ -585,16 +586,21 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         else 
         {
             log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
+            migrateSuccess = false;
         }
     }
     else if (!res.error.empty())
     {
         log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
+        migrateSuccess = false;
     }
  
     // Prefer doing it only after successfully calling MigrateLocalFile(),
     // otherwise, i.e. if it failed, the old config file wouldn't be used.
-    wxStandardPaths::Get().SetFileLayout(wxStandardPaths::FileLayout_XDG);
+    if (migrateSuccess)
+    {
+        wxStandardPaths::Get().SetFileLayout(wxStandardPaths::FileLayout_XDG);
+    }
 #endif // wxCHECK_VERSION(3,3,0)
 
     wxString configPath;
