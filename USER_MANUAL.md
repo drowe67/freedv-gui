@@ -939,7 +939,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
-    * Log heard callsigns to a CSV file. (PR #1290)
+    * Log heard callsigns to a CSV file. (PR #1290, #1293)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
