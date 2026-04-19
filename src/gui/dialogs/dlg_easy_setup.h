@@ -22,7 +22,7 @@
 #ifndef __EASY_SETUP_DIALOG__
 #define __EASY_SETUP_DIALOG__
 
-#include "main.h"
+#include "../../main.h"
 #include "defines.h"
 #include "audio/IAudioEngine.h"
 #include "rig_control/HamlibRigController.h"
