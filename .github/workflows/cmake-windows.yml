@@ -84,8 +84,7 @@ jobs:
         exclude:
         - runner: windows-2022
           arch: aarch64
-        - runner: windows-11-arm
-          arch: x86_64
+        - runner: windows-11-arm # No ARM audio drivers available, can't currently test CI
 
     runs-on: ${{ matrix.runner }}
     needs: build
@@ -107,14 +106,9 @@ jobs:
       with:
         arch: x64
 
-    - name: Create certificate stores
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      run: |
-          Get-ChildItem cert:\LocalMachine
-      #    New-Item -Path Cert:\LocalMachine\TrustedPublisher
-          
     - name: Install VB-Cable ("Radio" sound device)
-      uses: LABSN/sound-ci-helpers@v1
+      run: |
+        choco install vb-cable
   
     - run: 'Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip'
     - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
