@@ -572,6 +572,8 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     // Execute this early during the application startup, before the
     // global wxConfig object is created.
     log_info("Determining if we need to migrate config file to standard location...");
+    log_info("   Old location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_HOME).GetFullPath().ToUTF8());
+    log_info("   New location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG).GetFullPath().ToUTF8());
     const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG);
     if ( !res.oldPath.empty() ) 
     {
