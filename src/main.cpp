@@ -571,6 +571,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #if wxCHECK_VERSION(3,3,0)
     // Execute this early during the application startup, before the
     // global wxConfig object is created.
+    log_info("Determining if we need to migrate config file to standard location...");
     const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG);
     if ( !res.oldPath.empty() ) 
     {
@@ -583,6 +584,10 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
         }
+    }
+    else if (!res.error.empty())
+    {
+        log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
     }
  
     // Prefer doing it only after successfully calling MigrateLocalFile(),
