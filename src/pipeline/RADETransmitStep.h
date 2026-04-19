@@ -50,6 +50,7 @@ extern "C"
     #include "fargan_config.h"
     #include "fargan.h"
     #include "lpcnet.h"
+    #include "celt/cpu_support.h"
 }
 
 // Number of features to store. This is set to be close to the 

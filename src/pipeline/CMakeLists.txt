@@ -58,6 +58,11 @@ if(LINUX)
 # TBD - won't execute on macOS just yet.
 DefineUnitTest(RadeTextTest)
 target_link_libraries(RadeTextTest PRIVATE ${FREEDV_LINK_LIBS} codec2 rade opus) 
+if(BOOTSTRAP_WXWIDGETS)
+    target_link_libraries(RadeTextTest PRIVATE wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+    target_compile_definitions(RadeTextTest PRIVATE ${WXBUILD_BUILD_DEFS})
+    target_include_directories(RadeTextTest PRIVATE ${WXBUILD_INCLUDES})
+endif(BOOTSTRAP_WXWIDGETS)
 endif(LINUX)
 
 endif(UNITTEST)
