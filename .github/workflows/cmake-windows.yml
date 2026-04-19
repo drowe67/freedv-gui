@@ -111,7 +111,7 @@ jobs:
       if: ${{ matrix.runner == 'windows-11-arm' }}
       run: |
           Get-ChildItem cert:\LocalMachine
-          New-Item -Path Cert:\LocalMachine\TrustedPublisher
+      #    New-Item -Path Cert:\LocalMachine\TrustedPublisher
           
     - name: Install VB-Cable ("Radio" sound device)
       uses: LABSN/sound-ci-helpers@v1
@@ -145,7 +145,7 @@ jobs:
     - name: Install FreeDV on hard drive
       shell: pwsh
       run: |
-          Get-ChildItem *.exe | Rename-Item FreeDV.exe
+          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
           .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
   
     - name: Copy test scripts to install folder
