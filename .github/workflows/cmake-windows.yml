@@ -129,9 +129,7 @@ jobs:
       run: |
           Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -OutFile VAD.zip
           Expand-Archive -Path VAD.zip -DestinationPath "Virtual Audio Driver"
-          dir
-          dir "Virtual Audio Driver"
-          pnputil /add-driver "Virtual Audio Driver\VirtualAudioDriver.inf" /install
+          pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
       if: failure()
