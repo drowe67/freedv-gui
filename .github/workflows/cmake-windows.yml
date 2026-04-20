@@ -127,9 +127,11 @@ jobs:
 
     - name: Install VAD
       run: |
-          Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -outFile VAD.zip
-          Expand-Archive -Path VAD.zip -DestinationPath VAD
-          pnputil /add-driver VAD\VirtualAudioDriver.inf /install
+          Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -OutFile VAD.zip
+          Expand-Archive -Path VAD.zip -DestinationPath "Virtual Audio Driver"
+          dir
+          dir "Virtual Audio Driver"
+          pnputil /add-driver "Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
       if: failure()
