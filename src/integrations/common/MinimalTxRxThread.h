@@ -42,6 +42,11 @@
 #include <condition_variable>
 #include <atomic>
 
+extern "C"
+{
+    #include "fargan_config.h"
+}
+
 #include "../pipeline/AudioPipeline.h"
 #include "../util/IRealtimeHelper.h"
 #include "../util/Semaphore.h"
@@ -53,11 +58,6 @@
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C"
 {
-#if defined(FREEDV_INTEGRATION)
-    #include "fargan_config_integ.h"
-#else
-    #include "fargan_config.h"
-#endif // defined(FREEDV_INTEGRATION)
     #include "fargan.h"
     #include "lpcnet.h"
 }

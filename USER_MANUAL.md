@@ -920,6 +920,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Flex: Prevent multiple slices from being in FreeDV mode. (PR #1270)
     * Further improve audio dropouts. (PR #1287)
     * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
+    * Fix RADE related compiler errors. (PR #1299)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
@@ -935,6 +936,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290)
+    * Add ability to load and save different FreeDV configurations. (PR #1296)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)

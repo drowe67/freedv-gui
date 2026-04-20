@@ -22,7 +22,7 @@
 #ifndef LOG_ENTRY_DIALOG_H
 #define LOG_ENTRY_DIALOG_H
 
-#include "main.h"
+#include "../../main.h"
 #include "defines.h"
 #include "../../logging/ILogger.h"
 

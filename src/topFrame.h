@@ -148,6 +148,8 @@ class TopFrame : public wxFrame
         wxStaticBoxSizer* sbSizer_mode;
         
         wxMenuItem* m_menuItemPlayFileFromRadio;
+        wxMenuItem* m_menuItemExportConfig;
+        wxMenuItem* m_menuItemImportConfig;
 
         wxToggleButton *m_reporterHidden;
     
@@ -176,6 +178,10 @@ class TopFrame : public wxFrame
         virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsExportConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
+        virtual void OnToolsImportConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsImportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
