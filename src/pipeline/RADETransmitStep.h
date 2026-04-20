@@ -39,15 +39,19 @@
 #include <thread>
 #include <atomic>
 
+extern "C"
+{
+    #include "fargan_config.h"
+    #include "rade_api.h"
+}
+
 #include "IPipelineStep.h"
-#include "rade_api.h"
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
 
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C"
 {
-    #include "fargan_config.h"
     #include "fargan.h"
     #include "lpcnet.h"
 }
