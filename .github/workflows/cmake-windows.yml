@@ -108,19 +108,28 @@ jobs:
 
     - name: Install VB-Cable ("Radio" sound device)
       run: |
-        choco install vb-cable
-  
-    - run: 'Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip'
-    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
-    - name: Install driver
-      shell: pwsh
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          pnputil /add-driver VBCable_Driver_Pack45\vbMmeCable64_win10.inf /install
+
+    - name: Install VAC ("analog" sound device)
       run: |
+          Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip
+          Expand-Archive -Path vac464.zip -DestinationPath vac464
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
           .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
           Start-Sleep -Seconds 10
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 10
+
+    - name: Install VAD
+      run: |
+          Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -outFile VAD.zip
+          Expand-Archive -Path VAD.zip -DestinationPath VAD
+          pnputil /add-driver VAD\VirtualAudioDriver.inf /install
 
     - name: Screenshot if failed
       if: failure()
