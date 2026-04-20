@@ -116,7 +116,8 @@ jobs:
           Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
           Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\root
           Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          devgen add /bus ROOT /hardwareid VBAudioVACWDM
+          $devgen-path = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter "devgen.exe" -ErrorAction SilentlyContinue | Select-Object FullName
+          $devgen-path add /bus ROOT /hardwareid VBAudioVACWDM
           pnputil /add-driver VBCable_Driver_Pack45\vbMmeCable64_win10.inf /install
 
     - name: Install VAC ("analog" sound device)
@@ -143,7 +144,8 @@ jobs:
 
           Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\root
           Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          devgen add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
+          $devgen-path = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter "devgen.exe" -ErrorAction SilentlyContinue | Select-Object FullName
+          $devgen-path add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
           pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
