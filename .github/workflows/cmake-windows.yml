@@ -114,7 +114,7 @@ jobs:
           Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\root
           Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
           Get-ChildItem -Path $Env:WindowsSdkDir -Recurse -Filter "devgen.exe" | Select-Object FullName
-          $Env:WindowsSdkDir\Tools\$Env:WindowsSDKVersion\$Env:Platform\devgen.exe add /bus ROOT /hardwareid VBAudioVACWDM
+          ${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe add /bus ROOT /hardwareid VBAudioVACWDM
           pnputil /add-driver VBCable_Driver_Pack45\vbMmeCable64_win10.inf /install
 
     - name: Install VAC ("analog" sound device)
@@ -141,7 +141,7 @@ jobs:
 
           Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\root
           Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          $Env:WindowsSdkDir\Tools\$Env:WindowsSDKVersion\$Env:Platform\devgen.exe add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
+          ${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
           pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
