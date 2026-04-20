@@ -123,7 +123,7 @@ jobs:
           #Expand-Archive -Path vac464.zip -DestinationPath vac464
           #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\root
           #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
           Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
           $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
           $outputFile = '${{github.workspace}}\vac.cer';
