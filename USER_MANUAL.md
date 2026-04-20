@@ -363,6 +363,10 @@ to the following locations:
 * macOS: ~/Library/Preferences/
 * Windows: C:\\Users\\[username]\\AppData\\Roaming
 
+You can also save and restore different configuration files by using the Tools->Export Configuration
+and Use Configuration menu items. These menu options allow for switching of configurations without
+restarting FreeDV.
+
 ## Executing FreeDV With a Different Configuration (Windows)
 
 On Windows, you can create shortcuts to FreeDV with different file names for the "-f" command line
