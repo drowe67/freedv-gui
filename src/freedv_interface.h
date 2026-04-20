@@ -34,6 +34,11 @@
 #include <future>
 #include <atomic>
 
+extern "C" 
+{
+    #include "fargan_config.h"
+}
+
 // Codec2 required include files.
 #include "codec2.h"
 #include "comp.h"
@@ -45,9 +50,8 @@
 #include "pipeline/rade_text.h"
 
 // TBD - need to wrap in "extern C" to avoid linker errors
-extern "C" 
+extern "C"
 {
-    #include "fargan_config.h"
     #include "fargan.h"
     #include "lpcnet.h"
 }

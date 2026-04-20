@@ -74,7 +74,6 @@ extern "C" {
     extern void golay23_init(void);
 }
 
-#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
@@ -1326,6 +1325,70 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
 static std::recursive_mutex stoppingMutex;
 
+void MainFrame::setConfiguration_(wxFileConfig* config)
+{
+    pConfig = config;
+    wxConfigBase::Set(pConfig);
+        
+    if (wxGetApp().m_sharedReporterObject)
+    {
+        wxGetApp().m_sharedReporterObject = nullptr;
+    }
+
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->setReporter(nullptr);
+        wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
+    }
+    
+    // Resets all configuration to defaults.
+    loadConfiguration_();
+}
+
+void MainFrame::exportConfiguration_(wxConfigBase* config)
+{
+    if (!IsIconized()) {
+        int w = 0;
+        int h = 0;
+        int x = 0;
+        int y = 0;
+        GetSize(&w, &h);
+        GetPosition(&x, &y);
+        
+        wxGetApp().appConfiguration.mainWindowLeft = x;
+        wxGetApp().appConfiguration.mainWindowTop = y;
+        wxGetApp().appConfiguration.mainWindowWidth = w;
+        wxGetApp().appConfiguration.mainWindowHeight = h;
+    }
+
+    if (wxGetApp().appConfiguration.experimentalFeatures)
+    {
+        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+    }
+    
+    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
+    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
+
+    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+    autoSaveCurrentBandLevels_(false);
+
+    int mode = FREEDV_MODE_RADE;
+    if (m_rb1600->GetValue())
+        mode = 0;
+    if (m_rb700d->GetValue())
+        mode = 4;
+    if (m_rb700e->GetValue())
+        mode = 5;
+    if (m_rbRADE->GetValue())
+        mode = FREEDV_MODE_RADE;
+    
+    wxGetApp().appConfiguration.currentFreeDVMode = mode;
+    wxGetApp().appConfiguration.save(config);
+}
+
 //-------------------------------------------------------------------------
 // ~MainFrame()
 //-------------------------------------------------------------------------
@@ -1333,11 +1396,6 @@ MainFrame::~MainFrame()
 {
     delete voiceKeyerPopupMenu_;
     
-    int x;
-    int y;
-    int w;
-    int h;
-
     if (m_filterDialog != nullptr)
     {
         m_filterDialog->Close();
@@ -1366,39 +1424,7 @@ MainFrame::~MainFrame()
     wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().m_pttInSerialPort = nullptr;
     
-    if (!IsIconized()) {
-        GetSize(&w, &h);
-        GetPosition(&x, &y);
-        
-        wxGetApp().appConfiguration.mainWindowLeft = x;
-        wxGetApp().appConfiguration.mainWindowTop = y;
-        wxGetApp().appConfiguration.mainWindowWidth = w;
-        wxGetApp().appConfiguration.mainWindowHeight = h;
-    }
-
-    if (wxGetApp().appConfiguration.experimentalFeatures)
-    {
-        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
-    }
-    
-    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
-    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
-
-    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
-    autoSaveCurrentBandLevels_();
-
-    int mode = FREEDV_MODE_RADE;
-    if (m_rb1600->GetValue())
-        mode = 0;
-    if (m_rb700d->GetValue())
-        mode = 4;
-    if (m_rb700e->GetValue())
-        mode = 5;
-    if (m_rbRADE->GetValue())
-        mode = FREEDV_MODE_RADE;
-    
-    wxGetApp().appConfiguration.currentFreeDVMode = mode;
-    wxGetApp().appConfiguration.save(pConfig);
+    exportConfiguration_(pConfig);
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
