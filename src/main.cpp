@@ -584,10 +584,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // Execute this early during the application startup, before the
         // global wxConfig object is created.
         bool migrateSuccess = true;
+        wxString newFileLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
         log_info("Determining if we need to migrate config file to standard location...");
         log_info("   Old location: %s", (const char*)wxFileConfig::GetLocalFile("freedv").GetFullPath().ToUTF8());
-        log_info("   New location: %s", (const char*)wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG).GetFullPath().ToUTF8());
-        const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG, 0); // wxCONFIG_USE_HOME uses ~/freedv/.freedv instead of ~/.freedv
+        log_info("   New location: %s", (const char*)newFileLocation.ToUTF8());
+        const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR, 0); // wxCONFIG_USE_HOME uses ~/freedv/.freedv instead of ~/.freedv
         if ( !res.oldPath.empty() ) 
         {
             if ( res.error.empty() ) 
@@ -612,6 +613,14 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (migrateSuccess)
         {
             wxStandardPaths::Get().SetFileLayout(wxStandardPaths::FileLayout_XDG);
+
+#if defined(__linux__)
+            // Need to explicitly create the wxFileConfig on Linux so that we can force wxWidgets
+            // to load configuration files under a subdirectory. Otherwise, simply FileLayout_XDG
+            // above will use ~/.config/freedv.conf.
+            pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+            wxConfigBase::Set(pConfig);
+#endif // defined(__linux__)
         }
 #endif // wxCHECK_VERSION(3,3,0)
     }

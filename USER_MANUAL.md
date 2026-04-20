@@ -345,7 +345,7 @@ saved. By default, this is inside the current user's Documents folder.
 
 By default, FreeDV uses the following locations to store configuration:
 
-* Linux: $XDG_CONFIG_HOME/freedv.conf (see below)
+* Linux: $XDG_CONFIG_HOME/freedv/freedv.conf (see below)
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
 * Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
 
