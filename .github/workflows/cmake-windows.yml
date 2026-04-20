@@ -119,30 +119,45 @@ jobs:
 
     - name: Install VAC ("analog" sound device)
       run: |
-          Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip
-          Expand-Archive -Path vac464.zip -DestinationPath vac464
-          Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\root
-          Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
-          Start-Sleep -Seconds 10
-      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
-      timeout-minutes: 10
-
-    - name: Install VAD
-      run: |
-          Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -OutFile VAD.zip
-          Expand-Archive -Path VAD.zip -DestinationPath "Virtual Audio Driver"
-          $driverFile = 'Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.sys';
-          $outputFile = '${{github.workspace}}\vad.cer';
+          #Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip
+          #Expand-Archive -Path vac464.zip -DestinationPath vac464
+          #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\root
+          #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite
+          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
+          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
+          $outputFile = '${{github.workspace}}\vac.cer';
           $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
 
           $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
 
-          Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\root
-          Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
-          pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
+          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\root
+          #Import-Certificate -FilePath ${{github.workspace}}\ci\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+          pnputil /add-driver "vac470lite\vrtaucbl.inf" /install
+          #.\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
+          #Start-Sleep -Seconds 10
+      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
+      timeout-minutes: 10
+
+    #- name: Install VAD
+    #  run: |
+    #      Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -OutFile VAD.zip
+    #      Expand-Archive -Path VAD.zip -DestinationPath "Virtual Audio Driver"
+    #      $driverFile = 'Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.sys';
+    #      $outputFile = '${{github.workspace}}\vad.cer';
+    #      $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+    #
+    #      $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+    #      [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+    #      Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\root
+    #      Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+    #      & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VIRTUALAUDIODRIVER
+    #      pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
       if: failure()
