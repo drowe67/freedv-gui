@@ -412,7 +412,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start &Play File - From Radio...")) , _("Pipes radio sound input from file"), wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
-    
+
+    wxMenuItem* toolsSeparator3 = new wxMenuItem(tools, wxID_SEPARATOR);
+    tools->Append(toolsSeparator3);
+
+    m_menuItemExportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
+    tools->Append(m_menuItemExportConfig);
+
+    m_menuItemImportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
+    tools->Append(m_menuItemImportConfig);
+
     m_menubarMain->Append(tools, _("&Tools"));
 
     help = new wxMenu();
@@ -875,6 +884,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     this->Connect(m_menuItemPlayFileFromRadio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileFromRadio));
 
+    this->Connect(m_menuItemExportConfig->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsExportConfig));
+    this->Connect(m_menuItemExportConfig->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsExportConfigUI));
+    this->Connect(m_menuItemImportConfig->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsImportConfig));
+    this->Connect(m_menuItemImportConfig->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsImportConfigUI));
+
     this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpCheckUpdates));
     this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
     this->Connect(m_menuItemAbout->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpAbout));
@@ -991,7 +1005,12 @@ TopFrame::~TopFrame()
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileFromRadio));
-    
+
+    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsExportConfig));
+    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsExportConfigUI));
+    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsImportConfig));
+    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsImportConfigUI));
+
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpCheckUpdates));
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
     this->Disconnect(ID_ABOUT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpAbout));
