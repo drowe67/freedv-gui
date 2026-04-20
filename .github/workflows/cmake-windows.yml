@@ -106,6 +106,10 @@ jobs:
       with:
         arch: x64
 
+    - name: Install WDK
+      run: |
+          choco install windowsdriverkit11 -y
+
     - name: Install VB-Cable ("Radio" sound device)
       run: |
           Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
