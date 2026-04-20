@@ -129,6 +129,15 @@ jobs:
       run: |
           Invoke-WebRequest https://github.com/VirtualDrivers/Virtual-Audio-Driver/releases/download/25.7.14/Virtual.Audio.Driver.Signed.-.25.7.14.zip -OutFile VAD.zip
           Expand-Archive -Path VAD.zip -DestinationPath "Virtual Audio Driver"
+          $driverFile = 'Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.sys';
+          $outputFile = '${{github.workspace}}\vad.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\vad.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
           pnputil /add-driver "Virtual Audio Driver\Virtual Audio Driver\VirtualAudioDriver.inf" /install
 
     - name: Screenshot if failed
