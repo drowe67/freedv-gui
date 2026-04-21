@@ -19,9 +19,15 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-24.04
     outputs: 
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v6
@@ -46,7 +52,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Build freedv-gui
       shell: bash
@@ -70,38 +76,62 @@ jobs:
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
   test:
-    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-11-arm]
+        arch: [x86_64, aarch64]
+        exclude:
+        - runner: windows-2022
+          arch: aarch64
+        - runner: windows-11-arm 
+          arch: x86_64
+
+    runs-on: ${{ matrix.runner }}
     needs: build
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
       MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
       COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+
     steps: 
     - uses: actions/checkout@v6
     - uses: actions/download-artifact@v8
       with:
-        name: ${{needs.build.outputs.INSTALLER_FILENAME}}
+        merge-multiple: true
+        pattern: FreeDV-2*-${{ matrix.arch }}.exe
         path: ${{github.workspace}}
   
     - uses: TheMrMilchmann/setup-msvc-dev@v4
       with:
         arch: x64
- 
+
     - name: Install VB-Cable ("Radio" sound device)
-      uses: LABSN/sound-ci-helpers@v1
-  
-    - run: 'Invoke-WebRequest https://k6aq.net/freedv-build/vac464.zip -OutFile vac464.zip'
-    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
-    - name: Install driver
-      shell: pwsh
       run: |
-          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
-          Start-Sleep -Seconds 10
-      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
-      timeout-minutes: 10
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          Get-ChildItem -Path $Env:WindowsSdkDir -Recurse -Filter "devgen.exe" | Select-Object FullName
+          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VBAudioVACWDM
+          pnputil /add-driver VBCable_Driver_Pack45\vbMmeCable64_win10.inf /install
+
+    - name: Install VAC ("analog" sound device)
+      run: |
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
+          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
+          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
+          $outputFile = '${{github.workspace}}\vac.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\root
+          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+          pnputil /add-driver "vac470lite\vrtaucbl.inf" /install
 
     - name: Screenshot if failed
       if: failure()
@@ -120,7 +150,8 @@ jobs:
     - name: Install FreeDV on hard drive
       shell: pwsh
       run: |
-          .\${{needs.build.outputs.INSTALLER_FILENAME}} /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
+          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
   
     - name: Copy test scripts to install folder
       shell: pwsh
@@ -149,16 +180,12 @@ jobs:
 
     - name: Start Windows Audio Service
       run: |
-          net start audiosrv
+          Restart-Service -Name audiosrv -Force
 
     - name: List audio devices
       shell: pwsh
       run: |
           Get-CimInstance win32_sounddevice
-
-    - name: Install Python dependencies
-      run: |
-          python.exe -m pip install torch matplotlib
 
     - name: Test RADE
       shell: pwsh
