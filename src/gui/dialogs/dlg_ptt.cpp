@@ -765,6 +765,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 std::make_shared<HamlibRigController>(
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
                     (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+                    false,
                     m_ckForceRTSOn->GetValue(),
                     m_ckForceDTROn->GetValue() );
 
