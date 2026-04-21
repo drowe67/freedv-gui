@@ -1944,7 +1944,7 @@ void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
     wxFileDialog saveFileDialog(
         this,
         _("Export FreeDV Configuration"),
-        wxEmptyString,
+        wxConfigBase::Get().GetPath(),
         wxEmptyString,
         wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
@@ -1967,7 +1967,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     wxFileDialog openFileDialog(
         this,
         _("Import FreeDV Configuration"),
-        wxEmptyString,
+        wxConfigBase::Get().GetPath(),
         wxEmptyString,
         wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
