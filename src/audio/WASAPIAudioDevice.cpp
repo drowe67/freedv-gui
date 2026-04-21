@@ -188,10 +188,11 @@ void WASAPIAudioDevice::start()
         if (!initialized_)
         {
             // Set AudioClientProperties for stream. Must be done prior to Initialize().
-            AudioClientProperties props = {0};
+            AudioClientProperties props;
             prop.cbSize = sizeof(AudioClientProperties);
             prop.bIsOffload = TRUE;
             prop.eCategory = AudioCategory_Communications;
+            prop.Options = AUDCLNT_STREAMOPTIONS_NONE;
             hr = client_->SetClientProperties(&prop);
             if (FAILED(hr))
             {
