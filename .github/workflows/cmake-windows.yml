@@ -82,7 +82,7 @@ jobs:
         runner: [windows-2025, windows-11-arm]
         arch: [x86_64, aarch64]
         exclude:
-        - runner: windows-2022
+        - runner: windows-2025
           arch: aarch64
         - runner: windows-11-arm 
           arch: x86_64
