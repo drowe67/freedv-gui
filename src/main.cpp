@@ -586,46 +586,30 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         bool migrateSuccess = true;
         wxString oldFileLocation = wxFileConfig::GetLocalFile("freedv").GetFullPath();
         wxString newFileLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+        wxString newFileDir = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetPath();
         log_info("Determining if we need to migrate config file to standard location...");
         log_info("   Old location: %s", (const char*)oldFileLocation.ToUTF8());
         log_info("   New location: %s", (const char*)newFileLocation.ToUTF8());
 
+        wxFileName tempNewFile(newFileLocation);
         wxFileName tempOldFile(oldFileLocation);
-        if (tempOldFile.IsFileReadable())
+        if (!tempNewFile.IsFileReadable() && tempOldFile.IsFileReadable())
         {
-            // Make a backup copy in case something goes wrong
-            log_info("Making a backup of %s as %s.bak", (const char*)oldFileLocation.ToUTF8(), (const char*)oldFileLocation.ToUTF8());
-
-            bool copyResult = wxCopyFile(oldFileLocation, oldFileLocation + ".bak");
-            if (!copyResult)
+            // Migration hasn't happened yet, try to copy to new location.
+            bool mkdirResult = wxFileName(newFileDir).Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+            if (!mkdirResult)
             {
-                log_warn("Could not make a backup copy of %s. Migration will not proceed.", (const char*)oldFileLocation.ToUTF8());
+                log_warn("Could not create folder %s. Migration will not proceed.", (const char*)newFileDir.ToUTF8());
                 migrateSuccess = false;
             }
-        }
-
-        if (migrateSuccess)
-        {
-            log_info("Beginning migration to XDG-compliant config location");
-
-            const auto res = wxFileConfig::MigrateLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR, 0); // wxCONFIG_USE_HOME uses ~/freedv/.freedv instead of ~/.freedv
-            if ( !res.oldPath.empty() ) 
+            else
             {
-                if ( res.error.empty() ) 
+                bool copyResult = wxCopyFile(oldFileLocation, newFileLocation);
+                if (!copyResult)
                 {
-                    log_info("Config file was migrated from \"%s\" to \"%s\"",
-                             (const char*)res.oldPath.ToUTF8(), (const char*)res.newPath.ToUTF8());
-                } 
-                else 
-                {
-                    log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
+                    log_warn("Could not copy %s to %s. Migration will not proceed.", (const char*)oldFileLocation.ToUTF8(), (const char*)newFileLocation.ToUTF8());
                     migrateSuccess = false;
                 }
-            }
-            else if (!res.error.empty())
-            {
-                log_warn("Migrating old config failed: %s.", (const char*)res.error.ToUTF8());
-                migrateSuccess = false;
             }
         }
  
