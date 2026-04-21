@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [windows-2022, windows-11-arm]
+        runner: [windows-2025, windows-11-arm]
         arch: [x86_64, aarch64]
         exclude:
         - runner: windows-2022
