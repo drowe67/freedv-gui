@@ -416,7 +416,7 @@ void WASAPIAudioDevice::start()
             // Capture references for use by this thread.
             ComPtr<IAudioRenderClient> renderClientRef = renderClient_;
             ComPtr<IAudioCaptureClient> captureClientRef = captureClient_;
-            ComPtr<IAudioClient> clientRef = client_;
+            ComPtr<IAudioClient2> clientRef = client_;
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
             if (FAILED(res))

@@ -283,7 +283,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 log_info("Creating WASAPIAudioDevice for device %s (ID %d, direction = %d, sample rate = %d, number of channels = %d)", (const char*)deviceName.ToUTF8(), (int)dev.deviceId, (int)direction, sampleRate, numChannels);
 
                 ComPtr<IMMDevice> device = nullptr;
-                ComPtr<IAudioClient> client = nullptr;
+                ComPtr<IAudioClient2> client = nullptr;
 
                 HRESULT hr = coll->Item(dev.deviceId, device.GetAddressOf());
                 if (FAILED(hr))
@@ -461,8 +461,8 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(ComPtr<IMMDe
     }
 
     // Activate IAudioClient so we can obtain format info
-    ComPtr<IAudioClient> audioClient = nullptr;
-    hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)audioClient.GetAddressOf());
+    ComPtr<IAudioClient2> audioClient = nullptr;
+    hr = device->Activate(IID_IAudioClient2, CLSCTX_ALL, nullptr, (void**)audioClient.GetAddressOf());
     if (FAILED(hr))
     {
         std::stringstream ss;
