@@ -187,10 +187,6 @@ jobs:
       run: |
           Get-CimInstance win32_sounddevice
 
-    - name: Install Python dependencies
-      run: |
-          python.exe -m pip install torch matplotlib
-
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
