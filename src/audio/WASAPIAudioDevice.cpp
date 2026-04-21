@@ -36,7 +36,7 @@
 
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
-WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient2> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : Win32COMObject("WASAPIDev")
     , client_(client)
     , device_(device)
@@ -187,6 +187,20 @@ void WASAPIAudioDevice::start()
 
         if (!initialized_)
         {
+            // Set AudioClientProperties for stream. Must be done prior to Initialize().
+            AudioClientProperties props = {0};
+            prop.cbSize = sizeof(AudioClientProperties);
+            prop.bIsOffload = TRUE;
+            prop.eCategory = AudioCategory_Communications;
+            hr = client_->SetClientProperties(&prop);
+            if (FAILED(hr))
+            {
+                // Non-critical error, can continue without setting properties.
+                std::stringstream ss;
+                ss << "Could not set AudioClient properties (hr = " << hr << ")";
+                log_warn(ss.str().c_str());
+            }
+
             // Initialize the audio client with the above format
             hr = client_->Initialize(
                 AUDCLNT_SHAREMODE_SHARED,

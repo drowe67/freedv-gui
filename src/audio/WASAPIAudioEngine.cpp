@@ -299,7 +299,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 }
 
                 hr = device->Activate(
-                    IID_IAudioClient, CLSCTX_ALL,
+                    IID_IAudioClient2, CLSCTX_ALL,
                     nullptr, (void**)client.GetAddressOf()); 
                 if (FAILED(hr))
                 {

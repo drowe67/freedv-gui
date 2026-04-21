@@ -69,10 +69,10 @@ public:
 protected:
     friend class WASAPIAudioEngine;
 
-    WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    WASAPIAudioDevice(ComPtr<IAudioClient2> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
 
 private:
-    ComPtr<IAudioClient> client_;
+    ComPtr<IAudioClient2> client_;
     ComPtr<IMMDevice> device_;
     ComPtr<IAudioRenderClient> renderClient_;
     ComPtr<IAudioCaptureClient> captureClient_;
