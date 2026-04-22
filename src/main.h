@@ -186,6 +186,7 @@ class MainApp : public wxApp
 
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
+        wxString defaultConfigFilePath;
         
         // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;

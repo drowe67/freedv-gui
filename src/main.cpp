@@ -577,14 +577,17 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
         wxFileName fn(configPath);        
         customConfigFileName = fn.GetFullName();
+        defaultConfigFilePath = fn.GetPath();
     }
     else
     {
+        wxString oldFileLocation = wxFileConfig::GetLocalFile("freedv", 0).GetFullPath();
+        wxFileName tempOldFile(oldFileLocation);
+
 #if wxCHECK_VERSION(3,3,0) && defined(__linux__)
         // Execute this early during the application startup, before the
         // global wxConfig object is created.
         bool migrateSuccess = true;
-        wxString oldFileLocation = wxFileConfig::GetLocalFile("freedv").GetFullPath();
         wxString newFileLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
         wxString newFileDir = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetPath();
         log_info("Determining if we need to migrate config file to standard location...");
@@ -592,7 +595,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         log_info("   New location: %s", (const char*)newFileLocation.ToUTF8());
 
         wxFileName tempNewFile(newFileLocation);
-        wxFileName tempOldFile(oldFileLocation);
         if (!tempNewFile.IsFileReadable() && tempOldFile.IsFileReadable())
         {
             // Migration hasn't happened yet, try to copy to new location.
@@ -623,8 +625,12 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             // to load configuration files under a subdirectory. Otherwise, simply FileLayout_XDG
             // above will use ~/.config/freedv.conf.
             pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+
             wxConfigBase::Set(pConfig);
+            defaultConfigFilePath = tempNewFile.GetPath();
         }
+#else
+        defaultConfigFilePath = tempOldFile.GetPath();
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
 
