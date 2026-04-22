@@ -599,7 +599,7 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
 
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
-    extraTimeMs_ = std::max((long)0, duration); // cap extra time to >= 0.
+    extraTimeMs_ = std::max((int64_t)0, (int64_t)duration); // cap extra time to >= 0.
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {
