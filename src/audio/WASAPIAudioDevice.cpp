@@ -598,7 +598,7 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
 
     auto endTime = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
+    auto duration = std::chrono::ceil<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
     extraTimeMs_ = std::max((int64_t)0, (int64_t)duration); // cap extra time to >= 0.
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
