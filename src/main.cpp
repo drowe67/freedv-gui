@@ -566,9 +566,8 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     {
         return false;
     }
-    
+
     wxString configPath;
-    pConfig = wxConfigBase::Get();
     if (parser.Found("f", &configPath))
     {
         log_info("Loading configuration from %s", (const char*)configPath.ToUTF8());
@@ -578,7 +577,66 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
         wxFileName fn(configPath);        
         customConfigFileName = fn.GetFullName();
+        defaultConfigFilePath = fn.GetPath();
     }
+    else
+    {
+        wxString oldFileLocation = wxFileConfig::GetLocalFile("freedv", 0).GetFullPath();
+        wxFileName tempOldFile(oldFileLocation);
+
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+        // Execute this early during the application startup, before the
+        // global wxConfig object is created.
+        bool migrateSuccess = true;
+        wxString newFileLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+        wxString newFileDir = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetPath();
+        log_info("Determining if we need to migrate config file to standard location...");
+        log_info("   Old location: %s", (const char*)oldFileLocation.ToUTF8());
+        log_info("   New location: %s", (const char*)newFileLocation.ToUTF8());
+
+        wxFileName tempNewFile(newFileLocation);
+        if (!tempNewFile.IsFileReadable() && tempOldFile.IsFileReadable())
+        {
+            // Migration hasn't happened yet, try to copy to new location.
+            // Note that the return value from Mkdir isn't reliable despite actually
+            // creating the folder, so we should check for its existence separately.
+            wxFileName::Mkdir(newFileDir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+            if (!wxDirExists(newFileDir))
+            {
+                log_warn("Could not create folder %s. Migration will not proceed.", (const char*)newFileDir.ToUTF8());
+                migrateSuccess = false;
+            }
+            else
+            {
+                bool copyResult = wxCopyFile(oldFileLocation, newFileLocation);
+                if (!copyResult)
+                {
+                    log_warn("Could not copy %s to %s. Migration will not proceed.", (const char*)oldFileLocation.ToUTF8(), (const char*)newFileLocation.ToUTF8());
+                    migrateSuccess = false;
+                }
+            }
+        }
+ 
+        // Prefer doing it only after successfully calling MigrateLocalFile(),
+        // otherwise, i.e. if it failed, the old config file wouldn't be used.
+        if (migrateSuccess)
+        {
+            wxStandardPaths::Get().SetFileLayout(wxStandardPaths::FileLayout_XDG);
+
+            // Need to explicitly create the wxFileConfig on Linux so that we can force wxWidgets
+            // to load configuration files under a subdirectory. Otherwise, simply FileLayout_XDG
+            // above will use ~/.config/freedv.conf.
+            pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+
+            wxConfigBase::Set(pConfig);
+            defaultConfigFilePath = tempNewFile.GetPath();
+        }
+#else
+        defaultConfigFilePath = tempOldFile.GetPath();
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    }
+
+    pConfig = wxConfigBase::Get();
     pConfig->SetRecordDefaults();
     
     if (parser.Found("ut", &testName))

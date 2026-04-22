@@ -22,6 +22,7 @@
 #include <wx/tokenzr.h>
 #include <wx/numformatter.h>
 #include <wx/stdpaths.h>
+#include <wx/filename.h>
 #include <inttypes.h>
 
 #include "../defines.h"
@@ -234,8 +235,30 @@ void ReportingConfiguration::load(wxConfigBase* config)
     // Set default CSV log file path to Documents/freedv_rx_log.csv if not configured.
     if (csvLogFilePath->IsEmpty())
     {
-        csvLogFilePath.setWithoutProcessing(
-            wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + wxT("freedv_rx_log.csv"));
+        wxString defaultPath;
+        wxString logFileName = "freedv_rx_log.csv";
+
+#if defined(__linux__)
+        // Special logic to force use of XDG_DATA_HOME as wxWidgets doesn't currently
+        // provide this in wxStandardPaths.
+        wxString xdgDataHome;
+        if (!wxGetEnv("XDG_DATA_HOME", &xdgDataHome))
+        {
+            // Default to $HOME/.local/share per XDG specification.
+            wxString home = wxGetHomeDir();
+            xdgDataHome = wxString::Format("%s/.local/share", home);
+        }
+
+        defaultPath = wxString::Format("%s/freedv", xdgDataHome);
+#else
+        defaultPath = wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + "freedv";
+#endif // wxCHECK_VERSION(3,1,0)
+
+        // Make folder (including parents as needed)
+        wxFileName dn = wxFileName::DirName(defaultPath);
+        dn.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+
+        csvLogFilePath.setWithoutProcessing(defaultPath + wxFILE_SEP_PATH + logFileName);
     }
 
     // Special load handling for reporting below.
