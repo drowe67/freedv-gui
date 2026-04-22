@@ -124,7 +124,7 @@ jobs:
           $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
 
-          .\ci\Install-Driver.ps1 ${{github.workspace}\vac.cer "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
     - name: Screenshot if failed
       if: failure()
