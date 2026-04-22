@@ -598,8 +598,10 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (!tempNewFile.IsFileReadable() && tempOldFile.IsFileReadable())
         {
             // Migration hasn't happened yet, try to copy to new location.
-            bool mkdirResult = wxFileName(newFileDir).Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-            if (!mkdirResult)
+            // Note that the return value from Mkdir isn't reliable despite actually
+            // creating the folder, so we should check for its existence separately.
+            wxFileName::Mkdir(newFileDir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+            if (!wxDirExists(newFileDir))
             {
                 log_warn("Could not create folder %s. Migration will not proceed.", (const char*)newFileDir.ToUTF8());
                 migrateSuccess = false;
