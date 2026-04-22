@@ -53,6 +53,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient2> client, ComPtr<IMMDev
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
     , tmpBuf_(nullptr)
+    , extraTimeMs_(0)
 {
     // empty
 }
@@ -573,7 +574,7 @@ void WASAPIAudioDevice::setHelperRealTime()
 
 void WASAPIAudioDevice::startRealTimeWork() 
 {
-    // empty
+    startTime_ = std::chrono::steady_clock::now();
 }
 
 void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
@@ -585,8 +586,20 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         return;
     }
 
+    int64_t msec = ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+    msec -= extraTimeMs_;
+    if (msec <= 0)
+    {
+        extraTimeMs_ = 0;
+        return;
+    }
+
     // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
     DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
+    extraTimeMs_ = std::max((long)0, duration); // cap extra time to >= 0.
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {

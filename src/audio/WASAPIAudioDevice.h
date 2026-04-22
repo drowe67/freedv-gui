@@ -93,6 +93,10 @@ private:
     bool isFloatingPoint_;
     short* tmpBuf_;
 
+    // For handling additional wakeup time after semaphore timeout
+    int extraTimeMs_;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
+
     void renderAudio_(ComPtr<IAudioRenderClient> renderClient);
     void captureAudio_(ComPtr<IAudioCaptureClient> captureClient);
     void copyFromWindowsBuffer_(void* buf, int numFrames);
