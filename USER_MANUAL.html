@@ -437,10 +437,15 @@ class="header-section-number">6</span> Multiple Configurations</h1>
 <p>By default, FreeDV uses the following locations to store
 configuration:</p>
 <ul>
-<li>Linux: ~/.freedv</li>
+<li>Linux: $XDG_CONFIG_HOME/freedv/freedv.conf (see below)</li>
 <li>macOS: ~/Library/Preferences/FreeDV Preferences</li>
 <li>Windows: Registry (HKEY_CURRENT_USER\SOFTWARE\freedv)</li>
 </ul>
+<p>On Linux, XDG_CONFIG_HOME defaults to ~/.config if not explicitly
+overridden. Note that if you are not running the AppImage, the behavior
+is different if your distro does not include wxWidgets 3.3 or newer. In
+those cases, the default configuration file location is ~/.freedv, which
+is the same as in prior versions of FreeDV.</p>
 <p>If you’d like to store the configuration in another location (or
 store multiple configurations), FreeDV accepts the -f (or –config)
 command line arguments to provide an alternate location. An absolute
@@ -451,6 +456,10 @@ it will be relative to the following locations:</p>
 <li>macOS: ~/Library/Preferences/</li>
 <li>Windows: C:\Users\[username]\AppData\Roaming</li>
 </ul>
+<p>You can also save and restore different configuration files by using
+the Tools-&gt;Export Configuration and Use Configuration menu items.
+These menu options allow for switching of configurations without
+restarting FreeDV.</p>
 <h2 data-number="6.1"
 id="executing-freedv-with-a-different-configuration-windows"><span
 class="header-section-number">6.1</span> Executing FreeDV With a
@@ -1268,7 +1277,7 @@ data-cites="barjac">@barjac</span>!</li>
 data-cites="barjac">@barjac</span>!</li>
 <li>Add optional per-band TX attenuation saving. (PR #1284) - thanks
 <span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Log heard callsigns to a CSV file. (PR #1290)</li>
+<li>Log heard callsigns to a CSV file. (PR #1290, #1293)</li>
 <li>Add ability to load and save different FreeDV configurations. (PR
 #1296)</li>
 </ul></li>
