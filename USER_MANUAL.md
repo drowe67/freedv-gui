@@ -345,9 +345,14 @@ saved. By default, this is inside the current user's Documents folder.
 
 By default, FreeDV uses the following locations to store configuration:
 
-* Linux: ~/.freedv
+* Linux: $XDG_CONFIG_HOME/freedv/freedv.conf (see below)
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
 * Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
+
+On Linux, XDG_CONFIG_HOME defaults to ~/.config if not explicitly overridden. Note that 
+if you are not running the AppImage, the behavior is different if your distro does not 
+include wxWidgets 3.3 or newer. In those cases, the default configuration file location
+is ~/.freedv, which is the same as in prior versions of FreeDV.
 
 If you'd like to store the configuration in another location (or store multiple configurations),
 FreeDV accepts the -f (or --config) command line arguments to provide an alternate location. An
@@ -357,6 +362,10 @@ to the following locations:
 * Linux: ~/
 * macOS: ~/Library/Preferences/
 * Windows: C:\\Users\\[username]\\AppData\\Roaming
+
+You can also save and restore different configuration files by using the Tools->Export Configuration
+and Use Configuration menu items. These menu options allow for switching of configurations without
+restarting FreeDV.
 
 ## Executing FreeDV With a Different Configuration (Windows)
 
@@ -921,6 +930,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Further improve audio dropouts. (PR #1287)
     * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
     * Fix RADE related compiler errors. (PR #1299)
+    * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
@@ -935,7 +945,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
-    * Log heard callsigns to a CSV file. (PR #1290)
+    * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
