@@ -208,7 +208,7 @@ void WASAPIAudioDevice::start()
             REFERENCE_TIME maximumBufferTime = 0;
             hr = client_->GetBufferSizeLimits(
                 streamFormatPtr,
-                TRUE,
+                FALSE,
                 &minimumBufferTime,
                 &maximumBufferTime);
             if (hr == S_OK)
