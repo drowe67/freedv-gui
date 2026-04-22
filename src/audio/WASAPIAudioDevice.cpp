@@ -27,6 +27,7 @@
 #include <thread>
 #include <future>
 #include <avrt.h>
+#include <inttypes.h>
 #include "../util/logging/ulog.h"
 
 #define BLOCK_TIME_NS (20000000)
