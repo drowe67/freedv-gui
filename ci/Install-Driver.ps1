@@ -10,6 +10,6 @@ $infName = $args[1]
 $hwId = $args[2]
 
 Import-Certificate -FilePath $certName -CertStoreLocation Cert:\LocalMachine\root
-Import-Certificate -FilePath $certNamer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+Import-Certificate -FilePath $certName -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
 & "$Env:WindowsSdkDir\Tool\$Env:WindowsSDKVersion\$Env:Platform\devgen.exe" /add /bus ROOT /hardwareid $hwId
 pnputil /add-driver $infName /install
