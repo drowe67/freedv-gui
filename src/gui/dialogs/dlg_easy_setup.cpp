@@ -996,7 +996,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
 
                             for (unsigned long index = 0; index < size; index++)
                             {
-                                *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * castedThis->analogSineWaveSampleNumber_ / sr);
+                                *audioData++ = (SHRT_MAX / 4) * sin(2 * PI * (1500) * castedThis->analogSineWaveSampleNumber_ / sr);
                                 castedThis->analogSineWaveSampleNumber_ = (castedThis->analogSineWaveSampleNumber_ + 1) % sr;
                             }
 
