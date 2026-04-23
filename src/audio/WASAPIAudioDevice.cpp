@@ -210,7 +210,7 @@ void WASAPIAudioDevice::start()
 
         if (!initialized_)
         {
-            REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
+            //REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
             UINT32 defaultPeriodInFrames = 0;
             UINT32 fundamentalPeriodInFrames = 0;
             UINT32 minPeriodInFrames = 0;
