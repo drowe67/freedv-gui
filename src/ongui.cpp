@@ -1571,6 +1571,12 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         
         wxString::const_iterator end;
         logTimeObj.ParseDateTime(logTime, &end);
+
+        if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
+        {
+            // String was stored in UTC; ParseDateTime assumes local — reinterpret as UTC.
+            logTimeObj.MakeFromTimezone(wxDateTime::UTC);
+        }
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {

@@ -69,10 +69,10 @@ public:
 protected:
     friend class WASAPIAudioEngine;
 
-    WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
 
 private:
-    ComPtr<IAudioClient> client_;
+    ComPtr<IAudioClient3> client_;
     ComPtr<IMMDevice> device_;
     ComPtr<IAudioRenderClient> renderClient_;
     ComPtr<IAudioCaptureClient> captureClient_;
@@ -92,6 +92,10 @@ private:
     int validBits_;
     bool isFloatingPoint_;
     short* tmpBuf_;
+
+    // For handling additional wakeup time after semaphore timeout
+    int extraTimeMs_;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void renderAudio_(ComPtr<IAudioRenderClient> renderClient);
     void captureAudio_(ComPtr<IAudioCaptureClient> captureClient);

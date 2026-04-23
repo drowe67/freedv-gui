@@ -111,11 +111,14 @@ jobs:
       run: |
           Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
           Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\root
-          Import-Certificate -FilePath ${{github.workspace}}\ci\vbcable.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          Get-ChildItem -Path $Env:WindowsSdkDir -Recurse -Filter "devgen.exe" | Select-Object FullName
-          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VBAudioVACWDM
-          pnputil /add-driver VBCable_Driver_Pack45\vbMmeCable64_win10.inf /install
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+          
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install VAC ("analog" sound device)
       run: |
@@ -128,10 +131,7 @@ jobs:
           $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
 
-          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\root
-          Import-Certificate -FilePath ${{github.workspace}}\vac.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
-          & "${{ env.WindowsSdkDir }}\Tools\${{ env.WindowsSDKVersion }}\${{ env.Platform }}\devgen.exe" /add /bus ROOT /hardwareid VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-          pnputil /add-driver "vac470lite\vrtaucbl.inf" /install
+          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
     - name: Screenshot if failed
       if: failure()
