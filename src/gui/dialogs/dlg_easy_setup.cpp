@@ -1320,8 +1320,9 @@ void EasySetupDialog::updateAudioDevices_()
     }
     
     // FlexRadio shortcut: all devices starting with "DAX Audio RX" should be linked
-    // to the "DAX Audio TX" device (or "DAX TX" in SmartSDR 4.2+). There's only one 
-    // TX device for all digital mode applications intended to be used on a Flex radio.
+    // to the "DAX Audio TX" device (or "DAX RX" / "DAX TX" respectively in SmartSDR 4.2+). 
+    // There's only one TX device for all digital mode applications intended to be used 
+    // on a Flex radio.
     wxString fullTxDeviceName;
     int flexTxDeviceSampleRate = -1;
     for (auto& kvp : finalRadioDeviceList)
