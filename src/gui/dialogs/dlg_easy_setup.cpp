@@ -775,10 +775,19 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
         if (m_buttonTest->GetLabel() == "Stop Test")
         {
             // Stop the currently running test
-            if (txTestAudioDevice_ != nullptr)
+            if (txTestAudioDevice_ != nullptr || analogPlaybackTestAudioDevice_ != nullptr)
             {
-                txTestAudioDevice_->stop();
-                txTestAudioDevice_ = nullptr;
+                if (txTestAudioDevice_ != nullptr)
+                {
+                    txTestAudioDevice_->stop();
+                    txTestAudioDevice_ = nullptr;
+                }
+
+                if (analogPlaybackTestAudioDevice_ != nullptr)
+                {
+                    analogPlaybackTestAudioDevice_->stop();
+                    analogPlaybackTestAudioDevice_ = nullptr;
+                }
 
                 auto audioEngine = AudioEngineFactory::GetAudioEngine();
                 audioEngine->stop();
@@ -915,53 +924,87 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                 serialPortTestObject_->connect();      
             }
         
-            // Start playing a sine wave through the radio's device
-            if (radioOutDeviceName != "none")
+            // Get analog playback device info
+            int analogIndex = m_analogDevicePlayback->GetSelection();
+            SoundDeviceData* analogPlaybackData = (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(analogIndex);
+            wxString analogOutDeviceName = (analogPlaybackData != nullptr) ? analogPlaybackData->rxDeviceName : wxString("none");
+            int analogOutSampleRate = (analogPlaybackData != nullptr) ? analogPlaybackData->rxSampleRate : 44100;
+
+            // Start playing sine waves through the radio and analog playback devices
+            if (radioOutDeviceName != "none" || analogOutDeviceName != "none")
             {
                 auto audioEngine = AudioEngineFactory::GetAudioEngine();
                 audioEngine->start();
 
-                txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
-
-                if (txTestAudioDevice_ == nullptr)
+                if (radioOutDeviceName != "none")
                 {
-                    wxMessageBox(
-                        "Error opening radio sound device. Please double-check configuration and try again.", 
-                        wxT("Error"), wxOK | wxICON_ERROR, this);
-                    
-                    if (hamlibTestObject_ != nullptr)
+                    txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
+
+                    if (txTestAudioDevice_ == nullptr)
                     {
-                        hamlibTestObject_->ptt(false);
-                        hamlibTestObject_->disconnect();
-                        hamlibTestObject_ = nullptr;
+                        wxMessageBox(
+                            "Error opening radio sound device. Please double-check configuration and try again.",
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
+
+                        if (hamlibTestObject_ != nullptr)
+                        {
+                            hamlibTestObject_->ptt(false);
+                            hamlibTestObject_->disconnect();
+                            hamlibTestObject_ = nullptr;
+                        }
+                        else if (serialPortTestObject_ != nullptr)
+                        {
+                            serialPortTestObject_->ptt(false);
+                            serialPortTestObject_->disconnect();
+                            serialPortTestObject_ = nullptr;
+                        }
+
+                        audioEngine->stop();
+                        return;
                     }
-                    else if (serialPortTestObject_ != nullptr)
-                    {
-                        serialPortTestObject_->ptt(false);
-                        serialPortTestObject_->disconnect();
-                        serialPortTestObject_ = nullptr;
-                    }
-                
-                    audioEngine->stop();
-                    return;
+
+                    sineWaveSampleNumber_ = 0;
+
+                    txTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
+                        auto sr = dev.getSampleRate();
+                        EasySetupDialog* castedThis = (EasySetupDialog*)state;
+                        short* audioData = static_cast<short*>(data);
+
+                        for (unsigned long index = 0; index < size; index++)
+                        {
+                            *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * castedThis->sineWaveSampleNumber_ / sr);
+                            castedThis->sineWaveSampleNumber_ = (castedThis->sineWaveSampleNumber_ + 1) % sr;
+                        }
+
+                    }, this);
+
+                    txTestAudioDevice_->start();
                 }
-            
-                sineWaveSampleNumber_ = 0;
 
-                txTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
-                    auto sr = dev.getSampleRate();
-                    EasySetupDialog* castedThis = (EasySetupDialog*)state;
-                    short* audioData = static_cast<short*>(data);
-    
-                    for (unsigned long index = 0; index < size; index++)
+                if (analogOutDeviceName != "none")
+                {
+                    analogPlaybackTestAudioDevice_ = audioEngine->getAudioDevice(analogOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, analogOutSampleRate, 1);
+
+                    if (analogPlaybackTestAudioDevice_ != nullptr)
                     {
-                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * castedThis->sineWaveSampleNumber_ / sr);
-                        castedThis->sineWaveSampleNumber_ = (castedThis->sineWaveSampleNumber_ + 1) % sr;
+                        analogSineWaveSampleNumber_ = 0;
+
+                        analogPlaybackTestAudioDevice_->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) FREEDV_NONBLOCKING {
+                            auto sr = dev.getSampleRate();
+                            EasySetupDialog* castedThis = (EasySetupDialog*)state;
+                            short* audioData = static_cast<short*>(data);
+
+                            for (unsigned long index = 0; index < size; index++)
+                            {
+                                *audioData++ = (SHRT_MAX / 4) * sin(2 * PI * (1500) * castedThis->analogSineWaveSampleNumber_ / sr);
+                                castedThis->analogSineWaveSampleNumber_ = (castedThis->analogSineWaveSampleNumber_ + 1) % sr;
+                            }
+
+                        }, this);
+
+                        analogPlaybackTestAudioDevice_->start();
                     }
-
-                }, this);
-
-                txTestAudioDevice_->start();
+                }
             }
         
             // Disable all UI except the Stop button.
