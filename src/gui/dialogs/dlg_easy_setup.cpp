@@ -1351,7 +1351,8 @@ void EasySetupDialog::updateAudioDevices_()
     {
         for (auto& kvp : finalRadioDeviceList)
         {
-            if (kvp.first.StartsWith("DAX Audio RX") || kvp.first.StartsWith("DAX RX"))
+            if ((kvp.first.StartsWith("DAX Audio RX") && fullTxDeviceName.StartsWith("DAX Audio TX")) || 
+                (kvp.first.StartsWith("DAX RX") && fullTxDeviceName.StartsWith("DAX TX"))
             {
                 kvp.second->txDeviceName = fullTxDeviceName;
                 kvp.second->txSampleRate = flexTxDeviceSampleRate;
