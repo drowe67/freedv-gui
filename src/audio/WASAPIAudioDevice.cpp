@@ -253,7 +253,7 @@ void WASAPIAudioDevice::start()
                 WAVEFORMATEX* tempFormat = nullptr;
                 hr = client_->GetCurrentSharedModeEnginePeriod(
                     &tempFormat,
-                    defaultPeriodInFrames);
+                    &defaultPeriodInFrames);
                 (void)tempFormat; // ignore warnings
                 if (FAILED(hr))
                 {
