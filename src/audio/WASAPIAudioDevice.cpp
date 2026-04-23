@@ -37,7 +37,7 @@
 
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
-WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient2> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : Win32COMObject("WASAPIDev")
     , client_(client)
     , device_(device)
@@ -211,41 +211,64 @@ void WASAPIAudioDevice::start()
         if (!initialized_)
         {
             REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
-            REFERENCE_TIME minimumBufferTime = 0;
-            REFERENCE_TIME maximumBufferTime = 0;
-            hr = client_->GetBufferSizeLimits(
+            UINT32 defaultPeriodInFrames = 0;
+            UINT32 fundamentalPeriodInFrames = 0;
+            UINT32 minPeriodInFrames = 0;
+            UINT32 maxPeriodInFrames = 0;
+            hr = client_->GetSharedModeEnginePeriod(
                 streamFormatPtr,
-                FALSE,
-                &minimumBufferTime,
-                &maximumBufferTime);
-            if (hr == S_OK)
+                &defaultPeriodInFrames,
+                &fundamentalPeriodInFrames,
+                &minPeriodInFrames,
+                &maxPeriodInFrames);
+            if (FAILED(hr))
             {
-                log_info(
-                    "Desired buffer size: %" PRIu64 " ns, min: %" PRIu64 " ns, max: %" PRIu64 " ns", 
-                    ((uint64_t)(desiredRefTime * NS_PER_REFTIME)),
-                    ((uint64_t)(minimumBufferTime * NS_PER_REFTIME)),
-                    ((uint64_t)(maximumBufferTime * NS_PER_REFTIME)));
-                desiredRefTime = std::max(desiredRefTime, minimumBufferTime);
-                desiredRefTime = std::min(desiredRefTime, maximumBufferTime);
-            }
-            else
-            {
-                // Non-critical error, can continue without getting buffer sizes.
                 std::stringstream ss;
-                ss << "Could not call GetBufferSizeLimits (hr = " << hr << ")";
-                log_warn(ss.str().c_str());
+                ss << "Could not get audio engine period (hr = " << hr << ")";
+                log_error(ss.str().c_str());
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+                }
+                prom->set_value();
+                return;
             }
+
+            log_info(
+                "Default period: %d, fundamental period: %d, minPeriod: %d, maxPeriod: %d",
+                defaultPeriodInFrames,
+                fundamentalPeriodInFrames,
+                minPeriodInFrames,
+                maxPeriodInFrames);
               
             // Initialize the audio client with the above format
-            hr = client_->Initialize(
-                AUDCLNT_SHAREMODE_SHARED,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK | 
-                    AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
-                    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
-                desiredRefTime,
-                0,
+            hr = client_->InitializeSharedAudioStream(
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                defaultPeriodInFrames,
                 streamFormatPtr,
                 nullptr);
+            if (AUDCLNT_E_ENGINE_PERIODICITY_LOCKED == hr)
+            {
+                // Try again with actual period
+                WAVEFORMATEX* tempFormat = nullptr;
+                hr = client_->GetCurrentSharedModeEnginePeriod(
+                    &tempFormat,
+                    defaultPeriodInFrames);
+                (void)tempFormat; // ignore warnings
+                if (FAILED(hr))
+                {
+                    std::stringstream ss;
+                    ss << "Could not get current engine period (hr = " << hr << ")";
+                    log_warn(ss.str().c_str());
+                }
+
+                hr = client_->InitializeSharedAudioStream(
+                    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                    defaultPeriodInFrames,
+                    streamFormatPtr,
+                    nullptr);
+            }
+
             if (freeStreamFormat)
             {
                 CoTaskMemFree(streamFormatPtr);
@@ -451,7 +474,7 @@ void WASAPIAudioDevice::start()
             // Capture references for use by this thread.
             ComPtr<IAudioRenderClient> renderClientRef = renderClient_;
             ComPtr<IAudioCaptureClient> captureClientRef = captureClient_;
-            ComPtr<IAudioClient2> clientRef = client_;
+            ComPtr<IAudioClient3> clientRef = client_;
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
             if (FAILED(res))
