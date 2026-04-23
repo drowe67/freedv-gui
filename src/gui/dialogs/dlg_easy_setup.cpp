@@ -1320,13 +1320,14 @@ void EasySetupDialog::updateAudioDevices_()
     }
     
     // FlexRadio shortcut: all devices starting with "DAX Audio RX" should be linked
-    // to the "DAX Audio TX" device. There's only one TX device for all digital mode
-    // applications intended to be used on a Flex radio.
+    // to the "DAX Audio TX" device (or "DAX TX" in SmartSDR 4.2+). There's only one 
+    // TX device for all digital mode applications intended to be used on a Flex radio.
     wxString fullTxDeviceName;
     int flexTxDeviceSampleRate = -1;
     for (auto& kvp : finalRadioDeviceList)
     {
-        if (kvp.first.StartsWith("DAX Audio TX") && kvp.second->txSampleRate > 0 && kvp.second->txDeviceName != "none")
+        if ((kvp.first.StartsWith("DAX Audio TX") || kvp.first.StartsWith("DAX TX")) && 
+            kvp.second->txSampleRate > 0 && kvp.second->txDeviceName != "none")
         {
             fullTxDeviceName = kvp.second->txDeviceName;
             flexTxDeviceSampleRate = kvp.second->txSampleRate;
@@ -1349,7 +1350,7 @@ void EasySetupDialog::updateAudioDevices_()
     {
         for (auto& kvp : finalRadioDeviceList)
         {
-            if (kvp.first.StartsWith("DAX Audio RX"))
+            if (kvp.first.StartsWith("DAX Audio RX") || kvp.first.StartsWith("DAX RX"))
             {
                 kvp.second->txDeviceName = fullTxDeviceName;
                 kvp.second->txSampleRate = flexTxDeviceSampleRate;
