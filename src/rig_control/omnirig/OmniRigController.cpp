@@ -150,6 +150,9 @@ void OmniRigController::connectImpl_()
         // Get list of writable parameters.
         rig_->get_WriteableParams(&writableParams_);
 
+        // Make sure radio starts in RX mode.
+        rig_->put_Tx(PM_RX);
+
         // Get current frequency and mode when we first connect so we can
         // revert on close.
         requestCurrentFrequencyModeImpl_();

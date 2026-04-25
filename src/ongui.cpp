@@ -1441,7 +1441,7 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     m_cboReportFrequency->Enable(!newTx);
 
     // Enable tuning carrier
-    g_rxUserdata->tuneSineWaveSampleNumber = 0;
+    g_rxUserdata->tuneSineWaveSampleNumber.store(0, std::memory_order_release);
     g_rxUserdata->isTuning.store(newTx, std::memory_order_release);
 
     wxString fmtString;
