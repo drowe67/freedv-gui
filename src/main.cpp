@@ -3757,12 +3757,14 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
         for (unsigned long index = 0; index < size; index++)
         {
-            auto carrierSample = txLevel * sin(2 * M_PI * FDMDV_FCENTRE * cbData->tuneSineWaveSampleNumber / sr);
+            auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
+            auto carrierSample = txLevel * sin(2 * M_PI * FDMDV_FCENTRE * sineWaveSampleNumber / sr);
             for (int i = 0; i < numChannels; i++)
             {
                 *audioData++ = carrierSample;
             }
-            cbData->tuneSineWaveSampleNumber = (cbData->tuneSineWaveSampleNumber + 1) % sr;
+            sineWaveSampleNumber = (sineWaveSampleNumber + 1) % sr;
+            cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
         }
     }
     else
