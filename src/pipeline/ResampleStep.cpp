@@ -77,9 +77,9 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
 
     // r8brain is fast enough that we don't need special transition bands
     // for plots.
-    double reqTransBand = 10.0;
+    double reqTransBand = 9.0;
 
-    resampleState_ = new r8b::CDSPResampler16(
+    resampleState_ = new r8b::CDSPResampler24(
         inputSampleRate, outputSampleRate, maxInputLen, reqTransBand);
     assert(resampleState_ != nullptr);
 
