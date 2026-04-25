@@ -79,8 +79,8 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
     // for plots.
     double reqTransBand = 10.0;
 
-    resampleState_ = new r8b::CDSPResampler(
-        inputSampleRate, outputSampleRate, maxInputLen, reqTransBand, 121.0); // to match 121dB SNR from libsamplerate
+    resampleState_ = new r8b::CDSPResampler16(
+        inputSampleRate, outputSampleRate, maxInputLen, reqTransBand);
     assert(resampleState_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
