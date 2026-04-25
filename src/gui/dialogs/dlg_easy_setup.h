@@ -134,9 +134,11 @@ class EasySetupDialog : public wxDialog
          std::shared_ptr<HamlibRigController> hamlibTestObject_;
          std::shared_ptr<SerialPortOutRigController> serialPortTestObject_;
          int sineWaveSampleNumber_;
+         int analogSineWaveSampleNumber_;
          bool hasAppliedChanges_;
 
          std::shared_ptr<IAudioDevice> txTestAudioDevice_;
+         std::shared_ptr<IAudioDevice> analogPlaybackTestAudioDevice_;
 };
 
 #endif // __EASY_SETUP_DIALOG__

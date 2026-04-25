@@ -331,8 +331,9 @@ class HamlibHandler:
       if x:
         self.app.ptt = 1
       else:
+        if self.app.ptt:
+            self.app.timesBeforeKill = self.app.timesBeforeKill - 1
         self.app.ptt = 0
-        self.app.timesBeforeKill = self.app.timesBeforeKill - 1
   def GetSplitVfo(self):
     self.Reply('SPLIT', self.app.splitenable, 'TXVFO',  self.app.txvfo, 0)
   def SetSplitVfo(self):
