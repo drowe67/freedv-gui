@@ -82,9 +82,24 @@ void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* d
     static_assert(SampleDivisor != 0);
 
     // Iterate through samples, performing division (if needed) and typecasting
-    for (std::size_t index = 0; index < numSamples; index++)
+    if (SampleDivisor == 1)
     {
-        destSamples[index] = (DstType)sourceSamples[index] * ((DstType)1.0 / SampleDivisor);
+        for (std::size_t index = 0; index < numSamples; index++)
+        {
+            destSamples[index] = (DstType)sourceSamples[index];
+        }
+    }
+    else
+    {
+        auto divider = SampleDivisor + 1;
+        if (SampleDivisor != std::numeric_limits<DstType>::max())
+        {
+            divider = SampleDivisor;
+        }
+        for (std::size_t index = 0; index < numSamples; index++)
+        {
+            destSamples[index] = (DstType)sourceSamples[index] * ((DstType)1.0 / divider);
+        }
     }
 }
 
@@ -96,20 +111,35 @@ void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* des
     static_assert(std::numeric_limits<DstType>::is_integer);
 
     // Iterate through samples, performing multiplication (if needed) and typecasting
-    for (std::size_t index = 0; index < numSamples; index++)
+    if (SampleMultiplier == 1)
     {
-        SrcType temp = sourceSamples[index] * SampleMultiplier;
-        if (temp <= std::numeric_limits<DstType>::min())
+        for (std::size_t index = 0; index < numSamples; index++)
         {
-            destSamples[index] = std::numeric_limits<DstType>::min();
+            destSamples[index] = (DstType)sourceSamples[index];
         }
-        else if (temp >= std::numeric_limits<DstType>::max())
+    }
+    else
+    {
+        auto multiplier = SampleMultiplier + 1;
+        if (SampleMultiplier != std::numeric_limits<DstType>::max())
         {
-            destSamples[index] = std::numeric_limits<DstType>::max();
+            multiplier = SampleMultiplier;
         }
-        else
+        for (std::size_t index = 0; index < numSamples; index++)
         {
-            destSamples[index] = static_cast<DstType>(std::llround(temp));
+            SrcType temp = sourceSamples[index] * multiplier;
+            if (temp <= std::numeric_limits<DstType>::min())
+            {
+                destSamples[index] = std::numeric_limits<DstType>::min();
+            }
+            else if (temp >= std::numeric_limits<DstType>::max())
+            {
+                destSamples[index] = std::numeric_limits<DstType>::max();
+            }
+            else
+            {
+                destSamples[index] = static_cast<DstType>(std::llround(temp));
+            }
         }
     }
 }
