@@ -949,6 +949,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
+    * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
     * Easy Setup: Also emit audio tone through speakers. (PR #1033)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
