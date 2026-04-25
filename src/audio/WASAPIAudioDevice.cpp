@@ -27,16 +27,17 @@
 #include <thread>
 #include <future>
 #include <avrt.h>
+#include <inttypes.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (10000000)
+#define BLOCK_TIME_NS (20000000)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
 
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
-WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : Win32COMObject("WASAPIDev")
     , client_(client)
     , device_(device)
@@ -52,6 +53,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevi
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
     , tmpBuf_(nullptr)
+    , extraTimeMs_(0)
 {
     // empty
 }
@@ -94,12 +96,33 @@ void WASAPIAudioDevice::start()
         WAVEFORMATEX* streamFormatPtr = nullptr;
         WAVEFORMATEX streamFormat;
         bool freeStreamFormat = false;
-
+        
+        // Set AudioClientProperties for stream. Must be done prior to Initialize().
+        AudioClientProperties prop;
+        prop.cbSize = sizeof(AudioClientProperties);
+        prop.bIsOffload = TRUE;
+        prop.eCategory = AudioCategory_Communications;
+        prop.Options = AUDCLNT_STREAMOPTIONS_NONE;
+        HRESULT hr = client_->SetClientProperties(&prop);
+        if (FAILED(hr))
+        {
+            // Try disabling offload as not all devices support it.
+            prop.bIsOffload = FALSE;
+            hr = client_->SetClientProperties(&prop);
+            if (FAILED(hr))
+            {
+                // Non-critical error, can continue without setting properties.
+                std::stringstream ss;
+                ss << "Could not set AudioClient properties (hr = " << hr << ")";
+                log_warn(ss.str().c_str());
+            }
+        }
+        
         // Populate stream format based on requested sample
         // rate/number of channels.
         // NOTE: this should already have been determined valid
         // by the audio engine!
-        HRESULT hr = client_->GetMixFormat(&streamFormatPtr);
+        hr = client_->GetMixFormat(&streamFormatPtr);
         if (SUCCEEDED(hr))
         {
             freeStreamFormat = true;
@@ -187,16 +210,65 @@ void WASAPIAudioDevice::start()
 
         if (!initialized_)
         {
+            //REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
+            UINT32 defaultPeriodInFrames = 0;
+            UINT32 fundamentalPeriodInFrames = 0;
+            UINT32 minPeriodInFrames = 0;
+            UINT32 maxPeriodInFrames = 0;
+            hr = client_->GetSharedModeEnginePeriod(
+                streamFormatPtr,
+                &defaultPeriodInFrames,
+                &fundamentalPeriodInFrames,
+                &minPeriodInFrames,
+                &maxPeriodInFrames);
+            if (FAILED(hr))
+            {
+                std::stringstream ss;
+                ss << "Could not get audio engine period (hr = " << hr << ")";
+                log_error(ss.str().c_str());
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+                }
+                prom->set_value();
+                return;
+            }
+
+            log_info(
+                "Default period: %d, fundamental period: %d, minPeriod: %d, maxPeriod: %d",
+                defaultPeriodInFrames,
+                fundamentalPeriodInFrames,
+                minPeriodInFrames,
+                maxPeriodInFrames);
+              
             // Initialize the audio client with the above format
-            hr = client_->Initialize(
-                AUDCLNT_SHAREMODE_SHARED,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK | 
-                    AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
-                    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
-                BLOCK_TIME_NS / NS_PER_REFTIME, // REFERENCE_TIME is in 100ns units
-                0,
+            hr = client_->InitializeSharedAudioStream(
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                defaultPeriodInFrames,
                 streamFormatPtr,
                 nullptr);
+            if (AUDCLNT_E_ENGINE_PERIODICITY_LOCKED == hr)
+            {
+                // Try again with actual period
+                WAVEFORMATEX* tempFormat = nullptr;
+                hr = client_->GetCurrentSharedModeEnginePeriod(
+                    &tempFormat,
+                    &defaultPeriodInFrames);
+                (void)tempFormat; // ignore warnings
+                if (FAILED(hr))
+                {
+                    std::stringstream ss;
+                    ss << "Could not get current engine period (hr = " << hr << ")";
+                    log_warn(ss.str().c_str());
+                }
+
+                hr = client_->InitializeSharedAudioStream(
+                    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                    defaultPeriodInFrames,
+                    streamFormatPtr,
+                    nullptr);
+            }
+
             if (freeStreamFormat)
             {
                 CoTaskMemFree(streamFormatPtr);
@@ -402,7 +474,7 @@ void WASAPIAudioDevice::start()
             // Capture references for use by this thread.
             ComPtr<IAudioRenderClient> renderClientRef = renderClient_;
             ComPtr<IAudioCaptureClient> captureClientRef = captureClient_;
-            ComPtr<IAudioClient> clientRef = client_;
+            ComPtr<IAudioClient3> clientRef = client_;
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
             if (FAILED(res))
@@ -525,7 +597,7 @@ void WASAPIAudioDevice::setHelperRealTime()
 
 void WASAPIAudioDevice::startRealTimeWork() 
 {
-    // empty
+    startTime_ = std::chrono::steady_clock::now();
 }
 
 void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
@@ -537,8 +609,20 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         return;
     }
 
+    int64_t msec = ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+    msec -= extraTimeMs_;
+    if (msec <= 0)
+    {
+        extraTimeMs_ = 0;
+        return;
+    }
+
     // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
     DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto duration = std::chrono::ceil<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
+    extraTimeMs_ = std::max((int64_t)0, (int64_t)duration); // cap extra time to >= 0.
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {

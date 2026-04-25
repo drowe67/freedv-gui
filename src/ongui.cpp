@@ -1573,6 +1573,12 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
         
         wxString::const_iterator end;
         logTimeObj.ParseDateTime(logTime, &end);
+
+        if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
+        {
+            // String was stored in UTC; ParseDateTime assumes local — reinterpret as UTC.
+            logTimeObj.MakeFromTimezone(wxDateTime::UTC);
+        }
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
@@ -1946,7 +1952,7 @@ void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
     wxFileDialog saveFileDialog(
         this,
         _("Export FreeDV Configuration"),
-        wxEmptyString,
+        wxGetApp().defaultConfigFilePath,
         wxEmptyString,
         wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
@@ -1969,7 +1975,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     wxFileDialog openFileDialog(
         this,
         _("Import FreeDV Configuration"),
-        wxEmptyString,
+        wxGetApp().defaultConfigFilePath,
         wxEmptyString,
         wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
