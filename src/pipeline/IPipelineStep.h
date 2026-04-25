@@ -84,7 +84,7 @@ void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* d
     // Iterate through samples, performing division (if needed) and typecasting
     for (std::size_t index = 0; index < numSamples; index++)
     {
-        destSamples[index] = (DstType)sourceSamples[index] / ((DstType)SampleDivisor);
+        destSamples[index] = (DstType)sourceSamples[index] / (SampleDivisor + 1);
     }
 }
 
@@ -98,7 +98,7 @@ void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* des
     // Iterate through samples, performing multiplication (if needed) and typecasting
     for (std::size_t index = 0; index < numSamples; index++)
     {
-        SrcType temp = sourceSamples[index] * (SrcType)SampleMultiplier;
+        SrcType temp = sourceSamples[index] * (SampleMultiplier + 1);
         if (temp <= std::numeric_limits<DstType>::min())
         {
             destSamples[index] = std::numeric_limits<DstType>::min();
