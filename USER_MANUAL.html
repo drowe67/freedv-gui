@@ -459,7 +459,9 @@ it will be relative to the following locations:</p>
 <p>You can also save and restore different configuration files by using
 the Tools-&gt;Export Configuration and Use Configuration menu items.
 These menu options allow for switching of configurations without
-restarting FreeDV.</p>
+restarting FreeDV. Note that restoring a configuration file does not
+modify the default configuration nor does FreeDV begin using it by
+default on subsequent application starts.</p>
 <h2 data-number="6.1"
 id="executing-freedv-with-a-different-configuration-windows"><span
 class="header-section-number">6.1</span> Executing FreeDV With a
@@ -1252,6 +1254,8 @@ displayed. (PR #1282)</li>
 <li>Fix RADE related compiler errors. (PR #1299)</li>
 <li>Logging: fix incorrect time when using UTC due to DST. (PR #1302) -
 thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>Ensure that PTT is actually off when opening Hamlib connection. (PR
+#1308)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
