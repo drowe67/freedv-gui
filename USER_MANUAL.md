@@ -365,7 +365,8 @@ to the following locations:
 
 You can also save and restore different configuration files by using the Tools->Export Configuration
 and Use Configuration menu items. These menu options allow for switching of configurations without
-restarting FreeDV.
+restarting FreeDV. Note that restoring a configuration file does not modify the default configuration
+nor does FreeDV begin using it by default on subsequent application starts.
 
 ## Executing FreeDV With a Different Configuration (Windows)
 
@@ -931,6 +932,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
     * Fix RADE related compiler errors. (PR #1299)
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
+    * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
@@ -948,6 +950,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
     * Hamlib: Add options to force RTS and DTR on. (PR #1292)
+    * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
     * Easy Setup: Also emit audio tone through speakers. (PR #1033)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)

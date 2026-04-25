@@ -67,7 +67,7 @@ typedef struct paCallBackData
 
     // Tune state
     std::atomic<bool> isTuning;
-    int tuneSineWaveSampleNumber;
+    std::atomic<int> tuneSineWaveSampleNumber;
 } paCallBackData;
 
 #endif // AUDIO_PIPELINE_PA_CALLBACK_DATA_H

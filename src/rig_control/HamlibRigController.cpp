@@ -454,6 +454,14 @@ void HamlibRigController::connectImpl_()
             multipleVfos_ = true;
         }
 
+        // Make sure PTT is not enabled as there have been reports of some 
+        // radios starting off in this state.
+        result = rig_set_ptt(tmpRig, RIG_VFO_CURR, RIG_PTT_OFF);
+        if (result != RIG_OK)
+        {
+            log_warn("Could not ensure that radio starts with PTT off: %s", rigerror(result));
+        }
+
         // Get current frequency and mode when we first connect so we can 
         // revert on close.
         requestCurrentFrequencyModeImpl_();
