@@ -80,7 +80,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticBox* hamlibBox = new wxStaticBox(panel, wxID_ANY, _("Hamlib Settings"));
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( hamlibBox, wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(7, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(8, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -149,7 +149,24 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(wxT("None"));
     m_cbPttMethod->Append(wxT("CAT via Data port"));
-    
+
+    /* Force RTS / Force DTR checkboxes on one row */
+    wxBoxSizer* forceRtsSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceRTSOn = new wxCheckBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceRTSOn->SetToolTip(_("Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceRtsSizer->Add(m_ckForceRTSOn, 0, wxALIGN_CENTER_VERTICAL, 0);
+    forceRtsSizer->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Force RTS"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceRtsSizer, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 0);
+
+    wxBoxSizer* forceDtrSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceDTROn = new wxCheckBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceDTROn->SetToolTip(_("Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceDtrSizer->Add(m_ckForceDTROn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+    forceDtrSizer->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Force DTR"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceDtrSizer, 0, wxALIGN_CENTER_VERTICAL, 0);
+
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
     //----------------------------------------------------------------------
@@ -592,7 +609,10 @@ void ComPortsDlg::ExchangeData(int inout)
         m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
         
         m_cbPttMethod->SetSelection((int)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType);
-        
+
+        m_ckForceRTSOn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn);
+        m_ckForceDTROn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn);
+
         /* Serial PTT */
 
         m_ckUseSerialPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT);
@@ -650,7 +670,10 @@ void ComPortsDlg::ExchangeData(int inout)
         log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
-        
+
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn = m_ckForceRTSOn->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn = m_ckForceDTROn->GetValue();
+
         /* Serial settings */
 
         wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT           = m_ckUseSerialPTT->IsChecked();
@@ -741,7 +764,11 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
             std::shared_ptr<HamlibRigController> hamlib = 
                 std::make_shared<HamlibRigController>(
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
-                    (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8) );
+                    (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+                    false,
+                    false,
+                    m_ckForceRTSOn->GetValue(),
+                    m_ckForceDTROn->GetValue() );
 
             hamlib->onRigError += [=](IRigController*, std::string const& error) {
                 CallAfter([=]() {
