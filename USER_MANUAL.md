@@ -931,6 +931,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
     * Fix RADE related compiler errors. (PR #1299)
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
+    * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
