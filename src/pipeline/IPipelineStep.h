@@ -39,6 +39,17 @@
 #include <limits>
 #include "../util/sanitizers.h"
 
+#if defined(__x86_64__) || defined(_M_X64)
+#include <immintrin.h>
+
+inline int PIPELINE_LRINT(float x) {
+    return _mm_cvtss_si32(_mm_load_ss(&x));
+}
+
+#else
+#define PIPELINE_LRINT(x) (std::lrint(x))
+#endif // defined(__x86_64__) || defined(_M_X64)
+
 class IPipelineStep
 {
 public:
@@ -138,7 +149,7 @@ void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* des
             }
             else
             {
-                destSamples[index] = static_cast<DstType>(std::llround(temp));
+                destSamples[index] = static_cast<DstType>(PIPELINE_LRINT(temp));
             }
         }
     }
