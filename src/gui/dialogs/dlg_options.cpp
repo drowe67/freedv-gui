@@ -100,9 +100,6 @@ public:
 
     virtual int FilterEvent(wxEvent& event) override
     {
-        if (event.GetEventType() == wxEVT_KEY_DOWN)
-            log_info("XXX");
-
         if (event.GetEventType() != wxEVT_KEY_DOWN || !IsShown())
             return Event_Skip;
 
@@ -111,7 +108,7 @@ public:
         // Ignore modifier-only and Escape keypresses
         if (keyCode == WXK_SHIFT || keyCode == WXK_CONTROL || keyCode == WXK_ALT ||
             keyCode == WXK_CAPITAL || keyCode == WXK_NUMLOCK || keyCode == WXK_SCROLL ||
-            keyCode == WXK_ESCAPE)
+            keyCode == WXK_ESCAPE || keyCode == WXK_NONE)
         {
             return Event_Skip;
         }
