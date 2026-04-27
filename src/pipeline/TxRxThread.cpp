@@ -709,6 +709,9 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             deferReset_ = false;
             pipeline_->reset();
             clearFifos_();
+
+            // return out and begin processing on the next loop
+            return;
         }
 
         // This while loop locks the modulator to the sample rate of
