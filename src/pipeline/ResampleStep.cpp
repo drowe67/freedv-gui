@@ -137,9 +137,11 @@ void ResampleStep::prewarm_()
     // startup latency so that real audio produces output from the first sample,
     // matching libsamplerate's behaviour and keeping feature files aligned.
     double* tempOutputPtr = nullptr;
-    int outputSamples = 0;
-    for (int i = 0; i < 500 && outputSamples == 0; i++)
+    int lenRequired = resampleState_->getInLenBeforeOutPos(0);
+    while (lenRequired > 0)
     {
-        outputSamples = resampleState_->process(tempInput_, maxInputLen, tempOutputPtr);
+        int len = std::min(lenRequired, maxInputLen);
+        resampleState_->process(tempInput_, len, tempOutputPtr);
+        lenRequired -= len;
     }
 }
