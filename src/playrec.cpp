@@ -35,8 +35,8 @@ int                 g_sfTxFs;
 bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 
-SNDFILE            *g_sfRecFileFromModulator;
-bool                g_recFileFromModulator = false;
+std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+std::atomic<bool>                g_recFileFromModulator;
 int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 

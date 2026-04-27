@@ -96,7 +96,6 @@ extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
 extern int g_mode;
-extern bool g_recFileFromModulator;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
@@ -137,7 +136,8 @@ static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
 
 #include <sndfile.h>
 extern std::atomic<SNDFILE*> g_sfPlayFile;
-extern SNDFILE* g_sfRecFileFromModulator;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfRecDecoderFile;
@@ -282,7 +282,7 @@ void TxRxThread::initializePipeline_()
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
-            []() { return g_sfRecFileFromModulator; }, 
+            []() { return g_sfRecFileFromModulator.load(std::memory_order_acquire); },
             [](int) {
                 // empty
             });
