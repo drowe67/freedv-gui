@@ -1043,7 +1043,7 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
-        (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
@@ -1070,12 +1070,12 @@ int MainApp::FilterEvent(wxEvent& event)
                 else // space bar stops keyer
                     frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
-                return true; // absorb space so we don't toggle control with focus (e.g. Start)
+                return Event_Processed; // absorb space so we don't toggle control with focus (e.g. Start)
 
             }
         }
 
-    return -1;
+    return Event_Skip;
 }
 
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )

@@ -77,7 +77,8 @@ public:
     ConfigurationDataElement<wxString> playFileFromRadioPath;
     
     ConfigurationDataElement<bool> enableSpaceBarForPTT;
-    
+    ConfigurationDataElement<int> pttKeyCode;
+
     ConfigurationDataElement<wxString> voiceKeyerWaveFilePath;
     ConfigurationDataElement<wxString> voiceKeyerWaveFile;
     ConfigurationDataElement<int> voiceKeyerRxPause;

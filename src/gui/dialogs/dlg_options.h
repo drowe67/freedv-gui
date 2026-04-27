@@ -72,7 +72,9 @@ class OptionsDlg : public wxDialog
         void    OnToneStateEnable(wxCommandEvent& event);
         void    OnMultipleRxEnable(wxCommandEvent& event);
         void    OnFreqModeChangeEnable(wxCommandEvent& event);
-        
+        void    OnEnableSpacebarForPTT(wxCommandEvent& event);
+        void    OnSetPTTKey(wxCommandEvent& event);
+
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -92,6 +94,9 @@ class OptionsDlg : public wxDialog
         wxRadioButton *m_ckboxEnableFreqChangesOnly;
         wxRadioButton *m_ckboxNoFreqModeChanges;
         wxCheckBox    *m_ckboxEnableSpacebarForPTT;
+        wxTextCtrl    *m_txtPTTKeyName;
+        wxButton      *m_btnSetPTTKey;
+        int            m_selectedPTTKeyCode;
         wxTextCtrl    *m_txtTxRxDelayMilliseconds;
         wxCheckBox    *m_ckboxFrequencyEntryAsKHz;
         
