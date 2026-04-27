@@ -22,6 +22,7 @@
 #include <wx/gbsizer.h>
 #include <wx/numformatter.h>
 #include "dlg_options.h"
+#include "dlg_capture_ptt.h"
 
 extern FreeDVInterface freedvInterface;
 
@@ -68,57 +69,6 @@ static wxString getPTTKeyName(int keyCode)
             return wxString::Format(_("Key(%d)"), keyCode);
     }
 }
-
-// Small dialog that captures a single keypress for PTT key assignment.
-// Inherits wxEventFilter so it intercepts key events at the app level,
-// matching the same mechanism MainApp::FilterEvent uses for PTT itself.
-class PTTKeyCaptureDlg : public wxDialog, public wxEventFilter
-{
-public:
-    PTTKeyCaptureDlg(wxWindow* parent)
-        : wxDialog(parent, wxID_ANY, _("Set PTT Key"),
-                   wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxWANTS_CHARS)
-        , m_keyCode(WXK_SPACE)
-    {
-        auto sizer = new wxBoxSizer(wxVERTICAL);
-        sizer->Add(new wxStaticText(this, wxID_ANY, _("Press any key to use for PTT...")),
-                   0, wxALL | wxALIGN_CENTER, 15);
-        sizer->Add(new wxButton(this, wxID_CANCEL, _("Cancel")),
-                   0, wxALL | wxALIGN_CENTER, 5);
-        SetSizer(sizer);
-        sizer->Fit(this);
-
-        wxEvtHandler::AddFilter(this);
-    }
-
-    ~PTTKeyCaptureDlg()
-    {
-        wxEvtHandler::RemoveFilter(this);
-    }
-
-    int GetPTTKeyCode() const { return m_keyCode; }
-
-    virtual int FilterEvent(wxEvent& event) override
-    {
-        if (event.GetEventType() != wxEVT_KEY_DOWN || !IsShown())
-            return Event_Skip;
-
-
-        int keyCode = static_cast<wxKeyEvent&>(event).GetKeyCode();
-        // Ignore modifier-only and Escape keypresses
-        if (keyCode == WXK_SHIFT || keyCode == WXK_CONTROL || keyCode == WXK_ALT ||
-            keyCode == WXK_CAPITAL || keyCode == WXK_NUMLOCK || keyCode == WXK_SCROLL ||
-            keyCode == WXK_ESCAPE || keyCode == WXK_NONE)
-        {
-            return Event_Skip;
-        }
-        m_keyCode = keyCode;
-        EndModal(wxID_OK);
-        return Event_Processed;
-    }
-
-    int m_keyCode;
-};
 
 // PortAudio over/underflow counters
 
