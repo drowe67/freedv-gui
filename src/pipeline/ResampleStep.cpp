@@ -60,6 +60,8 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool)
 
     tempInput_ = new double[maxInputLen];
     assert(tempInput_ != nullptr);
+
+    prewarm_();
 }
 
 ResampleStep::~ResampleStep()
@@ -119,4 +121,25 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
 void ResampleStep::reset() FREEDV_NONBLOCKING
 {
     resampleState_->clear();
+    prewarm_();
+}
+
+void ResampleStep::prewarm_()
+{
+    if (inputSampleRate_ == outputSampleRate_) return;
+
+    int maxInputLen = inputSampleRate_ * 10 / 1000;
+    std::fill_n(tempInput_, maxInputLen, 0.0);
+
+    // Feed zero-valued samples until the resampler produces its first output.
+    // r8brain with DoConsumeLatency=true silently discards the first Latency
+    // input samples before emitting any output. Pre-warming here consumes that
+    // startup latency so that real audio produces output from the first sample,
+    // matching libsamplerate's behaviour and keeping feature files aligned.
+    double* tempOutputPtr = nullptr;
+    int outputSamples = 0;
+    for (int i = 0; i < 500 && outputSamples == 0; i++)
+    {
+        outputSamples = resampleState_->process(tempInput_, maxInputLen, tempOutputPtr);
+    }
 }

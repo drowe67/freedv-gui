@@ -52,6 +52,8 @@ public:
     virtual void reset() FREEDV_NONBLOCKING override;
     
 private:
+    void prewarm_();
+
     int inputSampleRate_;
     int outputSampleRate_;
     r8b::CDSPResampler* resampleState_;
