@@ -659,7 +659,7 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
     
-    if (equalizedMicAudioLink_ != nullptr && !g_tx.load(std::memory_order_acquire))
+    if (equalizedMicAudioLink_ != nullptr)
     {
         equalizedMicAudioLink_->clearFifo();
     }
@@ -675,11 +675,6 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
 
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         outFifo->reset();
-    }
-
-    if (equalizedMicAudioLink_)
-    {
-        equalizedMicAudioLink_->getFifo().reset();
     }
 }
 
