@@ -49,9 +49,9 @@ extern std::atomic<int> g_outfifo1_empty;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern paCallBackData* g_rxUserdata;
 
-extern SNDFILE            *g_sfRecFileFromModulator;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;

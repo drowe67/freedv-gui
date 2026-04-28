@@ -943,7 +943,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
-    * Use RNNoise for improved noise canceling during TX. (PR #1276)
+    * Use RNNoise for improved noise canceling during TX. (PR #1276, #1307)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
@@ -951,6 +951,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to load and save different FreeDV configurations. (PR #1296)
     * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
     * Easy Setup: Also emit audio tone through speakers. (PR #1033)
+    * Switch to r8brain for audio resampling. (PR #1307)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.0. (PR #1226)
@@ -961,7 +962,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
 5. Other:
-    * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286)
+    * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286, #1307)
 
 ## V2.2.1 February 2026
 
