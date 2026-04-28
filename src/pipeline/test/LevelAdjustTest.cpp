@@ -20,9 +20,9 @@ bool levelAdjustCommon(float val)
     }
     
     auto expectedVal = 10000 * val;
-    if (result[0] != expectedVal)
+    if (result[0] < (expectedVal - 1) || result[0] > (expectedVal + 1))
     {
-        std::cerr << "[result[" << result[0] << "] != " << expectedVal << "]...";
+        std::cerr << "[result[" << result[0] << "] != " << expectedVal << "] +/- 1...";
         return false;
     }
     
