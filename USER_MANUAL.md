@@ -961,6 +961,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
+    * Update FlexRadio waveform README to reflect SmartSDR 4.2 release. (PR #1311)
 5. Other:
     * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286, #1307)
 
