@@ -172,8 +172,8 @@ extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
 
-extern SNDFILE            *g_sfRecFileFromModulator;
-extern bool                g_recFileFromModulator;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
 extern int                 g_recFileFromModulatorEventId;
 
 extern SNDFILE            *g_sfRecMicFile;

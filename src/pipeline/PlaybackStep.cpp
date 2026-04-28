@@ -226,4 +226,7 @@ void PlaybackStep::reset() FREEDV_NONBLOCKING
     }
 
     outputFifo_.reset();
+
+    // Begin loading from file again if needed.
+    fileIoThreadSem_.signal();
 }
