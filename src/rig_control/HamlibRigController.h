@@ -49,8 +49,8 @@ public:
         PTT_VIA_CAT_DATA,
     };
     
-    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);
-    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);
+    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn);
+    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn);
     virtual ~HamlibRigController();
     
     virtual void connect() override;
@@ -80,7 +80,9 @@ private:
     const int civHex_;
     const PttType pttType_;
     std::string pttSerialPort_;
-    
+    const bool forceRtsOn_;
+    const bool forceDtrOn_;
+
     std::atomic<RIG*> rig_;
     bool multipleVfos_;
     bool pttSet_;

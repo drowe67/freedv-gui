@@ -68,7 +68,7 @@ bool HamlibRigController::RigCompare_(const struct rig_caps *rig1, const struct 
     return rig1->rig_model < rig2->rig_model;
 }
 
-HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
+HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn)
     : ThreadedObject("hamlib")
     , rigName_(std::move(rigName))
     , serialPort_(std::move(serialPort))
@@ -76,6 +76,8 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , civHex_(civHex)
     , pttType_(pttType)
     , pttSerialPort_(std::move(pttSerialPort))
+    , forceRtsOn_(forceRtsOn)
+    , forceDtrOn_(forceDtrOn)
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
@@ -93,7 +95,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     InitializeHamlibLibrary();
 }
 
-HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
+HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn)
     : ThreadedObject("hamlib")
     , rigName_(RigIndexToName(rigIndex))
     , serialPort_(std::move(serialPort))
@@ -101,6 +103,8 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , civHex_(civHex)
     , pttType_(pttType)
     , pttSerialPort_(std::move(pttSerialPort))
+    , forceRtsOn_(forceRtsOn)
+    , forceDtrOn_(forceDtrOn)
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
@@ -396,6 +400,18 @@ void HamlibRigController::connectImpl_()
     if (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR)
     {
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "ptt_share"), "1");
+    }
+
+    // Force RTS/DTR on if requested (e.g. to power a radio interface via the serial port lines).
+    if (forceRtsOn_)
+    {
+        log_debug("hamlib: forcing RTS on");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "rts_state"), "ON");
+    }
+    if (forceDtrOn_)
+    {
+        log_debug("hamlib: forcing DTR on");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "dtr_state"), "ON");
     }
     
     // Icom workaround from WSJT-X. Not sure it's needed here as
