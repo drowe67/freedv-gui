@@ -420,6 +420,28 @@ in sync with the radio. For example, in the case of ALE, the radio's frequency c
 waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can 
 be disabled by enabling "Manual Frequency Reporting" in Tools->Options.*
 
+The FreeDV Reporter window includes a **Message:** field that allows you to broadcast a
+short status message (such as your location, antenna, or current activity) to other FreeDV
+Reporter users. Type a message and click **Send** to broadcast it, or **Clear** to remove
+the current message.
+
+*Note: messages are only broadcast when reporting is enabled in Tools->Options->Reporting
+and the **Reporting** toggle button in the main window is on.*
+
+Messages are not saved automatically. To save a message for later reuse, right-click the
+**Send** button to open a context menu with the following options:
+
+* **Send and save message** — broadcasts the message and adds it to the saved list
+* **Only save message** — adds the message to the saved list without sending it
+
+Saved messages are kept in a drop-down list of up to 15 entries, sorted alphabetically.
+Click the arrow on the **Message:** field to view and select from saved messages.
+Right-clicking on any entry in the list opens a context menu with options to:
+
+* **Add** a new message to the list
+* **Edit** the selected message
+* **Delete** the selected message from the list
+
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
