@@ -31,7 +31,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -541,7 +541,7 @@ jobs:
            sudo apt install software-properties-common -y
            sudo add-apt-repository ppa:deadsnakes/ppa -y
            sudo apt update
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio-utils metacity at-spi2-core libebur128-dev python3.14 python3.14-dev python3.14-venv
+           sudo apt-get install libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio-utils metacity at-spi2-core libebur128-dev python3.14 python3.14-dev python3.14-venv
 
     - name: Install version-specific packages
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}

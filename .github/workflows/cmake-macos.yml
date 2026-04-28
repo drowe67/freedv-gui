@@ -22,7 +22,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128 
+          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -64,7 +64,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib libebur128
+        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128
 
     - name: Install VB-Cable
       shell: bash
