@@ -43,7 +43,7 @@ bool MsgListPopup::Create(wxWindow* parent)
 
 void MsgListPopup::SetStringValue(const wxString& s)
 {
-    int idx = FindString(s);
+    int idx = FindString(s, true);
     SetSelection(idx != wxNOT_FOUND ? idx : wxNOT_FOUND);
 }
 
