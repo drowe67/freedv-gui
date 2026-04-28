@@ -31,6 +31,8 @@
 #include <wx/combo.h>
 #include <wx/dataview.h>
 
+class wxListBox;
+
 #include "../../main.h"
 #include "defines.h"
 #include "filter_frequency.h"

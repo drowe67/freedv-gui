@@ -27,9 +27,8 @@
 #include <wx/wrapsizer.h>
 #include <wx/menuitem.h>
 #include <wx/numdlg.h>
-#include <wx/combo.h>
-#include <wx/listbox.h>
-#include <wx/textdlg.h> 
+#include <wx/textdlg.h>
+#include "../controls/MsgListPopup.h"
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -72,121 +71,6 @@ extern wxConfigBase* pConfig;
 #define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
-
-// Custom combo popup: a wxListBox that supports per-item right-click context menus.
-class MsgListPopup : public wxListBox, public wxComboPopup
-{
-public:
-    explicit MsgListPopup(FreeDVReporterDialog* parentDialog)
-        : parentDialog_(parentDialog)
-    {}
-
-    bool Create(wxWindow* parent) override
-    {
-        if (!wxListBox::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_SORT))
-            return false;
-        Connect(wxEVT_LEFT_UP,    wxMouseEventHandler(MsgListPopup::OnLeftUp),     nullptr, this);
-        Connect(wxEVT_MOTION,    wxMouseEventHandler(MsgListPopup::OnMouseMove),  nullptr, this);
-        Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(MsgListPopup::OnRightDown), nullptr, this);
-        Connect(wxEVT_RIGHT_UP,   wxMouseEventHandler(MsgListPopup::OnRightUp),   nullptr, this);
-        SetToolTip(_("Right click for more options"));
-        return true;
-    }
-
-    wxWindow* GetControl() override { return this; }
-
-    void SetStringValue(const wxString& s) override
-    {
-        int idx = FindString(s);
-        SetSelection(idx != wxNOT_FOUND ? idx : wxNOT_FOUND);
-    }
-
-    wxString GetStringValue() const override
-    {
-        int sel = GetSelection();
-        return sel != wxNOT_FOUND ? GetString(sel) : wxString();
-    }
-
-    void OnPopup() override
-    {
-        SetStringValue(GetComboCtrl()->GetValue());
-
-        // Reposition popup above the combo: it sits near the bottom of the
-        // dialog so there is more room upward.  OnPopup() is called before
-        // the popup window is made visible, so there is no flicker.
-        auto combo = GetComboCtrl();
-        wxWindow* popupWin = combo->GetPopupWindow();
-        if (popupWin)
-        {
-            wxPoint screenPos = combo->GetScreenPosition();
-            wxSize  popupSz   = popupWin->GetSize();
-            popupWin->Move(screenPos.x, screenPos.y - popupSz.GetHeight());
-        }
-    }
-
-    wxSize GetAdjustedSize(int minWidth, int /*prefHeight*/, int maxHeight) override
-    {
-        int count = std::max(1, (int)GetCount());
-        // Estimate row height from font metrics; fall back to 22px.
-        int rowH = GetCharHeight() > 0 ? GetCharHeight() + 8 : 22;
-        return wxSize(minWidth, std::min(count * rowH + 4, maxHeight));
-    }
-
-private:
-    void OnLeftUp(wxMouseEvent& event)
-    {
-        int item = HitTest(event.GetPosition());
-        if (item != wxNOT_FOUND)
-        {
-            SetSelection(item);
-            GetComboCtrl()->SetValue(GetString(item));
-            Dismiss();
-        }
-        else
-        {
-            event.Skip();
-        }
-    }
-
-    void OnMouseMove(wxMouseEvent& event)
-    {
-        int item = HitTest(event.GetPosition());
-        if (item != wxNOT_FOUND)
-            SetSelection(item);
-        event.Skip();
-    }
-
-    void OnRightDown(wxMouseEvent& event)
-    {
-        // Select the item under the cursor for visual feedback; defer
-        // the menu to RIGHT_UP so the button-release doesn't immediately
-        // activate the first menu item.
-        int item = HitTest(event.GetPosition());
-        if (item == wxNOT_FOUND)
-        {
-            event.Skip();
-            return;
-        }
-        SetSelection(item);
-        pendingContextItem_ = item;
-    }
-
-    void OnRightUp(wxMouseEvent& event)
-    {
-        if (pendingContextItem_ == wxNOT_FOUND)
-        {
-            event.Skip();
-            return;
-        }
-        int item = pendingContextItem_;
-        pendingContextItem_ = wxNOT_FOUND;
-        Dismiss();
-        parentDialog_->ShowMsgItemContextMenu(item);
-    }
-
-    FreeDVReporterDialog* parentDialog_;
-    int pendingContextItem_ = wxNOT_FOUND;
-};
 
 void FreeDVReporterDialog::createColumn_(int col, bool visible)
 {
@@ -488,7 +372,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     statusMessageSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_statusMessage = new wxComboCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), wxTE_PROCESS_ENTER);
-    m_statusMessage->SetPopupControl(new MsgListPopup(this));
+    m_statusMessage->SetPopupControl(new MsgListPopup([this](int idx){ ShowMsgItemContextMenu(idx); }));
     statusMessageSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonSend = new wxButton(this, wxID_ANY, _("Send"));
