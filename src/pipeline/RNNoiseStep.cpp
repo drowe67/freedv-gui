@@ -80,7 +80,7 @@ short* RNNoiseStep::execute(short* inputSamples, int numInputSamples, int* numOu
     int numRNNoiseRuns = (inputSampleFifo_.numUsed() + numInputSamples) / RNNOISE_FRAME_SIZE;
     if (numRNNoiseRuns > 0)
     {
-        *numOutputSamples = numRNNoiseRuns * RNNOISE_FRAME_SIZE;
+        *numOutputSamples = (numRNNoiseRuns - (firstFrame_ ? 1 : 0)) * RNNOISE_FRAME_SIZE;
         
         short* tmpOutput = outputSamples;
         

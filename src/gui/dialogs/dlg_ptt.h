@@ -61,6 +61,8 @@ class ComPortsDlg : public wxDialog
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
         wxComboBox *m_cbPttMethod;
+        wxCheckBox *m_ckForceRTSOn;
+        wxCheckBox *m_ckForceDTROn;
 
         /* Serial Settings */
 

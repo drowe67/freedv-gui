@@ -167,7 +167,7 @@ short* AgcStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             }
 
             // Scale samples based on current gain.
-            float scaleFactor = exp(currentGainDb_/20.0 * log(10.0));
+            float scaleFactor = expf(currentGainDb_/20.0f * logf(10.0f));
             float temp = 0;
             for (auto ctr = 0; ctr < numSamplesPerRun_; ctr++)
             {

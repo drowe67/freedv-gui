@@ -73,7 +73,7 @@ using namespace std::chrono_literals;
 //
 // * ENABLE_FASTER_PLOTS: This uses a faster resampling algorithm to reduce the CPU
 //   usage required to generate various plots in the user interface. (Tech note: When
-//   enabled, libsamplerate is directed to use SRC_LINEAR for the plot resampling.)
+//   enabled, r8brain uses a wider transition band for the plot resampling.)
 // * ENABLE_PROCESSING_STATS: This causes execution statistics to be collected for RX and TX
 //   processing and output in the log after the user pushes Stop. (Define in .h file.)
 
@@ -96,7 +96,6 @@ extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
 extern int g_mode;
-extern bool g_recFileFromModulator;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
@@ -137,7 +136,8 @@ static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
 
 #include <sndfile.h>
 extern std::atomic<SNDFILE*> g_sfPlayFile;
-extern SNDFILE* g_sfRecFileFromModulator;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE* g_sfRecFile;
 extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfRecDecoderFile;
@@ -282,7 +282,7 @@ void TxRxThread::initializePipeline_()
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
-            []() { return g_sfRecFileFromModulator; }, 
+            []() { return g_sfRecFileFromModulator.load(std::memory_order_acquire); },
             [](int) {
                 // empty
             });
@@ -659,7 +659,7 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
     
-    if (equalizedMicAudioLink_ != nullptr && !g_tx.load(std::memory_order_acquire))
+    if (equalizedMicAudioLink_ != nullptr)
     {
         equalizedMicAudioLink_->clearFifo();
     }
@@ -675,11 +675,6 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
 
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         outFifo->reset();
-    }
-
-    if (equalizedMicAudioLink_)
-    {
-        equalizedMicAudioLink_->getFifo().reset();
     }
 }
 
@@ -709,6 +704,9 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             deferReset_ = false;
             pipeline_->reset();
             clearFifos_();
+
+            // return out and begin processing on the next loop
+            return;
         }
 
         // This while loop locks the modulator to the sample rate of

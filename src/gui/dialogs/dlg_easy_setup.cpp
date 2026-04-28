@@ -131,7 +131,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_hamlibBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"));
     m_hamlibBox->Hide();
     wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(6, 2, 0, 0);
     hamlibBoxSizer->Add(gridSizerhl);
 
     /* Hamlib Rig Type combobox. */
@@ -179,7 +179,24 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("None"));
     m_cbPttMethod->Append(wxT("CAT via Data port"));
     m_cbPttMethod->SetSelection(0);
-    
+
+    /* Force RTS / Force DTR checkboxes on one row */
+    wxBoxSizer* forceRtsSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceRTSOn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceRTSOn->SetToolTip(_("Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceRtsSizer->Add(m_ckForceRTSOn, 0, wxALIGN_CENTER_VERTICAL, 0);
+    forceRtsSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force RTS"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceRtsSizer, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+
+    wxBoxSizer* forceDtrSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceDTROn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceDTROn->SetToolTip(_("Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceDtrSizer->Add(m_ckForceDTROn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+    forceDtrSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force DTR"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceDtrSizer, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+
     setupCatControlBoxSizer->Add(hamlibBoxSizer, 0, wxALL | wxEXPAND, 2);
 
     /* Serial port box */
@@ -548,6 +565,9 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
             
             m_cbPttMethod->SetSelection((int)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType);
+
+            m_ckForceRTSOn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn);
+            m_ckForceDTROn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn);
         }
         else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT)
         {
@@ -603,6 +623,9 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
             
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
+
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn = m_ckForceRTSOn->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn = m_ckForceDTROn->GetValue();
         }
         else if (m_ckUseSerialPTT->GetValue())
         {
@@ -869,8 +892,9 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                 }
                 
                 auto pttType = (HamlibRigController::PttType)m_cbPttMethod->GetSelection();
-                
-                hamlibTestObject_ = std::make_shared<HamlibRigController>(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType);
+
+                hamlibTestObject_ = std::make_shared<HamlibRigController>(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType,
+                    std::string(), false, false, m_ckForceRTSOn->GetValue(), m_ckForceDTROn->GetValue());
                 hamlibTestObject_->onRigError += [this](IRigController*, std::string error) {
                     CallAfter([this, error = std::move(error)]() {
                         wxMessageBox(

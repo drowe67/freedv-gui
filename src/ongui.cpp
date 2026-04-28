@@ -49,9 +49,9 @@ extern std::atomic<int> g_outfifo1_empty;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern paCallBackData* g_rxUserdata;
 
-extern SNDFILE            *g_sfRecFileFromModulator;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;
@@ -584,10 +584,12 @@ bool MainFrame::OpenHamlibRig() {
         pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
     {
         auto tmp = std::make_shared<HamlibRigController>(
-            rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
+            rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress,
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly),
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly,
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn,
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn);
 
         // Hamlib also controls PTT.
         firstFreqUpdateOnConnect_ = false;
