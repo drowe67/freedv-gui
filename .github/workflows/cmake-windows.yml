@@ -31,6 +31,7 @@ jobs:
 
     env:
       PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
+      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
 
     steps:
     - uses: actions/checkout@v6
@@ -48,7 +49,7 @@ jobs:
         tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
 
     - name: Configure code signing tunnel
-      if: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       env:
           FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
@@ -59,7 +60,7 @@ jobs:
           ssh -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i code-sign.sshkey -L 2222:127.0.0.1.2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
 
     - name: Configure code signing keys
-      if: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       env:
         FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
@@ -71,7 +72,7 @@ jobs:
           EOF
           
     - name: Configure code signing packages
-      if: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       run:
           sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin 
@@ -91,7 +92,7 @@ jobs:
 
     - name: Configure freedv-gui (unsigned)
       shell: bash
-      if: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       working-directory: ${{github.workspace}}
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
@@ -100,7 +101,7 @@ jobs:
         cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Configure freedv-gui (signed)
-      if: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
