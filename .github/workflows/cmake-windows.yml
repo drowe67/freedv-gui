@@ -58,7 +58,7 @@ jobs:
           ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
           EOF
           mkdir -p ~/.ssh
-          ssh-keyscan -t rsa @${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
           ssh -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L 2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
 
     - name: Configure code signing keys
