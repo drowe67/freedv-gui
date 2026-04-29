@@ -911,7 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.3.0 TBD 2026
+## V2.3.0 May 2026
 
 1. Bugfixes:
     * Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR #1220)
@@ -959,6 +959,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update wxWidgets to 3.3.2. (PR #1244)
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
     * Reenable Windows on ARM builds previously disabled in 2.0.0. (PR #1297, #1300)
+    * Add automated code signing support for Windows builds. (PR #1312)
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
