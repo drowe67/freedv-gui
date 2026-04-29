@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Code signing is 
+Code signing is a process by where a signature is embedded into an application's executable file. This signature can be validated by supported operating systems to ensure that the file is from a known source and hasn't been tampered with, and in fact is required for applications to run at all on some platforms (for example, macOS). This document contains information on how code signing works in the FreeDV project.
 
 ## Windows Code Signing
 
@@ -98,7 +98,7 @@ You will be prompted for your token's PIN several times during the build process
 
 ### Auto-building signed binaries for all supported architectures
 
-You can auto-build installers for all supported architectures (x86_64, i686, armv7, aarch64)
+You can auto-build installers for all supported architectures (x86_64, aarch64)
 by using the `build_signed_windows_release.sh` script as follows:
 
 ```
@@ -109,6 +109,21 @@ A `build_windows` directory will be created with installers for each architectur
 when complete. This may take quite a while (for example, ~1 hour on a 2019 MacBook Pro).
 
 *NOTE: Ensure that LLVM MinGW and osslsigncode are in your PATH before executing the above command.*
+
+### Using a remotely hosted USB key
+
+It is possible to connect to a remote server containing a USB token. This requires installing [pkcs11-proxy](https://github.com/iksaif/pkcs11-proxy) on both machines and setting needed environment on the build machine:
+
+```
+# On server with USB token, install SafeNet and all other needed packages and then run:
+$ PKCS11_DAEMON_SOCKET="tcp://127.0.0.1:2345" pkcs11-daemon /usr/lib/libeToken.so
+
+# On build machine
+$ ssh -Nf -o "ServerAliveInterval 60" -L 2345:127.0.0.1:2345 username@server-name
+$ mkdir build
+$ cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=/usr/lib/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=~/cert.url -DPKCS11_KEY_FILE=~/key.url -DINTERMEDIATE_CERT_FILE=~/cacerts.crt -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+$ PKCS11_PROXY_SOCKET="tcp://127.0.0.1:2345" make -j$(nproc) package
+```
 
 ### Troubleshooting:
 
