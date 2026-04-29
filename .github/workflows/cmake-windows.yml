@@ -27,7 +27,7 @@ jobs:
       matrix:
         arch: [x86_64, aarch64]
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     env:
       PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
@@ -39,7 +39,9 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis autoconf automake libtool libltdl-dev
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
     - name: Download MinGW LLVM
       shell: bash
