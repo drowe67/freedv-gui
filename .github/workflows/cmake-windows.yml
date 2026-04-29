@@ -60,7 +60,6 @@ jobs:
           chmod 600 code-sign.sshkey
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
-          ssh -N -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L 2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
 
     - name: Configure code signing keys
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
@@ -113,11 +112,21 @@ jobs:
         cd build_windows
         cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
-    - name: Build freedv-gui
+    - name: Build freedv-gui (unsigned)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        make -j$(nproc) package
+
+    - name: Build freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        ssh -N -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L 2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
         make -j$(nproc) package
 
     - name: Calculate installer filename
