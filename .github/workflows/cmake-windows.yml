@@ -74,7 +74,7 @@ jobs:
     - name: Configure code signing packages
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
-      run:
+      run: |
           sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin 
           git clone https://github.com/mtrojnar/osslsigncode.git
           cd osslsigncode
