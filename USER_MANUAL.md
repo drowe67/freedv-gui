@@ -971,6 +971,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
+    * Hamlib: Add options to force RTS and DTR on. (PR #1292)
     * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
     * Easy Setup: Also emit audio tone through speakers. (PR #1033)
     * Switch to r8brain for audio resampling. (PR #1307)
@@ -983,6 +984,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
+    * Update FlexRadio waveform README to reflect SmartSDR 4.2 release. (PR #1311)
 5. Other:
     * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286, #1307)
 
