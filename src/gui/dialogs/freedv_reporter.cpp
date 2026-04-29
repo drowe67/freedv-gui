@@ -2082,8 +2082,12 @@ void FreeDVReporterDialog::OnStatusMessageContextMenuEdit(wxCommandEvent&)
 
     auto oldText = popup->GetString(contextMenuSelectedIndex_);
     wxTextEntryDialog dlg(this, _("Edit the saved message:"), _("Edit Message"), oldText);
+    long savedW = wxGetApp().appConfiguration.msgEditDialogWidth;
+    if (savedW > 0)
+        dlg.SetSize(wxSize(savedW, dlg.GetSize().GetHeight()));
     if (dlg.ShowModal() != wxID_OK)
         return;
+    wxGetApp().appConfiguration.msgEditDialogWidth = dlg.GetSize().GetWidth();
 
     auto newText = dlg.GetValue().Trim();
     if (newText.IsEmpty() || newText == oldText)
@@ -2128,8 +2132,12 @@ void FreeDVReporterDialog::OnStatusMessageContextMenuDelete(wxCommandEvent&)
 void FreeDVReporterDialog::OnStatusMessageContextMenuAdd(wxCommandEvent&)
 {
     wxTextEntryDialog dlg(this, _("Enter new message:"), _("Add Message"), wxEmptyString);
+    long savedW = wxGetApp().appConfiguration.msgEditDialogWidth;
+    if (savedW > 0)
+        dlg.SetSize(wxSize(savedW, dlg.GetSize().GetHeight()));
     if (dlg.ShowModal() != wxID_OK)
         return;
+    wxGetApp().appConfiguration.msgEditDialogWidth = dlg.GetSize().GetWidth();
 
     auto newText = dlg.GetValue().Trim();
     if (newText.IsEmpty())
