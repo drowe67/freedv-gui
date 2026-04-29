@@ -57,7 +57,7 @@ jobs:
           cat <<EOF >code-sign.sshkey
           ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
           EOF
-          ssh -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i code-sign.sshkey -L 2222:127.0.0.1.2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
+          ssh -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i code-sign.sshkey -L 2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }} &
 
     - name: Configure code signing keys
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
