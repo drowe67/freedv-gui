@@ -1954,12 +1954,12 @@ void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent&)
 
     // If already on the list, re-insert so wxLB_SORT keeps it in place.
     auto popup = getMsgPopup();
-    auto location = popup->FindString(statusMsg);
+    auto location = popup->FindString(statusMsg, true);
     if (location >= 0)
     {
         popup->Delete(location);
         popup->Append(statusMsg);
-        popup->SetSelection(popup->FindString(statusMsg));
+        popup->SetSelection(popup->FindString(statusMsg, true));
 
         // Preserve current state of the MRU list.
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
@@ -1978,7 +1978,7 @@ void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent&)
     auto popup = getMsgPopup();
     auto statusMsg = m_statusMessage->GetValue();
     bool canSave = !statusMsg.IsEmpty()
-                   && popup->FindString(statusMsg) == wxNOT_FOUND
+                   && popup->FindString(statusMsg, true) == wxNOT_FOUND
                    && (int)popup->GetCount() < STATUS_MESSAGE_MRU_MAX_SIZE;
     setPopupMenu_->Enable(setSaveMenuItem_->GetId(), canSave);
     setPopupMenu_->Enable(saveMenuItem_->GetId(), canSave);
@@ -1997,14 +1997,14 @@ void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent&)
     if (statusMsg.size() > 0)
     {
         auto popup = getMsgPopup();
-        auto location = popup->FindString(statusMsg);
+        auto location = popup->FindString(statusMsg, true);
         if (location >= 0)
         {
             // Don't save if already in the list.
             return;
         }
         popup->Append(statusMsg);
-        popup->SetSelection(popup->FindString(statusMsg));
+        popup->SetSelection(popup->FindString(statusMsg, true));
 
         // Preserve current state of the MRU list.
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
@@ -2037,7 +2037,7 @@ void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent&)
     if (statusMsg.size() > 0)
     {
         auto popup = getMsgPopup();
-        auto location = popup->FindString(statusMsg);
+        auto location = popup->FindString(statusMsg, true);
         if (location >= 0)
         {
             popup->Delete(location);
@@ -2136,7 +2136,7 @@ void FreeDVReporterDialog::OnStatusMessageContextMenuAdd(wxCommandEvent&)
         return;
 
     auto popup = getMsgPopup();
-    if (popup->FindString(newText) != wxNOT_FOUND)
+    if (popup->FindString(newText, true) != wxNOT_FOUND)
         return; // already in the list
 
     popup->Append(newText);
