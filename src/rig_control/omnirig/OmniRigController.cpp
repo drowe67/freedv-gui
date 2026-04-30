@@ -439,16 +439,23 @@ void OmniRigController::requestCurrentFrequencyModeImpl_()
                 break;
         }
 
-        // Publish frequency/mode to subscribers
+        // If this is the first time we're retrieving the current frequency/mode,
+        // store it for later restore on disconnect. Do not pass this frequency/mode
+        // upstream since we could still be in the process of switching to the user-selected
+        // frequency. This avoids a race condition in SmartSDR where the radio and FreeDV are 
+        // fighting each other.
         currFreq_ = freq;
         currMode_ = mode;
-        onFreqModeChange(this, freq, mode);
-
         if (origFreq_ == 0)
         {
             // Save first freq/mode for restore
             origFreq_ = freq;
             origMode_ = omniRigMode;
+        }
+        else
+        {
+            // Pass frequency/mode changes upstream
+            onFreqModeChange(this, freq, mode);
         }
     }
 }
