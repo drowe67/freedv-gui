@@ -250,6 +250,17 @@ if(SIGN_WINDOWS_BINARIES)
     file(READ ${PKCS11_CERTIFICATE_FILE} PKCS11_CERTIFICATE_TMP)
     string(REPLACE "\n" "" PKCS11_KEY "${PKCS11_KEY_TMP}")
     string(REPLACE "\n" "" PKCS11_CERTIFICATE "${PKCS11_CERTIFICATE_TMP}")
+
+    if (DEFINED PKCS11_SECONDARY_KEY_FILE)
+        file(READ ${PKCS11_SECONDARY_KEY_FILE} PKCS11_SECONDARY_KEY_TMP)
+        string(REPLACE "\n" "" PKCS11_SECONDARY_KEY "${PKCS11_SECONDARY_KEY_TMP}")
+    endif (DEFINED PKCS11_SECONDARY_KEY_FILE)
+ 
+    if (DEFINED PKCS11_SECONDARY_CERTIFICATE_FILE)
+        file(READ ${PKCS11_SECONDARY_CERTIFICATE_FILE} PKCS11_SECONDARY_CERTIFICATE_TMP)
+        string(REPLACE "\n" "" PKCS11_SECONDARY_CERTIFICATE "${PKCS11_SECONDARY_CERTIFICATE_TMP}")
+    endif (DEFINED PKCS11_SECONDARY_CERTIFICATE_FILE)
+ 
 endif(SIGN_WINDOWS_BINARIES)
 
 if(USE_STATIC_DEPS)
@@ -738,6 +749,10 @@ VIAddVersionKey \\\"GitHash\\\" \\\"${GIT_HASH}\\\"
         # Add finalize command for NSIS so the installer/uninstaller can be
         # signed too.
         set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
+        if (PKCS11_SECONDARY_CERTIFICATE)
+            set(CPACK_NSIS_FINALIZE_CMD "${CPACK_NSIS_FINALIZE_CMD}; mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -nest -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_SECONDARY_CERTIFICATE}\\\" -key \\\"${PKCS11_SECONDARY_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
+        endif (PKCS11_SECONDARY_CERTIFICATE)
+        message(STATUS "Windows installer finalize command: ${CPACK_NSIS_FINALIZE_CMD}")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)

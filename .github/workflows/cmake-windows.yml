@@ -27,7 +27,11 @@ jobs:
       matrix:
         arch: [x86_64, aarch64]
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
+
+    env:
+      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
+      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
 
     steps:
     - uses: actions/checkout@v6
@@ -35,7 +39,9 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis autoconf automake libtool libltdl-dev
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
     - name: Download MinGW LLVM
       shell: bash
@@ -44,22 +50,89 @@ jobs:
         wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
         tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
 
-    - name: Configure freedv-gui
-      shell: bash
+    - name: Configure code signing tunnel
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+          FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      run: |
+          cat <<EOF >code-sign.sshkey
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+          EOF
+          chmod 600 code-sign.sshkey
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
+
+    - name: Configure code signing keys
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+        FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+      run: |
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_CERT}}" >freedv.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_KEY}}" >freedv.key
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_CERT}}" >freedv-secondary.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_KEY}}" >freedv-secondary.key
+          cat <<EOF >freedv.intermediatecerts
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+          EOF
+          
+    - name: Configure code signing packages
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       run: |
-        export WINEPREFIX=`pwd`/wine-env
+          sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin 
+          git clone https://github.com/mtrojnar/osslsigncode.git
+          cd osslsigncode
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+          cd ${{github.workspace}}
+          git clone https://github.com/iksaif/pkcs11-proxy.git
+          cd pkcs11-proxy
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+    - name: Configure freedv-gui (unsigned)
+      shell: bash
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
+      working-directory: ${{github.workspace}}
+      run: |
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
         cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
-    - name: Build freedv-gui
+    - name: Configure freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build freedv-gui (unsigned)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
         make -j$(nproc) package
+
+    - name: Build freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        ssh -fN -o "ServerAliveInterval 60" -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L localhost:2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }}
+        make -j$(nproc) package
+        killall ssh
 
     - name: Calculate installer filename
       shell: bash

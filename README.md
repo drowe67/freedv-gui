@@ -7,6 +7,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   * http://freedv.org - introduction, documentation, downloads
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   * Information on third party code included in FreeDV [here](./src/3rdparty/README.md)
+  * [Code signing information for FreeDV](./CODE_SIGNING.md)
 
 ## Installing prerequisites on Ubuntu Linux
 
