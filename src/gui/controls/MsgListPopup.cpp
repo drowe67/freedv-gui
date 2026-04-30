@@ -33,6 +33,7 @@ bool MsgListPopup::Create(wxWindow* parent)
 {
     if (!wxListBox::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_SORT))
         return false;
+    Connect(wxEVT_LEFT_DOWN,  wxMouseEventHandler(MsgListPopup::OnLeftDown),  nullptr, this);
     Connect(wxEVT_LEFT_UP,    wxMouseEventHandler(MsgListPopup::OnLeftUp),    nullptr, this);
     Connect(wxEVT_MOTION,     wxMouseEventHandler(MsgListPopup::OnMouseMove), nullptr, this);
     Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(MsgListPopup::OnRightDown), nullptr, this);
@@ -77,8 +78,28 @@ wxSize MsgListPopup::GetAdjustedSize(int minWidth, int /*prefHeight*/, int maxHe
     return wxSize(minWidth, std::min(count * rowH + 4, maxHeight));
 }
 
+void MsgListPopup::OnLeftDown(wxMouseEvent& event)
+{
+    mouseDownPos_ = event.GetPosition();
+    // Do not Skip(): forwarding to GTK's native handler would steal focus from
+    // the GtkEntry, causing a focus-in on Dismiss() that re-selects all text.
+}
+
 void MsgListPopup::OnLeftUp(wxMouseEvent& event)
 {
+    wxPoint pos = event.GetPosition();
+    int dx = std::abs(pos.x - mouseDownPos_.x);
+    int dy = std::abs(pos.y - mouseDownPos_.y);
+    mouseDownPos_ = wxDefaultPosition;
+
+    // If the mouse moved significantly between down and up the user was
+    // scrolling (e.g. dragging the horizontal scrollbar thumb), not clicking.
+    // Do not Skip(): prevents native handler from altering GTK focus state,
+    // which would cause a delayed focus-in that re-selects text after the
+    // next item pick.
+    if (dx > 4 || dy > 4)
+        return;
+
     int item = HitTest(event.GetPosition());
     if (item != wxNOT_FOUND)
     {
@@ -128,12 +149,10 @@ void MsgListPopup::OnRightUp(wxMouseEvent& event)
     onRightClick_(item);
 }
 
+
 void MsgListPopup::OnDeselect(wxTimerEvent&)
 {
     auto tc = GetComboCtrl()->GetTextCtrl();
     if (tc)
-    {
-        long end = tc->GetLastPosition();
-        tc->SetSelection(end, end);
-    }
+        tc->SetSelection(0, 0);
 }

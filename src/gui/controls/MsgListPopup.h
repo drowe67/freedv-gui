@@ -42,6 +42,7 @@ public:
     wxSize GetAdjustedSize(int minWidth, int prefHeight, int maxHeight) override;
 
 private:
+    void OnLeftDown(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
     void OnMouseMove(wxMouseEvent& event);
     void OnRightDown(wxMouseEvent& event);
@@ -51,6 +52,7 @@ private:
     ContextMenuCallback onRightClick_;
     int pendingContextItem_ = wxNOT_FOUND;
     wxTimer deselTimer_;
+    wxPoint mouseDownPos_ = wxDefaultPosition;
 };
 
 #endif // MSG_LIST_POPUP_H
