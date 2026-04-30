@@ -1617,7 +1617,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else if (timerId == ID_TIMER_UPD_FREQ)
     {
         // show freq. and mode [UP]
-        if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
+        if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected() && !suppressFreqModeUpdates_) 
         {
             log_debug("update freq and mode ...."); 
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
