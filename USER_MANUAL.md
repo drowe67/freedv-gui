@@ -955,7 +955,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Switch to r8brain for audio resampling. (PR #1307)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
-    * Update Hamlib to 4.7.0. (PR #1226)
+    * Update Hamlib to 4.7.1. (PR #1226, #1314)
     * Update wxWidgets to 3.3.2. (PR #1244)
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
     * Reenable Windows on ARM builds previously disabled in 2.0.0. (PR #1297, #1300)
