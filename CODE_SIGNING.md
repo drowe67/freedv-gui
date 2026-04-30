@@ -86,6 +86,8 @@ $ make
 $ make package
 ```
 
+Additionally you can optionally provide `PKCS11_SECONDARY_KEY_FILE` and `PKCS11_SECONDARY_CERTIFICATE_FILE` to CMake to sign Windows binaries with a second certificate. For example, this would be done to help confer reputation on a new certificate using the reputation of an older certificate.
+
 Other optional variables that can be set are as follows:
 
 * `PKCS11_ENGINE` / `PKCS11_MODULE`: Paths to the PKCS11 engine and module libraries on your system. This is mainly used for those who aren't compiling on amd64 and/or aren't using a SafeNet token.
@@ -160,7 +162,7 @@ Some things to check:
     * [ECDSA keys do not work well](https://vcsjones.dev/authenticode-and-ecc/) for code signing. Yes, this is still a problem in 2023 despite the date of the blog post. If you use your certificate vendor's token instead of your own, this isn't likely to be the problem but still worth noting here in case you're tempted to buy a YubiKey FIPS token (which supposedly works but never fully removed SmartScreen popups for the FreeDV project).
     * If you're still tempted to bring your own token, note that the [CA Forum mandates a minimum RSA key length of 3072 bits](https://knowledge.digicert.com/alerts/code-signing-new-minimum-rsa-keysize.html). Anything shorter than that will definitely cause problems. (4096 bit RSA appears to be the current standard for code signing certificates as of 2026.)
 
-Additionally, as of 2024, [Microsoft has changed how SmartScreen works](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation). For the purposes of avoiding the SmartScreen popup, there is effectively no longer any difference between EV and OV certificates. This means that it may take some downloads after issuance of a new certificate before it becomes trusted by Microsoft.
+Additionally, as of 2024, [Microsoft has changed how SmartScreen works](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation). For the purposes of avoiding the SmartScreen popup, there is effectively no longer any difference between EV and OV certificates. This means that it may take some downloads after issuance of a new certificate before it becomes trusted by Microsoft. Signing with a second certificate (one that already has had use) may confer reputation on any newly-issued certificates and reduce the time required to trust those certificates.
 
 ## macOS Notarization
 
@@ -204,10 +206,12 @@ The current GitHub Actions scripts for FreeDV support automated code signing and
 | `FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY` | Private key to use for connecting to `FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST`. | Windows |
 | `FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT` | Port to use for connecting to the server with the USB token (i.e. 22 if the server is directly on the internet). | Windows |
 | `FREEDV_WINDOWS_CODE_SIGNING_SSH_USER` | Username to use for connecting the required SSH tunnel to the server with the USB token attached. | Windows |
+| `FREEDV_WINDOWS_CODE_SIGNING_SECONDARY_CERT` | PKCS11 URL for the secondary certificate to use on the USB token. | Windows* |
+| `FREEDV_WINDOWS_CODE_SIGNING_SECONDARY_KEY` | PKCS11 URL for the public/private key to use on the USB token. | Windows* |
 
 Additionally, for macOS, the team ID must be specified by adding a variable named `FREEDV_MACOS_CODE_SIGNING_TEAM_ID` with the appropriate value.
 
-GitHub secrets are added by going to the repository's settings and clicking on "Actions" under "Secrets and variables". Note that for each platform you want to support signing or notarization for, all secrets for that platform must be provided (for example, `FREEDV_MACOS_CODE_SIGNING_CERTIFICATE`, `FREEDV_MACOS_CODE_SIGNING_USERNAME` and `FREEDV_MACOS_CODE_SIGNING_PASSWORD` must all be provided to notarize generatred macOS binaries).
+GitHub secrets are added by going to the repository's settings and clicking on "Actions" under "Secrets and variables". Note that for each platform you want to support signing or notarization for, all secrets for that platform must be provided (for example, `FREEDV_MACOS_CODE_SIGNING_CERTIFICATE`, `FREEDV_MACOS_CODE_SIGNING_USERNAME` and `FREEDV_MACOS_CODE_SIGNING_PASSWORD` must all be provided to notarize generatred macOS binaries). The exception is for items that have an asterisk (namely the secondary certificate for Windows).
 
 Currently automated code signing is not done on the main GitHub repository but on a fork of it owned by one of the PLT members. Builds off of `master` in that fork are then added to GitHub releases in the main repo. In the future, automated code signing may be done on the main repo instead.
 
