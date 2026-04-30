@@ -442,9 +442,10 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
 {
     CallAfter([&, mode, freq]() {
-        if (firstFreqUpdateOnConnect_)
+        if (firstUpdateCountOnConnect_ > 0)
         {
-            firstFreqUpdateOnConnect_ = false;
+	    // Suppress updates until frequency and/or mode have been updated.
+            firstUpdateCountOnConnect_--;
             return;
         }
 
@@ -546,13 +547,14 @@ void MainFrame::onRadioConnected_(IRigController*)
     {
         // Suppress the frequency update message that will occur immediately after
         // connect; this will prevent overwriting of whatever's in the text box.
-        firstFreqUpdateOnConnect_ = true;
+        firstUpdateCountOnConnect_++;
 
         // Set frequency/mode to the one pre-selected by the user before start.
         wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
         
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
+            firstUpdateCountOnConnect_++;
             wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
         }
     }
@@ -592,7 +594,7 @@ bool MainFrame::OpenHamlibRig() {
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn);
 
         // Hamlib also controls PTT.
-        firstFreqUpdateOnConnect_ = false;
+        firstUpdateCountOnConnect_ = 0;
         wxGetApp().rigFrequencyController = tmp;
         wxGetApp().rigPttController = tmp;
         

@@ -539,7 +539,7 @@ class MainFrame : public TopFrame
         float      vk_rx_time;
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
-        bool firstFreqUpdateOnConnect_;
+        int firstUpdateCountOnConnect_;
         FilterFrequency lastBand_;
         // Restore-point: the TX/tune level that was active when we entered the
         // current band (or when Enable was first clicked for that band). Restore
