@@ -445,6 +445,10 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         if (firstFreqUpdateOnConnect_)
         {
             firstFreqUpdateOnConnect_ = false;
+
+            // Ensure that user selected frequency is pushed to the radio on start. 
+            wxCommandEvent tmpEvent;
+            OnChangeReportFrequency(tmpEvent);
             return;
         }
 
