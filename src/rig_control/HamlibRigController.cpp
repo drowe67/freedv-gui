@@ -801,19 +801,14 @@ freqAttempt:
             }
             
             // If this is the first time we're retrieving the current frequency/mode,
-            // store it for later restore on disconnect. Do not pass this frequency/mode
-            // upstream since we could still be in the process of switching to the user-selected
-            // frequency. This avoids a race condition in SmartSDR where the radio and FreeDV are 
-            // fighting each other.
+            // store it for later restore on disconnect.
             if (origFreq_ == 0)
             {
                 origFreq_ = freq;
                 origMode_ = mode;
             }
-            else
-            {
-                onFreqModeChange(this, freq, currMode);
-            }
+            
+            onFreqModeChange(this, freq, currMode);
         }
     }
 }
