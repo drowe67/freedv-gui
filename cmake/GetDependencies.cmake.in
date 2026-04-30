@@ -44,11 +44,20 @@ endmacro()
 
 # Code signing function
 set(SIGN_WINDOWS_BINARIES @SIGN_WINDOWS_BINARIES@)
+set(PKCS11_SECONDARY_CERTIFICATE @PKCS11_SECONDARY_CERTIFICATE@)
 function(freedv_sign_dependency FILENAME OUT)
     if(SIGN_WINDOWS_BINARIES)
         execute_process(
             COMMAND @OSSLSIGNCODE_BIN@ sign -pkcs11engine @PKCS11_ENGINE@ -pkcs11module @PKCS11_MODULE@ -pkcs11cert "@PKCS11_CERTIFICATE@" -key "@PKCS11_KEY@" -h @SIGN_HASH@ -comm -ts @TIMESTAMP_SERVER@ -ac @INTERMEDIATE_CERT_FILE@ -n "FreeDV - @PROJECT_DESCRIPTION@" -i "https://freedv.org/" -in "${FILENAME}" -out "${OUT}"
         )
+        if(PKCS11_SECONDARY_CERTIFICATE)
+            execute_process(
+                COMMAND mv "${OUT}" "${FILENAME}"
+            )
+            execute_process(
+                COMMAND @OSSLSIGNCODE_BIN@ sign -nest -pkcs11engine @PKCS11_ENGINE@ -pkcs11module @PKCS11_MODULE@ -pkcs11cert "@PKCS11_SECONDARY_CERTIFICATE@" -key "@PKCS11_SECONDARY_KEY@" -h @SIGN_HASH@ -comm -ts @TIMESTAMP_SERVER@ -ac @INTERMEDIATE_CERT_FILE@ -n "FreeDV - @PROJECT_DESCRIPTION@" -i "https://freedv.org/" -in "${FILENAME}" -out "${OUT}"
+            )
+        endif(PKCS11_SECONDARY_CERTIFICATE)
     else(SIGN_WINDOWS_BINARIES)
         execute_process(
             COMMAND cp "${FILENAME}" "${OUT}"

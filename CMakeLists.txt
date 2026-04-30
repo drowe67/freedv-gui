@@ -750,8 +750,9 @@ VIAddVersionKey \\\"GitHash\\\" \\\"${GIT_HASH}\\\"
         # signed too.
         set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
         if (PKCS11_SECONDARY_CERTIFICATE)
-            set(CPACK_NSIS_FINALIZE_CMD "${CPACK_NSIS_FINALIZE_CMD}; mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -nest -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_SECONDARY_CERTIFICATE}\\\" -key \\\"${PKCS11_SECONDARY_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1;")
+            set(CPACK_NSIS_FINALIZE_CMD "${CPACK_NSIS_FINALIZE_CMD}; mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -nest -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_SECONDARY_CERTIFICATE}\\\" -key \\\"${PKCS11_SECONDARY_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
         endif (PKCS11_SECONDARY_CERTIFICATE)
+        message(STATUS "Windows installer finalize command: ${CPACK_NSIS_FINALIZE_CMD}")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)
