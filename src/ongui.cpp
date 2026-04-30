@@ -548,12 +548,15 @@ void MainFrame::onRadioConnected_(IRigController*)
         // connect; this will prevent overwriting of whatever's in the text box.
         firstFreqUpdateOnConnect_ = true;
 
-        // Set frequency/mode to the one pre-selected by the user before start.
-        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        
+        // Set frequency/mode to the one pre-selected by the user before start.        
+        auto curMode = getCurrentMode_();
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            wxGetApp().rigFrequencyController->setFrequencyMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, curMode);
+        }
+        else
+        {
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
         }
     }
 }
@@ -1763,10 +1766,13 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             // Request frequency/mode change on the radio side
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                wxGetApp().rigFrequencyController->setFrequencyMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, getCurrentMode_());
+            }
+            else
+            {
+                wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
             }
         }
     }

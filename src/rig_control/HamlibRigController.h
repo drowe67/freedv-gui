@@ -59,6 +59,7 @@ public:
     virtual void ptt(bool state) override;
     virtual void setFrequency(uint64_t frequency) override;
     virtual void setMode(IRigFrequencyController::Mode mode) override;
+    virtual void setFrequencyMode(uint64_t frequency, Mode mode) override;
     virtual void requestCurrentFrequencyMode() override;
 
     static void InitializeHamlibLibrary();
@@ -93,6 +94,7 @@ private:
     rmode_t origMode_;
     bool freqOnly_;
     bool destroying_;
+    bool suppressFreqChangeReporting_;
     
     int rigResponseTime_;
     
@@ -109,6 +111,7 @@ private:
     void pttImpl_(bool state);
     void setFrequencyImpl_(uint64_t frequencyHz);
     void setModeImpl_(IRigFrequencyController::Mode mode);
+    void setFrequencyModeImpl_(uint64_t frequencyHz, IRigFrequencyController::Mode mode);
     void requestCurrentFrequencyModeImpl_();
     
     static RigList RigList_;

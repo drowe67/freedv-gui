@@ -48,6 +48,7 @@ public:
     
     virtual void setFrequency(uint64_t frequency) = 0;
     virtual void setMode(Mode mode) = 0;
+    virtual void setFrequencyMode(uint64_t frequency, Mode mode) = 0;
     virtual void requestCurrentFrequencyMode() = 0;
     
 protected:

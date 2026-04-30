@@ -40,6 +40,7 @@ public:
     virtual void ptt(bool state) override;
     virtual void setFrequency(uint64_t frequency) override;
     virtual void setMode(IRigFrequencyController::Mode mode) override;
+    virtual void setFrequencyMode(uint64_t frequency, Mode mode) override;
     virtual void requestCurrentFrequencyMode() override;
     
     virtual int getRigResponseTimeMicroseconds() override;
@@ -64,6 +65,7 @@ private:
     void pttImpl_(bool state);
     void setFrequencyImpl_(uint64_t frequencyHz);
     void setModeImpl_(IRigFrequencyController::Mode mode);
+    void setFrequencyModeImpl_(uint64_t frequencyHz, IRigFrequencyController::Mode mode);
     void requestCurrentFrequencyModeImpl_();
 };
 

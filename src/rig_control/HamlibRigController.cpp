@@ -88,6 +88,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
     , destroying_(false)
+    , suppressFreqChangeReporting_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
 {
@@ -115,6 +116,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
     , destroying_(false)
+    , suppressFreqChangeReporting_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
 {
@@ -243,6 +245,11 @@ void HamlibRigController::setFrequency(uint64_t frequency)
 void HamlibRigController::setMode(IRigFrequencyController::Mode mode)
 {
     enqueue_(std::bind(&HamlibRigController::setModeImpl_, this, mode));
+}
+
+void HamlibRigController::setFrequencyMode(uint64_t frequency, Mode mode)
+{
+    enqueue_(std::bind(&HamlibRigController::setFrequencyModeImpl_, this, frequency, mode));
 }
 
 void HamlibRigController::requestCurrentFrequencyMode()
@@ -707,6 +714,93 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     }
 }
 
+void HamlibRigController::setFrequencyModeImpl_(uint64_t frequencyHz, IRigFrequencyController::Mode mode)
+{
+    rmode_t hamlibMode;
+    
+    switch (mode)
+    {
+        case USB:
+            hamlibMode = RIG_MODE_USB;
+            break;
+        case LSB:
+            hamlibMode = RIG_MODE_LSB;
+            break;
+        case DIGU:
+            hamlibMode = RIG_MODE_PKTUSB;
+            break;
+        case DIGL:
+            hamlibMode = RIG_MODE_PKTLSB;
+            break;
+        case FM:
+            hamlibMode = RIG_MODE_FM;
+            break;
+        case DIGFM:
+            hamlibMode = RIG_MODE_PKTFM;
+            break;
+        case AM:
+            hamlibMode = RIG_MODE_AM;
+            break;
+        default:
+            onRigError(this, "Cannot set mode: mode not recognized");
+            return;
+    }
+    
+    auto tmpRig = rig_.load(std::memory_order_acquire);
+    if (tmpRig == nullptr || currMode_ == hamlibMode)
+    {
+        return;
+    }
+
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, RIG_PTT_OFF);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            log_debug("rig_set_ptt: error = %s ", rigerror(result));
+            
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
+            
+            return;
+        }
+    }
+
+    vfo_t currVfo = getCurrentVfo_(); 
+    suppressFreqChangeReporting_ = true;
+    setFrequencyHelper_(currVfo, frequencyHz);
+    setModeHelper_(currVfo, hamlibMode);
+    suppressFreqChangeReporting_ = false;
+    
+    requestCurrentFrequencyMode();
+
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(tmpRig, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            log_debug("rig_set_ptt: error = %s ", rigerror(result));
+            
+            if (!errorEncountered_)
+            {
+                std::string errMsg = std::string("Could not enable PTT after mode change: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
+                onRigError(this, errMsg);
+                errorEncountered_ = true;
+            }
+        }
+    }
+}
+
 void HamlibRigController::requestCurrentFrequencyModeImpl_()
 {
     auto tmpRig = rig_.load(std::memory_order_acquire);
@@ -885,7 +979,7 @@ freqAttempt:
     if (setOkay)
     {
         currFreq_ = frequencyHz;
-        if (!destroying_)
+        if (!destroying_ && !suppressFreqChangeReporting_)
         {
             requestCurrentFrequencyMode();
         }
@@ -940,7 +1034,7 @@ modeAttempt:
     if (setOkay)
     {
         currMode_ = mode;
-        if (!destroying_)
+        if (!destroying_ && !suppressFreqChangeReporting_)
         {
             requestCurrentFrequencyMode();
         }
