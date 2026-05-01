@@ -25,6 +25,50 @@
 
 extern FreeDVInterface freedvInterface;
 
+// Returns a human-readable name for a PTT key code.
+static wxString getPTTKeyName(int keyCode)
+{
+    if (keyCode >= 'A' && keyCode <= 'Z')
+        return wxString((char)keyCode);
+    if (keyCode >= '0' && keyCode <= '9')
+        return wxString((char)keyCode);
+
+    switch (keyCode)
+    {
+        case WXK_SPACE:    return _("Space");
+        case WXK_TAB:      return _("Tab");
+        case WXK_RETURN:   return _("Enter");
+        case WXK_ESCAPE:   return _("Escape");
+        case WXK_BACK:     return _("Backspace");
+        case WXK_DELETE:   return _("Delete");
+        case WXK_INSERT:   return _("Insert");
+        case WXK_HOME:     return _("Home");
+        case WXK_END:      return _("End");
+        case WXK_PAGEUP:   return _("Page Up");
+        case WXK_PAGEDOWN: return _("Page Down");
+        case WXK_UP:       return _("Up");
+        case WXK_DOWN:     return _("Down");
+        case WXK_LEFT:     return _("Left");
+        case WXK_RIGHT:    return _("Right");
+        case WXK_F1:       return _("F1");
+        case WXK_F2:       return _("F2");
+        case WXK_F3:       return _("F3");
+        case WXK_F4:       return _("F4");
+        case WXK_F5:       return _("F5");
+        case WXK_F6:       return _("F6");
+        case WXK_F7:       return _("F7");
+        case WXK_F8:       return _("F8");
+        case WXK_F9:       return _("F9");
+        case WXK_F10:      return _("F10");
+        case WXK_F11:      return _("F11");
+        case WXK_F12:      return _("F12");
+        default:
+            if (keyCode > 32 && keyCode < 127)
+                return wxString((char)keyCode);
+            return wxString::Format(_("Key(%d)"), keyCode);
+    }
+}
+
 // PortAudio over/underflow counters
 
 extern std::atomic<int>    g_infifo1_full;
@@ -212,8 +256,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_ptt = new wxStaticBox(m_rigControlTab, wxID_ANY, _("PTT Options"));
     sbSizer_ptt = new wxStaticBoxSizer(sb_ptt, wxVERTICAL);
     
-    m_ckboxEnableSpacebarForPTT = new wxCheckBox(sb_ptt, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_ptt->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_LEFT, 5);
+    wxSizer* pttKeySizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxEnableSpacebarForPTT = new wxCheckBox(sb_ptt, wxID_ANY, _("Enable key for PTT:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    pttKeySizer->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtPTTKeyName = new wxTextCtrl(sb_ptt, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120, -1), wxTE_READONLY | wxTE_PROCESS_ENTER);
+    m_txtPTTKeyName->SetToolTip(_("The key currently assigned to PTT."));
+    pttKeySizer->Add(m_txtPTTKeyName, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_btnSetPTTKey = new wxButton(sb_ptt, wxID_ANY, _("Change..."), wxDefaultPosition, wxDefaultSize);
+    pttKeySizer->Add(m_btnSetPTTKey, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_ptt->Add(pttKeySizer, 0, wxALL, 0);
 
     wxSizer* txRxDelaySizer = new wxBoxSizer(wxHORIZONTAL);
     
@@ -825,6 +879,12 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxEnableFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxEnableFreqChangesOnly->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxNoFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+
+    m_ckboxEnableSpacebarForPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnEnableSpacebarForPTT), NULL, this);
+    m_btnSetPTTKey->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSetPTTKey), NULL, this);
+    m_txtPTTKeyName->Bind(wxEVT_KEY_DOWN, &OptionsDlg::OnPTTKeyCapture, this);
+    m_txtPTTKeyName->Bind(wxEVT_CHAR, &OptionsDlg::OnPTTKeyCapture, this);
+    this->Bind(wxEVT_CHAR_HOOK, &OptionsDlg::OnDialogCharHook, this);
     
     m_freqList->Connect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
@@ -876,6 +936,12 @@ OptionsDlg::~OptionsDlg()
     m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxEnableFreqChangesOnly->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxNoFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+
+    m_ckboxEnableSpacebarForPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnEnableSpacebarForPTT), NULL, this);
+    m_btnSetPTTKey->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSetPTTKey), NULL, this);
+    m_txtPTTKeyName->Unbind(wxEVT_KEY_DOWN, &OptionsDlg::OnPTTKeyCapture, this);
+    m_txtPTTKeyName->Unbind(wxEVT_CHAR, &OptionsDlg::OnPTTKeyCapture, this);
+    this->Unbind(wxEVT_CHAR_HOOK, &OptionsDlg::OnDialogCharHook, this);
     
     m_freqList->Disconnect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
@@ -917,6 +983,13 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
+        m_selectedPTTKeyCode = wxGetApp().appConfiguration.pttKeyCode;
+        m_capturingPTTKey = false;
+        m_txtPTTKeyName->SetValue(getPTTKeyName(m_selectedPTTKeyCode));
+        m_txtPTTKeyName->SetEditable(false);
+        bool pttEnabled = wxGetApp().appConfiguration.enableSpaceBarForPTT;
+        m_txtPTTKeyName->Enable(pttEnabled);
+        m_btnSetPTTKey->Enable(pttEnabled);
         m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
@@ -1088,6 +1161,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = tmpList;
         
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
+        wxGetApp().appConfiguration.pttKeyCode = m_selectedPTTKeyCode;
 
         wxGetApp().appConfiguration.txRxDelayMilliseconds = wxAtoi(m_txtTxRxDelayMilliseconds->GetValue());
         
@@ -1537,6 +1611,81 @@ void OptionsDlg::OnMultipleRxEnable(wxCommandEvent&)
 void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent&)
 {
     updateRigControlState();
+}
+
+void OptionsDlg::OnEnableSpacebarForPTT(wxCommandEvent&)
+{
+    bool enabled = m_ckboxEnableSpacebarForPTT->GetValue();
+    m_txtPTTKeyName->Enable(enabled);
+    m_btnSetPTTKey->Enable(enabled);
+    if (!enabled)
+        exitPTTCaptureMode_(false);
+}
+
+void OptionsDlg::OnSetPTTKey(wxCommandEvent&)
+{
+    if (m_capturingPTTKey)
+        exitPTTCaptureMode_(false);
+    else
+        enterPTTCaptureMode_();
+}
+
+void OptionsDlg::OnDialogCharHook(wxKeyEvent& event)
+{
+    // wxEVT_CHAR_HOOK reaches the dialog before wxEVT_KEY_DOWN reaches any child
+    // control, so this is the only place to intercept Escape while in capture mode
+    // — otherwise wxDialog's built-in handler closes the dialog first.
+    if (m_capturingPTTKey && event.GetKeyCode() == WXK_ESCAPE)
+    {
+        exitPTTCaptureMode_(false);
+        return; // consume — do not let the dialog treat Escape as Cancel
+    }
+    event.Skip();
+}
+
+void OptionsDlg::OnPTTKeyCapture(wxKeyEvent& event)
+{
+    if (!m_capturingPTTKey) { event.Skip(); return; }
+
+    int keyCode = event.GetKeyCode();
+    // Normalize lowercase letters to match wxEVT_KEY_DOWN uppercase convention.
+    if (keyCode >= 'a' && keyCode <= 'z')
+        keyCode -= ('a' - 'A');
+
+    if (keyCode == WXK_TAB)
+    {
+        exitPTTCaptureMode_(false);
+        event.Skip();
+        return;
+    }
+    // Ignore bare modifier keys.
+    if (keyCode == WXK_SHIFT || keyCode == WXK_CONTROL || keyCode == WXK_ALT ||
+        keyCode == WXK_CAPITAL || keyCode == WXK_NUMLOCK || keyCode == WXK_SCROLL ||
+        keyCode == WXK_NONE)
+    {
+        return;
+    }
+    exitPTTCaptureMode_(true, keyCode);
+    // Don't Skip() — prevents the key from typing into the text field.
+}
+
+void OptionsDlg::enterPTTCaptureMode_()
+{
+    m_capturingPTTKey = true;
+    m_txtPTTKeyName->SetEditable(true);
+    m_txtPTTKeyName->SetValue(_("Press any key..."));
+    m_txtPTTKeyName->SetFocus();
+    m_btnSetPTTKey->SetLabel(_("Cancel"));
+}
+
+void OptionsDlg::exitPTTCaptureMode_(bool accept, int keyCode)
+{
+    m_capturingPTTKey = false;
+    if (accept)
+        m_selectedPTTKeyCode = keyCode;
+    m_txtPTTKeyName->SetValue(getPTTKeyName(m_selectedPTTKeyCode));
+    m_txtPTTKeyName->SetEditable(false);
+    m_btnSetPTTKey->SetLabel(_("Change..."));
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
