@@ -83,6 +83,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , pttSet_(false)
     , currFreq_(0)
     , currMode_(RIG_MODE_NONE)
+    , pendingMode_(UNKNOWN)
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
@@ -461,10 +462,25 @@ void HamlibRigController::connectImpl_()
         {
             log_warn("Could not ensure that radio starts with PTT off: %s", rigerror(result));
         }
-
+        
         // Get current frequency and mode when we first connect so we can 
         // revert on close.
         requestCurrentFrequencyModeImpl_();
+        
+        // If a freq/mode was set prior to connect, push those changes now.
+        if (currFreq_ > 0)
+        {
+            auto tmpFreq = currFreq_;
+            currFreq_ = 0; // to make setFrequencyImpl_ actually run
+            setFrequencyImpl_(tmpFreq);
+        }
+        
+        if (currMode_ != RIG_MODE_NONE)
+        {
+            currMode_ = RIG_MODE_NONE; // to make setModeImpl_ actually run
+            setModeImpl_(pendingMode_);
+        }
+    
         return;
     }
     else
@@ -660,6 +676,8 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr || currMode_ == hamlibMode)
     {
+        currMode_ = hamlibMode;
+        pendingMode_ = mode;
         return;
     }
 
@@ -844,6 +862,7 @@ void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyH
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr)
     {
+        currFreq_ = frequencyHz;
         return;
     }
 
@@ -899,6 +918,7 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr)
     {
+        currMode_ = mode;
         return;
     }
     
