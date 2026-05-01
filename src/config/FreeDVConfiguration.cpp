@@ -48,6 +48,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowWidth("/Windows/FreeDVReporter/width", -1)
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
+    , msgEditDialogWidth("/Windows/FreeDVReporter/msgEditDialogWidth", -1)
     , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", 5) /* FREQUENCY_COL */
     , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
@@ -144,6 +145,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reporterWindowWidth);
     load_(config, reporterWindowHeight);
     load_(config, reporterWindowVisible);
+    load_(config, msgEditDialogWidth);
     load_(config, reporterWindowCurrentSort);
     load_(config, reporterWindowCurrentSortDirection);
     
@@ -273,6 +275,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reporterWindowWidth);
     save_(config, reporterWindowHeight);
     save_(config, reporterWindowVisible);
+    save_(config, msgEditDialogWidth);
     save_(config, reporterWindowCurrentSort);
     save_(config, reporterWindowCurrentSortDirection);
     
