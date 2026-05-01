@@ -156,6 +156,21 @@ void OmniRigController::connectImpl_()
         // Get current frequency and mode when we first connect so we can
         // revert on close.
         requestCurrentFrequencyModeImpl_();
+        
+        // If a freq/mode was set prior to connect, push those changes now.
+        if (currFreq_ > 0)
+        {
+            auto tmpFreq = currFreq_;
+            currFreq_ = 0; // to make setFrequencyImpl_ actually run
+            setFrequencyImpl_(tmpFreq);
+        }
+        
+        if (currMode_ != UNKNOWN)
+        {
+            auto tmpMode = currMode_;
+            currMode_ = UNKNOWN; // to make setModeImpl_ actually run
+            setModeImpl_(tmpMode);
+        }
     }
     else
     {
@@ -297,6 +312,10 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
             onRigError(this, errMsg.str());
         }
     }
+    else
+    {
+        currFreq_ = frequencyHz;
+    }
 }
 
 void OmniRigController::setModeImpl_(IRigFrequencyController::Mode mode)
@@ -355,6 +374,10 @@ void OmniRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             errMsg << "Could not change mode to " << omniRigMode << " (HRESULT = " << result << ")";
             onRigError(this, errMsg.str());
         }
+    }
+    else
+    {
+        currMode_ = mode;
     }
 }
 

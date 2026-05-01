@@ -88,6 +88,7 @@ private:
     bool pttSet_;
     uint64_t currFreq_;
     rmode_t currMode_;
+    IRigFrequencyController::Mode pendingMode_;
     bool restoreOnDisconnect_;
     uint64_t origFreq_;
     rmode_t origMode_;

@@ -2540,6 +2540,19 @@ void MainFrame::performFreeDVOn_()
                     OpenOmniRig();
                 }
     #endif // defined(WIN32)
+                
+                // Set frequency/mode to the one pre-selected by the user before start.
+                if (wxGetApp().rigFrequencyController && 
+                    (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
+                    wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+                {
+                    wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        
+                    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+                    {
+                        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                    }
+                }
                     
                 // Initialize PSK Reporter reporting.
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)

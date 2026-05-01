@@ -933,6 +933,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix RADE related compiler errors. (PR #1299)
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
     * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
+    * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
@@ -955,7 +956,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Switch to r8brain for audio resampling. (PR #1307)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
-    * Update Hamlib to 4.7.0. (PR #1226)
+    * Update Hamlib to 4.7.1. (PR #1226, #1314)
     * Update wxWidgets to 3.3.2. (PR #1244)
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
     * Reenable Windows on ARM builds previously disabled in 2.0.0. (PR #1297, #1300)
