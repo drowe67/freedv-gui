@@ -74,6 +74,7 @@ class OptionsDlg : public wxDialog
         void    OnFreqModeChangeEnable(wxCommandEvent& event);
         void    OnEnableSpacebarForPTT(wxCommandEvent& event);
         void    OnSetPTTKey(wxCommandEvent& event);
+        void    OnDialogCharHook(wxKeyEvent& event);
         void    OnPTTKeyCapture(wxKeyEvent& event);
         void    enterPTTCaptureMode_();
         void    exitPTTCaptureMode_(bool accept, int keyCode = 0);

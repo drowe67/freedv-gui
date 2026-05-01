@@ -884,6 +884,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_btnSetPTTKey->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSetPTTKey), NULL, this);
     m_txtPTTKeyName->Bind(wxEVT_KEY_DOWN, &OptionsDlg::OnPTTKeyCapture, this);
     m_txtPTTKeyName->Bind(wxEVT_CHAR, &OptionsDlg::OnPTTKeyCapture, this);
+    this->Bind(wxEVT_CHAR_HOOK, &OptionsDlg::OnDialogCharHook, this);
     
     m_freqList->Connect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
@@ -940,6 +941,7 @@ OptionsDlg::~OptionsDlg()
     m_btnSetPTTKey->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSetPTTKey), NULL, this);
     m_txtPTTKeyName->Unbind(wxEVT_KEY_DOWN, &OptionsDlg::OnPTTKeyCapture, this);
     m_txtPTTKeyName->Unbind(wxEVT_CHAR, &OptionsDlg::OnPTTKeyCapture, this);
+    this->Unbind(wxEVT_CHAR_HOOK, &OptionsDlg::OnDialogCharHook, this);
     
     m_freqList->Disconnect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
@@ -1628,6 +1630,19 @@ void OptionsDlg::OnSetPTTKey(wxCommandEvent&)
         enterPTTCaptureMode_();
 }
 
+void OptionsDlg::OnDialogCharHook(wxKeyEvent& event)
+{
+    // wxEVT_CHAR_HOOK reaches the dialog before wxEVT_KEY_DOWN reaches any child
+    // control, so this is the only place to intercept Escape while in capture mode
+    // — otherwise wxDialog's built-in handler closes the dialog first.
+    if (m_capturingPTTKey && event.GetKeyCode() == WXK_ESCAPE)
+    {
+        exitPTTCaptureMode_(false);
+        return; // consume — do not let the dialog treat Escape as Cancel
+    }
+    event.Skip();
+}
+
 void OptionsDlg::OnPTTKeyCapture(wxKeyEvent& event)
 {
     if (!m_capturingPTTKey) { event.Skip(); return; }
@@ -1637,7 +1652,7 @@ void OptionsDlg::OnPTTKeyCapture(wxKeyEvent& event)
     if (keyCode >= 'a' && keyCode <= 'z')
         keyCode -= ('a' - 'A');
 
-    if (keyCode == WXK_ESCAPE || keyCode == WXK_TAB)
+    if (keyCode == WXK_TAB)
     {
         exitPTTCaptureMode_(false);
         event.Skip();
