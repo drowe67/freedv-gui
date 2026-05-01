@@ -30,7 +30,7 @@ jobs:
     - name: Install required packages
       shell: bash
       run: |
-           sudo sed -i 's@https://ports.ubuntu.com/ubuntu-ports@https://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+           sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
            sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
 
@@ -110,7 +110,7 @@ jobs:
     - name: Install rtkit for RT threading
       shell: bash
       run: |
-           sudo sed -i 's@https://ports.ubuntu.com/ubuntu-ports@https://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+           sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
            sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
            sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
@@ -355,7 +355,7 @@ jobs:
     - name: Install rtkit for RT threading
       shell: bash
       run: |
-           sudo sed -i 's@https://ports.ubuntu.com/ubuntu-ports@https://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+           sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
            sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
            sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
@@ -491,7 +491,7 @@ jobs:
     - name: Install LLVM/Clang >=20.0 
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
-        sudo sed -i 's@https://ports.ubuntu.com/ubuntu-ports@https://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+        sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 21

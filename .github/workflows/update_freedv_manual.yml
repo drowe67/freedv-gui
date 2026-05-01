@@ -29,7 +29,7 @@ jobs:
 
       - name: Install pandoc package
         run: |
-             sudo sed -i 's@https://ports.ubuntu.com/ubuntu-ports@https://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+             sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
              sudo apt-get update
              sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
            
