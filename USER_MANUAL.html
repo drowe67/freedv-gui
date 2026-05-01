@@ -1219,8 +1219,8 @@ speech codec bits</td>
 </table>
 <h1 data-number="18" id="release-notes"><span
 class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v2.3.0-tbd-2026"><span
-class="header-section-number">18.1</span> V2.3.0 TBD 2026</h2>
+<h2 data-number="18.1" id="v2.3.0-may-2026"><span
+class="header-section-number">18.1</span> V2.3.0 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1256,6 +1256,8 @@ displayed. (PR #1282)</li>
 thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Ensure that PTT is actually off when opening Hamlib connection. (PR
 #1308)</li>
+<li>Fix race condition preventing frequency/mode from changing on start
+with SmartSDR 4.2. (PR #1314)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1296,12 +1298,14 @@ data-cites="barjac">@barjac</span>!</li>
 <li>Build system:
 <ul>
 <li>Update Python to 3.14.3. (PR #1221)</li>
-<li>Update Hamlib to 4.7.0. (PR #1226)</li>
+<li>Update Hamlib to 4.7.1. (PR #1226, #1314)</li>
 <li>Update wxWidgets to 3.3.2. (PR #1244)</li>
 <li>Flex: Update Docker container version to match AppImage version. (PR
 #1256)</li>
 <li>Reenable Windows on ARM builds previously disabled in 2.0.0. (PR
 #1297, #1300)</li>
+<li>Add automated code signing support for Windows builds. (PR
+#1312)</li>
 </ul></li>
 <li>Documentation:
 <ul>
