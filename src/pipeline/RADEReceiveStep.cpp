@@ -191,24 +191,28 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
 
     FREEDV_BEGIN_VERIFIED_SAFE 
     int   nin = rade_nin(dv_);
-    FREEDV_END_VERIFIED_SAFE 
+    FREEDV_END_VERIFIED_SAFE
+
+    // freqOffsetFn_() may involve synchronization; evaluate it once per execute()
+    // call rather than once per inner loop iteration.
+    const float foff = freqOffsetFn_();
 
     int   nout = 0;
-    while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
+    while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0)
     {
-        FREEDV_BEGIN_VERIFIED_SAFE 
+        FREEDV_BEGIN_VERIFIED_SAFE
         assert(nin <= rade_nin_max(dv_));
-        FREEDV_END_VERIFIED_SAFE 
+        FREEDV_END_VERIFIED_SAFE
 
         // demod per frame processing
-        for(int i=0; i<nin; i++) 
+        for(int i=0; i<nin; i++)
         {
             inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
             inputBufCplx_[i].imag = 0.0;
         }
 
         // Optional frequency shifting
-        freq_shift_coh(rxFdmOffset_, inputBufCplx_, freqOffsetFn_(), RADE_MODEM_SAMPLE_RATE, &rxFreqOffsetPhaseRectObjs_, nin);
+        freq_shift_coh(rxFdmOffset_, inputBufCplx_, foff, RADE_MODEM_SAMPLE_RATE, &rxFreqOffsetPhaseRectObjs_, nin);
         
         // RADE processing (input signal->features).
         int hasEooOut = 0;

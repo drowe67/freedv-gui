@@ -801,7 +801,12 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             
             if (outputSamples != nullptr)
             {
-                cbData->outfifo1->write(outputSamples, nout);
+                if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                {
+                    FREEDV_BEGIN_VERIFIED_SAFE
+                    log_warn("TX outfifo1 full, dropped %d samples (free=%d)", nout, cbData->outfifo1->numFree());
+                    FREEDV_END_VERIFIED_SAFE
+                }
             }
             
 #if defined(ENABLE_PROCESSING_STATS)
@@ -873,7 +878,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         
         if (nout > 0 && outputSamples != nullptr)
         {
-            outFifo->write(outputSamples, nout);
+            if (outFifo->write(outputSamples, nout) != 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("RX outFifo full, dropped %d samples (free=%d)", nout, outFifo->numFree());
+                FREEDV_END_VERIFIED_SAFE
+            }
         }
         
         tmpTx = g_tx.load(std::memory_order_acquire);

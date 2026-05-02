@@ -142,8 +142,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
     auto maxSamples = getOutputSampleRate();
     FREEDV_BEGIN_VERIFIED_SAFE
     int numSamplesPerTx = rade_n_tx_out(dv_);
+    int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
     FREEDV_END_VERIFIED_SAFE
-    
+
     *numOutputSamples = 0;
 
     if (numInputSamples == 0)
@@ -157,14 +158,10 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
 
         return outputSamples_.get();
     }
-    
+
     inputSampleFifo_.write(inputSamples, numInputSamples);
     while ((*numOutputSamples + numSamplesPerTx) < maxSamples && inputSampleFifo_.numUsed() >= LPCNET_FRAME_SIZE)
     {
-        FREEDV_BEGIN_VERIFIED_SAFE
-        int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
-        FREEDV_END_VERIFIED_SAFE
-
         short pcm[LPCNET_FRAME_SIZE];
         float features[NB_TOTAL_FEATURES];
 
