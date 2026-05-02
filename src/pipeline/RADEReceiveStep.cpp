@@ -213,9 +213,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         // RADE processing (input signal->features).
         int hasEooOut = 0;
 
-        FREEDV_BEGIN_REALTIME_UNSAFE
+        FREEDV_BEGIN_VERIFIED_SAFE
             nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, rxFdmOffset_);
-        FREEDV_END_REALTIME_UNSAFE
+        FREEDV_END_VERIFIED_SAFE
 
         if (hasEooOut && textPtr_ != nullptr)
         {
@@ -274,10 +274,10 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
     int sync = 0;
     int snr = 0;
 
-    FREEDV_BEGIN_REALTIME_UNSAFE
+    FREEDV_BEGIN_VERIFIED_SAFE
         sync = rade_sync(dv_);
         snr = rade_snrdB_3k_est(dv_);
-    FREEDV_END_REALTIME_UNSAFE
+    FREEDV_END_VERIFIED_SAFE
 
     syncState_.store(sync, std::memory_order_release);
     snr_.store(snr, std::memory_order_release);

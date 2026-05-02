@@ -189,9 +189,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
 
                 // RADE TX handling
                 int numOut = 0;
-                FREEDV_BEGIN_REALTIME_UNSAFE
+                FREEDV_BEGIN_VERIFIED_SAFE
                     numOut = rade_tx(dv_, radeOut_, &featureList_[0]);
-                FREEDV_END_REALTIME_UNSAFE
+                FREEDV_END_VERIFIED_SAFE
 
                 for (int index = 0; index < numOut; index++)
                 {
@@ -221,9 +221,9 @@ void RADETransmitStep::restartVocoder() FREEDV_NONBLOCKING
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
     FREEDV_END_VERIFIED_SAFE
 
-    FREEDV_BEGIN_REALTIME_UNSAFE
+    FREEDV_BEGIN_VERIFIED_SAFE
         rade_tx_eoo(dv_, eooOut_);
-    FREEDV_END_REALTIME_UNSAFE
+    FREEDV_END_VERIFIED_SAFE
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
