@@ -18,6 +18,8 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+
+#include <atomic>
 #include <string.h>
 #include <wx/wx.h>
 
