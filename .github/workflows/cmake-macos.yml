@@ -224,7 +224,7 @@ jobs:
     - name: Rename DMG file
       id: dmg-filename
       run: |
-          FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`
+          FREEDV_VERSION=`cat ../build_osx/freedv-version.txt`
           mv FreeDV.dmg FreeDV-${FREEDV_VERSION}.dmg
           echo "DMG_FILENAME=$(echo -n FreeDV*.dmg)" >> "$GITHUB_OUTPUT"
 
