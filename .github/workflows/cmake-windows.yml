@@ -254,6 +254,15 @@ jobs:
     - name: Start Windows Audio Service
       run: |
           Restart-Service -Name audiosrv -Force
+          $deadline = (Get-Date).AddSeconds(60)
+          do {
+              Start-Sleep -Seconds 2
+              $deviceNames = (Get-CimInstance win32_sounddevice).Name
+          } until (
+              ($deviceNames -match "VB-Audio Virtual Cable") -and
+              ($deviceNames -match "Virtual Audio Cable") -or
+              ((Get-Date) -gt $deadline)
+          )
 
     - name: List audio devices
       shell: pwsh
