@@ -225,7 +225,7 @@ jobs:
       id: dmg-filename
       run: |
           FREEDV_VERSION=`cat ${{github.workspace}}/build_osx/freedv-version.txt`
-          mv FreeDV.dmg FreeDV-${FREEDV_VERSION}.dmg
+          mv build_osx/src/FreeDV.dmg build_osx/src/FreeDV-${FREEDV_VERSION}.dmg
           echo "DMG_FILENAME=$(echo -n FreeDV*.dmg)" >> "$GITHUB_OUTPUT"
 
     - name: Stash disk image
