@@ -301,13 +301,13 @@ jobs:
       shell: pwsh
       run: |
           Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot.png
+          & .\screenCapture.bat screenshot-${{ matrix.arch }}.png
 
     - name: Upload screenshot
       uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: screenshot-${{ matrix.arch }}.png
-        path: ${{github.workspace}}/screenshot.png
+        path: ${{github.workspace}}/screenshot-${{ matrix.arch }}.png
         archive: false
 
