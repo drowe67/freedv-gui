@@ -27,7 +27,7 @@
 #define HZ_GRANULARITY 10
 
 void clickTune(float frequency); // callback to pass new click freq
-extern float           g_RxFreqOffsetHz;
+extern std::atomic<float> g_RxFreqOffsetHz;
 
 constexpr int STR_LENGTH = 15;
     
@@ -380,7 +380,7 @@ void PlotSpectrum::OnMouseRightDoubleClick(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotSpectrum::OnMouseWheelMoved(wxMouseEvent& event)
 {
-    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed);
     float direction = 1.0;
     if (event.GetWheelRotation() < 0)
     {
@@ -404,7 +404,7 @@ void PlotSpectrum::OnMouseWheelMoved(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
 {
-    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed);
     float direction = 0;
     
     switch (event.GetKeyCode())

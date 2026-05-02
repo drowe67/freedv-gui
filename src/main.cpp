@@ -186,8 +186,8 @@ extern bool g_recFileFromDecoder;
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
-float               g_RxFreqOffsetHz;
-float               g_TxFreqOffsetHz;
+std::atomic<float>  g_RxFreqOffsetHz;
+std::atomic<float>  g_TxFreqOffsetHz;
 
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
@@ -1294,11 +1294,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     // init click-tune states
 
-    g_RxFreqOffsetHz = 0.0;
-    m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-    m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+    g_RxFreqOffsetHz.store(0.0f, std::memory_order_relaxed);
+    m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
+    m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
 
-    g_TxFreqOffsetHz = 0.0;
+    g_TxFreqOffsetHz.store(0.0f, std::memory_order_relaxed);
 
     g_tx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
@@ -1626,7 +1626,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      else if (timerId == ID_TIMER_WATERFALL)
      {
           if (m_panelWaterfall->checkDT()) {
-              m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+              m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
               m_panelWaterfall->m_newdata = true;
               m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
               m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemOffset());
@@ -1636,7 +1636,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (timerId == ID_TIMER_SPECTRUM)
       {
-          m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+          m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
     
           // Note: each element in this combo box is a numeric value starting from 1,
           // so just incrementing the selected index should get us the correct results.
