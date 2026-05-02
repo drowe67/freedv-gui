@@ -3768,17 +3768,23 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         // complexity (i.e. additional decision steps to let through the sine wave
         // vs. regular TX).
         auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+
+        // Load once before the loop and store once after to avoid per-sample atomic
+        // memory barriers, which can cause the audio callback to overrun its deadline.
+        auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
+        const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
         for (unsigned long index = 0; index < size; index++)
         {
-            auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
-            auto carrierSample = txLevel * sin(2 * M_PI * FDMDV_FCENTRE * sineWaveSampleNumber / sr);
+            auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
             for (int i = 0; i < numChannels; i++)
             {
                 *audioData++ = carrierSample;
             }
-            sineWaveSampleNumber = (sineWaveSampleNumber + 1) % sr;
-            cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
+            // Conditional branch is cheaper than integer division (% sr).
+            if (++sineWaveSampleNumber >= (int)sr)
+                sineWaveSampleNumber = 0;
         }
+        cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
     }
     else
     {
