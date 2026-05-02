@@ -147,6 +147,7 @@ jobs:
       with:
         name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
 
   test:
     strategy:
@@ -308,4 +309,5 @@ jobs:
       with:
         name: screenshot-${{ matrix.arch }}.png
         path: ${{github.workspace}}/screenshot.png
+        archive: false
 
