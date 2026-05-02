@@ -206,20 +206,6 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
-    - name: Screenshot if failed
-      if: failure()
-      shell: pwsh
-      run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot.png
-
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: failure()
-      with:
-        name: screenshot.png
-        path: ${{github.workspace}}/screenshot.png
-
     - name: Install FreeDV on hard drive
       shell: pwsh
       run: |
@@ -309,3 +295,17 @@ jobs:
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 1600 -NumberOfRuns 1
       timeout-minutes: 10
  
+    - name: Screenshot if failed
+      if: failure()
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
+          & .\screenCapture.bat screenshot.png
+
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v7
+      if: failure()
+      with:
+        name: screenshot-${{ matrix.arch }}.png
+        path: ${{github.workspace}}/screenshot.png
+
