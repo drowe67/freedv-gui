@@ -263,7 +263,6 @@ jobs:
           Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List
           
     - name: Test RADE
       shell: pwsh
