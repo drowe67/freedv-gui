@@ -521,6 +521,11 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 freqString = wxNumberFormatter::ToString(freq / 1000.0 / 1000.0, 4);
             }
             
+            // Set internal reporting frequency to ensure we don't immediately request
+            // a frequency change from the radio (i.e. if rapidly changing frequency
+            // on the radio side).
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
+            
             m_cboReportFrequency->SetValue(freqString);
         }
         m_txtModeStatus->Refresh();
