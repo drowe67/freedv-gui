@@ -41,7 +41,7 @@ inline int wxMessageBoxWrapper(const wxString& message,
         log_fatal("wxMessageBox called during test '%s': %s",
                   (const char*)testName.ToUTF8(),
                   (const char*)message.ToUTF8());
-        exit(1);
+        exit(1); // NOLINT
     }
     return wxMessageBox(message, caption, style, parent, x, y);
 }
