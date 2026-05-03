@@ -120,21 +120,19 @@ void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* des
     }
     else
     {
-        auto multiplier = SampleMultiplier + 1;
-        if (SampleMultiplier != std::numeric_limits<DstType>::max())
-        {
-            multiplier = SampleMultiplier;
-        }
+        constexpr auto MIN_DST_TYPE_VAL = std::numeric_limits<DstType>::min();
+        constexpr auto MAX_DST_TYPE_VAL = std::numeric_limits<DstType>::max();
+        constexpr auto multiplier = (SampleMultiplier != MAX_DST_TYPE_VAL) ? SampleMultiplier : (SampleMultiplier + 1);
         for (std::size_t index = 0; index < numSamples; index++)
         {
             SrcType temp = sourceSamples[index] * multiplier;
-            if (temp <= std::numeric_limits<DstType>::min())
+            if (temp <= MIN_DST_TYPE_VAL)
             {
-                destSamples[index] = std::numeric_limits<DstType>::min();
+                destSamples[index] = MIN_DST_TYPE_VAL;
             }
-            else if (temp >= std::numeric_limits<DstType>::max())
+            else if (temp >= MAX_DST_TYPE_VAL)
             {
-                destSamples[index] = std::numeric_limits<DstType>::max();
+                destSamples[index] = MAX_DST_TYPE_VAL;
             }
             else
             {
