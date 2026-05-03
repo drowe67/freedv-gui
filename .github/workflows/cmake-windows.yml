@@ -181,19 +181,6 @@ jobs:
       with:
         arch: x64
 
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
     - name: Install VAC ("analog" sound device)
       run: |
           Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
@@ -206,6 +193,19 @@ jobs:
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+
+    - name: Install VB-Cable ("Radio" sound device)
+      run: |
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+          
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install FreeDV on hard drive
       shell: pwsh
@@ -256,6 +256,14 @@ jobs:
       run: |
           Get-CimInstance win32_sounddevice
 
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
+          Install-Module -Name AudioDeviceCmdlets
+          Set-AudioDevice "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}"
+          Set-AudioDevice "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}"
+          
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
