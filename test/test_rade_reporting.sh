@@ -113,32 +113,35 @@ FDV_PID=$!
 #wpctl status
 #pw-top -b -n 5
 wait $FDV_PID
+FREEDV_EXIT_CODE=$?
 cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
 
-if [ "$1" != "" ]; then
-    FADING_DIR="$SCRIPTPATH/fading"
+if [ $FREEDV_EXIT_CODE -eq 0 ]; then
+    if [ "$1" != "" ]; then
+        FADING_DIR="$SCRIPTPATH/fading"
 
-    # Add noise to recording to test performance
-    if [ "$2" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    elif [ "$2" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        # Add noise to recording to test performance
+        if [ "$2" == "mpp" ]; then
+            sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        elif [ "$2" == "awgn" ]; then
+            sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        fi
+        mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
     fi
-    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
+    FDV_PID=$!
+
+    #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    #    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+    #fi
+    wait $FDV_PID
+    FREEDV_EXIT_CODE=$?
+    cat tmp.log
 fi
-
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
-FDV_PID=$!
-
-#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
-#fi
-wait $FDV_PID
-FREEDV_EXIT_CODE=$?
-cat tmp.log
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
