@@ -260,7 +260,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04-arm]
+        os: [ubuntu-24.04-arm, ubuntu-24.04]
         fedora-version: [42, 43]
 
     runs-on: ${{ matrix.os }}
