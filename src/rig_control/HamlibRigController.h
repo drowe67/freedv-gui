@@ -96,10 +96,19 @@ private:
     bool destroying_;
     
     int rigResponseTime_;
-    
+  
     // Tracks errors encountered during/after rig_open() so that
     // we only display the error box once.
     bool errorEncountered_;
+
+    // Number of frequency/mode retrieval errors seen.
+    // This is so that we have a bit of leeway before showing the error
+    // box, as errors can sometimes be emitted yet no problems exist
+    // (example: rapidly spinning the dial on the radio side)
+    int getFreqModeErrorCount_;
+
+    // 2 or more errors while retrieving freq/mode should cause the popup to appear
+    const int MAX_GET_FREQUENCY_ERR_COUNT = 1;
     
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
