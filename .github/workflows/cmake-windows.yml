@@ -261,6 +261,7 @@ jobs:
       run: |
           Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
           Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
+          Get-AudioDevice -List
           Set-AudioDevice "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}"
           Set-AudioDevice "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}"
           
