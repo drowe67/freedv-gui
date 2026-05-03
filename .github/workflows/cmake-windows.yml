@@ -147,6 +147,7 @@ jobs:
       with:
         name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
 
   test:
     strategy:
@@ -180,19 +181,6 @@ jobs:
       with:
         arch: x64
 
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
     - name: Install VAC ("analog" sound device)
       run: |
           Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
@@ -206,19 +194,18 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
-    - name: Screenshot if failed
-      if: failure()
-      shell: pwsh
+    - name: Install VB-Cable ("Radio" sound device)
       run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot.png
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
 
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: failure()
-      with:
-        name: screenshot.png
-        path: ${{github.workspace}}/screenshot.png
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+          
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install FreeDV on hard drive
       shell: pwsh
@@ -254,12 +241,29 @@ jobs:
     - name: Start Windows Audio Service
       run: |
           Restart-Service -Name audiosrv -Force
+          $deadline = (Get-Date).AddSeconds(60)
+          do {
+              Start-Sleep -Seconds 2
+              $deviceNames = (Get-CimInstance win32_sounddevice).Name
+          } until (
+              ($deviceNames -match "VB-Audio Virtual Cable") -and
+              ($deviceNames -match "Virtual Audio Cable") -or
+              ((Get-Date) -gt $deadline)
+          )
 
     - name: List audio devices
       shell: pwsh
       run: |
           Get-CimInstance win32_sounddevice
 
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
+          Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
+          
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
@@ -300,3 +304,18 @@ jobs:
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 1600 -NumberOfRuns 1
       timeout-minutes: 10
  
+    - name: Screenshot if failed
+      if: failure()
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
+          & .\screenCapture.bat screenshot-${{ matrix.arch }}.png
+
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v7
+      if: failure()
+      with:
+        name: screenshot-${{ matrix.arch }}.png
+        path: ${{github.workspace}}/screenshot-${{ matrix.arch }}.png
+        archive: false
+

@@ -191,19 +191,19 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
 
     FREEDV_BEGIN_VERIFIED_SAFE 
     int   nin = rade_nin(dv_);
-    FREEDV_END_VERIFIED_SAFE 
+    FREEDV_END_VERIFIED_SAFE
 
     int   nout = 0;
-    while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
+    while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0)
     {
-        FREEDV_BEGIN_VERIFIED_SAFE 
+        FREEDV_BEGIN_VERIFIED_SAFE
         assert(nin <= rade_nin_max(dv_));
-        FREEDV_END_VERIFIED_SAFE 
+        FREEDV_END_VERIFIED_SAFE
 
         // demod per frame processing
-        for(int i=0; i<nin; i++) 
+        for(int i=0; i<nin; i++)
         {
-            inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
+            ConvertToFloatSampleType_<float, short>(&inputBuf_[i], &inputBufCplx_[i].real, 1);
             inputBufCplx_[i].imag = 0.0;
         }
 
@@ -213,9 +213,9 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         // RADE processing (input signal->features).
         int hasEooOut = 0;
 
-        FREEDV_BEGIN_REALTIME_UNSAFE
+        FREEDV_BEGIN_VERIFIED_SAFE
             nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, rxFdmOffset_);
-        FREEDV_END_REALTIME_UNSAFE
+        FREEDV_END_VERIFIED_SAFE
 
         if (hasEooOut && textPtr_ != nullptr)
         {
@@ -250,10 +250,8 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                     FREEDV_BEGIN_VERIFIED_SAFE 
                     fargan_synthesize(fargan_, fpcm, pendingFeatures_);
                     FREEDV_END_VERIFIED_SAFE 
-                    for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
-                    {
-                        pcm[i] = (int)floor(.5 + std::min(32767.f, std::max(-32767.f, 32768.f*fpcm[i])));
-                    }
+
+                    ConvertToIntSampleType_<short, float>(fpcm, pcm, LPCNET_FRAME_SIZE);
 
                     *numOutputSamples += LPCNET_FRAME_SIZE;
                     outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
@@ -274,10 +272,10 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
     int sync = 0;
     int snr = 0;
 
-    FREEDV_BEGIN_REALTIME_UNSAFE
+    FREEDV_BEGIN_VERIFIED_SAFE
         sync = rade_sync(dv_);
         snr = rade_snrdB_3k_est(dv_);
-    FREEDV_END_REALTIME_UNSAFE
+    FREEDV_END_VERIFIED_SAFE
 
     syncState_.store(sync, std::memory_order_release);
     snr_.store(snr, std::memory_order_release);

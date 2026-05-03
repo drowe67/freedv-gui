@@ -940,7 +940,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
     * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
-    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265)
+    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265, #1317)
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!

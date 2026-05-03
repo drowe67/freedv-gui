@@ -186,8 +186,8 @@ extern bool g_recFileFromDecoder;
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
-float               g_RxFreqOffsetHz;
-float               g_TxFreqOffsetHz;
+std::atomic<float>  g_RxFreqOffsetHz;
+std::atomic<float>  g_TxFreqOffsetHz;
 
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
@@ -1294,11 +1294,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     // init click-tune states
 
-    g_RxFreqOffsetHz = 0.0;
-    m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-    m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+    g_RxFreqOffsetHz.store(0.0f, std::memory_order_relaxed);
+    m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
+    m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
 
-    g_TxFreqOffsetHz = 0.0;
+    g_TxFreqOffsetHz.store(0.0f, std::memory_order_relaxed);
 
     g_tx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
@@ -1626,7 +1626,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      else if (timerId == ID_TIMER_WATERFALL)
      {
           if (m_panelWaterfall->checkDT()) {
-              m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+              m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
               m_panelWaterfall->m_newdata = true;
               m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
               m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemOffset());
@@ -1636,7 +1636,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (timerId == ID_TIMER_SPECTRUM)
       {
-          m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+          m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed));
     
           // Note: each element in this combo box is a numeric value starting from 1,
           // so just incrementing the selected index should get us the correct results.
@@ -3768,17 +3768,23 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         // complexity (i.e. additional decision steps to let through the sine wave
         // vs. regular TX).
         auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+
+        // Load once before the loop and store once after to avoid per-sample atomic
+        // memory barriers, which can cause the audio callback to overrun its deadline.
+        auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
+        const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
         for (unsigned long index = 0; index < size; index++)
         {
-            auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
-            auto carrierSample = txLevel * sin(2 * M_PI * FDMDV_FCENTRE * sineWaveSampleNumber / sr);
+            auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
             for (int i = 0; i < numChannels; i++)
             {
                 *audioData++ = carrierSample;
             }
-            sineWaveSampleNumber = (sineWaveSampleNumber + 1) % sr;
-            cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
+            // Conditional branch is cheaper than integer division (% sr).
+            if (++sineWaveSampleNumber >= (int)sr)
+                sineWaveSampleNumber = 0;
         }
+        cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
     }
     else
     {

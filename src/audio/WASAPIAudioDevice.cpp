@@ -744,17 +744,23 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
 
         if (numFramesAvailable > 0 && data != nullptr)
         {
-            // Fill buffer with silence if told to do so.
             if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
             {
                 memset(tmpBuf_, 0, numFramesAvailable * numChannels_ * sizeof(short));
             }
             else
             {
+                if (flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY)
+                {
+                    log_warn("Audio data discontinuity detected");
+                    if (onAudioOverflowFunction)
+                    {
+                        onAudioOverflowFunction(*this, onAudioOverflowState);
+                    }
+                }
                 copyFromWindowsBuffer_(data, numFramesAvailable);
             }
 
-            // Pass data to higher level code
             if (onAudioDataFunction)
             {
                 onAudioDataFunction(*this, tmpBuf_, numFramesAvailable, onAudioDataState);
