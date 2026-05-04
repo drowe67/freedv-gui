@@ -62,6 +62,18 @@ static wxString getPTTKeyName(int keyCode)
         case WXK_F10:      return _("F10");
         case WXK_F11:      return _("F11");
         case WXK_F12:      return _("F12");
+        case WXK_F13:      return _("F13");
+        case WXK_F14:      return _("F14");
+        case WXK_F15:      return _("F15");
+        case WXK_F16:      return _("F16");
+        case WXK_F17:      return _("F17");
+        case WXK_F18:      return _("F18");
+        case WXK_F19:      return _("F19");
+        case WXK_F20:      return _("F20");
+        case WXK_F21:      return _("F21");
+        case WXK_F22:      return _("F22");
+        case WXK_F23:      return _("F23");
+        case WXK_F24:      return _("F24");
         default:
             if (keyCode > 32 && keyCode < 127)
                 return wxString((char)keyCode);
