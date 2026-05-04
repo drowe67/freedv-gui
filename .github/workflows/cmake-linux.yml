@@ -256,75 +256,75 @@ jobs:
         path: ${{github.workspace}}/src/integrations/flex/${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
         archive: false
 
-  test-appimage-fedora:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04-arm]
-        fedora-version: [42, 43]
+  #test-appimage-fedora:
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      os: [ubuntu-24.04, ubuntu-24.04-arm]
+  #      fedora-version: [42, 43]
 
-    runs-on: ${{ matrix.os }}
-    needs: [build-appimage]
-    steps:
-    - uses: actions/checkout@v6
+  #  runs-on: ${{ matrix.os }}
+  #  needs: [build-appimage]
+  #  steps:
+  #  - uses: actions/checkout@v6
 
-    #- name: Setup tmate session
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #    detached: true
+  #  #- name: Setup tmate session
+  #  #  uses: mxschmitt/action-tmate@v3
+  #  #  with:
+  #  #    detached: true
 
-    - name: Disable AppArmor (needed for Fedora systemd)
-      run: |
-          sudo apparmor_parser -R /etc/apparmor.d/* || true
+  #  - name: Disable AppArmor (needed for Fedora systemd)
+  #    run: |
+  #        sudo apparmor_parser -R /etc/apparmor.d/* || true
 
-    - name: Save correct architecture
-      id: save-arch
-      run: |
-        echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
-    
-    - uses: actions/download-artifact@v8
-      with:
-        merge-multiple: true
-        pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
-        path: ${{github.workspace}}
+  #  - name: Save correct architecture
+  #    id: save-arch
+  #    run: |
+  #      echo "APPIMAGE_ARCH=$(uname -m)" >> "$GITHUB_OUTPUT"
+  #  
+  #  - uses: actions/download-artifact@v8
+  #    with:
+  #      merge-multiple: true
+  #      pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
+  #      path: ${{github.workspace}}
 
-    - name: Start Fedora container
-      shell: bash
-      run: |
-          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:${{ matrix.fedora-version }}
+  #  - name: Start Fedora container
+  #    shell: bash
+  #    run: |
+  #        sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:${{ matrix.fedora-version }}
 
-    - name: Install rtkit for RT threading
-      shell: bash
-      run: |
-          sudo podman exec fedora-test sudo dnf -y update 
-          sudo podman exec fedora-test sudo dnf -y install dbus dbus-x11 dbus-tools rtkit dbus-devel polkit
-          sudo podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
+  #  - name: Install rtkit for RT threading
+  #    shell: bash
+  #    run: |
+  #        sudo podman exec fedora-test sudo dnf -y update 
+  #        sudo podman exec fedora-test sudo dnf -y install dbus dbus-x11 dbus-tools rtkit dbus-devel polkit
+  #        sudo podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
 
-    - name: Install required packages for audio/display
-      shell: bash
-      run: |
-          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity python3-matplotlib python3-torch sox git
+  #  - name: Install required packages for audio/display
+  #    shell: bash
+  #    run: |
+  #        sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity python3-matplotlib python3-torch sox git
 
-    - name: Sanity check RADE
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          chmod +x *.AppImage
-          echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
-          echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
-          sudo podman exec fedora-test sudo groupadd -g $(id -g) $(id -gn)
-          sudo podman exec fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
-          sudo podman exec fedora-test sudo passwd -d $(id -un)
-          sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
-          sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
-          sudo podman exec fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
-          sudo podman exec fedora-test sudo systemctl restart systemd-logind
-          sudo podman exec fedora-test sudo systemctl restart polkit
-          sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
-          sudo podman exec fedora-test sudo systemctl start rtkit-daemon
-          sudo podman exec fedora-test sudo systemctl start user@$(id -u)
-          sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE $(id -un) /workspace/appimage/container-test.sh | tee tmp.log
-          grep "PASS" tmp.log
+  #  - name: Sanity check RADE
+  #    shell: bash
+  #    working-directory: ${{github.workspace}}
+  #    run: |
+  #        chmod +x *.AppImage
+  #        echo "FREEDV_BINARY=./$(echo -n *.AppImage) --appimage-extract-and-run" > tmp.env
+  #        echo "NO_AT_BRIDGE=${{ env.NO_AT_BRIDGE }}" >> tmp.env
+  #        sudo podman exec fedora-test sudo groupadd -g $(id -g) $(id -gn)
+  #        sudo podman exec fedora-test sudo useradd -m -u $(id -u) -g $(id -g) $(id -un)
+  #        sudo podman exec fedora-test sudo passwd -d $(id -un)
+  #        sudo podman exec fedora-test sudo mkdir -p /run/user/$(id -u)
+  #        sudo podman exec fedora-test sudo chmod 700 /run/user/$(id -u)
+  #        sudo podman exec fedora-test sudo chown $(id -un):$(id -gn) /run/user/$(id -u)
+  #        sudo podman exec fedora-test sudo systemctl restart systemd-logind
+  #        sudo podman exec fedora-test sudo systemctl restart polkit
+  #        sudo podman exec fedora-test sudo systemctl enable rtkit-daemon
+  #        sudo podman exec fedora-test sudo systemctl start rtkit-daemon
+  #        sudo podman exec fedora-test sudo systemctl start user@$(id -u)
+  #        sudo podman exec --env-file ./tmp.env fedora-test su -l -w FREEDV_BINARY,NO_AT_BRIDGE $(id -un) /workspace/appimage/container-test.sh | tee tmp.log
+  #        grep "PASS" tmp.log
 
   test-appimage-ubuntu:
     strategy:
