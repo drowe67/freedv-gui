@@ -91,6 +91,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , destroying_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
+    , getFreqModeErrorCount_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -118,6 +119,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , destroying_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
+    , getFreqModeErrorCount_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -325,6 +327,7 @@ void HamlibRigController::connectImpl_()
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
     errorEncountered_ = false;
+    getFreqModeErrorCount_ = 0;
 
     auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
     if (!tmpRig) 
@@ -747,7 +750,8 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_get_mode: error = %s ", rigerror(result));
-        if (!errorEncountered_)
+        getFreqModeErrorCount_++;
+        if (!errorEncountered_ && getFreqModeErrorCount_ > MAX_GET_FREQUENCY_ERR_COUNT)
         {
             std::string errMsg = std::string("Could not retrieve current radio mode: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
             onRigError(this, errMsg);
@@ -771,7 +775,9 @@ freqAttempt:
         {
             log_debug("rig_get_freq: error = %s ", rigerror(result));
             
-            if (!errorEncountered_)
+            getFreqModeErrorCount_++;
+
+            if (!errorEncountered_ && getFreqModeErrorCount_ > MAX_GET_FREQUENCY_ERR_COUNT)
             {
                 std::string errMsg = std::string("Could not get current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
                 onRigError(this, errMsg);
@@ -826,6 +832,10 @@ freqAttempt:
                 origMode_ = mode;
             }
             
+            // Reset get freq/mode error count since we don't want intermittent errors
+            // to cause a popup.
+            getFreqModeErrorCount_ = 0;
+
             onFreqModeChange(this, freq, currMode);
         }
     }

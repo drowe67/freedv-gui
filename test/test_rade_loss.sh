@@ -104,24 +104,27 @@ FDV_PID=$!
 #wpctl status
 #pw-top -b -n 5
 wait $FDV_PID
+FREEDV_EXIT_CODE=$?
 cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
-FDV_PID=$!
+if [ $FREEDV_EXIT_CODE -eq 0 ]; then
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    FDV_PID=$!
 
-#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
-#fi
-wait $FDV_PID
-FREEDV_EXIT_CODE=$?
-cat tmp.log
+    #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
+    #fi
+    wait $FDV_PID
+    FREEDV_EXIT_CODE=$?
+    cat tmp.log
 
-# Run feature files through loss tool
-$PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
+    # Run feature files through loss tool
+    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
+fi
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then

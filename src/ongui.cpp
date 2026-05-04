@@ -1715,6 +1715,16 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
+    wxString oldFreqString;            
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        oldFreqString = wxNumberFormatter::ToString(oldFreq / 1000.0, 1);
+    }
+    else
+    {
+        oldFreqString = wxNumberFormatter::ToString(oldFreq / 1000.0 / 1000.0, 4);
+    }
+
     if (freqStr.Length() > 0)
     {
         double tmp = 0;
@@ -1755,7 +1765,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
 
-    if (oldFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)
+    if (freqStr != oldFreqString)
     {      
         // Report current frequency to reporters
         for (auto& ptr : wxGetApp().m_reporters)
