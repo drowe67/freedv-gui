@@ -25,13 +25,31 @@
 
 extern FreeDVInterface freedvInterface;
 
+// F13-F24 on Linux (and possibly other platforms) return values different
+// than how they're defined in wxWidgets. These constants are so we can
+// check for these as well and do the right thing for key->name mapping.
+constexpr int WXK_F13_LINUX = 436;
+constexpr int WXK_F24_LINUX = WXK_F13_LINUX + 11;
+
 // Returns a human-readable name for a PTT key code.
 static wxString getPTTKeyName(int keyCode)
 {
     if (keyCode >= 'A' && keyCode <= 'Z')
+    {
         return wxString((char)keyCode);
-    if (keyCode >= '0' && keyCode <= '9')
+    }
+    else if (keyCode >= '0' && keyCode <= '9')
+    {
         return wxString((char)keyCode);
+    }
+    else if (keyCode >= WXK_F1 && keyCode <= WXK_F24)
+    {
+        return wxString::Format(_("F%d"), (keyCode - WXK_F1) + 1);
+    }
+    else if (keyCode >= WXK_F13_LINUX && keyCode <= WXK_F24_LINUX)
+    {
+        return wxString::Format(_("F%d"), (keyCode - WXK_F13_LINUX) + 13);
+    }
 
     switch (keyCode)
     {
@@ -50,30 +68,6 @@ static wxString getPTTKeyName(int keyCode)
         case WXK_DOWN:     return _("Down");
         case WXK_LEFT:     return _("Left");
         case WXK_RIGHT:    return _("Right");
-        case WXK_F1:       return _("F1");
-        case WXK_F2:       return _("F2");
-        case WXK_F3:       return _("F3");
-        case WXK_F4:       return _("F4");
-        case WXK_F5:       return _("F5");
-        case WXK_F6:       return _("F6");
-        case WXK_F7:       return _("F7");
-        case WXK_F8:       return _("F8");
-        case WXK_F9:       return _("F9");
-        case WXK_F10:      return _("F10");
-        case WXK_F11:      return _("F11");
-        case WXK_F12:      return _("F12");
-        case WXK_F13:      return _("F13");
-        case WXK_F14:      return _("F14");
-        case WXK_F15:      return _("F15");
-        case WXK_F16:      return _("F16");
-        case WXK_F17:      return _("F17");
-        case WXK_F18:      return _("F18");
-        case WXK_F19:      return _("F19");
-        case WXK_F20:      return _("F20");
-        case WXK_F21:      return _("F21");
-        case WXK_F22:      return _("F22");
-        case WXK_F23:      return _("F23");
-        case WXK_F24:      return _("F24");
         default:
             if (keyCode > 32 && keyCode < 127)
                 return wxString((char)keyCode);
