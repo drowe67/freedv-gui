@@ -906,7 +906,7 @@ freqAttempt:
         currFreq_ = frequencyHz;
         if (!destroying_)
         {
-            requestCurrentFrequencyMode();
+            requestCurrentFrequencyModeImpl_();
         }
     }
 }
@@ -962,7 +962,7 @@ modeAttempt:
         currMode_ = mode;
         if (!destroying_)
         {
-            requestCurrentFrequencyMode();
+            requestCurrentFrequencyModeImpl_();
         }
     }
 }

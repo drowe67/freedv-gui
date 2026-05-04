@@ -246,7 +246,7 @@ jobs:
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
-        compression-level: 0
+        archive: false
 
     - name: Upload waveform file
       uses: actions/upload-artifact@v7
@@ -254,12 +254,13 @@ jobs:
       with:
         name: ${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
         path: ${{github.workspace}}/src/integrations/flex/${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
+        archive: false
 
   test-appimage-fedora:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04-arm, ubuntu-24.04]
+        os: [ubuntu-24.04-arm]
         fedora-version: [42, 43]
 
     runs-on: ${{ matrix.os }}

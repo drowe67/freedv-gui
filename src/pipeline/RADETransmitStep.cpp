@@ -142,8 +142,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
     auto maxSamples = getOutputSampleRate();
     FREEDV_BEGIN_VERIFIED_SAFE
     int numSamplesPerTx = rade_n_tx_out(dv_);
+    int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
     FREEDV_END_VERIFIED_SAFE
-    
+
     *numOutputSamples = 0;
 
     if (numInputSamples == 0)
@@ -157,14 +158,10 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
 
         return outputSamples_.get();
     }
-    
+
     inputSampleFifo_.write(inputSamples, numInputSamples);
     while ((*numOutputSamples + numSamplesPerTx) < maxSamples && inputSampleFifo_.numUsed() >= LPCNET_FRAME_SIZE)
     {
-        FREEDV_BEGIN_VERIFIED_SAFE
-        int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
-        FREEDV_END_VERIFIED_SAFE
-
         short pcm[LPCNET_FRAME_SIZE];
         float features[NB_TOTAL_FEATURES];
 
@@ -192,9 +189,9 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
 
                 // RADE TX handling
                 int numOut = 0;
-                FREEDV_BEGIN_REALTIME_UNSAFE
+                FREEDV_BEGIN_VERIFIED_SAFE
                     numOut = rade_tx(dv_, radeOut_, &featureList_[0]);
-                FREEDV_END_REALTIME_UNSAFE
+                FREEDV_END_VERIFIED_SAFE
 
                 for (int index = 0; index < numOut; index++)
                 {
@@ -224,9 +221,9 @@ void RADETransmitStep::restartVocoder() FREEDV_NONBLOCKING
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
     FREEDV_END_VERIFIED_SAFE
 
-    FREEDV_BEGIN_REALTIME_UNSAFE
+    FREEDV_BEGIN_VERIFIED_SAFE
         rade_tx_eoo(dv_, eooOut_);
-    FREEDV_END_REALTIME_UNSAFE
+    FREEDV_END_VERIFIED_SAFE
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)

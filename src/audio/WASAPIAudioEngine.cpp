@@ -151,7 +151,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             prom->set_value(cachedInputDeviceList_);
             return;
         }
-        else if (cachedOutputDeviceList_.size() > 0)
+        else if (direction == AudioDirection::AUDIO_ENGINE_OUT && cachedOutputDeviceList_.size() > 0)
         {
             prom->set_value(cachedOutputDeviceList_);
             return;

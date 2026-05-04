@@ -91,7 +91,7 @@ extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
-extern float g_TxFreqOffsetHz;
+extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
@@ -112,7 +112,7 @@ extern float g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<int> g_channel_noise;
-extern float g_RxFreqOffsetHz;
+extern std::atomic<float> g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
@@ -268,7 +268,7 @@ void TxRxThread::initializePipeline_()
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
             inputSampleRate_, 
             outputSampleRate_, 
-            +[]() FREEDV_NONBLOCKING { return g_TxFreqOffsetHz; },
+            +[]() FREEDV_NONBLOCKING { return g_TxFreqOffsetHz.load(std::memory_order_relaxed); },
             helper_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
@@ -414,7 +414,7 @@ void TxRxThread::initializePipeline_()
             +[]() FREEDV_NONBLOCKING { return &g_State; },
             +[]() FREEDV_NONBLOCKING { return g_channel_noise.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
-            +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz; },
+            +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
             helper_
         );
@@ -801,7 +801,12 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             
             if (outputSamples != nullptr)
             {
-                cbData->outfifo1->write(outputSamples, nout);
+                if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                {
+                    FREEDV_BEGIN_VERIFIED_SAFE
+                    log_warn("TX outfifo1 full, dropped %d samples (free=%d)", nout, cbData->outfifo1->numFree());
+                    FREEDV_END_VERIFIED_SAFE
+                }
             }
             
 #if defined(ENABLE_PROCESSING_STATS)
@@ -873,7 +878,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         
         if (nout > 0 && outputSamples != nullptr)
         {
-            outFifo->write(outputSamples, nout);
+            if (outFifo->write(outputSamples, nout) != 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("RX outFifo full, dropped %d samples (free=%d)", nout, outFifo->numFree());
+                FREEDV_END_VERIFIED_SAFE
+            }
         }
         
         tmpTx = g_tx.load(std::memory_order_acquire);
