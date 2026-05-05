@@ -1667,7 +1667,8 @@ void OptionsDlg::OnPTTKeyCapture(wxKeyEvent& event)
     // Ignore bare modifier keys.
     if (keyCode == WXK_SHIFT || keyCode == WXK_CONTROL || keyCode == WXK_ALT ||
         keyCode == WXK_CAPITAL || keyCode == WXK_NUMLOCK || keyCode == WXK_SCROLL ||
-        keyCode == WXK_NONE)
+        keyCode == WXK_NONE || keyCode == WXK_WINDOWS_LEFT || keyCode == WXK_WINDOWS_RIGHT ||
+        keyCode == WXK_WINDOWS_MENU || keyCode == WXK_COMMAND)
     {
         return;
     }
