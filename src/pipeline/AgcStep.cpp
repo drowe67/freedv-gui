@@ -86,7 +86,7 @@ AgcStep::AgcStep(int sampleRate)
         agcState_ = nullptr;
     }
 
-    ebur128State_ = ebur128_init(1, sampleRate_, EBUR128_MODE_S);
+    ebur128State_ = ebur128_init(1, sampleRate_, EBUR128_MODE_M);
     assert(ebur128State_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
