@@ -702,14 +702,6 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
             }
             else
             {
-                if (flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY)
-                {
-                    log_warn("Audio data discontinuity detected");
-                    if (onAudioOverflowFunction)
-                    {
-                        onAudioOverflowFunction(*this, onAudioOverflowState);
-                    }
-                }
                 copyFromWindowsBuffer_(data, numFramesAvailable);
             }
 
