@@ -523,8 +523,14 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             
             // Set internal reporting frequency to ensure we don't immediately request
             // a frequency change from the radio (i.e. if rapidly changing frequency
-            // on the radio side).
+            // on the radio side). Note that this also causes reporting to not fire 
+            // by m_cboReportFrequency's change handler, so we should fire off reporting
+            // here.
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
+            for (auto& ptr : wxGetApp().m_reporters)
+            {
+                ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            }
             
             m_cboReportFrequency->SetValue(freqString);
         }
@@ -1442,7 +1448,6 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     }
 
     // Disable actual TX controls if needed
-    m_togBtnOnOff->Enable(!newTx);
     m_togBtnVoiceKeyer->Enable(!newTx);
     m_btnTogPTT->Enable(!newTx);
     m_cboReportFrequency->Enable(!newTx);

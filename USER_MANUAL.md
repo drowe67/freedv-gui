@@ -933,14 +933,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix RADE related compiler errors. (PR #1299)
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
     * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
-    * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314, #1320, #1321)
+    * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314, #1320, #1321, #1322)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
     * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
-    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265, #1317)
+    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265, #1317, #1322)
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
