@@ -2312,6 +2312,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
+    isModemRunning.store(false, std::memory_order_release);
     g_queueResync.store(false, std::memory_order_release);
     endingTx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
