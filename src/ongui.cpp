@@ -1448,7 +1448,6 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     }
 
     // Disable actual TX controls if needed
-    m_togBtnOnOff->Enable(!newTx);
     m_togBtnVoiceKeyer->Enable(!newTx);
     m_btnTogPTT->Enable(!newTx);
     m_cboReportFrequency->Enable(!newTx);

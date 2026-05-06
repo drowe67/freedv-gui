@@ -2670,6 +2670,16 @@ void MainFrame::performFreeDVOff_()
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
     {
+        // Disable Tune mode if needed
+        if (m_btnTogTune->GetValue())
+        {
+            m_btnTogTune->SetValue(false);
+            
+            // Ensures that Tune button actions are actually run to stop transmitting the tone.
+            wxCommandEvent tmpEvent;
+            OnTogBtnTune(tmpEvent);
+        }
+        
         m_sliderMicSpkrLevel->Enable(false);
         m_btnTogTune->Enable(false);
 
