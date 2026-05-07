@@ -61,6 +61,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}
+        create-symlink: true
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -85,7 +86,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: CC="ccache cc" CXX="ccache c++" OBJCXX="ccache cc" BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       timeout-minutes: 1
