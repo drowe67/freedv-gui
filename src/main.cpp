@@ -2623,6 +2623,23 @@ void MainFrame::performFreeDVOn_()
                 {
                     OpenPTTInPort();
                 }
+                
+                // Logic to ensure that both TX/RX threads start work at the 
+                // same time. This makes sure there are no dropouts at the beginning
+                // of full duplex TX.
+                m_rxThread->waitForReady();
+                if (m_txThread != nullptr)
+                {
+                    m_txThread->waitForReady();
+                }
+        
+                isModemRunning.store(true, std::memory_order_release);
+        
+                m_rxThread->signalToStart();
+                if (m_txThread != nullptr)
+                {
+                    m_txThread->signalToStart();
+                }
 
                 executeOnUiThreadAndWait_([&]() 
                 {
@@ -3422,23 +3439,6 @@ void MainFrame::startRxStream()
         }
 
         m_rxThread->start();
-
-        // Logic to ensure that both TX/RX threads start work at the 
-        // same time. This makes sure there are no dropouts at the beginning
-        // of full duplex TX.
-        m_rxThread->waitForReady();
-        if (m_txThread != nullptr)
-        {
-            m_txThread->waitForReady();
-        }
-        
-        isModemRunning.store(true, std::memory_order_release);
-        
-        m_rxThread->signalToStart();
-        if (m_txThread != nullptr)
-        {
-            m_txThread->signalToStart();
-        }
     
         log_debug("starting tx/rx processing thread");
 
