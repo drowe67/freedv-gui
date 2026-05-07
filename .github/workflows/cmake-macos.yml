@@ -62,6 +62,7 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}
         create-symlink: true
+        max-size: "2G"
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -141,6 +142,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}
+        max-size: "2G"
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
