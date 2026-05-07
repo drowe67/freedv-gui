@@ -2640,8 +2640,6 @@ void MainFrame::performFreeDVOn_()
                     m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
-
-                isModemRunning.store(true, std::memory_order_release);
             }
         }
     }
@@ -3433,6 +3431,9 @@ void MainFrame::startRxStream()
         {
             m_txThread->waitForReady();
         }
+        
+        isModemRunning.store(true, std::memory_order_release);
+        
         m_rxThread->signalToStart();
         if (m_txThread != nullptr)
         {
