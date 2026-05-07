@@ -20,6 +20,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ github.job }}
+        max-size: "2G"
+
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
@@ -35,7 +41,7 @@ jobs:
       run: |
         mkdir build_osx
         cd build_osx
-        CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        CC=clang CXX=clang++ cmake -DCMAKE_OBJCXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Partially build so we have all required .h and .c/.cpp files
         make -j$(sysctl -n hw.logicalcpu) build_rade build_codec2 build_rnnoise
     
