@@ -526,10 +526,14 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // on the radio side). Note that this also causes reporting to not fire 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
+            auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
-            for (auto& ptr : wxGetApp().m_reporters)
+            if (oldFreq != freq)
             {
-                ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                for (auto& ptr : wxGetApp().m_reporters)
+                {
+                    ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                }
             }
             
             m_cboReportFrequency->SetValue(freqString);
@@ -860,24 +864,18 @@ void MainFrame::applyTxLevel()
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
+    if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
+    if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
+    g_txLevelScale.store(exp(g_txLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
+    if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
+    if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
+    g_tuneLevelScale.store(exp(g_tuneLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
     if (isTuning)
-    {
-        if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
-        if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_tuneLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-    }
     else
-    {
-        if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
-        if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_txLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_txLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-    }
 
     m_txtTxLevelNum->SetLabel(fmtString);
 

@@ -941,6 +941,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
     * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
     * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314, #1320, #1321, #1322)
+    * Fix inability to open web browser in AppImages (e.g. when viewing callsign info). (PR #1326)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
@@ -954,7 +955,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use RNNoise for improved noise canceling during TX. (PR #1276, #1307)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
-    * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
+    * Add optional per-band TX attenuation saving. (PR #1284, #1323) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
     * Hamlib: Add options to force RTS and DTR on. (PR #1292)
