@@ -911,6 +911,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.3.1 TBD 2026
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Allow use of a custom key for PTT. (PR #1309)
+
 ## V2.3.0 May 2026
 
 1. Bugfixes:
@@ -954,7 +961,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
     * Easy Setup: Also emit audio tone through speakers. (PR #1033)
     * Switch to r8brain for audio resampling. (PR #1307)
-    * Allow use of a custom key for PTT. (PR #1309)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
     * Update Hamlib to 4.7.1. (PR #1226, #1314)
