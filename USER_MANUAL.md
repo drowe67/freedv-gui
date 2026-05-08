@@ -911,6 +911,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.3.1 TBD 2026
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Allow use of a custom key for PTT. (PR #1309)
+
 ## V2.3.0 May 2026
 
 1. Bugfixes:
