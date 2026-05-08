@@ -526,10 +526,14 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // on the radio side). Note that this also causes reporting to not fire 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
+            auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
-            for (auto& ptr : wxGetApp().m_reporters)
+            if (oldFreq != freq)
             {
-                ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                for (auto& ptr : wxGetApp().m_reporters)
+                {
+                    ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                }
             }
             
             m_cboReportFrequency->SetValue(freqString);
