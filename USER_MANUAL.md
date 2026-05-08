@@ -947,7 +947,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use RNNoise for improved noise canceling during TX. (PR #1276, #1307)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
-    * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
+    * Add optional per-band TX attenuation saving. (PR #1284, #1323) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
     * Hamlib: Add options to force RTS and DTR on. (PR #1292)
