@@ -914,7 +914,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.3.1 TBD 2026
 
 1. Bugfixes:
-    * TBD
+    * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333)
 2. Enhancements:
     * Allow use of a custom key for PTT. (PR #1309)
 
