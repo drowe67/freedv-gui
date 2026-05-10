@@ -124,7 +124,7 @@ void WASAPIAudioDevice::start()
         // rate/number of channels.
         // NOTE: this should already have been determined valid
         // by the audio engine!
-        hr = client_->GetMixFormat(&streamFormatPtr);
+        HRESULT hr = client_->GetMixFormat(&streamFormatPtr);
         if (SUCCEEDED(hr))
         {
             freeStreamFormat = true;
