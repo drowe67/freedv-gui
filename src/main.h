@@ -92,6 +92,7 @@
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
 #include "util/sanitizers.h"
+#include "gui/util/wxMessageBoxWrapper.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1

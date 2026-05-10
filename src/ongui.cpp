@@ -521,6 +521,21 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 freqString = wxNumberFormatter::ToString(freq / 1000.0 / 1000.0, 4);
             }
             
+            // Set internal reporting frequency to ensure we don't immediately request
+            // a frequency change from the radio (i.e. if rapidly changing frequency
+            // on the radio side). Note that this also causes reporting to not fire 
+            // by m_cboReportFrequency's change handler, so we should fire off reporting
+            // here.
+            auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
+            if (oldFreq != freq)
+            {
+                for (auto& ptr : wxGetApp().m_reporters)
+                {
+                    ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                }
+            }
+            
             m_cboReportFrequency->SetValue(freqString);
         }
         m_txtModeStatus->Refresh();
@@ -849,24 +864,18 @@ void MainFrame::applyTxLevel()
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
+    if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
+    if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
+    g_txLevelScale.store(exp(g_txLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
+    if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
+    if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
+    g_tuneLevelScale.store(exp(g_tuneLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
     if (isTuning)
-    {
-        if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
-        if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_tuneLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-    }
     else
-    {
-        if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
-        if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_txLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_txLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-    }
 
     m_txtTxLevelNum->SetLabel(fmtString);
 
@@ -1045,7 +1054,7 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
-        (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
@@ -1072,12 +1081,12 @@ int MainApp::FilterEvent(wxEvent& event)
                 else // space bar stops keyer
                     frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
-                return true; // absorb space so we don't toggle control with focus (e.g. Start)
+                return Event_Processed; // absorb space so we don't toggle control with focus (e.g. Start)
 
             }
         }
 
-    return -1;
+    return Event_Skip;
 }
 
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
@@ -1437,7 +1446,6 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     }
 
     // Disable actual TX controls if needed
-    m_togBtnOnOff->Enable(!newTx);
     m_togBtnVoiceKeyer->Enable(!newTx);
     m_btnTogPTT->Enable(!newTx);
     m_cboReportFrequency->Enable(!newTx);
@@ -1710,6 +1718,16 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
+    wxString oldFreqString;            
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        oldFreqString = wxNumberFormatter::ToString(oldFreq / 1000.0, 1);
+    }
+    else
+    {
+        oldFreqString = wxNumberFormatter::ToString(oldFreq / 1000.0 / 1000.0, 4);
+    }
+
     if (freqStr.Length() > 0)
     {
         double tmp = 0;
@@ -1750,7 +1768,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
 
-    if (oldFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)
+    if (freqStr != oldFreqString)
     {      
         // Report current frequency to reporters
         for (auto& ptr : wxGetApp().m_reporters)

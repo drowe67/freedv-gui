@@ -83,6 +83,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , pttSet_(false)
     , currFreq_(0)
     , currMode_(RIG_MODE_NONE)
+    , pendingMode_(UNKNOWN)
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
@@ -90,6 +91,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , destroying_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
+    , getFreqModeErrorCount_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -117,6 +119,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , destroying_(false)
     , rigResponseTime_(0)
     , errorEncountered_(false)
+    , getFreqModeErrorCount_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -324,6 +327,7 @@ void HamlibRigController::connectImpl_()
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
     errorEncountered_ = false;
+    getFreqModeErrorCount_ = 0;
 
     auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
     if (!tmpRig) 
@@ -461,10 +465,25 @@ void HamlibRigController::connectImpl_()
         {
             log_warn("Could not ensure that radio starts with PTT off: %s", rigerror(result));
         }
-
+        
         // Get current frequency and mode when we first connect so we can 
         // revert on close.
         requestCurrentFrequencyModeImpl_();
+        
+        // If a freq/mode was set prior to connect, push those changes now.
+        if (currFreq_ > 0)
+        {
+            auto tmpFreq = currFreq_;
+            currFreq_ = 0; // to make setFrequencyImpl_ actually run
+            setFrequencyImpl_(tmpFreq);
+        }
+        
+        if (currMode_ != RIG_MODE_NONE)
+        {
+            currMode_ = RIG_MODE_NONE; // to make setModeImpl_ actually run
+            setModeImpl_(pendingMode_);
+        }
+    
         return;
     }
     else
@@ -660,6 +679,8 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr || currMode_ == hamlibMode)
     {
+        currMode_ = hamlibMode;
+        pendingMode_ = mode;
         return;
     }
 
@@ -729,7 +750,8 @@ modeAttempt:
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         log_debug("rig_get_mode: error = %s ", rigerror(result));
-        if (!errorEncountered_)
+        getFreqModeErrorCount_++;
+        if (!errorEncountered_ && getFreqModeErrorCount_ > MAX_GET_FREQUENCY_ERR_COUNT)
         {
             std::string errMsg = std::string("Could not retrieve current radio mode: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
             onRigError(this, errMsg);
@@ -753,7 +775,9 @@ freqAttempt:
         {
             log_debug("rig_get_freq: error = %s ", rigerror(result));
             
-            if (!errorEncountered_)
+            getFreqModeErrorCount_++;
+
+            if (!errorEncountered_ && getFreqModeErrorCount_ > MAX_GET_FREQUENCY_ERR_COUNT)
             {
                 std::string errMsg = std::string("Could not get current frequency: ") + HAMLIB_FRIENDLY_ERROR_FN(result);
                 onRigError(this, errMsg);
@@ -808,6 +832,10 @@ freqAttempt:
                 origMode_ = mode;
             }
             
+            // Reset get freq/mode error count since we don't want intermittent errors
+            // to cause a popup.
+            getFreqModeErrorCount_ = 0;
+
             onFreqModeChange(this, freq, currMode);
         }
     }
@@ -844,6 +872,7 @@ void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyH
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr)
     {
+        currFreq_ = frequencyHz;
         return;
     }
 
@@ -887,7 +916,7 @@ freqAttempt:
         currFreq_ = frequencyHz;
         if (!destroying_)
         {
-            requestCurrentFrequencyMode();
+            requestCurrentFrequencyModeImpl_();
         }
     }
 }
@@ -899,6 +928,7 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr)
     {
+        currMode_ = mode;
         return;
     }
     
@@ -942,7 +972,7 @@ modeAttempt:
         currMode_ = mode;
         if (!destroying_)
         {
-            requestCurrentFrequencyMode();
+            requestCurrentFrequencyModeImpl_();
         }
     }
 }

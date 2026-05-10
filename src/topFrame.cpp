@@ -941,13 +941,19 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTxLevelPP->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
     m_btnTogTune->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
 
+#if wxCHECK_VERSION(3, 3, 0)
+    // wxGTK 3.3+ fires wxEVT_CONTEXT_MENU on button-press for these widget types,
+    // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP instead.
+    m_txLevelBox->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTxLevelContextMenu(ctx); });
+    m_txtTxLevelNum->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTxLevelContextMenu(ctx); });
+    m_btnTogTune->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTuneAttenContextMenu(ctx); });
+#else
+    // wxGTK < 3.3 does not generate RIGHT_UP for windowless widget types
+    // (wxStaticBox, wxStaticText); CONTEXT_MENU works without the dismiss issue.
     m_txLevelBox->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_txtTxLevelNum->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
-    m_btnTxLevelMM->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
-    m_btnTxLevelM->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
-    m_btnTxLevelP->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
-    m_btnTxLevelPP->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_btnTogTune->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTuneAttenContextMenu), NULL, this);
+#endif
 
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
@@ -1049,7 +1055,11 @@ TopFrame::~TopFrame()
     m_btnTxLevelM->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecr), NULL, this);
     m_btnTxLevelP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncr), NULL, this);
     m_btnTxLevelPP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncrBig), NULL, this);
+#if !wxCHECK_VERSION(3, 3, 0)
+    m_txLevelBox->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
+    m_txtTxLevelNum->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_btnTogTune->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTuneAttenContextMenu), NULL, this);
+#endif
 
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);
     m_sliderMicSpkrLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeMicSpkrLevel), NULL, this);

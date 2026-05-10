@@ -32,7 +32,7 @@
 
 constexpr int STR_LENGTH = 15;
 
-extern float           g_RxFreqOffsetHz;
+extern std::atomic<float> g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
@@ -574,7 +574,7 @@ void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
 {
-    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed);
     float direction = 1.0;
     if (event.GetWheelRotation() < 0)
     {
@@ -598,7 +598,7 @@ void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotWaterfall::OnKeyDown(wxKeyEvent& event)
 {
-    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz.load(std::memory_order_relaxed);
     float direction = 0;
     
     switch (event.GetKeyCode())

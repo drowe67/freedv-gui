@@ -71,7 +71,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
         
     , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
-        
+    , pttKeyCode("/Rig/PttKeyCode", WXK_SPACE)
+
     , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", _(""))
     , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
     , voiceKeyerRxPause("/VoiceKeyer/RxPause", 10)
@@ -162,7 +163,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, playFileFromRadioPath);
     
     load_(config, enableSpaceBarForPTT);
-    
+    load_(config, pttKeyCode);
+
     load_(config, voiceKeyerWaveFilePath);
     load_(config, voiceKeyerWaveFile);
     
@@ -292,7 +294,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, playFileFromRadioPath);
     
     save_(config, enableSpaceBarForPTT);
-    
+    save_(config, pttKeyCode);
+
     save_(config, voiceKeyerWaveFilePath);
     save_(config, voiceKeyerWaveFile);
     save_(config, voiceKeyerRxPause);

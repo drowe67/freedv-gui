@@ -933,7 +933,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.3.0 TBD 2026
+## V2.3.1 TBD 2026
+
+1. Bugfixes:
+    * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333) - thanks @barjac!
+2. Enhancements:
+    * Allow use of a custom key for PTT. (PR #1309)
+
+## V2.3.0 May 2026
 
 1. Bugfixes:
     * Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR #1220)
@@ -955,20 +962,22 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix RADE related compiler errors. (PR #1299)
     * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
     * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
+    * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314, #1320, #1321, #1322)
+    * Fix inability to open web browser in AppImages (e.g. when viewing callsign info). (PR #1326)
 2. Enhancements:
     * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
     * Optimize "From XXX" plot performance. (PR #1238, #1239)
     * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
     * Remove Python from RADE implementation to improve performance. (PR #1251)
     * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
-    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265)
+    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265, #1317, #1322)
     * Add SNR plot to main window. (PR #1250, #1261)
     * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
     * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
     * Use RNNoise for improved noise canceling during TX. (PR #1276, #1307)
     * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
     * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
-    * Add optional per-band TX attenuation saving. (PR #1284) - thanks @barjac!
+    * Add optional per-band TX attenuation saving. (PR #1284, #1323) - thanks @barjac!
     * Log heard callsigns to a CSV file. (PR #1290, #1293)
     * Add ability to load and save different FreeDV configurations. (PR #1296)
     * Hamlib: Add options to force RTS and DTR on. (PR #1292)
@@ -977,105 +986,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Switch to r8brain for audio resampling. (PR #1307)
 3. Build system:
     * Update Python to 3.14.3. (PR #1221)
-    * Update Hamlib to 4.7.0. (PR #1226)
+    * Update Hamlib to 4.7.1. (PR #1226, #1314)
     * Update wxWidgets to 3.3.2. (PR #1244)
     * Flex: Update Docker container version to match AppImage version. (PR #1256)
     * Reenable Windows on ARM builds previously disabled in 2.0.0. (PR #1297, #1300)
+    * Add automated code signing support for Windows builds. (PR #1312)
 4. Documentation:
     * Update README instructions to reflect current Windows build steps. (PR #1232)
     * Add OmniRig troubleshooting to the user manual. (PR #1264)
     * Update FlexRadio waveform README to reflect SmartSDR 4.2 release. (PR #1311)
 5. Other:
     * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286, #1307)
-
-## V2.2.1 February 2026
-
-1. Bugfixes:
-    * Fix UBSan/TSan errors from 2.2.0 build. (PR #1200, #1208)
-    * Fix compile error when trying to use Hamlib 5.0-git. (PR #1202)
-    * Fix bug causing PTT input to be initially ignored until pushing the PTT button. (PR #1203)
-    * FlexRadio: Fix command format for UDP port. (PR #1205; thanks @amcdermond!)
-    * Cache PTT response time to minimize first TX reporting issues. (PR #1207)
-    * Hamlib: Add checking prior to retrieving minimum/maximum baud rates. (PR #1209)
-    * Autosize columns in main window drop-down list. (PR #1213)
-    * PulseAudio/pipewire: Use fixed wait time between processing cycles. (PR #1216)
-    * Slow down waterfall display when waterfall is small (i.e. displayed with other plots). (PR #1216)
-    * FlexRadio: Terminate on SIGHUP to avoid hangs on exit. (PR #1214)
-2. Build system:
-    * macOS: Fix dylibbundler call for compilation. (PR #1204)
-    * macOS: Add /Applications shortcut to generated DMG. (PR #1206)
-
-## V2.2.0 January 2026
-
-1. Bugfixes:
-    * Radio integrations:
-        * KA9Q: Need to divide read() rval with sizeof(short). (PR #1120)
-        * Flex/KA9Q: Only report to FreeDV Reporter if user is not hidden from former. (PR #1140)
-        * Flex: use poll() instead of select(). (PR #1143)
-        * Flex: use tanh() for audio limiting. (PR #1156)
-        * Flex/KA9Q: Fix problem preventing running of AppImages on Raspberry Pi OS/Debian bookworm. (PR #1158)
-        * Flex: set SO_REUSEADDR to allow NodeRed, etc. to work with the waveform. (PR #1161)
-        * Flex/KA9Q: Make sure each argument to AppImage is quote-escaped. (PR #1168)
-    * FreeDV Reporter:
-        * Left-align cardinal directions. (PR #1139)
-        * Defer row adds and removes until timer fires to reduce flicker. (PR #1162)
-    * Update VC Redistributable and suppress reboots during its installation. (PR #1102)
-    * Reduce RADE RX losses due to resampling. (PR #1094)
-    * Use same sample rate for both recording RX and TX. (PR #1107)
-    * Fix intermittent crash on FreeDV Reporter connection loss. (PR #1112, #1115, #1178)
-    * Suppress background for fake rightmost column. (PR #1116)
-    * Emit VOX tone only when PTT is enabled. (PR #1122)
-    * OmniRig: Fix crash when using Test button in CAT config dialog. (PR #1126)
-    * Fix hidden/clipped axis labels on plots. (PR #1110)
-    * Work around deadlock bug in tty0tty. (PR #1134) - thanks @barjac!
-    * Zero out waterfall when transmitting and not in full duplex. (PR #1136)
-    * Avoid data race when terminating application. (PR #1140)
-    * Fix issue saving frequency list on non-English systems. (PR #1152)
-    * Suspend PTT input changes while transitioning TX<->RX. (PR #1151)
-    * Fix memory corruption when stopping and starting different playback files. (PR #1157)
-    * Update unit test infrastructure to fix initial (within ~2-3s) RADE desyncs. (PR #1167)
-    * Windows: disable microphone check on start. (PR #1191)
-    * UdpHandler: fix crash when unable to resolve DNS. (PR #1193)
-    * Prevent reset of FreeDV Reporter connection while running. (PR #1193)
-    * Disable UDP Reporting checkbox when running. (PR #1193)
-    * Fix waterfall rendering issue with multiple plots displayed at once. (PR #1193)
-    * Fix inconsistent behavior when selecting/deselecting rows from the main window drop-down list. (PR #1184)
-    * OmniRig: Don't suppresss frequency updates on initial connect. (PR #1184)
-    * Hamlib: increase timeout to 625ms. (PR #1195)
-2. Enhancements:
-    * FlexRadio support:
-        * Report FreeDV SNR using SmartSDR Meter API. (PR #1119)
-        * Use random port for VITA socket after connect. (PR #1141)
-        * Allow Ctrl-C to clean up the waveform. (PR #1144, #1146, #1160) - thanks @arodland!
-        * Allow FreeDV Reporter parameters to be overridden via command line. (PR #1154)
-        * Add command line option to adjust RX volume. (PR #1159)
-        * Allow user-configurable spot timeout (default 10 minutes). (PR #1169)
-        * Report SNR in spots added to SmartSDR. (PR #1179)
-    * KA9Q/SDR support:
-        * Allow user message to be reported to FreeDV Reporter. (PR #1179)
-    * FreeDV Reporter:
-        * Allow columns to be rearranged and/or made invisible. (PR #1132)
-        * Sort empty user messages below non-empty ones. (PR #1105)
-        * Add idle filter. (PR #1142, #1180, #1183, #1189)
-        * Add right-click menu for callsign lookups. (PR #1171, #1185)
-        * Add filtered indicator to bottom of window. (PR #1166)
-    * Upgrade Python to 3.14.2. (PR #1109, #1118, #1124, #1174)
-    * Add support for BBWENet bandwidth expander for received RADE audio. (PR #1113)
-    * Reduce CPU usage rendering "scalar" plots (i.e. From Mic). (PR #1133)
-    * Linux: List /dev/rfcomm* serial devices when configuring. (PR #1106) - thanks @NespaLa!
-    * Hamlib: Allow selection of baud rates greater than 115200. (PR #1125)
-    * Add support for loggers that support the WSJT-X networking protocol. (PR #1129, #1153, #1184, #1196)
-    * Add support for recording decoded audio. (PR #1145, #1184)
-    * Display Hamlib version in Help->About. (PR #1169)
-3. Build system:
-    * Use Clang to build AppImages for better performance. (PR #1149)
-    * Enable link-time optimization for AppImages, DMGs and Windows builds. (PR #1163)
-    * Enable profile-guided optimation for AppImages. (PR #1173)
-4. Other:
-    * Remove 5.3665 MHz as a default frequency. (PR #1187)
-
-*Note: Legacy modes (700D, 700E, 1600) are now hidden by default. (PR #1108) You can show them
-again by going to Tools->Options->Modem and selecting "Enable Legacy Modes".*
 
 ## Earlier than V2.2.0
 

@@ -210,64 +210,16 @@ void WASAPIAudioDevice::start()
 
         if (!initialized_)
         {
-            //REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
-            UINT32 defaultPeriodInFrames = 0;
-            UINT32 fundamentalPeriodInFrames = 0;
-            UINT32 minPeriodInFrames = 0;
-            UINT32 maxPeriodInFrames = 0;
-            hr = client_->GetSharedModeEnginePeriod(
-                streamFormatPtr,
-                &defaultPeriodInFrames,
-                &fundamentalPeriodInFrames,
-                &minPeriodInFrames,
-                &maxPeriodInFrames);
-            if (FAILED(hr))
-            {
-                std::stringstream ss;
-                ss << "Could not get audio engine period (hr = " << hr << ")";
-                log_error(ss.str().c_str());
-                if (onAudioErrorFunction)
-                {
-                    onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
-                }
-                prom->set_value();
-                return;
-            }
-
-            log_info(
-                "Default period: %d, fundamental period: %d, minPeriod: %d, maxPeriod: %d",
-                defaultPeriodInFrames,
-                fundamentalPeriodInFrames,
-                minPeriodInFrames,
-                maxPeriodInFrames);
-              
-            // Initialize the audio client with the above format
-            hr = client_->InitializeSharedAudioStream(
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                defaultPeriodInFrames,
+            REFERENCE_TIME desiredRefTime = BLOCK_TIME_NS / NS_PER_REFTIME; // REFERENCE_TIME is in 100ns units
+            hr = client_->Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK | 
+                    AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
+                    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
+                desiredRefTime,
+                0,
                 streamFormatPtr,
                 nullptr);
-            if (AUDCLNT_E_ENGINE_PERIODICITY_LOCKED == hr)
-            {
-                // Try again with actual period
-                WAVEFORMATEX* tempFormat = nullptr;
-                hr = client_->GetCurrentSharedModeEnginePeriod(
-                    &tempFormat,
-                    &defaultPeriodInFrames);
-                (void)tempFormat; // ignore warnings
-                if (FAILED(hr))
-                {
-                    std::stringstream ss;
-                    ss << "Could not get current engine period (hr = " << hr << ")";
-                    log_warn(ss.str().c_str());
-                }
-
-                hr = client_->InitializeSharedAudioStream(
-                    AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                    defaultPeriodInFrames,
-                    streamFormatPtr,
-                    nullptr);
-            }
 
             if (freeStreamFormat)
             {
@@ -744,7 +696,6 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
 
         if (numFramesAvailable > 0 && data != nullptr)
         {
-            // Fill buffer with silence if told to do so.
             if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
             {
                 memset(tmpBuf_, 0, numFramesAvailable * numChannels_ * sizeof(short));
@@ -754,7 +705,6 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
                 copyFromWindowsBuffer_(data, numFramesAvailable);
             }
 
-            // Pass data to higher level code
             if (onAudioDataFunction)
             {
                 onAudioDataFunction(*this, tmpBuf_, numFramesAvailable, onAudioDataState);

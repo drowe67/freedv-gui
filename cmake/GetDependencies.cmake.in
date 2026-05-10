@@ -10,12 +10,6 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES @CMAKE_FIND_LIBRARY_SUFFIXES@)
 set(CMAKE_FIND_LIBRARY_PREFIXES @CMAKE_FIND_LIBRARY_PREFIXES@)
 set(CMAKE_SYSTEM_LIBRARY_PATH @CMAKE_SYSTEM_LIBRARY_PATH@)
 set(CMAKE_FIND_ROOT_PATH @CMAKE_FIND_ROOT_PATH@)
-if(USE_INTERNAL_CODEC2)
-    set(CODEC2_BUILD_DIR ${CMAKE_BINARY_DIR}/codec2_build)
-else()
-    set(CODEC2_BUILD_DIR @CODEC2_BUILD_DIR@)
-endif()
-
 
 set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
 set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@)
@@ -44,11 +38,20 @@ endmacro()
 
 # Code signing function
 set(SIGN_WINDOWS_BINARIES @SIGN_WINDOWS_BINARIES@)
+set(PKCS11_SECONDARY_CERTIFICATE @PKCS11_SECONDARY_CERTIFICATE@)
 function(freedv_sign_dependency FILENAME OUT)
     if(SIGN_WINDOWS_BINARIES)
         execute_process(
             COMMAND @OSSLSIGNCODE_BIN@ sign -pkcs11engine @PKCS11_ENGINE@ -pkcs11module @PKCS11_MODULE@ -pkcs11cert "@PKCS11_CERTIFICATE@" -key "@PKCS11_KEY@" -h @SIGN_HASH@ -comm -ts @TIMESTAMP_SERVER@ -ac @INTERMEDIATE_CERT_FILE@ -n "FreeDV - @PROJECT_DESCRIPTION@" -i "https://freedv.org/" -in "${FILENAME}" -out "${OUT}"
         )
+        if(PKCS11_SECONDARY_CERTIFICATE)
+            execute_process(
+                COMMAND mv "${OUT}" "${FILENAME}"
+            )
+            execute_process(
+                COMMAND @OSSLSIGNCODE_BIN@ sign -nest -pkcs11engine @PKCS11_ENGINE@ -pkcs11module @PKCS11_MODULE@ -pkcs11cert "@PKCS11_SECONDARY_CERTIFICATE@" -key "@PKCS11_SECONDARY_KEY@" -h @SIGN_HASH@ -comm -ts @TIMESTAMP_SERVER@ -ac @INTERMEDIATE_CERT_FILE@ -n "FreeDV - @PROJECT_DESCRIPTION@" -i "https://freedv.org/" -in "${FILENAME}" -out "${OUT}"
+            )
+        endif(PKCS11_SECONDARY_CERTIFICATE)
     else(SIGN_WINDOWS_BINARIES)
         execute_process(
             COMMAND cp "${FILENAME}" "${OUT}"
@@ -122,18 +125,6 @@ execute_process(
 )
 
 # Handle internal libraries separately.
-if(CODEC2_BUILD_DIR)
-    list(REMOVE_ITEM _deps libcodec2.dll)
-    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src REQUIRED)
-    string(REPLACE ".a" "" CODEC2_FINAL ${CODEC2})
-
-    message("Found: libcodec2.dll")
-    #file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-    #    TYPE EXECUTABLE FILES ${CODEC2_FINAL})
-
-    freedv_sign_dependency(${CODEC2_FINAL} ${CMAKE_INSTALL_PREFIX}/bin/libcodec2.dll)
-endif()
-
 if(FREEDV_USING_LLVM_MINGW)
     # Use the bin/ folder for the platform as an additional
     # search path for find_library.

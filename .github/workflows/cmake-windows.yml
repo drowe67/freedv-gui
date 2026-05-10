@@ -27,7 +27,11 @@ jobs:
       matrix:
         arch: [x86_64, aarch64]
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
+
+    env:
+      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
+      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
 
     steps:
     - uses: actions/checkout@v6
@@ -35,7 +39,9 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis autoconf automake libtool libltdl-dev
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
     - name: Download MinGW LLVM
       shell: bash
@@ -44,22 +50,89 @@ jobs:
         wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
         tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
 
-    - name: Configure freedv-gui
-      shell: bash
+    - name: Configure code signing tunnel
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+          FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      run: |
+          cat <<EOF >code-sign.sshkey
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+          EOF
+          chmod 600 code-sign.sshkey
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
+
+    - name: Configure code signing keys
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+        FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+      run: |
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_CERT}}" >freedv.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_KEY}}" >freedv.key
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_CERT}}" >freedv-secondary.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_KEY}}" >freedv-secondary.key
+          cat <<EOF >freedv.intermediatecerts
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+          EOF
+          
+    - name: Configure code signing packages
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       run: |
-        export WINEPREFIX=`pwd`/wine-env
+          sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin 
+          git clone https://github.com/mtrojnar/osslsigncode.git
+          cd osslsigncode
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+          cd ${{github.workspace}}
+          git clone https://github.com/iksaif/pkcs11-proxy.git
+          cd pkcs11-proxy
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+    - name: Configure freedv-gui (unsigned)
+      shell: bash
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
+      working-directory: ${{github.workspace}}
+      run: |
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
         cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
-    - name: Build freedv-gui
+    - name: Configure freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build freedv-gui (unsigned)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
         make -j$(nproc) package
+
+    - name: Build freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        ssh -fN -o "ServerAliveInterval 60" -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L localhost:2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }}
+        make -j$(nproc) package
+        killall ssh
 
     - name: Calculate installer filename
       shell: bash
@@ -74,6 +147,7 @@ jobs:
       with:
         name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
 
   test:
     strategy:
@@ -107,19 +181,6 @@ jobs:
       with:
         arch: x64
 
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
     - name: Install VAC ("analog" sound device)
       run: |
           Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
@@ -133,19 +194,18 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
-    - name: Screenshot if failed
-      if: failure()
-      shell: pwsh
+    - name: Install VB-Cable ("Radio" sound device)
       run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot.png
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
 
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: failure()
-      with:
-        name: screenshot.png
-        path: ${{github.workspace}}/screenshot.png
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+          
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install FreeDV on hard drive
       shell: pwsh
@@ -181,12 +241,29 @@ jobs:
     - name: Start Windows Audio Service
       run: |
           Restart-Service -Name audiosrv -Force
+          $deadline = (Get-Date).AddSeconds(60)
+          do {
+              Start-Sleep -Seconds 2
+              $deviceNames = (Get-CimInstance win32_sounddevice).Name
+          } until (
+              ($deviceNames -match "VB-Audio Virtual Cable") -and
+              ($deviceNames -match "Virtual Audio Cable") -or
+              ((Get-Date) -gt $deadline)
+          )
 
     - name: List audio devices
       shell: pwsh
       run: |
           Get-CimInstance win32_sounddevice
 
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
+          Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
+          
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
@@ -227,3 +304,18 @@ jobs:
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 1600 -NumberOfRuns 1
       timeout-minutes: 10
  
+    - name: Screenshot if failed
+      if: failure()
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
+          & .\screenCapture.bat screenshot-${{ matrix.arch }}.png
+
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v7
+      if: failure()
+      with:
+        name: screenshot-${{ matrix.arch }}.png
+        path: ${{github.workspace}}/screenshot-${{ matrix.arch }}.png
+        archive: false
+

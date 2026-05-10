@@ -63,6 +63,12 @@ void WASAPIAudioEngine::start()
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
+        // Prevent sleep while audio is in use
+        SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+
+        // Request highest resolution timers
+        timeBeginPeriod(1);
+
         // Get device enumerator
         HRESULT hr = CoCreateInstance(
            CLSID_MMDeviceEnumerator, NULL,
@@ -125,6 +131,12 @@ void WASAPIAudioEngine::stop()
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
+        // Regular sleep behavior can resume
+        SetThreadExecutionState(ES_CONTINUOUS);
+
+        // No longer need high resolution timing
+        timeEndPeriod(1);
+
         devEnumerator_ = nullptr;
         inputDeviceList_ = nullptr;
         outputDeviceList_ = nullptr;
@@ -151,7 +163,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             prom->set_value(cachedInputDeviceList_);
             return;
         }
-        else if (cachedOutputDeviceList_.size() > 0)
+        else if (direction == AudioDirection::AUDIO_ENGINE_OUT && cachedOutputDeviceList_.size() > 0)
         {
             prom->set_value(cachedOutputDeviceList_);
             return;

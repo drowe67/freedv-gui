@@ -13,8 +13,8 @@
 
 // Callback from plot_spectrum & plot_waterfall.  would be nice to
 // work out a way to do this without globals.
-extern float           g_RxFreqOffsetHz;
-extern float           g_TxFreqOffsetHz;
+extern std::atomic<float> g_RxFreqOffsetHz;
+extern std::atomic<float> g_TxFreqOffsetHz;
 extern FreeDVInterface freedvInterface;
 extern std::atomic<bool>             g_tx;
 
@@ -35,9 +35,9 @@ void clickTune(float freq) {
         freq = FDMDV_FCENTRE;
     }
 
-    g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
-    g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
+    g_TxFreqOffsetHz.store(freq - FDMDV_FCENTRE, std::memory_order_relaxed);
+    g_RxFreqOffsetHz.store(FDMDV_FCENTRE - freq, std::memory_order_relaxed);
+    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz.load(std::memory_order_relaxed), g_RxFreqOffsetHz.load(std::memory_order_relaxed));
 }
 
 bool MainApp::CanAccessSerialPort(std::string const& portName)
