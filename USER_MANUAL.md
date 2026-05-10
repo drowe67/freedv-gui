@@ -939,6 +939,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333) - thanks @barjac!
 2. Enhancements:
     * Allow use of a custom key for PTT. (PR #1309)
+    * Improve Reporter message list usability. (PR #1310)
 
 ## V2.3.0 May 2026
 
