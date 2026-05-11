@@ -603,7 +603,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
         if (m_ckUseHamlibPTT->GetValue())
         {
             wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = (wxGetApp().m_intHamlibRig >= 0) ? HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig) : "";
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbSerialPort->GetValue();
             

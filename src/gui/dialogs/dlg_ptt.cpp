@@ -649,7 +649,7 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
         
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = (wxGetApp().m_intHamlibRig >= 0) ? HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig) : "";
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbPttSerialPort->GetValue();
@@ -983,7 +983,8 @@ void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent&)
 
 void ComPortsDlg::resetIcomCIVStatus()
 {
-    std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
+    auto curSel = m_cbRigName->GetCurrentSelection();
+    std::string rigName = curSel >= 0 ? m_cbRigName->GetString(curSel).ToStdString() : "";
     if (rigName.find("Icom") == 0)
     {
         m_stIcomCIVHex->Show();
