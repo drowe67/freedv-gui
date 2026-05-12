@@ -100,22 +100,16 @@ void WASAPIAudioDevice::start()
         // Set AudioClientProperties for stream. Must be done prior to Initialize().
         AudioClientProperties prop;
         prop.cbSize = sizeof(AudioClientProperties);
-        prop.bIsOffload = TRUE;
+        prop.bIsOffload = FALSE;
         prop.eCategory = AudioCategory_Other;
         prop.Options = AUDCLNT_STREAMOPTIONS_RAW;
         HRESULT hr = client_->SetClientProperties(&prop);
         if (FAILED(hr))
         {
-            // Try disabling offload as not all devices support it.
-            prop.bIsOffload = FALSE;
-            hr = client_->SetClientProperties(&prop);
-            if (FAILED(hr))
-            {
-                // Non-critical error, can continue without setting properties.
-                std::stringstream ss;
-                ss << "Could not set AudioClient properties (hr = " << hr << ")";
-                log_warn(ss.str().c_str());
-            }
+            // Non-critical error, can continue without setting properties.
+            std::stringstream ss;
+            ss << "Could not set AudioClient properties (hr = " << hr << ")";
+            log_warn(ss.str().c_str());
         }
         
         // Populate stream format based on requested sample
