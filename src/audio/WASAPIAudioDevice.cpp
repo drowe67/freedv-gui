@@ -30,7 +30,7 @@
 #include <inttypes.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (20000000)
+#define BLOCK_TIME_NS (10000000)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
@@ -97,13 +97,12 @@ void WASAPIAudioDevice::start()
         WAVEFORMATEX streamFormat;
         bool freeStreamFormat = false;
 
-#if 0        
         // Set AudioClientProperties for stream. Must be done prior to Initialize().
         AudioClientProperties prop;
         prop.cbSize = sizeof(AudioClientProperties);
         prop.bIsOffload = TRUE;
-        prop.eCategory = AudioCategory_Communications;
-        prop.Options = AUDCLNT_STREAMOPTIONS_NONE;
+        prop.eCategory = AudioCategory_Other;
+        prop.Options = AUDCLNT_STREAMOPTIONS_RAW;
         HRESULT hr = client_->SetClientProperties(&prop);
         if (FAILED(hr))
         {
@@ -118,13 +117,12 @@ void WASAPIAudioDevice::start()
                 log_warn(ss.str().c_str());
             }
         }
-#endif // 0
         
         // Populate stream format based on requested sample
         // rate/number of channels.
         // NOTE: this should already have been determined valid
         // by the audio engine!
-        HRESULT hr = client_->GetMixFormat(&streamFormatPtr);
+        hr = client_->GetMixFormat(&streamFormatPtr);
         if (SUCCEEDED(hr))
         {
             freeStreamFormat = true;
