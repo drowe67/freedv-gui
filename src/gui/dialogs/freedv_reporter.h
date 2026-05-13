@@ -28,7 +28,10 @@
 #include <mutex>
 
 #include <wx/tipwin.h>
+#include <wx/combo.h>
 #include <wx/dataview.h>
+
+class wxListBox;
 
 #include "../../main.h"
 #include "defines.h"
@@ -71,6 +74,7 @@ class FreeDVReporterDialog : public wxFrame
         static FilterFrequency getFilterForFrequency_(uint64_t freq);
 
         bool isTextMessageFieldInFocus();
+        void ShowMsgItemContextMenu(int itemIdx);
     
         void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
         
@@ -136,6 +140,10 @@ class FreeDVReporterDialog : public wxFrame
         void    OnStatusTextClearSelected(wxCommandEvent& event);
         void    OnStatusTextClearAll(wxCommandEvent& event);
         void    OnStatusTextChange(wxCommandEvent& event);
+        void    OnStatusMessageContextMenuEdit(wxCommandEvent& event);
+        void    OnStatusMessageContextMenuDelete(wxCommandEvent& event);
+        void    OnStatusMessageContextMenuAdd(wxCommandEvent& event);
+        wxListBox* getMsgPopup() const;
         void    OnSystemColorChanged(wxSysColourChangedEvent& event);
 
         void OnItemSelectionChanged(wxDataViewEvent& event);
@@ -184,11 +192,16 @@ class FreeDVReporterDialog : public wxFrame
         wxRadioButton* m_trackExactFreq;
 
         // Status message
-        wxComboBox* m_statusMessage;
+        wxComboCtrl* m_statusMessage;
         wxButton* m_buttonSend;
         wxButton* m_buttonClear;
         wxMenu* setPopupMenu_;
+        wxMenuItem* setSaveMenuItem_;
+        wxMenuItem* saveMenuItem_;
         wxMenu* clearPopupMenu_;
+        wxMenu* msgItemPopupMenu_;
+        wxMenuItem* addMsgMenuItem_;
+        int contextMenuSelectedIndex_;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;

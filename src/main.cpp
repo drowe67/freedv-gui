@@ -868,7 +868,7 @@ void MainFrame::loadConfiguration_()
     // for backwards compatibility.    
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
-        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
+        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", -1);
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
     }
     else

@@ -190,7 +190,7 @@ class MainApp : public wxApp
         wxString defaultConfigFilePath;
         
         // PTT -----------------------------------    
-        unsigned int        m_intHamlibRig;
+        int        m_intHamlibRig;
         std::shared_ptr<IRigFrequencyController> rigFrequencyController;
         std::shared_ptr<IRigPttController> rigPttController;
 
