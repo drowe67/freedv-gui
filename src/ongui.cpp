@@ -586,10 +586,17 @@ void MainFrame::onRadioDisconnected_(IRigController*)
 bool MainFrame::OpenHamlibRig() {
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT != true)
        return false;
-    if (wxGetApp().m_intHamlibRig == 0)
+    
+    int rig = wxGetApp().m_intHamlibRig;    
+    if (rig == -1)
+    {
+        std::string fullErr = "The radio's model is empty. This is likely due to changes in Hamlib between FreeDV releases. Please click Stop Modem, double-check your CAT settings and push Start Modem again.";
+        CallAfter([&, fullErr]() {
+            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        });
         return false;
-
-    int rig = wxGetApp().m_intHamlibRig;
+    }
+    
     wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
     wxString pttPort = wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort;
     auto pttType = (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
