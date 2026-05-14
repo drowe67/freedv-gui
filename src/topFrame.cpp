@@ -556,7 +556,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
-    m_reporterHidden->SetToolTip(_("Removes self from other FreeDV Reporter users when enabled."));
+    m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Options->Reporting."));
     sbSizerReporterBox->Add(m_reporterHidden, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
     leftSizer->Add(sbSizerReporterBox, 0, wxALL|wxEXPAND, 2);
