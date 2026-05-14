@@ -38,6 +38,7 @@ public:
     
     void operator() (FnArgs... args);
     EventHandler<FnArgs...>& operator+=(FnType const& fn);
+    EventHandler<FnArgs...>& operator=(FnType const& fn);
     void clear();
     
 private:
@@ -56,6 +57,14 @@ void EventHandler<FnArgs...>::operator() (FnArgs... args)
 template<typename... FnArgs>
 EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator+=(FnType const& fn)
 {
+    fnList_.push_back(fn);
+    return *this;
+}
+
+template<typename... FnArgs>
+EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator=(FnType const& fn)
+{
+    fnList_.clear();
     fnList_.push_back(fn);
     return *this;
 }
