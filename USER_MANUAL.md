@@ -943,6 +943,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Allow use of a custom key for PTT. (PR #1309)
     * Improve Reporter message list usability. (PR #1310) - thanks @barjac!
+    * Clarify Reporter on/off tooltip. (PR #1345)
 
 ## V2.3.0 May 2026
 
