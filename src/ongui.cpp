@@ -19,6 +19,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
+#include "gui/util/FrequencyOps.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -1482,28 +1483,9 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    bool is60MeterBand = 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
-    
     bool useAnalog = 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
-    HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
-    
-    HamlibRigController::Mode newMode;
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
-        !is60MeterBand)
-    {
-        newMode = lsbMode;
-    }
-    else
-    {
-        newMode = usbMode;
-    }
-
-    return newMode;
+    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
 }
 
 //-------------------------------------------------------------------------

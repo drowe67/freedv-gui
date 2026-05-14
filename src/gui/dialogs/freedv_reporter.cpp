@@ -29,6 +29,7 @@
 #include <wx/numdlg.h>
 #include <wx/textdlg.h>
 #include "../controls/MsgListPopup.h"
+#include "../util/FrequencyOps.h"
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -43,6 +44,7 @@
 
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase* pConfig;
+extern int g_analog;
 
 #define CALLSIGN_COL (0)
 #define GRID_SQUARE_COL (1)
@@ -1471,6 +1473,13 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             wxGetApp().rigFrequencyController->setFrequency(frequency);
+
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            {
+                bool useAnalog = 
+                    wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
+                wxGetApp().rigFrequencyController->setMode(GetModeForFrequency(frequency, useAnalog));
+            }
         }
         DeselectItem();
     }
