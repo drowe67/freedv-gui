@@ -45,6 +45,7 @@ HamlibRigController::RigNameList HamlibRigController::RigNameList_;
 std::mutex HamlibRigController::RigListMutex_;
 
 static const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
+static const char* MAX_TIMEOUT = "625";
 
 #if RIGCAPS_NOT_CONST && !HAMLIB_CONST_WORKAROUND
 int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) {
@@ -433,6 +434,11 @@ void HamlibRigController::connectImpl_()
 #else
     auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout_);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
+    if (result != RIG_OK)
+    {
+        log_warn("Could not retrieve initial timeout, assuming %s ms", MAX_TIMEOUT);
+        memcpy(currentTimeout_, MAX_TIMEOUT, strlen(MAX_TIMEOUT) + 1);
+    }
     log_info("Current rig timeout: %s ms", currentTimeout_);
 
     enableTimeouts_(tmpRig, true);
@@ -989,7 +995,6 @@ void HamlibRigController::enableTimeouts_(RIG* rig, bool enabled)
     {
         // Set timeouts so that we don't wait an extremely long time to begin TX.
         // However, only do so if the default timeout is larger than 625ms.
-        const char* MAX_TIMEOUT = "625";        
         if (atoi(currentTimeout_) >= atoi(MAX_TIMEOUT))
         {
             log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
