@@ -564,7 +564,7 @@ void HamlibRigController::pttImpl_(bool state)
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
     rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
 
-    // Reenable timeouts after previously disabling them above.
+    // Re-enable timeouts after previously disabling them above.
     if (pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
     {
         enableTimeouts_(rig_.load(std::memory_order_acquire), true);
