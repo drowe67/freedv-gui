@@ -37,6 +37,7 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #include "../util/sanitizers.h"
 
 class IPipelineStep
@@ -82,24 +83,9 @@ void IPipelineStep::ConvertToFloatSampleType_(SrcType* sourceSamples, DstType* d
     static_assert(SampleDivisor != 0);
 
     // Iterate through samples, performing division (if needed) and typecasting
-    if (SampleDivisor == 1)
+    for (std::size_t index = 0; index < numSamples; index++)
     {
-        for (std::size_t index = 0; index < numSamples; index++)
-        {
-            destSamples[index] = (DstType)sourceSamples[index];
-        }
-    }
-    else
-    {
-        auto divider = SampleDivisor + 1;
-        if (SampleDivisor != std::numeric_limits<DstType>::max())
-        {
-            divider = SampleDivisor;
-        }
-        for (std::size_t index = 0; index < numSamples; index++)
-        {
-            destSamples[index] = (DstType)sourceSamples[index] * ((DstType)1.0 / divider);
-        }
+        destSamples[index] = (DstType)sourceSamples[index] * ((DstType)1.0 / SampleDivisor);
     }
 }
 
@@ -111,34 +97,11 @@ void IPipelineStep::ConvertToIntSampleType_(SrcType* sourceSamples, DstType* des
     static_assert(std::numeric_limits<DstType>::is_integer);
 
     // Iterate through samples, performing multiplication (if needed) and typecasting
-    if (SampleMultiplier == 1)
+    constexpr auto MIN_DST_TYPE_VAL = std::numeric_limits<DstType>::min();
+    constexpr auto MAX_DST_TYPE_VAL = std::numeric_limits<DstType>::max();
+    for (std::size_t index = 0; index < numSamples; index++)
     {
-        for (std::size_t index = 0; index < numSamples; index++)
-        {
-            destSamples[index] = (DstType)sourceSamples[index];
-        }
-    }
-    else
-    {
-        constexpr auto MIN_DST_TYPE_VAL = std::numeric_limits<DstType>::min();
-        constexpr auto MAX_DST_TYPE_VAL = std::numeric_limits<DstType>::max();
-        constexpr auto multiplier = (SampleMultiplier != MAX_DST_TYPE_VAL) ? SampleMultiplier : (SampleMultiplier + 1);
-        for (std::size_t index = 0; index < numSamples; index++)
-        {
-            SrcType temp = sourceSamples[index] * multiplier;
-            if (temp <= MIN_DST_TYPE_VAL)
-            {
-                destSamples[index] = MIN_DST_TYPE_VAL;
-            }
-            else if (temp >= MAX_DST_TYPE_VAL)
-            {
-                destSamples[index] = MAX_DST_TYPE_VAL;
-            }
-            else
-            {
-                destSamples[index] = static_cast<DstType>(std::lrint(temp));
-            }
-        }
+        destSamples[index] = (DstType)floor(.5 + std::min((SrcType)MAX_DST_TYPE_VAL, std::max((SrcType)MIN_DST_TYPE_VAL, MAX_DST_TYPE_VAL*sourceSamples[index])));
     }
 }
 
