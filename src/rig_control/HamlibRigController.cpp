@@ -44,6 +44,8 @@ HamlibRigController::RigList HamlibRigController::RigList_;
 HamlibRigController::RigNameList HamlibRigController::RigNameList_;
 std::mutex HamlibRigController::RigListMutex_;
 
+static const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
+
 #if RIGCAPS_NOT_CONST && !HAMLIB_CONST_WORKAROUND
 int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) {
 #else
@@ -422,27 +424,18 @@ void HamlibRigController::connectImpl_()
     // FreeDV doesn't do split.
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "no_xchg"), "1");
 
-    // Set timeouts so that we don't wait an extremely long time to begin TX.
-    // However, only do so if the default timeout is larger than 625ms.
-    const char* MAX_TIMEOUT = "625";
-    const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
-    constexpr int TIMEOUT_BUF_LEN = 1024;
-    char currentTimeout[TIMEOUT_BUF_LEN];
+    // Set initial timeouts. These may be adjusted later during certain
+    // operations if needed.
 #if defined(HAMLIB_USE_FRIENDLY_ERRORS)
     // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
     // causes compile errors in FreeDV due to -Werror.
-    auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
+    auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout_, TIMEOUT_BUF_LEN);
 #else
-    auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
+    auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout_);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
-    log_info("Current rig timeout: %s ms", currentTimeout);
-    if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
-    {
-        log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
-    }
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
+    log_info("Current rig timeout: %s ms", currentTimeout_);
+
+    enableTimeouts_(tmpRig, true);
             
     result = rig_open(tmpRig);
     if (result == RIG_OK) 
@@ -547,6 +540,13 @@ void HamlibRigController::pttImpl_(bool state)
     {
         on = RIG_PTT_ON_DATA;
     }
+
+    // If not using CAT for PTT, disable timeouts. Presumably
+    // e.g. setting RTS should be immediate.
+    if (pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
+    {
+        enableTimeouts_(rig_.load(std::memory_order_acquire), false);
+    }
     
     auto oldTime = std::chrono::steady_clock::now();
     int result = RIG_OK;
@@ -557,6 +557,12 @@ void HamlibRigController::pttImpl_(bool state)
     auto newTime = std::chrono::steady_clock::now();
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
     rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+
+    // Reenable timeouts after previously disabling them above.
+    if (pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
+    {
+        enableTimeouts_(rig_.load(std::memory_order_acquire), true);
+    }
     
     if (result != RIG_OK) 
     {
@@ -975,4 +981,26 @@ modeAttempt:
             requestCurrentFrequencyModeImpl_();
         }
     }
+}
+
+void HamlibRigController::enableTimeouts_(RIG* rig, bool enabled)
+{
+    if (enabled)
+    {
+        // Set timeouts so that we don't wait an extremely long time to begin TX.
+        // However, only do so if the default timeout is larger than 625ms.
+        const char* MAX_TIMEOUT = "625";        
+        if (atoi(currentTimeout_) >= atoi(MAX_TIMEOUT))
+        {
+            log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
+            rig_set_conf(rig, rig_token_lookup(rig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
+        }
+    }
+    else
+    {
+        rig_set_conf(rig, rig_token_lookup(rig, HAMLIB_TIMEOUT_TOKEN_NAME), "0");
+    }
+
+    rig_set_conf(rig, rig_token_lookup(rig, "retry"), "0");
+    rig_set_conf(rig, rig_token_lookup(rig, "timeout_retry"), "0");
 }

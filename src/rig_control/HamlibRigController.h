@@ -120,6 +120,10 @@ private:
     void setFrequencyImpl_(uint64_t frequencyHz);
     void setModeImpl_(IRigFrequencyController::Mode mode);
     void requestCurrentFrequencyModeImpl_();
+
+    static const int TIMEOUT_BUF_LEN = 1024;
+    char currentTimeout_[TIMEOUT_BUF_LEN];
+    void enableTimeouts_(RIG* rig, bool enabled);
     
     static RigList RigList_;
     static RigNameList RigNameList_;
