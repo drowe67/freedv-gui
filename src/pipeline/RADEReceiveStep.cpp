@@ -203,7 +203,6 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         // demod per frame processing
         for(int i=0; i<nin; i++)
         {
-            //ConvertToFloatSampleType_<float, short>(&inputBuf_[i], &inputBufCplx_[i].real, 1);
             inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
             inputBufCplx_[i].imag = 0.0;
         }
@@ -256,8 +255,6 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
                     {
                         pcm[i] = (int)floor(.5 + std::min(32767.f, std::max(-32767.f, 32768.f*fpcm[i])));
                     }
-
-                    //ConvertToIntSampleType_<short, float>(fpcm, pcm, LPCNET_FRAME_SIZE);
 
                     *numOutputSamples += LPCNET_FRAME_SIZE;
                     outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
