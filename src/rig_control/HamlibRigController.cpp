@@ -283,6 +283,10 @@ int HamlibRigController::RigNameToIndex(std::string const& rigName)
 std::string HamlibRigController::RigIndexToName(unsigned int rigIndex)
 {
     InitializeHamlibLibrary();
+    if (rigIndex >= RigNameList_.size())
+    {
+        return "";
+    }
     return RigNameList_[rigIndex];
 }
 

@@ -938,7 +938,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333) - thanks @barjac!
     * Fix audio routing problems on Windows due to hardware offloading. (PR #1335)
-    * Hamlib: Detect empty rig name on start. (PR #1339)
+    * Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks @barjac!
     * Disable use of pffft during audio resampling. (PR #1338)
     * FreeDV Reporter: Fix issue preventing mode changes on double-click. (PR #1343)
     * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
