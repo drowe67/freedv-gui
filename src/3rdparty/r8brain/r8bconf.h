@@ -180,7 +180,7 @@
 	 * attenuation higher than 120 dB is not required.
 	 */
 
-	#define R8B_PFFFT 0
+	#define R8B_PFFFT 1
 #else // !defined( R8B_PFFFT )
 	#if R8B_PFFFT && R8B_PFFFT_DOUBLE
 		// Handle the case when both `R8B_PFFFT` and `R8B_PFFFT_DOUBLE` were
