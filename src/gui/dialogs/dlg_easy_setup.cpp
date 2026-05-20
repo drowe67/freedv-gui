@@ -540,7 +540,10 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             m_hamlibBox->Show();
             m_serialBox->Hide();
 
-            m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+            if (wxGetApp().m_intHamlibRig >= 0)
+            {
+                m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+            }
             resetIcomCIVStatus_();
             
             auto selected = m_cbRigName->GetCurrentSelection();
@@ -698,8 +701,17 @@ void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent&)
 
 void EasySetupDialog::resetIcomCIVStatus_()
 {
-    std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
-    if (rigName.find("Icom") == 0)
+    bool icomFound = false;
+    if (m_cbRigName->GetCurrentSelection() >= 0)
+    {
+        std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
+        if (rigName.find("Icom") == 0)
+        {
+            icomFound = true;
+        }
+    }
+
+    if (icomFound)
     {
         m_stIcomCIVHex->Show();
         m_tcIcomCIVHex->Show();
@@ -1128,7 +1140,10 @@ void EasySetupDialog::updateHamlibDevices_()
     {
         m_cbRigName->Append(HamlibRigController::RigIndexToName(index));
     }
-    m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+    if (wxGetApp().m_intHamlibRig >= 0)
+    {
+        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+    }
     
     /* populate Hamlib serial rate combo box */
     updateHamlibSerialRates_();
