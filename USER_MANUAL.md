@@ -940,6 +940,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix audio routing problems on Windows due to hardware offloading. (PR #1335)
     * Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks @barjac!
     * Disable use of pffft during audio resampling. (PR #1338)
+    * Fix missing Hamlib defines when building from source (PR #1353) - thanks @barjac!
     * FreeDV Reporter: Fix issue preventing mode changes on double-click. (PR #1343)
     * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
     * Improve Flex waveform RX audio quality. (PR #1348)
