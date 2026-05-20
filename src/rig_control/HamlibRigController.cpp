@@ -553,7 +553,7 @@ void HamlibRigController::pttImpl_(bool state)
 
     // If not using CAT for PTT, disable timeouts. Presumably
     // e.g. setting RTS should be immediate.
-    if (pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
+    if (pttType_ != PTT_VIA_NONE && pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
     {
         enableTimeouts_(rig_.load(std::memory_order_acquire), false);
     }
@@ -568,12 +568,6 @@ void HamlibRigController::pttImpl_(bool state)
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
     rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
 
-    // Re-enable timeouts after previously disabling them above.
-    if (pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
-    {
-        enableTimeouts_(rig_.load(std::memory_order_acquire), true);
-    }
-    
     if (result != RIG_OK) 
     {
         log_debug("rig_set_ptt: error = %s ", rigerror(result));
@@ -600,6 +594,12 @@ void HamlibRigController::pttImpl_(bool state)
         {
             requestCurrentFrequencyMode();
         }
+    }
+
+    // Re-enable timeouts after previously disabling them above.
+    if (pttType_ != PTT_VIA_NONE && pttType_ != PTT_VIA_CAT && pttType_ != PTT_VIA_CAT_DATA)
+    {
+        enableTimeouts_(rig_.load(std::memory_order_acquire), true);
     }
 }
 
@@ -1004,9 +1004,15 @@ void HamlibRigController::enableTimeouts_(RIG* rig, bool enabled)
             log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
             rig_set_conf(rig, rig_token_lookup(rig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
         }
+        else
+        {
+            log_info("Setting rig timeout to %s ms", currentTimeout_);
+            rig_set_conf(rig, rig_token_lookup(rig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout_);
+        }
     }
     else
     {
+        log_info("Setting rig timeout to 0 ms");
         rig_set_conf(rig, rig_token_lookup(rig, HAMLIB_TIMEOUT_TOKEN_NAME), "0");
     }
 
