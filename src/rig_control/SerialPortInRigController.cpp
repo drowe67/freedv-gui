@@ -34,7 +34,7 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
     , suspendChanges_(false)
 {
     // Perform required initialization on successful connection.
-    onRigConnected += [&](IRigController*) {
+    onRigConnected = [&](IRigController*) {
         // Set RTS and DTR enabled for certain PTT input interfaces.
         raiseRTS_();
         raiseDTR_();
@@ -46,7 +46,7 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
         pollThread_ = std::thread(std::bind(&SerialPortInRigController::pollThreadEntry_, this));
     };
 
-    onRigDisconnected += [&](IRigController*) {
+    onRigDisconnected = [&](IRigController*) {
         threadExiting_ = true;
         pollThread_.join();
     };
