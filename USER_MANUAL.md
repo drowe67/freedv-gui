@@ -943,7 +943,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix missing Hamlib defines when building from source (PR #1353) - thanks @barjac!
     * FreeDV Reporter: Fix issue preventing mode changes on double-click. (PR #1343)
     * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
-    * Improve Flex waveform RX audio quality. (PR #1348)
+    * Improve Flex waveform RX audio quality. (PR #1348, 1356)
 2. Enhancements:
     * Allow use of a custom key for PTT. (PR #1309)
     * Improve Reporter message list usability. (PR #1310) - thanks @barjac!
