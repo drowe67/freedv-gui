@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include "../../main.h"
+#include "../../logging/WSJTXNetworkLogger.h"
 #include <wx/wx.h>
 #include <wx/valnum.h>
 #include "log_entry.h"
@@ -209,9 +210,16 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
         
         std::time_t timeSinceUnixEpoch = logTime_.GetTicks();
 
-        if (logger_ != nullptr)
+        auto logger = logger_;
+        if (logger == nullptr && wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
         {
-            logger_->logContact(
+            logger = std::make_shared<WSJTXNetworkLogger>(
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+        }
+        if (logger != nullptr)
+        {
+            logger->logContact(
                 std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
                 (const char*)dxCall_->GetValue().ToUTF8(),
                 (const char*)dxGrid_->GetValue().ToUTF8(),
