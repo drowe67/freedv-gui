@@ -22,6 +22,7 @@
 
 #include <inttypes.h>
 #include <time.h>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <vector>
@@ -1055,6 +1056,8 @@ setDefaultMode:
     // Show/hide frequency box based on CAT control status
     m_freqBox->Show(isFrequencyControlEnabled_());
 
+    restoreCallsignListFromCsv_();
+
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
     {
@@ -1443,6 +1446,71 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
+}
+
+void MainFrame::restoreCallsignListFromCsv_()
+{
+    auto csvPath = wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath.get();
+    if (csvPath.IsEmpty())
+        return;
+
+    std::ifstream file(csvPath.ToStdString());
+    if (!file.is_open())
+        return;
+
+    std::vector<std::string> lines;
+    std::string line;
+    bool firstLine = true;
+    while (std::getline(file, line))
+    {
+        if (firstLine) { firstLine = false; continue; } // skip CSV header
+        if (!line.empty())
+            lines.push_back(line);
+    }
+
+    const int MAX_RESTORE_ROWS = 100;
+    if ((int)lines.size() > MAX_RESTORE_ROWS)
+        lines.erase(lines.begin(), lines.begin() + ((int)lines.size() - MAX_RESTORE_ROWS));
+
+    bool freqAsKhz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+
+    for (auto& csvLine : lines)
+    {
+        // CSV columns: date,time,callsign,mode,frequency_hz,snr_db
+        std::istringstream ss(csvLine);
+        std::string date, time, callsign, mode, freqStr, snrStr;
+        if (!std::getline(ss, date, ',')) continue;
+        if (!std::getline(ss, time, ',')) continue;
+        if (!std::getline(ss, callsign, ',')) continue;
+        if (!std::getline(ss, mode, ',')) continue;
+        if (!std::getline(ss, freqStr, ',')) continue;
+        if (!std::getline(ss, snrStr)) continue;
+
+        uint64_t freqHz = 0;
+        try { freqHz = std::stoull(freqStr); } catch (...) { continue; }
+
+        wxString freqDisplay;
+        if (freqAsKhz)
+            freqDisplay = wxNumberFormatter::ToString(freqHz / 1000.0, 1);
+        else
+            freqDisplay = wxNumberFormatter::ToString(freqHz / 1000000.0, 4);
+
+        wxString dateTime = wxString::Format("%s %s", date, time);
+
+        int snrInt = 0;
+        try { snrInt = std::stoi(snrStr); } catch (...) { continue; }
+        wxString snrDisplay;
+        snrDisplay.Printf(SNR_FORMAT_STR_NO_DB, (float)snrInt);
+
+        auto index = m_lastReportedCallsignListView->InsertItem(0, wxString(callsign), 0);
+        m_lastReportedCallsignListView->SetItem(index, 1, freqDisplay);
+        m_lastReportedCallsignListView->SetItem(index, 2, dateTime);
+        m_lastReportedCallsignListView->SetItem(index, 3, snrDisplay);
+        m_lastReportedCallsignListView->SetItemTextColour(index, wxColour(160, 160, 160));
+    }
+
+    for (int col = 0; col < 4; col++)
+        m_lastReportedCallsignListView->SetColumnWidth(col, getIdealStationsHeardColumnLength_(col));
 }
 
 static std::recursive_mutex stoppingMutex;
@@ -2398,8 +2466,8 @@ void MainFrame::performFreeDVOn_()
 
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
-        m_cboLastReportedCallsigns->Enable(false);
-            
+        restoreCallsignListFromCsv_();
+        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
         m_cboLastReportedCallsigns->SetText(wxT(""));
         
         m_logQSO->Disable();

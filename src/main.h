@@ -579,6 +579,7 @@ class MainFrame : public TopFrame
         bool        validateSoundCardSetup();
         
         void loadConfiguration_();
+        void restoreCallsignListFromCsv_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);
         void setConfiguration_(wxConfigBase* config);
