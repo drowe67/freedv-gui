@@ -208,19 +208,22 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
         freqHz = (int64_t)freqDouble;
         
         std::time_t timeSinceUnixEpoch = logTime_.GetTicks();
-        
-        logger_->logContact(
-            std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
-            (const char*)dxCall_->GetValue().ToUTF8(), 
-            (const char*)dxGrid_->GetValue().ToUTF8(),
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
-            freqHz,
-            (const char*)rxReport_->GetValue().ToUTF8(),
-            (const char*)txReport_->GetValue().ToUTF8(),
-            (const char*)name_->GetValue().ToUTF8(),
-            (const char*)comments_->GetValue().ToUTF8(),
-            snr_);
+
+        if (logger_ != nullptr)
+        {
+            logger_->logContact(
+                std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
+                (const char*)dxCall_->GetValue().ToUTF8(),
+                (const char*)dxGrid_->GetValue().ToUTF8(),
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
+                freqHz,
+                (const char*)rxReport_->GetValue().ToUTF8(),
+                (const char*)txReport_->GetValue().ToUTF8(),
+                (const char*)name_->GetValue().ToUTF8(),
+                (const char*)comments_->GetValue().ToUTF8(),
+                snr_);
+        }
         this->EndModal(wxOK);
     }
 }
