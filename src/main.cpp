@@ -1057,6 +1057,7 @@ setDefaultMode:
     m_freqBox->Show(isFrequencyControlEnabled_());
 
     restoreCallsignListFromCsv_();
+    m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -2892,8 +2893,8 @@ void MainFrame::performFreeDVOff_()
         m_rb700d->Enable();
         m_rb700e->Enable();
         
-        m_logQSO->Disable();
-        
+        m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
+
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
         {
