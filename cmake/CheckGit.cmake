@@ -55,6 +55,7 @@ function(CheckGitVersion)
     else()
         set(FREEDV_VERSION "${FreeDV_VERSION}")
     endif()
+    set(FREEDV_VERSION_CLEAN "${FreeDV_VERSION}")
     file(WRITE ${CMAKE_BINARY_DIR}/freedv-version.txt ${FREEDV_VERSION})
 
     # Only update the git_version.cpp if the hash has changed. This will
