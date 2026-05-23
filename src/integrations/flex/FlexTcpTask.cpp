@@ -217,7 +217,7 @@ void FlexTcpTask::createWaveform_(std::string const& name, std::string const& sh
     sendRadioCommand_(std::string("waveform remove ") + name);
 
     // Actually create the waveform.
-    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=" + GetFreeDVVersion();
+    std::string waveformCommand = "waveform create name=" + name + " mode=" + shortName + " underlying_mode=" + underlyingMode + " version=" + GetFreeDVVersionClean();
     std::string setPrefix = "waveform set " + name + " ";
     sendRadioCommand_(waveformCommand, [&, setPrefix](unsigned int rv, std::string const& res) {
         if (rv == 0)
