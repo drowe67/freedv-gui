@@ -27,5 +27,6 @@
 
 extern const char* FREEDV_GIT_HASH;
 std::string GetFreeDVVersion();
+std::string GetFreeDVVersionClean();
 
 #endif // GIT_HASH_H
