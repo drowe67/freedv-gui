@@ -1138,9 +1138,12 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 void MainFrame::togglePTT(void) {
     std::chrono::high_resolution_clock highResClock;
 
+    auto txState = g_tx.load(std::memory_order_acquire);
+    log_info("toggling PTT -- original state %d", txState ? 1 : 0);
+
     // Change tabbed page in centre panel depending on PTT state
 
-    if (g_tx.load(std::memory_order_acquire))
+    if (txState)
     {
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)
