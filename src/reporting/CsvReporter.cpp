@@ -75,11 +75,11 @@ void CsvReporter::addReceiveRecord(std::string callsign, std::string mode, uint6
     std::time_t now = std::time(nullptr);
     struct tm* curTime = (struct tm*)malloc(sizeof(struct tm));
     assert(curTime != NULL);
-#if defined(WIN32)
+#if defined(_WIN32)
     gmtime_s(curTime, &now);
 #else
     gmtime_r(&now, curTime);
-#endif // defined(WIN32) 
+#endif // defined(_WIN32) 
 
     char dateBuf[100]; // YYYY-MM-DD\0
     char timeBuf[100];  // HH:MM:SS\0
