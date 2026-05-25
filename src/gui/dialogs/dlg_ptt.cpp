@@ -764,11 +764,13 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
             std::shared_ptr<HamlibRigController> hamlib = 
                 std::make_shared<HamlibRigController>(
                     rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
-                    (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+                    (pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_CAT_DATA) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
                     false,
                     false,
                     m_ckForceRTSOn->GetValue(),
                     m_ckForceDTROn->GetValue() );
+
+            hamlib->disableFrequencyModeGetSet(true);
 
             hamlib->onRigError += [=](IRigController*, std::string const& error) {
                 CallAfter([=]() {

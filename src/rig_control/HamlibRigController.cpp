@@ -95,6 +95,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , rigResponseTime_(0)
     , errorEncountered_(false)
     , getFreqModeErrorCount_(0)
+    , frequencyModeDisabled_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -123,6 +124,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , rigResponseTime_(0)
     , errorEncountered_(false)
     , getFreqModeErrorCount_(0)
+    , frequencyModeDisabled_(false)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -455,10 +457,13 @@ void HamlibRigController::connectImpl_()
         
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
-        vfo_t vfo;
-        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && (tmpRig->state.vfo_list & RIG_VFO_B))
+        if (!frequencyModeDisabled_)
         {
-            multipleVfos_ = true;
+            vfo_t vfo;
+            if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && (tmpRig->state.vfo_list & RIG_VFO_B))
+            {
+                multipleVfos_ = true;
+            }
         }
 
         // Make sure PTT is not enabled as there have been reports of some 
@@ -514,7 +519,7 @@ void HamlibRigController::disconnectImpl_()
         }
  
         // If we're told to restore on disconnect, do so.
-        if (restoreOnDisconnect_)
+        if (restoreOnDisconnect_ && !frequencyModeDisabled_)
         {
             vfo_t currVfo = getCurrentVfo_(); 
             setFrequencyHelper_(currVfo, origFreq_);
@@ -606,12 +611,7 @@ void HamlibRigController::pttImpl_(bool state)
 void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
 {
     auto tmpRig = rig_.load(std::memory_order_acquire);
-    if (tmpRig == nullptr)
-    {
-        return;
-    }
-
-    if (currFreq_ == frequencyHz)
+    if (tmpRig == nullptr || frequencyModeDisabled_ || currFreq_ == frequencyHz)
     {
         return;
     }
@@ -693,7 +693,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     }
     
     auto tmpRig = rig_.load(std::memory_order_acquire);
-    if (tmpRig == nullptr || currMode_ == hamlibMode)
+    if (tmpRig == nullptr || currMode_ == hamlibMode || frequencyModeDisabled_)
     {
         currMode_ = hamlibMode;
         pendingMode_ = mode;
@@ -747,7 +747,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
 void HamlibRigController::requestCurrentFrequencyModeImpl_()
 {
     auto tmpRig = rig_.load(std::memory_order_acquire);
-    if (tmpRig == nullptr || pttSet_)
+    if (tmpRig == nullptr || pttSet_ || frequencyModeDisabled_)
     {
         // Note: we ignore attempts to retrieve frequency/mode during
         // TX for several reasons:
@@ -886,7 +886,7 @@ void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyH
     bool setOkay = false;
     
     auto tmpRig = rig_.load(std::memory_order_acquire);
-    if (tmpRig == nullptr)
+    if (tmpRig == nullptr || frequencyModeDisabled_)
     {
         currFreq_ = frequencyHz;
         return;

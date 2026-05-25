@@ -70,6 +70,8 @@ public:
     
     virtual int getRigResponseTimeMicroseconds() override;
 
+    void disableFrequencyModeGetSet(bool disabled) { frequencyModeDisabled_ = disabled; }
+    
 private:
     using RigList = std::vector<const struct rig_caps *>;
     using RigNameList = std::vector<std::string>;
@@ -110,6 +112,9 @@ private:
     // 2 or more errors while retrieving freq/mode should cause the popup to appear
     const int MAX_GET_FREQUENCY_ERR_COUNT = 1;
     
+    // Disables frequency/mode get/set (i.e. for testing config)
+    bool frequencyModeDisabled_;
+
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
     void setModeHelper_(vfo_t currVfo, rmode_t mode);

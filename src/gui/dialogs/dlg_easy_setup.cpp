@@ -915,6 +915,8 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                     });
                 };
 
+                hamlibTestObject_->disableFrequencyModeGetSet(true);
+
                 hamlibTestObject_->onRigConnected += [&](IRigController*) {
                     hamlibTestObject_->ptt(true);
                 };
