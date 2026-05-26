@@ -5,18 +5,12 @@ TARGET=${1:-all}
 if [[ "${TARGET}" == "all" ]]; then
     export APPNAME="FreeDV"
     export APPEXEC=../build_linux/src/freedv
-    export APPRUN="AppRun.sh"
-    export RADE_SRC="rade_src"
 elif [[ "${TARGET}" == "freedv-flex" ]]; then
     export APPNAME="FreeDV-FlexRadio"
     export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
-    export APPRUN="AppRun-FlexRadio.sh"
-    export RADE_SRC="rade_integ_src"
 elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
     export APPNAME="FreeDV-KA9Q"
     export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
-    export APPRUN="AppRun-KA9Q.sh"
-    export RADE_SRC="rade_integ_src"
 fi
 
 DESKTOP_FILE="$APPNAME.desktop"
@@ -49,7 +43,6 @@ fi
 --executable "$APPEXEC" \
 --appdir "$APPDIR" \
 --icon-file ../contrib/freedv256x256.png \
---custom-apprun=$APPRUN \
 --desktop-file $DESKTOP_FILE
 
 # Create the output
