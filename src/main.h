@@ -124,6 +124,15 @@ enum {
 
 extern int                 g_nSoundCards;
 
+// Last-used configuration file helpers.
+// The path is stored in a platform-appropriate state store
+// (registry on Windows, file on macOS/Linux) that is independent
+// of the main application config so it can always be read and written
+// regardless of which config backend is currently active.
+wxString  getLastUsedConfigPath();
+void      saveLastUsedConfigPath(const wxString& path);
+void      clearLastUsedConfigPath();
+
 // Voice Keyer Constants
 
 #define VK_SYNC_WAIT_TIME 5.0

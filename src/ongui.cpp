@@ -2021,6 +2021,9 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
 #endif // defined(UNOFFICIAL_RELEASE)
     setConfiguration_(importConfig);
+
+    // Remember this file so it is automatically restored on the next startup.
+    saveLastUsedConfigPath(path);
 }
 
 void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
@@ -2047,6 +2050,9 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     wxConfigBase* defaultConfig = new wxConfig(wxT("FreeDV"), wxT("CODEC2-Project"));
 
     setConfiguration_(defaultConfig);
+
+    // Remove the last-used config path so startup reverts to the default next time.
+    clearLastUsedConfigPath();
 
     // Clear any custom config file indicator from the title bar.
     wxGetApp().customConfigFileName = wxEmptyString;
