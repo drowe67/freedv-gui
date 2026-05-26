@@ -36,6 +36,7 @@
 //=========================================================================
 
 #include <string>
+#include <inttypes.h>
 
 class IReporter
 {
