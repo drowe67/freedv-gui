@@ -207,6 +207,22 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     sbSizerReportingRows->Add(sbSizerReportingUDP, 0, wxALL | wxEXPAND, 5);
 
+    // UDP broadcast reporting options (UdpReporter)
+    wxBoxSizer* sbSizerReportingUDPBroadcast = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxUDPBroadcastEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Enable UDP Broadcast"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxUDPBroadcastEnable->SetToolTip(_("Broadcasts received callsign/frequency data as JSON UDP datagrams (e.g. to a multicast group or a local listener)."));
+    sbSizerReportingUDPBroadcast->Add(m_ckboxUDPBroadcastEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPBroadcastAddr = new wxStaticText(sbReporting, wxID_ANY, wxT("IP Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDPBroadcast->Add(labelUDPBroadcastAddr, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpBroadcastAddress = new wxTextCtrl(sbReporting, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0);
+    sbSizerReportingUDPBroadcast->Add(m_udpBroadcastAddress, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText* labelUDPBroadcastPort = new wxStaticText(sbReporting, wxID_ANY, wxT("Port:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizerReportingUDPBroadcast->Add(labelUDPBroadcastPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_udpBroadcastPort = new wxTextCtrl(sbReporting, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(60, -1), 0);
+    sbSizerReportingUDPBroadcast->Add(m_udpBroadcastPort, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizerReportingRows->Add(sbSizerReportingUDPBroadcast, 0, wxALL | wxEXPAND, 5);
+
     // CSV log file path
     wxBoxSizer* sbSizerCsvLog = new wxBoxSizer(wxHORIZONTAL);
     wxStaticText* labelCsvLogPath = new wxStaticText(sbReporting, wxID_ANY, wxT("Stations Heard Log File:"), wxDefaultPosition, wxDefaultSize, 0);
@@ -878,6 +894,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxUDPReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPBroadcastEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -935,6 +952,7 @@ OptionsDlg::~OptionsDlg()
     m_ckboxReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxFreeDVReporterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxUDPReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxUDPBroadcastEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -1071,6 +1089,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxUDPReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled);
         m_udpHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname);
         m_udpPort->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort.get()));
+
+        // UDP broadcast options (UdpReporter)
+        m_ckboxUDPBroadcastEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled);
+        m_udpBroadcastAddress->SetValue(wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress);
+        m_udpBroadcastPort->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort.get()));
 
         // CSV log file path
         m_txtCtrlCsvLogFilePath->SetValue(wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath);
@@ -1269,6 +1292,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long udpPort;
         m_udpPort->GetValue().ToLong(&udpPort);
         wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort = (int)udpPort;
+
+        // UDP broadcast options (UdpReporter)
+        wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled = m_ckboxUDPBroadcastEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress = m_udpBroadcastAddress->GetValue();
+
+        long udpBroadcastPort;
+        m_udpBroadcastPort->GetValue().ToLong(&udpBroadcastPort);
+        wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort = (int)udpBroadcastPort;
 
         // CSV log file path
         wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath = m_txtCtrlCsvLogFilePath->GetValue();
@@ -1496,7 +1527,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
             m_useCardinalDirections->Enable(true);
             m_ckboxUDPReportingEnable->Enable(true);
-            
+
             if (m_ckboxUDPReportingEnable->GetValue())
             {
                 m_udpHostname->Enable(true);
@@ -1506,6 +1537,19 @@ void OptionsDlg::updateReportingState()
             {
                 m_udpHostname->Enable(false);
                 m_udpPort->Enable(false);
+            }
+
+            m_ckboxUDPBroadcastEnable->Enable(true);
+
+            if (m_ckboxUDPBroadcastEnable->GetValue())
+            {
+                m_udpBroadcastAddress->Enable(true);
+                m_udpBroadcastPort->Enable(true);
+            }
+            else
+            {
+                m_udpBroadcastAddress->Enable(false);
+                m_udpBroadcastPort->Enable(false);
             }
         }
         else
@@ -1521,7 +1565,10 @@ void OptionsDlg::updateReportingState()
             m_udpHostname->Enable(false);
             m_udpPort->Enable(false);
             m_ckboxUDPReportingEnable->Enable(false);
-        }    
+            m_udpBroadcastAddress->Enable(false);
+            m_udpBroadcastPort->Enable(false);
+            m_ckboxUDPBroadcastEnable->Enable(false);
+        }
     }
     else
     {
@@ -1540,7 +1587,10 @@ void OptionsDlg::updateReportingState()
         m_udpHostname->Enable(false);
         m_udpPort->Enable(false);
         m_ckboxUDPReportingEnable->Enable(false);
-        
+        m_udpBroadcastAddress->Enable(false);
+        m_udpBroadcastPort->Enable(false);
+        m_ckboxUDPBroadcastEnable->Enable(false);
+
         m_ckbox_use_utc_time->Enable(false);
     }
 }

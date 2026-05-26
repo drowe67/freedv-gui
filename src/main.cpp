@@ -47,6 +47,7 @@
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
+#include "reporting/UdpReporter.h"
 
 #include "logging/WSJTXNetworkLogger.h"
 
@@ -2587,11 +2588,19 @@ void MainFrame::performFreeDVOn_()
                         if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                         {
                             wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-                            
+
                             if (!m_reporterHidden->GetValue())
                             {
                                 wxGetApp().m_sharedReporterObject->showOurselves();
                             }
+                        }
+
+                        if (wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled)
+                        {
+                            auto udpBroadcastReporter = std::make_shared<UdpReporter>(
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress->ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort);
+                            wxGetApp().m_reporters.push_back(udpBroadcastReporter);
                         }
 
                         // Enable FreeDV Reporter timer (every 5 minutes).
