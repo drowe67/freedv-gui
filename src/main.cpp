@@ -1206,7 +1206,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
-    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);
+    m_totTimer.SetOwner(this, ID_TIMER_TOT);
+    Bind(wxEVT_TIMER, &MainFrame::OnTOTTimer, this, ID_TIMER_TOT);
 #endif
     
     // Create voice keyer popup menu.

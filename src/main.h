@@ -117,6 +117,7 @@ enum {
         ID_TIMER_UPDATE_OTHER,
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
+        ID_TIMER_TOT,           // Time-Out Timer
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -310,11 +311,11 @@ class MainFrame : public TopFrame
 
 #ifdef _USE_TIMER
         wxTimer                 m_plotTimer;
-        
+
         // Not sure why we have the option to disable timers. TBD?
         wxTimer                 m_pskReporterTimer;
         wxTimer                 m_updFreqStatusTimer; //[UP]
-        
+
         wxTimer                 m_plotWaterfallTimer;
         wxTimer                 m_plotSpectrumTimer;
         wxTimer                 m_plotScatterTimer;
@@ -322,6 +323,9 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
         wxTimer                 m_plotSNRTimer;
+
+        // Time-Out Timer (TOT): stops TX after configured period
+        wxTimer                 m_totTimer;
 #endif
 
     void destroy_fifos(void);
@@ -453,6 +457,8 @@ class MainFrame : public TopFrame
         
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
+
+        void OnTOTTimer(wxTimerEvent& evt);
         
         void OnSetMonitorVKAudio( wxCommandEvent& event );
         void OnSetMonitorTxAudio( wxCommandEvent& event );

@@ -1135,6 +1135,34 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
     event.Skip();
 }
 
+//-------------------------------------------------------------------------
+// OnTOTTimer()
+// Time-Out Timer handler: fires when the configured TX time limit expires.
+//-------------------------------------------------------------------------
+void MainFrame::OnTOTTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire))
+    {
+        // Not currently transmitting; nothing to do.
+        return;
+    }
+
+    log_info("Time-Out Timer (TOT) expired — stopping transmit");
+
+    if (vk_state == VK_TX)
+    {
+        // Voice keyer is active; stop it via its state machine.
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else
+    {
+        m_btnTogPTT->SetValue(false);
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        endingTx.store(true, std::memory_order_release);
+        togglePTT();
+    }
+}
+
 void MainFrame::togglePTT(void) {
     std::chrono::high_resolution_clock highResClock;
 
@@ -1142,6 +1170,12 @@ void MainFrame::togglePTT(void) {
 
     if (g_tx.load(std::memory_order_acquire))
     {
+        // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
+        if (m_totTimer.IsRunning())
+        {
+            m_totTimer.Stop();
+        }
+
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)
         {
@@ -1401,7 +1435,16 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
-                
+
+        // Start Time-Out Timer if enabled.
+        if (wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled &&
+            wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs > 0)
+        {
+            int totMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+            log_info("Starting Time-Out Timer (%d seconds)", wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs.get());
+            m_totTimer.Start(totMs, wxTIMER_ONE_SHOT);
+        }
+
         if (wxGetApp().m_pttInSerialPort)
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
