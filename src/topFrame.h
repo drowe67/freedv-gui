@@ -182,6 +182,8 @@ class TopFrame : public wxFrame
         virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsImportConfig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsImportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
+        virtual void OnToolsLoadDefaultConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }

@@ -1386,7 +1386,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
 static std::recursive_mutex stoppingMutex;
 
-void MainFrame::setConfiguration_(wxFileConfig* config)
+void MainFrame::setConfiguration_(wxConfigBase* config)
 {
     pConfig = config;
     wxConfigBase::Set(pConfig);

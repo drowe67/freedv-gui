@@ -380,7 +380,9 @@ class MainFrame : public TopFrame
         void OnToolsExportConfigUI( wxUpdateUIEvent& event ) override;
         void OnToolsImportConfig( wxCommandEvent& event ) override;
         void OnToolsImportConfigUI( wxUpdateUIEvent& event ) override;
-        
+        void OnToolsLoadDefaultConfig( wxCommandEvent& event ) override;
+        void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) override;
+
         void OnCenterRx(wxCommandEvent& event) override;
 
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
@@ -570,7 +572,7 @@ class MainFrame : public TopFrame
         void loadConfiguration_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);
-        void setConfiguration_(wxFileConfig* config);
+        void setConfiguration_(wxConfigBase* config);
 
         HamlibRigController::Mode getCurrentMode_();
         
