@@ -71,7 +71,7 @@ void UdpReporter::inAnalogMode(bool /*inAnalog*/) {}
 void UdpReporter::send() {}
 
 void UdpReporter::addReceiveRecord(std::string callsign, std::string mode,
-                                   uint64_t frequency, signed char /*snr*/)
+                                   uint64_t frequency, signed char snr)
 {
     // ── Build ISO-8601 UTC timestamp ─────────────────────────────────────────
     std::time_t now = std::time(nullptr);
@@ -85,11 +85,12 @@ void UdpReporter::addReceiveRecord(std::string callsign, std::string mode,
     yyjson_mut_val* root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
 
-    yyjson_mut_obj_add_str(doc, root, "type",         "fdv_callsign");
-    yyjson_mut_obj_add_int(doc, root, "version",      JSON_MESSAGE_VERSION);
-    yyjson_mut_obj_add_str(doc, root, "timestamp",    timestampBuf);
-    yyjson_mut_obj_add_str(doc, root, "callsign",     callsign.c_str());
-    yyjson_mut_obj_add_str(doc, root, "mode",         mode.c_str());
+    yyjson_mut_obj_add_str( doc, root, "type",         "fdv_callsign");
+    yyjson_mut_obj_add_int( doc, root, "version",      JSON_MESSAGE_VERSION);
+    yyjson_mut_obj_add_str( doc, root, "timestamp",    timestampBuf);
+    yyjson_mut_obj_add_str( doc, root, "callsign",     callsign.c_str());
+    yyjson_mut_obj_add_str( doc, root, "mode",         mode.c_str());
+    yyjson_mut_obj_add_int( doc, root, "snr",          snr);
     yyjson_mut_obj_add_uint(doc, root, "frequency_hz", frequency);
 
     size_t jsonLen = 0;
