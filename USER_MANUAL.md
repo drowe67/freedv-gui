@@ -945,6 +945,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
     * Improve Flex waveform RX audio quality. (PR #1348, 1356)
     * Flex: Use version number without Git hash for waveform registration. (PR #1359)
+    * Fix intermittent CSV logging corruption. (PR #1361)
 2. Enhancements:
     * Allow use of a custom key for PTT. (PR #1309)
     * Improve Reporter message list usability. (PR #1310) - thanks @barjac!
