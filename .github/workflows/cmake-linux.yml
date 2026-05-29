@@ -49,8 +49,8 @@ jobs:
         mkdir build_linux
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
-        # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_rade build_codec2 build_rnnoise
+        # Build so we have all required .h and .c/.cpp files
+        make -j$(nproc)
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
@@ -67,7 +67,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04-arm, ubuntu-22.04]
-        target: [all, freedv-ka9q, freedv-flex]
 
     runs-on: ${{ matrix.os }}
 
@@ -134,14 +133,9 @@ jobs:
           pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
-    - name: Set up Docker Buildx
-      if: ${{ matrix.target == 'freedv-flex' }}
-      uses: docker/setup-buildx-action@v4
-
     - name: Build instrumented freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
@@ -149,7 +143,6 @@ jobs:
     - name: Generate optimization profile
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
@@ -170,22 +163,10 @@ jobs:
     - name: Build PGO optimized freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
-
-    - name: Build target
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: ${{ matrix.target != 'all' }}
-      run: |
-          . ./rade-venv/bin/activate
-          mkdir build_linux
-          cd build_linux
-          CC=clang-21 CXX=clang++-21 cmake -DENABLE_LTO=1 -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
-          make -j$(nproc) ${{ matrix.target }}
 
     - name: Initialize GPG keys
       if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
@@ -207,14 +188,14 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
-          ./make-appimage.sh ${{ matrix.target }}
+          ./make-appimage.sh
 
     - name: Build AppImage (signed)
       if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
-          LDAI_SIGN=1 LDAI_SIGN_KEY="${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}" ./make-appimage.sh ${{ matrix.target }}
+          LDAI_SIGN=1 LDAI_SIGN_KEY="${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}" ./make-appimage.sh
 
     - name: Calculate AppImage filename
       shell: bash
@@ -223,37 +204,11 @@ jobs:
       run: |
           echo "APPIMAGE_FILENAME=$(echo -n FreeDV*.AppImage)" >> "$GITHUB_OUTPUT"
 
-    - name: Generate waveform file
-      shell: bash
-      working-directory: ${{github.workspace}}/src/integrations/flex
-      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
-      run: |
-        cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
-        ./FreeDV-FlexRadio.AppImage --appimage-extract
-        ls -lR squashfs-root
-        export FREEDV_VERSION=`cat ${{github.workspace}}/build_linux/freedv-version.txt`
-        docker buildx build --label com.flexradio.waveform.version=$FREEDV_VERSION --output type=oci,compression=gzip,dest=freedv-waveform-${FREEDV_VERSION}.tar.gz --tag=freedv-waveform .
-
-    - name: Calculate waveform filename
-      shell: bash
-      id: flex-waveform-filename
-      working-directory: ${{github.workspace}}/src/integrations/flex
-      run: |
-          echo "FLEX_WAVEFORM_FILENAME=$(echo -n freedv-waveform*.tar.gz)" >> "$GITHUB_OUTPUT"
-
     - name: Upload AppImage
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
-        archive: false
-
-    - name: Upload waveform file
-      uses: actions/upload-artifact@v7
-      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
-      with:
-        name: ${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
-        path: ${{github.workspace}}/src/integrations/flex/${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
         archive: false
 
   test-appimage-fedora:
