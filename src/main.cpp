@@ -216,8 +216,8 @@ wxString utTxFile;
 wxString utTxOutFile;
 wxString utRxFile;
 wxString utRxOutFile;
-wxString utTxFeatureFile;
-wxString utRxFeatureFile;
+std::string utTxFeatureFile;
+std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
 
@@ -687,14 +687,18 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
-    if (parser.Found("rxfeaturefile", &utRxFeatureFile))
+    wxString utRxFeatureFileTmp; 
+    if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
-        log_info("Capturing RADE RX features into file %s", (const char*)utRxFeatureFile.ToUTF8());
+        utRxFeatureFile = utRxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE RX features into file %s", utRxFeatureFile.c_str());
     }
-    
-    if (parser.Found("txfeaturefile", &utTxFeatureFile))
+   
+    wxString utTxFeatureFileTmp; 
+    if (parser.Found("txfeaturefile", &utTxFeatureFileTmp))
     {
-        log_info("Capturing RADE TX features into file %s", (const char*)utTxFeatureFile.ToUTF8());
+        utTxFeatureFile = utTxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE TX features into file %s", utTxFeatureFile.c_str());
     }
     
     return true;
