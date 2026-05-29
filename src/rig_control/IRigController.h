@@ -24,7 +24,7 @@
 #define I_RIG_CONTROLLER_H
 
 #include <string>
-#include "util/EventHandler.h"
+#include "EventHandler.h"
 
 class IRigController
 {

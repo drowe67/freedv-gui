@@ -1,3 +1,0 @@
-add_subdirectory(common)
-add_subdirectory(flex)
-add_subdirectory(ka9q)
