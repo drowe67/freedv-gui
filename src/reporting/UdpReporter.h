@@ -1,9 +1,9 @@
-#ifndef I_REPORTER_H
-#define I_REPORTER_H
+#ifndef UDP_REPORTER_H
+#define UDP_REPORTER_H
 
 //=========================================================================
-// Name:            IReporter.h
-// Purpose:         Public interface for reporting classes.
+// Name:            UdpReporter.h
+// Purpose:         Reports received callsigns via UDP broadcast as JSON.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -36,20 +36,37 @@
 //=========================================================================
 
 #include <string>
-#include <inttypes.h>
+#include "IReporter.h"
+#include "../util/UdpHandler.h"
 
-class IReporter
+class UdpReporter : protected UdpHandler, public IReporter
 {
 public:
-    virtual ~IReporter() = default;
+    // address: IPv4 or IPv6 address to send UDP datagrams to
+    // port:    UDP destination port number
+    UdpReporter(std::string address, int port);
+    virtual ~UdpReporter();
 
-    virtual void freqChange(uint64_t frequency) = 0;
-    virtual void transmit(std::string mode, bool tx) = 0;
-    
-    virtual void inAnalogMode(bool inAnalog) = 0;
-    
-    virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr) = 0;
-    virtual void send() = 0;
+    virtual void freqChange(uint64_t frequency) override;
+    virtual void transmit(std::string mode, bool tx) override;
+    virtual void inAnalogMode(bool inAnalog) override;
+
+    // Serialises a received callsign as a JSON UDP datagram and sends it.
+    virtual void addReceiveRecord(std::string callsign, std::string mode,
+                                  uint64_t frequency, signed char snr) override;
+
+    virtual void send() override;
+
+protected:
+    // We only send — ignore anything received on the socket.
+    virtual void onReceive_(const char*, int, char*, int) override {}
+
+private:
+    std::string address_;
+    int         port_;
+    uint64_t    currentFrequency_;
+
+    static constexpr int JSON_MESSAGE_VERSION = 1;
 };
 
-#endif // I_REPORTER_H
+#endif // UDP_REPORTER_H

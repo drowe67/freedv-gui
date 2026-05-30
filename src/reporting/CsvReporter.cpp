@@ -32,6 +32,8 @@
 //
 //=========================================================================
 
+#include <cassert>
+#include <cstdlib>
 #include <cinttypes>
 #include <ctime>
 #include <iomanip>
@@ -69,22 +71,31 @@ void CsvReporter::addReceiveRecord(std::string callsign, std::string mode, uint6
         return;
     }
 
+    int snrInt = static_cast<int>(snr);
     std::time_t now = std::time(nullptr);
-    std::tm* curTime = std::gmtime(&now); // NOLINT
+    struct tm* curTime = (struct tm*)malloc(sizeof(struct tm));
+    assert(curTime != NULL);
+#if defined(_WIN32)
+    gmtime_s(curTime, &now);
+#else
+    gmtime_r(&now, curTime);
+#endif // defined(_WIN32) 
 
-    char dateBuf[11]; // YYYY-MM-DD\0
-    char timeBuf[9];  // HH:MM:SS\0
+    char dateBuf[100]; // YYYY-MM-DD\0
+    char timeBuf[100];  // HH:MM:SS\0
     std::strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d", curTime);
     std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", curTime);
 
+    free(curTime);
+
     log_info("CsvReporter: adding record for callsign %s, mode %s, frequency %" PRIu64 ", SNR %d",
-             callsign.c_str(), mode.c_str(), frequency, static_cast<int>(snr));
+             callsign.c_str(), mode.c_str(), frequency, snrInt);
 
     file_ << dateBuf << ","
           << timeBuf << ","
           << callsign << ","
           << mode << ","
           << frequency << ","
-          << static_cast<int>(snr) << "\n";
+          << snrInt << "\n";
     file_.flush();
 }

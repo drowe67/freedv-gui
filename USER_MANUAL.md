@@ -365,8 +365,9 @@ to the following locations:
 
 You can also save and restore different configuration files by using the Tools->Export Configuration
 and Use Configuration menu items. These menu options allow for switching of configurations without
-restarting FreeDV. Note that restoring a configuration file does not modify the default configuration
-nor does FreeDV begin using it by default on subsequent application starts.
+restarting FreeDV. Note that restoring a configuration file does not modify the default configuration.
+However, the last restored configuration file will be loaded the next time FreeDV starts, unless you
+choose Tools->Load Default Configuration or restore a different configuration file.
 
 ## Executing FreeDV With a Different Configuration (Windows)
 
@@ -933,18 +934,26 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.3.1 TBD 2026
+## V2.4.0 TBD 2026
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Add UDP broadcast of received callsigns. (PR #1367)
+    * Load last-used config file on restarts. (PR #1365)
+
+## V2.3.1 May 2026
 
 1. Bugfixes:
     * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333) - thanks @barjac!
     * Fix audio routing problems on Windows due to hardware offloading. (PR #1335)
     * Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks @barjac!
-    * Disable use of pffft during audio resampling. (PR #1338)
     * Fix missing Hamlib defines when building from source (PR #1353) - thanks @barjac!
     * FreeDV Reporter: Fix issue preventing mode changes on double-click. (PR #1343)
     * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
-    * Improve Flex waveform RX audio quality. (PR #1348, 1356)
+    * Improve Flex waveform RX audio quality. (PR #1338, #1348, 1356)
     * Flex: Use version number without Git hash for waveform registration. (PR #1359)
+    * Fix intermittent CSV logging corruption. (PR #1361)
     * Hamlib: Fix bug preventing frequency change after changing on the radio. (PR #1363)
     * KA9Q: Remove custom AppRun script causing audio distortion. (PR #1364)
 2. Enhancements:
