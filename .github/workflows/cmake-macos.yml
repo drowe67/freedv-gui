@@ -29,6 +29,13 @@ jobs:
       with:
         version: "20.1"
 
+    - name: Build macdylibbundler
+      run: |
+        git clone https://github.com/tmiw/macdylibbundler.git
+        cd macdylibbundler && git checkout main && git pull
+        make -j$(sysctl -n hw.logicalcpu)
+        cd ..
+
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
