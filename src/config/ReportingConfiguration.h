@@ -70,7 +70,11 @@ public:
     ConfigurationDataElement<bool> udpReportingEnabled;
     ConfigurationDataElement<wxString> udpReportingHostname;
     ConfigurationDataElement<int> udpReportingPort;
-    
+
+    ConfigurationDataElement<bool> udpBroadcastEnabled;
+    ConfigurationDataElement<wxString> udpBroadcastAddress;
+    ConfigurationDataElement<int> udpBroadcastPort;
+
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;

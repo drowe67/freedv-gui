@@ -601,6 +601,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
 
     if (currFreq_ == frequencyHz)
     {
+        log_warn("Attempting to set to same frequency (%" PRIu64 " Hz), ignoring", frequencyHz);
         return;
     }
     
@@ -834,6 +835,14 @@ freqAttempt:
             {
                 origFreq_ = freq;
                 origMode_ = mode;
+            }
+            else
+            {
+                // currFreq_ should only be set after initial retrieval of frequency/mode
+                // as the user could specify a frequency to change to on startup. Otherwise,
+                // that would be overwritten and the frequency change would not happen.
+                currFreq_ = freq;
+                currMode_ = mode;
             }
             
             // Reset get freq/mode error count since we don't want intermittent errors
