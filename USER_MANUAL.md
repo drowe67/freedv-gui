@@ -366,6 +366,8 @@ to the following locations:
 You can also save and restore different configuration files by using the Tools->Export Configuration
 and Use Configuration menu items. These menu options allow for switching of configurations without
 restarting FreeDV. Note that restoring a configuration file does not modify the default configuration.
+However, the last restored configuration file will be loaded the next time FreeDV starts, unless you
+choose Tools->Load Default Configuration or restore a different configuration file.
 
 ## Executing FreeDV With a Different Configuration (Windows)
 
