@@ -365,8 +365,9 @@ to the following locations:
 
 You can also save and restore different configuration files by using the Tools->Export Configuration
 and Use Configuration menu items. These menu options allow for switching of configurations without
-restarting FreeDV. Note that restoring a configuration file does not modify the default configuration
-nor does FreeDV begin using it by default on subsequent application starts.
+restarting FreeDV. Note that restoring a configuration file does not modify the default configuration.
+However, the last restored configuration file will be loaded the next time FreeDV starts, unless you
+choose Tools->Load Default Configuration or restore a different configuration file.
 
 ## Executing FreeDV With a Different Configuration (Windows)
 
@@ -939,6 +940,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * TBD
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
+    * Load last-used config file on restarts. (PR #1365)
 
 ## V2.3.1 May 2026
 

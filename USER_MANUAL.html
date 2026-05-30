@@ -460,8 +460,10 @@ it will be relative to the following locations:</p>
 the Tools-&gt;Export Configuration and Use Configuration menu items.
 These menu options allow for switching of configurations without
 restarting FreeDV. Note that restoring a configuration file does not
-modify the default configuration nor does FreeDV begin using it by
-default on subsequent application starts.</p>
+modify the default configuration. However, the last restored
+configuration file will be loaded the next time FreeDV starts, unless
+you choose Tools-&gt;Load Default Configuration or restore a different
+configuration file.</p>
 <h2 data-number="6.1"
 id="executing-freedv-with-a-different-configuration-windows"><span
 class="header-section-number">6.1</span> Executing FreeDV With a
@@ -1245,8 +1247,21 @@ speech codec bits</td>
 </table>
 <h1 data-number="18" id="release-notes"><span
 class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v2.3.1-may-2026"><span
-class="header-section-number">18.1</span> V2.3.1 May 2026</h2>
+<h2 data-number="18.1" id="v2.4.0-tbd-2026"><span
+class="header-section-number">18.1</span> V2.4.0 TBD 2026</h2>
+<ol type="1">
+<li>Bugfixes:
+<ul>
+<li>TBD</li>
+</ul></li>
+<li>Enhancements:
+<ul>
+<li>Add UDP broadcast of received callsigns. (PR #1367)</li>
+<li>Load last-used config file on restarts. (PR #1365)</li>
+</ul></li>
+</ol>
+<h2 data-number="18.2" id="v2.3.1-may-2026"><span
+class="header-section-number">18.2</span> V2.3.1 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1280,8 +1295,8 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Clarify Reporter on/off tooltip. (PR #1345)</li>
 </ul></li>
 </ol>
-<h2 data-number="18.2" id="v2.3.0-may-2026"><span
-class="header-section-number">18.2</span> V2.3.0 May 2026</h2>
+<h2 data-number="18.3" id="v2.3.0-may-2026"><span
+class="header-section-number">18.3</span> V2.3.0 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1384,8 +1399,8 @@ thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
 maintenance. (PR #1286, #1307)</li>
 </ul></li>
 </ol>
-<h2 data-number="18.3" id="earlier-than-v2.2.0"><span
-class="header-section-number">18.3</span> Earlier than V2.2.0</h2>
+<h2 data-number="18.4" id="earlier-than-v2.2.0"><span
+class="header-section-number">18.4</span> Earlier than V2.2.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
 for more information about changes in versions prior to 2.2.0.</p>
