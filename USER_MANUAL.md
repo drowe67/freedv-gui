@@ -938,6 +938,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * TBD
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
+    * Load last-used config file on restarts. (PR #1365)
 
 ## V2.3.1 May 2026
 
