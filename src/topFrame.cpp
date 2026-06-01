@@ -837,7 +837,26 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
-        
+
+    //=====================================================
+    // Time-Out Timer warning box (shown when <=15s remain)
+    //=====================================================
+    m_totWarningBox = new wxStaticBox(m_panel, wxID_ANY, _("Time-Out Timer"), wxDefaultPosition, wxSize(100,-1));
+    wxStaticBoxSizer* totWarnSizer = new wxStaticBoxSizer(m_totWarningBox, wxVERTICAL);
+
+    m_totWarningText = new wxStaticText(m_totWarningBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_totWarningText->SetMinSize(wxSize(100,-1));
+    totWarnSizer->Add(m_totWarningText, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+
+    m_btnExtendTOT = new wxButton(m_totWarningBox, wxID_ANY, _("Extend by 60s"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnExtendTOT->SetToolTip(_("Extends the current Time-Out Timer by 60 seconds."));
+    m_btnExtendTOT->SetBackgroundColour(*wxRED);
+    totWarnSizer->Add(m_btnExtendTOT, 0, wxALL | wxEXPAND, 5);
+
+    m_totWarningSizer = totWarnSizer;
+    rightSizer->Add(totWarnSizer, 0, wxALL | wxEXPAND, 2);
+    rightSizer->Show(m_totWarningSizer, false, true);
+
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     
     m_panel->SetSizerAndFit(bSizer1);
@@ -990,6 +1009,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_reporterHidden->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnToggleReporterVisibility), NULL, this);
 
     m_btnTogTune->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
+
+    m_btnExtendTOT->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnExtendTOT), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -1097,6 +1118,8 @@ TopFrame::~TopFrame()
     m_reporterHidden->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnToggleReporterVisibility), NULL, this);
 
     m_btnTogTune->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
+
+    m_btnExtendTOT->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnExtendTOT), NULL, this);
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

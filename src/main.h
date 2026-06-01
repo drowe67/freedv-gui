@@ -118,6 +118,7 @@ enum {
         ID_TIMER_PSKREPORTER,
         ID_TIMER_UPD_FREQ,
         ID_TIMER_TOT,           // Time-Out Timer
+        ID_TIMER_TOT_WARNING,   // Polls remaining TOT time to show warning
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -335,7 +336,12 @@ class MainFrame : public TopFrame
 
         // Time-Out Timer (TOT): stops TX after configured period
         wxTimer                 m_totTimer;
+        wxTimer                 m_totWarningTimer;
 #endif
+
+        // TOT warning state
+        std::chrono::time_point<std::chrono::high_resolution_clock> m_totTxStartTime;
+        int                     m_totCurrentDurationMs{0};
 
     void destroy_fifos(void);
 
@@ -470,6 +476,8 @@ class MainFrame : public TopFrame
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
 
         void OnTOTTimer(wxTimerEvent& evt);
+        void OnTOTWarningTimer(wxTimerEvent& evt);
+        void OnExtendTOT(wxCommandEvent& event) override;
         
         void OnSetMonitorVKAudio( wxCommandEvent& event );
         void OnSetMonitorTxAudio( wxCommandEvent& event );

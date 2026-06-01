@@ -1149,6 +1149,15 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
 
     log_info("Time-Out Timer (TOT) expired — stopping transmit");
 
+    if (m_totWarningTimer.IsRunning())
+    {
+        m_totWarningTimer.Stop();
+    }
+    rightSizer->Show(m_totWarningSizer, false, true);
+    rightSizer->Layout();
+    m_panel->Layout();
+    m_totCurrentDurationMs = 0;
+
     if (vk_state == VK_TX)
     {
         // Voice keyer is active; stop it via its state machine.
@@ -1160,6 +1169,59 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
+    }
+}
+
+void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+        return;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
+    int remaining = m_totCurrentDurationMs - (int)elapsed;
+
+    if (remaining > 0 && remaining <= 15000)
+    {
+        int secRemaining = (remaining + 999) / 1000;
+        m_totWarningText->SetLabel(wxString::Format(_("%ds remaining"), secRemaining));
+        if (!m_totWarningBox->IsShown())
+        {
+            rightSizer->Show(m_totWarningSizer, true, true);
+            rightSizer->Layout();
+            m_panel->Layout();
+        }
+    }
+    else if (remaining > 15000 && m_totWarningBox->IsShown())
+    {
+        rightSizer->Show(m_totWarningSizer, false, true);
+        rightSizer->Layout();
+        m_panel->Layout();
+    }
+}
+
+void MainFrame::OnExtendTOT(wxCommandEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+        return;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
+
+    m_totCurrentDurationMs += 60000;
+    int newRemaining = m_totCurrentDurationMs - (int)elapsed;
+
+    if (newRemaining > 0)
+    {
+        m_totTimer.Start(newRemaining, wxTIMER_ONE_SHOT);
+        log_info("Time-Out Timer (TOT) extended — %d ms remaining", newRemaining);
+    }
+
+    if (m_totWarningBox->IsShown())
+    {
+        rightSizer->Show(m_totWarningSizer, false, true);
+        rightSizer->Layout();
+        m_panel->Layout();
     }
 }
 
@@ -1175,6 +1237,14 @@ void MainFrame::togglePTT(void) {
         {
             m_totTimer.Stop();
         }
+        if (m_totWarningTimer.IsRunning())
+        {
+            m_totWarningTimer.Stop();
+        }
+        rightSizer->Show(m_totWarningSizer, false, true);
+        rightSizer->Layout();
+        m_panel->Layout();
+        m_totCurrentDurationMs = 0;
 
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)
@@ -1443,6 +1513,10 @@ void MainFrame::togglePTT(void) {
             int totMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
             log_info("Starting Time-Out Timer (%d seconds)", wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs.get());
             m_totTimer.Start(totMs, wxTIMER_ONE_SHOT);
+
+            m_totTxStartTime = std::chrono::high_resolution_clock::now();
+            m_totCurrentDurationMs = totMs;
+            m_totWarningTimer.Start(1000, wxTIMER_CONTINUOUS);
         }
 
         if (wxGetApp().m_pttInSerialPort)
