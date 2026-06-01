@@ -1,8 +1,3 @@
-# FreeDV Rig Integrations
+# FreeDV integrations have moved
 
-This folder contains integrations for various radios and SDRs. Currently, we support:
-
-* [FlexRadio 6000/8000/Aurora series](./flex/README.md)
-* [Command line RX tool for e.g. KA9Q](./ka9q/README.md)
-
-Please see the above README files for more information on building and running these integrations.
+FreeDV integrations (e.g. Flex, KA9Q) are now in a separate repo and will release from there: https://github.com/tmiw/freedv-integrations

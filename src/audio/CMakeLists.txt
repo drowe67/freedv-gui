@@ -36,8 +36,10 @@ add_library(fdv_audio STATIC
     ${AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES}
 )
 
+target_link_libraries(fdv_audio PUBLIC fdv_util)
+
 if(APPLE AND NATIVE_AUDIO_AVAILABLE)
-    target_link_libraries(fdv_audio
+    target_link_libraries(fdv_audio PUBLIC
         "-framework AVFoundation"
         "-framework CoreAudio")
 elseif(WIN32 AND NATIVE_AUDIO_AVAILABLE)
