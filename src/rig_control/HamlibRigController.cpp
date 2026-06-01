@@ -445,12 +445,16 @@ void HamlibRigController::connectImpl_()
         log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
     }
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "1");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "1");
             
     result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
+        // Reset retry to 0 since we've now connected.
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
+
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
