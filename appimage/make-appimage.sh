@@ -1,17 +1,7 @@
 #!/bin/bash -e
 
-TARGET=${1:-all}
-
-if [[ "${TARGET}" == "all" ]]; then
-    export APPNAME="FreeDV"
-    export APPEXEC=../build_linux/src/freedv
-elif [[ "${TARGET}" == "freedv-flex" ]]; then
-    export APPNAME="FreeDV-FlexRadio"
-    export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
-elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
-    export APPNAME="FreeDV-KA9Q"
-    export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
-fi
+export APPNAME="FreeDV"
+export APPEXEC=../build_linux/src/freedv
 
 DESKTOP_FILE="$APPNAME.desktop"
 APPDIR="$APPNAME.AppDir"
@@ -40,23 +30,16 @@ else
 fi
 
 ./linuxdeploy-${MACH_ARCH}.AppImage \
---executable "$APPEXEC" \
---appdir "$APPDIR" \
---icon-file ../contrib/freedv256x256.png \
---desktop-file $DESKTOP_FILE
+  --executable "$APPEXEC" \
+  --appdir "$APPDIR" \
+  --icon-file ../contrib/freedv256x256.png \
+  --desktop-file $DESKTOP_FILE
 
 # Create the output
-if [[ "${TARGET}" == "all" ]]; then
-    ./linuxdeploy-${MACH_ARCH}.AppImage \
-        --appdir "$APPDIR" \
-        --plugin gtk \
-        --output appimage
-else
-    # GTK plugin not needed for integrations
-    ./linuxdeploy-${MACH_ARCH}.AppImage \
-        --appdir "$APPDIR" \
-        --output appimage
-fi
+./linuxdeploy-${MACH_ARCH}.AppImage \
+  --appdir "$APPDIR" \
+  --plugin gtk \
+  --output appimage
 
 # Include version number in AppImage filename
 FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`

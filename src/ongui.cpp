@@ -61,7 +61,7 @@ extern wxMutex g_mutexProtectingCallbackData;
 
 static wxString bandNameForFilter(FilterFrequency band);
 
-std::atomic<bool> g_eoo_enqueued;
+extern std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
 

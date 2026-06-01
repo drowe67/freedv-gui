@@ -20,10 +20,6 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
-# Include third party headers and components
-include_directories(3rdparty)
-add_subdirectory(3rdparty)
-
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
@@ -32,17 +28,9 @@ add_subdirectory(audio)
 add_subdirectory(config)
 add_subdirectory(gui)
 add_subdirectory(logging)
-add_subdirectory(os)
 add_subdirectory(pipeline)
-add_subdirectory(reporting)
 add_subdirectory(rig_control)
 add_subdirectory(sox)
-add_subdirectory(util)
-
-# Compile FreeDV rig integrations
-if((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
-add_subdirectory(integrations)
-endif((LINUX OR APPLE) AND (NOT SANITIZERS_ENABLED))
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
@@ -67,10 +55,10 @@ endif(APPLE)
 
 if(APPLE)
 target_compile_options(FreeDV PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus r8brain git_version)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_audio_pipeline_extra fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 git_version)
 else(APPLE)
 target_compile_options(freedv PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus r8brain git_version)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_audio_pipeline_extra fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 git_version)
 endif(APPLE)
 
 # Add dependencies for other statically built libraries, if applicable.
@@ -81,7 +69,7 @@ if(FREEDV_STATIC_DEPS)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
     endif(APPLE)
     add_dependencies(fdv_audio ${FREEDV_STATIC_DEPS})
-    add_dependencies(fdv_audio_pipeline ${FREEDV_STATIC_DEPS})
+    add_dependencies(fdv_audio_pipeline_extra ${FREEDV_STATIC_DEPS})
     add_dependencies(fdv_sox ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
 

@@ -28,7 +28,7 @@
 #include <mutex>
 #include <atomic>
 
-#include "util/ThreadedObject.h"
+#include "ThreadedObject.h"
 #include "IRigFrequencyController.h"
 #include "IRigPttController.h"
 
