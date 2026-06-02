@@ -57,7 +57,7 @@ extern "C"
 }
 
 #include "util/IRealtimeHelper.h"
-#include "util/sanitizers.h"
+#include "freedv_sanitizers.h"
 #include "util/realtime_fp.h"
 
 class IPipelineStep;

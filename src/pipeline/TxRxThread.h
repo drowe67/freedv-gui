@@ -45,7 +45,7 @@
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
 #include "util/Semaphore.h"
-#include "util/sanitizers.h"
+#include "freedv_sanitizers.h"
 
 // Forward declarations
 class LinkStep;
