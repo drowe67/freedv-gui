@@ -214,7 +214,7 @@ wxConfigBase *pConfig = NULL;
 // active).  On Windows this becomes HKCU\Software\CODEC2-Project\FreeDV-State;
 // on macOS/Linux it becomes a file in the per-user config directory.
 static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
-static const wxChar* const FREEDV_STATE_VENDOR_NAME = wxT("CODEC2-Project");
+static const wxChar* const FREEDV_VENDOR_NAME = wxT("CODEC2-Project");
 static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
 
 wxString getLastUsedConfigPath()
