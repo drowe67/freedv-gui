@@ -342,6 +342,7 @@ class MainFrame : public TopFrame
         // TOT warning state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totTxStartTime;
         int                     m_totCurrentDurationMs{0};
+        bool totExtendTimeoutButtonColorState_;
 
     void destroy_fifos(void);
 

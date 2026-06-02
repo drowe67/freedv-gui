@@ -1191,9 +1191,16 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
             rightSizer->Layout();
             m_panel->Layout();
         }
+
+        // Toggle Extend Timeout background color between OS-default and red
+        // to provide a more easily seen indication that timeout is about to expire.
+        m_btnExtendTOT->SetBackgroundColour(totExtendTimeoutButtonColorState_ ? *wxRED : wxNullColour);
+        totExtendTimeoutButtonColorState_ = !totExtendTimeoutButtonColorState_;
+        m_btnExtendTOT->Refresh(); // background color does not update unless manually refreshed
     }
     else if (remaining > 15000 && m_totWarningBox->IsShown())
     {
+        totExtendTimeoutButtonColorState_ = false;
         rightSizer->Show(m_totWarningSizer, false, true);
         rightSizer->Layout();
         m_panel->Layout();
@@ -1482,6 +1489,7 @@ void MainFrame::togglePTT(void) {
 
     if (newTx)
     {
+        totExtendTimeoutButtonColorState_ = false;
         endingTx.store(false, std::memory_order_release);
             
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
@@ -1516,7 +1524,7 @@ void MainFrame::togglePTT(void) {
 
             m_totTxStartTime = std::chrono::high_resolution_clock::now();
             m_totCurrentDurationMs = totMs;
-            m_totWarningTimer.Start(1000, wxTIMER_CONTINUOUS);
+            m_totWarningTimer.Start(500, wxTIMER_CONTINUOUS);
         }
 
         if (wxGetApp().m_pttInSerialPort)
