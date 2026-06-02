@@ -937,7 +937,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.4.0 TBD 2026
 
 1. Bugfixes:
-    * TBD
+    * Hamlib: Allow one timeout during connection process to allow Icom marine radios to behave better. (PR #1369)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Load last-used config file on restarts. (PR #1365)
