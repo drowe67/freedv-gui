@@ -235,7 +235,7 @@ void saveLastUsedConfigPath(const wxString& path)
 void clearLastUsedConfigPath()
 {
     wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.DeleteEntry(LAST_USED_CONFIG_KEY);
+    stateConfig.Write(LAST_USED_CONFIG_KEY, wxEmptyString);
     stateConfig.Flush();
 }
 
