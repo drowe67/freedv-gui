@@ -91,7 +91,7 @@
 #include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
-#include "util/sanitizers.h"
+#include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
 
 #define _USE_TIMER              1
