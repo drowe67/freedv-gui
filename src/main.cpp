@@ -219,7 +219,7 @@ static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile")
 
 wxString getLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
     wxString path;
     stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
     return path;
@@ -227,14 +227,14 @@ wxString getLastUsedConfigPath()
 
 void saveLastUsedConfigPath(const wxString& path)
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
     stateConfig.Write(LAST_USED_CONFIG_KEY, path);
     stateConfig.Flush();
 }
 
 void clearLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
     stateConfig.DeleteEntry(LAST_USED_CONFIG_KEY);
     stateConfig.Flush();
 }
