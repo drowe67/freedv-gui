@@ -451,10 +451,6 @@ void HamlibRigController::connectImpl_()
     result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
-        // Reset retry to 0 since we've now connected.
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
-
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
@@ -491,6 +487,10 @@ void HamlibRigController::connectImpl_()
             currMode_ = RIG_MODE_NONE; // to make setModeImpl_ actually run
             setModeImpl_(pendingMode_);
         }
+
+        // Reset retry to 0 since we've now connected.
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
     
         return;
     }
