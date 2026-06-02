@@ -235,8 +235,7 @@ void saveLastUsedConfigPath(const wxString& path)
 void clearLastUsedConfigPath()
 {
     wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
-    stateConfig.SetPath(wxT("/"));
-    stateConfig.DeleteEntry(wxT("LastUsedConfigFile"));
+    stateConfig.DeleteEntry(LAST_USED_CONFIG_KEY);
     stateConfig.Flush();
 }
 
@@ -603,7 +602,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     if (parser.Found("f", &configPath))
     {
         log_info("Loading configuration from %s", (const char*)configPath.ToUTF8());
-        pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
+        pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
         wxConfigBase::Set(pConfig);
         
         // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
@@ -658,7 +657,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             // Need to explicitly create the wxFileConfig on Linux so that we can force wxWidgets
             // to load configuration files under a subdirectory. Otherwise, simply FileLayout_XDG
             // above will use ~/.config/freedv.conf.
-            pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+            pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
 
             wxConfigBase::Set(pConfig);
             defaultConfigFilePath = tempNewFile.GetPath();
@@ -676,7 +675,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             {
                 log_info("Restoring last-used configuration from %s",
                          (const char*)lastUsedPath.ToUTF8());
-                pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"),
+                pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME,
                                            lastUsedPath, lastUsedPath,
                                            wxCONFIG_USE_LOCAL_FILE);
                 wxConfigBase::Set(pConfig);
@@ -780,7 +779,7 @@ bool MainApp::OnInit()
     {
         return false;
     }
-    SetVendorName(wxT("CODEC2-Project"));
+    SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();

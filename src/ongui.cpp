@@ -2049,8 +2049,8 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
     // uses the default file location (wxFileConfig).  This becomes the
     // active pConfig going forward — no need to restore the old one.
-    wxConfigBase* defaultConfig = new wxConfig(wxT("FreeDV"), wxT("CODEC2-Project"));
-
+    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    
     setConfiguration_(defaultConfig);
 
     // Remove the last-used config path so startup reverts to the default next time.
