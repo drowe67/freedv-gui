@@ -940,7 +940,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * TBD
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
-    * Load last-used config file on restarts. (PR #1365)
+    * Load last-used config file on restarts. (PR #1365, #1371)
 3. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
