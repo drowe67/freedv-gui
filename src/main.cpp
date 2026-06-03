@@ -47,6 +47,7 @@
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
+#include "reporting/UdpReporter.h"
 
 #include "logging/WSJTXNetworkLogger.h"
 
@@ -205,8 +206,39 @@ std::atomic<bool> isModemRunning;
 
 FILE *ftest;
 
-// Config file management 
+// Config file management
 wxConfigBase *pConfig = NULL;
+
+// Name used for the separate state-store config object (distinct from the main
+// app config so the last-used path is readable regardless of which backend is
+// active).  On Windows this becomes HKCU\Software\CODEC2-Project\FreeDV-State;
+// on macOS/Linux it becomes a file in the per-user config directory.
+static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
+static const wxChar* const FREEDV_STATE_VENDOR_NAME = wxT("CODEC2-Project");
+static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
+
+wxString getLastUsedConfigPath()
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    wxString path;
+    stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
+    return path;
+}
+
+void saveLastUsedConfigPath(const wxString& path)
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    stateConfig.Write(LAST_USED_CONFIG_KEY, path);
+    stateConfig.Flush();
+}
+
+void clearLastUsedConfigPath()
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_STATE_VENDOR_NAME);
+    stateConfig.SetPath(wxT("/"));
+    stateConfig.DeleteEntry(wxT("LastUsedConfigFile"));
+    stateConfig.Flush();
+}
 
 // Unit test management
 wxString testName;
@@ -215,8 +247,8 @@ wxString utTxFile;
 wxString utTxOutFile;
 wxString utRxFile;
 wxString utRxOutFile;
-wxString utTxFeatureFile;
-wxString utRxFeatureFile;
+std::string utTxFeatureFile;
+std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
 
@@ -634,6 +666,31 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+
+        // If a config file was previously loaded via "Use Configuration...",
+        // restore it now so the user's last session is preserved.
+        wxString lastUsedPath = getLastUsedConfigPath();
+        if (!lastUsedPath.IsEmpty())
+        {
+            if (wxFileExists(lastUsedPath))
+            {
+                log_info("Restoring last-used configuration from %s",
+                         (const char*)lastUsedPath.ToUTF8());
+                pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"),
+                                           lastUsedPath, lastUsedPath,
+                                           wxCONFIG_USE_LOCAL_FILE);
+                wxConfigBase::Set(pConfig);
+                wxFileName fn(lastUsedPath);
+                customConfigFileName = fn.GetFullName();
+                defaultConfigFilePath = fn.GetPath();
+            }
+            else
+            {
+                log_warn("Last-used config file '%s' no longer exists; reverting to default.",
+                         (const char*)lastUsedPath.ToUTF8());
+                clearLastUsedConfigPath();
+            }
+        }
     }
 
     pConfig = wxConfigBase::Get();
@@ -686,14 +743,18 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
-    if (parser.Found("rxfeaturefile", &utRxFeatureFile))
+    wxString utRxFeatureFileTmp; 
+    if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
-        log_info("Capturing RADE RX features into file %s", (const char*)utRxFeatureFile.ToUTF8());
+        utRxFeatureFile = utRxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE RX features into file %s", utRxFeatureFile.c_str());
     }
-    
-    if (parser.Found("txfeaturefile", &utTxFeatureFile))
+   
+    wxString utTxFeatureFileTmp; 
+    if (parser.Found("txfeaturefile", &utTxFeatureFileTmp))
     {
-        log_info("Capturing RADE TX features into file %s", (const char*)utTxFeatureFile.ToUTF8());
+        utTxFeatureFile = utTxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE TX features into file %s", utTxFeatureFile.c_str());
     }
     
     return true;
@@ -868,8 +929,11 @@ void MainFrame::loadConfiguration_()
     // for backwards compatibility.    
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
-        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", -1);
+        if (wxGetApp().m_intHamlibRig >= 0)
+        {
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+        }
     }
     else
     {
@@ -1383,7 +1447,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
 static std::recursive_mutex stoppingMutex;
 
-void MainFrame::setConfiguration_(wxFileConfig* config)
+void MainFrame::setConfiguration_(wxConfigBase* config)
 {
     pConfig = config;
     wxConfigBase::Set(pConfig);
@@ -2584,11 +2648,19 @@ void MainFrame::performFreeDVOn_()
                         if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                         {
                             wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-                            
+
                             if (!m_reporterHidden->GetValue())
                             {
                                 wxGetApp().m_sharedReporterObject->showOurselves();
                             }
+                        }
+
+                        if (wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled)
+                        {
+                            auto udpBroadcastReporter = std::make_shared<UdpReporter>(
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress->ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort);
+                            wxGetApp().m_reporters.push_back(udpBroadcastReporter);
                         }
 
                         // Enable FreeDV Reporter timer (every 5 minutes).

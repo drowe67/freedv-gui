@@ -33,7 +33,7 @@ SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, b
     , rigResponseTime_(0)
 {
     // Ensure that PTT is disabled on successful connect.
-    onRigConnected += [&](IRigController*) {
+    onRigConnected = [&](IRigController*) {
         ptt(false);
     };
 }

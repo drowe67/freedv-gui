@@ -171,6 +171,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl    *m_udpHostname;
         wxTextCtrl    *m_udpPort;
 
+        wxCheckBox    *m_ckboxUDPBroadcastEnable;
+        wxTextCtrl    *m_udpBroadcastAddress;
+        wxTextCtrl    *m_udpBroadcastPort;
+
         wxTextCtrl    *m_txtCtrlCsvLogFilePath;
         wxButton      *m_buttonChooseCsvLogFilePath;
         

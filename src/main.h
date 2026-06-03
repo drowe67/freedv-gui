@@ -91,7 +91,7 @@
 #include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
-#include "util/sanitizers.h"
+#include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
 
 #define _USE_TIMER              1
@@ -123,6 +123,15 @@ enum {
 #define EXCHANGE_DATA_OUT   1
 
 extern int                 g_nSoundCards;
+
+// Last-used configuration file helpers.
+// The path is stored in a platform-appropriate state store
+// (registry on Windows, file on macOS/Linux) that is independent
+// of the main application config so it can always be read and written
+// regardless of which config backend is currently active.
+wxString  getLastUsedConfigPath();
+void      saveLastUsedConfigPath(const wxString& path);
+void      clearLastUsedConfigPath();
 
 // Voice Keyer Constants
 
@@ -190,7 +199,7 @@ class MainApp : public wxApp
         wxString defaultConfigFilePath;
         
         // PTT -----------------------------------    
-        unsigned int        m_intHamlibRig;
+        int        m_intHamlibRig;
         std::shared_ptr<IRigFrequencyController> rigFrequencyController;
         std::shared_ptr<IRigPttController> rigPttController;
 
@@ -380,7 +389,9 @@ class MainFrame : public TopFrame
         void OnToolsExportConfigUI( wxUpdateUIEvent& event ) override;
         void OnToolsImportConfig( wxCommandEvent& event ) override;
         void OnToolsImportConfigUI( wxUpdateUIEvent& event ) override;
-        
+        void OnToolsLoadDefaultConfig( wxCommandEvent& event ) override;
+        void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) override;
+
         void OnCenterRx(wxCommandEvent& event) override;
 
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
@@ -570,7 +581,7 @@ class MainFrame : public TopFrame
         void loadConfiguration_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);
-        void setConfiguration_(wxFileConfig* config);
+        void setConfiguration_(wxConfigBase* config);
 
         HamlibRigController::Mode getCurrentMode_();
         

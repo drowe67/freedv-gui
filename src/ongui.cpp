@@ -19,6 +19,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
+#include "gui/util/FrequencyOps.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -60,7 +61,7 @@ extern wxMutex g_mutexProtectingCallbackData;
 
 static wxString bandNameForFilter(FilterFrequency band);
 
-std::atomic<bool> g_eoo_enqueued;
+extern std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -586,10 +587,17 @@ void MainFrame::onRadioDisconnected_(IRigController*)
 bool MainFrame::OpenHamlibRig() {
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT != true)
        return false;
-    if (wxGetApp().m_intHamlibRig == 0)
+    
+    int rig = wxGetApp().m_intHamlibRig;    
+    if (rig == -1)
+    {
+        std::string fullErr = "The radio's model is empty. This is likely due to changes in Hamlib between FreeDV releases. Please click Stop Modem, double-check your CAT settings and push Start Modem again.";
+        CallAfter([&, fullErr]() {
+            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        });
         return false;
-
-    int rig = wxGetApp().m_intHamlibRig;
+    }
+    
     wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
     wxString pttPort = wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort;
     auto pttType = (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
@@ -1474,28 +1482,9 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    bool is60MeterBand = 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
-    
     bool useAnalog = 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
-    HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
-    
-    HamlibRigController::Mode newMode;
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
-        !is60MeterBand)
-    {
-        newMode = lsbMode;
-    }
-    else
-    {
-        newMode = usbMode;
-    }
-
-    return newMode;
+    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
 }
 
 //-------------------------------------------------------------------------
@@ -1768,7 +1757,9 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     }
 
     if (freqStr != oldFreqString)
-    {      
+    {
+        log_info("Request frequency change to %" PRIu64 " Hz", wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get());
+
         // Report current frequency to reporters
         for (auto& ptr : wxGetApp().m_reporters)
         {
@@ -2019,7 +2010,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     }
 
     // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
-    wxFileName fn(path);        
+    wxFileName fn(path);
     wxGetApp().customConfigFileName = fn.GetFullName();
 
     SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
@@ -2031,4 +2022,47 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
 #endif // defined(UNOFFICIAL_RELEASE)
     setConfiguration_(importConfig);
+
+    // Remember this file so it is automatically restored on the next startup.
+    saveLastUsedConfigPath(path);
+}
+
+void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
+}
+
+void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    wxMessageDialog messageDialog(
+        this, _("This will load the default FreeDV configuration. Are you sure?"),
+        _("Load Default Configuration"),
+        wxYES_NO | wxICON_QUESTION | wxCENTRE);
+
+    if (messageDialog.ShowModal() != wxID_YES)
+        return;
+
+    // Create a platform-appropriate default config:
+    // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
+    // uses the default file location (wxFileConfig).  This becomes the
+    // active pConfig going forward — no need to restore the old one.
+    wxConfigBase* defaultConfig = new wxConfig(wxT("FreeDV"), wxT("CODEC2-Project"));
+
+    setConfiguration_(defaultConfig);
+
+    // Remove the last-used config path so startup reverts to the default next time.
+    clearLastUsedConfigPath();
+
+    // Clear any custom config file indicator from the title bar.
+    wxGetApp().customConfigFileName = wxEmptyString;
+    SetTitle(_("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()));
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate(wxInvalidDateTime);
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
+#endif // defined(UNOFFICIAL_RELEASE)
 }

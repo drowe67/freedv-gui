@@ -460,8 +460,10 @@ it will be relative to the following locations:</p>
 the Tools-&gt;Export Configuration and Use Configuration menu items.
 These menu options allow for switching of configurations without
 restarting FreeDV. Note that restoring a configuration file does not
-modify the default configuration nor does FreeDV begin using it by
-default on subsequent application starts.</p>
+modify the default configuration. However, the last restored
+configuration file will be loaded the next time FreeDV starts, unless
+you choose Tools-&gt;Load Default Configuration or restore a different
+configuration file.</p>
 <h2 data-number="6.1"
 id="executing-freedv-with-a-different-configuration-windows"><span
 class="header-section-number">6.1</span> Executing FreeDV With a
@@ -1245,8 +1247,29 @@ speech codec bits</td>
 </table>
 <h1 data-number="18" id="release-notes"><span
 class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v2.3.1-tbd-2026"><span
-class="header-section-number">18.1</span> V2.3.1 TBD 2026</h2>
+<h2 data-number="18.1" id="v2.4.0-tbd-2026"><span
+class="header-section-number">18.1</span> V2.4.0 TBD 2026</h2>
+<ol type="1">
+<li>Bugfixes:
+<ul>
+<li>Hamlib: Allow one timeout during connection process to allow Icom
+marine radios to behave better. (PR #1369)</li>
+<li>Rename sanitizers.h-&gt;freedv_sanitizers.h due to name conflicts.
+(PR #1372)</li>
+</ul></li>
+<li>Enhancements:
+<ul>
+<li>Add UDP broadcast of received callsigns. (PR #1367)</li>
+<li>Load last-used config file on restarts. (PR #1365)</li>
+</ul></li>
+<li>Other:
+<ul>
+<li>FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR
+#1368)</li>
+</ul></li>
+</ol>
+<h2 data-number="18.2" id="v2.3.1-may-2026"><span
+class="header-section-number">18.2</span> V2.3.1 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1255,16 +1278,33 @@ class="header-section-number">18.1</span> V2.3.1 TBD 2026</h2>
 data-cites="barjac">@barjac</span>!</li>
 <li>Fix audio routing problems on Windows due to hardware offloading.
 (PR #1335)</li>
+<li>Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks
+<span class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>Fix missing Hamlib defines when building from source (PR #1353) -
+thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>FreeDV Reporter: Fix issue preventing mode changes on double-click.
+(PR #1343)</li>
+<li>Fix compiler warning/error in EventHandler when using GCC 16.1. (PR
+#1347)</li>
+<li>Improve Flex waveform RX audio quality. (PR #1338, #1348, 1356)</li>
+<li>Flex: Use version number without Git hash for waveform registration.
+(PR #1359)</li>
+<li>Fix intermittent CSV logging corruption. (PR #1361)</li>
+<li>Hamlib: Fix bug preventing frequency change after changing on the
+radio. (PR #1363)</li>
+<li>KA9Q: Remove custom AppRun script causing audio distortion. (PR
+#1364)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
 <li>Allow use of a custom key for PTT. (PR #1309)</li>
 <li>Improve Reporter message list usability. (PR #1310) - thanks <span
 class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>Clarify Reporter on/off tooltip. (PR #1345)</li>
 </ul></li>
 </ol>
-<h2 data-number="18.2" id="v2.3.0-may-2026"><span
-class="header-section-number">18.2</span> V2.3.0 May 2026</h2>
+<h2 data-number="18.3" id="v2.3.0-may-2026"><span
+class="header-section-number">18.3</span> V2.3.0 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1367,8 +1407,8 @@ thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
 maintenance. (PR #1286, #1307)</li>
 </ul></li>
 </ol>
-<h2 data-number="18.3" id="earlier-than-v2.2.0"><span
-class="header-section-number">18.3</span> Earlier than V2.2.0</h2>
+<h2 data-number="18.4" id="earlier-than-v2.2.0"><span
+class="header-section-number">18.4</span> Earlier than V2.2.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
 for more information about changes in versions prior to 2.2.0.</p>
