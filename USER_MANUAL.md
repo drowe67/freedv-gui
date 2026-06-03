@@ -939,7 +939,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Hamlib: Allow one timeout during connection process to allow Icom marine radios to behave better. (PR #1369)
     * Rename sanitizers.h->freedv_sanitizers.h due to name conflicts. (PR #1372)
-    * Fix intermittent non-response to short PTT clicks to stop TX. (PR #1375)
+    * Fix intermittent non-response to short PTT clicks to stop TX. (PR #1375) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Load last-used config file on restarts. (PR #1365)
