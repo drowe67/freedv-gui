@@ -262,7 +262,9 @@ a poor SNR at the receiver.  This is a very common problem.
     
    Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
    The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
-   Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
+   Right-clicking the Tune button opens a context menu with the following options:
+   * **Set tune output to minimum (-30 dB)** — immediately sets the tune attenuation to its lowest output level without transmitting, useful for safe low-power antenna tuner testing.
+   * Per-band **Enable/Disable auto-save** and **Restore** options, similar to those described above for TX attenuation (shown only when a band is known).
    
    FreeDV will automatically detect band changes (via Hamlib or OmniRig CAT, or manual
    frequency entry) and load any saved attenuation value for the new band.
