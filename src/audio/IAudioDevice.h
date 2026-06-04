@@ -31,7 +31,7 @@
 
 #include "AudioDeviceSpecification.h"
 #include "../util/IRealtimeHelper.h"
-#include "../util/sanitizers.h"
+#include "freedv_sanitizers.h"
 
 using namespace std::chrono_literals;
 

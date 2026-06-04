@@ -1121,7 +1121,7 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 //-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
+void MainFrame::OnTogBtnPTT (wxCommandEvent&)
 {
     if (vk_state == VK_TX)
     {
@@ -1129,10 +1129,9 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
     else
-    {        
+    {
         togglePTT();
     }
-    event.Skip();
 }
 
 void MainFrame::togglePTT(void) {
@@ -1341,7 +1340,7 @@ void MainFrame::togglePTT(void) {
     }
 
     auto newTx = m_btnTogPTT->GetValue();
-    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
         wxGetApp().rigPttController->ptt(newTx);
     }
@@ -2049,8 +2048,8 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
     // uses the default file location (wxFileConfig).  This becomes the
     // active pConfig going forward — no need to restore the old one.
-    wxConfigBase* defaultConfig = new wxConfig(wxT("FreeDV"), wxT("CODEC2-Project"));
-
+    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    
     setConfiguration_(defaultConfig);
 
     // Remove the last-used config path so startup reverts to the default next time.

@@ -35,7 +35,7 @@
 #include <chrono>
 using namespace std::chrono_literals;
 
-#include "../util/sanitizers.h"
+#include "freedv_sanitizers.h"
 
 // WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
 // first.
