@@ -71,6 +71,7 @@
 
 #include "topFrame.h"
 #include "gui/dialogs/filter_frequency.h"
+#include "gui/dialogs/tot_warning.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
 #include "gui/controls/plot_scatter.h"
@@ -342,7 +343,7 @@ class MainFrame : public TopFrame
         // TOT warning state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totTxStartTime;
         int                     m_totCurrentDurationMs{0};
-        bool totExtendTimeoutButtonColorState_;
+        TotWarningDialog*       m_totWarningDialog_{nullptr};
 
     void destroy_fifos(void);
 
@@ -478,7 +479,6 @@ class MainFrame : public TopFrame
 
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
-        void OnExtendTOT(wxCommandEvent& event) override;
         
         void OnSetMonitorVKAudio( wxCommandEvent& event );
         void OnSetMonitorTxAudio( wxCommandEvent& event );

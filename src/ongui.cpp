@@ -1142,25 +1142,23 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 void MainFrame::OnTOTTimer(wxTimerEvent&)
 {
     if (!g_tx.load(std::memory_order_acquire))
-    {
-        // Not currently transmitting; nothing to do.
         return;
-    }
 
     log_info("Time-Out Timer (TOT) expired — stopping transmit");
 
     if (m_totWarningTimer.IsRunning())
-    {
         m_totWarningTimer.Stop();
+
+    if (m_totWarningDialog_)
+    {
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
     }
-    rightSizer->Show(m_totWarningSizer, false, true);
-    rightSizer->Layout();
-    m_panel->Layout();
     m_totCurrentDurationMs = 0;
 
     if (vk_state == VK_TX)
     {
-        // Voice keyer is active; stop it via its state machine.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
     else
@@ -1183,52 +1181,53 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
 
     if (remaining > 0 && remaining <= 15000)
     {
-        int secRemaining = (remaining + 999) / 1000;
-        m_totWarningText->SetLabel(wxString::Format(_("%ds remaining"), secRemaining));
-        if (!m_totWarningBox->IsShown())
+        if (!m_totWarningDialog_)
         {
-            rightSizer->Show(m_totWarningSizer, true, true);
-            rightSizer->Layout();
-            m_panel->Layout();
+            m_totWarningDialog_ = new TotWarningDialog(
+                this, remaining,
+                [this]() {
+                    m_totWarningDialog_ = nullptr;
+                    if (!g_tx.load(std::memory_order_acquire))
+                        return;
+                    if (vk_state == VK_TX)
+                    {
+                        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+                    }
+                    else
+                    {
+                        m_btnTogPTT->SetValue(false);
+                        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                        endingTx.store(true, std::memory_order_release);
+                        togglePTT();
+                    }
+                },
+                [this]() {
+                    m_totWarningDialog_ = nullptr;
+                    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+                        return;
+                    auto now = std::chrono::high_resolution_clock::now();
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
+                    m_totCurrentDurationMs += 60000;
+                    int newRemaining = m_totCurrentDurationMs - (int)elapsed;
+                    if (newRemaining > 0)
+                    {
+                        m_totTimer.Start(newRemaining, wxTIMER_ONE_SHOT);
+                        log_info("Time-Out Timer (TOT) extended — %d ms remaining", newRemaining);
+                    }
+                }
+            );
+            m_totWarningDialog_->Show();
         }
-
-        // Toggle Extend Timeout background color between OS-default and red
-        // to provide a more easily seen indication that timeout is about to expire.
-        m_btnExtendTOT->SetBackgroundColour(totExtendTimeoutButtonColorState_ ? *wxRED : wxNullColour);
-        totExtendTimeoutButtonColorState_ = !totExtendTimeoutButtonColorState_;
-        m_btnExtendTOT->Refresh(); // background color does not update unless manually refreshed
+        else
+        {
+            m_totWarningDialog_->updateRemainingTime(remaining);
+        }
     }
-    else if (remaining > 15000 && m_totWarningBox->IsShown())
+    else if (remaining > 15000 && m_totWarningDialog_)
     {
-        totExtendTimeoutButtonColorState_ = false;
-        rightSizer->Show(m_totWarningSizer, false, true);
-        rightSizer->Layout();
-        m_panel->Layout();
-    }
-}
-
-void MainFrame::OnExtendTOT(wxCommandEvent&)
-{
-    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
-        return;
-
-    auto now = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
-
-    m_totCurrentDurationMs += 60000;
-    int newRemaining = m_totCurrentDurationMs - (int)elapsed;
-
-    if (newRemaining > 0)
-    {
-        m_totTimer.Start(newRemaining, wxTIMER_ONE_SHOT);
-        log_info("Time-Out Timer (TOT) extended — %d ms remaining", newRemaining);
-    }
-
-    if (m_totWarningBox->IsShown())
-    {
-        rightSizer->Show(m_totWarningSizer, false, true);
-        rightSizer->Layout();
-        m_panel->Layout();
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
     }
 }
 
@@ -1241,16 +1240,15 @@ void MainFrame::togglePTT(void) {
     {
         // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
         if (m_totTimer.IsRunning())
-        {
             m_totTimer.Stop();
-        }
         if (m_totWarningTimer.IsRunning())
-        {
             m_totWarningTimer.Stop();
+        if (m_totWarningDialog_)
+        {
+            auto dlg = m_totWarningDialog_;
+            m_totWarningDialog_ = nullptr;
+            dlg->Destroy();
         }
-        rightSizer->Show(m_totWarningSizer, false, true);
-        rightSizer->Layout();
-        m_panel->Layout();
         m_totCurrentDurationMs = 0;
 
         // If PTT input is enabled, suspend further changes until after EOO is sent.
@@ -1489,7 +1487,6 @@ void MainFrame::togglePTT(void) {
 
     if (newTx)
     {
-        totExtendTimeoutButtonColorState_ = false;
         endingTx.store(false, std::memory_order_release);
             
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
