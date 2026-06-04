@@ -260,8 +260,8 @@ a poor SNR at the receiver.  This is a very common problem.
      auto-saved value for that band, useful for recovering a known good level
      after experimenting during a session.
     
-   Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
-   The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
+   The **Control** panel (right-hand side) contains a **Tune** button which outputs a continuous 1500 Hz carrier for antenna matching, netting etc.
+   While Tune is active the TX Attenuation controls adjust the tune signal level rather than the normal transmit level.
    Right-clicking the Tune button opens a context menu with the following options:
    * **Set tune output to minimum (-30 dB)** — immediately sets the tune attenuation to its lowest output level without transmitting, useful for safe low-power antenna tuner testing.
    * Per-band **Enable/Disable auto-save** and **Restore** options, similar to those described above for TX attenuation (shown only when a band is known).

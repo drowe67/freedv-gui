@@ -732,11 +732,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     txLevelSizer->Add(txBtnSizer, 0, wxEXPAND, 0);
 
-    m_btnTogTune = new wxToggleButton(m_txLevelBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
-    m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
-    txLevelSizer->Add(m_btnTogTune, 1, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-    m_btnTogTune->Enable(false); // disable by default
-    
     rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
     
     // Mic/Speaker Level slider
@@ -823,6 +818,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_togBtnAnalog, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
+    // Tune Toggle
+    //------------------------------
+    m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
+    sbSizer5->Add(m_btnTogTune, 0, wxALL | wxEXPAND, 5);
+    m_btnTogTune->Enable(false);
+
+    //------------------------------
     // Voice Keyer Toggle
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Start Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
@@ -859,7 +862,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb700e->MoveBeforeInTabOrder(m_rb1600);
     
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnAnalog);
-    m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
+    m_togBtnAnalog->MoveBeforeInTabOrder(m_btnTogTune);
+    m_btnTogTune->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
     m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
     
     //-------------------
