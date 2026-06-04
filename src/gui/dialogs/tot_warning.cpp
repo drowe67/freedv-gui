@@ -28,8 +28,8 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
     : wxDialog(parent, wxID_ANY, _("Time-Out Timer Warning"),
                wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP)
-    , m_onStop_(onStop)
-    , m_onExtend_(onExtend)
+    , m_onStop_(std::move(onStop))
+    , m_onExtend_(std::move(onExtend))
 {
     SetLayoutDirection(wxLayout_LeftToRight);
 
