@@ -97,6 +97,7 @@ void WASAPIAudioDevice::start()
         WAVEFORMATEX streamFormat;
         bool freeStreamFormat = false;
 
+#if 0
         // Set AudioClientProperties for stream. Must be done prior to Initialize().
         AudioClientProperties prop;
         prop.cbSize = sizeof(AudioClientProperties);
@@ -111,12 +112,13 @@ void WASAPIAudioDevice::start()
             ss << "Could not set AudioClient properties (hr = " << hr << ")";
             log_warn(ss.str().c_str());
         }
-        
+#endif
+
         // Populate stream format based on requested sample
         // rate/number of channels.
         // NOTE: this should already have been determined valid
         // by the audio engine!
-        hr = client_->GetMixFormat(&streamFormatPtr);
+        HRESULT hr = client_->GetMixFormat(&streamFormatPtr);
         if (SUCCEEDED(hr))
         {
             freeStreamFormat = true;
