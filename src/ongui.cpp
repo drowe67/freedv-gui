@@ -1185,7 +1185,9 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
             m_totWarningDialog_ = new TotWarningDialog(
                 this, remaining,
                 [this]() {
+                    m_totWarningDialog_->Destroy();
                     m_totWarningDialog_ = nullptr;
+                    
                     if (!g_tx.load(std::memory_order_acquire))
                         return;
                     if (vk_state == VK_TX)
@@ -1201,7 +1203,9 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                     }
                 },
                 [this]() {
+                    m_totWarningDialog_->Destroy();
                     m_totWarningDialog_ = nullptr;
+                    
                     if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
                         return;
                     auto now = std::chrono::high_resolution_clock::now();

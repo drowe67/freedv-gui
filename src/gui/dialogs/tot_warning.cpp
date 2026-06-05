@@ -72,7 +72,6 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
     updateRemainingTime(initialRemainingMs);
 
-    this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(TotWarningDialog::OnClose));
     m_stopBtn_->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
         wxCommandEventHandler(TotWarningDialog::OnStop), nullptr, this);
     m_extendBtn_->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
@@ -81,7 +80,6 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
 TotWarningDialog::~TotWarningDialog()
 {
-    this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(TotWarningDialog::OnClose));
     m_stopBtn_->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED,
         wxCommandEventHandler(TotWarningDialog::OnStop), nullptr, this);
     m_extendBtn_->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED,
@@ -100,16 +98,9 @@ void TotWarningDialog::updateRemainingTime(int remainingMs)
 void TotWarningDialog::OnStop(wxCommandEvent&)
 {
     m_onStop_();
-    Destroy();
 }
 
 void TotWarningDialog::OnExtend(wxCommandEvent&)
 {
     m_onExtend_();
-    Destroy();
-}
-
-void TotWarningDialog::OnClose(wxCloseEvent&)
-{
-    Destroy();
 }
