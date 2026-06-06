@@ -1316,35 +1316,13 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                     m_totWarningDialog_->Destroy();
                     m_totWarningDialog_ = nullptr;
                     
-                    if (!g_tx.load(std::memory_order_acquire))
-                        return;
-                    if (vk_state == VK_TX)
-                    {
-                        VoiceKeyerProcessEvent(VK_SPACE_BAR);
-                    }
-                    else
-                    {
-                        m_btnTogPTT->SetValue(false);
-                        m_btnTogPTT->SetBackgroundColour(wxNullColour);
-                        endingTx.store(true, std::memory_order_release);
-                        togglePTT();
-                    }
-                },
-                [this]() {
-                    m_totWarningDialog_->Destroy();
-                    m_totWarningDialog_ = nullptr;
-                    
                     if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
                         return;
-                    auto now = std::chrono::high_resolution_clock::now();
-                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
-                    m_totCurrentDurationMs += 60000;
-                    int newRemaining = m_totCurrentDurationMs - (int)elapsed;
-                    if (newRemaining > 0)
-                    {
-                        m_totTimer.Start(newRemaining, wxTIMER_ONE_SHOT);
-                        log_info("Time-Out Timer (TOT) extended — %d ms remaining", newRemaining);
-                    }
+
+                    m_totCurrentDurationMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+                    m_totTxStartTime = std::chrono::high_resolution_clock::now();
+                    m_totTimer.Start(m_totCurrentDurationMs, wxTIMER_ONE_SHOT);
+                    log_info("Time-Out Timer (TOT) extended — %d ms remaining", m_totCurrentDurationMs);
                 }
             );
             m_totWarningDialog_->Show();

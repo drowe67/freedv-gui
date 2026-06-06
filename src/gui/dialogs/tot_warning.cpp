@@ -23,12 +23,10 @@
 #include "tot_warning.h"
 
 TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
-                                   std::function<void()> onStop,
                                    std::function<void()> onExtend)
     : wxDialog(parent, wxID_ANY, _("Time-Out Timer Warning"),
                wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP)
-    , m_onStop_(std::move(onStop))
     , m_onExtend_(std::move(onExtend))
 {
     SetLayoutDirection(wxLayout_LeftToRight);
@@ -51,8 +49,8 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
     wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_extendBtn_ = new wxButton(panel, wxID_ANY, _("Extend by 60s"));
-    m_extendBtn_->SetToolTip(_("Extends the Time-Out Timer by 60 seconds."));
+    m_extendBtn_ = new wxButton(panel, wxID_ANY, _("Reset Timer"));
+    m_extendBtn_->SetToolTip(_("Resets the Time-Out Timer to extend transmission."));
     btnSizer->Add(m_extendBtn_, 0, wxALL, 5);
 
     topSizer->Add(btnSizer, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
@@ -86,11 +84,6 @@ void TotWarningDialog::updateRemainingTime(int remainingMs)
     m_countdownText_->SetLabel(wxString::Format(_("%d second%s remaining"),
         sec, sec == 1 ? wxT("") : wxT("s")));
     Layout();
-}
-
-void TotWarningDialog::OnStop(wxCommandEvent&)
-{
-    m_onStop_();
 }
 
 void TotWarningDialog::OnExtend(wxCommandEvent&)

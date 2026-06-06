@@ -34,7 +34,6 @@ class TotWarningDialog : public wxDialog
 {
 public:
     TotWarningDialog(wxWindow* parent, int initialRemainingMs,
-                     std::function<void()> onStop,
                      std::function<void()> onExtend);
     virtual ~TotWarningDialog();
 
@@ -44,10 +43,8 @@ private:
     wxStaticText* m_countdownText_;
     wxButton*     m_extendBtn_;
 
-    std::function<void()> m_onStop_;
     std::function<void()> m_onExtend_;
 
-    void OnStop(wxCommandEvent&);
     void OnExtend(wxCommandEvent&);
 };
 
