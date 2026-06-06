@@ -260,9 +260,9 @@ a poor SNR at the receiver.  This is a very common problem.
      auto-saved value for that band, useful for recovering a known good level
      after experimenting during a session.
     
-   Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
-   The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
-   Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
+   The **Control** panel (right-hand side) contains a **Tune** button which outputs a continuous 1500 Hz carrier for antenna matching, netting etc.
+   While Tune is active the TX Attenuation controls adjust the tune signal level rather than the normal transmit level.
+   Right-clicking the Tune button opens a context menu with per-band auto-save/restore options similar to those described above for TX attenuation.
    
    FreeDV will automatically detect band changes (via Hamlib or OmniRig CAT, or manual
    frequency entry) and load any saved attenuation value for the new band.
@@ -944,6 +944,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Load last-used config file on restarts. (PR #1365, #1371)
+    * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
 3. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
