@@ -51,9 +51,6 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
     wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_stopBtn_ = new wxButton(panel, wxID_ANY, _("Stop Transmitting"));
-    btnSizer->Add(m_stopBtn_, 0, wxALL, 5);
-
     m_extendBtn_ = new wxButton(panel, wxID_ANY, _("Extend by 60s"));
     m_extendBtn_->SetToolTip(_("Extends the Time-Out Timer by 60 seconds."));
     btnSizer->Add(m_extendBtn_, 0, wxALL, 5);
@@ -72,16 +69,12 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
     updateRemainingTime(initialRemainingMs);
 
-    m_stopBtn_->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
-        wxCommandEventHandler(TotWarningDialog::OnStop), nullptr, this);
     m_extendBtn_->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
         wxCommandEventHandler(TotWarningDialog::OnExtend), nullptr, this);
 }
 
 TotWarningDialog::~TotWarningDialog()
 {
-    m_stopBtn_->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED,
-        wxCommandEventHandler(TotWarningDialog::OnStop), nullptr, this);
     m_extendBtn_->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED,
         wxCommandEventHandler(TotWarningDialog::OnExtend), nullptr, this);
 }

@@ -42,7 +42,6 @@ public:
 
 private:
     wxStaticText* m_countdownText_;
-    wxButton*     m_stopBtn_;
     wxButton*     m_extendBtn_;
 
     std::function<void()> m_onStop_;
