@@ -929,12 +929,14 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
     auto& atten = wxGetApp().appConfiguration.txAttenByBand;
     bool hasSaved = (atten->find(bandName) != atten->end());
 
+    wxString attenType = (m_btnTogTune->GetValue()) ? "Tune" : "TX";
+
     wxMenu menu;
     wxString toggleLabel = hasSaved
-        ? wxString::Format(_("Disable auto-save of TX atten for %s"), bandName)
-        : wxString::Format(_("Enable auto-save of TX atten for %s"),  bandName);
+        ? wxString::Format(_("Disable auto-save of %s atten for %s"), attenType, bandName)
+        : wxString::Format(_("Enable auto-save of %s atten for %s"),  attenType, bandName);
     auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
-    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore TX atten level for %s"), bandName));
+    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore %s atten level for %s"), attenType, bandName));
     restoreItem->Enable(hasSaved);
 
     // Toggle: Enable saves the current level and opts the band into auto-save;
