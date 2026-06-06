@@ -260,9 +260,12 @@ a poor SNR at the receiver.  This is a very common problem.
      auto-saved value for that band, useful for recovering a known good level
      after experimenting during a session.
     
-   Within the TX Attenuation dialog there is also a Tune button which will output a continuous single tone at 1500Hz for antenna matching, netting etc.
-   The level of this signal while active may also be adjusted using the same controls as for the TX Attenuation.
-   Right click on the tune button to see a different context menu with similar options to the TX attenuation described above.
+   The **Control** panel (right-hand side) contains a **Tune** button which outputs a continuous 1500 Hz carrier for antenna matching, netting etc.
+   While Tune is active the TX Attenuation controls adjust the tune signal level rather than the normal transmit level.
+
+   Right-clicking the Tune button opens a context menu with the following options:
+   * **Set tune output to minimum (-30 dB)** — immediately sets the tune attenuation to its lowest output level without transmitting, useful for safe low-power antenna tuner testing.
+   * Per-band **Enable/Disable auto-save** and **Restore** options, similar to those described above for TX attenuation (shown only when a band is known).
    
    FreeDV will automatically detect band changes (via Hamlib or OmniRig CAT, or manual
    frequency entry) and load any saved attenuation value for the new band.
@@ -940,9 +943,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Allow one timeout during connection process to allow Icom marine radios to behave better. (PR #1369)
     * Rename sanitizers.h->freedv_sanitizers.h due to name conflicts. (PR #1372)
     * Fix intermittent non-response to short PTT clicks to stop TX. (PR #1375) - thanks @barjac!
+    * Revert to libsamplerate library to fix remaining audio quality issues. (PR #1379)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Load last-used config file on restarts. (PR #1365, #1371)
+    * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
+    * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
 3. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
