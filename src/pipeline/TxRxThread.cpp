@@ -484,9 +484,10 @@ void TxRxThread::initializePipeline_()
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
                 +[]() FREEDV_NONBLOCKING { return g_analog ||
+                    g_totBeepActive.load(std::memory_order_acquire) ||
                     (
                         (g_recVoiceKeyerFile) ||
-                        (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) || 
+                        (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
                         (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
                     ); },
                 bypassRfDemodulationPipeline,
@@ -495,7 +496,7 @@ void TxRxThread::initializePipeline_()
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+                +[]() FREEDV_NONBLOCKING { return g_analog != 0 || g_totBeepActive.load(std::memory_order_acquire); },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
