@@ -63,6 +63,7 @@ using namespace std::chrono_literals;
 #include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
+#include "BeepStep.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
@@ -105,9 +106,7 @@ extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
 extern std::atomic<bool> g_playFileFromRadio;
 extern int g_sfFs;
-extern std::atomic<SNDFILE*> g_sfTotBeep;
 extern std::atomic<bool>     g_totBeepActive;
-extern int                   g_totBeepFs;
 extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
 extern float g_SquelchLevel;
@@ -517,27 +516,14 @@ void TxRxThread::initializePipeline_()
         // TOT beep step: replaces speaker audio with a warning beep during countdown
         auto totBeepBypass = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         auto totBeepActivePath = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new PlaybackStep(
-            outputSampleRate_,
-            +[]() FREEDV_NONBLOCKING { return g_totBeepFs; },
-            +[]() FREEDV_NONBLOCKING {
-                return g_totBeepActive.load(std::memory_order_acquire)
-                       ? g_sfTotBeep.load(std::memory_order_acquire)
-                       : nullptr;
-            },
-            []() {
-                log_info("TOT beep done");
-                auto tmp = g_sfTotBeep.load(std::memory_order_acquire);
-                if (tmp) sf_close(tmp);
-                g_sfTotBeep.store(nullptr, std::memory_order_release);
-                g_totBeepActive.store(false, std::memory_order_release);
-            }
-        );
+        auto totBeepPlayback = new BeepStep(outputSampleRate_, 1000, 250, +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
+            g_totBeepActive.store(false, std::memory_order_release);
+            thisStep.reset();
+        });
         totBeepActivePath->appendPipelineStep(totBeepPlayback);
         auto totBeepEitherOr = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING {
-                return g_totBeepActive.load(std::memory_order_acquire)
-                       && g_sfTotBeep.load(std::memory_order_acquire) != nullptr;
+                return g_totBeepActive.load(std::memory_order_acquire);
             },
             totBeepActivePath,
             totBeepBypass

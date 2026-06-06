@@ -1,4 +1,5 @@
 add_library(fdv_audio_pipeline_extra STATIC
+    BeepStep.cpp
     ComputeRfSpectrumStep.cpp
     EqualizerStep.cpp
     FreeDVReceiveStep.cpp

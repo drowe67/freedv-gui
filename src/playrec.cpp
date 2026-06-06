@@ -39,9 +39,8 @@ std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 std::atomic<bool>                g_recFileFromModulator;
 
 // Time-Out Timer beep: injected into the speaker output path during the warning window.
-std::atomic<SNDFILE*> g_sfTotBeep(nullptr);
 std::atomic<bool>     g_totBeepActive(false);
-int                   g_totBeepFs = 8000;
+
 int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
