@@ -1299,11 +1299,9 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
 
     if (remaining > 0 && remaining <= 15000)
     {
-        // Beep every 2 seconds during the warning window.
+        // Beep once when the window pops up.
         bool firstBeep = (m_totLastBeepTime_ == decltype(m_totLastBeepTime_){});
-        bool timeForBeep = firstBeep ||
-            std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totLastBeepTime_).count() >= 2000;
-        if (timeForBeep) {
+        if (firstBeep) {
             playTotBeep_();
             m_totLastBeepTime_ = now;
         }
@@ -1322,6 +1320,7 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                     m_totCurrentDurationMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
                     m_totTxStartTime = std::chrono::high_resolution_clock::now();
                     m_totTimer.Start(m_totCurrentDurationMs, wxTIMER_ONE_SHOT);
+                    m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
                     log_info("Time-Out Timer (TOT) extended — %d ms remaining", m_totCurrentDurationMs);
                 }
             );
@@ -1337,6 +1336,7 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
         auto dlg = m_totWarningDialog_;
         m_totWarningDialog_ = nullptr;
         dlg->Destroy();
+        m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
     }
 }
 
