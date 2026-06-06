@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include "../../main.h"
+#include "../../logging/WSJTXNetworkLogger.h"
 #include <wx/wx.h>
 #include <wx/valnum.h>
 #include "log_entry.h"
@@ -208,19 +209,29 @@ void LogEntryDialog::OnOK(wxCommandEvent&)
         freqHz = (int64_t)freqDouble;
         
         std::time_t timeSinceUnixEpoch = logTime_.GetTicks();
-        
-        logger_->logContact(
-            std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
-            (const char*)dxCall_->GetValue().ToUTF8(), 
-            (const char*)dxGrid_->GetValue().ToUTF8(),
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),
-            (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
-            freqHz,
-            (const char*)rxReport_->GetValue().ToUTF8(),
-            (const char*)txReport_->GetValue().ToUTF8(),
-            (const char*)name_->GetValue().ToUTF8(),
-            (const char*)comments_->GetValue().ToUTF8(),
-            snr_);
+
+        auto logger = logger_;
+        if (logger == nullptr && wxGetApp().appConfiguration.reportingConfiguration.udpReportingEnabled)
+        {
+            logger = std::make_shared<WSJTXNetworkLogger>(
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.udpReportingHostname->ToUTF8(),
+                wxGetApp().appConfiguration.reportingConfiguration.udpReportingPort);
+        }
+        if (logger != nullptr)
+        {
+            logger->logContact(
+                std::chrono::system_clock::from_time_t(timeSinceUnixEpoch),
+                (const char*)dxCall_->GetValue().ToUTF8(),
+                (const char*)dxGrid_->GetValue().ToUTF8(),
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(),
+                (const char*)wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToUTF8(),
+                freqHz,
+                (const char*)rxReport_->GetValue().ToUTF8(),
+                (const char*)txReport_->GetValue().ToUTF8(),
+                (const char*)name_->GetValue().ToUTF8(),
+                (const char*)comments_->GetValue().ToUTF8(),
+                snr_);
+        }
         this->EndModal(wxOK);
     }
 }
