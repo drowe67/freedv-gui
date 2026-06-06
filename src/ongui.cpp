@@ -963,38 +963,46 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
 
 void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
 {
+    wxMenu menu;
+
+    auto minItem = menu.Append(wxID_ANY, _("Set tune output to minimum (-30 dB)"));
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_tuneLevel = TX_ATTENUATION_MIN;
+        applyTxLevel();
+    }, minItem->GetId());
+
     uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
     FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
-    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
+    wxString bandName = bandNameForFilter(bandEnum);
 
-    if (bandName.IsEmpty())
-        return;
+    if (!bandName.IsEmpty())
+    {
+        menu.AppendSeparator();
+        auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
+        bool hasSaved = (atten->find(bandName) != atten->end());
 
-    auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
-    bool hasSaved = (atten->find(bandName) != atten->end());
+        wxString toggleLabel = hasSaved
+            ? wxString::Format(_("Disable auto-save of tune atten for %s"), bandName)
+            : wxString::Format(_("Enable auto-save of tune atten for %s"),  bandName);
+        auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
+        auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
+        restoreItem->Enable(hasSaved);
 
-    wxMenu menu;
-    wxString toggleLabel = hasSaved
-        ? wxString::Format(_("Disable auto-save of tune atten for %s"), bandName)
-        : wxString::Format(_("Enable auto-save of tune atten for %s"),  bandName);
-    auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
-    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
-    restoreItem->Enable(hasSaved);
-
-    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
-        if (hasSaved)
-            wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
-        else
-        {
-            tuneLoadedLevel_ = g_tuneLevel; // record restore point at Enable time
-            wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
-        }
-        wxGetApp().appConfiguration.save(pConfig);
-    }, toggleItem->GetId());
-    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
-        g_tuneLevel = tuneLoadedLevel_;
-        applyTxLevel();
-    }, restoreItem->GetId());
+        menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
+            if (hasSaved)
+                wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
+            else
+            {
+                tuneLoadedLevel_ = g_tuneLevel;
+                wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+            }
+            wxGetApp().appConfiguration.save(pConfig);
+        }, toggleItem->GetId());
+        menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+            g_tuneLevel = tuneLoadedLevel_;
+            applyTxLevel();
+        }, restoreItem->GetId());
+    }
 
     PopupMenu(&menu);
 }
@@ -1121,7 +1129,7 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 //-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
+void MainFrame::OnTogBtnPTT (wxCommandEvent&)
 {
     if (vk_state == VK_TX)
     {
@@ -1129,10 +1137,9 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
     else
-    {        
+    {
         togglePTT();
     }
-    event.Skip();
 }
 
 void MainFrame::togglePTT(void) {
@@ -1341,7 +1348,7 @@ void MainFrame::togglePTT(void) {
     }
 
     auto newTx = m_btnTogPTT->GetValue();
-    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
         wxGetApp().rigPttController->ptt(newTx);
     }
@@ -2049,8 +2056,8 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
     // uses the default file location (wxFileConfig).  This becomes the
     // active pConfig going forward — no need to restore the old one.
-    wxConfigBase* defaultConfig = new wxConfig(wxT("FreeDV"), wxT("CODEC2-Project"));
-
+    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    
     setConfiguration_(defaultConfig);
 
     // Remove the last-used config path so startup reverts to the default next time.
