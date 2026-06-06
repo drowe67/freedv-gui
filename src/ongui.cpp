@@ -66,7 +66,7 @@ extern std::atomic<SNDFILE*> g_sfTotBeep;
 extern std::atomic<bool>     g_totBeepActive;
 extern int                   g_totBeepFs;
 
-// Virtual-file state for the pre-generated TOT beep (1000 Hz, 500 ms, 8000 Hz mono PCM).
+// Virtual-file state for the pre-generated TOT beep (1000 Hz, 250 ms, 8000 Hz mono PCM).
 namespace {
 
 struct TotBeepMemFile {
@@ -75,7 +75,7 @@ struct TotBeepMemFile {
 
     TotBeepMemFile() {
         constexpr int kSampleRate = 8000;
-        constexpr int kNumSamples = kSampleRate / 2; // 500 ms
+        constexpr int kNumSamples = kSampleRate / 4; // 250 ms
         samples.resize(kNumSamples);
         for (int i = 0; i < kNumSamples; i++) {
             samples[i] = static_cast<int16_t>(
