@@ -37,6 +37,11 @@
 
 #include "BeepStep.h"
 
+// M_PI is not available on some compilers, so define it here just in case.
+#ifndef M_PI
+    #define M_PI 3.1415926535897932384626433832795
+#endif
+
 BeepStep::BeepStep(int sampleRate, int frequency, int durationMs, realtime_fp<void(BeepStep&)> const& onCompleteFn)
     : sampleRate_(sampleRate)
     , frequency_(frequency)
