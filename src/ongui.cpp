@@ -1142,7 +1142,8 @@ int MainApp::FilterEvent(wxEvent& event)
             bool reporterActiveButNotUpdatingTextMessage = 
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
-            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            if (frame->m_RxRunning && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
@@ -1304,7 +1305,9 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
             m_totWarningDialog_ = new TotWarningDialog(
                 this, remaining,
                 [this]() {
+                    m_totWarningDialog_->Destroy();
                     m_totWarningDialog_ = nullptr;
+                    
                     if (!g_tx.load(std::memory_order_acquire))
                         return;
                     if (vk_state == VK_TX)
@@ -1320,7 +1323,9 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                     }
                 },
                 [this]() {
+                    m_totWarningDialog_->Destroy();
                     m_totWarningDialog_ = nullptr;
+                    
                     if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
                         return;
                     auto now = std::chrono::high_resolution_clock::now();

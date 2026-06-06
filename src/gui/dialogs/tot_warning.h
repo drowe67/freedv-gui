@@ -50,7 +50,6 @@ private:
 
     void OnStop(wxCommandEvent&);
     void OnExtend(wxCommandEvent&);
-    void OnClose(wxCloseEvent&);
 };
 
 #endif // TOT_WARNING_DIALOG_H
