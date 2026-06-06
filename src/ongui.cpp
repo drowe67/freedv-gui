@@ -7,6 +7,9 @@
 #include <sstream>
 #include <iomanip>
 #include <locale>
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 #include "main.h"
 
@@ -58,6 +61,76 @@ extern bool g_recFileFromRadio;
 extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
+
+extern std::atomic<SNDFILE*> g_sfTotBeep;
+extern std::atomic<bool>     g_totBeepActive;
+extern int                   g_totBeepFs;
+
+// Virtual-file state for the pre-generated TOT beep (1000 Hz, 500 ms, 8000 Hz mono PCM).
+namespace {
+
+struct TotBeepMemFile {
+    std::vector<int16_t> samples;
+    sf_count_t bytePos = 0;
+
+    TotBeepMemFile() {
+        constexpr int kSampleRate = 8000;
+        constexpr int kNumSamples = kSampleRate / 2; // 500 ms
+        samples.resize(kNumSamples);
+        for (int i = 0; i < kNumSamples; i++) {
+            samples[i] = static_cast<int16_t>(
+                16000.0 * std::sin(2.0 * M_PI * 1000.0 * i / kSampleRate));
+        }
+    }
+};
+
+static TotBeepMemFile g_totBeepMemFile_;
+
+static sf_count_t totBeepGetFilelen_(void* ud) {
+    auto* f = static_cast<TotBeepMemFile*>(ud);
+    return static_cast<sf_count_t>(f->samples.size() * sizeof(int16_t));
+}
+
+static sf_count_t totBeepSeek_(sf_count_t offset, int whence, void* ud) {
+    auto* f = static_cast<TotBeepMemFile*>(ud);
+    sf_count_t sz = static_cast<sf_count_t>(f->samples.size() * sizeof(int16_t));
+    switch (whence) {
+        case SEEK_SET: f->bytePos = offset; break;
+        case SEEK_CUR: f->bytePos += offset; break;
+        case SEEK_END: f->bytePos = sz + offset; break;
+    }
+    if (f->bytePos < 0) f->bytePos = 0;
+    if (f->bytePos > sz) f->bytePos = sz;
+    return f->bytePos;
+}
+
+static sf_count_t totBeepRead_(void* ptr, sf_count_t count, void* ud) {
+    auto* f = static_cast<TotBeepMemFile*>(ud);
+    sf_count_t sz = static_cast<sf_count_t>(f->samples.size() * sizeof(int16_t));
+    sf_count_t avail = sz - f->bytePos;
+    sf_count_t toRead = std::min(count, avail);
+    if (toRead > 0) {
+        std::memcpy(ptr, reinterpret_cast<uint8_t*>(f->samples.data()) + f->bytePos, toRead);
+        f->bytePos += toRead;
+    }
+    return toRead;
+}
+
+static sf_count_t totBeepWrite_(const void*, sf_count_t, void*) { return 0; }
+
+static sf_count_t totBeepTell_(void* ud) {
+    return static_cast<TotBeepMemFile*>(ud)->bytePos;
+}
+
+static SF_VIRTUAL_IO g_totBeepVio_ = {
+    totBeepGetFilelen_,
+    totBeepSeek_,
+    totBeepRead_,
+    totBeepWrite_,
+    totBeepTell_
+};
+
+} // namespace
 
 static wxString bandNameForFilter(FilterFrequency band);
 
@@ -1134,6 +1207,42 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
     }
 }
 
+void MainFrame::playTotBeep_()
+{
+    log_info("Playing TOT beep");
+
+    if (g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_totBeepMemFile_.bytePos = 0;
+
+    SF_INFO sfInfo = {};
+    sfInfo.samplerate = 8000;
+    sfInfo.channels = 1;
+    sfInfo.format = SF_FORMAT_RAW | SF_FORMAT_PCM_16 | SF_ENDIAN_CPU;
+
+    auto sndFile = sf_open_virtual(&g_totBeepVio_, SFM_READ, &sfInfo, &g_totBeepMemFile_);
+    if (sndFile) {
+        g_totBeepFs = 8000;
+        g_sfTotBeep.store(sndFile, std::memory_order_release);
+        g_totBeepActive.store(true, std::memory_order_release);
+    }
+}
+
+void MainFrame::stopTotBeep_()
+{
+    log_info("Stopping TOT beep");
+    m_totLastBeepTime_ = {};
+    if (!g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_mutexProtectingCallbackData.Lock();
+    g_totBeepActive.store(false, std::memory_order_release);
+    auto tmp = g_sfTotBeep.exchange(nullptr, std::memory_order_acq_rel);
+    if (tmp) sf_close(tmp);
+    g_mutexProtectingCallbackData.Unlock();
+}
+
 //-------------------------------------------------------------------------
 // OnTOTTimer()
 // Time-Out Timer handler: fires when the configured TX time limit expires.
@@ -1155,6 +1264,7 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         dlg->Destroy();
     }
     m_totCurrentDurationMs = 0;
+    stopTotBeep_();
 
     if (vk_state == VK_TX)
     {
@@ -1180,6 +1290,15 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
 
     if (remaining > 0 && remaining <= 15000)
     {
+        // Beep every 2 seconds during the warning window.
+        bool firstBeep = (m_totLastBeepTime_ == decltype(m_totLastBeepTime_){});
+        bool timeForBeep = firstBeep ||
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totLastBeepTime_).count() >= 2000;
+        if (timeForBeep) {
+            playTotBeep_();
+            m_totLastBeepTime_ = now;
+        }
+
         if (!m_totWarningDialog_)
         {
             m_totWarningDialog_ = new TotWarningDialog(
@@ -1249,6 +1368,7 @@ void MainFrame::togglePTT(void) {
             dlg->Destroy();
         }
         m_totCurrentDurationMs = 0;
+        stopTotBeep_();
 
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)

@@ -105,6 +105,9 @@ extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
 extern std::atomic<bool> g_playFileFromRadio;
 extern int g_sfFs;
+extern std::atomic<SNDFILE*> g_sfTotBeep;
+extern std::atomic<bool>     g_totBeepActive;
+extern int                   g_totBeepFs;
 extern bool g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
 extern float g_SquelchLevel;
@@ -510,6 +513,36 @@ void TxRxThread::initializePipeline_()
             g_rxUserdata->spkEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
 
+        // TOT beep step: replaces speaker audio with a warning beep during countdown
+        auto totBeepBypass = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        auto totBeepActivePath = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        auto totBeepPlayback = new PlaybackStep(
+            outputSampleRate_,
+            +[]() FREEDV_NONBLOCKING { return g_totBeepFs; },
+            +[]() FREEDV_NONBLOCKING {
+                return g_totBeepActive.load(std::memory_order_acquire)
+                       ? g_sfTotBeep.load(std::memory_order_acquire)
+                       : nullptr;
+            },
+            []() {
+                log_info("TOT beep done");
+                auto tmp = g_sfTotBeep.load(std::memory_order_acquire);
+                if (tmp) sf_close(tmp);
+                g_sfTotBeep.store(nullptr, std::memory_order_release);
+                g_totBeepActive.store(false, std::memory_order_release);
+            }
+        );
+        totBeepActivePath->appendPipelineStep(totBeepPlayback);
+        auto totBeepEitherOr = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING {
+                return g_totBeepActive.load(std::memory_order_acquire)
+                       && g_sfTotBeep.load(std::memory_order_acquire) != nullptr;
+            },
+            totBeepActivePath,
+            totBeepBypass
+        );
+        pipeline_->appendPipelineStep(totBeepEitherOr);
+
         // Record from decoder step (optional)
         auto recordDecoderStep = new RecordStep(
             outputSampleRate_, 
@@ -852,10 +885,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     bool tmpTx = g_tx.load(std::memory_order_acquire);
     bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
     bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+    bool totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
     bool processInputFifo = 
         (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
         (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
-        (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
+        (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
+        totBeepActive;
     if (!processInputFifo)
     {
         clearFifos_();
@@ -889,10 +924,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         tmpTx = g_tx.load(std::memory_order_acquire);
         tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
         tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+        totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
         processInputFifo = 
             (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
             (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
-            (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
+            (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
+            totBeepActive;
         
 #if defined(ENABLE_PROCESSING_STATS)
         endTimer_();

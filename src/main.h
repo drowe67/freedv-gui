@@ -345,6 +345,9 @@ class MainFrame : public TopFrame
         int                     m_totCurrentDurationMs{0};
         TotWarningDialog*       m_totWarningDialog_{nullptr};
 
+        // TOT beep state
+        std::chrono::time_point<std::chrono::high_resolution_clock> m_totLastBeepTime_;
+
     void destroy_fifos(void);
 
     void togglePTT(void);
@@ -479,6 +482,8 @@ class MainFrame : public TopFrame
 
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
+        void playTotBeep_();
+        void stopTotBeep_();
         
         void OnSetMonitorVKAudio( wxCommandEvent& event );
         void OnSetMonitorTxAudio( wxCommandEvent& event );
