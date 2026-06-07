@@ -1868,6 +1868,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snrEstimate = freedvInterface.getSNREstimate();
         if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
+        } else {
+            g_snr = 0;
         }
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1887,10 +1889,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
         {
-            float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, (float)MAX_SNR_VAL);
-            snr = std::max(snr, (float)NO_SNR_VAL);
-            m_panelSNR->add_new_sample(snr);
+            float snrChartValue = syncState ? g_snr : NO_SNR_VAL;
+            snrChartValue = std::min(snrChartValue, (float)MAX_SNR_VAL);
+            snrChartValue = std::max(snrChartValue, (float)NO_SNR_VAL);
+            m_panelSNR->add_new_sample(snrChartValue);
             m_panelSNR->refreshData();
         }
         

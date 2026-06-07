@@ -1533,8 +1533,9 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
+    g_snr = 0;
 
     event.Skip();
 }
