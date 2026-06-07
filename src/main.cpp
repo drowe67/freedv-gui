@@ -1729,8 +1729,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         return;
     }
     
-    // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
+    // Most plots don't need TX/sync state, but we really should only be grabbing this
+    // info once every 100ms. Since there are multiple timers involved, we only grab
+    // this info on the "update other" timer fire and cache it for the other timers.
+    if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -1866,10 +1868,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
-            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
-        } else {
-            g_snr = 0;
+        if (timerId == ID_TIMER_UPDATE_OTHER)
+        {
+            if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
+                g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
+            }
         }
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1928,6 +1931,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         g_sync_time = time(0);
             
                         freedvInterface.resetReliableText();
+
+                        // Reset SNR for next "over".
+                        g_snr = 0;
                     }
                 }
                 m_timeSinceSyncLoss = 0;
