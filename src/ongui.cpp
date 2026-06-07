@@ -63,6 +63,8 @@ static wxString bandNameForFilter(FilterFrequency band);
 
 extern std::atomic<bool> g_eoo_enqueued;
 
+extern float g_snr;
+
 void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
