@@ -64,6 +64,7 @@ using namespace std::chrono_literals;
 #include "MuteStep.h"
 #include "LinkStep.h"
 #include "BeepStep.h"
+#include "MixStep.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
@@ -312,6 +313,9 @@ void TxRxThread::initializePipeline_()
     else
     {
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
+
+        auto activeRxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
@@ -336,7 +340,7 @@ void TxRxThread::initializePipeline_()
             recordRadioTap,
             bypassRecordRadio
         );
-        pipeline_->appendPipelineStep(eitherOrRecordRadio);
+        activeRxPipeline->appendPipelineStep(eitherOrRecordRadio);
         
         // Play from radio step (optional)
         auto eitherOrBypassPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -363,7 +367,7 @@ void TxRxThread::initializePipeline_()
             },
             eitherOrPlayRadio,
             eitherOrBypassPlayRadio);
-        pipeline_->appendPipelineStep(eitherOrPlayRadioStep);
+        activeRxPipeline->appendPipelineStep(eitherOrPlayRadioStep);
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(&g_plotDemodInFifo);
@@ -375,7 +379,7 @@ void TxRxThread::initializePipeline_()
         resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
-        pipeline_->appendPipelineStep(resampleForPlotTap);
+        activeRxPipeline->appendPipelineStep(resampleForPlotTap);
 
         // Tone interferer step (optional)
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -390,7 +394,7 @@ void TxRxThread::initializePipeline_()
             toneInterfererStep,
             bypassToneInterferer
         );
-        pipeline_->appendPipelineStep(eitherOrToneInterferer);
+        activeRxPipeline->appendPipelineStep(eitherOrToneInterferer);
         
         // RF spectrum computation step
         auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
@@ -406,7 +410,7 @@ void TxRxThread::initializePipeline_()
         computeRfSpectrumPipeline->appendPipelineStep(computeRfSpectrumStep);
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
-        pipeline_->appendPipelineStep(computeRfSpectrumTap);
+        activeRxPipeline->appendPipelineStep(computeRfSpectrumTap);
         
         // RX demodulation step
         auto bypassRfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
@@ -483,24 +487,24 @@ void TxRxThread::initializePipeline_()
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
                 +[]() FREEDV_NONBLOCKING { return g_analog ||
-                    g_totBeepActive.load(std::memory_order_acquire) ||
                     (
                         (g_recVoiceKeyerFile) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
                         (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
-                    ); },
+                    ); 
+                },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0 || g_totBeepActive.load(std::memory_order_acquire); },
+                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
 
-        pipeline_->appendPipelineStep(eitherOrRfDemodulationStep);
+        activeRxPipeline->appendPipelineStep(eitherOrRfDemodulationStep);
 
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -511,24 +515,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol,
             g_rxUserdata->spkEqLock);
-        pipeline_->appendPipelineStep(equalizerStep);
-
-        // TOT beep step: replaces speaker audio with a warning beep during countdown
-        auto totBeepBypass = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        auto totBeepActivePath = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new BeepStep(outputSampleRate_, 1000, 250, +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
-            g_totBeepActive.store(false, std::memory_order_release);
-            thisStep.reset();
-        });
-        totBeepActivePath->appendPipelineStep(totBeepPlayback);
-        auto totBeepEitherOr = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING {
-                return g_totBeepActive.load(std::memory_order_acquire);
-            },
-            totBeepActivePath,
-            totBeepBypass
-        );
-        pipeline_->appendPipelineStep(totBeepEitherOr);
+        activeRxPipeline->appendPipelineStep(equalizerStep);
 
         // Record from decoder step (optional)
         auto recordDecoderStep = new RecordStep(
@@ -550,8 +537,51 @@ void TxRxThread::initializePipeline_()
             recordDecoderTap,
             bypassRecordDecoder
         );
-        pipeline_->appendPipelineStep(eitherOrRecordDecoder);
+        activeRxPipeline->appendPipelineStep(eitherOrRecordDecoder);
+
+        auto activeRxMutePipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+        auto activeRxMuteStep = new MuteStep(outputSampleRate_);
+        activeRxMutePipeline->appendPipelineStep(activeRxMuteStep);
+
+        // TOT beep step: emits a warning beep during countdown
+        auto totBeepBypass = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+        auto totBeepMuteStep = new MuteStep(outputSampleRate_);
+        totBeepBypass->appendPipelineStep(totBeepMuteStep);
+
+        auto totBeepActivePath = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+        auto totBeepPlayback = new BeepStep(outputSampleRate_, 1000, 250, +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
+            g_totBeepActive.store(false, std::memory_order_release);
+            thisStep.reset();
+        });
+        totBeepActivePath->appendPipelineStep(totBeepPlayback);
+        auto totBeepEitherOr = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING {
+                return g_totBeepActive.load(std::memory_order_acquire);
+            },
+            totBeepActivePath,
+            totBeepBypass
+        );
+
+        auto activeRxEitherOr = new EitherOrStep(
+            +[]() FREEDV_NONBLOCKING {
+                bool tmpTx = g_tx.load(std::memory_order_acquire);
+                bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
+                bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+                return
+                    (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
+                    (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
+                    (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
+            },
+            activeRxPipeline,
+            activeRxMuteStep
+        );
         
+        auto totMixStep = new MixStep(
+            activeRxEitherOr,
+            totBeepEitherOr
+        );
+        pipeline_->appendPipelineStep(totMixStep);
+       
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
     }
@@ -868,26 +898,11 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
     int             nout;
 
-
-    bool tmpTx = g_tx.load(std::memory_order_acquire);
-    bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
-    bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-    bool totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
-    bool processInputFifo = 
-        (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-        (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
-        (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
-        totBeepActive;
-    if (!processInputFifo)
-    {
-        clearFifos_();
-    }
-
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
+    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
         
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
@@ -907,17 +922,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 FREEDV_END_VERIFIED_SAFE
             }
         }
-        
-        tmpTx = g_tx.load(std::memory_order_acquire);
-        tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
-        tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-        totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
-        processInputFifo = 
-            (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-            (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
-            (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
-            totBeepActive;
-        
+               
 #if defined(ENABLE_PROCESSING_STATS)
         endTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)

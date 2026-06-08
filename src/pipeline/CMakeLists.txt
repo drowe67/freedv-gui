@@ -4,6 +4,7 @@ add_library(fdv_audio_pipeline_extra STATIC
     EqualizerStep.cpp
     FreeDVReceiveStep.cpp
     FreeDVTransmitStep.cpp
+    MixStep.cpp
     ParallelStep.cpp
     PlaybackStep.cpp
     RecordStep.cpp
