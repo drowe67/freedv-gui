@@ -91,5 +91,6 @@ short* BeepStep::execute(short* inputSamples, int numInputSamples, int* numOutpu
 
 void BeepStep::reset() FREEDV_NONBLOCKING
 {
+    playing_ = false;
     sampleCtr_ = 0;
 }

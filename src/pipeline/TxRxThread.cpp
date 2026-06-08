@@ -151,6 +151,12 @@ extern bool g_recFileFromDecoder;
 
 #include "sox_biquad.h"
 
+// Tracks whether the TOT beep is physically playing (distinct from g_totBeepActive which
+// may be cleared by stopTotBeep_() before the beep finishes). Kept true for the whole
+// duration of playback so rxProcessing_ keeps the pipeline running through the TX-stop
+// sequence even after g_totBeepActive is cleared.
+static std::atomic<bool> s_totBeepPlaying{false};
+
 void TxRxThread::initializePipeline_()
 {
     if (m_tx)
@@ -487,14 +493,21 @@ void TxRxThread::initializePipeline_()
                         (g_recVoiceKeyerFile) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
                         (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
-                    ); },
+                    ) ||
+                    // Bypass RADE during TOT beep so BeepStep gets regular-sized buffers.
+                    // RADE outputs 0 samples on most calls (accumulates input until a full frame
+                    // is ready), which would corrupt BeepStep's sample-counter-based timing.
+                    g_totBeepActive.load(std::memory_order_acquire) ||
+                    s_totBeepPlaying.load(std::memory_order_acquire); },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+                +[]() FREEDV_NONBLOCKING { return g_analog != 0 ||
+                    g_totBeepActive.load(std::memory_order_acquire) ||
+                    s_totBeepPlaying.load(std::memory_order_acquire); },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
@@ -519,9 +532,12 @@ void TxRxThread::initializePipeline_()
             {{10,false},{80,true},{80,false},{80,true},{80,false},{80,true},
              {80,false},{80,true},{80,false},{80,true},{10,false}},
             +[]() FREEDV_NONBLOCKING {
-                return g_totBeepActive.load(std::memory_order_acquire);
+                bool active = g_totBeepActive.load(std::memory_order_acquire);
+                if (active) s_totBeepPlaying.store(true, std::memory_order_release);
+                return active;
             },
             +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
+                s_totBeepPlaying.store(false, std::memory_order_release);
                 g_totBeepActive.store(false, std::memory_order_release);
                 thisStep.reset();
             }
@@ -870,8 +886,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     bool tmpTx = g_tx.load(std::memory_order_acquire);
     bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
     bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-    bool totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
-    bool processInputFifo = 
+    bool totBeepActive = g_totBeepActive.load(std::memory_order_acquire) ||
+                         s_totBeepPlaying.load(std::memory_order_acquire);
+    bool processInputFifo =
         (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
         (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
         (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
@@ -909,8 +926,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         tmpTx = g_tx.load(std::memory_order_acquire);
         tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
         tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-        totBeepActive = g_totBeepActive.load(std::memory_order_acquire);
-        processInputFifo = 
+        totBeepActive = g_totBeepActive.load(std::memory_order_acquire) ||
+                        s_totBeepPlaying.load(std::memory_order_acquire);
+        processInputFifo =
             (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
             (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
             (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
