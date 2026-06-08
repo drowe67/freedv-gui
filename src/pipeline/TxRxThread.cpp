@@ -900,16 +900,28 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
     if (!processInputFifo)
     {
-        clearFifos_();
-        // For 2-card setups outfifo2 is the speaker FIFO and is not written
-        // by the TX pipeline.  Feed silence each cycle to prevent the
-        // continuous FIFO underruns that cause PipeWire to emit a startup
-        // transient when the beep fires after 15 s of TX.
-        if (g_nSoundCards != 1)
+        if (g_nSoundCards != 1 && outFifo->numUsed() > 0)
         {
-            static short silence[960] = {};
-            int n = nsam_one_speech_frame < 960 ? nsam_one_speech_frame : 960;
-            (void)outFifo->write(silence, n);
+            // outFifo2 still has audio (TOT beep draining after generation
+            // completed).  Clear stale radio input but leave the speaker FIFO
+            // alone so the full beep plays through before we reset.
+            cbData->infifo1->reset();
+            if (equalizedMicAudioLink_ != nullptr)
+                equalizedMicAudioLink_->clearFifo();
+        }
+        else
+        {
+            clearFifos_();
+            // For 2-card setups outfifo2 is the speaker FIFO and is not written
+            // by the TX pipeline.  Feed silence each cycle to prevent the
+            // continuous FIFO underruns that cause PipeWire to emit a startup
+            // transient when the beep fires after 15 s of TX.
+            if (g_nSoundCards != 1)
+            {
+                static short silence[960] = {};
+                int n = nsam_one_speech_frame < 960 ? nsam_one_speech_frame : 960;
+                (void)outFifo->write(silence, n);
+            }
         }
     }
 
