@@ -579,7 +579,7 @@ void TxRxThread::initializePipeline_()
                     (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
             },
             activeRxPipeline,
-            activeRxMuteStep
+            activeRxMutePipeline
         );
         
         auto totMixStep = new MixStep(
