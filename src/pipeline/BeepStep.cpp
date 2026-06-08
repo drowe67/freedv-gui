@@ -37,20 +37,31 @@
 
 #include "BeepStep.h"
 
+static constexpr int TONE_AMPLITUDE = 8192;
+static constexpr int SILENCE_BETWEEN_REPEATS_MS = 80;
+
 // M_PI is not available on some compilers, so define it here just in case.
 #ifndef M_PI
     #define M_PI 3.1415926535897932384626433832795
 #endif
 
-BeepStep::BeepStep(int sampleRate, int frequency, int durationMs, realtime_fp<void(BeepStep&)> const& onCompleteFn)
+BeepStep::BeepStep(
+    int sampleRate, int frequency, int durationMs, int repeats, 
+    realtime_fp<bool()> const& isActiveFn,
+    realtime_fp<void(BeepStep&)> const& onCompleteFn)
     : sampleRate_(sampleRate)
     , frequency_(frequency)
+    , repeats_(repeats)
+    , isActiveFn_(isActiveFn)
     , onCompleteFn_(onCompleteFn)
     
     // SR = (samples / 1s) * (1s / 1000ms) = samples / msec
     , samplesToGenerate_((sampleRate * durationMs) / 1000)
+    , silenceToGenerate_((sampleRate * SILENCE_BETWEEN_REPEATS_MS) / 1000)
 
     , sampleCtr_(0)
+    , repeatCtr_(0)
+    , silenceCtr_(0)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     outputSamples_ = std::make_unique<short[]>(sampleRate);
@@ -72,29 +83,46 @@ int BeepStep::getOutputSampleRate() const FREEDV_NONBLOCKING
     return sampleRate_;
 }    
 
-short* BeepStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+short* BeepStep::execute(short*, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     *numOutputSamples = numInputSamples;
 
     short* outPtr = outputSamples_.get();
     for (int index = 0; index < numInputSamples; index++)
     {
-        if (sampleCtr_ < samplesToGenerate_)
+        if (repeatCtr_ < repeats_ && isActiveFn_())
         {
-            constexpr int TONE_AMPLITUDE = 8192; // TBD
-            outPtr[index] = TONE_AMPLITUDE * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_);
+            if (sampleCtr_ < samplesToGenerate_)
+            {
+                // First phase: actually generate the sine wave.
+                outPtr[index] = TONE_AMPLITUDE * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_);
+                sampleCtr_++;
+            }
+            else if (silenceCtr_ < silenceToGenerate_)
+            {
+                // Second phase: add silence before the next repeat.
+                outPtr[index] = 0;
+                silenceCtr_++;
+
+                if (silenceCtr_ == silenceToGenerate_)
+                {
+                    // Increment repeat counter, either start over at (1)
+                    // or pass through input audio.
+                    sampleCtr_ = 0;
+                    silenceCtr_ = 0;
+                    repeatCtr_++;
+                }
+            }
         }
         else
         {
-            outPtr[index] = inputSamples[index];
+            outPtr[index] = 0; // ignoring input, only generates beeps
+            if (repeatCtr_ == repeats_)
+            {
+                // Call completion function.
+                onCompleteFn_(*this);
+            }
         }
-
-        if (sampleCtr_ == samplesToGenerate_)
-        {
-            onCompleteFn_(*this);
-        }
-
-        sampleCtr_++;
     }
 
     return outPtr;
@@ -103,4 +131,6 @@ short* BeepStep::execute(short* inputSamples, int numInputSamples, int* numOutpu
 void BeepStep::reset() FREEDV_NONBLOCKING
 {
     sampleCtr_ = 0;
+    repeatCtr_ = 0;
+    silenceCtr_ = 0;
 }

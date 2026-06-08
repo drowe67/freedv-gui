@@ -549,10 +549,16 @@ void TxRxThread::initializePipeline_()
         totBeepBypass->appendPipelineStep(totBeepMuteStep);
 
         auto totBeepActivePath = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new BeepStep(outputSampleRate_, 1000, 250, +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
-            g_totBeepActive.store(false, std::memory_order_release);
-            thisStep.reset();
-        });
+        auto totBeepPlayback = new BeepStep(
+            outputSampleRate_, 750, 80, 5, 
+            +[]() FREEDV_NONBLOCKING {
+                return g_totBeepActive.load(std::memory_order_acquire);
+            },
+            +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
+                g_totBeepActive.store(false, std::memory_order_release);
+                thisStep.reset();
+            }
+        );
         totBeepActivePath->appendPipelineStep(totBeepPlayback);
         auto totBeepEitherOr = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING {

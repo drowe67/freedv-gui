@@ -42,7 +42,10 @@
 class BeepStep : public IPipelineStep
 {
 public:
-    BeepStep(int sampleRate, int frequency, int durationMs, realtime_fp<void(BeepStep&)> const& onCompleteFn);
+    BeepStep(
+        int sampleRate, int frequency, int durationMs, int repeats, 
+        realtime_fp<bool()> const& isActiveFn,
+        realtime_fp<void(BeepStep&)> const& onCompleteFn);
     virtual ~BeepStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -53,10 +56,15 @@ public:
 private:
     int sampleRate_;
     int frequency_;
+    int repeats_;
+    realtime_fp<bool()> isActiveFn_;
     realtime_fp<void(BeepStep&)> onCompleteFn_;
 
     int samplesToGenerate_;
+    int silenceToGenerate_;
     int sampleCtr_;
+    int repeatCtr_;
+    int silenceCtr_;
     std::unique_ptr<short[]> outputSamples_;
 };
 
