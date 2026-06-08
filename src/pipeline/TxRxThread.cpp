@@ -49,6 +49,7 @@ using namespace std::chrono_literals;
 #include "paCallbackData.h"
 
 #include "PlaybackStep.h"
+#include "BeepStep.h"
 #include "EitherOrStep.h"
 #include "RNNoiseStep.h"
 #include "EqualizerStep.h"
@@ -63,7 +64,6 @@ using namespace std::chrono_literals;
 #include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
-#include "BeepStep.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
@@ -483,7 +483,6 @@ void TxRxThread::initializePipeline_()
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
                 +[]() FREEDV_NONBLOCKING { return g_analog ||
-                    g_totBeepActive.load(std::memory_order_acquire) ||
                     (
                         (g_recVoiceKeyerFile) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
@@ -495,7 +494,7 @@ void TxRxThread::initializePipeline_()
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0 || g_totBeepActive.load(std::memory_order_acquire); },
+                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
@@ -513,22 +512,21 @@ void TxRxThread::initializePipeline_()
             g_rxUserdata->spkEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
 
-        // TOT beep step: replaces speaker audio with a warning beep during countdown
-        auto totBeepBypass = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        auto totBeepActivePath = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new BeepStep(outputSampleRate_, 1000, 250, +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
-            g_totBeepActive.store(false, std::memory_order_release);
-            thisStep.reset();
-        });
-        totBeepActivePath->appendPipelineStep(totBeepPlayback);
-        auto totBeepEitherOr = new EitherOrStep(
+        // TOT beep step: always present in pipeline, activates/deactivates without switching.
+        // Polls g_totBeepActive and plays Morse '5' at 750 Hz / 15 WPM, then clears the flag.
+        auto totBeepPlayback = new BeepStep(
+            outputSampleRate_, 750,
+            {{10,false},{80,true},{80,false},{80,true},{80,false},{80,true},
+             {80,false},{80,true},{80,false},{80,true},{10,false}},
             +[]() FREEDV_NONBLOCKING {
                 return g_totBeepActive.load(std::memory_order_acquire);
             },
-            totBeepActivePath,
-            totBeepBypass
+            +[](BeepStep& thisStep) FREEDV_NONBLOCKING {
+                g_totBeepActive.store(false, std::memory_order_release);
+                thisStep.reset();
+            }
         );
-        pipeline_->appendPipelineStep(totBeepEitherOr);
+        pipeline_->appendPipelineStep(totBeepPlayback);
 
         // Record from decoder step (optional)
         auto recordDecoderStep = new RecordStep(

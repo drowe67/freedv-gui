@@ -1,103 +1,92 @@
-//=========================================================================
-// Name:            BeepStep.cpp
-// Purpose:         Describes a beep generator step in the audio pipeline.
-//
-// Authors:         Mooneer Salem
-// License:
-//
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// - Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// - Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-// OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-//=========================================================================
-
 #include <cmath>
-#include <cassert>
-
 #include "BeepStep.h"
 
-// M_PI is not available on some compilers, so define it here just in case.
-#ifndef M_PI
-    #define M_PI 3.1415926535897932384626433832795
-#endif
+static const int TONE_AMPLITUDE = 20000;
+static const double M_2PI = 2.0 * M_PI;
 
-BeepStep::BeepStep(int sampleRate, int frequency, int durationMs, realtime_fp<void(BeepStep&)> const& onCompleteFn)
+BeepStep::BeepStep(int sampleRate, int frequency,
+                   std::initializer_list<BeepSegment> pattern,
+                   realtime_fp<bool()> const& isActiveFn,
+                   realtime_fp<void(BeepStep&)> const& onCompleteFn)
     : sampleRate_(sampleRate)
-    , frequency_(frequency)
+    , isActiveFn_(isActiveFn)
     , onCompleteFn_(onCompleteFn)
-    
-    // SR = (samples / 1s) * (1s / 1000ms) = samples / msec
-    , samplesToGenerate_((sampleRate * durationMs) / 1000)
-
+    , samplesToGenerate_(0)
     , sampleCtr_(0)
+    , playing_(false)
 {
-    // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::make_unique<short[]>(sampleRate);
-    assert(outputSamples_ != nullptr);
+    // Count total samples
+    for (auto& seg : pattern)
+        samplesToGenerate_ += (sampleRate * seg.durationMs) / 1000;
+
+    pregenSamples_ = std::make_unique<short[]>(samplesToGenerate_);
+    execOutput_    = std::make_unique<short[]>(samplesToGenerate_);
+
+    int ramp = (sampleRate * 5) / 1000;
+    double phase = 0.0;
+    double phaseStep = M_2PI * frequency / sampleRate;
+    int idx = 0;
+
+    for (auto& seg : pattern) {
+        int segSamples = (sampleRate * seg.durationMs) / 1000;
+        for (int i = 0; i < segSamples; i++) {
+            double env = 0.0;
+            if (seg.isTone) {
+                if (i < ramp)
+                    env = 0.5 * (1.0 - std::cos(M_PI * i / ramp));
+                else if (i >= segSamples - ramp)
+                    env = 0.5 * (1.0 + std::cos(M_PI * (i - (segSamples - ramp)) / ramp));
+                else
+                    env = 1.0;
+                pregenSamples_[idx] = static_cast<short>(TONE_AMPLITUDE * env * std::cos(phase));
+            } else {
+                pregenSamples_[idx] = 0;
+            }
+            phase += phaseStep;
+            if (phase >= M_2PI) phase -= M_2PI;
+            idx++;
+        }
+    }
 }
 
-BeepStep::~BeepStep()
-{
-    // empty
-}
-    
-int BeepStep::getInputSampleRate() const FREEDV_NONBLOCKING
-{
-    return sampleRate_;
-}
+BeepStep::~BeepStep() = default;
 
-int BeepStep::getOutputSampleRate() const FREEDV_NONBLOCKING
-{
-    return sampleRate_;
-}    
+int BeepStep::getInputSampleRate() const FREEDV_NONBLOCKING { return sampleRate_; }
+int BeepStep::getOutputSampleRate() const FREEDV_NONBLOCKING { return sampleRate_; }
 
 short* BeepStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
-    *numOutputSamples = numInputSamples;
-
-    short* outPtr = outputSamples_.get();
-    for (int index = 0; index < numInputSamples; index++)
-    {
-        if (sampleCtr_ < samplesToGenerate_)
-        {
-            constexpr int TONE_AMPLITUDE = 8192; // TBD
-            outPtr[index] = TONE_AMPLITUDE * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_);
-        }
-        else
-        {
-            outPtr[index] = inputSamples[index];
-        }
-
-        if (sampleCtr_ == samplesToGenerate_)
-        {
-            onCompleteFn_(*this);
-        }
-
-        sampleCtr_++;
+    // Check for activation once per buffer (never mid-buffer)
+    if (!playing_ && isActiveFn_()) {
+        sampleCtr_ = 0;
+        playing_ = true;
     }
 
-    return outPtr;
+    *numOutputSamples = numInputSamples;
+    bool completed = false;
+
+    for (int index = 0; index < numInputSamples; index++) {
+        short outSample;
+
+        if (playing_ && sampleCtr_ < samplesToGenerate_) {
+            outSample = pregenSamples_[sampleCtr_++];
+        } else if (playing_) {
+            // Pattern complete — passthrough + fire callback once
+            outSample = inputSamples[index];
+            if (!completed) {
+                completed = true;
+                playing_ = false;
+                onCompleteFn_(*this);
+            }
+        } else {
+            // Idle passthrough
+            outSample = inputSamples[index];
+        }
+
+        execOutput_[index] = outSample;
+    }
+
+    return execOutput_.get();
 }
 
 void BeepStep::reset() FREEDV_NONBLOCKING
