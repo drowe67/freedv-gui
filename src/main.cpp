@@ -3837,16 +3837,20 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
-    if (toRead < size)
+    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
     else
     {
-        cbData->outfifo1->read(tmpOutput, toRead);
+        if (toRead >= size)
+        {
+            cbData->outfifo1->read(tmpOutput, size);
+        }
+
         auto numChannels = dev.getNumChannels();
         auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-        auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
         auto sr = dev.getSampleRate();
 
         if (isTuning)
