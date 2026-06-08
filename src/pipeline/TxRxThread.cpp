@@ -32,6 +32,7 @@
 //
 //=========================================================================
 
+#include <algorithm>
 #include <chrono>
 using namespace std::chrono_literals;
 
@@ -529,7 +530,7 @@ void TxRxThread::initializePipeline_()
         // Polls g_totBeepActive and plays Morse '5' at 750 Hz / 15 WPM, then clears the flag.
         auto totBeepPlayback = new BeepStep(
             outputSampleRate_, 750,
-            {{10,false},{80,true},{80,false},{80,true},{80,false},{80,true},
+            {{50,false},{80,true},{80,false},{80,true},{80,false},{80,true},
              {80,false},{80,true},{80,false},{80,true},{10,false}},
             +[]() FREEDV_NONBLOCKING {
                 bool active = g_totBeepActive.load(std::memory_order_acquire);
@@ -893,17 +894,37 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
         (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex)) ||
         totBeepActive;
-    if (!processInputFifo)
-    {
-        clearFifos_();
-    }
 
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
-    // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
-        
+    if (!processInputFifo)
+    {
+        clearFifos_();
+        // For 2-card setups outfifo2 is the speaker FIFO and is not written
+        // by the TX pipeline.  Feed silence each cycle to prevent the
+        // continuous FIFO underruns that cause PipeWire to emit a startup
+        // transient when the beep fires after 15 s of TX.
+        if (g_nSoundCards != 1)
+        {
+            static short silence[960] = {};
+            int n = nsam_one_speech_frame < 960 ? nsam_one_speech_frame : 960;
+            (void)outFifo->write(silence, n);
+        }
+    }
+
+    // while we have enough input samples available and enough space in the output FIFO ...
+    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame) {
+        if (cbData->infifo1->read(inputSamples_.get(), nsam) != 0)
+        {
+            // No radio input available. During the beep, BeepStep ignores inputSamples
+            // anyway, so substitute silence to keep outFifo at least 3 frames ahead of
+            // the callback — preventing OS scheduling jitter from causing underrun gaps
+            // in the tone that would sound like crunches.
+            if (!totBeepActive || outFifo->numUsed() >= 3 * nsam_one_speech_frame) break;
+            std::fill_n(inputSamples_.get(), nsam, (short)0);
+        }
+
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
