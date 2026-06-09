@@ -58,6 +58,7 @@ BeepStep::BeepStep(
     // SR = (samples / 1s) * (1s / 1000ms) = samples / msec
     , samplesToGenerate_((sampleRate * durationMs) / 1000)
     , silenceToGenerate_((sampleRate * SILENCE_BETWEEN_REPEATS_MS) / 1000)
+    , rampLength_((sampleRate * 5) / 1000) // 5 ms Hann ramp
 
     , sampleCtr_(0)
     , repeatCtr_(0)
@@ -95,7 +96,21 @@ short* BeepStep::execute(short*, int numInputSamples, int* numOutputSamples) FRE
             if (sampleCtr_ < samplesToGenerate_)
             {
                 // First phase: actually generate the sine wave.
-                outPtr[index] = TONE_AMPLITUDE * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_);
+                // Beginning and end of beep should be ramped up and down.
+                double env;
+                if (sampleCtr_ < rampLength_)
+                {
+                    env = 0.5 * (1.0 - cosf(M_PI * sampleCtr_ / rampLength_));
+                }
+                else if (sampleCtr_ >= (samplesToGenerate_ - rampLength_))
+                {
+                    env = 0.5 * (1.0 + cosf(M_PI * (sampleCtr_ - (samplesToGenerate_ - rampLength_)) / rampLength_));
+                }
+                else
+                {
+                    env = 1.0;
+                }
+                outPtr[index] = (short)(TONE_AMPLITUDE * env * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_));
                 sampleCtr_++;
             }
             else if (silenceCtr_ < silenceToGenerate_)

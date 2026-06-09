@@ -62,6 +62,7 @@ private:
 
     int samplesToGenerate_;
     int silenceToGenerate_;
+    int rampLength_;
     int sampleCtr_;
     int repeatCtr_;
     int silenceCtr_;
