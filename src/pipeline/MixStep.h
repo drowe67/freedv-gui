@@ -37,6 +37,7 @@
 
 #include <memory>
 #include "IPipelineStep.h"
+#include "GenericFIFO.h"
 
 class MixStep : public IPipelineStep
 {
@@ -53,6 +54,9 @@ private:
     std::unique_ptr<IPipelineStep> firstChannel_;
     std::unique_ptr<IPipelineStep> secondChannel_;
     std::unique_ptr<short[]> outputSamples_;
+
+    GenericFIFO<short> firstOutputFIFO_;
+    GenericFIFO<short> secondOutputFIFO_;
 };
 
 #endif // AUDIO_PIPELINE__MIX_STEP_H

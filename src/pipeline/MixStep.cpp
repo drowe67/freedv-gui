@@ -40,6 +40,8 @@
 MixStep::MixStep(IPipelineStep* firstChannel, IPipelineStep* secondChannel)
     : firstChannel_(firstChannel)
     , secondChannel_(secondChannel)
+    , firstOutputFIFO_(firstChannel->getOutputSampleRate())
+    , secondOutputFIFO_(secondChannel->getOutputSampleRate())
 {
     assert(firstChannel_->getInputSampleRate() == secondChannel_->getInputSampleRate());
     assert(firstChannel_->getOutputSampleRate() == secondChannel_->getOutputSampleRate());
@@ -68,11 +70,13 @@ short* MixStep::execute(short* inputSamples, int numInputSamples, int* numOutput
 {
     int firstOutputNumSamples = 0;
     auto firstOutputPtr = firstChannel_->execute(inputSamples, numInputSamples, &firstOutputNumSamples);
+    firstOutputFIFO_.write(firstOutputPtr, firstOutputNumSamples);
 
     int secondOutputNumSamples = 0;
     auto secondOutputPtr = secondChannel_->execute(inputSamples, numInputSamples, &secondOutputNumSamples);
+    secondOutputFIFO_.write(secondOutputPtr, secondOutputNumSamples);
 
-    *numOutputSamples = std::max(firstOutputNumSamples, secondOutputNumSamples);
+    *numOutputSamples = std::min(firstOutputFIFO_.numUsed(), secondOutputFIFO_.numUsed());
 
     short* outPtr = outputSamples_.get();
     for (int index = 0; index < *numOutputSamples; index++)
@@ -86,8 +90,10 @@ short* MixStep::execute(short* inputSamples, int numInputSamples, int* numOutput
         // 4. Convert result back to short and store in output.
         //
         // See https://dsp.stackexchange.com/questions/3581/algorithms-to-mix-audio-signals-without-clipping.
-        short sampleLeft = (index < firstOutputNumSamples) ? firstOutputPtr[index] : 0;
-        short sampleRight = (index < secondOutputNumSamples) ? secondOutputPtr[index] : 0;
+        short sampleLeft = 0;
+        short sampleRight = 0;
+        firstOutputFIFO_.read(&sampleLeft, 1);
+        secondOutputFIFO_.read(&sampleRight, 1);
 
         float sampleLeftFloat = 0.f;
         float sampleRightFloat = 0.f;
@@ -107,4 +113,6 @@ void MixStep::reset() FREEDV_NONBLOCKING
 {
     firstChannel_->reset();
     secondChannel_->reset();
+    firstOutputFIFO_.reset();
+    secondOutputFIFO_.reset();
 }
