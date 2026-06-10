@@ -462,7 +462,7 @@ void TxRxThread::initializePipeline_()
             });
             monitorPipeline->appendPipelineStep(monitorLevelStep);
 
-            auto muteStep = new MuteStep(outputSampleRate_);
+            auto muteStep = new MuteStep(inputSampleRate_, outputSampleRate_);
             
             mutePipeline->appendPipelineStep(muteStep);
             
@@ -540,12 +540,12 @@ void TxRxThread::initializePipeline_()
         activeRxPipeline->appendPipelineStep(eitherOrRecordDecoder);
 
         auto activeRxMutePipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto activeRxMuteStep = new MuteStep(outputSampleRate_);
+        auto activeRxMuteStep = new MuteStep(inputSampleRate_, outputSampleRate_);
         activeRxMutePipeline->appendPipelineStep(activeRxMuteStep);
 
         // TOT beep step: emits a warning beep during countdown
         auto totBeepBypass = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto totBeepMuteStep = new MuteStep(outputSampleRate_);
+        auto totBeepMuteStep = new MuteStep(inputSampleRate_, outputSampleRate_);
         totBeepBypass->appendPipelineStep(totBeepMuteStep);
 
         auto totBeepActivePath = new AudioPipeline(inputSampleRate_, outputSampleRate_);
