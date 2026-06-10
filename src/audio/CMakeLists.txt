@@ -10,9 +10,9 @@ if(NATIVE_AUDIO_AVAILABLE)
             WASAPIAudioDevice.cpp
         )
     elseif(LINUX)
-        if (DBUS_FOUND)
+        if (DBus_FOUND)
             set(RTKIT_FILES rtkit.c)
-        endif (DBUS_FOUND)
+        endif (DBus_FOUND)
 
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
             PulseAudioDevice.cpp
@@ -44,10 +44,10 @@ if(APPLE AND NATIVE_AUDIO_AVAILABLE)
         "-framework CoreAudio")
 elseif(WIN32 AND NATIVE_AUDIO_AVAILABLE)
     target_link_libraries(fdv_audio PRIVATE uuid avrt winmm ksuser)
-elseif(LINUX AND NATIVE_AUDIO_AVAILABLE AND DBUS_FOUND)
-    target_include_directories(fdv_audio PRIVATE ${DBUS_INCLUDE_DIRS})
+elseif(LINUX AND NATIVE_AUDIO_AVAILABLE AND DBus_FOUND)
+    target_include_directories(fdv_audio PRIVATE ${DBus_INCLUDE_DIRS})
     target_compile_definitions(fdv_audio PRIVATE -DUSE_RTKIT)
-    target_link_libraries(fdv_audio PRIVATE ${DBUS_LIBRARIES})
+    target_link_libraries(fdv_audio PRIVATE ${DBus_LIBRARIES})
 endif()
 
 target_compile_options(fdv_audio PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
