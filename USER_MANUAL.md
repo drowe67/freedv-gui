@@ -950,7 +950,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Load last-used config file on restarts. (PR #1365, #1371)
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
-3. Other:
+    * Restore heard station list on launch. (PR #1358) - thanks @barjac!
+3. Build system:
+    * Clear CMake deprecation warnings in FreeDV. (PR #1383)
+4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
 ## V2.3.1 May 2026
