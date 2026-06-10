@@ -315,12 +315,21 @@ which removes the saved value and stops auto-saving.</li>
 attenuation to the last auto-saved value for that band, useful for
 recovering a known good level after experimenting during a session.</li>
 </ul>
-<p>Within the TX Attenuation dialog there is also a Tune button which
-will output a continuous single tone at 1500Hz for antenna matching,
-netting etc. The level of this signal while active may also be adjusted
-using the same controls as for the TX Attenuation. Right click on the
-tune button to see a different context menu with similar options to the
-TX attenuation described above.</p>
+<p>The <strong>Control</strong> panel (right-hand side) contains a
+<strong>Tune</strong> button which outputs a continuous 1500 Hz carrier
+for antenna matching, netting etc. While Tune is active the TX
+Attenuation controls adjust the tune signal level rather than the normal
+transmit level.</p>
+<p>Right-clicking the Tune button opens a context menu with the
+following options:</p>
+<ul>
+<li><strong>Set tune output to minimum (-30 dB)</strong> — immediately
+sets the tune attenuation to its lowest output level without
+transmitting, useful for safe low-power antenna tuner testing.</li>
+<li>Per-band <strong>Enable/Disable auto-save</strong> and
+<strong>Restore</strong> options, similar to those described above for
+TX attenuation (shown only when a band is known).</li>
+</ul>
 <p>FreeDV will automatically detect band changes (via Hamlib or OmniRig
 CAT, or manual frequency entry) and load any saved attenuation value for
 the new band. When a band is left the current values for that band are
@@ -1266,6 +1275,18 @@ issues. (PR #1379)</li>
 <ul>
 <li>Add UDP broadcast of received callsigns. (PR #1367)</li>
 <li>Load last-used config file on restarts. (PR #1365, #1371)</li>
+<li>Add “Set tune output to minimum” to Tune button context menu for
+safety. (PR #1378) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
+<li>Move Tune button into Control widget for improved usability. (PR
+#1377) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
+<li>Restore heard station list on launch. (PR #1358) - thanks <span
+class="citation" data-cites="barjac">@barjac</span>!</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>Clear CMake deprecation warnings in FreeDV. (PR #1383)</li>
 </ul></li>
 <li>Other:
 <ul>
