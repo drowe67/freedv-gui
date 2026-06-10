@@ -1092,11 +1092,7 @@ int MainApp::FilterEvent(wxEvent& event)
                         frame->m_btnTogPTT->SetValue(false);
                     else
                         frame->m_btnTogPTT->SetValue(true);
-
-                    // Update background color of button here because when toggling PTT via keyboard,
-                    // the background color for some reason doesn't update inside togglePTT().
-                    frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-
+                    
                     // Actually toggle PTT.
                     frame->togglePTT();
                 }
@@ -1198,7 +1194,6 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
     else
     {
         m_btnTogPTT->SetValue(false);
-        m_btnTogPTT->SetBackgroundColour(wxNullColour);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
     }
@@ -1258,6 +1253,8 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
 
 void MainFrame::togglePTT(void) {
     std::chrono::high_resolution_clock highResClock;
+
+    m_btnTogPTT->Enable(false); // disable PTT button during changeover
 
     // Change tabbed page in centre panel depending on PTT state
 
@@ -1586,7 +1583,10 @@ void MainFrame::togglePTT(void) {
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 
-    CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
+    CallAfter([&]() { 
+        m_btnTogPTT->Enable(true); // allow PTT again
+        m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
+    });
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
