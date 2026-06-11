@@ -44,7 +44,11 @@ FetchContent_Declare(
     UPDATE_DISCONNECTED 1
 )
 
-FetchContent_MakeAvailable(wxWidgets)
+FetchContent_GetProperties(wxWidgets)
+if(NOT wxwidgets_POPULATED)
+  FetchContent_Populate(wxWidgets)
+  add_subdirectory(${wxwidgets_SOURCE_DIR} ${wxwidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # Override some CXX flags to prevent wxWidgets build failures
 if(APPLE)
