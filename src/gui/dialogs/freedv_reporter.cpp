@@ -1472,16 +1472,7 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || 
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
-            // Round to the nearest 100 Hz.
-            uint64_t wholeFreq = frequency / 100;
-            uint64_t remainder = frequency % 100;
-
-            if (remainder >= 50)
-            {
-                wholeFreq++;
-            }
-
-            wxGetApp().rigFrequencyController->setFrequency(wholeFreq * 100);
+            wxGetApp().rigFrequencyController->setFrequency(frequency);
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
