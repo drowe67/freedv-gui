@@ -276,9 +276,9 @@ endif(USE_STATIC_DEPS)
 if (LINUX)
     message(STATUS "Looking for DBus...")
     find_package(DBus)
-    if (DBUS_FOUND)
+    if (DBus_FOUND)
         message(STATUS "Found DBus, will attempt to use rtkit for real-time threading")
-    endif (DBUS_FOUND)
+    endif (DBus_FOUND)
 endif (LINUX)
 
 #
