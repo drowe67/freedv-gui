@@ -45,10 +45,12 @@ FetchContent_Declare(
 )
 
 FetchContent_GetProperties(wxWidgets)
-if(NOT wxwidgets_POPULATED)
-  FetchContent_Populate(wxWidgets)
-  add_subdirectory(${wxwidgets_SOURCE_DIR} ${wxwidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+
+# MakeAvailable isn't used here since it will balloon the size of the Windows build.
+# To avoid the CMake deprecation warning, we force it to use the non-deprecated version
+# of FetchContent_Populate.
+FetchContent_Populate(wxWidgets QUIET)
+add_subdirectory(${wxwidgets_SOURCE_DIR} ${wxwidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 # Override some CXX flags to prevent wxWidgets build failures
 if(APPLE)
