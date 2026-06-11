@@ -1464,15 +1464,7 @@ void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
 {
-    const wxPoint pt = wxGetMousePosition();
-    int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
-    int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
-    
-    wxDataViewItem item;
-    wxDataViewColumn* col;
-    m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
-
-    if (event.GetItem().IsOk() && col->GetModelColumn() == FREQUENCY_COL)
+    if (event.GetItem().IsOk())
     {
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         auto frequency = model->getFrequency(event.GetItem());
