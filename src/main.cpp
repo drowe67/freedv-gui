@@ -2105,6 +2105,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                                     pendingSnr);
                             }
                         }
+
+                        if (pendingSnr <= -15)
+                        {
+                            // XXX DEBUG ONLY - automatically stop modem if we get a bad SNR.
+                            CallAfter([&]() {
+                                wxCommandEvent tmpEvent;
+                                OnTogBtnOnOff(tmpEvent);
+                            });
+                        }
                     }
                 }
             }
