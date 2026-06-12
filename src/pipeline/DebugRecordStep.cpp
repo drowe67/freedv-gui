@@ -24,7 +24,7 @@
 #include "sndfile.h"
 #include "../util/logging/ulog.h"
 
-DebugRecordStep::DebugRecordStep(int sampleRate, int numSecondsToRecord, std::string fileName)
+DebugRecordStep::DebugRecordStep(int sampleRate, int numSecondsToRecord, std::string const& fileName)
     : sampleRate_(sampleRate)
     , inputSampleFifo_(sampleRate * numSecondsToRecord)
     , fileName_(fileName)

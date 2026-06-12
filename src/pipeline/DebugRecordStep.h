@@ -32,7 +32,7 @@
 class DebugRecordStep : public IPipelineStep
 {
 public:
-    DebugRecordStep(int sampleRate, int numSecondsToRecord, std::string filename);
+    DebugRecordStep(int sampleRate, int numSecondsToRecord, std::string const& filename);
     virtual ~DebugRecordStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
