@@ -1,5 +1,6 @@
 add_library(fdv_audio_pipeline_extra STATIC
     ComputeRfSpectrumStep.cpp
+    DebugRecordStep.cpp
     EqualizerStep.cpp
     FreeDVReceiveStep.cpp
     FreeDVTransmitStep.cpp
