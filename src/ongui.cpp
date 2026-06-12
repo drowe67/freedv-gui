@@ -1074,35 +1074,108 @@ int MainApp::FilterEvent(wxEvent& event)
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
-            bool reporterActiveButNotUpdatingTextMessage = 
-                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
-            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
+            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
-                    if (frame->m_btnTogPTT->GetValue())
-                        frame->m_btnTogPTT->SetValue(false);
-                    else
-                        frame->m_btnTogPTT->SetValue(true);
+                    if (wxGetApp().appConfiguration.pttMomentaryMode) {
+                        // Momentary mode: start TX only on the initial key press (not repeated events).
+                        if (!g_tx.load(std::memory_order_acquire)) {
+                            frame->m_btnTogPTT->SetValue(true);
+                            frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
+                            frame->togglePTT();
+                        }
+                    } else {
+                        // Latching mode: toggle TX state on each key press.
+                        if (frame->m_btnTogPTT->GetValue())
+                            frame->m_btnTogPTT->SetValue(false);
+                        else
+                            frame->m_btnTogPTT->SetValue(true);
 
-                    // Update background color of button here because when toggling PTT via keyboard,
-                    // the background color for some reason doesn't update inside togglePTT().
-                    frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+                        // Update background color of button here because when toggling PTT via keyboard,
+                        // the background color for some reason doesn't update inside togglePTT().
+                        frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
 
-                    // Actually toggle PTT.
-                    frame->togglePTT();
+                        frame->togglePTT();
+                    }
                 }
                 else // space bar stops keyer
                     frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
-                return Event_Processed; // absorb space so we don't toggle control with focus (e.g. Start)
+                return Event_Processed; // absorb key so we don't toggle control with focus (e.g. Start)
 
             }
         }
 
+    // In momentary mode, stop TX when the PTT key is released.
+    if ((event.GetEventType() == wxEVT_KEY_UP) &&
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
+        {
+            bool mainWindowActive = frame->IsActive();
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
+                !frame->m_reporterDialog->isTextMessageFieldInFocus();
+            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) &&
+                wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
+                wxGetApp().appConfiguration.pttMomentaryMode) {
+
+                if (frame->vk_state == VK_IDLE && g_tx.load(std::memory_order_acquire)) {
+                    frame->m_btnTogPTT->SetValue(false);
+                    frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                    frame->togglePTT();
+                }
+                return Event_Processed;
+            }
+        }
+
     return Event_Skip;
+}
+
+void MainFrame::OnPTTButtonDown(wxMouseEvent& event)
+{
+    if (!wxGetApp().appConfiguration.pttMomentaryMode || !m_RxRunning || isReceiveOnly() || vk_state != VK_IDLE) {
+        event.Skip();
+        return;
+    }
+    if (!g_tx.load(std::memory_order_acquire)) {
+        m_btnTogPTT->SetValue(true);
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+        m_btnTogPTT->CaptureMouse();
+        togglePTT();
+    }
+    // Consume the event to prevent the native toggle button from also toggling state.
+}
+
+void MainFrame::OnPTTButtonUp(wxMouseEvent& event)
+{
+    if (!wxGetApp().appConfiguration.pttMomentaryMode) {
+        event.Skip();
+        return;
+    }
+    if (m_btnTogPTT->HasCapture()) {
+        m_btnTogPTT->ReleaseMouse();
+    }
+    if (g_tx.load(std::memory_order_acquire)) {
+        m_btnTogPTT->SetValue(false);
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        togglePTT();
+    }
+    // Consume the event to prevent the native toggle button from also toggling state.
+}
+
+void MainFrame::OnPTTButtonCaptureLost(wxMouseCaptureLostEvent& /*event*/)
+{
+    // Mouse capture was lost (e.g. user switched windows while holding PTT).
+    // Stop transmitting if we were in momentary PTT mode.
+    if (wxGetApp().appConfiguration.pttMomentaryMode && g_tx.load(std::memory_order_acquire)) {
+        m_btnTogPTT->SetValue(false);
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        togglePTT();
+    }
 }
 
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
@@ -1136,8 +1209,10 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else
+    else if (!wxGetApp().appConfiguration.pttMomentaryMode)
     {
+        // In momentary mode, TX is managed by OnPTTButtonDown/Up mouse handlers.
+        // This toggle-click handler is only used in latching mode.
         togglePTT();
     }
 }

@@ -407,6 +407,9 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
+        void OnPTTButtonDown( wxMouseEvent& event ) override;
+        void OnPTTButtonUp( wxMouseEvent& event ) override;
+        void OnPTTButtonCaptureLost( wxMouseCaptureLostEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         

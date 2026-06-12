@@ -927,6 +927,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnVoiceKeyer->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
     m_btnTogPTT->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
+    m_btnTogPTT->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(TopFrame::OnPTTButtonDown), NULL, this);
+    m_btnTogPTT->Connect(wxEVT_LEFT_UP, wxMouseEventHandler(TopFrame::OnPTTButtonUp), NULL, this);
+    m_btnTogPTT->Connect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(TopFrame::OnPTTButtonCaptureLost), NULL, this);
 
     m_BtnCallSignReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCallSignReset), NULL, this);
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
@@ -1051,6 +1054,9 @@ TopFrame::~TopFrame()
     m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
+    m_btnTogPTT->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(TopFrame::OnPTTButtonDown), NULL, this);
+    m_btnTogPTT->Disconnect(wxEVT_LEFT_UP, wxMouseEventHandler(TopFrame::OnPTTButtonUp), NULL, this);
+    m_btnTogPTT->Disconnect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(TopFrame::OnPTTButtonCaptureLost), NULL, this);
     
     m_btnCenterRx->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
 
