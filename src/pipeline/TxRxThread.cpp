@@ -63,6 +63,7 @@ using namespace std::chrono_literals;
 #include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
+#include "DebugRecordStep.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
