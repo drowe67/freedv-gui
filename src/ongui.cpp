@@ -1256,6 +1256,11 @@ void MainFrame::togglePTT(void) {
 
     m_btnTogPTT->Enable(false); // disable PTT button during changeover
 
+    // Temporarily clear background color during transition as disabling the button
+    // can cause the text to appear unreadable with something other than the OS-default
+    // background.
+    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+
     // Change tabbed page in centre panel depending on PTT state
 
     if (g_tx.load(std::memory_order_acquire))
@@ -1489,9 +1494,6 @@ void MainFrame::togglePTT(void) {
     {
         obj->transmit(freedvInterface.getCurrentTxModeStr(), newTx);
     }
-
-    // Change button color depending on TX status.
-    m_btnTogPTT->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
     
     // If we're recording, switch to/from modulator and radio.
     if (g_sfRecFile != nullptr)
