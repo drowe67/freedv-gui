@@ -471,6 +471,16 @@ The last selected logging source (either the FreeDV Reporter window or the drop-
 of the main window) is used for auto-filling of logging data. This is to avoid confusion (for instance, if a row 
 in the main window is selected but it's intended to log from FreeDV Reporter instead).
 
+# Time-Out Timer (TOT)
+
+FreeDV contains a built-in time-out timer (TOT) that prevents the radio from transmitting for longer than the configured
+period. By default, this is enabled and set to 180 seconds (3 minutes). Fifteen seconds prior to the timeout firing,
+a window will appear along with a beep in your configured speakers or headset to allow you to either reset the timer
+or finish up your transmission. 
+
+If you desire a different timeout or want to disable the TOT, you can do so by going to Tools->Options->Rig Control
+and changing the TOT related options in that tab.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
