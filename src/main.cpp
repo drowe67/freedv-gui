@@ -2679,12 +2679,11 @@ void MainFrame::performFreeDVOn_()
                     (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
                     wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
                 {
-                    wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        
                     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
                     {
                         wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
                     }
+                    wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 }
                     
                 // Initialize PSK Reporter reporting.
