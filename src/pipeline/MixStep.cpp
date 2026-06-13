@@ -77,7 +77,13 @@ short* MixStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     secondOutputFIFO_.write(secondOutputPtr, secondOutputNumSamples);
 
     *numOutputSamples = std::min(firstOutputFIFO_.numUsed(), secondOutputFIFO_.numUsed());
-
+    if (*numOutputSamples == 0)
+    {
+        // If a FIFO doesn't have any data available, we want to pass through
+        // the one that does ASAP.
+        *numOutputSamples = std::max(firstOutputFIFO_.numUsed(), secondOutputFIFO_.numUsed());
+    }
+    
     short* outPtr = outputSamples_.get();
     for (int index = 0; index < *numOutputSamples; index++)
     {
