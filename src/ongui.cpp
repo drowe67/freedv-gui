@@ -1256,10 +1256,10 @@ void MainFrame::togglePTT(void) {
 
     m_btnTogPTT->Enable(false); // disable PTT button during changeover
 
-    // Temporarily clear background color during transition as disabling the button
-    // can cause the text to appear unreadable with something other than the OS-default
-    // background.
-    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+    // Use intermediate background to indicate that we're switching states.
+    // This will be reset to the final state at the end of the switch.
+    m_btnTogPTT->SetBackgroundColour(wxTheColourDatabase->Find("ORANGE RED"));
+    m_btnTogPTT->Refresh();
 
     // Change tabbed page in centre panel depending on PTT state
 
