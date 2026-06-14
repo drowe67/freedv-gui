@@ -31,7 +31,7 @@ inline HamlibRigController::Mode GetModeForFrequency(uint64_t frequency, bool us
         frequency >= 5250000 && 
         frequency <= 5450000;
     
-    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
+    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGU;
     HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
     
     HamlibRigController::Mode newMode;
