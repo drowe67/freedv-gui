@@ -494,8 +494,9 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         bool isLsbFreq = freq < 10000000 && !is60MeterBand;
 
         bool isMatchingMode = 
-            (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-            (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+            (!g_analog && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+            (isUsbFreq && (mode == IRigFrequencyController::USB)) ||
+            (isLsbFreq && (mode == IRigFrequencyController::LSB));
 
         if (isMatchingMode)
         {
