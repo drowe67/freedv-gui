@@ -1490,9 +1490,10 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    bool useAnalog = 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
+    return GetModeForFrequency(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, 
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
+        g_analog);
 }
 
 //-------------------------------------------------------------------------

@@ -1479,9 +1479,11 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                bool useAnalog = 
-                    wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-                wxGetApp().rigFrequencyController->setMode(GetModeForFrequency(frequency, useAnalog));
+                wxGetApp().rigFrequencyController->setMode(
+                    GetModeForFrequency(
+                        frequency, 
+                        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes, 
+                        g_analog));
             }
         }
         DeselectItem();
