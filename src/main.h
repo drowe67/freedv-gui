@@ -309,6 +309,7 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelSNR;
 
         bool                    m_RxRunning;
+        bool                    txChangeoverOccurring_;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
@@ -422,6 +423,9 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
+        // NOTE: sets TX colour on press to avoid a GTK blue-flash during the TX delay.
+        // Upstream may prefer a different approach (e.g. true press-to-start TX).
+        void OnTogBtnPTTMouseDown( wxMouseEvent& event );
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         

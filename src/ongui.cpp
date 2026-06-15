@@ -1130,6 +1130,27 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 }
 
 //-------------------------------------------------------------------------
+// OnTogBtnPTTMouseDown()
+// Set TX colour immediately on mouse press when going RX->TX, avoiding a GTK
+// blue-flash during the TX delay before togglePTT() sets it on release.
+// Only fires when the pipeline is genuinely in RX (g_tx false); during the
+// TX->RX drain g_tx is still true, so clicks there are correctly ignored.
+// NOTE for upstream: this is a simple cosmetic fix. A fuller alternative would
+// be to start TX here on press and suppress the togglePTT() call on release.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
+{
+    if (txChangeoverOccurring_) return;
+
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
@@ -1253,19 +1274,31 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
 }
 
 void MainFrame::togglePTT(void) {
+    // Guard against re-entrant calls during the TX drain (Yield() processes events).
+    // This is necessary because we are not disabling the button during the changeover,
+    // as doing so causes the text on the button to be unreadable.
+    if (txChangeoverOccurring_) 
+    {
+        return;
+    }
+    txChangeoverOccurring_ = true;
+
     std::chrono::high_resolution_clock highResClock;
 
-    m_btnTogPTT->Enable(false); // disable PTT button during changeover
-
-    // Use intermediate background to indicate that we're switching states.
-    // This will be reset to the final state at the end of the switch.
-    m_btnTogPTT->SetBackgroundColour(wxTheColourDatabase->Find("ORANGE RED"));
-    m_btnTogPTT->Refresh();
+    // Record direction now; button value may be toggled by a stray click during
+    // the drain loops below, which would corrupt newTx at the end if not checked.
+    const bool wasInTx = g_tx.load(std::memory_order_acquire);
 
     // Change tabbed page in centre panel depending on PTT state
 
-    if (g_tx.load(std::memory_order_acquire))
+    if (wasInTx)
     {
+        // Amber during TX->RX drain: distinct from TX (red) and RX (default),
+        // black text readable throughout.
+        m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+        m_btnTogPTT->SetLabel("TX Ending");
+        m_btnTogPTT->Refresh();
+
         // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
         if (m_totTimer.IsRunning())
             m_totTimer.Stop();
@@ -1478,7 +1511,9 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    auto newTx = m_btnTogPTT->GetValue();
+    // Use wasInTx to determine direction: don't let a stray click during the drain
+    // flip newTx and leave the radio keyed with the pipeline in the wrong state.
+    auto newTx = !wasInTx;
     if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
         wxGetApp().rigPttController->ptt(newTx);
@@ -1562,6 +1597,7 @@ void MainFrame::togglePTT(void) {
     // here (similar to what's already done for ending TX while
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
+    m_btnTogPTT->SetLabel(_("&PTT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
     
     // The Report Frequency drop-down should not be modifiable during TX.
@@ -1586,8 +1622,8 @@ void MainFrame::togglePTT(void) {
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 
-    CallAfter([&]() { 
-        m_btnTogPTT->Enable(true); // allow PTT again
+    CallAfter([&]() {
+        txChangeoverOccurring_ = false;
         m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
     });
 }
