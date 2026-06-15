@@ -301,6 +301,24 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_ptt->Add(txRxDelaySizer, 0, wxALL, 0);
+
+    wxSizer* totTimerSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    m_ckboxTOTTimerEnabled = new wxCheckBox(sb_ptt, wxID_ANY, _("Enable Time-Out Timer (TOT):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTOTTimerEnabled->SetToolTip(_("When enabled, FreeDV will automatically stop transmitting after the configured time period has elapsed."));
+    totTimerSizer->Add(m_ckboxTOTTimerEnabled, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtTOTTimerSecs = new wxTextCtrl(sb_ptt, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80, -1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTOTTimerSecs->SetToolTip(_("The number of seconds FreeDV will transmit before automatically dropping back to receive."));
+    totTimerSizer->Add(m_txtTOTTimerSecs, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    auto totTimerSecsLabel = new wxStaticText(sb_ptt, wxID_ANY, _("seconds"));
+    totTimerSizer->Add(totTimerSecsLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_ptt->Add(totTimerSizer, 0, wxALL, 0);
+
+    m_ckboxTOTTimerEnabled->Connect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTOTTimerEnable), NULL, this);
+
     sizerRigControl->Add(sbSizer_ptt,0, wxALL | wxEXPAND, 5);
     
     wxStaticBoxSizer* sbSizer_hamlib;
@@ -1015,6 +1033,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtPTTKeyName->Enable(pttEnabled);
         m_btnSetPTTKey->Enable(pttEnabled);
         m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
+
+        m_ckboxTOTTimerEnabled->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled);
+        m_txtTOTTimerSecs->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs.get()));
+        m_txtTOTTimerSecs->Enable(wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled);
+
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         m_ckboxEnableFreqChangesOnly->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
@@ -1193,7 +1216,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.pttKeyCode = m_selectedPTTKeyCode;
 
         wxGetApp().appConfiguration.txRxDelayMilliseconds = wxAtoi(m_txtTxRxDelayMilliseconds->GetValue());
-        
+
+        wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled = m_ckboxTOTTimerEnabled->GetValue();
+        {
+            long totSecs;
+            m_txtTOTTimerSecs->GetValue().ToLong(&totSecs);
+            if (totSecs < 1) totSecs = 1;
+            wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs = (int)totSecs;
+        }
+
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
@@ -1676,6 +1707,11 @@ void OptionsDlg::OnEnableSpacebarForPTT(wxCommandEvent&)
     m_btnSetPTTKey->Enable(enabled);
     if (!enabled)
         exitPTTCaptureMode_(false);
+}
+
+void OptionsDlg::OnTOTTimerEnable(wxCommandEvent&)
+{
+    m_txtTOTTimerSecs->Enable(m_ckboxTOTTimerEnabled->GetValue());
 }
 
 void OptionsDlg::OnSetPTTKey(wxCommandEvent&)

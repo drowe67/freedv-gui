@@ -840,7 +840,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
-        
+
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     
     m_panel->SetSizerAndFit(bSizer1);

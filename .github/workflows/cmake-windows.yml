@@ -174,7 +174,7 @@ jobs:
     - uses: actions/download-artifact@v8
       with:
         merge-multiple: true
-        pattern: FreeDV-2*-${{ matrix.arch }}.exe
+        pattern: FreeDV-*-${{ matrix.arch }}.exe
         path: ${{github.workspace}}
   
     - uses: TheMrMilchmann/setup-msvc-dev@v4
