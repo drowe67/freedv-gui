@@ -570,11 +570,12 @@ void MainFrame::onRadioConnected_(IRigController*)
         firstFreqUpdateOnConnect_ = true;
 
         // Set frequency/mode to the one pre-selected by the user before start.
+        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
             wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
         }
-        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
 }
 
@@ -1958,11 +1959,11 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             // Request frequency/mode change on the radio side
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
                 wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
             }
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
         }
     }
 
