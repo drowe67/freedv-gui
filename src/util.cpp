@@ -183,12 +183,7 @@ void MainFrame::OpenPTTInPort(void)
                 GetEventHandler()->CallAfter([this, pttState]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
-                        m_btnTogPTT->SetValue(pttState); 
-                        
-                        // Update background color of button here because when toggling PTT via CTS,
-                        // the background color for some reason doesn't update inside togglePTT().
-                        m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-                        
+                        m_btnTogPTT->SetValue(pttState);                        
                         togglePTT(); 
                     }
                 });
