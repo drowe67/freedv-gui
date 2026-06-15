@@ -143,7 +143,7 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb1600;
 
         wxSizer* rightSizer;
-        
+
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
         
@@ -251,7 +251,7 @@ class TopFrame : public wxFrame
         virtual void OnToggleReporterVisibility (wxCommandEvent& event) { event.Skip(); }
         
         virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
-        
+
         void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:

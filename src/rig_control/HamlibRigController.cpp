@@ -446,12 +446,12 @@ void HamlibRigController::connectImpl_()
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
     }
 
-    // Initially allow one retry if we time out while sending commands. This is needed
+    // Initially allow two retries if we time out while sending commands. This is needed
     // to better support Icom marine radios due to their ability to power themselves on
     // when rig_open is called (they're unable to immediately respond to commands while
     // powering up and thus results in spurious Hamlib errors being displayed to users).
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "1");
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "1");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "2");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "2");
             
     result = rig_open(tmpRig);
     if (result == RIG_OK) 
