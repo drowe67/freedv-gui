@@ -1151,6 +1151,21 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnTogBtnPTTMouseLeave()
+// Reset premature TX colour if mouse leaves button before release and TX
+// has not actually started, preventing a stuck-red button.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
+{
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
