@@ -955,9 +955,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix intermittent non-response to short PTT clicks to stop TX. (PR #1375) - thanks @barjac!
     * Revert to libsamplerate library to fix remaining audio quality issues. (PR #1379)
     * Right-justify SNR column in FreeDV Reporter to improve appearance. (PR #1387) - thanks @barjac!
+    * Hamlib: Set frequency again on mode changes. (PR #1395)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
-    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366)
+    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398) - thanks @barjac!
     * Load last-used config file on restarts. (PR #1365, #1371)
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
