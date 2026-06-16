@@ -998,7 +998,7 @@ modeAttempt:
 
         // We request the frequency to be set again to work around an issue with the 
         // FTDX10 where mode changes between LSB and USB cause the VFO frequency to shift
-        // by a few kHz. This ensures that the frequency we're currently set to is in sync
+        // by 700 Hz. This ensures that the frequency we're currently set to is in sync
         // with the VFO frequency.
         if (currFreq_ > 0)
         {
