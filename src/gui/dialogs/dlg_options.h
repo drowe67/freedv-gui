@@ -91,6 +91,9 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
         wxNotebookPage *m_simulationTab; // testing/interference
         wxNotebookPage *m_debugTab; // Debug
+#ifdef ENABLE_GNUPG_AUTH
+        wxNotebookPage *m_signingTab; // GNUPG_AUTH: OpenPGP signing
+#endif
         
         /* Hamlib options */
         wxCheckBox    *m_ckboxUseAnalogModes;
@@ -202,6 +205,12 @@ class OptionsDlg : public wxDialog
         wxTextCtrl*  m_statsResetTime;
         
         wxCheckBox*  m_ckbox_use_utc_time;
+
+#ifdef ENABLE_GNUPG_AUTH
+        wxCheckBox*   m_ckboxGnupgEnableSigning;
+        wxTextCtrl*   m_txtGnupgKeyFingerprint;
+        wxStaticText* m_txtGnupgHardwareToken;
+#endif
         
         wxListBox*  m_freqList;
         wxStaticText* m_labelEnterFreq;

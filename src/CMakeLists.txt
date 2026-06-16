@@ -61,6 +61,18 @@ target_compile_options(freedv PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_audio_pipeline_extra fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_logging fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 git_version)
 endif(APPLE)
 
+if(ENABLE_GNUPG_AUTH)
+    if(APPLE)
+        target_compile_definitions(FreeDV PRIVATE ENABLE_GNUPG_AUTH)
+        target_link_libraries(FreeDV PkgConfig::GPGME)
+    else()
+        target_compile_definitions(freedv PRIVATE ENABLE_GNUPG_AUTH)
+        target_link_libraries(freedv PkgConfig::GPGME)
+    endif()
+    target_compile_definitions(fdv_config PRIVATE ENABLE_GNUPG_AUTH)
+    target_compile_definitions(fdv_gui_dialogs PRIVATE ENABLE_GNUPG_AUTH)
+endif()
+
 # Add dependencies for other statically built libraries, if applicable.
 if(FREEDV_STATIC_DEPS)
     if(APPLE)

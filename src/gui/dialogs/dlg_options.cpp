@@ -22,6 +22,9 @@
 #include <wx/gbsizer.h>
 #include <wx/numformatter.h>
 #include "dlg_options.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include "../../pipeline/FreeDVAuthStep.h"
+#endif
 
 extern FreeDVInterface freedvInterface;
 
@@ -119,6 +122,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
     m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
+#ifdef ENABLE_GNUPG_AUTH
+    m_signingTab = new wxPanel(m_notebook, wxID_ANY);
+#endif
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
@@ -127,8 +133,37 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
+#ifdef ENABLE_GNUPG_AUTH
+    m_notebook->AddPage(m_signingTab, _("Signing"));
+#endif
     
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
+
+#ifdef ENABLE_GNUPG_AUTH
+    // GNUPG_AUTH: Signing tab
+    wxBoxSizer* sizerSigning = new wxBoxSizer(wxVERTICAL);
+    wxStaticBox* sbSigning = new wxStaticBox(m_signingTab, wxID_ANY, _("OpenPGP Signing"));
+    wxStaticBoxSizer* sbSizerSigning = new wxStaticBoxSizer(sbSigning, wxVERTICAL);
+
+    m_ckboxGnupgEnableSigning = new wxCheckBox(sbSigning, wxID_ANY, _("Enable signing on TX"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerSigning->Add(m_ckboxGnupgEnableSigning, 0, wxALL | wxEXPAND, 5);
+
+    wxBoxSizer* rowFingerprint = new wxBoxSizer(wxHORIZONTAL);
+    rowFingerprint->Add(new wxStaticText(sbSigning, wxID_ANY, _("GnuPG key fingerprint:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtGnupgKeyFingerprint = new wxTextCtrl(sbSigning, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(320, -1));
+    rowFingerprint->Add(m_txtGnupgKeyFingerprint, 1, wxALL | wxEXPAND, 5);
+    sbSizerSigning->Add(rowFingerprint, 0, wxALL | wxEXPAND, 2);
+
+    wxBoxSizer* rowToken = new wxBoxSizer(wxHORIZONTAL);
+    rowToken->Add(new wxStaticText(sbSigning, wxID_ANY, _("Hardware token:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtGnupgHardwareToken = new wxStaticText(sbSigning, wxID_ANY, _("none"), wxDefaultPosition, wxDefaultSize);
+    m_txtGnupgHardwareToken->SetLabel(wxString::FromUTF8(FreeDVAuthStep::detectHardwareToken().c_str()));
+    rowToken->Add(m_txtGnupgHardwareToken, 1, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerSigning->Add(rowToken, 0, wxALL | wxEXPAND, 2);
+
+    sizerSigning->Add(sbSizerSigning, 1, wxALL | wxEXPAND, 5);
+    m_signingTab->SetSizer(sizerSigning);
+#endif
     
     // Reporting tab
     wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
@@ -1100,6 +1135,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
+
+#ifdef ENABLE_GNUPG_AUTH
+        m_ckboxGnupgEnableSigning->SetValue(wxGetApp().appConfiguration.gnupgAuthEnableSigning);
+        m_txtGnupgKeyFingerprint->SetValue(wxGetApp().appConfiguration.gnupgAuthKeyFingerprint);
+        m_txtGnupgHardwareToken->SetLabel(wxString::FromUTF8(FreeDVAuthStep::detectHardwareToken().c_str()));
+#endif
         
         // Stats reset time
         m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.statsResetTimeSecs.get()));
@@ -1306,6 +1347,28 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
+
+#ifdef ENABLE_GNUPG_AUTH
+        wxGetApp().appConfiguration.gnupgAuthEnableSigning = m_ckboxGnupgEnableSigning->GetValue();
+        wxGetApp().appConfiguration.gnupgAuthKeyFingerprint = m_txtGnupgKeyFingerprint->GetValue();
+
+        if (wxGetApp().appConfiguration.gnupgAuthEnableSigning.getWithoutProcessing())
+        {
+            wxString fingerprint = wxGetApp().appConfiguration.gnupgAuthKeyFingerprint.getWithoutProcessing();
+            if (!fingerprint.IsEmpty())
+            {
+                if (!FreeDVAuthStep::validateSigningKeyFingerprint(fingerprint.ToStdString()))
+                {
+                    wxMessageBox(
+                        _("The configured GnuPG key fingerprint was not found or has no signing-capable subkey. "
+                          "Check the fingerprint and that the secret key is available in your keyring."),
+                        _("Signing Key Validation"),
+                        wxOK | wxICON_WARNING,
+                        this);
+                }
+            }
+        }
+#endif
         
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())

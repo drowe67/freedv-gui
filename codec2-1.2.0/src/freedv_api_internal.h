@@ -209,6 +209,11 @@ struct freedv {
   int fsk_ldpc_state, fsk_ldpc_best_location, fsk_ldpc_baduw;
   float fsk_ldpc_snr;
   float fsk_S[2], fsk_N[2];
+
+  /* GNUPG_AUTH: pending auth frame split across data channel payloads */
+  unsigned char auth_frame[FREEDV_AUTH_FRAME_MAX];
+  int auth_frame_len;
+  int auth_chunk_offset;
 };
 
 // open function for each mode

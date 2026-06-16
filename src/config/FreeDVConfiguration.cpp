@@ -118,6 +118,10 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , showDecodeStats("/Debug/showDecodeStats", false)
     , enableLegacyModes("/Modem/enableLegacyModes", false)
+#ifdef ENABLE_GNUPG_AUTH
+    , gnupgAuthEnableSigning("/Signing/EnableSigning", false)
+    , gnupgAuthKeyFingerprint("/Signing/KeyFingerprint", _(""))
+#endif
 {
     // empty
 }
@@ -249,6 +253,11 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, showDecodeStats);
     load_(config, enableLegacyModes);
 
+#ifdef ENABLE_GNUPG_AUTH
+    load_(config, gnupgAuthEnableSigning);
+    load_(config, gnupgAuthKeyFingerprint);
+#endif
+
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
 }
@@ -341,6 +350,11 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, showDecodeStats);
     save_(config, enableLegacyModes);
+
+#ifdef ENABLE_GNUPG_AUTH
+    save_(config, gnupgAuthEnableSigning);
+    save_(config, gnupgAuthKeyFingerprint);
+#endif
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);

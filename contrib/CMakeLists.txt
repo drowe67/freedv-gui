@@ -1,3 +1,15 @@
+# GNUPG_AUTH: install signing status icons
+if(ENABLE_GNUPG_AUTH)
+    install(FILES
+        auth/key.svg
+        auth/open.svg
+        auth/key-error.svg
+        auth/auth_unsigned.svg
+        auth/locked.svg
+        auth/readme.md
+        DESTINATION share/freedv-gui/auth)
+endif()
+
 # Install icons if we're on most *nix systems.
 if(UNIX AND NOT APPLE)
     set(ICON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor

@@ -60,7 +60,9 @@
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
 
-#include "rade_api.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include <wx/bmpbndl.h>
+#endif
 
 using namespace std::chrono_literals;
 using namespace std::placeholders;
@@ -120,6 +122,9 @@ int   g_SquelchActive;
 float g_SquelchLevel;
 int   g_analog;
 std::atomic<bool>   g_tx;
+#ifdef ENABLE_GNUPG_AUTH
+FreeDVAuthStep* g_authTxStep = nullptr;
+#endif
 float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
@@ -1331,6 +1336,71 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         this
         );
 
+#ifdef ENABLE_GNUPG_AUTH
+    // GNUPG_AUTH: load signing status icons and add status bar indicator
+    {
+        auto resolveAuthIcon = [](const wxString& name) {
+            wxArrayString candidates;
+            candidates.Add(wxStandardPaths::Get().GetInstallPrefix() + wxFILE_SEP_PATH
+                + "share" + wxFILE_SEP_PATH + "freedv-gui" + wxFILE_SEP_PATH + "auth" + wxFILE_SEP_PATH + name);
+            candidates.Add(wxGetCwd() + wxFILE_SEP_PATH + "contrib" + wxFILE_SEP_PATH + "auth" + wxFILE_SEP_PATH + name);
+
+            for (const auto& path : candidates)
+            {
+                if (wxFileExists(path))
+                {
+#ifdef wxHAS_SVG
+                    return wxBitmapBundle::FromSVGFile(path, wxSize(16, 16));
+#else
+                    wxImage img(16, 16);
+                    img.InitAlpha();
+                    unsigned char r = 128;
+                    unsigned char g = 128;
+                    unsigned char b = 128;
+                    if (name == "open.svg")
+                    {
+                        r = 46; g = 125; b = 50;
+                    }
+                    else if (name == "key.svg")
+                    {
+                        r = 33; g = 150; b = 243;
+                    }
+                    else if (name == "key-error.svg")
+                    {
+                        r = 198; g = 40; b = 40;
+                    }
+                    else if (name == "auth_unsigned.svg")
+                    {
+                        r = 198; g = 40; b = 40;
+                    }
+                    for (int y = 0; y < 16; ++y)
+                    {
+                        for (int x = 0; x < 16; ++x)
+                        {
+                            img.SetRGB(x, y, r, g, b);
+                        }
+                    }
+                    return wxBitmapBundle::FromImage(img);
+#endif
+                }
+            }
+            return wxBitmapBundle();
+        };
+
+        authSignedIcon_ = resolveAuthIcon("open.svg");
+        authUnsignedIcon_ = resolveAuthIcon("auth_unsigned.svg");
+        authNoKeyIcon_ = resolveAuthIcon("key-error.svg");
+        authKeyLoadedIcon_ = resolveAuthIcon("key.svg");
+
+        m_statusBar1->SetFieldsCount(2);
+        int statusWidths[] = {-2, 20};
+        m_statusBar1->SetStatusWidths(2, statusWidths);
+        m_authStatusBitmap_ = new wxStaticBitmap(
+            m_statusBar1, wxID_ANY, authUnsignedIcon_.GetBitmap(wxSize(16, 16)));
+        positionAuthStatusIcon_();
+    }
+#endif
+
     m_RxRunning = false;
 
     m_txThread = nullptr;
@@ -1893,6 +1963,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelSNR->add_new_sample(snr);
             m_panelSNR->refreshData();
         }
+
+#ifdef ENABLE_GNUPG_AUTH
+        if (!txState && authRxStep_)
+        {
+            updateAuthStatus(authRxStep_->getState());
+        }
+#endif
         
         // sync LED (Colours don't work on Windows) ------------------------
 
@@ -1907,6 +1984,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if (g_prev_State.load(std::memory_order_acquire) == 0) 
                 {
                     g_resyncs++;
+
+#ifdef ENABLE_GNUPG_AUTH
+                    if (authRxStep_)
+                    {
+                        authRxStep_->onSyncAcquired();
+                    }
+#endif
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
                     // NOTE: m_timeSinceSyncLoss is in milliseconds.
@@ -1932,6 +2016,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             else
             {
+#ifdef ENABLE_GNUPG_AUTH
+                if (g_prev_State.load(std::memory_order_acquire) != 0 && authRxStep_)
+                {
+                    authRxStep_->onSyncLost();
+                }
+#endif
                 // Counts the amount of time since losing sync. Once we exceed
                 // wxGetApp().appConfiguration.statsResetTimeSecs, we will reset the stats. 
                 m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
@@ -2546,6 +2636,15 @@ void MainFrame::performFreeDVOn_()
         // Codec2 verbosity setting
         freedvInterface.setVerbose(g_freedv_verbose);
 
+#ifdef ENABLE_GNUPG_AUTH
+        // GNUPG_AUTH: create persistent RX auth step and wire data channel callbacks
+        authRxStep_ = std::make_unique<FreeDVAuthStep>(
+            freedvInterface.getCurrentTxDv(),
+            nullptr);
+        freedvInterface.setupAuth(authRxStep_.get());
+        updateAuthStatus(authRxStep_->getIdleState());
+#endif
+
         // Text field/callsign callbacks.
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
@@ -2798,6 +2897,57 @@ void MainFrame::performFreeDVOn_()
     tmpFifo->reset();
 }
 
+#ifdef ENABLE_GNUPG_AUTH
+void MainFrame::positionAuthStatusIcon_()
+{
+    if (m_authStatusBitmap_ == nullptr || m_statusBar1 == nullptr)
+    {
+        return;
+    }
+
+    wxRect rect;
+    if (m_statusBar1->GetFieldRect(1, rect))
+    {
+        wxSize iconSize = m_authStatusBitmap_->GetSize();
+        m_authStatusBitmap_->SetPosition(wxPoint(
+            rect.x + (rect.width - iconSize.x) / 2,
+            rect.y + (rect.height - iconSize.y) / 2));
+    }
+}
+
+void MainFrame::updateAuthStatus(FreeDVAuthStep::State state)
+{
+    if (m_authStatusBitmap_ == nullptr)
+    {
+        return;
+    }
+
+    wxBitmapBundle icon;
+    switch (state)
+    {
+        case FreeDVAuthStep::State::SIGNED:
+            icon = authSignedIcon_;
+            break;
+        case FreeDVAuthStep::State::NO_KEY:
+            icon = authNoKeyIcon_;
+            break;
+        case FreeDVAuthStep::State::KEY_LOADED:
+            icon = authKeyLoadedIcon_;
+            break;
+        case FreeDVAuthStep::State::UNSIGNED:
+        default:
+            icon = authUnsignedIcon_;
+            break;
+    }
+
+    if (icon.IsOk())
+    {
+        m_authStatusBitmap_->SetBitmap(icon.GetBitmap(wxSize(16, 16)));
+        positionAuthStatusIcon_();
+    }
+}
+#endif
+
 void MainFrame::performFreeDVOff_()
 {
     log_debug("Stop .....");
@@ -2807,6 +2957,17 @@ void MainFrame::performFreeDVOff_()
     //
 
     isModemRunning.store(false, std::memory_order_release);
+
+#ifdef ENABLE_GNUPG_AUTH
+    // GNUPG_AUTH: tear down auth steps
+    if (authRxStep_)
+    {
+        authRxStep_->resetRxSession();
+    }
+    authTxStep_.reset();
+    authRxStep_.reset();
+    freedvInterface.clearAuth();
+#endif
 
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 

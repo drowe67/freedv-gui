@@ -126,6 +126,12 @@ public:
     ConfigurationDataElement<bool> showDecodeStats;
     
     ConfigurationDataElement<bool> enableLegacyModes;
+
+#ifdef ENABLE_GNUPG_AUTH
+    // GNUPG_AUTH: OpenPGP transmission signing options
+    ConfigurationDataElement<bool> gnupgAuthEnableSigning;
+    ConfigurationDataElement<wxString> gnupgAuthKeyFingerprint;
+#endif
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

@@ -39,6 +39,9 @@
 #include "pipeline/AudioPipeline.h"
 #include "pipeline/BandwidthExpandStep.h"
 #include "pipeline/EitherOrStep.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include "pipeline/FreeDVAuthStep.h"
+#endif
 
 #include "util/logging/ulog.h"
 
@@ -82,6 +85,9 @@ FreeDVInterface::FreeDVInterface() :
     radeTxStep_(nullptr),
     sync_(0),
     radeTextPtr_(nullptr)
+#ifdef ENABLE_GNUPG_AUTH
+    , authStep_(nullptr)
+#endif
 {
     // empty
 }
@@ -1033,3 +1039,58 @@ skipSyncCheck:
 
     return indexWithSync;
 };
+
+#ifdef ENABLE_GNUPG_AUTH
+void FreeDVInterface::OnAuthDataRx_(void* state, unsigned char* packet, size_t size)
+{
+    FreeDVInterface* obj = static_cast<FreeDVInterface*>(state);
+    if (obj == nullptr || obj->authStep_ == nullptr || packet == nullptr || size == 0)
+    {
+        return;
+    }
+
+    obj->authStep_->processRxFrame(packet, size);
+}
+
+void FreeDVInterface::OnAuthDataTx_(void* state, unsigned char* packet, size_t* size)
+{
+    FreeDVInterface* obj = static_cast<FreeDVInterface*>(state);
+    if (obj == nullptr || packet == nullptr || size == nullptr)
+    {
+        if (size) *size = 0;
+        return;
+    }
+
+    if (obj->authStep_ != nullptr && obj->authStep_->popTxPayload(packet, size))
+    {
+        return;
+    }
+
+    // GNUPG_AUTH: fallback to codec2 queued auth frame chunks
+    if (obj->currentTxMode_ != nullptr)
+    {
+        size_t chunkSize = 0;
+        if (freedv_auth_pop_tx_chunk(obj->currentTxMode_, packet, *size, &chunkSize))
+        {
+            *size = chunkSize;
+            return;
+        }
+    }
+
+    *size = 0;
+}
+
+void FreeDVInterface::setupAuth(FreeDVAuthStep* authStep)
+{
+    authStep_ = authStep;
+    for (auto& dv : dvObjects_)
+    {
+        freedv_set_callback_data(dv, &FreeDVInterface::OnAuthDataRx_, &FreeDVInterface::OnAuthDataTx_, this);
+    }
+}
+
+void FreeDVInterface::clearAuth()
+{
+    authStep_ = nullptr;
+}
+#endif

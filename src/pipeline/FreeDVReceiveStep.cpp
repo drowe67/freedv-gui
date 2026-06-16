@@ -34,6 +34,11 @@
 
 #include <cassert>
 #include "FreeDVReceiveStep.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include "FreeDVAuthStep.h"
+#include "../freedv_interface.h"
+extern FreeDVInterface freedvInterface;
+#endif
 #include "freedv_api.h"
 #include "codec2_fifo.h"
 #include "codec2_fdmdv.h"
@@ -133,6 +138,16 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
             FREEDV_BEGIN_VERIFIED_SAFE
             nout = freedv_comprx(dv_, outputSamples_.get() + *numOutputSamples, rxFdmOffset_);
             FREEDV_END_VERIFIED_SAFE
+
+#ifdef ENABLE_GNUPG_AUTH
+            // GNUPG_AUTH: accumulate decoded speech bytes for END frame verification
+            if (auto* authStep = freedvInterface.getAuthStep())
+            {
+                authStep->accumulateRxPayload(
+                    reinterpret_cast<const uint8_t*>(outputSamples_.get() + *numOutputSamples),
+                    nout * sizeof(short));
+            }
+#endif
 
             *numOutputSamples += nout;
             

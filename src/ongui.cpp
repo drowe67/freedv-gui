@@ -1383,6 +1383,29 @@ void MainFrame::togglePTT(void) {
         }
     }
 
+#ifdef ENABLE_GNUPG_AUTH
+    // GNUPG_AUTH: start/end bookend signing on PTT transitions
+    if (newTx)
+    {
+        authTxStep_ = std::make_unique<FreeDVAuthStep>(
+            freedvInterface.getCurrentTxDv(),
+            [this](FreeDVAuthStep::State state) {
+                CallAfter([this, state]() { updateAuthStatus(state); });
+            });
+        g_authTxStep = authTxStep_.get();
+        authTxStep_->processTxStart();
+    }
+    else
+    {
+        if (authTxStep_)
+        {
+            authTxStep_->processTxEnd();
+            g_authTxStep = nullptr;
+            authTxStep_.reset();
+        }
+    }
+#endif
+
     if (newTx)
     {
         endingTx.store(false, std::memory_order_release);

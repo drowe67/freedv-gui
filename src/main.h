@@ -91,6 +91,9 @@
 #include "logging/ILogger.h"
 #include "pipeline/paCallbackData.h"
 #include "pipeline/LinkStep.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include "pipeline/FreeDVAuthStep.h"
+#endif
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
 
@@ -336,6 +339,11 @@ class MainFrame : public TopFrame
     void destroy_fifos(void);
 
     void togglePTT(void);
+
+#ifdef ENABLE_GNUPG_AUTH
+    void updateAuthStatus(FreeDVAuthStep::State state);
+    void positionAuthStatusIcon_();
+#endif
 
     bool                    m_schedule_restore;
 
@@ -642,6 +650,16 @@ class MainFrame : public TopFrame
         }
         
         int getIdealStationsHeardColumnLength_(int col);
+
+#ifdef ENABLE_GNUPG_AUTH
+        wxBitmapBundle authSignedIcon_;
+        wxBitmapBundle authUnsignedIcon_;
+        wxBitmapBundle authNoKeyIcon_;
+        wxBitmapBundle authKeyLoadedIcon_;
+        wxStaticBitmap* m_authStatusBitmap_;
+        std::unique_ptr<FreeDVAuthStep> authRxStep_;
+        std::unique_ptr<FreeDVAuthStep> authTxStep_;
+#endif
 };
 
 void resample_for_plot(GenericFIFO<short> *plotFifo, short buf[], short* dec_samples, int length, int fs) FREEDV_NONBLOCKING;
@@ -660,5 +678,9 @@ void my_put_next_rx_char(void *callback_state, char c);
 // helper complex freq shift function
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
+
+#ifdef ENABLE_GNUPG_AUTH
+extern FreeDVAuthStep* g_authTxStep;
+#endif
 
 #endif //__FDMDV2_MAIN__

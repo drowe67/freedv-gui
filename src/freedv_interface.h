@@ -64,6 +64,9 @@ class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
 class RADEReceiveStep;
+#ifdef ENABLE_GNUPG_AUTH
+class FreeDVAuthStep;
+#endif
 
 // Anything above 255 is a RADE mode. There's only one right now,
 // this is just for future expansion.
@@ -151,6 +154,13 @@ public:
     void restartTxVocoder() FREEDV_NONBLOCKING;
  
     float getSNREstimate();
+
+#ifdef ENABLE_GNUPG_AUTH
+    void setupAuth(FreeDVAuthStep* authStep);
+    void clearAuth();
+    FreeDVAuthStep* getAuthStep() { return authStep_; }
+    struct freedv* getCurrentTxDv() { return currentTxMode_; }
+#endif
     
 private:
     struct ReceivePipelineState
@@ -218,6 +228,13 @@ private:
     int postProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
 
     void radeSyncFn_(RADEReceiveStep* step) FREEDV_NONBLOCKING;
+
+#ifdef ENABLE_GNUPG_AUTH
+    static void OnAuthDataRx_(void* state, unsigned char* packet, size_t size);
+    static void OnAuthDataTx_(void* state, unsigned char* packet, size_t* size);
+
+    FreeDVAuthStep* authStep_;
+#endif
 };
 
 #endif // FREEDV_INTERFACE_H

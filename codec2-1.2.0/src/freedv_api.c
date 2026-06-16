@@ -1218,13 +1218,56 @@ void freedv_set_callback_data(struct freedv *f, freedv_callback_datarx datarx,
                               void *callback_state) {
   if ((FDV_MODE_ACTIVE(FREEDV_MODE_2400A, f->mode)) ||
       (FDV_MODE_ACTIVE(FREEDV_MODE_2400B, f->mode)) ||
-      (FDV_MODE_ACTIVE(FREEDV_MODE_800XA, f->mode))) {
+      (FDV_MODE_ACTIVE(FREEDV_MODE_800XA, f->mode)) ||
+      (FDV_MODE_ACTIVE(FREEDV_MODE_700D, f->mode)) ||
+      (FDV_MODE_ACTIVE(FREEDV_MODE_700E, f->mode))) {
     if (!f->deframer->fdc) f->deframer->fdc = freedv_data_channel_create();
     if (!f->deframer->fdc) return;
 
     freedv_data_set_cb_rx(f->deframer->fdc, datarx, callback_state);
     freedv_data_set_cb_tx(f->deframer->fdc, datatx, callback_state);
   }
+}
+
+/* GNUPG_AUTH: queue auth frame for datatx callback delivery */
+void freedv_auth_inject(struct freedv *f, const uint8_t *frame, size_t len) {
+  if (!f) return;
+  if (frame == NULL || len == 0) {
+    f->auth_frame_len = 0;
+    f->auth_chunk_offset = 0;
+    return;
+  }
+  if (len > FREEDV_AUTH_FRAME_MAX) return;
+  memcpy(f->auth_frame, frame, len);
+  f->auth_frame_len = (int)len;
+  f->auth_chunk_offset = 0;
+}
+
+int freedv_auth_pop_tx_chunk(struct freedv *f, unsigned char *packet, size_t max_size,
+                             size_t *out_size) {
+  if (!f || !packet || !out_size || f->auth_frame_len <= 0) return 0;
+  if (f->auth_chunk_offset >= f->auth_frame_len) return 0;
+
+  size_t remaining =
+      (size_t)f->auth_frame_len - (size_t)f->auth_chunk_offset;
+  size_t chunk_size;
+  if (f->auth_chunk_offset == 0) {
+    chunk_size = FREEDV_AUTH_FIRST_CHUNK;
+  } else {
+    chunk_size = FREEDV_AUTH_CONT_CHUNK;
+    if (max_size > 0 && max_size < chunk_size) chunk_size = max_size;
+  }
+  if (chunk_size > remaining) chunk_size = remaining;
+  if (chunk_size == 0 || max_size < chunk_size) return 0;
+
+  memcpy(packet, f->auth_frame + f->auth_chunk_offset, chunk_size);
+  *out_size = chunk_size;
+  f->auth_chunk_offset += (int)chunk_size;
+  if (f->auth_chunk_offset >= f->auth_frame_len) {
+    f->auth_frame_len = 0;
+    f->auth_chunk_offset = 0;
+  }
+  return 1;
 }
 
 /*---------------------------------------------------------------------------*\

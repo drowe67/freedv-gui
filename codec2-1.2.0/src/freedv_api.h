@@ -332,6 +332,17 @@ int freedv_get_bits_per_modem_frame(struct freedv *freedv);
 int freedv_get_sz_error_pattern(struct freedv *freedv);
 int freedv_get_protocol_bits(struct freedv *freedv);
 
+#include <stdint.h>
+
+// GNUPG_AUTH: variable-length auth bookend frame for data channel TX slots.
+#define FREEDV_AUTH_FRAME_MAX 1024
+#define FREEDV_AUTH_FIRST_CHUNK 63
+#define FREEDV_AUTH_CONT_CHUNK 62
+
+void freedv_auth_inject(struct freedv *freedv, const uint8_t *frame, size_t len);
+int freedv_auth_pop_tx_chunk(struct freedv *freedv, unsigned char *packet, size_t max_size,
+                             size_t *out_size);
+
 #ifdef __cplusplus
 }
 #endif

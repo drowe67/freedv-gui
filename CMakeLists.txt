@@ -600,6 +600,13 @@ On Linux systems try installing:
     endif()
 endif()
 
+# GNUPG_AUTH: optional OpenPGP transmission signing via libgpgme
+option(ENABLE_GNUPG_AUTH "Enable GnuPG transmission signing" OFF)
+if(ENABLE_GNUPG_AUTH)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GPGME REQUIRED IMPORTED_TARGET gpgme)
+endif()
+
 # Enable CTest tests for freedv-gui
 option(UNITTEST "Build unittest binaries." OFF)
 if(UNITTEST)

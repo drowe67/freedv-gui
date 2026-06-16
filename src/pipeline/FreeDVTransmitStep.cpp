@@ -38,6 +38,10 @@
 #include "codec2_fifo.h"
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
+#ifdef ENABLE_GNUPG_AUTH
+#include "FreeDVAuthStep.h"
+#include "../main.h"
+#endif
 
 extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
@@ -116,6 +120,16 @@ short* FreeDVTransmitStep::execute(short* inputSamples, int numInputSamples, int
         if ((*numOutputSamples + nfreedv) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
+
+#ifdef ENABLE_GNUPG_AUTH
+            // GNUPG_AUTH: accumulate speech frame bytes for END frame hash
+            if (g_authTxStep != nullptr)
+            {
+                g_authTxStep->accumulateTxPayload(
+                    reinterpret_cast<const uint8_t*>(codecInput_),
+                    samplesUsedForFifo * sizeof(short));
+            }
+#endif
         
             if (mode == FREEDV_MODE_800XA) 
             {
