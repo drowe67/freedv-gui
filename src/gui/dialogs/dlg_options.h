@@ -74,6 +74,7 @@ class OptionsDlg : public wxDialog
         void    OnFreqModeChangeEnable(wxCommandEvent& event);
         void    OnEnableSpacebarForPTT(wxCommandEvent& event);
         void    OnSetPTTKey(wxCommandEvent& event);
+        void    OnTOTTimerEnable(wxCommandEvent& event);
         void    OnDialogCharHook(wxKeyEvent& event);
         void    OnPTTKeyCapture(wxKeyEvent& event);
         void    enterPTTCaptureMode_();
@@ -105,6 +106,10 @@ class OptionsDlg : public wxDialog
         bool           m_capturingPTTKey;
         wxTextCtrl    *m_txtTxRxDelayMilliseconds;
         wxCheckBox    *m_ckboxFrequencyEntryAsKHz;
+
+        /* Time-Out Timer options */
+        wxCheckBox    *m_ckboxTOTTimerEnabled;
+        wxTextCtrl    *m_txtTOTTimerSecs;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored

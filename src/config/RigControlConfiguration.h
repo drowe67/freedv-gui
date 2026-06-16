@@ -68,7 +68,11 @@ public:
     // absolute first TX or the first TX after a CAT/PTT config change
     // will have zero wait).
     ConfigurationDataElement<int> rigResponseTimeMicroseconds;
-    
+
+    // Time-Out Timer (TOT): limits how long FreeDV can stay in transmit.
+    ConfigurationDataElement<bool> totTimerEnabled;
+    ConfigurationDataElement<int>  totTimerSecs;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

@@ -148,6 +148,7 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
         case SNR_COL:
             colName = wxT("SNR");
             minWidth = 60;
+            alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
             break;
         case LAST_UPDATE_DATE_COL:
             colName = wxT("Last Update");
@@ -163,6 +164,8 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
     }
     auto renderer = colObj->GetRenderer();
     renderer->SetAlignment(alignment);
+    if (col == SNR_COL)
+        colObj->SetAlignment(wxALIGN_RIGHT);
     if (ellipsize)
     {
         renderer->EnableEllipsize(wxELLIPSIZE_END);
@@ -3424,7 +3427,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         temp->lastRxCallsign = parent_->UNKNOWN_STR;
         temp->lastRxMode = parent_->UNKNOWN_STR;
         temp->snrVal = UNKNOWN_SNR_VAL;
-        temp->snr = parent_->UNKNOWN_STR;
+        temp->snr = parent_->UNKNOWN_STR + wxT("  ");
         
         // Default to sane colors for rows. If we need to highlight, the timer will change
         // these later. 
@@ -3698,7 +3701,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
 
-            wxString snrString = wxNumberFormatter::ToString(snr, 1);
+            wxString snrString = wxNumberFormatter::ToString(snr, 1) + wxT("  ");
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.

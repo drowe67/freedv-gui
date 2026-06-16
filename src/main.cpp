@@ -1191,6 +1191,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     terminating_ = false;
     realigned_ = false;
     syncState_ = false;
+    txChangeoverOccurring_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1252,10 +1253,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, true);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
-//    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
-     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
+    m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-   // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
+    m_btnTogPTT->Bind(wxEVT_LEFT_DOWN, &MainFrame::OnTogBtnPTTMouseDown, this);
+    m_btnTogPTT->Bind(wxEVT_LEFT_DCLICK, &MainFrame::OnTogBtnPTTMouseDown, this);
+    m_btnTogPTT->Bind(wxEVT_LEAVE_WINDOW, &MainFrame::OnTogBtnPTTMouseLeave, this);
 
     loadConfiguration_();
     
@@ -1270,7 +1272,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
-    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);
+    m_totTimer.SetOwner(this, ID_TIMER_TOT);
+    Bind(wxEVT_TIMER, &MainFrame::OnTOTTimer, this, ID_TIMER_TOT);
+    m_totWarningTimer.SetOwner(this, ID_TIMER_TOT_WARNING);
+    Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
 #endif
     
     // Create voice keyer popup menu.
@@ -3902,61 +3908,67 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
-    if (toRead < size)
+    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
-
-    cbData->outfifo1->read(tmpOutput, toRead);
-    auto numChannels = dev.getNumChannels();
-    auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
-    auto sr = dev.getSampleRate();
-
-    if (isTuning)
-    {
-        // This may be better as a pipeline step but would also add additional
-        // complexity (i.e. additional decision steps to let through the sine wave
-        // vs. regular TX).
-        auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
-
-        // Load once before the loop and store once after to avoid per-sample atomic
-        // memory barriers, which can cause the audio callback to overrun its deadline.
-        auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
-        const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
-        for (unsigned long index = 0; index < size; index++)
-        {
-            auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
-            for (int i = 0; i < numChannels; i++)
-            {
-                *audioData++ = carrierSample;
-            }
-            // Conditional branch is cheaper than integer division (% sr).
-            if (++sineWaveSampleNumber >= (int)sr)
-                sineWaveSampleNumber = 0;
-        }
-        cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
-    }
     else
     {
-        for (size_t count = 0; count < size; count++, audioData += numChannels)
+        if (toRead >= size)
         {
-            auto output = (count < toRead) ? tmpOutput[count] : 0;
+            cbData->outfifo1->read(tmpOutput, size);
+        }
 
-            // write signal to all channels to start. This is so that
-            // the compiler can optimize for the most common case.
-            for (auto j = 0; j < numChannels; j++)
+        auto numChannels = dev.getNumChannels();
+        auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
+        auto sr = dev.getSampleRate();
+
+        if (isTuning)
+        {
+            // This may be better as a pipeline step but would also add additional
+            // complexity (i.e. additional decision steps to let through the sine wave
+            // vs. regular TX).
+            auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+
+            // Load once before the loop and store once after to avoid per-sample atomic
+            // memory barriers, which can cause the audio callback to overrun its deadline.
+            auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
+            const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
+            for (unsigned long index = 0; index < size; index++)
             {
-                audioData[j] = output;
+                auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
+                for (int i = 0; i < numChannels; i++)
+                {
+                    *audioData++ = carrierSample;
+                }
+                // Conditional branch is cheaper than integer division (% sr).
+                if (++sineWaveSampleNumber >= (int)sr)
+                    sineWaveSampleNumber = 0;
             }
-                        
-            // If VOX tone is enabled, go back through and add the VOX tone
-            // on the left channel.
-            if (enableVoxTone)
+            cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
+        }
+        else
+        {
+            for (size_t count = 0; count < size; count++, audioData += numChannels)
             {
-                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
-                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                 auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+                // write signal to all channels to start. This is so that
+                // the compiler can optimize for the most common case.
+                for (auto j = 0; j < numChannels; j++)
+                {
+                    audioData[j] = output;
+                }
+                        
+                // If VOX tone is enabled, go back through and add the VOX tone
+                // on the left channel.
+                if (enableVoxTone)
+                {
+                    cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
+                    cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                    audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                }
             }
         }
     }
@@ -3990,14 +4002,16 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     {
         g_outfifo2_empty.fetch_add(1, std::memory_order_release);
     }
-
-    cbData->outfifo2->read(tmpOutput, toRead);
-    auto numChannels = dev.getNumChannels();
-    for (size_t count = 0; count < size; count++)
+    else
     {
-        for (int j = 0; j < numChannels; j++)
+        cbData->outfifo2->read(tmpOutput, toRead);
+        auto numChannels = dev.getNumChannels();
+        for (size_t count = 0; count < size; count++)
         {
-            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+            for (int j = 0; j < numChannels; j++)
+            {
+                *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+            }
         }
     }
 }

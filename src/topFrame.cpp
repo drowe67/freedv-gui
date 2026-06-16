@@ -840,7 +840,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
-        
+
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     
     m_panel->SetSizerAndFit(bSizer1);
@@ -927,7 +927,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnVoiceKeyer->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
     m_btnTogPTT->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
-    m_btnTogPTT->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(TopFrame::OnPTTButtonDown), NULL, this);
     m_btnTogPTT->Connect(wxEVT_LEFT_UP, wxMouseEventHandler(TopFrame::OnPTTButtonUp), NULL, this);
     m_btnTogPTT->Connect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(TopFrame::OnPTTButtonCaptureLost), NULL, this);
 
@@ -1054,7 +1053,6 @@ TopFrame::~TopFrame()
     m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
-    m_btnTogPTT->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(TopFrame::OnPTTButtonDown), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_LEFT_UP, wxMouseEventHandler(TopFrame::OnPTTButtonUp), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_MOUSE_CAPTURE_LOST, wxMouseCaptureLostEventHandler(TopFrame::OnPTTButtonCaptureLost), NULL, this);
     

@@ -471,6 +471,16 @@ The last selected logging source (either the FreeDV Reporter window or the drop-
 of the main window) is used for auto-filling of logging data. This is to avoid confusion (for instance, if a row 
 in the main window is selected but it's intended to log from FreeDV Reporter instead).
 
+# Time-Out Timer (TOT)
+
+FreeDV contains a built-in time-out timer (TOT) that prevents the radio from transmitting for longer than the configured
+period. By default, this is enabled and set to 180 seconds (3 minutes). Fifteen seconds prior to the timeout firing,
+a window will appear along with a beep in your configured speakers or headset to allow you to either reset the timer
+or finish up your transmission. 
+
+If you desire a different timeout or want to disable the TOT, you can do so by going to Tools->Options->Rig Control
+and changing the TOT related options in that tab.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
@@ -940,12 +950,15 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V2.4.0 TBD 2026
 
 1. Bugfixes:
-    * Hamlib: Allow one timeout during connection process to allow Icom marine radios to behave better. (PR #1369)
+    * Hamlib: Allow two timeouts during connection process to allow Icom marine radios to behave better. (PR #1369, #1388)
     * Rename sanitizers.h->freedv_sanitizers.h due to name conflicts. (PR #1372)
     * Fix intermittent non-response to short PTT clicks to stop TX. (PR #1375) - thanks @barjac!
     * Revert to libsamplerate library to fix remaining audio quality issues. (PR #1379)
+    * Right-justify SNR column in FreeDV Reporter to improve appearance. (PR #1387) - thanks @barjac!
+    * Hamlib: Set frequency again on mode changes. (PR #1395)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
+    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398) - thanks @barjac!
     * Load last-used config file on restarts. (PR #1365, #1371)
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
