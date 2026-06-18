@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
     freedv_backend
     GIT_REPOSITORY https://github.com/tmiw/freedv-backend
-    GIT_TAG main
+    GIT_TAG ms-eoo-refactor-end-silence
 )
 
 FetchContent_MakeAvailable(freedv_backend)
