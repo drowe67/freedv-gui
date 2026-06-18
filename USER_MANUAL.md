@@ -956,6 +956,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Revert to libsamplerate library to fix remaining audio quality issues. (PR #1379)
     * Right-justify SNR column in FreeDV Reporter to improve appearance. (PR #1387) - thanks @barjac!
     * Hamlib: Set frequency again on mode changes. (PR #1395)
+    * Consolidate EOO length calculation in freedv-backend to improve callsign decode reliability. (PR #1402)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398) - thanks @barjac!

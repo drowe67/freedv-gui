@@ -62,13 +62,6 @@ public:
     
     ConfigurationDataElement<bool> leftChannelVoxTone;
 
-    // Not directly modifiable by the user -- this is a cached version
-    // so that the first TX after a restart of FreeDV will wait the same
-    // amount of time as during the previous run (ensuring that only the
-    // absolute first TX or the first TX after a CAT/PTT config change
-    // will have zero wait).
-    ConfigurationDataElement<int> rigResponseTimeMicroseconds;
-
     // Time-Out Timer (TOT): limits how long FreeDV can stay in transmit.
     ConfigurationDataElement<bool> totTimerEnabled;
     ConfigurationDataElement<int>  totTimerSecs;
