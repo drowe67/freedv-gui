@@ -558,12 +558,10 @@ int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
-
         // Verified that rade_api.c from librade has no unbounded operations
         // as of 2025-10-03.
         FREEDV_BEGIN_VERIFIED_SAFE
-        return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
+        return std::max(rade_n_tx_out(rade_), radeTxStep_->eooLengthInSamples());
         FREEDV_END_VERIFIED_SAFE
     }
 
