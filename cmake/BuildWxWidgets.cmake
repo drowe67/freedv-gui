@@ -34,17 +34,36 @@ set(wxUSE_WINSOCK2 ON CACHE BOOL "Use WinSock2" FORCE)
 endif(WIN32)
 
 include(FetchContent)
-FetchContent_Declare(
-    wxWidgets
-    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-    GIT_SHALLOW    TRUE
-    GIT_PROGRESS   TRUE
-    GIT_TAG        v${WXWIDGETS_VERSION}
-    PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
-    UPDATE_DISCONNECTED 1
-)
 
-FetchContent_MakeAvailable(wxWidgets)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28.0")
+    FetchContent_Declare(
+        wxWidgets
+        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+        GIT_SHALLOW    TRUE
+        GIT_PROGRESS   TRUE
+        GIT_TAG        v${WXWIDGETS_VERSION}
+        PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
+        UPDATE_DISCONNECTED 1
+        EXCLUDE_FROM_ALL
+    )
+
+    FetchContent_MakeAvailable(wxWidgets)
+else()
+    FetchContent_Declare(
+        wxWidgets
+        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+        GIT_SHALLOW    TRUE
+        GIT_PROGRESS   TRUE
+        GIT_TAG        v${WXWIDGETS_VERSION}
+        PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
+        UPDATE_DISCONNECTED 1
+    )
+    FetchContent_GetProperties(wxWidgets)
+    if(NOT wxwidgets_POPULATED)
+        FetchContent_Populate(wxWidgets)
+        add_subdirectory(${wxwidgets_SOURCE_DIR} ${wxwidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+endif()
 
 # Override some CXX flags to prevent wxWidgets build failures
 if(APPLE)

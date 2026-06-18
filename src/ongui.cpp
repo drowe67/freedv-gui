@@ -7,6 +7,9 @@
 #include <sstream>
 #include <iomanip>
 #include <locale>
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 #include "main.h"
 
@@ -58,6 +61,8 @@ extern bool g_recFileFromRadio;
 extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
+
+extern std::atomic<bool>     g_totBeepActive;
 
 static wxString bandNameForFilter(FilterFrequency band);
 
@@ -1088,7 +1093,9 @@ int MainApp::FilterEvent(wxEvent& event)
             bool reporterActiveButNotUpdatingTextMessage = 
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
-            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            bool tuneActive = frame->m_btnTogTune->GetValue();
+            if (frame->m_RxRunning && !tuneActive && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
@@ -1097,11 +1104,7 @@ int MainApp::FilterEvent(wxEvent& event)
                         frame->m_btnTogPTT->SetValue(false);
                     else
                         frame->m_btnTogPTT->SetValue(true);
-
-                    // Update background color of button here because when toggling PTT via keyboard,
-                    // the background color for some reason doesn't update inside togglePTT().
-                    frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-
+                    
                     // Actually toggle PTT.
                     frame->togglePTT();
                 }
@@ -1138,6 +1141,42 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 }
 
 //-------------------------------------------------------------------------
+// OnTogBtnPTTMouseDown()
+// Set TX colour immediately on mouse press when going RX->TX, avoiding a GTK
+// blue-flash during the TX delay before togglePTT() sets it on release.
+// Only fires when the pipeline is genuinely in RX (g_tx false); during the
+// TX->RX drain g_tx is still true, so clicks there are correctly ignored.
+// NOTE for upstream: this is a simple cosmetic fix. A fuller alternative would
+// be to start TX here on press and suppress the togglePTT() call on release.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
+{
+    if (txChangeoverOccurring_) return;
+
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnPTTMouseLeave()
+// Reset premature TX colour if mouse leaves button before release and TX
+// has not actually started, preventing a stuck-red button.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
+{
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
@@ -1153,13 +1192,153 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
     }
 }
 
+void MainFrame::playTotBeep_()
+{
+    log_info("Playing TOT beep");
+
+    if (g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_totBeepActive.store(true, std::memory_order_release);
+}
+
+void MainFrame::stopTotBeep_()
+{
+    log_info("Stopping TOT beep");
+    m_totLastBeepTime_ = {};
+    if (!g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_totBeepActive.store(false, std::memory_order_release);
+}
+
+//-------------------------------------------------------------------------
+// OnTOTTimer()
+// Time-Out Timer handler: fires when the configured TX time limit expires.
+//-------------------------------------------------------------------------
+void MainFrame::OnTOTTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire))
+        return;
+
+    log_info("Time-Out Timer (TOT) expired — stopping transmit");
+
+    if (m_totWarningTimer.IsRunning())
+        m_totWarningTimer.Stop();
+
+    if (m_totWarningDialog_)
+    {
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
+    }
+    m_totCurrentDurationMs = 0;
+    stopTotBeep_();
+
+    if (vk_state == VK_TX)
+    {
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else
+    {
+        m_btnTogPTT->SetValue(false);
+        endingTx.store(true, std::memory_order_release);
+        togglePTT();
+    }
+}
+
+void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+        return;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
+    int remaining = m_totCurrentDurationMs - (int)elapsed;
+
+    if (remaining > 0 && remaining <= 15000)
+    {
+        // Beep once when the window pops up.
+        bool firstBeep = (m_totLastBeepTime_ == decltype(m_totLastBeepTime_){});
+        if (firstBeep) {
+            playTotBeep_();
+            m_totLastBeepTime_ = now;
+        }
+
+        if (!m_totWarningDialog_)
+        {
+            m_totWarningDialog_ = new TotWarningDialog(
+                this, remaining,
+                [this]() {
+                    m_totWarningDialog_->Destroy();
+                    m_totWarningDialog_ = nullptr;
+                    
+                    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+                        return;
+
+                    m_totCurrentDurationMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+                    m_totTxStartTime = std::chrono::high_resolution_clock::now();
+                    m_totTimer.Start(m_totCurrentDurationMs, wxTIMER_ONE_SHOT);
+                    m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
+                    log_info("Time-Out Timer (TOT) extended — %d ms remaining", m_totCurrentDurationMs);
+                }
+            );
+            m_totWarningDialog_->Show();
+        }
+        else
+        {
+            m_totWarningDialog_->updateRemainingTime(remaining);
+        }
+    }
+    else if (remaining > 15000 && m_totWarningDialog_)
+    {
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
+        m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
+    }
+}
+
 void MainFrame::togglePTT(void) {
+    // Guard against re-entrant calls during the TX drain (Yield() processes events).
+    // This is necessary because we are not disabling the button during the changeover,
+    // as doing so causes the text on the button to be unreadable.
+    if (txChangeoverOccurring_) 
+    {
+        return;
+    }
+    txChangeoverOccurring_ = true;
+
     std::chrono::high_resolution_clock highResClock;
+
+    // Record direction now; button value may be toggled by a stray click during
+    // the drain loops below, which would corrupt newTx at the end if not checked.
+    const bool wasInTx = g_tx.load(std::memory_order_acquire);
 
     // Change tabbed page in centre panel depending on PTT state
 
-    if (g_tx.load(std::memory_order_acquire))
+    if (wasInTx)
     {
+        // Amber during TX->RX drain: distinct from TX (red) and RX (default),
+        // black text readable throughout.
+        m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+        m_btnTogPTT->SetLabel("TX Ending");
+        m_btnTogPTT->Refresh();
+
+        // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
+        if (m_totTimer.IsRunning())
+            m_totTimer.Stop();
+        if (m_totWarningTimer.IsRunning())
+            m_totWarningTimer.Stop();
+        if (m_totWarningDialog_)
+        {
+            auto dlg = m_totWarningDialog_;
+            m_totWarningDialog_ = nullptr;
+            dlg->Destroy();
+        }
+        m_totCurrentDurationMs = 0;
+        stopTotBeep_();
+
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)
         {
@@ -1239,37 +1418,15 @@ void MainFrame::togglePTT(void) {
         {
             latency = outDevice->getLatencyInMicroseconds();
         }
-        auto pttResponseTime = 0;
 
-        // Also take into account any latency between the computer and radio.
-        // The only way to do this is by tracking how long it takes to respond
-        // to PTT requests (and that's not necessarily great, either). Normally
-        // this component should be a small part of the overall latency, but it
-        // could be larger when dealing with SDR radios that are on the network.
-        //
-        // Note: This may not provide accurate results until after going from 
-        // TX->RX the first time, but one missed report during a session shouldn't 
-        // be a huge deal.
-        auto pttController = wxGetApp().rigPttController;
-        if (pttController)
-        {
-            // We only need to worry about the time getting to the radio,
-            // not the time to get from the radio to us.
-            pttResponseTime = std::max(
-                pttController->getRigResponseTimeMicroseconds() / 2,
-                wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds.get());
-            wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = pttResponseTime;
-        }
-
-        auto totalPauseTime = latency + pttResponseTime;
         log_info(
-            "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
-            totalPauseTime, latency, pttResponseTime);
+            "Pausing for a minimum of %d us before TX->RX to allow remaining audio to go out", 
+            latency);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::microseconds(totalPauseTime))
+            if (diff >= std::chrono::microseconds(latency))
             {
                 break;
             }
@@ -1358,7 +1515,9 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    auto newTx = m_btnTogPTT->GetValue();
+    // Use wasInTx to determine direction: don't let a stray click during the drain
+    // flip newTx and leave the radio keyed with the pipeline in the wrong state.
+    auto newTx = !wasInTx;
     if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
         wxGetApp().rigPttController->ptt(newTx);
@@ -1375,9 +1534,6 @@ void MainFrame::togglePTT(void) {
     {
         obj->transmit(freedvInterface.getCurrentTxModeStr(), newTx);
     }
-
-    // Change button color depending on TX status.
-    m_btnTogPTT->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
     
     // If we're recording, switch to/from modulator and radio.
     if (g_sfRecFile != nullptr)
@@ -1419,7 +1575,20 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
-                
+
+        // Start Time-Out Timer if enabled.
+        if (wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled &&
+            wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs > 0)
+        {
+            int totMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+            log_info("Starting Time-Out Timer (%d seconds)", wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs.get());
+            m_totTimer.Start(totMs, wxTIMER_ONE_SHOT);
+
+            m_totTxStartTime = std::chrono::high_resolution_clock::now();
+            m_totCurrentDurationMs = totMs;
+            m_totWarningTimer.Start(500, wxTIMER_CONTINUOUS);
+        }
+
         if (wxGetApp().m_pttInSerialPort)
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
@@ -1432,6 +1601,7 @@ void MainFrame::togglePTT(void) {
     // here (similar to what's already done for ending TX while
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
+    m_btnTogPTT->SetLabel(_("&PTT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
     
     // The Report Frequency drop-down should not be modifiable during TX.
@@ -1456,7 +1626,10 @@ void MainFrame::togglePTT(void) {
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 
-    CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
+    CallAfter([&]() {
+        txChangeoverOccurring_ = false;
+        m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
+    });
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)

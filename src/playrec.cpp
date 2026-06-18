@@ -37,6 +37,10 @@ int                 g_playFileFromRadioEventId;
 
 std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 std::atomic<bool>                g_recFileFromModulator;
+
+// Time-Out Timer beep: injected into the speaker output path during the warning window.
+std::atomic<bool>     g_totBeepActive(false);
+
 int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
