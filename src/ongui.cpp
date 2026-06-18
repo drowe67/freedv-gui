@@ -512,6 +512,19 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
         }
 
+        // Sync sideband dropdown to radio mode when in analog mode.
+        if (g_analog)
+        {
+            if (mode == IRigFrequencyController::USB)
+            {
+                m_cboSideband->SetSelection(0);
+            }
+            else if (mode == IRigFrequencyController::LSB)
+            {
+                m_cboSideband->SetSelection(1);
+            }
+        }
+
         // Update frequency box
         if (!suppressFreqModeUpdates_ && (
             !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
@@ -1671,10 +1684,16 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    return GetModeForFrequency(
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
-        g_analog);
+    if (!g_analog)
+    {
+        return wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes
+            ? IRigFrequencyController::USB
+            : IRigFrequencyController::DIGU;
+    }
+
+    return m_cboSideband->GetSelection() == 0
+        ? IRigFrequencyController::USB
+        : IRigFrequencyController::LSB;
 }
 
 //-------------------------------------------------------------------------
@@ -1686,15 +1705,18 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         g_analog = 1;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
         m_panelWaterfall->setFs(FS);
-        
+
         m_togBtnAnalog->SetLabel(wxT("Switch to Di&gital"));
+        m_cboSideband->Enable();
     }
     else {
         g_analog = 0;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
-        
+
         m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
+        m_cboSideband->SetSelection(0);
+        m_cboSideband->Disable();
     }
 
     // Report analog change to registered reporters
@@ -2005,6 +2027,16 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
     OnChangeReportFrequency(tmpEvent);
 
     TopFrame::OnReportFrequencyKillFocus(event);
+}
+
+void MainFrame::OnChangeSideband(wxCommandEvent&)
+{
+    if (wxGetApp().rigFrequencyController != nullptr &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+    {
+        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+    }
 }
 
 void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)

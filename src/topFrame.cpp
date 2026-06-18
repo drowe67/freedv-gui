@@ -771,7 +771,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
     m_cboReportFrequency->SetMinSize(wxSize(150,-1));
     txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
-    
+
+    wxArrayString sidebandChoices;
+    sidebandChoices.Add(wxT("USB"));
+    sidebandChoices.Add(wxT("LSB"));
+    m_cboSideband = new wxComboBox(m_freqBox, wxID_ANY, wxT("USB"), wxDefaultPosition, wxDefaultSize, sidebandChoices, wxCB_READONLY);
+    m_cboSideband->SetSelection(0);
+    m_cboSideband->SetMinSize(wxSize(150,-1));
+    m_cboSideband->Disable();
+    txtReportFreqSizer->Add(m_cboSideband, 1, wxALL, 5);
+
     reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
     //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
     
@@ -984,6 +993,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboReportFrequency->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
+
+    m_cboSideband->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeSideband), NULL, this);
     
     m_cboLastReportedCallsigns->Connect(wxEVT_COMBOBOX_DROPDOWN, wxCommandEventHandler(TopFrame::OnOpenCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Connect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnCloseCallsignList), NULL, this);
@@ -1090,9 +1101,11 @@ TopFrame::~TopFrame()
     m_cboReportFrequency->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
-    
+
     m_cboReportFrequency->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
+
+    m_cboSideband->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeSideband), NULL, this);
 
     m_cboLastReportedCallsigns->Disconnect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(TopFrame::OnRightClickCallsignList), NULL, this);
     m_cboLastReportedCallsigns->Disconnect(wxEVT_COMBOBOX_DROPDOWN, wxCommandEventHandler(TopFrame::OnOpenCallsignList), NULL, this);

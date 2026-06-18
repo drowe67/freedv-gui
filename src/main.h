@@ -473,6 +473,7 @@ class MainFrame : public TopFrame
         
         void OnChangeReportFrequency( wxCommandEvent& event ) override;
         void OnChangeReportFrequencyVerify( wxCommandEvent& event ) override;
+        void OnChangeSideband( wxCommandEvent& event ) override;
         
         void OnReportFrequencySetFocus(wxFocusEvent& event) override;
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
