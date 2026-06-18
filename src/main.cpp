@@ -914,12 +914,12 @@ void MainFrame::loadConfiguration_()
     m_lastReportedCallsignListView->GetColumn(1, colInfo);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
+        m_freqBox->SetLabel(_("Center Freq. (kHz)"));
         colInfo.SetText(_("kHz"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
+        m_freqBox->SetLabel(_("Center Freq. (MHz)"));
         colInfo.SetText(_("MHz"));
     }
     m_lastReportedCallsignListView->SetColumn(1, colInfo);
