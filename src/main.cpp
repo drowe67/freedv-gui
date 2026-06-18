@@ -1192,6 +1192,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     realigned_ = false;
     syncState_ = false;
     txChangeoverOccurring_ = false;
+    badSnrFound_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1942,6 +1943,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                         // Reset SNR for next "over".
                         g_snr = 0;
+
+                        if (badSnrFound_)
+                        {
+                            // XXX DEBUG ONLY - Automatically stop RX if bad SNR found.
+                            CallAfter([&]() {
+                                wxCommandEvent tmpEvent;
+                                OnTogBtnOnOff(tmpEvent);
+                            });
+                        }
                     }
                 }
                 m_timeSinceSyncLoss = 0;
@@ -2117,10 +2127,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         if (pendingSnr <= -15)
                         {
                             // XXX DEBUG ONLY - automatically stop modem if we get a bad SNR.
-                            CallAfter([&]() {
-                                wxCommandEvent tmpEvent;
-                                OnTogBtnOnOff(tmpEvent);
-                            });
+                            badSnrFound_ = true;
                         }
                     }
                 }
@@ -2153,10 +2160,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (pendingSnr <= -15)
                     {
                         // XXX DEBUG ONLY - automatically stop modem if we get a bad SNR.
-                        CallAfter([&]() {
-                            wxCommandEvent tmpEvent;
-                            OnTogBtnOnOff(tmpEvent);
-                        });
+                        badSnrFound_ = true;
                     }
                 }
             }
@@ -2486,6 +2490,7 @@ void MainFrame::performFreeDVOn_()
     
     m_timeSinceSyncLoss = 0;
     syncState_ = false;
+    badSnrFound_ = false;
 
     executeOnUiThreadAndWait_([&]() 
     {
