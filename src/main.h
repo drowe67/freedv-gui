@@ -426,6 +426,7 @@ class MainFrame : public TopFrame
         // NOTE: sets TX colour on press to avoid a GTK blue-flash during the TX delay.
         // Upstream may prefer a different approach (e.g. true press-to-start TX).
         void OnTogBtnPTTMouseDown( wxMouseEvent& event );
+        void OnTogBtnPTTMouseLeave( wxMouseEvent& event );
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         

@@ -534,6 +534,7 @@ void HamlibRigController::disconnectImpl_()
             {
                 setModeHelper_(currVfo, origMode_);
             }
+
         }
         
         origFreq_ = 0;
@@ -994,6 +995,20 @@ modeAttempt:
     if (setOkay)
     {
         currMode_ = mode;
+
+        // We request the frequency to be set again to work around an issue with the 
+        // FTDX10 where mode changes between LSB and USB cause the VFO frequency to shift
+        // by 700 Hz. This ensures that the frequency we're currently set to is in sync
+        // with the VFO frequency.
+        if (currFreq_ > 0)
+        {
+            result = rig_set_freq(tmpRig, currVfo, currFreq_);
+            if (result != RIG_OK)
+            {
+                log_debug("rig_set_freq: error = %s ", rigerror(result));
+            }
+        }
+
         if (!destroying_)
         {
             requestCurrentFrequencyModeImpl_();

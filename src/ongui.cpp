@@ -1165,6 +1165,21 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnTogBtnPTTMouseLeave()
+// Reset premature TX colour if mouse leaves button before release and TX
+// has not actually started, preventing a stuck-red button.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
+{
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
@@ -1406,37 +1421,15 @@ void MainFrame::togglePTT(void) {
         {
             latency = outDevice->getLatencyInMicroseconds();
         }
-        auto pttResponseTime = 0;
 
-        // Also take into account any latency between the computer and radio.
-        // The only way to do this is by tracking how long it takes to respond
-        // to PTT requests (and that's not necessarily great, either). Normally
-        // this component should be a small part of the overall latency, but it
-        // could be larger when dealing with SDR radios that are on the network.
-        //
-        // Note: This may not provide accurate results until after going from 
-        // TX->RX the first time, but one missed report during a session shouldn't 
-        // be a huge deal.
-        auto pttController = wxGetApp().rigPttController;
-        if (pttController)
-        {
-            // We only need to worry about the time getting to the radio,
-            // not the time to get from the radio to us.
-            pttResponseTime = std::max(
-                pttController->getRigResponseTimeMicroseconds() / 2,
-                wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds.get());
-            wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = pttResponseTime;
-        }
-
-        auto totalPauseTime = latency + pttResponseTime;
         log_info(
-            "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
-            totalPauseTime, latency, pttResponseTime);
+            "Pausing for a minimum of %d us before TX->RX to allow remaining audio to go out", 
+            latency);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::microseconds(totalPauseTime))
+            if (diff >= std::chrono::microseconds(latency))
             {
                 break;
             }
