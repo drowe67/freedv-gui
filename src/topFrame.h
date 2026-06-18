@@ -233,7 +233,6 @@ class TopFrame : public wxFrame
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnChangeReportFrequencyVerify( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnChangeSideband( wxCommandEvent& event ) { event.Skip(); }
                 
         virtual void OnReportFrequencySetFocus(wxFocusEvent& event) { event.Skip(); }
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
@@ -263,7 +262,6 @@ class TopFrame : public wxFrame
         wxToggleButton* m_btnTogTune;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
-        wxComboBox*   m_cboSideband;
         wxStaticBox*  m_freqBox;
         wxStaticBox*  squelchBox;
         wxStaticBox*  m_txLevelBox;

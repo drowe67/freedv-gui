@@ -2892,8 +2892,6 @@ void MainFrame::performFreeDVOff_()
         m_textCurrentDecodeMode->Disable();
 
         m_togBtnAnalog->Disable();
-        m_cboSideband->SetSelection(0);
-        m_cboSideband->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
     
