@@ -253,9 +253,11 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
     // Check if small screen size means text will overlap
 
+    float centreFreqHz = (MAX_F_HZ - MIN_F_HZ) / 2.0f;
+
     int textXStep = STEP_F_HZ*freq_hz_to_px;
     int textYStep = STEP_MAG_DB*mag_dB_to_py;
-    snprintf(buf, STR_LENGTH, "%.1fk", ((float)MAX_F_HZ - STEP_F_HZ)/1000.0f);
+    snprintf(buf, STR_LENGTH, "%.1fk", (STEP_F_HZ - centreFreqHz)/1000.0f);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedX = (text_w > textXStep);
     int overlappedY = (text_h > textYStep);
@@ -271,7 +273,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
         if (!repaintDataOnly)
         {
-            snprintf(buf, STR_LENGTH, "%.1fk", f/1000.0f);
+            snprintf(buf, STR_LENGTH, "%.1fk", (f - centreFreqHz)/1000.0f);
             GetTextExtent(buf, &text_w, &text_h);
             if (!overlappedX)
                 ctx->DrawText(buf, x - text_w/2, (PLOT_BORDER + bottomOffset_ - YBOTTOM_TEXT_OFFSET * 2 - text_h) / 2);
