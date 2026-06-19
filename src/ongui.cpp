@@ -1071,6 +1071,7 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 }
 
 // check for space bar press (only when running)
+static bool IsPttKeyDown_ = false;
 
 int MainApp::FilterEvent(wxEvent& event)
 {
@@ -1084,8 +1085,7 @@ int MainApp::FilterEvent(wxEvent& event)
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
-	    bool keyRepeated = static_cast<wxKeyEvent&>(event).IsAutoRepeat();
-            if (frame->m_RxRunning && !tuneActive && !keyRepeated && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
+            if (frame->m_RxRunning && !tuneActive && !IsPttKeyDown_ && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
@@ -1093,6 +1093,7 @@ int MainApp::FilterEvent(wxEvent& event)
                     if (wxGetApp().appConfiguration.pttMomentaryMode) {
                         // Momentary mode: start TX only on the initial key press (not repeated events).
                         if (!g_tx.load(std::memory_order_acquire)) {
+                            IsPttKeyDown_ = true;
                             frame->m_btnTogPTT->SetValue(true);
                             frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
                             frame->togglePTT();
@@ -1129,6 +1130,7 @@ int MainApp::FilterEvent(wxEvent& event)
                 wxGetApp().appConfiguration.pttMomentaryMode) {
 
                 if (frame->vk_state == VK_IDLE && g_tx.load(std::memory_order_acquire)) {
+                    IsPttKeyDown_ = false;
                     frame->m_btnTogPTT->SetValue(false);
                     frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
                     frame->togglePTT();
