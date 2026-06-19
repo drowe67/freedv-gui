@@ -499,8 +499,9 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         bool isLsbFreq = freq < 10000000 && !is60MeterBand;
 
         bool isMatchingMode = 
-            (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-            (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+            (!g_analog && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+            (isUsbFreq && (mode == IRigFrequencyController::USB)) ||
+            (isLsbFreq && (mode == IRigFrequencyController::LSB));
 
         if (isMatchingMode)
         {
@@ -1663,9 +1664,10 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    bool useAnalog = 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
+    return GetModeForFrequency(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, 
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
+        g_analog);
 }
 
 //-------------------------------------------------------------------------
@@ -1673,6 +1675,8 @@ HamlibRigController::Mode MainFrame::getCurrentMode_()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
 {
+    auto oldMode = getCurrentMode_();
+
     if (g_analog == 0) {
         g_analog = 1;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
@@ -1702,7 +1706,27 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
-        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        auto currentMode = getCurrentMode_();
+
+        constexpr int LSB_USB_FREQ_SHIFT_HZ = 3000;
+        if (currentMode == HamlibRigController::LSB && g_analog)
+        {
+            // If analog is enabled, we should add +3 kHz to the frequency to 
+            // ensure we're still listening to the same passband that we were
+            // previously prior to the analog switch.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency + LSB_USB_FREQ_SHIFT_HZ;
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
+        else if (oldMode == HamlibRigController::LSB && !g_analog)
+        {
+            // Revert previous mode shift.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency - LSB_USB_FREQ_SHIFT_HZ;
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
+
+        wxGetApp().rigFrequencyController->setMode(currentMode);
     }
 
     g_State.store(0, std::memory_order_release);

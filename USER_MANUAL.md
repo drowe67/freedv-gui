@@ -293,7 +293,10 @@ demodulator.
 
 ## USB or LSB?
 
-FreeDV currently follows the same conventions for upper and lower sideband as are used for amateur SSB. As an aid to this, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
+FreeDV has standardized on upper sideband for RADEV2, regardless of the location in the band. As an aid to this, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode, it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
+
+Note that if in Analog mode, FreeDV will use the appropriate sideband for the band.  To ensure that the same portion of spectrum is used by both digital and analog modes FreeDV will adjust the radio frequency by +3kHz on the legacy LSB bands. i.e. 40, 80 and 160 meters. (For example, 7177 kHz becomes 7180 kHz when the Analog button is pushed.)
+
 ## Transceiver Filters
 
 For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 kHz). 
@@ -740,11 +743,10 @@ an experimental feature is causing problems, please file a bug report!)
 
 ## FreeDV Sets Radio To Wrong Mode
 
-By default, FreeDV attempts to set the radio's mode to DIGU/USB-D (or LSB equivalent for 40 meters and below). Some radios
-do not support data modes and only have USB and LSB. For these, you can go to Tools->Options->Rig Control and check the
-"Use USB/LSB instead of DIGU/DIGL" option. This will cause FreeDV to use the standard USB and LSB modes for rig control instead.
+By default, FreeDV attempts to set the radio's mode to DIGU/USB-D. Some radios do not support data modes and only have USB. For these, you can go to Tools->Options->Rig Control and check the
+"Use USB instead of DIGU" option. This will cause FreeDV to use the standard USB mode for rig control instead.
 
-Note that for best results, your radio should have all processing disabled if you're using the standard USB/LSB modes. This
+Note that for best results, your radio should have all processing disabled if you're using the standard USB mode. This
 disabling of processing typically takes place when using data mode.
 
 ## Overdriving Transmit Level
@@ -946,6 +948,11 @@ FEC | Forward Error Correction - extra bits to we send to protect the speech cod
 LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
+
+## V3.0.0 TBD 2026
+
+1. Enhancements:
+    * RADEV2: Standardize mode as USB. (PR #1397)
 
 ## V2.4.0 TBD 2026
 
