@@ -1084,7 +1084,8 @@ int MainApp::FilterEvent(wxEvent& event)
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
-            if (frame->m_RxRunning && !tuneActive && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
+	    bool keyRepeated = static_cast<wxKeyEvent&>(event).IsAutoRepeat();
+            if (frame->m_RxRunning && !tuneActive && !keyRepeated && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
