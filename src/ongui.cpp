@@ -1138,34 +1138,6 @@ int MainApp::FilterEvent(wxEvent& event)
     return Event_Skip;
 }
 
-void MainFrame::OnPTTButtonUp(wxMouseEvent& event)
-{
-    if (!wxGetApp().appConfiguration.pttMomentaryMode) {
-        event.Skip();
-        return;
-    }
-    if (m_btnTogPTT->HasCapture()) {
-        m_btnTogPTT->ReleaseMouse();
-    }
-    if (g_tx.load(std::memory_order_acquire)) {
-        m_btnTogPTT->SetValue(false);
-        m_btnTogPTT->SetBackgroundColour(wxNullColour);
-        togglePTT();
-    }
-    // Consume the event to prevent the native toggle button from also toggling state.
-}
-
-void MainFrame::OnPTTButtonCaptureLost(wxMouseCaptureLostEvent& /*event*/)
-{
-    // Mouse capture was lost (e.g. user switched windows while holding PTT).
-    // Stop transmitting if we were in momentary PTT mode.
-    if (wxGetApp().appConfiguration.pttMomentaryMode && g_tx.load(std::memory_order_acquire)) {
-        m_btnTogPTT->SetValue(false);
-        m_btnTogPTT->SetBackgroundColour(wxNullColour);
-        togglePTT();
-    }
-}
-
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
@@ -1200,23 +1172,12 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
     if (txChangeoverOccurring_) return;
 
-    if (!wxGetApp().appConfiguration.pttMomentaryMode || !m_RxRunning || isReceiveOnly() || vk_state != VK_IDLE) {
-        // Consume the event to prevent the native toggle button from also toggling state.
-        if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
-        {
-            m_btnTogPTT->SetBackgroundColour(*wxRED);
-            m_btnTogPTT->Refresh();
-        }
-        event.Skip();
-        return;
-    }
-
-    if (!g_tx.load(std::memory_order_acquire)) {
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
-        m_btnTogPTT->SetValue(true);
-        m_btnTogPTT->CaptureMouse();
-        togglePTT();
+        m_btnTogPTT->Refresh();
     }
+    event.Skip();
 }
 
 //-------------------------------------------------------------------------
@@ -1244,10 +1205,8 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else if (!wxGetApp().appConfiguration.pttMomentaryMode)
+    else 
     {
-        // In momentary mode, TX is managed by OnPTTButtonDown/Up mouse handlers.
-        // This toggle-click handler is only used in latching mode.
         togglePTT();
     }
 }
@@ -1661,7 +1620,7 @@ void MainFrame::togglePTT(void) {
     // here (similar to what's already done for ending TX while
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
-    m_btnTogPTT->SetLabel(_("&PTT"));
+    m_btnTogPTT->SetLabel(_("&XMIT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
     
     // The Report Frequency drop-down should not be modifiable during TX.

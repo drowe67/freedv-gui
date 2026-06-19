@@ -423,8 +423,6 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
-        void OnPTTButtonUp( wxMouseEvent& event ) override;
-        void OnPTTButtonCaptureLost( wxMouseCaptureLostEvent& event ) override;
 
         // NOTE: sets TX colour on press to avoid a GTK blue-flash during the TX delay.
         // Upstream may prefer a different approach (e.g. true press-to-start TX).

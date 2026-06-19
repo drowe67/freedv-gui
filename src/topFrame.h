@@ -202,9 +202,6 @@ class TopFrame : public wxFrame
         
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) { event.Skip(); }
-        virtual void OnPTTButtonDown( wxMouseEvent& event ) { event.Skip(); }
-        virtual void OnPTTButtonUp( wxMouseEvent& event ) { event.Skip(); }
-        virtual void OnPTTButtonCaptureLost( wxMouseCaptureLostEvent& ) {}
 
         virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         

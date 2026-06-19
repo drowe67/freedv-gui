@@ -291,7 +291,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     sbSizer_ptt->Add(pttKeySizer, 0, wxALL, 0);
 
-    m_ckboxPTTMomentaryMode = new wxCheckBox(sb_ptt, wxID_ANY, _("Momentary PTT (hold to transmit)"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPTTMomentaryMode = new wxCheckBox(sb_ptt, wxID_ANY, _("Momentary PTT (hold key to transmit)"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ckboxPTTMomentaryMode->SetToolTip(_("When enabled, you must hold the PTT button or key to keep transmitting. Releasing it returns to receive."));
     sbSizer_ptt->Add(m_ckboxPTTMomentaryMode, 0, wxALL, 5);
 
