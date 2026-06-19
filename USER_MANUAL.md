@@ -960,7 +960,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Switch off memory channel before setting frequency/mode. (PR #1403) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
-    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398) - thanks @barjac!
+    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
     * Load last-used config file on restarts. (PR #1365, #1371)
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
