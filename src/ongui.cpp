@@ -1122,7 +1122,8 @@ int MainApp::FilterEvent(wxEvent& event)
             bool reporterActiveButNotUpdatingTextMessage =
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
-            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) &&
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            if (frame->m_RxRunning && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
                 wxGetApp().appConfiguration.pttMomentaryMode) {
 
