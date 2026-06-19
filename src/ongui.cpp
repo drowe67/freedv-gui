@@ -1179,7 +1179,11 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1195,7 +1199,11 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1350,7 +1358,11 @@ void MainFrame::togglePTT(void) {
         // - e.g. backdrop while the TOT warning dialog has focus - would
         // otherwise dim or recolour the default text away from black.
         m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->SetLabel("TX Ending");
         m_btnTogPTT->Refresh();
 
@@ -1632,7 +1644,11 @@ void MainFrame::togglePTT(void) {
     m_btnTogPTT->SetValue(newTx);
     m_btnTogPTT->SetLabel(_("&XMIT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+#if !defined(__APPLE__)
+    // macOS limitations prevent the foreground color of toggle buttons from being 
+    // reliably set, so don't mess with it in the first place.
     m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxNullColour);
+#endif // !defined(__APPLE__)
     
     // The Report Frequency drop-down should not be modifiable during TX.
     // Additionally, tuning during normal TX is verboten.
