@@ -295,7 +295,7 @@ demodulator.
 
 FreeDV has standardized on upper sideband for RADEV2, regardless of the location in the band. As an aid to this, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode, it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
-Note that if in Analog mode, FreeDV will use the proper sideband depending on the location in the band (e.g. LSB for 40 meters). As a result, to ensure that the user is monitoring the same sideband, FreeDV will add 3 kHz to the radio's VFO frequency when switching to Analog mode (and subtract 3 kHz when switching back to FreeDV reception). We add 3 kHz only if we are on the legacy LSB modes of 40, 80, & 160 meters.
+Note that if in Analog mode, FreeDV will use the appropriate sideband for the band.  To ensure that the same portion of spectrum is used by both digital and analog modes FreeDV will adjust the radio frequency by +3kHz on the legacy LSB bands. i.e. 40, 80 and 160 meters. (For example, 7177 kHz becomes 7180 kHz when the Analog button is pushed.)
 
 ## Transceiver Filters
 
