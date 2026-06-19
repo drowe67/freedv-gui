@@ -947,6 +947,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V3.0.0 TBD 2026
+
+1. Enhancements:
+    * RADEV2: Standardize mode as USB. (PR #1397)
+
 ## V2.4.0 TBD 2026
 
 1. Bugfixes:
