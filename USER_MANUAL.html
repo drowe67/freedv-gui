@@ -356,17 +356,23 @@ demodulator.</p></li>
 </ul>
 <h2 data-number="2.7" id="usb-or-lsb"><span
 class="header-section-number">2.7</span> USB or LSB?</h2>
-<p>FreeDV currently follows the same conventions for upper and lower
-sideband as are used for amateur SSB. As an aid to this, FreeDV will
-show the current mode on the bottom of the window upon pressing the
-Start button if Hamlib is enabled and your radio supports retrieving
-frequency and mode information over CAT. If your radio is using an
-unexpected mode (e.g. LSB on 20 meters), it will display that mode on
-the bottom of the window next to the Clear button in red letters. When a
-session is not active, Hamlib isn’t enabled, or if your radio doesn’t
-support retrieving frequency and mode over CAT, it will remain grayed
-out with “unk” displaying instead of the mode (for “unknown”). ##
-Transceiver Filters</p>
+<p>FreeDV has standardized on upper sideband for RADEV2, regardless of
+the location in the band. As an aid to this, FreeDV will show the
+current mode on the bottom of the window upon pressing the Start button
+if Hamlib is enabled and your radio supports retrieving frequency and
+mode information over CAT. If your radio is using an unexpected mode, it
+will display that mode on the bottom of the window next to the Clear
+button in red letters. When a session is not active, Hamlib isn’t
+enabled, or if your radio doesn’t support retrieving frequency and mode
+over CAT, it will remain grayed out with “unk” displaying instead of the
+mode (for “unknown”).</p>
+<p>Note that if in Analog mode, FreeDV will use the appropriate sideband
+for the band. To ensure that the same portion of spectrum is used by
+both digital and analog modes FreeDV will adjust the radio frequency by
++3kHz on the legacy LSB bands. i.e. 40, 80 and 160 meters. (For example,
+7177 kHz becomes 7180 kHz when the Analog button is pushed.)</p>
+<h2 data-number="2.8" id="transceiver-filters"><span
+class="header-section-number">2.8</span> Transceiver Filters</h2>
 <p>For most FreeDV use, your radio’s receive and transmit filters should
 be set to the widest possible (typically around 3 kHz). This allows easy
 switching between analog mode as well as the various FreeDV modes. There
@@ -1020,14 +1026,13 @@ class="header-section-number">16</span> Common Problems</h1>
 <h2 data-number="16.1" id="freedv-sets-radio-to-wrong-mode"><span
 class="header-section-number">16.1</span> FreeDV Sets Radio To Wrong
 Mode</h2>
-<p>By default, FreeDV attempts to set the radio’s mode to DIGU/USB-D (or
-LSB equivalent for 40 meters and below). Some radios do not support data
-modes and only have USB and LSB. For these, you can go to
-Tools-&gt;Options-&gt;Rig Control and check the “Use USB/LSB instead of
-DIGU/DIGL” option. This will cause FreeDV to use the standard USB and
-LSB modes for rig control instead.</p>
+<p>By default, FreeDV attempts to set the radio’s mode to DIGU/USB-D.
+Some radios do not support data modes and only have USB. For these, you
+can go to Tools-&gt;Options-&gt;Rig Control and check the “Use USB
+instead of DIGU” option. This will cause FreeDV to use the standard USB
+mode for rig control instead.</p>
 <p>Note that for best results, your radio should have all processing
-disabled if you’re using the standard USB/LSB modes. This disabling of
+disabled if you’re using the standard USB mode. This disabling of
 processing typically takes place when using data mode.</p>
 <h2 data-number="16.2" id="overdriving-transmit-level"><span
 class="header-section-number">16.2</span> Overdriving Transmit
@@ -1267,8 +1272,16 @@ speech codec bits</td>
 </table>
 <h1 data-number="19" id="release-notes"><span
 class="header-section-number">19</span> Release Notes</h1>
-<h2 data-number="19.1" id="v2.4.0-tbd-2026"><span
-class="header-section-number">19.1</span> V2.4.0 TBD 2026</h2>
+<h2 data-number="19.1" id="v3.0.0-tbd-2026"><span
+class="header-section-number">19.1</span> V3.0.0 TBD 2026</h2>
+<ol type="1">
+<li>Enhancements:
+<ul>
+<li>RADEV2: Standardize mode as USB. (PR #1397)</li>
+</ul></li>
+</ol>
+<h2 data-number="19.2" id="v2.4.0-tbd-2026"><span
+class="header-section-number">19.2</span> V2.4.0 TBD 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1313,8 +1326,8 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 #1368)</li>
 </ul></li>
 </ol>
-<h2 data-number="19.2" id="v2.3.1-may-2026"><span
-class="header-section-number">19.2</span> V2.3.1 May 2026</h2>
+<h2 data-number="19.3" id="v2.3.1-may-2026"><span
+class="header-section-number">19.3</span> V2.3.1 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1348,8 +1361,8 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Clarify Reporter on/off tooltip. (PR #1345)</li>
 </ul></li>
 </ol>
-<h2 data-number="19.3" id="v2.3.0-may-2026"><span
-class="header-section-number">19.3</span> V2.3.0 May 2026</h2>
+<h2 data-number="19.4" id="v2.3.0-may-2026"><span
+class="header-section-number">19.4</span> V2.3.0 May 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1452,8 +1465,8 @@ thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
 maintenance. (PR #1286, #1307)</li>
 </ul></li>
 </ol>
-<h2 data-number="19.4" id="earlier-than-v2.2.0"><span
-class="header-section-number">19.4</span> Earlier than V2.2.0</h2>
+<h2 data-number="19.5" id="earlier-than-v2.2.0"><span
+class="header-section-number">19.5</span> Earlier than V2.2.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
 for more information about changes in versions prior to 2.2.0.</p>
