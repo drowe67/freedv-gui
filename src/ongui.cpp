@@ -1145,6 +1145,7 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1160,6 +1161,7 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->SetForegroundColour(wxNullColour);
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1309,8 +1311,12 @@ void MainFrame::togglePTT(void) {
     if (wasInTx)
     {
         // Amber during TX->RX drain: distinct from TX (red) and RX (default),
-        // black text readable throughout.
+        // black text readable throughout. Foreground is pinned explicitly
+        // (not just left to the GTK theme) since some themes/window states
+        // - e.g. backdrop while the TOT warning dialog has focus - would
+        // otherwise dim or recolour the default text away from black.
         m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
         m_btnTogPTT->SetLabel("TX Ending");
         m_btnTogPTT->Refresh();
 
@@ -1592,6 +1598,7 @@ void MainFrame::togglePTT(void) {
     m_btnTogPTT->SetValue(newTx);
     m_btnTogPTT->SetLabel(_("&PTT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+    m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxNullColour);
     
     // The Report Frequency drop-down should not be modifiable during TX.
     // Additionally, tuning during normal TX is verboten.
