@@ -1082,10 +1082,10 @@ int MainApp::FilterEvent(wxEvent& event)
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
-	    bool keyRepeated = static_cast<wxKeyEvent&>(event).IsAutoRepeat();
+
             // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
             // (e.g. TOT) from immediately restarting TX -- see main.h.
-            if (frame->m_RxRunning && !tuneActive && !keyRepeated && !frame->m_pttKeyRequireRelease_ &&
+            if (frame->m_RxRunning && !tuneActive && !frame->m_pttKeyRequireRelease_ &&
                 (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
