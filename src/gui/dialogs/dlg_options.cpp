@@ -571,22 +571,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     // Modem tab
     wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
-    
-    //------------------------------
-    // FreeDV 700 Options
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_freedv700;
-    wxStaticBox *sb_freedv700 = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Options"));
-    sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
-
-    m_ckboxFreeDV700txClip = new wxCheckBox(sb_freedv700, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALL | wxALIGN_LEFT, 5);
-
-    m_ckboxFreeDV700txBPF = new wxCheckBox(sb_freedv700, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
-
-    sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
     //------------------------------
     // Half/Full duplex selection
@@ -819,8 +803,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseVoiceKeyerWaveFilePath->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
     m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
     
-    m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
-    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
@@ -870,8 +852,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxTestFrame->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
-
-    m_ckboxFreeDV700txClip->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -930,7 +910,6 @@ OptionsDlg::~OptionsDlg()
     m_ckboxTestFrame->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
-    m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
     m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
     m_buttonChooseQuickRecordDecodedPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
@@ -1053,9 +1032,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
         
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
-       
-        m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
-        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
         
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
@@ -1256,8 +1232,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
         wxGetApp().appConfiguration.showDecodeStats = m_showDecodeStats->GetValue();
-        wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
-        wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
         
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
@@ -1472,10 +1446,6 @@ void OptionsDlg::OnChooseCsvLogFilePath(wxCommandEvent&) {
     }
 
     m_txtCtrlCsvLogFilePath->SetValue(fileDialog.GetPath());
-}
-
-void OptionsDlg::OnFreeDV700txClip(wxScrollEvent&) {
-    wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
 }
 
 void OptionsDlg::OnDebugConsole(wxScrollEvent&) {

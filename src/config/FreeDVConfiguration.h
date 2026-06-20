@@ -87,9 +87,6 @@ public:
     ConfigurationDataElement<wxString> quickRecordRawPath;
     ConfigurationDataElement<wxString> quickRecordDecodedPath;
     
-    ConfigurationDataElement<bool> freedv700Clip;
-    ConfigurationDataElement<bool> freedv700TxBPF;
-    
     ConfigurationDataElement<int> noiseSNR;
     
     ConfigurationDataElement<bool> debugConsoleEnabled; // note: Windows only

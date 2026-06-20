@@ -2066,11 +2066,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
-    
-        // set some run time options (if applicable)
-        freedvInterface.setRunTimeOptions(
-            (int)wxGetApp().appConfiguration.freedv700Clip,
-            (int)wxGetApp().appConfiguration.freedv700TxBPF);
 
         // Test Frame Bit Error Updates ------------------------------------
 
@@ -2356,9 +2351,6 @@ void MainFrame::performFreeDVOn_()
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, true, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
-        // Codec 2 VQ Equaliser
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
-
         // Codec2 verbosity setting
         freedvInterface.setVerbose(g_freedv_verbose);
 
@@ -2391,13 +2383,6 @@ void MainFrame::performFreeDVOn_()
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-
-        // init Codec 2 LPC Post Filter (FreeDV 1600)
-        freedvInterface.setLpcPostFilter(
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma);
 
         log_debug("freedv_get_n_speech_samples(tx): %d", freedvInterface.getTxNumSpeechSamples());
         log_debug("freedv_get_speech_sample_rate(tx): %d", freedvInterface.getTxSpeechSampleRate());

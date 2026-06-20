@@ -79,9 +79,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     , quickRecordRawPath("/QuickRecord/SavePath", _(""))
     , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", _(""))
         
-    , freedv700Clip("/FreeDV700/txClip", true)
-    , freedv700TxBPF("/FreeDV700/txBPF", true)
-        
     , noiseSNR("/Noise/noise_snr", 2)
         
     , debugConsoleEnabled("/Debug/console", false)
@@ -196,9 +193,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, halfDuplexMode);
     
-    load_(config, freedv700Clip);
-    load_(config, freedv700TxBPF);
-    
     load_(config, noiseSNR);
     
     load_(config, debugConsoleEnabled);
@@ -286,9 +280,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, quickRecordRawPath);
     save_(config, quickRecordDecodedPath);
-    
-    save_(config, freedv700Clip);
-    save_(config, freedv700TxBPF);
     
     save_(config, noiseSNR);
     

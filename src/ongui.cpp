@@ -1851,8 +1851,6 @@ void MainFrame::resetStats_()
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-        // resets variance stats every time it is called
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
 }
 
