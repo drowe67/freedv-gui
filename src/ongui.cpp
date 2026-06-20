@@ -1085,7 +1085,10 @@ int MainApp::FilterEvent(wxEvent& event)
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
 	    bool keyRepeated = static_cast<wxKeyEvent&>(event).IsAutoRepeat();
-            if (frame->m_RxRunning && !tuneActive && !keyRepeated && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
+            // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
+            // (e.g. TOT) from immediately restarting TX -- see main.h.
+            if (frame->m_RxRunning && !tuneActive && !keyRepeated && !frame->m_pttKeyRequireRelease_ &&
+                (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
@@ -1275,6 +1278,32 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         m_btnTogPTT->SetValue(false);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
+
+        // If the spacebar PTT key is still physically held down (e.g. something
+        // resting on the keyboard), holding it through the timeout must not be
+        // able to immediately re-key the rig -- that would defeat the whole
+        // point of the TOT. wxEVT_KEY_UP/DOWN aren't reliable for detecting
+        // "still held" here: on some platforms, a held key generates real
+        // key-up/key-down event pairs at the OS repeat rate rather than a
+        // single sustained key-down, so we poll the actual OS key state
+        // instead and keep the spacebar disabled until it genuinely goes up.
+        if (wxGetApp().appConfiguration.pttMomentaryMode &&
+            wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+        {
+            log_info("TOT fired while PTT key still held -- blocking restart until key is released");
+            m_pttKeyRequireRelease_ = true;
+            m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
+        }
+    }
+}
+
+void MainFrame::OnPttKeyPollTimer(wxTimerEvent&)
+{
+    if (!wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+    {
+        log_info("PTT key released -- spacebar PTT re-armed");
+        m_pttKeyRequireRelease_ = false;
+        m_pttKeyPollTimer.Stop();
     }
 }
 
