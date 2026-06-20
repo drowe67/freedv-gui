@@ -1071,7 +1071,6 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
 }
 
 // check for space bar press (only when running)
-static bool IsPttKeyDown_ = false;
 
 int MainApp::FilterEvent(wxEvent& event)
 {
@@ -1085,7 +1084,11 @@ int MainApp::FilterEvent(wxEvent& event)
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
-            if (frame->m_RxRunning && !tuneActive && !IsPttKeyDown_ && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
+	    bool keyRepeated = static_cast<wxKeyEvent&>(event).IsAutoRepeat();
+            // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
+            // (e.g. TOT) from immediately restarting TX -- see main.h.
+            if (frame->m_RxRunning && !tuneActive && !keyRepeated && !frame->m_pttKeyRequireRelease_ &&
+                (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
@@ -1093,7 +1096,6 @@ int MainApp::FilterEvent(wxEvent& event)
                     if (wxGetApp().appConfiguration.pttMomentaryMode) {
                         // Momentary mode: start TX only on the initial key press (not repeated events).
                         if (!g_tx.load(std::memory_order_acquire)) {
-                            IsPttKeyDown_ = true;
                             frame->m_btnTogPTT->SetValue(true);
                             frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
                             frame->togglePTT();
@@ -1130,7 +1132,6 @@ int MainApp::FilterEvent(wxEvent& event)
                 wxGetApp().appConfiguration.pttMomentaryMode) {
 
                 if (frame->vk_state == VK_IDLE && g_tx.load(std::memory_order_acquire)) {
-                    IsPttKeyDown_ = false;
                     frame->m_btnTogPTT->SetValue(false);
                     frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
                     frame->togglePTT();
@@ -1277,6 +1278,32 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         m_btnTogPTT->SetValue(false);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
+
+        // If the spacebar PTT key is still physically held down (e.g. something
+        // resting on the keyboard), holding it through the timeout must not be
+        // able to immediately re-key the rig -- that would defeat the whole
+        // point of the TOT. wxEVT_KEY_UP/DOWN aren't reliable for detecting
+        // "still held" here: on some platforms, a held key generates real
+        // key-up/key-down event pairs at the OS repeat rate rather than a
+        // single sustained key-down, so we poll the actual OS key state
+        // instead and keep the spacebar disabled until it genuinely goes up.
+        if (wxGetApp().appConfiguration.pttMomentaryMode &&
+            wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+        {
+            log_info("TOT fired while PTT key still held -- blocking restart until key is released");
+            m_pttKeyRequireRelease_ = true;
+            m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
+        }
+    }
+}
+
+void MainFrame::OnPttKeyPollTimer(wxTimerEvent&)
+{
+    if (!wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+    {
+        log_info("PTT key released -- spacebar PTT re-armed");
+        m_pttKeyRequireRelease_ = false;
+        m_pttKeyPollTimer.Stop();
     }
 }
 
