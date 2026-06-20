@@ -1070,8 +1070,6 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
 }
 
-// check for space bar press (only when running)
-
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
