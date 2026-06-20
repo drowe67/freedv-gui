@@ -116,8 +116,6 @@ int g_tuneLevel = 0;
 std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
-int   g_SquelchActive;
-float g_SquelchLevel;
 int   g_analog;
 std::atomic<bool>   g_tx;
 float g_snr;
@@ -325,38 +323,6 @@ void MainApp::UnitTest_()
     
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
-
-    // Select FreeDV mode.
-    wxRadioButton* modeBtn = nullptr;
-    if (utFreeDVMode == "RADEV1")
-    {
-        modeBtn = frame->m_rbRADE;
-    }
-    else if (utFreeDVMode == "700D")
-    {
-        modeBtn = frame->m_rb700d;
-    }
-    else if (utFreeDVMode == "700E")
-    {
-        modeBtn = frame->m_rb700e;
-    }
-    else if (utFreeDVMode == "1600")
-    {
-        modeBtn = frame->m_rb1600;
-    }
-    
-    if (modeBtn != nullptr)
-    {
-        log_info("Firing mode change");
-        /*sim.MouseMove(modeBtn->GetScreenPosition());
-        sim.MouseClick();*/
-        CallAfter([this, modeBtn]() {
-            modeBtn->SetValue(true);
-            wxCommandEvent* modeEvent = new wxCommandEvent(wxEVT_RADIOBUTTON, modeBtn->GetId());
-            modeEvent->SetEventObject(modeBtn);
-            QueueEvent(modeEvent);
-        });
-    }
     
     // Fire event to start FreeDV
     log_info("Firing start");
@@ -856,10 +822,6 @@ void MainFrame::loadConfiguration_()
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
-
-    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
-    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
-    g_SquelchLevel /= 2.0;
     
     Move(x, y);
     wxSize size = GetMinSize();
@@ -987,65 +949,19 @@ void MainFrame::loadConfiguration_()
         m_cboReportFrequency->SetValue(sVal);
     }
 
-    int defaultMode = wxGetApp().appConfiguration.currentFreeDVMode.getDefaultVal();
-    int mode = wxGetApp().appConfiguration.currentFreeDVMode;
-setDefaultMode:
-    if (mode == 0)
-    {
-        m_rb1600->SetValue(1);
-    }
-    else if (mode == 4)
-    {
-        m_rb700d->SetValue(1);
-    }
-    else if (mode == 5)
-    {
-        m_rb700e->SetValue(1);
-    }
-    else if (mode == FREEDV_MODE_RADE)
-    {
-        m_rbRADE->SetValue(1);
-    }
-    else
-    {
-        // Default to RADE otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
-    }
-    
-    // Disable controls not supported by RADE.
-    bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
-    squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_sliderSQ->Enable(isEnabled);
-    m_ckboxSQ->Enable(isEnabled);
-    m_textSQ->Enable(isEnabled);
-    m_btnCenterRx->Enable(isEnabled);
-    m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_BtnReSync->Enable(isEnabled);
-    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
-
-    if (!isEnabled)
-    {
-        m_textBits->SetLabel("Bits: unk");
-        m_textErrors->SetLabel("Errs: unk");
-        m_textBER->SetLabel("BER: unk");
-        m_textFreqOffset->SetLabel("FrqOff: unk");
-        m_textSyncMetric->SetLabel("Sync: unk");
-        m_textCodec2Var->SetLabel("Var: unk");
-        m_textClockOffset->SetLabel("ClkOff: unk");
-    }
+    m_textBits->SetLabel("Bits: unk");
+    m_textErrors->SetLabel("Errs: unk");
+    m_textBER->SetLabel("BER: unk");
+    m_textFreqOffset->SetLabel("FrqOff: unk");
+    m_textSyncMetric->SetLabel("Sync: unk");
+    m_textCodec2Var->SetLabel("Var: unk");
+    m_textClockOffset->SetLabel("ClkOff: unk");
     
     pConfig->SetPath(wxT("/"));
     
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
-
-    // squelch settings
-    m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB";
-    m_textSQ->SetLabel(sqsnr_string);
-    m_ckboxSQ->SetValue(g_SquelchActive);
 
     // SNR settings
 
@@ -1132,8 +1048,6 @@ setDefaultMode:
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
-    modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1567,23 +1481,8 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
     }
     
-    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
-    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
-
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     autoSaveCurrentBandLevels_(false);
-
-    int mode = FREEDV_MODE_RADE;
-    if (m_rb1600->GetValue())
-        mode = 0;
-    if (m_rb700d->GetValue())
-        mode = 4;
-    if (m_rb700e->GetValue())
-        mode = 5;
-    if (m_rbRADE->GetValue())
-        mode = FREEDV_MODE_RADE;
-    
-    wxGetApp().appConfiguration.currentFreeDVMode = mode;
     wxGetApp().appConfiguration.save(config);
 }
 
@@ -2398,57 +2297,6 @@ void MainFrame::OnExit(wxCommandEvent&)
     }
 }
 
-void MainFrame::OnChangeTxMode( wxCommandEvent& event )
-{
-    auto eventObject = (wxRadioButton*)event.GetEventObject();
-    auto newMode = g_mode;
-    if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
-    {
-        newMode = FREEDV_MODE_1600;
-    }
-    else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
-    {
-        newMode = FREEDV_MODE_RADE;
-    }
-    else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
-    {
-        newMode = FREEDV_MODE_700D;
-    }
-    else if (eventObject == m_rb700e || (eventObject == nullptr && m_rb700e->GetValue())) 
-    {
-        newMode = FREEDV_MODE_700E;
-    }
-
-    if (newMode != g_mode)
-    {
-        g_mode = newMode; 
-        if (freedvInterface.isRunning())
-        {
-            // Need to change the TX interface live.
-            freedvInterface.changeTxMode(g_mode);
-        }
-    
-        // Force recreation of EQ filters.
-        m_newMicInFilter = true;
-        m_newSpkOutFilter = true;
-    
-        // Report TX change to registered reporters
-        auto txStatus = g_tx.load(std::memory_order_acquire);
-        for (auto& obj : wxGetApp().m_reporters)
-        {
-            obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
-        }
-    
-        // Disable controls not supported by RADE
-        bool isEnabled = g_mode != FREEDV_MODE_RADE;
-        m_sliderSQ->Enable(isEnabled);
-        m_ckboxSQ->Enable(isEnabled);
-        m_textSQ->Enable(isEnabled);
-        m_btnCenterRx->Enable(isEnabled);
-        m_BtnReSync->Enable(isEnabled);
-    }
-}
-
 void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
@@ -2498,55 +2346,15 @@ void MainFrame::performFreeDVOn_()
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        // determine what mode we are using
-        wxCommandEvent tmpEvent;
-        OnChangeTxMode(tmpEvent);
-
-        if (!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
-        {
-            m_rb1600->Disable();
-            m_rbRADE->Disable();
-            m_rb700d->Disable();
-            m_rb700e->Disable();
-            
-            if (!wxGetApp().appConfiguration.enableLegacyModes)
-            {
-                // If legacy modes are not enabled, RADE is the only option.
-                g_mode = FREEDV_MODE_RADE;
-            }
-            freedvInterface.addRxMode(g_mode);
-        }
-        else
-        {
-            m_rbRADE->Disable();
-                    
-            int rxModes[] = {
-                FREEDV_MODE_1600,
-                FREEDV_MODE_700E,
-                FREEDV_MODE_700D,
-            };
-
-            for (auto& mode : rxModes)
-            {
-                freedvInterface.addRxMode(mode);
-            }
-        
-            // If we're receive-only, it doesn't make sense to be able to change TX mode.
-            if (g_nSoundCards <= 1)
-            {
-                m_rb1600->Disable();
-                m_rbRADE->Disable();
-                m_rb700d->Disable();
-                m_rb700e->Disable();
-            }
-        }
+        g_mode = FREEDV_MODE_RADE;
+        freedvInterface.addRxMode(g_mode);
         
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, true, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -2894,11 +2702,6 @@ void MainFrame::performFreeDVOff_()
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-    
-        m_rbRADE->Enable();
-        m_rb1600->Enable();
-        m_rb700d->Enable();
-        m_rb700e->Enable();
         
         m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
 

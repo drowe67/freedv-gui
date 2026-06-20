@@ -70,7 +70,6 @@ class OptionsDlg : public wxDialog
         
         void    OnReportingEnable(wxCommandEvent& event);
         void    OnToneStateEnable(wxCommandEvent& event);
-        void    OnMultipleRxEnable(wxCommandEvent& event);
         void    OnFreqModeChangeEnable(wxCommandEvent& event);
         void    OnEnableSpacebarForPTT(wxCommandEvent& event);
         void    OnSetPTTKey(wxCommandEvent& event);
@@ -153,7 +152,6 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
-        wxCheckBox   *m_ckboxEnableLegacyModes;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
@@ -202,8 +200,6 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxDebugConsole;
 
-        wxCheckBox*  m_ckboxMultipleRx;
-        wxCheckBox*  m_ckboxSingleRxThread;
         wxTextCtrl*  m_statsResetTime;
         
         wxCheckBox*  m_ckbox_use_utc_time;
@@ -234,7 +230,6 @@ class OptionsDlg : public wxDialog
          void updateChannelNoiseState();
          void updateAttnCarrierState();
          void updateToneState();
-         void updateMultipleRxState();
          void updateRigControlState();
          
          bool sessionActive_;

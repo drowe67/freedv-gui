@@ -586,9 +586,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txBPF = new wxCheckBox(sb_freedv700, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
-    m_ckboxEnableLegacyModes = new wxCheckBox(sb_freedv700, wxID_ANY, _("Enable Legacy Modes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxEnableLegacyModes, 0, wxALL | wxALIGN_LEFT, 5);
-    
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
     //------------------------------
@@ -602,24 +599,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALL | wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
 
     sizerModem->Add(sbSizer_duplex,0, wxALL | wxEXPAND, 5);
-
-    //------------------------------
-    // Multiple RX selection
-    //------------------------------
-    wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
-    wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxVERTICAL);
-
-    wxBoxSizer* sbSizer_simultaneousDecode = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxMultipleRx = new wxCheckBox(sb_multirx, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_simultaneousDecode->Add(m_ckboxMultipleRx, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-    sbSizer_multirx->Add(sbSizer_simultaneousDecode, 0, wxALIGN_LEFT, 0);
-    
-    wxBoxSizer* sbSizer_singleThread = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxSingleRxThread = new wxCheckBox(sb_multirx, wxID_ANY, _("Use single thread for multiple RX operation"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_singleThread->Add(m_ckboxSingleRxThread, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-    sbSizer_multirx->Add(sbSizer_singleThread, 0, wxALIGN_LEFT, 0);
-    
-    sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 5);
     
     wxStaticBox *sb_modemstats = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Statistics"));
     wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
@@ -842,8 +821,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
     m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckHalfDuplex);
-    m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
-    m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
@@ -914,9 +891,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxUDPReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxUDPBroadcastEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    
-    m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
-    
+        
     m_ckboxEnableFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxEnableFreqChangesOnly->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxNoFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
@@ -972,9 +947,7 @@ OptionsDlg::~OptionsDlg()
     m_ckboxUDPReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxUDPBroadcastEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    
-    m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
-    
+        
     m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxEnableFreqChangesOnly->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     m_ckboxNoFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
@@ -1057,9 +1030,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
-
-        m_ckboxMultipleRx->SetValue(wxGetApp().appConfiguration.multipleReceiveEnabled);
-        m_ckboxSingleRxThread->SetValue(wxGetApp().appConfiguration.multipleReceiveOnSingleThread);
         
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
@@ -1086,7 +1056,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
        
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
-        m_ckboxEnableLegacyModes->SetValue(wxGetApp().appConfiguration.enableLegacyModes);
         
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
@@ -1175,7 +1144,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         updateChannelNoiseState();
         updateAttnCarrierState();
         updateToneState();
-        updateMultipleRxState();
         updateRigControlState();
 
         wxCommandEvent tmpEvent;
@@ -1233,8 +1201,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
 
         wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
-        wxGetApp().appConfiguration.multipleReceiveEnabled = m_ckboxMultipleRx->GetValue();
-        wxGetApp().appConfiguration.multipleReceiveOnSingleThread = m_ckboxSingleRxThread->GetValue();
         
         /* Plot settings */
         wxGetApp().appConfiguration.currentSpectrumAveraging = m_cbxNumSpectrumAveraging->GetSelection();
@@ -1292,7 +1258,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.showDecodeStats = m_showDecodeStats->GetValue();
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
-        wxGetApp().appConfiguration.enableLegacyModes = m_ckboxEnableLegacyModes->GetValue();
         
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
@@ -1642,21 +1607,6 @@ void OptionsDlg::updateToneState()
     m_txtToneAmplitude->Enable(m_ckboxTone->GetValue());
 }
 
-void OptionsDlg::updateMultipleRxState()
-{
-    if (!sessionActive_)
-    {
-        m_ckboxMultipleRx->Enable(true);
-        m_ckboxSingleRxThread->Enable(m_ckboxMultipleRx->GetValue());
-    }
-    else
-    {
-        // Multi-RX settings cannot be updated during a session.
-        m_ckboxMultipleRx->Enable(false);
-        m_ckboxSingleRxThread->Enable(false);
-    }
-}
-
 void OptionsDlg::updateRigControlState()
 {
     if (!sessionActive_)
@@ -1688,11 +1638,6 @@ void OptionsDlg::OnReportingEnable(wxCommandEvent&)
 void OptionsDlg::OnToneStateEnable(wxCommandEvent&)
 {
     updateToneState();
-}
-
-void OptionsDlg::OnMultipleRxEnable(wxCommandEvent&)
-{
-    updateMultipleRxState();
 }
 
 void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent&)

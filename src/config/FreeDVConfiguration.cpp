@@ -55,10 +55,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Current tab view */
     , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
         
-    /* Squelch configuration */
-    , squelchActive("/Audio/SquelchActive", 1)
-    , squelchLevel("/Audio/SquelchLevel", (int)(SQ_DEFAULT_SNR*2))
-        
     /* Misc. audio settings */
     , fifoSizeMs("/Audio/fifoSize_ms", (int)FIFO_SIZE)
     , transmitLevel("/Audio/transmitLevel", 0)
@@ -79,8 +75,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     , voiceKeyerRepeats("/VoiceKeyer/Repeats", 5)
         
     , halfDuplexMode("/Rig/HalfDuplex", true)
-    , multipleReceiveEnabled("/Rig/MultipleRx", true)
-    , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
         
     , quickRecordRawPath("/QuickRecord/SavePath", _(""))
     , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", _(""))
@@ -100,8 +94,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     , waterfallColor("/Waterfall/Color", 0)
     , statsResetTimeSecs("/Stats/ResetTime", 10)
         
-    , currentFreeDVMode("/Audio/mode", FREEDV_MODE_RADE)
-        
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
     
     , experimentalFeatures("/ExperimentalFeatures", false)
@@ -117,7 +109,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
         
     , showDecodeStats("/Debug/showDecodeStats", false)
-    , enableLegacyModes("/Modem/enableLegacyModes", false)
 {
     // empty
 }
@@ -151,9 +142,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reporterWindowCurrentSortDirection);
     
     load_(config, currentNotebookTab);
-    
-    load_(config, squelchActive);
-    load_(config, squelchLevel);
     
     load_(config, fifoSizeMs);
     load_(config, transmitLevel);
@@ -207,8 +195,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, voiceKeyerRepeats);
     
     load_(config, halfDuplexMode);
-    load_(config, multipleReceiveEnabled);
-    load_(config, multipleReceiveOnSingleThread);
     
     load_(config, freedv700Clip);
     load_(config, freedv700TxBPF);
@@ -225,7 +211,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, waterfallColor);
     
     load_(config, statsResetTimeSecs);
-    load_(config, currentFreeDVMode);
     
     load_(config, currentSpectrumAveraging);
     
@@ -247,7 +232,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reportingUserMsgColWidth);
     
     load_(config, showDecodeStats);
-    load_(config, enableLegacyModes);
 
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
@@ -283,9 +267,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, currentNotebookTab);
     
-    save_(config, squelchActive);
-    save_(config, squelchLevel);
-    
     save_(config, fifoSizeMs);
     save_(config, transmitLevel);
     save_(config, tuneLevel);
@@ -302,8 +283,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, voiceKeyerRepeats);
     
     save_(config, halfDuplexMode);
-    save_(config, multipleReceiveEnabled);
-    save_(config, multipleReceiveOnSingleThread);
     
     save_(config, quickRecordRawPath);
     save_(config, quickRecordDecodedPath);
@@ -323,7 +302,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, waterfallColor);
     
     save_(config, statsResetTimeSecs);
-    save_(config, currentFreeDVMode);
     
     save_(config, currentSpectrumAveraging);
     
@@ -340,7 +318,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reportingUserMsgColWidth);
     
     save_(config, showDecodeStats);
-    save_(config, enableLegacyModes);
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);
