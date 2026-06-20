@@ -1070,11 +1070,14 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
 }
 
+static bool PttKeyDown_ = false;
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
         (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
+            PttKeyDown_ = true;
+
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
             bool reporterActiveButNotUpdatingTextMessage =
@@ -1120,6 +1123,8 @@ int MainApp::FilterEvent(wxEvent& event)
     if ((event.GetEventType() == wxEVT_KEY_UP) &&
         (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
+            PttKeyDown_ = false;
+
             bool mainWindowActive = frame->IsActive();
             bool reporterActiveButNotUpdatingTextMessage =
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
@@ -1286,7 +1291,7 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         // single sustained key-down, so we poll the actual OS key state
         // instead and keep the spacebar disabled until it genuinely goes up.
         if (wxGetApp().appConfiguration.pttMomentaryMode &&
-            wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+            PttKeyDown_)
         {
             log_info("TOT fired while PTT key still held -- blocking restart until key is released");
             m_pttKeyRequireRelease_ = true;
@@ -1297,7 +1302,7 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
 
 void MainFrame::OnPttKeyPollTimer(wxTimerEvent&)
 {
-    if (!wxGetKeyState(static_cast<wxKeyCode>(wxGetApp().appConfiguration.pttKeyCode.get())))
+    if (!PttKeyDown_)
     {
         log_info("PTT key released -- spacebar PTT re-armed");
         m_pttKeyRequireRelease_ = false;
