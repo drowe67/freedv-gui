@@ -72,25 +72,27 @@ ReportingConfiguration::ReportingConfiguration()
 
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
 
+    // Values are centre frequencies (dial frequency +/-1.5kHz depending on
+    // sideband), matching the convention used for reportingFrequency.
     , reportingFrequencyList("/Reporting/FrequencyList", {
-        _("1.8700"),
-        _("3.6250"),
-        _("3.6430"),
-        _("3.6930"),
-        _("3.6970"),
-        _("3.8030"),
-        _("5.4035"),
-        _("5.3685"),
-        _("7.1770"),
-        _("7.1970"),
-        _("14.2360"),
-        _("14.2400"),
-        _("18.1180"),
-        _("21.3130"),
-        _("24.9330"),
-        _("28.3300"),
-        _("28.7200"),
-        _("10489.6400"),
+        _("1.8685"),
+        _("3.6235"),
+        _("3.6415"),
+        _("3.6915"),
+        _("3.6955"),
+        _("3.8015"),
+        _("5.4050"),
+        _("5.3700"),
+        _("7.1755"),
+        _("7.1955"),
+        _("14.2375"),
+        _("14.2415"),
+        _("18.1195"),
+        _("21.3145"),
+        _("24.9345"),
+        _("28.3315"),
+        _("28.7215"),
+        _("10489.6415"),
     })
     , freedvReporterTxRowBackgroundColor("/Reporting/FreeDV/TxRowBackgroundColor", "#fc4500")
     , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
