@@ -309,8 +309,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         // to Mic In
 
         if (vk_event == VK_SPACE_BAR) {
-            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            m_btnTogPTT->SetForegroundColour(wxNullColour);
             endingTx.store(true, std::memory_order_release);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
@@ -321,8 +322,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         }
 
         if (vk_event == VK_PLAY_FINISHED) {
-            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            m_btnTogPTT->SetForegroundColour(wxNullColour);
             endingTx.store(true, std::memory_order_release);
             CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
@@ -404,8 +406,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     default:
         // catch anything we missed
 
-        m_btnTogPTT->SetValue(false); 
+        m_btnTogPTT->SetValue(false);
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->SetForegroundColour(wxNullColour);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);

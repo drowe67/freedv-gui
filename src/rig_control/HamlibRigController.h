@@ -111,6 +111,7 @@ private:
     const int MAX_GET_FREQUENCY_ERR_COUNT = 1;
     
     vfo_t getCurrentVfo_();
+    vfo_t getWritableVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
     void setModeHelper_(vfo_t currVfo, rmode_t mode);
     

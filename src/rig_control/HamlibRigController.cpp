@@ -638,7 +638,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
         }
     }
 
-    vfo_t currVfo = getCurrentVfo_(); 
+    vfo_t currVfo = getWritableVfo_();
     setFrequencyHelper_(currVfo, frequencyHz);
 
     if (pttSet_)
@@ -722,7 +722,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
         }
     }
 
-    vfo_t currVfo = getCurrentVfo_(); 
+    vfo_t currVfo = getWritableVfo_();
     setModeHelper_(currVfo, hamlibMode);
 
     if (pttSet_)
@@ -887,6 +887,33 @@ vfo_t HamlibRigController::getCurrentVfo_()
         }
     }
     
+    return vfo;
+}
+
+vfo_t HamlibRigController::getWritableVfo_()
+{
+    vfo_t vfo = getCurrentVfo_();
+
+    if (vfo == RIG_VFO_MEM)
+    {
+        // Hamlib can't set frequency/mode directly on a memory channel --
+        // switch to VFO A first so the subsequent set_freq/set_mode call
+        // succeeds instead of failing with "Invalid parameter".
+        auto tmpRig = rig_.load(std::memory_order_acquire);
+        if (tmpRig != nullptr)
+        {
+            int result = rig_set_vfo(tmpRig, RIG_VFO_A);
+            if (result == RIG_OK)
+            {
+                vfo = RIG_VFO_A;
+            }
+            else
+            {
+                log_debug("rig_set_vfo: error = %s ", rigerror(result));
+            }
+        }
+    }
+
     return vfo;
 }
 
