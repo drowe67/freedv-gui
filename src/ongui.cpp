@@ -1359,6 +1359,8 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                 }
             );
             m_totWarningDialog_->Show();
+            m_totWarningDialog_->Iconize(false); // undo minimize if required
+            m_totWarningDialog_->Raise(); // brings from background to foreground if required
         }
         else
         {
