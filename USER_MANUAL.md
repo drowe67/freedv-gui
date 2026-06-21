@@ -957,9 +957,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Right-justify SNR column in FreeDV Reporter to improve appearance. (PR #1387) - thanks @barjac!
     * Hamlib: Set frequency again on mode changes. (PR #1395)
     * Consolidate EOO length calculation in freedv-backend to improve callsign decode reliability. (PR #1402)
+    * Hamlib: Switch off memory channel before setting frequency/mode. (PR #1403) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
-    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398) - thanks @barjac!
+    * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
     * Load last-used config file on restarts. (PR #1365, #1371)
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
