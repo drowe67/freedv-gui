@@ -78,8 +78,6 @@ class OptionsDlg : public wxDialog
         void    enterPTTCaptureMode_();
         void    exitPTTCaptureMode_(bool accept, int keyCode = 0);
 
-        wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
-
         wxCheckBox* m_ckHalfDuplex;
 
         wxNotebook  *m_notebook;

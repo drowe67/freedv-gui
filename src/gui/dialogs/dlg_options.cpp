@@ -132,21 +132,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     // Reporting tab
     wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
-    
-    //------------------------------
-    // Txt Msg Text Box
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_callSign;
-    wxStaticBox *sb_textMsg = new wxStaticBox(m_reportingTab, wxID_ANY, _("Txt Msg"));
-    sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
-
-    m_txtCtrlCallSign = new wxTextCtrl(sb_textMsg, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_txtCtrlCallSign->SetToolTip(_("Text message that you can send along with your voice. Note that this does not have error correction and thus is not guaranteed to arrive at the receiving station."));
-    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND, 5);
-
-    sizerReporting->Add(sbSizer_callSign,0, wxALL | wxEXPAND, 5);
- 
+     
     //----------------------------------------------------------
     // Reporting Options 
     //----------------------------------------------------------
@@ -786,7 +772,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Tab ordering for accessibility
     //-------------------
 #if 0
-    m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckboxReportingEnable);
     m_ckboxReportingEnable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
     
@@ -974,8 +959,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             m_freqList->Append(item);
         }
         
-        m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
-
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
         m_selectedPTTKeyCode = wxGetApp().appConfiguration.pttKeyCode;
         m_capturingPTTKey = false;
@@ -1174,8 +1157,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly = m_ckboxEnableFreqChangesOnly->GetValue();
         
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
-
         wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
         
         /* Plot settings */
@@ -1484,7 +1465,6 @@ void OptionsDlg::updateReportingState()
 
         if (m_ckboxReportingEnable->GetValue())
         {
-            m_txtCtrlCallSign->Enable(false);
             m_txt_callsign->Enable(true);
             m_txt_grid_square->Enable(true);
             m_ckboxManualFrequencyReporting->Enable(true);
@@ -1520,7 +1500,6 @@ void OptionsDlg::updateReportingState()
         }
         else
         {
-            m_txtCtrlCallSign->Enable(true);
             m_txt_callsign->Enable(false);
             m_txt_grid_square->Enable(false);
             m_ckboxPskReporterEnable->Enable(false);
@@ -1540,7 +1519,6 @@ void OptionsDlg::updateReportingState()
     {
         // Txt Msg/Reporter options cannot be modified during a session.
         m_ckboxReportingEnable->Enable(false);
-        m_txtCtrlCallSign->Enable(false);
         m_txt_callsign->Enable(false);
         m_txt_grid_square->Enable(false);
         m_ckboxManualFrequencyReporting->Enable(false);

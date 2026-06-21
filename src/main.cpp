@@ -1853,58 +1853,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         g_prev_State.store(state, std::memory_order_release);
 
-        // send Callsign ----------------------------------------------------
-
-        char callsign[MAX_CALLSIGN];
-        memset(callsign, 0, MAX_CALLSIGN);
-    
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            strncpy(callsign, (const char*) wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString->mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
-            if (strlen(callsign) < MAX_CALLSIGN - 1)
-            {
-                strncat(callsign, "\r", 2);
-            }     
-     
-            // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-            char* sendBuffer = &callsign[0];
-            auto txDataFifo = g_txDataInFifo.load(std::memory_order_acquire);
-            if ((unsigned)txDataFifo->numUsed() < strlen(sendBuffer)) {
-                unsigned int  i;
-
-                // write chars to tx data fifo
-                for(i = 0; i < strlen(sendBuffer); i++) {
-                    short ashort = (unsigned char)sendBuffer[i];
-                    txDataFifo->write(&ashort, 1);
-                }
-            }
-
-            // See if any Callsign info received --------------------------------
-
-            short ashort;
-            while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-                unsigned char incomingChar = (unsigned char)ashort;
-        
-                // Pre-1.5.1 behavior, where text is handled as-is.
-                if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                {                        
-                    // CR completes line. Fill in remaining positions with zeroes.
-                    if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
-                    {
-                        memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
-                    }
-            
-                    // Reset to the beginning.
-                    m_pcallsign = m_callsign;
-                }
-                else
-                {
-                    *m_pcallsign++ = incomingChar;
-                }
-                m_txtCtrlCallSign->SetValue(m_callsign);
-            }
-        }
-
         // We should only report to reporters when all of the following are true:
         // a) The callsign encoder indicates a valid callsign has been received.
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
