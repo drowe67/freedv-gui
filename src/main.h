@@ -360,6 +360,15 @@ class MainFrame : public TopFrame
         // pairs at the OS key-repeat rate.
         bool                    m_pttKeyRequireRelease_{false};
 
+        // Set when the momentary PTT key is released while a TX start is
+        // still in progress (e.g. during the configured TX/RX delay in
+        // togglePTT()). A stop requested during that window can't be
+        // actioned immediately -- togglePTT()'s re-entrancy guard
+        // (txChangeoverOccurring_) would just no-op it -- so togglePTT()
+        // checks this once the start completes and immediately stops TX
+        // if it's set, instead of leaving the radio keyed indefinitely.
+        bool                    m_momentaryKeyReleasedDuringChangeover_{false};
+
         // TOT beep state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totLastBeepTime_;
 
