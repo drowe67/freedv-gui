@@ -1694,7 +1694,7 @@ HamlibRigController::Mode MainFrame::getCurrentMode_()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
 {
-    auto oldMode = getCurrentMode_();
+    bool wasAnalog = (g_analog != 0);
 
     if (g_analog == 0) {
         g_analog = 1;
@@ -1720,32 +1720,62 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         }
     }
     
-    if (wxGetApp().rigFrequencyController != nullptr && 
+    // Digital mode is always USB (#1397), but analog mode still follows the
+    // band-based USB/LSB convention -- so on bands where analog uses LSB,
+    // toggling analog *does* change sideband, unlike before. Since LSB
+    // content sits below the dial while USB sits above it, keeping the same
+    // actual occupied frequency across the toggle requires re-tuning the
+    // dial, not just redisplaying it. We do this by converting the current
+    // dial frequency to a sideband-relative "spot" (always applying the
+    // offset, regardless of analog/digital, purely as a tuning reference),
+    // then converting that spot back to a dial frequency under the new
+    // mode's offset.
+    uint64_t newDialFreq = 0;
+    bool dialFreqChanged = false;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        auto& reportingFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+        bool hamlibUseAnalogModes = wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes;
+
+        // hamlibUseAnalogModes is only a USB/LSB-vs-DIGU/DIGL label
+        // preference for GetModeForFrequency -- the centre-frequency offset
+        // itself depends only on whether we were/are actually in analog
+        // voice mode (wasAnalog / g_analog).
+        auto oldMode = GetModeForFrequency(reportingFreq, hamlibUseAnalogModes, wasAnalog);
+        uint64_t dialFreq = DisplayToDialFreq(reportingFreq, oldMode, wasAnalog);
+
+        uint64_t spot = DialToDisplayFreq(dialFreq, oldMode, false);
+
+        auto newMode = GetModeForFrequency(dialFreq, hamlibUseAnalogModes, g_analog != 0);
+        newDialFreq = DisplayToDialFreq(spot, newMode, false);
+        dialFreqChanged = newDialFreq != dialFreq;
+
+        reportingFreq = DialToDisplayFreq(newDialFreq, newMode, g_analog != 0);
+
+        wxString freqString;
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqString = wxNumberFormatter::ToString(reportingFreq / 1000.0, 1);
+        }
+        else
+        {
+            freqString = wxNumberFormatter::ToString(reportingFreq / 1000.0 / 1000.0, 4);
+        }
+        m_cboReportFrequency->SetValue(freqString);
+    }
+
+    if (wxGetApp().rigFrequencyController != nullptr &&
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
-        // Request mode change on the radio side
-        auto currentMode = getCurrentMode_();
-
-        constexpr int LSB_USB_FREQ_SHIFT_HZ = 3000;
-        if (currentMode == HamlibRigController::LSB && g_analog)
+        // Re-tune the rig first if the sideband change means the dial needs
+        // to move to keep the actual occupied frequency consistent, then
+        // request the mode change.
+        if (dialFreqChanged)
         {
-            // If analog is enabled, we should add +3 kHz to the frequency to 
-            // ensure we're still listening to the same passband that we were
-            // previously prior to the analog switch.
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency + LSB_USB_FREQ_SHIFT_HZ;
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            wxGetApp().rigFrequencyController->setFrequency(newDialFreq);
         }
-        else if (oldMode == HamlibRigController::LSB && !g_analog)
-        {
-            // Revert previous mode shift.
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency - LSB_USB_FREQ_SHIFT_HZ;
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        }
-
-        wxGetApp().rigFrequencyController->setMode(currentMode);
+        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
     }
 
     g_State.store(0, std::memory_order_release);
