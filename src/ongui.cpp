@@ -1135,10 +1135,21 @@ int MainApp::FilterEvent(wxEvent& event)
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
                 wxGetApp().appConfiguration.pttMomentaryMode) {
 
-                if (frame->vk_state == VK_IDLE && g_tx.load(std::memory_order_acquire)) {
-                    frame->m_btnTogPTT->SetValue(false);
-                    frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
-                    frame->togglePTT();
+                if (frame->vk_state == VK_IDLE) {
+                    if (g_tx.load(std::memory_order_acquire)) {
+                        frame->m_btnTogPTT->SetValue(false);
+                        frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                        frame->togglePTT();
+                    } else if (frame->m_btnTogPTT->GetValue()) {
+                        // Key released before g_tx caught up -- likely still inside
+                        // togglePTT()'s TX/RX delay loop for the start that's in
+                        // progress. Calling togglePTT() here would no-op against its
+                        // re-entrancy guard, so remember the release and let
+                        // togglePTT() action it once the start finishes -- see
+                        // m_momentaryKeyReleasedDuringChangeover_ in main.h.
+                        log_info("PTT key released mid-changeover -- deferring momentary stop");
+                        frame->m_momentaryKeyReleasedDuringChangeover_ = true;
+                    }
                 }
                 return Event_Processed;
             }
@@ -1707,6 +1718,21 @@ void MainFrame::togglePTT(void) {
         txChangeoverOccurring_ = false;
         m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
     });
+
+    if (newTx && m_momentaryKeyReleasedDuringChangeover_)
+    {
+        // The momentary PTT key was released while this start was still in
+        // progress (see the wxEVT_KEY_UP handler in FilterEvent). Queued
+        // after the CallAfter() above so it runs once txChangeoverOccurring_
+        // has cleared, rather than no-opping against it.
+        m_momentaryKeyReleasedDuringChangeover_ = false;
+        log_info("Momentary PTT key was released while TX was starting -- stopping now");
+        CallAfter([this]() {
+            m_btnTogPTT->SetValue(false);
+            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            togglePTT();
+        });
+    }
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
