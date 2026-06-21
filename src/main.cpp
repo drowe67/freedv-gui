@@ -56,6 +56,7 @@
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/util/FrequencyOps.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
@@ -2687,11 +2688,15 @@ void MainFrame::performFreeDVOn_()
                     (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
                     wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
                 {
-                    wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        
+                    // The offset depends only on g_analog (real analog voice
+                    // mode), not on the hamlibUseAnalogModes label preference.
+                    auto mode = getCurrentMode_();
+                    wxGetApp().rigFrequencyController->setFrequency(
+                        DisplayToDialFreq(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, mode, g_analog != 0));
+
                     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
                     {
-                        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                        wxGetApp().rigFrequencyController->setMode(mode);
                     }
                 }
                     

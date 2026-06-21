@@ -1471,19 +1471,23 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
     {
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         auto frequency = model->getFrequency(event.GetItem());
-        if (wxGetApp().rigFrequencyController && 
-            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || 
+        if (wxGetApp().rigFrequencyController &&
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges ||
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
-            wxGetApp().rigFrequencyController->setFrequency(frequency);
+            // The spot's frequency is the remote station's centre frequency;
+            // convert to dial frequency before commanding the rig. The
+            // offset depends only on g_analog (real analog voice mode), not
+            // on the hamlibUseAnalogModes label preference.
+            auto mode = GetModeForFrequency(
+                frequency,
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
+                g_analog);
+            wxGetApp().rigFrequencyController->setFrequency(DisplayToDialFreq(frequency, mode, g_analog != 0));
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().rigFrequencyController->setMode(
-                    GetModeForFrequency(
-                        frequency, 
-                        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes, 
-                        g_analog));
+                wxGetApp().rigFrequencyController->setMode(mode);
             }
         }
         DeselectItem();
