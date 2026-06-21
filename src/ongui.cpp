@@ -1076,6 +1076,7 @@ int MainApp::FilterEvent(wxEvent& event)
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
         (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
+            bool pttKeyChanging = !PttKeyDown_;
             PttKeyDown_ = true;
 
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
@@ -1101,7 +1102,7 @@ int MainApp::FilterEvent(wxEvent& event)
                             frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
                             frame->togglePTT();
                         }
-                    } else {
+                    } else if (pttKeyChanging) {
                         // Latching mode: toggle TX state on each key press.
                         if (frame->m_btnTogPTT->GetValue())
                             frame->m_btnTogPTT->SetValue(false);
