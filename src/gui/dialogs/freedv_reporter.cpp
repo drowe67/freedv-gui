@@ -57,9 +57,8 @@ extern int g_analog;
 #define USER_MESSAGE_COL (8)
 #define LAST_TX_DATE_COL (9)
 #define LAST_RX_CALLSIGN_COL (10)
-#define LAST_RX_MODE_COL (11)
-#define SNR_COL (12)
-#define LAST_UPDATE_DATE_COL (13)
+#define SNR_COL (11)
+#define LAST_UPDATE_DATE_COL (12)
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_SNR_VAL (-99)
@@ -140,10 +139,6 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
         case LAST_RX_CALLSIGN_COL:
             colName = wxT("RX Call");
             minWidth = 65;
-            break;
-        case LAST_RX_MODE_COL:
-            colName = wxT("Mode");
-            minWidth = 60;
             break;
         case SNR_COL:
             colName = wxT("SNR");
@@ -271,12 +266,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         {
             log_info("Creating col %d", col);
             auto visible = (bool)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(col);
-
-            // Hide RX Mode column if legacy modes aren't enabled
-            if (col == LAST_RX_MODE_COL)
-            {
-                visible &= wxGetApp().appConfiguration.enableLegacyModes;
-            }
             createColumn_(col, visible);
         }
     }
@@ -412,7 +401,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         {USER_MESSAGE_COL, _("User Message")},
         {LAST_TX_DATE_COL, _("Last TX Date")},
         {LAST_RX_CALLSIGN_COL, _("Last RX Callsign")},
-        {LAST_RX_MODE_COL, _("Last RX Mode")},
         {SNR_COL, _("SNR")},
         {LAST_UPDATE_DATE_COL, _("Last Update")},
     };
@@ -422,11 +410,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         auto menuItem = showMenu_->Append(wxID_HIGHEST + 100 + item.first, item.second, wxEmptyString, wxITEM_CHECK);
         menuItem->Check(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(item.first));
         this->Connect(wxID_HIGHEST + 100 + item.first, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnShowColumn));
-
-        if (item.first == LAST_RX_MODE_COL && !wxGetApp().appConfiguration.enableLegacyModes)
-        {
-            menuItem->Enable(false);
-        }
     }
 
     std::vector<int> idleLongerThanMinutes { 30, 60, 90, 120 };
@@ -776,12 +759,6 @@ void FreeDVReporterDialog::refreshLayout()
         item->SetAlignment(wxALIGN_RIGHT);
         renderer->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     }
-    
-    // Hide/show legacy columns
-    item = getColumnForModelColId_(LAST_RX_MODE_COL);
-    item->SetHidden(!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(LAST_RX_MODE_COL));
-    auto menuItem = showMenu_->FindChildItem(wxID_HIGHEST + 100 + LAST_RX_MODE_COL);
-    menuItem->Enable(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Update filter status in window
     updateFilterStatus_();
@@ -2569,7 +2546,6 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::getColumnDisplayValue_(R
         case USER_MESSAGE_COL:   return data->userMessage;
         case LAST_TX_DATE_COL:   return data->lastTx;
         case LAST_RX_CALLSIGN_COL: return data->lastRxCallsign;
-        case LAST_RX_MODE_COL:   return data->lastRxMode;
         case SNR_COL:            return data->snr;
         case LAST_UPDATE_DATE_COL: return data->lastUpdate;
         default:                 return "";
@@ -2934,9 +2910,6 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
         case LAST_RX_CALLSIGN_COL:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
-        case LAST_RX_MODE_COL:
-            result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
-            break;
         case SNR_COL:
             result = leftData->snrVal - rightData->snrVal;
             break;
@@ -3136,9 +3109,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
                 break;
             case LAST_RX_CALLSIGN_COL:
                 variant = wxVariant(row->lastRxCallsign);
-                break;
-            case LAST_RX_MODE_COL:
-                variant = wxVariant(row->lastRxMode);
                 break;
             case SNR_COL:
                 variant = wxVariant(row->snr);
@@ -3694,8 +3664,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx) ||
-                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxModeWx);
+                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx);
             bool isDataChanged =
                 iter->second->lastRxCallsign != receivedCallsignWx ||
                 iter->second->lastRxMode != rxModeWx;
@@ -3709,7 +3678,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 // Frequency change--blank out SNR too.
                 isChanged |=
                     (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_MODE_COL) && iter->second->lastRxMode != parent_->UNKNOWN_STR) ||
                     (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=

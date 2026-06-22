@@ -771,10 +771,6 @@ set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
 endif(NOT SANITIZERS_ENABLED)
 endif(NOT ENABLE_RTSAN)
 
-DefineAudioTest(700D)
-DefineAudioTest(700E)
-DefineAudioTest(1600)
-
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
 if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")

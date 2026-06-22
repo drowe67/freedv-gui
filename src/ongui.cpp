@@ -32,8 +32,6 @@
 
 extern int g_mode;
 
-extern int   g_SquelchActive;
-extern float g_SquelchLevel;
 extern int   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
@@ -238,19 +236,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
-        
-        // Show/hide legacy modes
-        modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        
-        bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && !m_rbRADE->GetValue();
-        squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_sliderSQ->Enable(isEnabled);
-        m_ckboxSQ->Enable(isEnabled);
-        m_textSQ->Enable(isEnabled);
-        m_btnCenterRx->Enable(isEnabled);
-        m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_BtnReSync->Enable(isEnabled);
-        m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
         // XXX - with really short windows, wxWidgets sometimes doesn't size
         // the components properly until the user resizes the window (even if only
@@ -798,18 +783,6 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
 }
 
 //-------------------------------------------------------------------------
-// OnCmdSliderScroll()
-//-------------------------------------------------------------------------
-void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
-{
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
-    m_textSQ->SetLabel(sqsnr_string);
-
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
 // bandNameForFilter() - maps FilterFrequency enum to config key string
 //-------------------------------------------------------------------------
 static wxString bandNameForFilter(FilterFrequency band)
@@ -1044,21 +1017,6 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
-}
-
-//-------------------------------------------------------------------------
-// OnCheckSQClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent&)
-{
-    if(!g_SquelchActive)
-    {
-        g_SquelchActive = true;
-    }
-    else
-    {
-        g_SquelchActive = false;
-    }
 }
 
 void MainFrame::setsnrBeta(bool snrSlow)
@@ -1920,8 +1878,6 @@ void MainFrame::resetStats_()
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-        // resets variance stats every time it is called
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
 }
 

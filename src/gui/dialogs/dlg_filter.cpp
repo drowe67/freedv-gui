@@ -81,29 +81,6 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
 
-    // LPC Post Filter --------------------------------------------------------
-    wxStaticBox* lpcPostFilterBox = new wxStaticBox(this, wxID_ANY, _("FreeDV 1600 LPC Post Filter"));
-    wxStaticBoxSizer* lpcpfs = new wxStaticBoxSizer(lpcPostFilterBox, wxHORIZONTAL);
-
-    wxBoxSizer* left = new wxBoxSizer(wxVERTICAL);
-
-    m_codec2LPCPostFilterEnable = new wxCheckBox(lpcPostFilterBox, wxID_ANY, _("Enable"), wxDefaultPosition,wxDefaultSize, wxCHK_2STATE);
-    left->Add(m_codec2LPCPostFilterEnable, 0, wxALL, 5);
-
-    m_codec2LPCPostFilterBassBoost = new wxCheckBox(lpcPostFilterBox, wxID_ANY, _("0-1 kHz 3dB Boost"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    left->Add(m_codec2LPCPostFilterBassBoost, 0, wxALL, 5);
-    lpcpfs->Add(left, 0, wxALL | wxALIGN_CENTRE_HORIZONTAL | wxALIGN_CENTRE_VERTICAL, 5);
-
-    wxBoxSizer* sizerBetaGamma = new wxBoxSizer(wxVERTICAL);
-    newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, lpcPostFilterBox, sizerBetaGamma, "Beta");
-    newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, lpcPostFilterBox, sizerBetaGamma, "Gamma");
-    lpcpfs->Add(sizerBetaGamma, 1, wxALL | wxEXPAND, 5);
-    
-    m_LPCPostFilterDefault = new wxButton(lpcPostFilterBox, wxID_ANY, wxT("Default"));
-    lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL | wxALIGN_CENTRE_HORIZONTAL | wxALIGN_CENTRE_VERTICAL, 5);
-
-    bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 5);
-
     // RNNoise pre-processor --------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_rnnoise;
@@ -118,10 +95,6 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_rnnoise->Add(m_ckboxAgcEnabled, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxAgcEnabled->SetToolTip(_("Automatic gain control for microphone"));
     
-    m_ckbox700C_EQ = new wxCheckBox(sb_rnnoise, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_rnnoise->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
-
     bSizer30->Add(sbSizer_rnnoise, 0, wxALL | wxEXPAND, 5);   
 
     // Speaker audio post-processing
@@ -263,14 +236,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FilterDlg::OnInitDialog));
 
-    m_codec2LPCPostFilterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnEnable), NULL, this);
-    m_codec2LPCPostFilterBassBoost->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
-    m_LPCPostFilterDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
-
     m_ckboxNoiseReduction->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnNoiseReductionEnable), NULL, this);
     m_ckboxAgcEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
     m_ckboxBwExpandEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBwExpandEnable), NULL, this);
-    m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
     int events[] = {
         wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
@@ -295,10 +263,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
         m_SpkOutMid.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
         m_SpkOutMid.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
         m_SpkOutMid.sliderQ->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
-        m_SpkOutVol.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutVolGainScroll), NULL, this);
-        
-        m_codec2LPCPostFilterBeta->Connect(event, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
-        m_codec2LPCPostFilterGamma->Connect(event, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
+        m_SpkOutVol.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutVolGainScroll), NULL, this);        
     }
     
     m_MicInEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnMicInEnable), NULL, this);
@@ -323,10 +288,6 @@ FilterDlg::~FilterDlg()
     // Disconnect Events
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FilterDlg::OnClose), NULL, this);
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FilterDlg::OnInitDialog));
-
-    m_codec2LPCPostFilterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnEnable), NULL, this);
-    m_codec2LPCPostFilterBassBoost->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
-    m_LPCPostFilterDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxNoiseReduction->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnNoiseReductionEnable), NULL, this);
     m_ckboxAgcEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
@@ -355,10 +316,7 @@ FilterDlg::~FilterDlg()
         m_SpkOutMid.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
         m_SpkOutMid.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
         m_SpkOutMid.sliderQ->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
-        m_SpkOutVol.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutVolGainScroll), NULL, this);
-        
-        m_codec2LPCPostFilterBeta->Disconnect(event, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
-        m_codec2LPCPostFilterGamma->Disconnect(event, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
+        m_SpkOutVol.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutVolGainScroll), NULL, this);        
     }
     
     m_MicInEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnMicInEnable), NULL, this);
@@ -368,31 +326,6 @@ FilterDlg::~FilterDlg()
     m_SpkOutDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
-}
-
-void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *s, wxString const& controlName)
-{
-    wxBoxSizer *bs = new wxBoxSizer(wxHORIZONTAL);
-
-    wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
-    bs->Add(st, 0, wxALIGN_CENTER_VERTICAL|wxALL, 2);
-
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX_BETA_GAMMA, wxDefaultPosition); 
-    (*slider)->SetMinSize(wxSize(SLIDER_LENGTH,wxDefaultCoord));
-
-    bs->Add(*slider, 1, wxALL|wxEXPAND, 2);
-
-    *stValue = new wxStaticText(parent, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    bs->Add(*stValue, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
-
-    s->Add(bs, 0, wxALL | wxEXPAND, 0);
-
-#if wxUSE_ACCESSIBILITY
-    auto lpcAccessible = new LabelOverrideAccessible([stValue]() {
-        return (*stValue)->GetLabel();
-    });
-    (*slider)->SetAccessible(lpcAccessible);
-#endif // wxUSE_ACCESSIBILITY
 }
 
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString const& controlName, int max)
@@ -484,13 +417,6 @@ void FilterDlg::ExchangeData(int inout)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
-        // LPC Post filter
-
-        m_codec2LPCPostFilterEnable->SetValue(wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable);
-        m_codec2LPCPostFilterBassBoost->SetValue(wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost);
-        m_beta = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta; setBeta();
-        m_gamma = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma; setGamma();
-
         // RNNoise Pre-Processor
 
         m_ckboxNoiseReduction->SetValue(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable);
@@ -500,9 +426,6 @@ void FilterDlg::ExchangeData(int inout)
         
         // BW Expand
         m_ckboxBwExpandEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled);
-
-        // Codec 2 700C EQ
-        m_ckbox700C_EQ->SetValue(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
 
         // Mic In Equaliser
 
@@ -576,13 +499,6 @@ void FilterDlg::ExchangeData(int inout)
     }
     if(inout == EXCHANGE_DATA_OUT)
     {
-        // LPC Post filter
-
-        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable     = m_codec2LPCPostFilterEnable->GetValue();
-        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost  = m_codec2LPCPostFilterBassBoost->GetValue();
-        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta       = m_beta;
-        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma      = m_gamma;
-
         // RNNoise Pre-Processor
         wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
         
@@ -591,9 +507,6 @@ void FilterDlg::ExchangeData(int inout)
         
         // BW Expand
         wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
-
-        // Codec 2 700C EQ
-        wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
 
         // Mic In Equaliser
 
@@ -638,16 +551,6 @@ float FilterDlg::limit(float value, float min, float max) {
 //-------------------------------------------------------------------------
 // OnDefault()
 //-------------------------------------------------------------------------
-
-void FilterDlg::OnLPCPostFilterDefault(wxCommandEvent&)
-{
-    m_beta = CODEC2_LPC_PF_BETA; setBeta();
-    m_gamma = CODEC2_LPC_PF_GAMMA; setGamma();
-    m_codec2LPCPostFilterEnable->SetValue(true);
-    m_codec2LPCPostFilterBassBoost->SetValue(true);
-    ExchangeData(EXCHANGE_DATA_OUT);
-}
-
 void FilterDlg::OnMicInDefault(wxCommandEvent&)
 {
     m_MicInBass.freqHz = 100.0;
@@ -719,50 +622,12 @@ void FilterDlg::OnInitDialog(wxInitDialogEvent&)
     ExchangeData(EXCHANGE_DATA_IN);
 }
 
-void FilterDlg::setBeta(void) {
-    wxString buf = wxNumberFormatter::ToString(m_beta, 2);
-    m_staticTextBeta->SetLabel(buf);
-    int slider = (int)(m_beta*SLIDER_MAX_BETA_GAMMA + 0.5);
-    m_codec2LPCPostFilterBeta->SetValue(slider);
-}
-
-void FilterDlg::setCodec2(void) {
-    if (m_running) {
-        freedvInterface.setLpcPostFilter(
-                                       m_codec2LPCPostFilterEnable->GetValue(),
-                                       m_codec2LPCPostFilterBassBoost->GetValue(),
-                                       m_beta, m_gamma);
-    }
-    ExchangeData(EXCHANGE_DATA_OUT);
-}
-
-void FilterDlg::setGamma(void) {
-    wxString buf = wxNumberFormatter::ToString(m_gamma, 2);
-    m_staticTextGamma->SetLabel(buf);
-    int slider = (int)(m_gamma*SLIDER_MAX_BETA_GAMMA + 0.5);
-    m_codec2LPCPostFilterGamma->SetValue(slider);
-}
-
 void FilterDlg::OnEnable(wxScrollEvent&) {
-    setCodec2();
     updateControlState();
 }
 
 void FilterDlg::OnBassBoost(wxScrollEvent&) {
-    setCodec2();
     updateControlState();
-}
-
-void FilterDlg::OnBetaScroll(wxScrollEvent&) {
-    m_beta = (float)m_codec2LPCPostFilterBeta->GetValue()/SLIDER_MAX_BETA_GAMMA;
-    setBeta();
-    setCodec2();
-}
-
-void FilterDlg::OnGammaScroll(wxScrollEvent&) {
-    m_gamma = (float)m_codec2LPCPostFilterGamma->GetValue()/SLIDER_MAX_BETA_GAMMA;
-    setGamma();
-    setCodec2();
 }
 
 void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
@@ -780,14 +645,6 @@ void FilterDlg::OnAgcEnable(wxScrollEvent&) {
 void FilterDlg::OnBwExpandEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release); // forces immediate change at pipeline level
-    ExchangeData(EXCHANGE_DATA_OUT);
-}
-
-void FilterDlg::On700C_EQ(wxScrollEvent&) {
-    wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
-    if (m_running) {
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
-    }
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
@@ -822,11 +679,6 @@ void FilterDlg::updateControlState()
     m_SpkOutVol.sliderGain->Enable(true);
     
     m_SpkOutDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
-    
-    m_codec2LPCPostFilterBeta->Enable(m_codec2LPCPostFilterEnable->GetValue());
-    m_codec2LPCPostFilterBassBoost->Enable(m_codec2LPCPostFilterEnable->GetValue());
-    m_codec2LPCPostFilterGamma->Enable(m_codec2LPCPostFilterEnable->GetValue());
-    m_LPCPostFilterDefault->Enable(m_codec2LPCPostFilterEnable->GetValue());
 }
 
 void FilterDlg::OnMicInEnable(wxScrollEvent&) {
