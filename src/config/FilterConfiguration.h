@@ -83,15 +83,9 @@ public:
     FilterChannel<MicIn> micInChannel;
     FilterChannel<SpkOut> spkOutChannel;
     
-    ConfigurationDataElement<bool> codec2LPCPostFilterEnable;
-    ConfigurationDataElement<bool> codec2LPCPostFilterBassBoost;
-    ConfigurationDataElement<float> codec2LPCPostFilterGamma;
-    ConfigurationDataElement<float> codec2LPCPostFilterBeta;
-    
     ConfigurationDataElement<bool> noiseReductionEnable;
     ConfigurationDataElement<bool> agcEnabled;
     ConfigurationDataElement<bool> bwExpandEnabled;
-    ConfigurationDataElement<bool> enable700CEqualizer;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

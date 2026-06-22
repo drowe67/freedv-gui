@@ -913,9 +913,6 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
-        
-        // send latest squelch level to FreeDV API, as it handles squelch internally
-        freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
         auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam, &nout);
         

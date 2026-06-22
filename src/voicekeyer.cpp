@@ -311,7 +311,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+            // macOS limitations prevent the foreground color of toggle buttons from being 
+            // reliably set, so don't mess with it in the first place.
             m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
             endingTx.store(true, std::memory_order_release);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
@@ -324,7 +328,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_PLAY_FINISHED) {
             m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+            // macOS limitations prevent the foreground color of toggle buttons from being 
+            // reliably set, so don't mess with it in the first place.
             m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
             endingTx.store(true, std::memory_order_release);
             CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
@@ -408,7 +416,11 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         m_btnTogPTT->SetValue(false);
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         endingTx.store(true, std::memory_order_release);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);

@@ -32,8 +32,6 @@
 
 extern int g_mode;
 
-extern int   g_SquelchActive;
-extern float g_SquelchLevel;
 extern int   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
@@ -238,19 +236,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
-        
-        // Show/hide legacy modes
-        modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        
-        bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && !m_rbRADE->GetValue();
-        squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_sliderSQ->Enable(isEnabled);
-        m_ckboxSQ->Enable(isEnabled);
-        m_textSQ->Enable(isEnabled);
-        m_btnCenterRx->Enable(isEnabled);
-        m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_BtnReSync->Enable(isEnabled);
-        m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
         // XXX - with really short windows, wxWidgets sometimes doesn't size
         // the components properly until the user resizes the window (even if only
@@ -491,12 +476,23 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 break;
         }
 
+        // Round to the nearest 100 Hz.
+        uint64_t wholeFreq = freq / 100;
+        uint64_t remainder = freq % 100;
+
+        if (remainder >= 50)
+        {
+            wholeFreq++;
+        }
+
+        auto newFreq = wholeFreq * 100;
+
         // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-        bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
+        bool is60MeterBand = newFreq >= 5250000 && newFreq <= 5450000;
 
         // Update color based on the mode and current frequency.
-        bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-        bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+        bool isUsbFreq = newFreq >= 10000000 || is60MeterBand;
+        bool isLsbFreq = newFreq < 10000000 && !is60MeterBand;
 
         bool isMatchingMode = 
             (!g_analog && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
@@ -521,11 +517,11 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             wxString freqString;            
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                freqString = wxNumberFormatter::ToString(freq / 1000.0, 1);
+                freqString = wxNumberFormatter::ToString(newFreq / 1000.0, 1);
             }
             else
             {
-                freqString = wxNumberFormatter::ToString(freq / 1000.0 / 1000.0, 4);
+                freqString = wxNumberFormatter::ToString(newFreq / 1000.0 / 1000.0, 4);
             }
             
             // Set internal reporting frequency to ensure we don't immediately request
@@ -534,8 +530,8 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
             auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
-            if (oldFreq != freq)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+            if (oldFreq != newFreq)
             {
                 for (auto& ptr : wxGetApp().m_reporters)
                 {
@@ -548,7 +544,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         m_txtModeStatus->Refresh();
 
         // Auto-save outgoing band levels, then load the new band's levels
-        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(newFreq);
         if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
         {
             autoSaveCurrentBandLevels_();
@@ -784,18 +780,6 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
         dc.Clear();
     }
     dc.SetUserScale(m_zoom, m_zoom);
-}
-
-//-------------------------------------------------------------------------
-// OnCmdSliderScroll()
-//-------------------------------------------------------------------------
-void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
-{
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
-    m_textSQ->SetLabel(sqsnr_string);
-
-    event.Skip();
 }
 
 //-------------------------------------------------------------------------
@@ -1035,21 +1019,6 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
 
-//-------------------------------------------------------------------------
-// OnCheckSQClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent&)
-{
-    if(!g_SquelchActive)
-    {
-        g_SquelchActive = true;
-    }
-    else
-    {
-        g_SquelchActive = false;
-    }
-}
-
 void MainFrame::setsnrBeta(bool snrSlow)
 {
     if(snrSlow)
@@ -1146,7 +1115,11 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1162,7 +1135,11 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
     event.Skip();
@@ -1317,7 +1294,11 @@ void MainFrame::togglePTT(void) {
         // - e.g. backdrop while the TOT warning dialog has focus - would
         // otherwise dim or recolour the default text away from black.
         m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
         m_btnTogPTT->SetLabel("TX Ending");
         m_btnTogPTT->Refresh();
 
@@ -1599,7 +1580,11 @@ void MainFrame::togglePTT(void) {
     m_btnTogPTT->SetValue(newTx);
     m_btnTogPTT->SetLabel(_("&PTT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+#if !defined(__APPLE__)
+    // macOS limitations prevent the foreground color of toggle buttons from being 
+    // reliably set, so don't mess with it in the first place.
     m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxNullColour);
+#endif // !defined(__APPLE__)
     
     // The Report Frequency drop-down should not be modifiable during TX.
     // Additionally, tuning during normal TX is verboten.
@@ -1893,8 +1878,6 @@ void MainFrame::resetStats_()
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-        // resets variance stats every time it is called
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
 }
 

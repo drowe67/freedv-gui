@@ -76,17 +76,13 @@ class FilterDlg : public wxDialog
         void    OnOK(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
-        void    OnLPCPostFilterDefault(wxCommandEvent& event);
 
-        void    OnBetaScroll(wxScrollEvent& event);
-        void    OnGammaScroll(wxScrollEvent& event);
         void    OnEnable(wxScrollEvent& event);
         void    OnBassBoost(wxScrollEvent& event);
 
         void    OnNoiseReductionEnable(wxScrollEvent& event);
         void    OnAgcEnable(wxScrollEvent& event);
         void    OnBwExpandEnable(wxScrollEvent& event);
-        void    On700C_EQ(wxScrollEvent& event);
 
         void    OnMicInBassFreqScroll(wxScrollEvent&) { sliderToFreq(&m_MicInBass, true); }
         void    OnMicInBassGainScroll(wxScrollEvent&) { sliderToGain(&m_MicInBass, true); }
@@ -113,19 +109,13 @@ class FilterDlg : public wxDialog
         void    OnSpkOutDefault(wxCommandEvent& event);
 
         wxStaticText* m_staticText8;
-        wxCheckBox*   m_codec2LPCPostFilterEnable;
         wxStaticText* m_staticText9;
-        wxCheckBox*   m_codec2LPCPostFilterBassBoost;
         wxStaticText* m_staticText91;
-        wxSlider*     m_codec2LPCPostFilterBeta;
         wxStaticText* m_staticTextBeta;
         wxStaticText* m_staticText911;
-        wxSlider*     m_codec2LPCPostFilterGamma;
         wxStaticText* m_staticTextGamma;
-        wxButton*     m_LPCPostFilterDefault;
 
         wxCheckBox*   m_ckboxNoiseReduction;
-        wxCheckBox*   m_ckbox700C_EQ;
         wxCheckBox*   m_ckboxAgcEnabled;
         wxCheckBox*   m_ckboxBwExpandEnabled;
         
@@ -144,16 +134,9 @@ class FilterDlg : public wxDialog
 
      private:
         bool          m_running;
-        float         m_beta;
-        float         m_gamma;
-
-        void          setBeta(void);  // sets slider and static text from m_beta
-        void          setGamma(void); // sets slider and static text from m_gamma
-        void          setCodec2(void);
  
         void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString const& controlName, int max);
         EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderBass);
-        void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *sbs, wxString const& controlName);
         wxNotebook    *m_auiNotebook;
         void          setFreq(EQ *eq);
         void          setGain(EQ *eq);
