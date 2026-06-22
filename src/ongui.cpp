@@ -298,14 +298,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Adjust frequency labels on main window
         wxListItem colInfo;
         m_lastReportedCallsignListView->GetColumn(1, colInfo);
+        updateFreqBoxLabel_();
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_freqBox->SetLabel(_("Center Freq. (kHz)"));
             colInfo.SetText(_("kHz"));
         }
         else
         {
-            m_freqBox->SetLabel(_("Center Freq. (MHz)"));
             colInfo.SetText(_("MHz"));
         }
         m_lastReportedCallsignListView->SetColumn(1, colInfo);
@@ -1711,6 +1710,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
     }
 
+    updateFreqBoxLabel_();
+
     // Report analog change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
@@ -2112,6 +2113,23 @@ void MainFrame::OnCenterRx(wxCommandEvent&)
     clickTune(FDMDV_FCENTRE);
 }
 
+void MainFrame::updateFreqBoxLabel_()
+{
+    // The centre-frequency convention only makes sense in digital mode (see
+    // GetCentreFreqOffsetHz() in FrequencyOps.h, which returns a zero offset
+    // whenever analog is active) -- in Analog mode the displayed value *is*
+    // the radio's dial frequency, so the label needs to say so.
+    bool asKhz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+    if (g_analog)
+    {
+        m_freqBox->SetLabel(asKhz ? _("Radio Freq. (kHz)") : _("Radio Freq. (MHz)"));
+    }
+    else
+    {
+        m_freqBox->SetLabel(asKhz ? _("Center Freq. (kHz)") : _("Center Freq. (MHz)"));
+    }
+}
+
 void MainFrame::updateReportingFreqList_()
 {
     uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -2144,16 +2162,9 @@ void MainFrame::updateReportingFreqList_()
         m_cboReportFrequency->SetSelection(idx);
     }
     m_cboReportFrequency->SetValue(prevSelected);
-    
-    // Update associated label if the units have changed
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-    {
-        m_freqBox->SetLabel(_("Center Freq. (kHz)"));
-    }
-    else
-    {
-        m_freqBox->SetLabel(_("Center Freq. (MHz)"));
-    }
+
+    // Update associated label if the units/mode have changed
+    updateFreqBoxLabel_();
 }
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)

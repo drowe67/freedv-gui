@@ -617,6 +617,7 @@ class MainFrame : public TopFrame
         void executeOnUiThreadAndWait_(std::function<void()> fn);
         
         void updateReportingFreqList_();
+        void updateFreqBoxLabel_();
         
         void initializeFreeDVReporter_();
         void updateVoiceKeyerButtonLabel_();

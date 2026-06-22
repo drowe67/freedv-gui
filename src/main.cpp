@@ -912,14 +912,13 @@ void MainFrame::loadConfiguration_()
     // Adjust frequency entry labels
     wxListItem colInfo;
     m_lastReportedCallsignListView->GetColumn(1, colInfo);
+    updateFreqBoxLabel_();
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Center Freq. (kHz)"));
         colInfo.SetText(_("kHz"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Center Freq. (MHz)"));
         colInfo.SetText(_("MHz"));
     }
     m_lastReportedCallsignListView->SetColumn(1, colInfo);
