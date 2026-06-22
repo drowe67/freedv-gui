@@ -213,8 +213,6 @@ class OptionsDlg : public wxDialog
         wxTextCtrl* m_txtCtrlNewFrequency;
         wxButton*   m_freqListAdd;
         wxButton*   m_freqListRemove;
-        wxButton*   m_freqListMoveUp;
-        wxButton*   m_freqListMoveDown;
         
         unsigned int  event_in_serial, event_out_serial;
 
@@ -226,8 +224,6 @@ class OptionsDlg : public wxDialog
         void OnReportingFreqTextChange(wxCommandEvent& event);
         void OnReportingFreqAdd(wxCommandEvent& event);
         void OnReportingFreqRemove(wxCommandEvent& event);
-        void OnReportingFreqMoveUp(wxCommandEvent& event);
-        void OnReportingFreqMoveDown(wxCommandEvent& event);
         
      private:
          void updateReportingState();
