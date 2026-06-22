@@ -60,8 +60,6 @@
 
 #include "gui/util/wxListViewComboPopup.h"
 
-#include "freedv_api.h" // for FREEDV_MODE_*
-
 ///////////////////////////////////////////////////////////////////////////
 
 #define ID_OPEN 1000
@@ -204,7 +202,6 @@ class TopFrame : public wxFrame
 
         virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
         

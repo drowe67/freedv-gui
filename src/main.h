@@ -65,9 +65,7 @@
 #include <intrin.h>
 #endif
 
-#include "codec2.h"
-#include "codec2_fifo.h"
-#include "modem_stats.h"
+#include "pipeline/modem_stats.h"
 
 #include "topFrame.h"
 #include "gui/dialogs/filter_frequency.h"
@@ -437,7 +435,6 @@ class MainFrame : public TopFrame
         
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
-        void OnReSync( wxCommandEvent& event ) override;
 
         //System Events
         void OnPaint(wxPaintEvent& event);

@@ -410,11 +410,6 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # 
 include(cmake/BuildFreeDVBackend.cmake)
 
-#
-# Build codec2
-#
-include(cmake/BuildCodec2.cmake)
-
 if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
 endif(NOT USE_NATIVE_AUDIO AND LINUX)

@@ -41,7 +41,6 @@
 #include <sndfile.h>
 #include <thread>
 #include <atomic>
-#include "codec2_fifo.h"
 #include "../util/Semaphore.h"
 #include "../util/GenericFIFO.h"
 

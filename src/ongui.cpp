@@ -28,15 +28,10 @@
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
-
-extern int g_mode;
-
 extern int   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
@@ -1343,29 +1338,26 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
-        {
-            log_info("Waiting for EOO to be queued");
-            endingTx.store(true, std::memory_order_release);
+        log_info("Waiting for EOO to be queued");
+        endingTx.store(true, std::memory_order_release);
             
-            auto beginTime = std::chrono::high_resolution_clock::now();
-            while(true)
+        auto beginTime = std::chrono::high_resolution_clock::now();
+        while(true)
+        {
+            if (g_eoo_enqueued.load(std::memory_order_acquire))
             {
-                if (g_eoo_enqueued.load(std::memory_order_acquire))
-                {
-                    log_info("Detected that EOO has been enqueued");
-                    break;
-                }
+                log_info("Detected that EOO has been enqueued");
+                break;
+            }
  
-                wxThread::Sleep(1);
-                wxGetApp().Yield(true);
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
 
-                auto endTime = std::chrono::high_resolution_clock::now();
-                if ((endTime - beginTime) >= std::chrono::seconds(2))
-                {
-                    log_warn("Timed out waiting for EOO to be enqueued");
-                    break;
-                }
+            auto endTime = std::chrono::high_resolution_clock::now();
+            if ((endTime - beginTime) >= std::chrono::seconds(2))
+            {
+                log_warn("Timed out waiting for EOO to be enqueued");
+                break;
             }
         }
 
@@ -1825,17 +1817,6 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 
 // Force manual resync, just in case demod gets stuck on false sync
 
-void MainFrame::OnReSync(wxCommandEvent&)
-{
-    if (m_RxRunning)  {
-        log_debug("OnReSync");
-        
-        // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-        // the next execution of the TX/RX loop.
-        g_queueResync.store(true, std::memory_order_release);
-    }
-}
-
 // Deselects item on right-click
 void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
 {
@@ -1871,7 +1852,6 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
 void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {
-        freedvInterface.resetBitStats();
         g_resyncs = 0;
         int i;
         for(i=0; i<2*g_Nc; i++) {

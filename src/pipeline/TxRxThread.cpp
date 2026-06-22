@@ -56,11 +56,9 @@ using namespace std::chrono_literals;
 #include "ResampleStep.h"
 #include "TapStep.h"
 #include "LevelAdjustStep.h"
-#include "FreeDVTransmitStep.h"
 #include "RecordStep.h"
 #include "ToneInterfererStep.h"
 #include "ComputeRfSpectrumStep.h"
-#include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
 #include "BeepStep.h"
@@ -68,8 +66,6 @@ using namespace std::chrono_literals;
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
-
-#include "codec2_alloc.h"
 
 // Experimental options for potential future release:
 //
@@ -97,11 +93,9 @@ extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
-extern int g_mode;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
-extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
@@ -270,9 +264,7 @@ void TxRxThread::initializePipeline_()
         
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
             inputSampleRate_, 
-            outputSampleRate_, 
-            +[]() FREEDV_NONBLOCKING { return g_TxFreqOffsetHz.load(std::memory_order_relaxed); },
-            helper_);
+            outputSampleRate_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
@@ -421,8 +413,7 @@ void TxRxThread::initializePipeline_()
             +[]() FREEDV_NONBLOCKING { return g_channel_noise.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
             +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
-            +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
-            helper_
+            +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; }
         );
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
@@ -599,10 +590,6 @@ void* TxRxThread::Entry() noexcept
     // and thus constantly increment/decrement refcounts.
     IRealtimeHelper* helper = helper_.get();
 
-    // Ensure that O(1) memory allocator is used for Codec2
-    // instead of standard malloc().
-    codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
-    
     initializePipeline_();
     
     // Request real-time scheduling from the operating system.
@@ -656,8 +643,6 @@ void* TxRxThread::Entry() noexcept
     
     // Return to normal scheduling
     helper->clearHelperRealTime();
-    
-    codec2_disable_realtime();
     
     return NULL;
 }
@@ -815,29 +800,26 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             }
             if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
-                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
+                if (!hasEooBeenSent_)
                 {
-                    if (!hasEooBeenSent_)
-                    {
-                        // Special case for handling RADE EOT
-                        freedvInterface.restartTxVocoder();
-                        hasEooBeenSent_ = true;
-                    }
+                    // Special case for handling RADE EOT
+                    freedvInterface.restartTxVocoder();
+                    hasEooBeenSent_ = true;
+                }
 
-                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                    if (nout > 0 && outputSamples != nullptr)
+                auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
+                if (nout > 0 && outputSamples != nullptr)
+                {
+                    if (cbData->outfifo1->write(outputSamples, nout) != 0)
                     {
-                        if (cbData->outfifo1->write(outputSamples, nout) != 0)
-                        {
-                            FREEDV_BEGIN_VERIFIED_SAFE
-                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
-                            FREEDV_END_VERIFIED_SAFE
-                        }
+                        FREEDV_BEGIN_VERIFIED_SAFE
+                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
+                        FREEDV_END_VERIFIED_SAFE
                     }
-                    else
-                    {
-                        g_eoo_enqueued.store(true, std::memory_order_release);
-                    }
+                }
+                else
+                {
+                    g_eoo_enqueued.store(true, std::memory_order_release);
                 }
                 break;
             }
@@ -889,14 +871,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
     //  RX side processing --------------------------------------------
     //
-    
-    if (g_queueResync.load(std::memory_order_acquire))
-    {
-        g_queueResync.store(false, std::memory_order_release);
-        freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
-        g_resyncs++;
-    }
-    
+        
     // Attempt to read one processing frame (about 20ms) of receive samples,  we 
     // keep this frame duration constant across modes and sound card sample rates
     int nsam = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;

@@ -23,8 +23,11 @@
 
 #include "wx/wx.h"
 #include "logging/ulog.h"
-#include "freedv_api.h"
-#include "modem_stats.h"
+#include "pipeline/modem_stats.h"
+
+#define FDMDV_FCENTRE (1500)        // center of waterfall
+#define FDMDV_SCALE \
+  825 /* suggested scaling for 16 bit shorts                            */
 
 // Spectrogram and Waterfall
 

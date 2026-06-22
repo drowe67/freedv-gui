@@ -39,11 +39,7 @@ extern "C"
     #include "fargan_config.h"
 }
 
-// Codec2 required include files.
-#include "codec2.h"
-#include "comp.h"
-#include "modem_stats.h"
-#include "reliable_text.h"
+#include "pipeline/modem_stats.h"
 
 // RADE required include files
 #include "rade_api.h"
@@ -61,13 +57,8 @@ extern "C"
 #include "util/realtime_fp.h"
 
 class IPipelineStep;
-class ParallelStep;
 class RADETransmitStep;
 class RADEReceiveStep;
-
-// Anything above 255 is a RADE mode. There's only one right now,
-// this is just for future expansion.
-#define FREEDV_MODE_RADE ((1 << 8) + 1)
 
 class FreeDVInterface
 {
@@ -75,37 +66,24 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText);
+    void start(int fifoSizeMs, bool usingReliableText);
     void stop();
-    void changeTxMode(int txMode);
-    int getTxMode() const { return txMode_; }
-    bool isRunning() const { return rade_ != nullptr || dvObjects_.size() > 0; }
-    bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
-    void setRunTimeOptions(bool clip, bool bpf);
+    bool isRunning() const { return rade_ != nullptr; }
     
     const char* getCurrentModeStr() const;
     const char* getCurrentTxModeStr() const;
-    bool usingTestFrames() const;
-    void resetTestFrameStats();
-    void resetBitStats();
-    void setTestFrames(bool testFrames, bool combine);
     
     int getTotalBits();
     int getTotalBitErrors();
     
-    int getCurrentMode() const { return rxMode_.load(std::memory_order_acquire); }
     float getVariance() const;
     
     int getErrorPattern(short** outputPattern);
     
     int getSync() const;
     void setSync(int val) FREEDV_NONBLOCKING;
-    void setEq(int val);
-    void setVerbose(bool val);
     
     void setTextCallbackFn(void (*rxFunc)(void *, char), char (*txFunc)(void *));
-    
-    void addRxMode(int mode) { enabledModes_.push_back(mode); }
     
     int getTxModemSampleRate() const FREEDV_NONBLOCKING;
     int getTxSpeechSampleRate() const;
@@ -117,17 +95,11 @@ public:
     int getRxNumSpeechSamples() const FREEDV_NONBLOCKING;
     int getRxSpeechSampleRate() const FREEDV_NONBLOCKING;
     
-    void setLpcPostFilter(int enable, int bassBoost, float beta, float gamma);
-    
-    void setTextVaricodeNum(int num);
-    
-    void setSquelch(bool enable, float level) FREEDV_NONBLOCKING;
-    
     void setCarrierAmplitude(int c, float amp);
 
     float getCurrentRxModemOffset();
     
-    struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
+    struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[0]; }
     
     void resetReliableText();
     const char* getReliableText();
@@ -135,17 +107,14 @@ public:
     
     IPipelineStep* createTransmitPipeline(
         int inputSampleRate, 
-        int outputSampleRate, 
-        realtime_fp<float()> const& getFreqOffsetFn,
-        std::shared_ptr<IRealtimeHelper> realtimeHelper);
+        int outputSampleRate); 
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
         realtime_fp<std::atomic<int>*()> const& getRxStateFn,
         realtime_fp<int()> const& getChannelNoiseFn,
         realtime_fp<int()> const& getChannelNoiseSnrFn,
         realtime_fp<float()> const& getFreqOffsetFn,
-        realtime_fp<float*()> const& getSigPwrAvgFn,
-        std::shared_ptr<IRealtimeHelper> realtimeHelper
+        realtime_fp<float*()> const& getSigPwrAvgFn
     );
 
     void restartTxVocoder() FREEDV_NONBLOCKING;
@@ -160,52 +129,19 @@ private:
         realtime_fp<int()> getChannelNoiseSnrFn;
         realtime_fp<float()> getFreqOffsetFn;
         realtime_fp<float*()> getSigPwrAvgFn;
-        realtime_fp<int(ParallelStep*)> preProcessFn;
-        realtime_fp<int(ParallelStep*)> postProcessFn;
     };
 
-    struct FreeDVTextFnState
-    {
-        FreeDVInterface* interfaceObj;
-        struct freedv* modeObj;
-    };
-    
-    static void FreeDVTextRxFn_(void *callback_state, char c);
-    static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
     static void OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state);
     
     static float GetMinimumSNR_(int mode);
     
     void (*textRxFunc_)(void *, char);
-    bool singleRxThread_;
-    int txMode_;
-    std::atomic<int> rxMode_;
-    bool squelchEnabled_;
-    std::deque<int> enabledModes_;
-    std::deque<struct freedv*> dvObjects_;
-    std::deque<FreeDVTextFnState*> textFnObjs_;
-    std::deque<struct FIFO*> errorFifos_;
-    std::deque<float> snrVals_;
-    std::deque<float> squelchVals_;
-    
-    // Amount to add to squelch SNR to take into account different mode characteristics.
-    // For example, if multi-RX is on, 700E's squelch would be the user's selection + 3.0dB
-    // since 700E's minimum is 1.0dB and 700D's is -2.0dB.
-    //
-    // More info on minimum SNRs is at https://github.com/drowe67/codec2/blob/master/README_freedv.md.
-    std::deque<float> snrAdjust_; 
     
     struct MODEM_STATS* modemStatsList_;
-    int modemStatsIndex_;
     
-    struct freedv* currentTxMode_;
-    std::atomic<struct freedv*> currentRxMode_; 
-    struct freedv* lastSyncRxMode_;
-    
-    std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
     std::mutex reliableTextMutex_;
-   
+  
     struct rade* rade_;
     FARGANState fargan_;
     LPCNetEncState *lpcnetEncState_; 
@@ -213,9 +149,6 @@ private:
     std::atomic<int> sync_;
     std::atomic<int> radeSnr_;
     rade_text_t radeTextPtr_;
-    
-    int preProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
-    int postProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
 
     void radeSyncFn_(RADEReceiveStep* step) FREEDV_NONBLOCKING;
 };
