@@ -414,8 +414,6 @@ class MainFrame : public TopFrame
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;
         void OnHelpAbout( wxCommandEvent& event ) override;
         void OnHelpManual( wxCommandEvent& event ) override;
-        void OnCmdSliderScroll( wxScrollEvent& event ) override;
-        void OnCheckSQClick( wxCommandEvent& event ) override;
         void OnCheckSNRClick( wxCommandEvent& event ) override;
 
         // Toggle Buttons
@@ -455,8 +453,6 @@ class MainFrame : public TopFrame
 #endif
 
         int VoiceKeyerStartTx(void);
-
-        void OnChangeTxMode( wxCommandEvent& event ) override;
         
         void applyTxLevel();
         void OnTxLevelDecrBig( wxCommandEvent& event ) override;

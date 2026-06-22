@@ -31,9 +31,7 @@
 #include "ReportingConfiguration.h"
 
 ReportingConfiguration::ReportingConfiguration()
-    : reportingFreeTextString("/Data/CallSign", _(""))
-        
-    , reportingEnabled("/Reporting/Enable", false)
+    : reportingEnabled("/Reporting/Enable", false)
     , reportingCallsign("/Reporting/Callsign", _(""))
     , reportingGridSquare("/Reporting/GridSquare", _(""))
         
@@ -286,8 +284,6 @@ void ReportingConfiguration::load(wxConfigBase* config)
     reportingEnabled.setDefaultVal(oldPskEnable);
     reportingCallsign.setDefaultVal(oldPskCallsign);
     reportingGridSquare.setDefaultVal(oldGridSquare);
-    
-    load_(config, reportingFreeTextString);
  
     load_(config, reportingEnabled);
     load_(config, reportingCallsign);
@@ -393,9 +389,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
 }
 
 void ReportingConfiguration::save(wxConfigBase* config)
-{
-    save_(config, reportingFreeTextString);
- 
+{ 
     save_(config, reportingEnabled);
     save_(config, reportingCallsign);
     save_(config, reportingGridSquare);

@@ -953,6 +953,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Enhancements:
     * RADEV2: Standardize mode as USB. (PR #1397)
+2. Other:
+    * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407)
+
+*Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 
 ## V2.4.0 TBD 2026
 
@@ -965,6 +969,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: Set frequency again on mode changes. (PR #1395)
     * Consolidate EOO length calculation in freedv-backend to improve callsign decode reliability. (PR #1402)
     * Hamlib: Switch off memory channel before setting frequency/mode. (PR #1403) - thanks @barjac!
+    * Hamlib/OmniRig: Round received frequency to nearest 100 Hz. (PR #1373)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
