@@ -2133,7 +2133,7 @@ void MainFrame::updateReportingFreqList_()
     }
     m_cboReportFrequency->Clear();
     
-    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
+    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyListCentred.get())
     {
         m_cboReportFrequency->Append(item);
     }
