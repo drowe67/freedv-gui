@@ -562,9 +562,10 @@ jobs:
               export MAX_EXECUTION_TIMES=2
           else
               export MAX_EXECUTION_TIMES=1
-          fi 
+          fi
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
+          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
     - name: Execute unit tests
@@ -590,9 +591,10 @@ jobs:
               export MAX_EXECUTION_TIMES=2
           else
               export MAX_EXECUTION_TIMES=1
-          fi 
+          fi
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
+          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
 
