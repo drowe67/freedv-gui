@@ -97,7 +97,15 @@ function Test-FreeDV {
     $rigctlProcess = New-Object System.Diagnostics.Process
     $rigctlProcess.StartInfo = $rigctlPsi
     [void]$rigctlProcess.Start()
-    
+
+    # Wait for hamlibserver.py to open its listen socket before starting FreeDV,
+    # because Python startup on slow CI machines can take several seconds.
+    $deadline = (Get-Date).AddSeconds(30)
+    while ((Get-Date) -lt $deadline) {
+        if (Get-NetTCPConnection -LocalPort 4575 -State Listen -ErrorAction SilentlyContinue) { break }
+        Start-Sleep -Milliseconds 250
+    }
+
     # Start freedv.exe
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.CreateNoWindow = $true
