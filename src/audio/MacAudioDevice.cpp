@@ -685,12 +685,11 @@ void MacAudioDevice::setHelperRealTime()
                           THREAD_EXTENDED_POLICY,
                           reinterpret_cast<thread_policy_t>(&policy),
                           THREAD_EXTENDED_POLICY_COUNT);
-    if (result != KERN_SUCCESS) 
+    if (result != KERN_SUCCESS)
     {
-        log_warn("Could not set current thread to real-time: %d");
-        return;
+        log_warn("Could not set current thread to real-time: %d", result);
     }
-    
+
     // Set to relatively high priority.
     thread_precedence_policy_data_t precedence;
     precedence.importance = 63;
@@ -700,8 +699,7 @@ void MacAudioDevice::setHelperRealTime()
                                THREAD_PRECEDENCE_POLICY_COUNT);
     if (result != KERN_SUCCESS)
     {
-        log_warn("Could not increase thread priority");
-        return;
+        log_warn("Could not increase thread priority: %d", result);
     }
     
     // Most important, set real-time constraints.
@@ -742,14 +740,12 @@ void MacAudioDevice::setHelperRealTime()
                           THREAD_TIME_CONSTRAINT_POLICY_COUNT);
     if (result != KERN_SUCCESS)
     {
-        log_warn("Could not set time constraint policy");
-        return;
+        log_warn("Could not set time constraint policy: %d", result);
     }
-    else
-    {
-        // Going real-time is a prerequisite for joining workgroups
-        joinWorkgroup_();
-    }
+
+    // Workgroup joining improves scheduling even if time constraint policy
+    // could not be set above.
+    joinWorkgroup_();
 }
 
 OSStatus MacAudioDevice::InputProc_(
