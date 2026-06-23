@@ -320,9 +320,6 @@ void TxRxThread::initializePipeline_()
         wxFileName recordFile(NonblockingWxGetApp().appConfiguration.voiceKeyerWaveFilePath, "FreeDVDebugAudio.wav");
         std::string recordFileStr = (const char*)recordFile.GetFullPath().ToUTF8();
         
-        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 600, recordFileStr);
-        pipeline_->appendPipelineStep(debugRecordStep);
-
         auto activeRxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
 
         // Record from radio step (optional)
@@ -433,6 +430,10 @@ void TxRxThread::initializePipeline_()
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
             helper_
         );
+
+        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 600, recordFileStr);
+        rfDemodulationPipeline->appendPipelineStep(debugRecordStep);
+
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
         // Resample for plot step (speech out)
