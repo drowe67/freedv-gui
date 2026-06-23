@@ -969,6 +969,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Restore heard station list on launch. (PR #1358) - thanks @barjac!
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
+    * Upgrade Hamlib to 4.7.2. (PR #1413)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
