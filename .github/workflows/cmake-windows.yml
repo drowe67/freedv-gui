@@ -263,7 +263,19 @@ jobs:
           Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-          
+
+    - name: Set High Performance power plan to prevent CPU frequency scaling
+      if: ${{ matrix.runner == 'windows-11-arm' }}
+      shell: pwsh
+      run: |
+          # Prevent ARM CPU boost->base frequency transitions during audio tests.
+          # This is the Windows equivalent of the Linux "performance" CPU governor.
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          # Explicitly pin minimum processor performance to 100% so the ARM CPU
+          # does not scale down after exhausting its boost budget.
+          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
+          powercfg /setactive SCHEME_CURRENT
+
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
