@@ -1284,7 +1284,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
-    wxGetApp().m_testFrames = false;
     wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
 

@@ -600,9 +600,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
 
-    m_ckboxTestFrame = new wxCheckBox(sb_testFrames, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALL | wxALIGN_LEFT, 5);
-
     wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_ckboxChannelNoise = new wxCheckBox(sb_testFrames, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -790,7 +787,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
-    m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
     m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
     m_txtNoiseSNR->MoveBeforeInTabOrder(m_ckboxAttnCarrierEn);
     m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
@@ -835,7 +831,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
 
-    m_ckboxTestFrame->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
 #ifdef __WXMSW__
@@ -892,7 +887,6 @@ OptionsDlg::~OptionsDlg()
     m_sdbSizer5Cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
 
-    m_ckboxTestFrame->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
@@ -992,8 +986,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
-        
-        m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
+
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
         m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
@@ -1174,8 +1167,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         wxGetApp().appConfiguration.quickRecordRawPath = m_txtCtrlQuickRecordRawPath->GetValue();
         wxGetApp().appConfiguration.quickRecordDecodedPath = m_txtCtrlQuickRecordDecodedPath->GetValue();
-        
-        wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
         long noise_snr;
@@ -1363,10 +1354,6 @@ void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 }
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time
-
-void OptionsDlg::OnTestFrame(wxScrollEvent&) {
-    wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
-}
 
 void OptionsDlg::OnChannelNoise(wxScrollEvent&) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
