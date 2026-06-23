@@ -959,6 +959,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Consolidate EOO length calculation in freedv-backend to improve callsign decode reliability. (PR #1402)
     * Hamlib: Switch off memory channel before setting frequency/mode. (PR #1403) - thanks @barjac!
     * Hamlib/OmniRig: Round received frequency to nearest 100 Hz. (PR #1373)
+    * Tighten remaining audio settings to improve audio drops. (PR #1412)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
