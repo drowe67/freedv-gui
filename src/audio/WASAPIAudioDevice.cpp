@@ -27,6 +27,7 @@
 #include <thread>
 #include <future>
 #include <avrt.h>
+#include <timeapi.h>
 #include <inttypes.h>
 #include "../util/logging/ulog.h"
 
@@ -391,6 +392,10 @@ void WASAPIAudioDevice::start()
             log_warn(ss.str().c_str());
         }
 
+        // Reduce Windows timer resolution to 1ms to improve WaitForSingleObject
+        // precision in the audio loop.
+        timeBeginPeriod(1);
+
         // Start render/capture
         hr = client_->Start();
         if (FAILED(hr))
@@ -489,6 +494,8 @@ void WASAPIAudioDevice::stop()
         
         renderClient_ = nullptr;
         captureClient_ = nullptr;
+
+        timeEndPeriod(1);
 
         if (renderCaptureEvent_ != nullptr)
         {

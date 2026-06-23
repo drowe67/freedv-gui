@@ -77,7 +77,7 @@ function Test-FreeDV {
     $soxPsi.FileName = "sox.exe"
     $soxPsi.WorkingDirectory = $current_loc
     $quoted_device = "`"" + $RadioToComputerDevice + "`""
-    $soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 8000 -t wav `"$current_loc\test.wav`"")
+    $soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 48000 -t wav `"$current_loc\test.wav`"")
     
     $soxProcess = New-Object System.Diagnostics.Process
     $soxProcess.StartInfo = $soxPsi
@@ -97,7 +97,15 @@ function Test-FreeDV {
     $rigctlProcess = New-Object System.Diagnostics.Process
     $rigctlProcess.StartInfo = $rigctlPsi
     [void]$rigctlProcess.Start()
-    
+
+    # Wait for hamlibserver.py to open its listen socket before starting FreeDV,
+    # because Python startup on slow CI machines can take several seconds.
+    $deadline = (Get-Date).AddSeconds(30)
+    while ((Get-Date) -lt $deadline) {
+        if (Get-NetTCPConnection -LocalPort 4575 -State Listen -ErrorAction SilentlyContinue) { break }
+        Start-Sleep -Milliseconds 250
+    }
+
     # Start freedv.exe
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.CreateNoWindow = $true
@@ -112,6 +120,7 @@ function Test-FreeDV {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     [void]$process.Start()
+    $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 
     # Read output from first FreeDV run
     $err_output = $process.StandardError.ReadToEnd();
@@ -119,7 +128,7 @@ function Test-FreeDV {
     $process.WaitForExit()
 
     Write-Host "$err_output"
-    
+
     # Stop recording audio
     try {
         $soxProcess.Kill()
@@ -127,13 +136,14 @@ function Test-FreeDV {
         # Ignore failure as Python could have killed sox
     }
     $soxProcess.WaitForExit()
-    
+
     # Restart FreeDV in RX mode
     $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     [void]$process.Start()
+    $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
     
     # Read output from second FreeDV run
     $err_output_fdv = $process.StandardError.ReadToEnd()
