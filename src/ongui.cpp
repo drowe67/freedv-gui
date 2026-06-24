@@ -1201,6 +1201,10 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
     if (txChangeoverOccurring_) { event.Skip(); return; }
 
+    // Clear any stale suppress flag (e.g. set by OnTOTTimer) so a fresh press
+    // always starts a clean cycle rather than having its release silently eaten.
+    m_suppressNextPTTClick_ = false;
+
     // Pre-empt GTK's blue active-state for the RX->TX direction.
     if (!g_tx.load(std::memory_order_acquire))
     {
@@ -1357,6 +1361,15 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
             m_pttKeyRequireRelease_ = true;
             m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
         }
+
+        // Suppress any pending XMIT mouse button release in momentary mode.
+        // Unlike the keyboard (which needs polling), the click event simply
+        // won't fire if the mouse is released outside the button, and
+        // OnTogBtnPTTMouseDown clears this flag on any fresh press -- so
+        // setting it unconditionally here is safe even if no mouse press is
+        // currently in progress.
+        if (wxGetApp().appConfiguration.pttMomentaryMode)
+            m_suppressNextPTTClick_ = true;
     }
 }
 
