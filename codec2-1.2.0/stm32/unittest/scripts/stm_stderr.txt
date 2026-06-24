@@ -1,2 +1,0 @@
-semihosting test - stderr
-Error 2 opening fin

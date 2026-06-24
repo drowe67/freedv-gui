@@ -29,6 +29,17 @@ FREEDV_COMPUTER_TO_SPEAKER_DEVICE="${FREEDV_COMPUTER_TO_SPEAKER_DEVICE:-FreeDV_C
 FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="${FREEDV_MICROPHONE_TO_COMPUTER_DEVICE:-FreeDV_Microphone_To_Computer}"
 FREEDV_COMPUTER_TO_RADIO_DEVICE="${FREEDV_COMPUTER_TO_RADIO_DEVICE:-FreeDV_Computer_To_Radio}"
 
+if [ ! -d "$(pwd)/codec2" ]; then
+    echo "Building 'ch' tool from Codec2..."
+    git clone https://github.com/drowe67/codec2.git
+    cd codec2
+    mkdir build_linux
+    cd build_linux
+    cmake ..
+    make ch
+    cd ../..
+fi
+
 # Automated script to help find audio dropouts.
 # NOTE: this must be run from "build_*". Also assumes PulseAudio/pipewire or macOS Core Audio,
 # does not work in Windows.
@@ -45,7 +56,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
 fi
 
 # Determine correct record device to retrieve TX data
-if [ "$2" == "mpp" ]; then
+if [ "$1" == "mpp" ]; then
     FREEDV_CONF_FILE=freedv-ctest-reporting-mpp.conf 
 else
     FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
@@ -91,7 +102,7 @@ if [ ! -d $(pwd)/rade_src ]; then
 fi
 
 # Start "radio"
-if [ "$2" == "mpp" ]; then
+if [ "$1" == "mpp" ]; then
     TIMES_BEFORE_KILL=6
 else
     TIMES_BEFORE_KILL=1
@@ -100,7 +111,7 @@ python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
 RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
-if [ "$2" == "mpp" ]; then
+if [ "$1" == "mpp" ]; then
     TX_ARGS="-txtime 1 -txattempts 7 "
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
@@ -125,17 +136,15 @@ cat tmp.log
 kill $RECORD_PID
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    if [ "$1" != "" ]; then
-        FADING_DIR="$SCRIPTPATH/fading"
+    FADING_DIR="$SCRIPTPATH/fading"
 
-        # Add noise to recording to test performance
-        if [ "$2" == "mpp" ]; then
-            sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-        elif [ "$2" == "awgn" ]; then
-            sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-        fi
-        mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+    # Add noise to recording to test performance
+    if [ "$1" == "mpp" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    elif [ "$1" == "awgn" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
+    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
     $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
     FDV_PID=$!
