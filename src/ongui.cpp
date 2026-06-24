@@ -1149,7 +1149,7 @@ int MainApp::FilterEvent(wxEvent& event)
                 if (frame->vk_state == VK_IDLE) {
                     if (g_tx.load(std::memory_order_acquire)) {
                         frame->m_btnTogPTT->SetValue(false);
-                        frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                        frame->m_btnTogPTT->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
                         frame->togglePTT();
                     } else if (frame->m_btnTogPTT->GetValue()) {
                         // Key released before g_tx caught up -- likely still inside
@@ -1192,44 +1192,67 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTTMouseDown()
-// Set TX colour immediately on mouse press when going RX->TX, avoiding a GTK
-// blue-flash during the TX delay before togglePTT() sets it on release.
-// Only fires when the pipeline is genuinely in RX (g_tx false); during the
-// TX->RX drain g_tx is still true, so clicks there are correctly ignored.
-// NOTE for upstream: this is a simple cosmetic fix. A fuller alternative would
-// be to start TX here on press and suppress the togglePTT() call on release.
+// Start/stop TX immediately on LEFT_DOWN rather than waiting for release.
+// Pre-sets the button value and sets m_suppressNextPTTClick_ so that the
+// redundant wxEVT_COMMAND_TOGGLEBUTTON_CLICKED that wxToggleButton fires on
+// LEFT_UP is discarded by OnTogBtnPTT without double-toggling.
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
-    if (txChangeoverOccurring_) return;
+    if (txChangeoverOccurring_) { event.Skip(); return; }
 
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    // Clear any stale suppress flag (e.g. set by OnTOTTimer) so a fresh press
+    // always starts a clean cycle rather than having its release silently eaten.
+    m_suppressNextPTTClick_ = false;
+
+    // Pre-empt GTK's blue active-state for the RX->TX direction.
+    if (!g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
 #if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
 #endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
+
+    // Pre-set the button value to the intended post-toggle state so it gives
+    // immediate visual feedback before togglePTT() finishes its delay.
+    m_btnTogPTT->SetValue(!m_btnTogPTT->GetValue());
+
+    // In latching mode the click event on LEFT_UP would double-toggle, so
+    // suppress it. In momentary mode we leave it unsuppressed: the click on
+    // release is what stops TX (mirroring the spacebar momentary behaviour).
+    if (!wxGetApp().appConfiguration.pttMomentaryMode)
+        m_suppressNextPTTClick_ = true;
+
+    if (vk_state == VK_TX)
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    else
+        togglePTT();
+
     event.Skip();
 }
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTTMouseLeave()
-// Reset premature TX colour if mouse leaves button before release and TX
-// has not actually started, preventing a stuck-red button.
+// Reset pre-empt colour if mouse leaves during the TX start delay before
+// g_tx and GetValue() have been updated by togglePTT(). The
+// txChangeoverOccurring_ guard prevents this firing while togglePTT() is
+// running (it would see g_tx/GetValue() still false and wrongly reset colour).
+// Always clears m_suppressNextPTTClick_: if the mouse leaves before release,
+// wxToggleButton will not fire TOGGLEBUTTON_CLICKED on LEFT_UP, so the flag
+// would otherwise stay set and silently consume the next click or spacebar.
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 {
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    m_suppressNextPTTClick_ = false;
+
+    if (m_btnTogPTT->IsEnabled() && !m_btnTogPTT->GetValue()
+        && !g_tx.load(std::memory_order_acquire) && !txChangeoverOccurring_)
     {
-        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        m_btnTogPTT->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
 #if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
-        m_btnTogPTT->SetForegroundColour(wxNullColour);
+        m_btnTogPTT->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT));
 #endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
@@ -1241,12 +1264,30 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
 {
+    // OnTogBtnPTTMouseDown already called togglePTT() on LEFT_DOWN; discard
+    // this redundant click event and undo the widget's auto-toggle.
+    if (m_suppressNextPTTClick_)
+    {
+        m_suppressNextPTTClick_ = false;
+        m_btnTogPTT->SetValue(!m_btnTogPTT->GetValue());
+        return;
+    }
+
     if (vk_state == VK_TX)
     {
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else 
+    else if (wxGetApp().appConfiguration.pttMomentaryMode && txChangeoverOccurring_)
+    {
+        // Mouse released while TX start is still in progress; togglePTT() would
+        // no-op against its re-entrancy guard, so defer the stop exactly as the
+        // keyboard momentary handler does for mid-changeover key releases.
+        log_info("PTT mouse released mid-changeover -- deferring momentary stop");
+        m_momentaryKeyReleasedDuringChangeover_ = true;
+        m_btnTogPTT->SetValue(true); // click auto-toggled to false; restore to match pre-set
+    }
+    else
     {
         togglePTT();
     }
@@ -1320,6 +1361,15 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
             m_pttKeyRequireRelease_ = true;
             m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
         }
+
+        // Suppress any pending XMIT mouse button release in momentary mode.
+        // Unlike the keyboard (which needs polling), the click event simply
+        // won't fire if the mouse is released outside the button, and
+        // OnTogBtnPTTMouseDown clears this flag on any fresh press -- so
+        // setting it unconditionally here is safe even if no mouse press is
+        // currently in progress.
+        if (wxGetApp().appConfiguration.pttMomentaryMode)
+            m_suppressNextPTTClick_ = true;
     }
 }
 
@@ -1698,11 +1748,11 @@ void MainFrame::togglePTT(void) {
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
     m_btnTogPTT->SetLabel(_("&XMIT"));
-    m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+    m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
 #if !defined(__APPLE__)
-    // macOS limitations prevent the foreground color of toggle buttons from being 
+    // macOS limitations prevent the foreground color of toggle buttons from being
     // reliably set, so don't mess with it in the first place.
-    m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxNullColour);
+    m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT));
 #endif // !defined(__APPLE__)
     
     // The Report Frequency drop-down should not be modifiable during TX.
@@ -1742,7 +1792,7 @@ void MainFrame::togglePTT(void) {
         log_info("Momentary PTT key was released while TX was starting -- stopping now");
         CallAfter([this]() {
             m_btnTogPTT->SetValue(false);
-            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            m_btnTogPTT->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
             togglePTT();
         });
     }
