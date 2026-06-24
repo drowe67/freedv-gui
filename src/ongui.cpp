@@ -1247,8 +1247,8 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 {
     m_suppressNextPTTClick_ = false;
 
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire)
-        && !txChangeoverOccurring_)
+    if (m_btnTogPTT->IsEnabled() && !m_btnTogPTT->GetValue()
+        && !g_tx.load(std::memory_order_acquire) && !txChangeoverOccurring_)
     {
         m_btnTogPTT->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
 #if !defined(__APPLE__)

@@ -1039,6 +1039,10 @@ setDefaultMode:
     
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
+    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+    m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
     m_togBtnVoiceKeyer->Disable();
 
     // squelch settings
