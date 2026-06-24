@@ -3251,7 +3251,7 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
                     castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, std::move(newDeviceName));
-                }, nullptr);
+                }, this);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
