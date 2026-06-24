@@ -2893,6 +2893,10 @@ void MainFrame::performFreeDVOff_()
 
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         m_togBtnVoiceKeyer->Disable();
     
         m_rbRADE->Enable();
@@ -2924,6 +2928,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->Enable(false);
     m_btnTogPTT->Enable(false);
+    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+    m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         
     // we are attempting to start
 
@@ -2951,6 +2959,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 m_togBtnAnalog->Enable(m_RxRunning);
                 m_togBtnVoiceKeyer->Enable(txEnabled);
                 m_btnTogPTT->Enable(txEnabled);
+                if (!txEnabled)
+                {
+                    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+                    m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
+                }
                 optionsDlg->setSessionActive(m_RxRunning);
 
                 if (m_RxRunning)
@@ -2982,6 +2997,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 m_togBtnAnalog->Enable(m_RxRunning);
                 m_togBtnVoiceKeyer->Enable(m_RxRunning);
                 m_btnTogPTT->Enable(m_RxRunning);
+                if (!m_RxRunning)
+                {
+                    m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+                    m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
+                }
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
