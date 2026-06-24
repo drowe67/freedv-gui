@@ -1192,43 +1192,54 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTTMouseDown()
-// Set TX colour immediately on mouse press when going RX->TX, avoiding a GTK
-// blue-flash during the TX delay before togglePTT() sets it on release.
-// Only fires when the pipeline is genuinely in RX (g_tx false); during the
-// TX->RX drain g_tx is still true, so clicks there are correctly ignored.
-// NOTE for upstream: this is a simple cosmetic fix. A fuller alternative would
-// be to start TX here on press and suppress the togglePTT() call on release.
+// Start/stop TX immediately on LEFT_DOWN rather than waiting for release.
+// Pre-sets the button value and sets m_suppressNextPTTClick_ so that the
+// redundant wxEVT_COMMAND_TOGGLEBUTTON_CLICKED that wxToggleButton fires on
+// LEFT_UP is discarded by OnTogBtnPTT without double-toggling.
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
-    if (txChangeoverOccurring_) return;
+    if (txChangeoverOccurring_) { event.Skip(); return; }
 
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    // Pre-empt GTK's blue active-state for the RX->TX direction.
+    if (!g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
 #if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
 #endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
     }
+
+    // Pre-set the button value to the intended post-toggle state. This means
+    // that when OnTogBtnPTT fires on LEFT_UP and suppresses the click, it can
+    // simply invert GetValue() to undo the widget's auto-toggle -- regardless
+    // of where togglePTT() is in its TX delay at that moment.
+    m_btnTogPTT->SetValue(!m_btnTogPTT->GetValue());
+    m_suppressNextPTTClick_ = true;
+
+    if (vk_state == VK_TX)
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    else
+        togglePTT();
+
     event.Skip();
 }
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTTMouseLeave()
-// Reset premature TX colour if mouse leaves button before release and TX
-// has not actually started, preventing a stuck-red button.
+// Reset pre-empt colour if mouse leaves during the TX start delay before
+// g_tx and GetValue() have been updated by togglePTT(). The
+// txChangeoverOccurring_ guard prevents this firing while togglePTT() is
+// running (it would see g_tx/GetValue() still false and wrongly reset colour).
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 {
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire)
+        && !txChangeoverOccurring_)
     {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
 #if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(wxNullColour);
 #endif // !defined(__APPLE__)
         m_btnTogPTT->Refresh();
@@ -1241,12 +1252,21 @@ void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent&)
 {
+    // OnTogBtnPTTMouseDown already called togglePTT() on LEFT_DOWN; discard
+    // this redundant click event and undo the widget's auto-toggle.
+    if (m_suppressNextPTTClick_)
+    {
+        m_suppressNextPTTClick_ = false;
+        m_btnTogPTT->SetValue(!m_btnTogPTT->GetValue());
+        return;
+    }
+
     if (vk_state == VK_TX)
     {
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else 
+    else
     {
         togglePTT();
     }
