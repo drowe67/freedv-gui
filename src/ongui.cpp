@@ -1205,7 +1205,7 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
     // always starts a clean cycle rather than having its release silently eaten.
     m_suppressNextPTTClick_ = false;
 
-    // Pre-empt GTK's blue active-state for the RX->TX direction.
+    // Preempt GTK's blue active-state for the RX->TX direction.
     if (!g_tx.load(std::memory_order_acquire))
     {
         m_btnTogPTT->SetBackgroundColour(*wxRED);
@@ -1235,7 +1235,7 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTTMouseLeave()
-// Reset pre-empt colour if mouse leaves during the TX start delay before
+// Reset preempt colour if mouse leaves during the TX start delay before
 // g_tx and GetValue() have been updated by togglePTT(). The
 // txChangeoverOccurring_ guard prevents this firing while togglePTT() is
 // running (it would see g_tx/GetValue() still false and wrongly reset colour).
