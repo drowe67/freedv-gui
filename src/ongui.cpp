@@ -1211,12 +1211,15 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
         m_btnTogPTT->Refresh();
     }
 
-    // Pre-set the button value to the intended post-toggle state. This means
-    // that when OnTogBtnPTT fires on LEFT_UP and suppresses the click, it can
-    // simply invert GetValue() to undo the widget's auto-toggle -- regardless
-    // of where togglePTT() is in its TX delay at that moment.
+    // Pre-set the button value to the intended post-toggle state so it gives
+    // immediate visual feedback before togglePTT() finishes its delay.
     m_btnTogPTT->SetValue(!m_btnTogPTT->GetValue());
-    m_suppressNextPTTClick_ = true;
+
+    // In latching mode the click event on LEFT_UP would double-toggle, so
+    // suppress it. In momentary mode we leave it unsuppressed: the click on
+    // release is what stops TX (mirroring the spacebar momentary behaviour).
+    if (!wxGetApp().appConfiguration.pttMomentaryMode)
+        m_suppressNextPTTClick_ = true;
 
     if (vk_state == VK_TX)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
@@ -1232,9 +1235,14 @@ void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 // g_tx and GetValue() have been updated by togglePTT(). The
 // txChangeoverOccurring_ guard prevents this firing while togglePTT() is
 // running (it would see g_tx/GetValue() still false and wrongly reset colour).
+// Always clears m_suppressNextPTTClick_: if the mouse leaves before release,
+// wxToggleButton will not fire TOGGLEBUTTON_CLICKED on LEFT_UP, so the flag
+// would otherwise stay set and silently consume the next click or spacebar.
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
 {
+    m_suppressNextPTTClick_ = false;
+
     if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire)
         && !txChangeoverOccurring_)
     {
@@ -1265,6 +1273,15 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
     {
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else if (wxGetApp().appConfiguration.pttMomentaryMode && txChangeoverOccurring_)
+    {
+        // Mouse released while TX start is still in progress; togglePTT() would
+        // no-op against its re-entrancy guard, so defer the stop exactly as the
+        // keyboard momentary handler does for mid-changeover key releases.
+        log_info("PTT mouse released mid-changeover -- deferring momentary stop");
+        m_momentaryKeyReleasedDuringChangeover_ = true;
+        m_btnTogPTT->SetValue(true); // click auto-toggled to false; restore to match pre-set
     }
     else
     {
