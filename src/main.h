@@ -369,11 +369,6 @@ class MainFrame : public TopFrame
         // if it's set, instead of leaving the radio keyed indefinitely.
         bool                    m_momentaryKeyReleasedDuringChangeover_{false};
 
-        // Set by OnTogBtnPTTMouseDown after it calls togglePTT() directly on
-        // LEFT_DOWN. Causes OnTogBtnPTT to discard the redundant click event
-        // that wxToggleButton fires on LEFT_UP and undo its auto-toggle.
-        bool                    m_suppressNextPTTClick_{false};
-
         // TOT beep state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totLastBeepTime_;
 
@@ -452,8 +447,8 @@ class MainFrame : public TopFrame
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
 
-        // Starts/stops TX immediately on LEFT_DOWN; consumes the event to prevent a
-        // redundant wxEVT_COMMAND_TOGGLEBUTTON_CLICKED from firing on LEFT_UP.
+        // NOTE: sets TX colour on press to avoid a GTK blue-flash during the TX delay.
+        // Upstream may prefer a different approach (e.g. true press-to-start TX).
         void OnTogBtnPTTMouseDown( wxMouseEvent& event );
         void OnTogBtnPTTMouseLeave( wxMouseEvent& event );
 
