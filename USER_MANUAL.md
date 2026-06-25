@@ -581,16 +581,6 @@ transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.
 
-## Timing Delta Tab
-
-This indicates the symbol timing estimate of the demodulator, in the
-range of +/- 0.5 of a symbol.  With off air signals this will have a
-sawtooth appearance, as the demod tracks the modulator sample clock.
-The steeper the slope, the greater the sample clock offset.
-
-* [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
-* [Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
-
 ## Sound Card Debug
 
 These features were added to help diagnose sound card issues during development.
