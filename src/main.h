@@ -120,6 +120,7 @@ enum {
         ID_TIMER_UPD_FREQ,
         ID_TIMER_TOT,           // Time-Out Timer
         ID_TIMER_TOT_WARNING,   // Polls remaining TOT time to show warning
+        ID_TIMER_PTT_KEY_POLL,  // Polls physical PTT key state after a forced TX stop
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -340,12 +341,34 @@ class MainFrame : public TopFrame
         // Time-Out Timer (TOT): stops TX after configured period
         wxTimer                 m_totTimer;
         wxTimer                 m_totWarningTimer;
+
+        // Polls the physical PTT key state (via wxGetKeyState) after a forced
+        // TX stop, so a held key can't immediately restart TX -- see
+        // m_pttKeyRequireRelease_ below.
+        wxTimer                 m_pttKeyPollTimer;
 #endif
 
         // TOT warning state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totTxStartTime;
         int                     m_totCurrentDurationMs{0};
         TotWarningDialog*       m_totWarningDialog_{nullptr};
+
+        // Set when TX is force-stopped (e.g. by the TOT) while the PTT key is
+        // still physically held down. Blocks the spacebar from restarting TX
+        // until wxGetKeyState() confirms a genuine release -- this can't be
+        // determined reliably from wxEVT_KEY_UP/DOWN alone, since holding a
+        // key down can generate real (non-auto-repeat-flagged) up/down event
+        // pairs at the OS key-repeat rate.
+        bool                    m_pttKeyRequireRelease_{false};
+
+        // Set when the momentary PTT key is released while a TX start is
+        // still in progress (e.g. during the configured TX/RX delay in
+        // togglePTT()). A stop requested during that window can't be
+        // actioned immediately -- togglePTT()'s re-entrancy guard
+        // (txChangeoverOccurring_) would just no-op it -- so togglePTT()
+        // checks this once the start completes and immediately stops TX
+        // if it's set, instead of leaving the radio keyed indefinitely.
+        bool                    m_momentaryKeyReleasedDuringChangeover_{false};
 
         // TOT beep state
         std::chrono::time_point<std::chrono::high_resolution_clock> m_totLastBeepTime_;
@@ -424,10 +447,12 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
+
         // NOTE: sets TX colour on press to avoid a GTK blue-flash during the TX delay.
         // Upstream may prefer a different approach (e.g. true press-to-start TX).
         void OnTogBtnPTTMouseDown( wxMouseEvent& event );
         void OnTogBtnPTTMouseLeave( wxMouseEvent& event );
+
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         
@@ -488,6 +513,7 @@ class MainFrame : public TopFrame
 
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
+        void OnPttKeyPollTimer(wxTimerEvent& evt);
         void playTotBeep_();
         void stopTotBeep_();
         
