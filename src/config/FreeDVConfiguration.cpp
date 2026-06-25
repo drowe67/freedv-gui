@@ -72,6 +72,7 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
     , pttKeyCode("/Rig/PttKeyCode", WXK_SPACE)
+    , pttMomentaryMode("/Rig/PttMomentaryMode", false)
 
     , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", _(""))
     , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
@@ -164,6 +165,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, enableSpaceBarForPTT);
     load_(config, pttKeyCode);
+    load_(config, pttMomentaryMode);
 
     load_(config, voiceKeyerWaveFilePath);
     load_(config, voiceKeyerWaveFile);
@@ -295,6 +297,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, enableSpaceBarForPTT);
     save_(config, pttKeyCode);
+    save_(config, pttMomentaryMode);
 
     save_(config, voiceKeyerWaveFilePath);
     save_(config, voiceKeyerWaveFile);

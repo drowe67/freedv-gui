@@ -549,7 +549,7 @@ void TxRxThread::initializePipeline_()
         totBeepBypass->appendPipelineStep(totBeepMuteStep);
 
         auto totBeepActivePath = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new BeepStep(
+        beepStep_ = new BeepStep(
             outputSampleRate_, 750, 80, 5, 
             +[]() FREEDV_NONBLOCKING {
                 return g_totBeepActive.load(std::memory_order_acquire);
@@ -559,7 +559,7 @@ void TxRxThread::initializePipeline_()
                 thisStep.reset();
             }
         );
-        totBeepActivePath->appendPipelineStep(totBeepPlayback);
+        totBeepActivePath->appendPipelineStep(beepStep_);
         auto totBeepEitherOr = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING {
                 return g_totBeepActive.load(std::memory_order_acquire);
@@ -895,6 +895,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         g_queueResync.store(false, std::memory_order_release);
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
+    }
+
+    // Make sure we reset 
+    if (!g_totBeepActive.load(std::memory_order_acquire))
+    {
+        beepStep_->reset();
     }
     
     // Attempt to read one processing frame (about 20ms) of receive samples,  we 
