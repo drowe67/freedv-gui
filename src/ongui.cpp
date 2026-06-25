@@ -1202,17 +1202,6 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
     if (txChangeoverOccurring_) return;
-
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
-    {
-        m_btnTogPTT->SetBackgroundColour(*wxRED);
-#if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
-        m_btnTogPTT->SetForegroundColour(*wxBLACK);
-#endif // !defined(__APPLE__)
-        m_btnTogPTT->Refresh();
-    }
     event.Skip();
 }
 
@@ -1579,6 +1568,15 @@ void MainFrame::togglePTT(void) {
     }
     else
     {
+        // Force PTT button colors ASAP to avoid latency after mouse up.
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
+        wxGetApp().Yield(true);
+
         // If PTT input is enabled, suspend further changes until we actually start TX.
         if (wxGetApp().m_pttInSerialPort)
         {
