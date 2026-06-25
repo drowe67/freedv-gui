@@ -540,7 +540,7 @@ void TxRxThread::initializePipeline_()
         totBeepBypass->appendPipelineStep(totBeepMuteStep);
 
         auto totBeepActivePath = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto totBeepPlayback = new BeepStep(
+        beepStep_ = new BeepStep(
             outputSampleRate_, 750, 80, 5, 
             +[]() FREEDV_NONBLOCKING {
                 return g_totBeepActive.load(std::memory_order_acquire);
@@ -550,7 +550,7 @@ void TxRxThread::initializePipeline_()
                 thisStep.reset();
             }
         );
-        totBeepActivePath->appendPipelineStep(totBeepPlayback);
+        totBeepActivePath->appendPipelineStep(beepStep_);
         auto totBeepEitherOr = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING {
                 return g_totBeepActive.load(std::memory_order_acquire);
@@ -871,7 +871,13 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
     //  RX side processing --------------------------------------------
     //
-        
+
+    // Make sure we reset 
+    if (!g_totBeepActive.load(std::memory_order_acquire))
+    {
+        beepStep_->reset();
+    }
+    
     // Attempt to read one processing frame (about 20ms) of receive samples,  we 
     // keep this frame duration constant across modes and sound card sample rates
     int nsam = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;

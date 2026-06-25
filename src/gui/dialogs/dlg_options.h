@@ -94,6 +94,7 @@ class OptionsDlg : public wxDialog
         wxRadioButton *m_ckboxEnableFreqChangesOnly;
         wxRadioButton *m_ckboxNoFreqModeChanges;
         wxCheckBox    *m_ckboxEnableSpacebarForPTT;
+        wxCheckBox    *m_ckboxPTTMomentaryMode;
         wxTextCtrl    *m_txtPTTKeyName;
         wxButton      *m_btnSetPTTKey;
         int            m_selectedPTTKeyCode;

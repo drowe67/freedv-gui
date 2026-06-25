@@ -765,7 +765,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Tune Toggle
     //------------------------------
-    m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("Tune"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("&Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
     sbSizer5->Add(m_btnTogTune, 0, wxALL | wxEXPAND, 5);
     m_btnTogTune->Enable(false);
@@ -780,8 +780,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // PTT button: Toggle Transmit/Receive mode
     //------------------------------
-    m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
-    m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
+    m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&XMIT"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogPTT->SetToolTip(_("Switch between Receive and Transmit. Right-click for additional options."));
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);

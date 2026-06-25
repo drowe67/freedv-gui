@@ -277,8 +277,12 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     sbSizer_ptt->Add(pttKeySizer, 0, wxALL, 0);
 
+    m_ckboxPTTMomentaryMode = new wxCheckBox(sb_ptt, wxID_ANY, _("Momentary PTT (hold key to transmit)"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPTTMomentaryMode->SetToolTip(_("When enabled, you must hold the PTT button or key to keep transmitting. Releasing it returns to receive."));
+    sbSizer_ptt->Add(m_ckboxPTTMomentaryMode, 0, wxALL, 5);
+
     wxSizer* txRxDelaySizer = new wxBoxSizer(wxHORIZONTAL);
-    
+
     auto txRxDelayLabel = new wxStaticText(sb_ptt, wxID_ANY, _("TX/RX Delay (milliseconds): "));
     txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -954,6 +958,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         }
         
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
+        m_ckboxPTTMomentaryMode->SetValue(wxGetApp().appConfiguration.pttMomentaryMode);
         m_selectedPTTKeyCode = wxGetApp().appConfiguration.pttKeyCode;
         m_capturingPTTKey = false;
         m_txtPTTKeyName->SetValue(getPTTKeyName(m_selectedPTTKeyCode));
@@ -1134,6 +1139,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         wxGetApp().appConfiguration.pttKeyCode = m_selectedPTTKeyCode;
+        wxGetApp().appConfiguration.pttMomentaryMode = m_ckboxPTTMomentaryMode->GetValue();
 
         wxGetApp().appConfiguration.txRxDelayMilliseconds = wxAtoi(m_txtTxRxDelayMilliseconds->GetValue());
 

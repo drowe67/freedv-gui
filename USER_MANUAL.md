@@ -318,7 +318,7 @@ For reference, the channel widths of the currently supported modes are below:
 The Voice Keyer Button on the front page puts FreeDV and your radio into 
 transmit, reads a wave file of your voice to call CQ, and then switches to 
 receive to see if anyone is replying.  If you press the space bar or click
-the PTT button, the voice keyer stops.  If a signal with a valid sync is 
+the XMIT button, the voice keyer stops.  If a signal with a valid sync is 
 received for a few seconds the voice keyer also stops.
 
 The Audio tab inside Tools-Options can be used to select the wave file, set 
@@ -334,7 +334,7 @@ Additional options are also available if you right-click on the Voice Keyer butt
 
 FreeDV has the ability to monitor transmit audio. This can be useful for adjusting 
 microphone filters when your radio is plugged into a dummy load. To enable this,
-right-click on the PTT button and choose "Monitor transmitted audio". A checkmark
+right-click on the XMIT button and choose "Monitor transmitted audio". A checkmark
 will appear next to this menu option when enabled.
 
 # Quick Record
@@ -841,7 +841,7 @@ Verify audio device settings in FreeDV. If your audio settings are correct,
 there are a few other possibilities:
 
 1. If on Windows, make sure all audio effects are disabled on all devices used with FreeDV.
-2. Turn off TX monitoring (right-click on PTT button and make sure "Monitor transmitted audio" is unchecked).
+2. Turn off TX monitoring (right-click on XMIT button and make sure "Monitor transmitted audio" is unchecked).
 
 ## The signal is strong but FreeDV won't get sync and decode
 
@@ -978,6 +978,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add "Set tune output to minimum" to Tune button context menu for safety. (PR #1378) - thanks @barjac!
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
     * Restore heard station list on launch. (PR #1358) - thanks @barjac!
+    * Add momentary PTT option to FreeDV. (PR #1393)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
