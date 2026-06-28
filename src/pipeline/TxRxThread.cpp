@@ -431,8 +431,12 @@ void TxRxThread::initializePipeline_()
             helper_
         );
 
-        auto debugRecordStep = new DebugRecordStep(inputSampleRate_, 600, recordFileStr);
-        rfDemodulationPipeline->appendPipelineStep(debugRecordStep);
+        auto debugRecordStep = new DebugRecordStep(8000, 3600, recordFileStr);
+	auto debugRecordPipeline = new AudioPipeline(inputSampleRate_, 8000);
+	debugRecordPipeline->appendPipelineStep(debugRecordStep);
+
+	auto debugRecordTap = new TapStep(inputSampleRate_, debugRecordPipeline);
+        rfDemodulationPipeline->appendPipelineStep(debugRecordTap);
 
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
