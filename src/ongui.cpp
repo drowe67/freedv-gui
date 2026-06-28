@@ -278,14 +278,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Adjust frequency labels on main window
         wxListItem colInfo;
         m_lastReportedCallsignListView->GetColumn(1, colInfo);
+        updateFreqBoxLabel_();
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
             colInfo.SetText(_("kHz"));
         }
         else
         {
-            m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
             colInfo.SetText(_("MHz"));
         }
         m_lastReportedCallsignListView->SetColumn(1, colInfo);
@@ -482,6 +481,14 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
 
         auto newFreq = wholeFreq * 100;
 
+        // Convert the rounded dial frequency to the actual centre frequency of
+        // the transmitted/received signal for display/reporting purposes.
+        // Note: the offset depends only on whether FreeDV is actually in
+        // analog voice mode (g_analog) -- NOT on hamlibUseAnalogModes, which
+        // is purely a USB/LSB-vs-DIGU/DIGL label preference still used while
+        // transmitting digital FreeDV.
+        uint64_t displayFreq = DialToDisplayFreq(newFreq, mode, g_analog != 0);
+
         // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
         bool is60MeterBand = newFreq >= 5250000 && newFreq <= 5450000;
 
@@ -509,24 +516,24 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
         {
             // wxString::Format() doesn't respect locale but wxNumberFormatter should. Use the latter instead.
-            wxString freqString;            
+            wxString freqString;
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                freqString = wxNumberFormatter::ToString(newFreq / 1000.0, 1);
+                freqString = wxNumberFormatter::ToString(displayFreq / 1000.0, 1);
             }
             else
             {
-                freqString = wxNumberFormatter::ToString(newFreq / 1000.0 / 1000.0, 4);
+                freqString = wxNumberFormatter::ToString(displayFreq / 1000.0 / 1000.0, 4);
             }
-            
+
             // Set internal reporting frequency to ensure we don't immediately request
             // a frequency change from the radio (i.e. if rapidly changing frequency
-            // on the radio side). Note that this also causes reporting to not fire 
+            // on the radio side). Note that this also causes reporting to not fire
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
             auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
-            if (oldFreq != newFreq)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = displayFreq;
+            if (oldFreq != displayFreq)
             {
                 for (auto& ptr : wxGetApp().m_reporters)
                 {
@@ -562,11 +569,15 @@ void MainFrame::onRadioConnected_(IRigController*)
         firstFreqUpdateOnConnect_ = true;
 
         // Set frequency/mode to the one pre-selected by the user before start.
-        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        
+        // The offset depends only on g_analog (real analog voice mode), not
+        // on the hamlibUseAnalogModes label preference.
+        auto mode = getCurrentMode_();
+        wxGetApp().rigFrequencyController->setFrequency(
+            DisplayToDialFreq(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, mode, g_analog != 0));
+
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            wxGetApp().rigFrequencyController->setMode(mode);
         }
     }
 }
@@ -1750,7 +1761,7 @@ HamlibRigController::Mode MainFrame::getCurrentMode_()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
 {
-    auto oldMode = getCurrentMode_();
+    bool wasAnalog = (g_analog != 0);
 
     if (g_analog == 0) {
         g_analog = 1;
@@ -1767,6 +1778,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
     }
 
+    updateFreqBoxLabel_();
+
     // Report analog change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
@@ -1776,32 +1789,62 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         }
     }
     
-    if (wxGetApp().rigFrequencyController != nullptr && 
+    // Digital mode is always USB (#1397), but analog mode still follows the
+    // band-based USB/LSB convention -- so on bands where analog uses LSB,
+    // toggling analog *does* change sideband, unlike before. Since LSB
+    // content sits below the dial while USB sits above it, keeping the same
+    // actual occupied frequency across the toggle requires re-tuning the
+    // dial, not just redisplaying it. We do this by converting the current
+    // dial frequency to a sideband-relative "spot" (always applying the
+    // offset, regardless of analog/digital, purely as a tuning reference),
+    // then converting that spot back to a dial frequency under the new
+    // mode's offset.
+    uint64_t newDialFreq = 0;
+    bool dialFreqChanged = false;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        auto& reportingFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+        bool hamlibUseAnalogModes = wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes;
+
+        // hamlibUseAnalogModes is only a USB/LSB-vs-DIGU/DIGL label
+        // preference for GetModeForFrequency -- the centre-frequency offset
+        // itself depends only on whether we were/are actually in analog
+        // voice mode (wasAnalog / g_analog).
+        auto oldMode = GetModeForFrequency(reportingFreq, hamlibUseAnalogModes, wasAnalog);
+        uint64_t dialFreq = DisplayToDialFreq(reportingFreq, oldMode, wasAnalog);
+
+        uint64_t spot = DialToDisplayFreq(dialFreq, oldMode, false);
+
+        auto newMode = GetModeForFrequency(dialFreq, hamlibUseAnalogModes, g_analog != 0);
+        newDialFreq = DisplayToDialFreq(spot, newMode, false);
+        dialFreqChanged = newDialFreq != dialFreq;
+
+        reportingFreq = DialToDisplayFreq(newDialFreq, newMode, g_analog != 0);
+
+        wxString freqString;
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqString = wxNumberFormatter::ToString(reportingFreq / 1000.0, 1);
+        }
+        else
+        {
+            freqString = wxNumberFormatter::ToString(reportingFreq / 1000.0 / 1000.0, 4);
+        }
+        m_cboReportFrequency->SetValue(freqString);
+    }
+
+    if (wxGetApp().rigFrequencyController != nullptr &&
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
-        // Request mode change on the radio side
-        auto currentMode = getCurrentMode_();
-
-        constexpr int LSB_USB_FREQ_SHIFT_HZ = 3000;
-        if (currentMode == HamlibRigController::LSB && g_analog)
+        // Re-tune the rig first if the sideband change means the dial needs
+        // to move to keep the actual occupied frequency consistent, then
+        // request the mode change.
+        if (dialFreqChanged)
         {
-            // If analog is enabled, we should add +3 kHz to the frequency to 
-            // ensure we're still listening to the same passband that we were
-            // previously prior to the analog switch.
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency + LSB_USB_FREQ_SHIFT_HZ;
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            wxGetApp().rigFrequencyController->setFrequency(newDialFreq);
         }
-        else if (oldMode == HamlibRigController::LSB && !g_analog)
-        {
-            // Revert previous mode shift.
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency - LSB_USB_FREQ_SHIFT_HZ;
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        }
-
-        wxGetApp().rigFrequencyController->setMode(currentMode);
+        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
     }
 
     g_State.store(0, std::memory_order_release);
@@ -2036,11 +2079,15 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
-            // Request frequency/mode change on the radio side
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            // Request frequency/mode change on the radio side. The offset
+            // depends only on g_analog (real analog voice mode), not on the
+            // hamlibUseAnalogModes label preference.
+            auto mode = getCurrentMode_();
+            wxGetApp().rigFrequencyController->setFrequency(
+                DisplayToDialFreq(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, mode, g_analog != 0));
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                wxGetApp().rigFrequencyController->setMode(mode);
             }
         }
     }
@@ -2120,6 +2167,23 @@ void MainFrame::OnCenterRx(wxCommandEvent&)
     clickTune(FDMDV_FCENTRE);
 }
 
+void MainFrame::updateFreqBoxLabel_()
+{
+    // The centre-frequency convention only makes sense in digital mode (see
+    // GetCentreFreqOffsetHz() in FrequencyOps.h, which returns a zero offset
+    // whenever analog is active) -- in Analog mode the displayed value *is*
+    // the radio's dial frequency, so the label needs to say so.
+    bool asKhz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+    if (g_analog)
+    {
+        m_freqBox->SetLabel(asKhz ? _("Radio Freq. (kHz)") : _("Radio Freq. (MHz)"));
+    }
+    else
+    {
+        m_freqBox->SetLabel(asKhz ? _("Center Freq. (kHz)") : _("Center Freq. (MHz)"));
+    }
+}
+
 void MainFrame::updateReportingFreqList_()
 {
     uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -2141,7 +2205,7 @@ void MainFrame::updateReportingFreqList_()
     }
     m_cboReportFrequency->Clear();
     
-    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
+    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyListCentred.get())
     {
         m_cboReportFrequency->Append(item);
     }
@@ -2152,16 +2216,9 @@ void MainFrame::updateReportingFreqList_()
         m_cboReportFrequency->SetSelection(idx);
     }
     m_cboReportFrequency->SetValue(prevSelected);
-    
-    // Update associated label if the units have changed
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-    {
-        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
-    }
-    else
-    {
-        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
-    }
+
+    // Update associated label if the units/mode have changed
+    updateFreqBoxLabel_();
 }
 
 void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
