@@ -271,8 +271,6 @@ a poor SNR at the receiver.  This is a very common problem.
    frequency entry) and load any saved attenuation value for the new band.
    When a band is left the current values for that band are saved immediately.
    
- 1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
-
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.
 
@@ -303,15 +301,6 @@ For most FreeDV use, your radio's receive and transmit filters should be set to 
 This allows easy switching between analog mode as well as the various FreeDV modes. There has not been any testing done to
 definitively confirm whether narrower bandwidths help with reception of FreeDV. Additionally, FreeDV already performs its own 
 transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).
-
-For reference, the channel widths of the currently supported modes are below:
-
-| Mode | Width (kHz) |
-| --- | --- |
-| 1600 | 1.125 |
-| 700D | 1.000 |
-| 700E | 1.500 |
-| RADEV1 | 1.500 |
 
 # Voice Keyer
 
@@ -492,9 +481,6 @@ analog SSB and Skype as anchors for a rough guide to audio quality:
 Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 --- | :---: | :---: | :---: | :---: | :---:
 SSB | 0 | 8/10 | low | 2600 | 5/10
-1600 (*) | 4 | 3/10 | low | 4000 | 4/10
-700D (*) | -2 | 4/10 | high | 4000 | 3/10
-700E (*) | 1 | 7/10 | medium | 4000 | 3/10
 RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
 
@@ -509,57 +495,6 @@ repeating yourself.  The numbers above are on channels without fading
 (AWGN channels like VHF radio).  For fading channels the minimum SNR
 is a few dB higher. The Fading column shows how robust the mode is to
 HF Fading channels, higher is more robust.
-
-The more advanced 700D and 2020 modes have a high latency due to the
-use of large Forward Error Correction (FEC) codes.  They buffer many
-frames of speech, which combined with PC sound card buffering results
-in end-to-end latencies of 1-2 seconds.  They may take a few seconds to
-sync at the start of an over, especially in fading channels.
-
-## Multiple Mode Support
-
-FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
-
-* 700D
-* 700E
-* 1600
-
-In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
-These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
-this may consume significant additional CPU resources, which can cause decode problems. 
-
-By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
-necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
-and additionally short circuits the list of modes to be checked when in sync.
-
-Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
-(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
-difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
-when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
-
-## FreeDV 700D
-
-In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful
-Forward Error Correction (FEC) and optional interleaving.  It uses the
-same 700 bit/s speech codec as the deprecated 700C mode. It operates at SNRs as low as
--2dB, and has good HF channel performance.  It is around 10dB better
-than FreeDV 1600 on fading channels, and is competitive with SSB at
-low SNRs.  The FEC provides some protection from urban HF noise.
-
-FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
-+/- 60Hz of the transmit frequency.  This is straightforward with
-modern radios which are generally accurate to +/-1 Hz, but requires
-skill and practice when used with older, VFO based radios.
-
-## FreeDV 700E
-
-FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
-
-The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
-
-Clipping can be enabled via Tools-Options.
-
-On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.
 
 ## FreeDV RADEV1
 
@@ -578,7 +513,6 @@ This section describes features on Tools-Filter.
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
 Noise Suppression | Enable noise suppression, de-reverberation, AGC of mic signal using the Speex pre-processor
-700D Auto EQ | Automatic equalization for FreeDV 700D/E Codec input audio
 
 Auto EQ (Automatic Equalization) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artifacts and make the codec speech easier to understand.
 
@@ -639,8 +573,7 @@ Errs | Number of bit errors detected
 Resyncs | Number of times the demodulator has resynced
 ClkOff | Estimated sample clock offset in parts per million
 FreqOff | Estimated frequency offset in Hz
-Sync | Sync metric (OFDM modes like 700D/E)
-Var | Speech encoder distortion for 700D (see Auto EQ)
+Sync | Sync metric
 
 The sample clock offset is the estimated difference between the
 modulator (TX) and demodulator (RX) sample clocks.  For example if the
@@ -648,26 +581,14 @@ transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.
 
-## Timing Delta Tab
-
-This indicates the symbol timing estimate of the demodulator, in the
-range of +/- 0.5 of a symbol.  With off air signals this will have a
-sawtooth appearance, as the demod tracks the modulator sample clock.
-The steeper the slope, the greater the sample clock offset.
-
-* [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
-* [Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
-
 ## Sound Card Debug
 
-These features were added for FreeDV 700D, to help diagnose sound card
-issues during development.
+These features were added to help diagnose sound card issues during development.
 
 ### Tools - Options dialog:
 
 Debug FIFO and PortAudio counters: used for debugging audio
-problems on 700D.  During beta testing there were problems with break
-up in the 700D TX and RX audio on Windows.
+problems.  
 
 The PortAudio counters (PortAudio1 and PortAudio2) should not
 increment when running in TX or RX, as this indicates samples are
@@ -696,9 +617,8 @@ If the PortAudio counters are incrementing on receive try:
   thread in FreeDV which may help the sound driver thread process
   samples.
 
-  The txRXDumpTiming check box dumps timing information to a console
-  that is used for debugging the RX break up problem on 700D.  Each
-  number is how many ms the txRXThread took to run.
+  The txRXDumpTiming check box dumps timing information to a console.
+  Each number is how many ms the txRXThread took to run.
 
   The txRXDumpTiming check box dumps the number of samples free in the
   TX FIFO sending samples to the TX.  If this hits zero, your TX audio
@@ -751,7 +671,7 @@ disabling of processing typically takes place when using data mode.
 
 ## Overdriving Transmit Level
 
-This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
+This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  
 
 ## I can't set up FreeDV, especially the Sound Cards
 
@@ -848,13 +768,6 @@ there are a few other possibilities:
 Do you have the correct sideband? See USB or LSB section.
 
 Is it a FreeDV signal?  SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.
-
-## Trouble getting Sync with 700D
-
-You need to be within +/- 60 Hz on the transmit signal.  It helps if
-both the TX and RX stations tune to known, exact frequencies such as
-exactly 7.177MHz.  On channels with fast fading sync may take a few
-seconds.
 
 ## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
 
@@ -954,7 +867,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Enhancements:
     * RADEV2: Standardize mode as USB. (PR #1397)
 2. Other:
-    * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411)
+    * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 
