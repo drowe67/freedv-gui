@@ -407,14 +407,8 @@ class MainFrame : public TopFrame
         void OnTop(wxCommandEvent& event) override;
         void OnExit( wxCommandEvent& event ) override;
 
-        void OnToolsEasySetup( wxCommandEvent& event ) override;
-        void OnToolsEasySetupUI( wxUpdateUIEvent& event ) override;
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
-        void OnToolsAudio( wxCommandEvent& event ) override;
-        void OnToolsAudioUI( wxUpdateUIEvent& event ) override;
-        void OnToolsComCfg( wxCommandEvent& event ) override;
-        void OnToolsComCfgUI( wxUpdateUIEvent& event ) override;
         void OnToolsFilter( wxCommandEvent& event ) override;
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;

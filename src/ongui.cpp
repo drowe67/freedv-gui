@@ -14,11 +14,8 @@
 #include "main.h"
 
 #include "git_version.h"
-#include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
-#include "gui/dialogs/dlg_audiooptions.h"
 #include "gui/dialogs/dlg_options.h"
-#include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
@@ -80,45 +77,6 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
     OnExit(event);
 }
 
-//-------------------------------------------------------------------------
-// OnToolsEasySetup()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetup(wxCommandEvent&)
-{
-    EasySetupDialog* dlg = new EasySetupDialog(this);
-    if (dlg->ShowModal() == wxOK)
-    {
-        // Show/hide frequency box based on CAT control setup.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-
-        // Show/hide callsign combo box based on PSK Reporter Status
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            m_cboLastReportedCallsigns->Show();
-            m_txtCtrlCallSign->Hide();
-        }
-        else
-        {
-            m_cboLastReportedCallsigns->Hide();
-            m_txtCtrlCallSign->Show();
-        }
-
-        // Initialize FreeDV Reporter if required.
-        initializeFreeDVReporter_();
-        
-        // Relayout window so that the changes can take effect.
-        m_panel->Layout();
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnToolsEasySetupUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -151,40 +109,6 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
 void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 {
     event.Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "");
-}
-
-//-------------------------------------------------------------------------
-// OnToolsAudio()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudio(wxCommandEvent& event)
-{
-    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
-
-    wxUnusedVar(event);
-    int rv = 0;
-    AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
-    rv = dlg->ShowModal();
-    if(rv == wxOK)
-    {
-        dlg->ExchangeData(EXCHANGE_DATA_OUT);
-
-        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
-        if (oldRxOnly != newRxOnly &&
-            wxGetApp().m_sharedReporterObject->isValidForReporting())
-        {
-            // Receive Only status has changed, refresh FreeDV Reporter
-            initializeFreeDVReporter_();
-        }
-    }
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsAudioUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
@@ -338,35 +262,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 {
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    ComPortsDlg *dlg = new ComPortsDlg(NULL);
-
-    if (dlg->ShowModal() == wxID_OK)
-    {
-        // Show/hide frequency box based on CAT control configuration.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-        
-        // Reinitialize FreeDV Reporter again in case we changed PTT method.
-        initializeFreeDVReporter_();
-    }
-
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfgUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------

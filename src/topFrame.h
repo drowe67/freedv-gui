@@ -151,12 +151,8 @@ class TopFrame : public wxFrame
 
         virtual void OnExit( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTop( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetup( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetupUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudio( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudioUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFilter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
@@ -164,8 +160,6 @@ class TopFrame : public wxFrame
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
