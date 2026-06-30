@@ -23,6 +23,8 @@
 #define __OPTIONS_DIALOG__
 
 #include <wx/clrpicker.h>
+#include <wx/propgrid/property.h>
+#include <wx/propgrid/props.h>
 
 #include "../../main.h"
 #include "defines.h"
@@ -80,6 +82,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox* m_ckHalfDuplex;
 
         wxNotebook  *m_notebook;
+        wxNotebookPage *m_radioTab; // Radio (CAT/PTT Config)
         wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
         wxNotebookPage *m_rigControlTab; // Rig Control
         wxNotebookPage *m_displayTab; // Waterfall color, other display config
@@ -87,6 +90,44 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
         wxNotebookPage *m_simulationTab; // testing/interference
         wxNotebookPage *m_debugTab; // Debug
+
+        /* Radio tab - VOX PTT Settings */
+        wxCheckBox* m_ckLeftChannelVoxTone;
+
+        /* Radio tab - Hamlib Settings */
+        wxCheckBox *m_ckUseHamlibPTT;
+        wxComboBox *m_cbRigName;
+        wxComboBox *m_cbSerialPort;
+        wxComboBox *m_cbPttSerialPort;
+        wxComboBox *m_cbSerialRate;
+        wxStaticText *m_stIcomCIVHex;
+        wxTextCtrl *m_tcIcomCIVHex;
+        wxComboBox *m_cbPttMethod;
+        wxCheckBox *m_ckForceRTSOn;
+        wxCheckBox *m_ckForceDTROn;
+
+        /* Radio tab - Serial Port Settings */
+        wxCheckBox    *m_ckUseSerialPTT;
+        wxStaticText  *m_staticTextSerialDevice;
+        wxComboBox    *m_cbCtlDevicePath;
+        wxRadioButton *m_rbUseDTR;
+        wxCheckBox    *m_ckRTSPos;
+        wxRadioButton *m_rbUseRTS;
+        wxCheckBox    *m_ckDTRPos;
+
+        /* Radio tab - PTT In Settings */
+        wxCheckBox    *m_ckUsePTTInput;
+        wxStaticText  *m_pttInSerialDeviceLabel;
+        wxCheckBox    *m_ckCTSPos;
+        wxComboBox    *m_cbCtlDevicePathPttIn;
+
+#if defined(WIN32)
+        /* Radio tab - OmniRig Settings */
+        wxCheckBox    *m_ckUseOmniRig;
+        wxComboBox    *m_cbOmniRigRigId;
+#endif
+
+        wxButton* m_buttonTestPTT;
         
         /* Hamlib options */
         wxCheckBox    *m_ckboxUseAnalogModes;
@@ -210,6 +251,19 @@ class OptionsDlg : public wxDialog
         void OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event);
         void OnChooseQuickRecordPath(wxCommandEvent& event);
         void OnChooseCsvLogFilePath(wxCommandEvent& event);
+
+        /* Radio tab event handlers */
+        void PTTUseHamLibClicked(wxCommandEvent& event);
+        void PTTUseSerialClicked(wxCommandEvent& event);
+#if defined(WIN32)
+        void PTTUseOmniRigClicked(wxCommandEvent& event);
+#endif
+        void PTTUseSerialInputClicked(wxCommandEvent& event);
+        void HamlibRigNameChanged(wxCommandEvent& event);
+        void OnHamlibSerialPortChanged(wxCommandEvent& event);
+        void OnHamlibPttMethodChanged(wxCommandEvent& event);
+        void resetIcomCIVStatus();
+        void OnTestPTT(wxCommandEvent& event);
         
         void OnReportingFreqSelectionChange(wxCommandEvent& event);
         void OnReportingFreqTextChange(wxCommandEvent& event);
@@ -224,8 +278,12 @@ class OptionsDlg : public wxDialog
          void updateAttnCarrierState();
          void updateToneState();
          void updateRigControlState();
-         
+         void updateRadioControlState();
+         void populatePortList();
+         void populateBaudRateList(int min = 0, int max = 0);
+
          bool sessionActive_;
+         bool isTesting_;
 };
 
 #endif // __OPTIONS_DIALOG__
