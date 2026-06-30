@@ -431,7 +431,7 @@ void TxRxThread::initializePipeline_()
             helper_
         );
 
-        auto debugRecordStep = new DebugRecordStep(8000, 3600, recordFileStr);
+        auto debugRecordStep = new DebugRecordStep(8000, 60 * 60 * 12, recordFileStr); // 12 hours
 	auto debugRecordPipeline = new AudioPipeline(inputSampleRate_, 8000);
 	debugRecordPipeline->appendPipelineStep(debugRecordStep);
 
