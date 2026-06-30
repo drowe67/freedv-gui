@@ -68,6 +68,8 @@ static wxString bandNameForFilter(FilterFrequency band);
 
 extern std::atomic<bool> g_eoo_enqueued;
 
+extern float g_snr;
+
 void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
@@ -1831,8 +1833,9 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
 
     g_State.store(0, std::memory_order_release);
-    g_prev_State.store(0, std::memory_order_release);;
+    g_prev_State.store(0, std::memory_order_release);
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
+    g_snr = 0;
 
     event.Skip();
 }

@@ -1192,6 +1192,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     realigned_ = false;
     syncState_ = false;
     txChangeoverOccurring_ = false;
+    badSnrFound_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1737,8 +1738,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         return;
     }
     
-    // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
+    // Most plots don't need TX/sync state, but we really should only be grabbing this
+    // info once every 100ms. Since there are multiple timers involved, we only grab
+    // this info on the "update other" timer fire and cache it for the other timers.
+    if (timerId == ID_TIMER_UPDATE_OTHER)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -1874,8 +1877,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
-            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
+        if (timerId == ID_TIMER_UPDATE_OTHER)
+        {
+            if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
+                g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
+            }
         }
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1895,10 +1901,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
         {
-            float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, (float)MAX_SNR_VAL);
-            snr = std::max(snr, (float)NO_SNR_VAL);
-            m_panelSNR->add_new_sample(snr);
+            float snrChartValue = syncState ? g_snr : NO_SNR_VAL;
+            snrChartValue = std::min(snrChartValue, (float)MAX_SNR_VAL);
+            snrChartValue = std::max(snrChartValue, (float)NO_SNR_VAL);
+            m_panelSNR->add_new_sample(snrChartValue);
             m_panelSNR->refreshData();
         }
         
@@ -1934,6 +1940,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         g_sync_time = time(0);
             
                         freedvInterface.resetReliableText();
+
+                        // Reset SNR for next "over".
+                        g_snr = 0;
+
+                        if (badSnrFound_)
+                        {
+                            // XXX DEBUG ONLY - Automatically stop RX if bad SNR found.
+                            CallAfter([&]() {
+                                wxCommandEvent tmpEvent;
+                                OnTogBtnOnOff(tmpEvent);
+                            });
+                        }
                     }
                 }
                 m_timeSinceSyncLoss = 0;
@@ -2105,6 +2123,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                                     pendingSnr);
                             }
                         }
+
+                        if (pendingSnr <= -15)
+                        {
+                            // XXX DEBUG ONLY - automatically stop modem if we get a bad SNR.
+                            badSnrFound_ = true;
+                        }
                     }
                 }
             }
@@ -2131,6 +2155,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             freq,
                             pendingSnr
                         );
+                    }
+
+                    if (pendingSnr <= -15)
+                    {
+                        // XXX DEBUG ONLY - automatically stop modem if we get a bad SNR.
+                        badSnrFound_ = true;
                     }
                 }
             }
@@ -2460,6 +2490,7 @@ void MainFrame::performFreeDVOn_()
     
     m_timeSinceSyncLoss = 0;
     syncState_ = false;
+    badSnrFound_ = false;
 
     executeOnUiThreadAndWait_([&]() 
     {
