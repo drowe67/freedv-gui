@@ -2670,7 +2670,7 @@ void OptionsDlg::testAudioOutput(const wxString& devName)
 
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
 
-    m_audioPlotThread = new std::thread([&](wxString devName) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName) {
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
@@ -2723,7 +2723,7 @@ void OptionsDlg::testAudioInput(const wxString& devName)
 
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
 
-    m_audioPlotThread = new std::thread([&](wxString devName) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName) {
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
