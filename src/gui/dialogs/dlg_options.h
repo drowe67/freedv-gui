@@ -28,6 +28,7 @@
 
 #include "../../main.h"
 #include "defines.h"
+#include "audio/IAudioEngine.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -175,7 +176,24 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlQuickRecordRawPath;
         wxButton     *m_buttonChooseQuickRecordDecodedPath;
         wxTextCtrl   *m_txtCtrlQuickRecordDecodedPath;
-        
+
+        /* Audio tab - device selection combos */
+        wxComboBox* m_cbSoundCard1InDevice;
+        wxComboBox* m_cbSoundCard1OutDevice;
+        wxComboBox* m_cbSoundCard2InDevice;
+        wxComboBox* m_cbSoundCard2OutDevice;
+
+        /* Audio tab - test buttons */
+        wxButton*    m_btnSoundCard1InTest;
+        wxButton*    m_btnSoundCard1OutTest;
+        wxButton*    m_btnSoundCard2InTest;
+        wxButton*    m_btnSoundCard2OutTest;
+
+        void OnSoundCard1InTest(wxCommandEvent& event);
+        void OnSoundCard1OutTest(wxCommandEvent& event);
+        void OnSoundCard2InTest(wxCommandEvent& event);
+        void OnSoundCard2OutTest(wxCommandEvent& event);
+
         /* test frames, other simulated channel impairments */
 
         wxCheckBox   *m_ckboxChannelNoise;
@@ -282,8 +300,13 @@ class OptionsDlg : public wxDialog
          void populatePortList();
          void populateBaudRateList(int min = 0, int max = 0);
 
+         void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
+         void testAudioOutput(const wxString& devName);
+         void testAudioInput(const wxString& devName);
+
          bool sessionActive_;
          bool isTesting_;
+         std::thread* m_audioPlotThread;
 };
 
 #endif // __OPTIONS_DIALOG__
