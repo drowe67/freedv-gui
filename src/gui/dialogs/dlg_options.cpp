@@ -151,10 +151,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
 
-    m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_keyerTab, _("Audio"));
-    m_notebook->AddPage(m_reportingTab, _("Reporting"));
+    m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
+    m_notebook->AddPage(m_reportingTab, _("Reporting"));
     m_notebook->AddPage(m_displayTab, _("Display"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
