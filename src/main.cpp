@@ -52,6 +52,7 @@
 #include "logging/WSJTXNetworkLogger.h"
 
 #include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/freedv_reporter.h"
 
@@ -1310,10 +1311,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
-        // Initial setup. Open Options dialog so the user can configure everything.
+        // Initial setup — show the setup wizard.
         CallAfter([&]() {
-            wxCommandEvent dummy;
-            OnToolsOptions(dummy);
+            SetupWizard wizard(this);
+            wizard.ShowModal();
         });
     }
     

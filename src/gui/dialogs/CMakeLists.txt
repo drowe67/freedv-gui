@@ -2,6 +2,7 @@ add_library(fdv_gui_dialogs STATIC
     begin_recording.cpp
     dlg_filter.cpp
     dlg_options.cpp
+    dlg_setup_wizard.cpp
     freedv_reporter.cpp
     log_entry.cpp
     monitor_volume_adj.cpp
