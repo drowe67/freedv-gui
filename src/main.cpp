@@ -2342,7 +2342,7 @@ void MainFrame::performFreeDVOn_()
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
-                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         });
                     }
                     else
@@ -2783,7 +2783,7 @@ void MainFrame::startRxStream()
         if (g_nSoundCards == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
-                wxMessageBox(wxT("No Sound Cards configured, use Tools->Options to configure"), wxT("Error"), wxOK);
+                wxMessageBox(wxT("No Sound Cards configured, use Tools->Settings to configure"), wxT("Error"), wxOK);
             });
             
             m_RxRunning = false;
@@ -3307,7 +3307,7 @@ bool MainFrame::validateSoundCardSetup()
     else if (!canRun)
     {
         wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Options to check your settings.",
+            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Settings to check your settings.",
             failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
     }
     else
@@ -3344,7 +3344,7 @@ bool MainFrame::validateSoundCardSetup()
         if (!canRun)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Options to check your settings.",
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Settings to check your settings.",
                 failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }

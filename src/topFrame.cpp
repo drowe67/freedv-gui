@@ -388,9 +388,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // menu on macOS automatically. On other platforms it stays in Tools.
     wxMenuItem* m_menuItemOptions;
 #ifdef __WXMAC__
-    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Options...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Settings...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
 #else
-    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Options...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Settings...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
 #endif // __WXMAC__
     tools->Append(m_menuItemOptions);
 
@@ -549,7 +549,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
-    m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Options->Reporting."));
+    m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings->Reporting."));
     sbSizerReporterBox->Add(m_reporterHidden, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
     leftSizer->Add(sbSizerReporterBox, 0, wxALL|wxEXPAND, 2);
