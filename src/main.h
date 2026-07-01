@@ -410,6 +410,8 @@ class MainFrame : public TopFrame
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
         void OnToolsFilter( wxCommandEvent& event ) override;
+        void OnToolsSetupWizard(wxCommandEvent& event) override;
+        void OnToolsSetupWizardUI(wxUpdateUIEvent& event) override;
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 

@@ -16,6 +16,7 @@
 #include "git_version.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
@@ -109,6 +110,20 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
 void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 {
     event.Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "");
+}
+
+//-------------------------------------------------------------------------
+// OnToolsSetupWizard()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsSetupWizard(wxCommandEvent&)
+{
+    SetupWizard wizard(this);
+    wizard.ShowModal();
+}
+
+void MainFrame::OnToolsSetupWizardUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------

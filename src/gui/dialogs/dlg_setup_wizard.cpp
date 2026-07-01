@@ -502,9 +502,19 @@ void SetupWizard::loadConfig()
 {
     auto& cfg = wxGetApp().appConfiguration;
 
+    auto audioEngine = AudioEngineFactory::GetAudioEngine();
+
     // Page 0: Receive Audio
     m_cbRadioIn->SetValue(cfg.audioConfiguration.soundCard1In.deviceName);
-    m_cbSpeakerOut->SetValue(cfg.audioConfiguration.soundCard1Out.deviceName);
+    {
+        wxString spk = cfg.audioConfiguration.soundCard1Out.deviceName;
+        if (spk.IsEmpty() || spk == "none")
+        {
+            auto def = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
+            if (def.isValid()) spk = def.name;
+        }
+        m_cbSpeakerOut->SetValue(spk);
+    }
 
     // Page 1: Transmit Audio
     wxString sc2in  = cfg.audioConfiguration.soundCard2In.deviceName;
@@ -515,6 +525,10 @@ void SetupWizard::loadConfig()
     if (!rxOnly) {
         m_cbMicIn->SetValue(sc2in);
         m_cbRadioOut->SetValue(sc2out);
+    } else {
+        // Pre-fill microphone with system default so the user sees a sensible suggestion
+        auto def = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
+        if (def.isValid()) m_cbMicIn->SetValue(def.name);
     }
 
     // Page 2: Radio Control — Hamlib
