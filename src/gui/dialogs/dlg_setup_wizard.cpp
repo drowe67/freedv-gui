@@ -365,9 +365,11 @@ void SetupWizard::populateAudioCombo(wxComboBox* combo, IAudioEngine::AudioDirec
 {
     combo->Clear();
     auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
     for (auto& dev : engine->getAudioDeviceList(dir))
         combo->Append(dev.name);
     combo->Append("none");
+    engine->stop();
 }
 
 void SetupWizard::populateSerialPorts()
