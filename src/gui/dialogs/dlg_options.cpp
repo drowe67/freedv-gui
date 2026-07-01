@@ -2728,7 +2728,7 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
     btn->SetLabel(_("Recording"));
 
-    m_audioPlotThread = new std::thread([&](wxString inDev, wxString outDev, wxButton* btn) {
+    m_audioPlotThread = new std::thread([&](wxString const& inDev, wxString const& outDev, wxButton* btn) {
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto inDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : inDevList)
