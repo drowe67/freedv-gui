@@ -301,8 +301,8 @@ class OptionsDlg : public wxDialog
          void populateBaudRateList(int min = 0, int max = 0);
 
          void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
-         void testAudioOutput(const wxString& devName);
-         void testAudioInput(const wxString& inDevName, const wxString& outDevName);
+         void testAudioOutput(const wxString& devName, wxButton* btn);
+         void testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn);
 
          bool sessionActive_;
          bool isTesting_;

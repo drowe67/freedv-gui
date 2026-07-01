@@ -2662,7 +2662,7 @@ static void setAudioTestButtonsEnabled(bool enabled,
 //-------------------------------------------------------------------------
 // testAudioOutput() - plays a 400 Hz sine wave on the selected output device
 //-------------------------------------------------------------------------
-void OptionsDlg::testAudioOutput(const wxString& devName)
+void OptionsDlg::testAudioOutput(const wxString& devName, wxButton* btn)
 {
     if (devName.IsEmpty() || devName == "none")
     {
@@ -2671,8 +2671,9 @@ void OptionsDlg::testAudioOutput(const wxString& devName)
     }
 
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+    btn->SetLabel(_("Playing"));
 
-    m_audioPlotThread = new std::thread([&](wxString const& devName) {
+    m_audioPlotThread = new std::thread([&](wxString const& devName, wxButton* btn) {
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
@@ -2703,19 +2704,20 @@ void OptionsDlg::testAudioOutput(const wxString& devName)
             }
         }
 
-        CallAfter([&]() {
+        CallAfter([&, btn]() {
             m_audioPlotThread->join();
             delete m_audioPlotThread;
             m_audioPlotThread = nullptr;
+            btn->SetLabel(_("Test"));
             setAudioTestButtonsEnabled(true, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
         });
-    }, devName);
+    }, devName, btn);
 }
 
 //-------------------------------------------------------------------------
 // testAudioInput() - records 5 s on the input device then plays back on output
 //-------------------------------------------------------------------------
-void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDevName)
+void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn)
 {
     if (inDevName.IsEmpty() || inDevName == "none")
     {
@@ -2724,8 +2726,9 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
     }
 
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+    btn->SetLabel(_("Recording"));
 
-    m_audioPlotThread = new std::thread([&](wxString inDev, wxString outDev) {
+    m_audioPlotThread = new std::thread([&](wxString inDev, wxString outDev, wxButton* btn) {
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto inDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : inDevList)
@@ -2756,6 +2759,8 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
                 inDevice->start();
                 std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_RECORD_DURATION_SECS));
                 inDevice->stop();
+
+                CallAfter([btn]() { btn->SetLabel(_("Playing")); });
 
                 // Play back the recording on the output device
                 if (!outDev.IsEmpty() && outDev != "none")
@@ -2823,13 +2828,14 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
             break;
         }
 
-        CallAfter([&]() {
+        CallAfter([&, btn]() {
             m_audioPlotThread->join();
             delete m_audioPlotThread;
             m_audioPlotThread = nullptr;
+            btn->SetLabel(_("Test"));
             setAudioTestButtonsEnabled(true, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
         });
-    }, inDevName, outDevName);
+    }, inDevName, outDevName, btn);
 }
 
 //-------------------------------------------------------------------------
@@ -2840,7 +2846,7 @@ void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
     wxString outDev = m_cbSoundCard2OutDevice->GetValue();
     if (outDev.IsEmpty() || outDev == "none")
         outDev = m_cbSoundCard1OutDevice->GetValue();
-    testAudioInput(m_cbSoundCard1InDevice->GetValue(), outDev);
+    testAudioInput(m_cbSoundCard1InDevice->GetValue(), outDev, m_btnSoundCard1InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2848,7 +2854,7 @@ void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_cbSoundCard1OutDevice->GetValue());
+    testAudioOutput(m_cbSoundCard1OutDevice->GetValue(), m_btnSoundCard1OutTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2856,7 +2862,7 @@ void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 {
-    testAudioInput(m_cbSoundCard2InDevice->GetValue(), m_cbSoundCard2OutDevice->GetValue());
+    testAudioInput(m_cbSoundCard2InDevice->GetValue(), m_cbSoundCard2OutDevice->GetValue(), m_btnSoundCard2InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2864,5 +2870,5 @@ void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_cbSoundCard2OutDevice->GetValue());
+    testAudioOutput(m_cbSoundCard2OutDevice->GetValue(), m_btnSoundCard2OutTest);
 }
