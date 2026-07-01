@@ -353,12 +353,6 @@ wxPanel* SetupWizard::makeReportingPage()
 
     vs->Add(grid, 0, wxEXPAND | wxBOTTOM, 10);
 
-    m_ckFreeDVReporter = new wxCheckBox(page, wxID_ANY, _("Report to FreeDV Reporter"));
-    vs->Add(m_ckFreeDVReporter, 0, wxBOTTOM, 6);
-
-    m_ckPskReporter = new wxCheckBox(page, wxID_ANY, _("Report to PSK Reporter"));
-    vs->Add(m_ckPskReporter, 0);
-
     page->SetSizer(vs);
     return page;
 }
@@ -556,8 +550,6 @@ void SetupWizard::loadConfig()
     m_ckReportingEnable->SetValue(cfg.reportingConfiguration.reportingEnabled);
     m_txtCallsign->SetValue(cfg.reportingConfiguration.reportingCallsign);
     m_txtGridSquare->SetValue(cfg.reportingConfiguration.reportingGridSquare);
-    m_ckFreeDVReporter->SetValue(cfg.reportingConfiguration.freedvReporterEnabled);
-    m_ckPskReporter->SetValue(cfg.reportingConfiguration.pskReporterEnabled);
 }
 
 void SetupWizard::saveConfig()
@@ -632,11 +624,12 @@ void SetupWizard::saveConfig()
 #endif
 
     // Page 3: Reporting
-    cfg.reportingConfiguration.reportingEnabled      = m_ckReportingEnable->GetValue();
+    bool reportingOn = m_ckReportingEnable->GetValue();
+    cfg.reportingConfiguration.reportingEnabled      = reportingOn;
     cfg.reportingConfiguration.reportingCallsign     = m_txtCallsign->GetValue();
     cfg.reportingConfiguration.reportingGridSquare   = m_txtGridSquare->GetValue();
-    cfg.reportingConfiguration.freedvReporterEnabled = m_ckFreeDVReporter->GetValue();
-    cfg.reportingConfiguration.pskReporterEnabled    = m_ckPskReporter->GetValue();
+    cfg.reportingConfiguration.freedvReporterEnabled = reportingOn;
+    cfg.reportingConfiguration.pskReporterEnabled    = reportingOn;
 
     cfg.save(pConfig);
 }
@@ -701,8 +694,6 @@ void SetupWizard::updateReportingState()
     m_txtCallsign->Enable(en);
     m_stGridSquare->Enable(en);
     m_txtGridSquare->Enable(en);
-    m_ckFreeDVReporter->Enable(en);
-    m_ckPskReporter->Enable(en);
 }
 
 // --------------------------------------------------------------------------

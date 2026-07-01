@@ -80,8 +80,6 @@ private:
     wxTextCtrl*   m_txtCallsign;
     wxStaticText* m_stGridSquare;
     wxTextCtrl*   m_txtGridSquare;
-    wxCheckBox*   m_ckFreeDVReporter;
-    wxCheckBox*   m_ckPskReporter;
 
     // Page factories
     wxPanel* makeReceivePage();
