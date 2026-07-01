@@ -378,53 +378,51 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_menubarMain->Append(file, _("&File"));
 
+    settings = new wxMenu();
+
+    // wxID_PREFERENCES causes wxWidgets to move this item into the application
+    // menu on macOS automatically. On other platforms it stays in Settings.
+    wxMenuItem* m_menuItemOptions;
+#ifdef __WXMAC__
+    m_menuItemOptions = new wxMenuItem(settings, wxID_PREFERENCES, wxString(_("&Edit Settings...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#else
+    m_menuItemOptions = new wxMenuItem(settings, wxID_PREFERENCES, wxString(_("&Edit Settings...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#endif // __WXMAC__
+    settings->Append(m_menuItemOptions);
+
+    wxMenuItem* m_menuItemSetupWizard;
+    m_menuItemSetupWizard = new wxMenuItem(settings, wxID_ANY, wxString(_("Setup &Wizard...")), _("Re-run the FreeDV Setup Wizard"), wxITEM_NORMAL);
+    settings->Append(m_menuItemSetupWizard);
+
+    settings->AppendSeparator();
+
+    m_menuItemExportConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
+    settings->Append(m_menuItemExportConfig);
+
+    m_menuItemImportConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
+    settings->Append(m_menuItemImportConfig);
+
+    wxMenuItem* m_menuItemLoadDefaultConfig;
+    m_menuItemLoadDefaultConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("Load &Default Configuration")) , _("Resets FreeDV to its default configuration"), wxITEM_NORMAL);
+    settings->Append(m_menuItemLoadDefaultConfig);
+
+    m_menubarMain->Append(settings, _("&Settings"));
+
     tools = new wxMenu();
-    wxMenuItem* m_menuItemEasySetup;
-    m_menuItemEasySetup = new wxMenuItem(tools, wxID_ANY, wxString(_("&Easy Setup...")) , _("Simplified setup of FreeDV"), wxITEM_NORMAL);
-    tools->Append(m_menuItemEasySetup);
-    
+
     wxMenuItem* m_menuItemFreeDVReporter;
     m_menuItemFreeDVReporter = new wxMenuItem(tools, wxID_ANY, wxString(_("FreeDV R&eporter")) , _("Opens browser window and displays FreeDV Reporter service."), wxITEM_NORMAL);
     tools->Append(m_menuItemFreeDVReporter);
-    
-    wxMenuItem* toolsSeparator1 = new wxMenuItem(tools, wxID_SEPARATOR);
-    tools->Append(toolsSeparator1);
-    
-    wxMenuItem* m_menuItemAudio;
-    m_menuItemAudio = new wxMenuItem(tools, wxID_ANY, wxString(_("&Audio Config...")) , _("Configures sound cards for FreeDV"), wxITEM_NORMAL);
-    tools->Append(m_menuItemAudio);
-
-    wxMenuItem* m_menuItemRigCtrlCfg;
-    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("CAT and P&TT Config...")) , _("Configures FreeDV integration with radio"), wxITEM_NORMAL);
-    tools->Append(m_menuItemRigCtrlCfg);
-
-    wxMenuItem* m_menuItemOptions;
-    m_menuItemOptions = new wxMenuItem(tools, wxID_ANY, wxString(_("&Options...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
-    tools->Append(m_menuItemOptions);
 
     wxMenuItem* m_menuItemFilter;
-    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , _("Configures audio filtering"), wxITEM_NORMAL);
+    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("Filter &Audio...")) , _("Configures audio filtering"), wxITEM_NORMAL);
     tools->Append(m_menuItemFilter);
-    
-    wxMenuItem* toolsSeparator2 = new wxMenuItem(tools, wxID_SEPARATOR);
-    tools->Append(toolsSeparator2);
+
+    tools->AppendSeparator();
 
     m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start &Play File - From Radio...")) , _("Pipes radio sound input from file"), wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
-
-    wxMenuItem* toolsSeparator3 = new wxMenuItem(tools, wxID_SEPARATOR);
-    tools->Append(toolsSeparator3);
-
-    m_menuItemExportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
-    tools->Append(m_menuItemExportConfig);
-
-    m_menuItemImportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
-    tools->Append(m_menuItemImportConfig);
-
-    wxMenuItem* m_menuItemLoadDefaultConfig;
-    m_menuItemLoadDefaultConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("Load &Default Configuration")) , _("Resets FreeDV to its default configuration"), wxITEM_NORMAL);
-    tools->Append(m_menuItemLoadDefaultConfig);
 
     m_menubarMain->Append(tools, _("&Tools"));
 
@@ -557,7 +555,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
-    m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Options->Reporting."));
+    m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings->Reporting."));
     sbSizerReporterBox->Add(m_reporterHidden, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
     leftSizer->Add(sbSizerReporterBox, 0, wxALL|wxEXPAND, 2);
@@ -818,18 +816,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     this->Connect(wxEVT_SYS_COLOUR_CHANGED, wxSysColourChangedEventHandler(TopFrame::OnSystemColorChanged));
     this->Connect(m_menuItemExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnExit));
 
-    this->Connect(m_menuItemEasySetup->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsEasySetup));
-    this->Connect(m_menuItemEasySetup->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsEasySetupUI));
     this->Connect(m_menuItemFreeDVReporter->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsFreeDVReporter));
     this->Connect(m_menuItemFreeDVReporter->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsFreeDVReporterUI));
-    this->Connect(m_menuItemAudio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsAudio));
-    this->Connect(m_menuItemAudio->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsAudioUI));
+    this->Connect(m_menuItemSetupWizard->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsSetupWizard));
+    this->Connect(m_menuItemSetupWizard->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsSetupWizardUI));
     this->Connect(m_menuItemFilter->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsFilter));
     this->Connect(m_menuItemFilter->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsFilterUI));
-    this->Connect(m_menuItemRigCtrlCfg->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsComCfg));
-    this->Connect(m_menuItemRigCtrlCfg->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsComCfgUI));
-    this->Connect(m_menuItemOptions->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
-    this->Connect(m_menuItemOptions->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
+    this->Connect(wxID_PREFERENCES, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
+    this->Connect(wxID_PREFERENCES, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
     this->Connect(m_menuItemPlayFileFromRadio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileFromRadio));
 
@@ -936,16 +930,12 @@ TopFrame::~TopFrame()
     this->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::topFrame_OnUpdateUI));
     this->Disconnect(wxEVT_ACTIVATE, wxActivateEventHandler(TopFrame::OnActivateWindow));
     this->Disconnect(ID_EXIT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnExit));
-    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsEasySetup));
-    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsEasySetupUI));
-    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsAudio));
-    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsAudioUI));
+    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsSetupWizard));
+    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsSetupWizardUI));
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsFilter));
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsFilterUI));
-    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsComCfg));
-    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsComCfgUI));
-    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
-    this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
+    this->Disconnect(wxID_PREFERENCES, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
+    this->Disconnect(wxID_PREFERENCES, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileFromRadio));
 

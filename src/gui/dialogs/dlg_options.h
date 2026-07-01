@@ -23,9 +23,12 @@
 #define __OPTIONS_DIALOG__
 
 #include <wx/clrpicker.h>
+#include <wx/propgrid/property.h>
+#include <wx/propgrid/props.h>
 
 #include "../../main.h"
 #include "defines.h"
+#include "audio/IAudioEngine.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -80,13 +83,53 @@ class OptionsDlg : public wxDialog
         wxCheckBox* m_ckHalfDuplex;
 
         wxNotebook  *m_notebook;
+        wxNotebookPage *m_radioTab; // Radio (CAT/PTT Config)
         wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
         wxNotebookPage *m_rigControlTab; // Rig Control
         wxNotebookPage *m_displayTab; // Waterfall color, other display config
-        wxNotebookPage *m_keyerTab; // Voice Keyer
+        wxNotebookPage *m_keyerTab; // Audio devices
+        wxNotebookPage *m_voiceKeyerTab; // Voice Keyer / Quick Record
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
         wxNotebookPage *m_simulationTab; // testing/interference
         wxNotebookPage *m_debugTab; // Debug
+
+        /* Radio tab - VOX PTT Settings */
+        wxCheckBox* m_ckLeftChannelVoxTone;
+
+        /* Radio tab - Hamlib Settings */
+        wxCheckBox *m_ckUseHamlibPTT;
+        wxComboBox *m_cbRigName;
+        wxComboBox *m_cbSerialPort;
+        wxComboBox *m_cbPttSerialPort;
+        wxComboBox *m_cbSerialRate;
+        wxStaticText *m_stIcomCIVHex;
+        wxTextCtrl *m_tcIcomCIVHex;
+        wxComboBox *m_cbPttMethod;
+        wxCheckBox *m_ckForceRTSOn;
+        wxCheckBox *m_ckForceDTROn;
+
+        /* Radio tab - Serial Port Settings */
+        wxCheckBox    *m_ckUseSerialPTT;
+        wxStaticText  *m_staticTextSerialDevice;
+        wxComboBox    *m_cbCtlDevicePath;
+        wxRadioButton *m_rbUseDTR;
+        wxCheckBox    *m_ckRTSPos;
+        wxRadioButton *m_rbUseRTS;
+        wxCheckBox    *m_ckDTRPos;
+
+        /* Radio tab - PTT In Settings */
+        wxCheckBox    *m_ckUsePTTInput;
+        wxStaticText  *m_pttInSerialDeviceLabel;
+        wxCheckBox    *m_ckCTSPos;
+        wxComboBox    *m_cbCtlDevicePathPttIn;
+
+#if defined(WIN32)
+        /* Radio tab - OmniRig Settings */
+        wxCheckBox    *m_ckUseOmniRig;
+        wxComboBox    *m_cbOmniRigRigId;
+#endif
+
+        wxButton* m_buttonTestPTT;
         
         /* Hamlib options */
         wxCheckBox    *m_ckboxUseAnalogModes;
@@ -134,7 +177,38 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlQuickRecordRawPath;
         wxButton     *m_buttonChooseQuickRecordDecodedPath;
         wxTextCtrl   *m_txtCtrlQuickRecordDecodedPath;
-        
+
+        /* Audio tab - device selection combos */
+        wxComboBox* m_cbSoundCard1InDevice;
+        wxComboBox* m_cbSoundCard1OutDevice;
+        wxComboBox* m_cbSoundCard2InDevice;
+        wxComboBox* m_cbSoundCard2OutDevice;
+
+        /* Audio tab - test buttons */
+        wxButton*    m_btnSoundCard1InTest;
+        wxButton*    m_btnSoundCard1OutTest;
+        wxButton*    m_btnSoundCard2InTest;
+        wxButton*    m_btnSoundCard2OutTest;
+
+        /* Audio tab - receive only */
+        wxCheckBox*  m_ckTxReceiveOnly;
+
+        /* Audio tab - sample rate labels */
+        wxStaticText* m_stSC1InSampleRate;
+        wxStaticText* m_stSC1OutSampleRate;
+        wxStaticText* m_stSC2InSampleRate;
+        wxStaticText* m_stSC2OutSampleRate;
+
+        void OnSoundCard1InTest(wxCommandEvent& event);
+        void OnSoundCard1OutTest(wxCommandEvent& event);
+        void OnSoundCard2InTest(wxCommandEvent& event);
+        void OnSoundCard2OutTest(wxCommandEvent& event);
+        void OnSoundCard1InDeviceChange(wxCommandEvent& event);
+        void OnSoundCard1OutDeviceChange(wxCommandEvent& event);
+        void OnSoundCard2InDeviceChange(wxCommandEvent& event);
+        void OnSoundCard2OutDeviceChange(wxCommandEvent& event);
+        void OnTxReceiveOnlyChanged(wxCommandEvent& event);
+
         /* test frames, other simulated channel impairments */
 
         wxCheckBox   *m_ckboxChannelNoise;
@@ -210,6 +284,19 @@ class OptionsDlg : public wxDialog
         void OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event);
         void OnChooseQuickRecordPath(wxCommandEvent& event);
         void OnChooseCsvLogFilePath(wxCommandEvent& event);
+
+        /* Radio tab event handlers */
+        void PTTUseHamLibClicked(wxCommandEvent& event);
+        void PTTUseSerialClicked(wxCommandEvent& event);
+#if defined(WIN32)
+        void PTTUseOmniRigClicked(wxCommandEvent& event);
+#endif
+        void PTTUseSerialInputClicked(wxCommandEvent& event);
+        void HamlibRigNameChanged(wxCommandEvent& event);
+        void OnHamlibSerialPortChanged(wxCommandEvent& event);
+        void OnHamlibPttMethodChanged(wxCommandEvent& event);
+        void resetIcomCIVStatus();
+        void OnTestPTT(wxCommandEvent& event);
         
         void OnReportingFreqSelectionChange(wxCommandEvent& event);
         void OnReportingFreqTextChange(wxCommandEvent& event);
@@ -224,8 +311,18 @@ class OptionsDlg : public wxDialog
          void updateAttnCarrierState();
          void updateToneState();
          void updateRigControlState();
-         
+         void updateRadioControlState();
+         void populatePortList();
+         void populateBaudRateList(int min = 0, int max = 0);
+
+         void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
+         void updateSampleRateLabel(wxStaticText* label, const wxString& devName, IAudioEngine::AudioDirection direction);
+         void testAudioOutput(const wxString& devName, wxButton* btn);
+         void testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn);
+
          bool sessionActive_;
+         bool isTesting_;
+         std::thread* m_audioPlotThread;
 };
 
 #endif // __OPTIONS_DIALOG__

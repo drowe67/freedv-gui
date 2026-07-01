@@ -52,8 +52,8 @@
 #include "logging/WSJTXNetworkLogger.h"
 
 #include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/dlg_filter.h"
-#include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 
 #include "util/logging/ulog.h"
@@ -1311,29 +1311,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
-        // Initial setup. Display Easy Setup dialog.
+        // Initial setup — show the setup wizard.
         CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control configuration.
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-                {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
-
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
+            SetupWizard wizard(this);
+            wizard.ShowModal();
         });
     }
     
@@ -2362,7 +2343,7 @@ void MainFrame::performFreeDVOn_()
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
-                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         });
                     }
                     else
@@ -2803,7 +2784,7 @@ void MainFrame::startRxStream()
         if (g_nSoundCards == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
-                wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
+                wxMessageBox(wxT("No Sound Cards configured, use Tools->Settings to configure"), wxT("Error"), wxOK);
             });
             
             m_RxRunning = false;
@@ -3317,36 +3298,17 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Display Easy Setup dialog.
+        // No audio devices configured — open Options so the user can set them up.
         CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control status
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-                {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
-
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
+            wxCommandEvent dummy;
+            OnToolsOptions(dummy);
         });
         canRun = false;
     }
     else if (!canRun)
     {
         wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
+            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Settings to check your settings.",
             failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
     }
     else
@@ -3383,7 +3345,7 @@ bool MainFrame::validateSoundCardSetup()
         if (!canRun)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Settings to check your settings.",
                 failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }
