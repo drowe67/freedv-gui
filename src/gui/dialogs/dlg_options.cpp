@@ -707,7 +707,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Audio Devices - Sound Card 1 (Receive)
     //----------------------------------------------------------------------
     {
-        wxStaticBox* sbSC1 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Sound Card 1 (Receive)"));
+        wxStaticBox* sbSC1 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Radio Devices"));
         wxStaticBoxSizer* sbsSC1 = new wxStaticBoxSizer(sbSC1, wxVERTICAL);
 
         wxFlexGridSizer* fgsSC1 = new wxFlexGridSizer(2, 3, 5, 5);
@@ -733,7 +733,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Audio Devices - Sound Card 2 (Transmit)
     //----------------------------------------------------------------------
     {
-        wxStaticBox* sbSC2 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Sound Card 2 (Transmit)"));
+        wxStaticBox* sbSC2 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Analog Devices"));
         wxStaticBoxSizer* sbsSC2 = new wxStaticBoxSizer(sbSC2, wxVERTICAL);
 
         wxFlexGridSizer* fgsSC2 = new wxFlexGridSizer(2, 3, 5, 5);
