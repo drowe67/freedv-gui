@@ -129,7 +129,7 @@ wxPanel* SetupWizard::makeReceivePage()
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, 8, 8);
     grid->AddGrowableCol(1, 1);
 
-    grid->Add(new wxStaticText(page, wxID_ANY, _("Radio Receive:")),
+    grid->Add(new wxStaticText(page, wxID_ANY, _("Input To Computer From Radio:")),
               0, wxALIGN_CENTER_VERTICAL);
     m_cbRadioIn = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                   wxDefaultPosition, wxDefaultSize, 0, nullptr,
@@ -137,7 +137,7 @@ wxPanel* SetupWizard::makeReceivePage()
     populateAudioCombo(m_cbRadioIn, IAudioEngine::AUDIO_ENGINE_IN);
     grid->Add(m_cbRadioIn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
-    grid->Add(new wxStaticText(page, wxID_ANY, _("Speaker / Headphones:")),
+    grid->Add(new wxStaticText(page, wxID_ANY, _("Output From Computer To Speaker/Headphones:")),
               0, wxALIGN_CENTER_VERTICAL);
     m_cbSpeakerOut = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                      wxDefaultPosition, wxDefaultSize, 0, nullptr,
@@ -167,7 +167,7 @@ wxPanel* SetupWizard::makeTxPage()
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, 8, 8);
     grid->AddGrowableCol(1, 1);
 
-    m_stMicIn = new wxStaticText(page, wxID_ANY, _("Microphone:"));
+    m_stMicIn = new wxStaticText(page, wxID_ANY, _("Input From Microphone To Computer:"));
     grid->Add(m_stMicIn, 0, wxALIGN_CENTER_VERTICAL);
     m_cbMicIn = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                 wxDefaultPosition, wxDefaultSize, 0, nullptr,
@@ -175,7 +175,7 @@ wxPanel* SetupWizard::makeTxPage()
     populateAudioCombo(m_cbMicIn, IAudioEngine::AUDIO_ENGINE_IN);
     grid->Add(m_cbMicIn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
-    m_stRadioOut = new wxStaticText(page, wxID_ANY, _("Radio Transmit:"));
+    m_stRadioOut = new wxStaticText(page, wxID_ANY, _("Output From Computer To Radio:"));
     grid->Add(m_stRadioOut, 0, wxALIGN_CENTER_VERTICAL);
     m_cbRadioOut = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                    wxDefaultPosition, wxDefaultSize, 0, nullptr,

@@ -718,7 +718,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         wxFlexGridSizer* fgsSC1 = new wxFlexGridSizer(4, 3, 3, 5);
         fgsSC1->AddGrowableCol(1);
 
-        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Radio Receive:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Input To Computer From Radio:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
         m_cbSoundCard1InDevice = new wxComboBox(sbSC1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
         fgsSC1->Add(m_cbSoundCard1InDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
         m_btnSoundCard1InTest = new wxButton(sbSC1, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
@@ -729,7 +729,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         fgsSC1->Add(m_stSC1InSampleRate, 0, wxLEFT | wxBOTTOM, 3);
         fgsSC1->AddSpacer(0);
 
-        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Speaker / Headphones:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Output From Computer To Speaker/Headphones:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
         m_cbSoundCard1OutDevice = new wxComboBox(sbSC1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
         fgsSC1->Add(m_cbSoundCard1OutDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
         m_btnSoundCard1OutTest = new wxButton(sbSC1, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
@@ -757,7 +757,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         wxFlexGridSizer* fgsSC2 = new wxFlexGridSizer(4, 3, 3, 5);
         fgsSC2->AddGrowableCol(1);
 
-        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Microphone:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Input From Microphone To Computer:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
         m_cbSoundCard2InDevice = new wxComboBox(sbSC2, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
         fgsSC2->Add(m_cbSoundCard2InDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
         m_btnSoundCard2InTest = new wxButton(sbSC2, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
@@ -768,7 +768,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         fgsSC2->Add(m_stSC2InSampleRate, 0, wxLEFT | wxBOTTOM, 3);
         fgsSC2->AddSpacer(0);
 
-        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Radio Transmit:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Output From Computer To Radio:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
         m_cbSoundCard2OutDevice = new wxComboBox(sbSC2, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
         fgsSC2->Add(m_cbSoundCard2OutDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
         m_btnSoundCard2OutTest = new wxButton(sbSC2, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
