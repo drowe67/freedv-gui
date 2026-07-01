@@ -147,6 +147,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_rigControlTab = new wxPanel(m_notebook, wxID_ANY);
     m_displayTab = new wxPanel(m_notebook, wxID_ANY);
     m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
+    m_voiceKeyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
     m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
@@ -155,6 +156,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
+    m_notebook->AddPage(m_voiceKeyerTab, _("Voice Keyer"));
     m_notebook->AddPage(m_displayTab, _("Display"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
@@ -781,11 +783,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         sizerKeyer->Add(sbsSC2, 0, wxALL | wxEXPAND, 5);
     }
 
+    m_keyerTab->SetSizer(sizerKeyer);
+
     //----------------------------------------------------------------------
-    // Voice Keyer
+    // Voice Keyer tab
     //----------------------------------------------------------------------
 
-    wxStaticBox* voiceKeyerBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer"));
+    wxBoxSizer* sizerVoiceKeyer = new wxBoxSizer(wxVERTICAL);
+
+    wxStaticBox* voiceKeyerBox = new wxStaticBox(m_voiceKeyerTab, wxID_ANY, _("Voice Keyer"));
     wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer(voiceKeyerBox, wxVERTICAL);
 
     wxBoxSizer* voiceKeyerSizer1 = new wxBoxSizer(wxHORIZONTAL);
@@ -819,15 +825,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     staticBoxSizer28a->Add(voiceKeyerSizer1);
     staticBoxSizer28a->Add(voiceKeyerSizer2);
 
-    sizerKeyer->Add(staticBoxSizer28a,0, wxALL | wxEXPAND, 5);
-    
-    m_keyerTab->SetSizer(sizerKeyer);
-    
+    sizerVoiceKeyer->Add(staticBoxSizer28a, 0, wxALL | wxEXPAND, 5);
+
     //------------------------------
     // Quick Record
     //------------------------------
-    
-    wxStaticBox* quickRecordBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record"));
+
+    wxStaticBox* quickRecordBox = new wxStaticBox(m_voiceKeyerTab, wxID_ANY, _("Quick Record"));
     wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer(quickRecordBox, wxVERTICAL);
 
     wxFlexGridSizer* quickRecordSizer = new wxFlexGridSizer(2, 3, 5, 5);
@@ -843,7 +847,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordRawPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseQuickRecordRawPath->SetMinSize(wxSize(120, -1));
     quickRecordSizer->Add(m_buttonChooseQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
+
     staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save decoded recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -854,11 +858,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordDecodedPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseQuickRecordDecodedPath->SetMinSize(wxSize(120, -1));
     quickRecordSizer->Add(m_buttonChooseQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
+
     sbsQuickRecord->Add(quickRecordSizer);
-    
-    sizerKeyer->Add(sbsQuickRecord,0, wxALL | wxEXPAND, 5);
-    
+
+    sizerVoiceKeyer->Add(sbsQuickRecord, 0, wxALL | wxEXPAND, 5);
+
+    m_voiceKeyerTab->SetSizer(sizerVoiceKeyer);
+
     // Modem tab
     wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
 
@@ -1117,7 +1123,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 #endif // __WXMSW__
     
     m_keyerTab->MoveBeforeInTabOrder(m_reportingTab);
-    m_reportingTab->MoveBeforeInTabOrder(m_rigControlTab);
+    m_reportingTab->MoveBeforeInTabOrder(m_voiceKeyerTab);
+    m_voiceKeyerTab->MoveBeforeInTabOrder(m_rigControlTab);
     m_rigControlTab->MoveBeforeInTabOrder(m_displayTab);
     m_displayTab->MoveBeforeInTabOrder(m_modemTab);
     m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
