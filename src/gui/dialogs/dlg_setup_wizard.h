@@ -94,6 +94,7 @@ private:
     void loadConfig();
     void saveConfig();
     void updateNavButtons();
+    void fitToCurrentPage();
     void updateTxState();
     void updateRadioState();
     void updateReportingState();

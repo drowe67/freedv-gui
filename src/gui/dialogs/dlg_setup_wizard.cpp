@@ -82,8 +82,6 @@ SetupWizard::SetupWizard(wxWindow* parent)
     topSizer->Add(navSizer, 0, wxEXPAND | wxALL, 10);
 
     SetSizerAndFit(topSizer);
-    SetMinSize(wxSize(560, 460));
-    SetSize(wxSize(580, 500));
 
     // Populate serial ports and load saved config
     populateSerialPorts();
@@ -660,6 +658,20 @@ void SetupWizard::updateNavButtons()
     m_btnNext->Show(m_currentPage < NUM_PAGES - 1);
     m_btnFinish->Show(m_currentPage == NUM_PAGES - 1);
     Layout();
+    fitToCurrentPage();
+}
+
+void SetupWizard::fitToCurrentPage()
+{
+    wxWindow* page = m_book->GetCurrentPage();
+    if (!page) return;
+    page->Layout();
+    wxSize pageSize = page->GetBestSize();
+    // SetMinSize with an explicit size makes GetEffectiveMinSize() return exactly
+    // pageSize, bypassing wxSimplebook's max-of-all-pages GetBestSize() calculation.
+    m_book->SetMinSize(pageSize);
+    Fit();
+    m_book->SetMinSize(wxDefaultSize);
 }
 
 void SetupWizard::updateTxState()
