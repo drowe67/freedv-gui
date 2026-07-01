@@ -44,10 +44,12 @@
 
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
+#include "samplerate.h"
 
 using namespace std::chrono_literals;
 
-#define OPTIONS_AUDIO_TEST_DURATION_SECS  2
+#define OPTIONS_AUDIO_TEST_DURATION_SECS   2
+#define OPTIONS_AUDIO_RECORD_DURATION_SECS 5
 
 extern FreeDVInterface freedvInterface;
 
@@ -2711,11 +2713,11 @@ void OptionsDlg::testAudioOutput(const wxString& devName)
 }
 
 //-------------------------------------------------------------------------
-// testAudioInput() - opens the selected input device and records briefly
+// testAudioInput() - records 5 s on the input device then plays back on output
 //-------------------------------------------------------------------------
-void OptionsDlg::testAudioInput(const wxString& devName)
+void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDevName)
 {
-    if (devName.IsEmpty() || devName == "none")
+    if (inDevName.IsEmpty() || inDevName == "none")
     {
         wxMessageBox(_("Please select an audio input device first."), _("Audio Test"), wxOK | wxICON_INFORMATION, this);
         return;
@@ -2723,26 +2725,102 @@ void OptionsDlg::testAudioInput(const wxString& devName)
 
     setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
 
-    m_audioPlotThread = new std::thread([&](wxString const& devName) {
+    m_audioPlotThread = new std::thread([&](wxString inDev, wxString outDev) {
         auto engine = AudioEngineFactory::GetAudioEngine();
-        auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
-        for (auto& devInfo : devList)
+        auto inDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+        for (auto& devInfo : inDevList)
         {
-            if (devInfo.name.IsSameAs(devName))
+            if (!devInfo.name.IsSameAs(inDev))
+                continue;
+
+            int inSampleRate = devInfo.defaultSampleRate;
+            int inTotalSamples = inSampleRate * OPTIONS_AUDIO_RECORD_DURATION_SECS;
+            std::vector<short> recordBuf(inTotalSamples, 0);
+
+            struct RecordState { std::vector<short>* buf; int pos; };
+            RecordState recState = { &recordBuf, 0 };
+
+            auto inDevice = engine->getAudioDevice(devInfo.name, IAudioEngine::AUDIO_ENGINE_IN, inSampleRate, 1);
+            if (inDevice)
             {
-                auto device = engine->getAudioDevice(devInfo.name, IAudioEngine::AUDIO_ENGINE_IN, devInfo.defaultSampleRate, 1);
-                if (device)
+                inDevice->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
+                    auto* s = static_cast<RecordState*>(state);
+                    if (data != nullptr)
+                    {
+                        const short* in = static_cast<const short*>(data);
+                        for (size_t j = 0; j < numSamples && s->pos < (int)s->buf->size(); j++)
+                            (*s->buf)[s->pos++] = in[j];
+                    }
+                }, &recState);
+                inDevice->setDescription("Options Audio Input Test");
+                inDevice->start();
+                std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_RECORD_DURATION_SECS));
+                inDevice->stop();
+
+                // Play back the recording on the output device
+                if (!outDev.IsEmpty() && outDev != "none")
                 {
-                    device->setOnAudioData([](IAudioDevice&, void*, size_t, void*) FREEDV_NONBLOCKING {
-                        // discard captured audio — test confirms device opens successfully
-                    }, nullptr);
-                    device->setDescription("Options Audio Input Test");
-                    device->start();
-                    std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_TEST_DURATION_SECS));
-                    device->stop();
+                    auto outDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+                    for (auto& outDevInfo : outDevList)
+                    {
+                        if (!outDevInfo.name.IsSameAs(outDev))
+                            continue;
+
+                        int outSampleRate = outDevInfo.defaultSampleRate;
+
+                        // Resample recorded buffer if input and output rates differ
+                        std::vector<short> resampledBuf;
+                        const std::vector<short>* playBuf = &recordBuf;
+
+                        if (outSampleRate != inSampleRate)
+                        {
+                            std::vector<float> floatIn(recordBuf.size());
+                            src_short_to_float_array(recordBuf.data(), floatIn.data(), (int)recordBuf.size());
+
+                            int outSamples = (int)((double)inTotalSamples * outSampleRate / inSampleRate) + 1;
+                            std::vector<float> floatOut(outSamples);
+
+                            SRC_DATA srcData = {};
+                            srcData.data_in      = floatIn.data();
+                            srcData.data_out     = floatOut.data();
+                            srcData.input_frames = (long)recordBuf.size();
+                            srcData.output_frames = (long)outSamples;
+                            srcData.end_of_input  = 1;
+                            srcData.src_ratio     = (double)outSampleRate / (double)inSampleRate;
+
+                            if (src_simple(&srcData, SRC_SINC_MEDIUM_QUALITY, 1) == 0)
+                            {
+                                resampledBuf.resize(srcData.output_frames_gen);
+                                src_float_to_short_array(floatOut.data(), resampledBuf.data(), (int)srcData.output_frames_gen);
+                                playBuf = &resampledBuf;
+                            }
+                        }
+
+                        struct PlayState { const std::vector<short>* buf; int pos; };
+                        PlayState playState = { playBuf, 0 };
+
+                        auto outDevice = engine->getAudioDevice(outDevInfo.name, IAudioEngine::AUDIO_ENGINE_OUT, outSampleRate, 1);
+                        if (outDevice)
+                        {
+                            outDevice->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
+                                auto* s = static_cast<PlayState*>(state);
+                                if (data != nullptr)
+                                {
+                                    short* out = static_cast<short*>(data);
+                                    for (size_t j = 0; j < numSamples; j++)
+                                        out[j] = (s->pos < (int)s->buf->size()) ? (*s->buf)[s->pos++] : 0;
+                                }
+                            }, &playState);
+                            outDevice->setDescription("Options Audio Input Playback");
+                            outDevice->start();
+                            std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_RECORD_DURATION_SECS));
+                            outDevice->stop();
+                        }
+                        break;
+                    }
                 }
-                break;
             }
+            break;
         }
 
         CallAfter([&]() {
@@ -2751,7 +2829,7 @@ void OptionsDlg::testAudioInput(const wxString& devName)
             m_audioPlotThread = nullptr;
             setAudioTestButtonsEnabled(true, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
         });
-    }, devName);
+    }, inDevName, outDevName);
 }
 
 //-------------------------------------------------------------------------
@@ -2759,7 +2837,10 @@ void OptionsDlg::testAudioInput(const wxString& devName)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 {
-    testAudioInput(m_cbSoundCard1InDevice->GetValue());
+    wxString outDev = m_cbSoundCard2OutDevice->GetValue();
+    if (outDev.IsEmpty() || outDev == "none")
+        outDev = m_cbSoundCard1OutDevice->GetValue();
+    testAudioInput(m_cbSoundCard1InDevice->GetValue(), outDev);
 }
 
 //-------------------------------------------------------------------------
@@ -2775,7 +2856,7 @@ void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 {
-    testAudioInput(m_cbSoundCard2InDevice->GetValue());
+    testAudioInput(m_cbSoundCard2InDevice->GetValue(), m_cbSoundCard2OutDevice->GetValue());
 }
 
 //-------------------------------------------------------------------------

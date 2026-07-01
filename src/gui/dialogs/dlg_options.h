@@ -302,7 +302,7 @@ class OptionsDlg : public wxDialog
 
          void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
          void testAudioOutput(const wxString& devName);
-         void testAudioInput(const wxString& devName);
+         void testAudioInput(const wxString& inDevName, const wxString& outDevName);
 
          bool sessionActive_;
          bool isTesting_;
