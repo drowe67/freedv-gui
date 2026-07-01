@@ -349,10 +349,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 #endif
 
     // Test PTT button
-    wxBoxSizer* testButtonSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* testButtonSizer = new wxBoxSizer(wxVERTICAL);
     m_buttonTestPTT = new wxButton(m_radioTab, wxID_ANY, _("Test PTT"), wxDefaultPosition, wxDefaultSize, 0);
-    testButtonSizer->Add(m_buttonTestPTT, 0, wxALL, 5);
-    sizerRadio->Add(testButtonSizer, 0, wxALL | wxALIGN_LEFT, 5);
+    testButtonSizer->Add(m_buttonTestPTT, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    sizerRadio->Add(testButtonSizer, 0, wxALL | wxEXPAND, 5);
 
     m_radioTab->SetSizer(sizerRadio);
 
