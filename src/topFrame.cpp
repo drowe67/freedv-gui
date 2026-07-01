@@ -378,49 +378,51 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_menubarMain->Append(file, _("&File"));
 
+    settings = new wxMenu();
+
+    // wxID_PREFERENCES causes wxWidgets to move this item into the application
+    // menu on macOS automatically. On other platforms it stays in Settings.
+    wxMenuItem* m_menuItemOptions;
+#ifdef __WXMAC__
+    m_menuItemOptions = new wxMenuItem(settings, wxID_PREFERENCES, wxString(_("&Edit Settings...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#else
+    m_menuItemOptions = new wxMenuItem(settings, wxID_PREFERENCES, wxString(_("&Edit Settings...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#endif // __WXMAC__
+    settings->Append(m_menuItemOptions);
+
+    wxMenuItem* m_menuItemSetupWizard;
+    m_menuItemSetupWizard = new wxMenuItem(settings, wxID_ANY, wxString(_("Setup &Wizard...")), _("Re-run the FreeDV Setup Wizard"), wxITEM_NORMAL);
+    settings->Append(m_menuItemSetupWizard);
+
+    settings->AppendSeparator();
+
+    m_menuItemExportConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
+    settings->Append(m_menuItemExportConfig);
+
+    m_menuItemImportConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
+    settings->Append(m_menuItemImportConfig);
+
+    wxMenuItem* m_menuItemLoadDefaultConfig;
+    m_menuItemLoadDefaultConfig = new wxMenuItem(settings, wxID_ANY, wxString(_("Load &Default Configuration")) , _("Resets FreeDV to its default configuration"), wxITEM_NORMAL);
+    settings->Append(m_menuItemLoadDefaultConfig);
+
+    m_menubarMain->Append(settings, _("&Settings"));
+
     tools = new wxMenu();
 
     wxMenuItem* m_menuItemFreeDVReporter;
     m_menuItemFreeDVReporter = new wxMenuItem(tools, wxID_ANY, wxString(_("FreeDV R&eporter")) , _("Opens browser window and displays FreeDV Reporter service."), wxITEM_NORMAL);
     tools->Append(m_menuItemFreeDVReporter);
 
-    // wxID_PREFERENCES causes wxWidgets to move this item into the application
-    // menu on macOS automatically. On other platforms it stays in Tools.
-    wxMenuItem* m_menuItemOptions;
-#ifdef __WXMAC__
-    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Settings...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
-#else
-    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Settings...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
-#endif // __WXMAC__
-    tools->Append(m_menuItemOptions);
-
-    wxMenuItem* m_menuItemSetupWizard;
-    m_menuItemSetupWizard = new wxMenuItem(tools, wxID_ANY, wxString(_("Setup &Wizard...")), _("Re-run the FreeDV Setup Wizard"), wxITEM_NORMAL);
-    tools->Append(m_menuItemSetupWizard);
-
     wxMenuItem* m_menuItemFilter;
-    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , _("Configures audio filtering"), wxITEM_NORMAL);
+    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("Filter &Audio...")) , _("Configures audio filtering"), wxITEM_NORMAL);
     tools->Append(m_menuItemFilter);
-    
-    wxMenuItem* toolsSeparator2 = new wxMenuItem(tools, wxID_SEPARATOR);
-    tools->Append(toolsSeparator2);
+
+    tools->AppendSeparator();
 
     m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start &Play File - From Radio...")) , _("Pipes radio sound input from file"), wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
-
-    wxMenuItem* toolsSeparator3 = new wxMenuItem(tools, wxID_SEPARATOR);
-    tools->Append(toolsSeparator3);
-
-    m_menuItemExportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Export Configuration...")) , _("Exports the current FreeDV configuration to a file"), wxITEM_NORMAL);
-    tools->Append(m_menuItemExportConfig);
-
-    m_menuItemImportConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("&Use Configuration...")) , _("Loads a FreeDV configuration from a file"), wxITEM_NORMAL);
-    tools->Append(m_menuItemImportConfig);
-
-    wxMenuItem* m_menuItemLoadDefaultConfig;
-    m_menuItemLoadDefaultConfig = new wxMenuItem(tools, wxID_ANY, wxString(_("Load &Default Configuration")) , _("Resets FreeDV to its default configuration"), wxITEM_NORMAL);
-    tools->Append(m_menuItemLoadDefaultConfig);
 
     m_menubarMain->Append(tools, _("&Tools"));
 

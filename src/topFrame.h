@@ -86,6 +86,7 @@ class TopFrame : public wxFrame
         wxMenuBar* m_menubarMain;
         wxMenu* file;
         wxMenu* edit;
+        wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
         wxGauge* m_gaugeSNR;
