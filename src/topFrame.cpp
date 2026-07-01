@@ -387,15 +387,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // wxID_PREFERENCES causes wxWidgets to move this item into the application
     // menu on macOS automatically. On other platforms it stays in Tools.
     wxMenuItem* m_menuItemOptions;
-    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Options...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
-    tools->Append(m_menuItemOptions);
-
 #ifdef __WXMAC__
-    // Add Option-Comma (⌥,) as an additional keyboard shortcut on macOS.
-    wxAcceleratorEntry optionsAccel(wxACCEL_ALT, ',', wxID_PREFERENCES);
-    wxAcceleratorTable optionsAccelTable(1, &optionsAccel);
-    this->SetAcceleratorTable(optionsAccelTable);
-#endif
+    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Options...\tCTRL-,")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#else
+    m_menuItemOptions = new wxMenuItem(tools, wxID_PREFERENCES, wxString(_("&Options...")) , _("Miscellaneous FreeDV configuration options"), wxITEM_NORMAL);
+#endif // __WXMAC__
+    tools->Append(m_menuItemOptions);
 
     wxMenuItem* m_menuItemFilter;
     m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , _("Configures audio filtering"), wxITEM_NORMAL);
