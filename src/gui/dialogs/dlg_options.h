@@ -189,10 +189,24 @@ class OptionsDlg : public wxDialog
         wxButton*    m_btnSoundCard2InTest;
         wxButton*    m_btnSoundCard2OutTest;
 
+        /* Audio tab - receive only */
+        wxCheckBox*  m_ckTxReceiveOnly;
+
+        /* Audio tab - sample rate labels */
+        wxStaticText* m_stSC1InSampleRate;
+        wxStaticText* m_stSC1OutSampleRate;
+        wxStaticText* m_stSC2InSampleRate;
+        wxStaticText* m_stSC2OutSampleRate;
+
         void OnSoundCard1InTest(wxCommandEvent& event);
         void OnSoundCard1OutTest(wxCommandEvent& event);
         void OnSoundCard2InTest(wxCommandEvent& event);
         void OnSoundCard2OutTest(wxCommandEvent& event);
+        void OnSoundCard1InDeviceChange(wxCommandEvent& event);
+        void OnSoundCard1OutDeviceChange(wxCommandEvent& event);
+        void OnSoundCard2InDeviceChange(wxCommandEvent& event);
+        void OnSoundCard2OutDeviceChange(wxCommandEvent& event);
+        void OnTxReceiveOnlyChanged(wxCommandEvent& event);
 
         /* test frames, other simulated channel impairments */
 
@@ -301,6 +315,7 @@ class OptionsDlg : public wxDialog
          void populateBaudRateList(int min = 0, int max = 0);
 
          void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
+         void updateSampleRateLabel(wxStaticText* label, const wxString& devName, IAudioEngine::AudioDirection direction);
          void testAudioOutput(const wxString& devName, wxButton* btn);
          void testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn);
 
