@@ -154,8 +154,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
 
-    m_notebook->AddPage(m_rxAudioTab, _("Receive Audio"));
-    m_notebook->AddPage(m_txAudioTab, _("Transmit Audio"));
+    m_notebook->AddPage(m_rxAudioTab, _("RX Audio"));
+    m_notebook->AddPage(m_txAudioTab, _("TX Audio"));
     m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
