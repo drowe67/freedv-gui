@@ -2702,12 +2702,14 @@ void OptionsDlg::populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::Audio
 {
     combo->Clear();
     auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
     auto devList = engine->getAudioDeviceList(direction);
     for (auto& dev : devList)
     {
         combo->Append(dev.name);
     }
     combo->Append("none");
+    engine->stop();
 }
 
 //-------------------------------------------------------------------------
@@ -2721,7 +2723,9 @@ void OptionsDlg::updateSampleRateLabel(wxStaticText* label, const wxString& devN
         return;
     }
     auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
     auto devList = engine->getAudioDeviceList(direction);
+    engine->stop();
     for (auto& dev : devList)
     {
         if (dev.name == devName.ToStdString())
