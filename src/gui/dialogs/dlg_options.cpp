@@ -1644,6 +1644,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
         {
             auto audioEngine = AudioEngineFactory::GetAudioEngine();
+            audioEngine->start();
+
             auto getSR = [&](const wxString& name, IAudioEngine::AudioDirection dir) -> int {
                 if (name.IsEmpty() || name == "none") return 0;
                 for (auto& dev : audioEngine->getAudioDeviceList(dir))
@@ -1678,6 +1680,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
                 r = getSR(sc2in,   IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate  = r;
                 r = getSR(spk,     IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = r;
             }
+
+            audioEngine->stop();
         }
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();

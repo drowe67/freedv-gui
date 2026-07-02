@@ -576,6 +576,7 @@ void SetupWizard::saveConfig()
 {
     auto& cfg = wxGetApp().appConfiguration;
     auto  audioEngine = AudioEngineFactory::GetAudioEngine();
+    audioEngine->start();
 
     // Helper: look up default sample rate for a named device
     auto getSampleRate = [&](const wxString& name, IAudioEngine::AudioDirection dir) -> int {
@@ -662,6 +663,8 @@ void SetupWizard::saveConfig()
     cfg.reportingConfiguration.pskReporterEnabled    = reportingOn;
 
     cfg.save(pConfig);
+
+    audioEngine->stop();
 }
 
 // --------------------------------------------------------------------------
