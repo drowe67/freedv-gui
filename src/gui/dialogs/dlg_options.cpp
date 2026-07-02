@@ -166,7 +166,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
     
-    bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
+    bSizer30->Add(m_notebook, 1, wxALL | wxEXPAND, 3);
 
     // Radio tab (CAT and PTT Config)
     wxBoxSizer* sizerRadio = new wxBoxSizer(wxVERTICAL);
@@ -1089,7 +1089,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     panel->SetSizer(bSizer30);
     
     wxBoxSizer* winSizer = new wxBoxSizer(wxVERTICAL);
-    winSizer->Add(panel, 0, wxEXPAND);
+    winSizer->Add(panel, 1, wxEXPAND);
     
     this->SetSizerAndFit(winSizer);
     this->Layout();
