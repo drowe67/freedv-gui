@@ -224,7 +224,6 @@ class MainApp : public wxApp
         bool                saveConfig();
 
         // misc
-        bool       m_channel_noise;
         float      m_channel_snr_dB;
 
         int        FilterEvent(wxEvent& event);

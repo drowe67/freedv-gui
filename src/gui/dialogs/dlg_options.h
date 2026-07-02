@@ -65,7 +65,6 @@ class OptionsDlg : public wxDialog
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
  
-        void    OnChannelNoise(wxScrollEvent& event);
         void    OnDebugConsole(wxScrollEvent& event);
 
         void    OnFifoReset(wxCommandEvent& event);
@@ -217,9 +216,6 @@ class OptionsDlg : public wxDialog
         void OnRefreshAudioDevices(wxCommandEvent& event);
 
         /* test frames, other simulated channel impairments */
-
-        wxCheckBox   *m_ckboxChannelNoise;
-        wxTextCtrl   *m_txtNoiseSNR;
         wxCheckBox   *m_ckboxAttnCarrierEn;
         wxTextCtrl   *m_txtAttnCarrier;
 

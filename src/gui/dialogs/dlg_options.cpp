@@ -946,19 +946,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
 
-    wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
-
-    m_ckboxChannelNoise = new wxCheckBox(sb_testFrames, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    channelNoiseSizer->Add(m_ckboxChannelNoise, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *channelNoiseDbLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
-    channelNoiseSizer->Add(channelNoiseDbLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtNoiseSNR = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
-    channelNoiseSizer->Add(m_txtNoiseSNR, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_testFrames->Add(channelNoiseSizer);
-
     wxBoxSizer* attnCarrierSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_ckboxAttnCarrierEn = new wxCheckBox(sb_testFrames, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -1133,8 +1120,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
-    m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
-    m_txtNoiseSNR->MoveBeforeInTabOrder(m_ckboxAttnCarrierEn);
     m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
     m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
@@ -1179,8 +1164,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
-
-    m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -1260,8 +1243,6 @@ OptionsDlg::~OptionsDlg()
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
-
-    m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
     m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
@@ -1477,10 +1458,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
-
-        m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
-        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
-
         m_ckboxTone->SetValue(wxGetApp().m_tone);
         m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
         m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude));
@@ -1583,7 +1560,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         // Update control state based on checkbox state.
         updateReportingState();
-        updateChannelNoiseState();
         updateAttnCarrierState();
         updateToneState();
         updateRigControlState();
@@ -1704,11 +1680,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             audioEngine->stop();
         }
 
-        wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
-        long noise_snr;
-        m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
-        wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
-        
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
         m_txtToneFreqHz->GetValue().ToLong(&tone_freq_hz);
@@ -1937,12 +1908,6 @@ void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time
 
-void OptionsDlg::OnChannelNoise(wxScrollEvent&) {
-    wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
-    updateChannelNoiseState();
-}
-
-
 void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     wxDirDialog pathDialog(
                                 this,
@@ -2106,11 +2071,6 @@ void OptionsDlg::updateReportingState()
 
         m_ckbox_use_utc_time->Enable(false);
     }
-}
-
-void OptionsDlg::updateChannelNoiseState()
-{
-    m_txtNoiseSNR->Enable(m_ckboxChannelNoise->GetValue());
 }
 
 void OptionsDlg::updateAttnCarrierState()

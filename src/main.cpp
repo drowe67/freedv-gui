@@ -90,7 +90,6 @@ int                 g_freedv_verbose;
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-std::atomic<int>    g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
@@ -1284,7 +1283,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
-    wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
 
     optionsDlg = new OptionsDlg(NULL);
@@ -1976,10 +1974,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
-
-        // Test Frame Bit Error Updates ------------------------------------
-
-        g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
         wxString modeString; 

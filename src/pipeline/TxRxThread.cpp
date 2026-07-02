@@ -108,7 +108,6 @@ extern float g_SquelchLevel;
 extern float g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
-extern std::atomic<int> g_channel_noise;
 extern std::atomic<float> g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
@@ -410,8 +409,6 @@ void TxRxThread::initializePipeline_()
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },
-            +[]() FREEDV_NONBLOCKING { return g_channel_noise.load(std::memory_order_acquire); },
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
             +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; }
         );
