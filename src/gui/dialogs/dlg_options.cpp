@@ -2781,6 +2781,15 @@ void OptionsDlg::populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDi
     list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
     list->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
     list->SetColumnWidth(2, wxLIST_AUTOSIZE_USEHEADER);
+
+    // Resize column 0 to use remaining space
+    auto spaceUsed = list->GetColumnWidth(1) + list->GetColumnWidth(2);
+    auto spaceAvailable = list->GetClientSize().GetWidth() - 50; // to ensure scrollbar doesn't appear
+    auto spaceNeeded = spaceAvailable - spaceUsed;
+    if (list->GetColumnWidth(0) < spaceNeeded)
+    {
+        list->SetColumnWidth(0, spaceNeeded);
+    }
 }
 
 //-------------------------------------------------------------------------
