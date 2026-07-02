@@ -752,6 +752,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
             sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
+        {
+            wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
+            refreshRow->AddStretchSpacer();
+            m_btnRefreshRxAudio = new wxButton(m_rxAudioTab, wxID_ANY, _("Refresh Device List"));
+            refreshRow->Add(m_btnRefreshRxAudio, 0, wxALL, 3);
+            sizerRxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
         m_rxAudioTab->SetSizer(sizerRxAudio);
     }
 
@@ -800,6 +808,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
             m_tcSoundCard2OutDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
             selRow->Add(m_tcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
             sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
+        {
+            wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
+            refreshRow->AddStretchSpacer();
+            m_btnRefreshTxAudio = new wxButton(m_txAudioTab, wxID_ANY, _("Refresh Device List"));
+            refreshRow->Add(m_btnRefreshTxAudio, 0, wxALL, 3);
+            sizerTxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
         m_txAudioTab->SetSizer(sizerTxAudio);
@@ -1224,6 +1240,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_lcSoundCard2InDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
     m_lcSoundCard2OutDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
     m_ckTxReceiveOnly->Connect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
+    m_btnRefreshRxAudio->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+    m_btnRefreshTxAudio->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
 
     event_in_serial = 0;
     event_out_serial = 0;
@@ -1298,6 +1316,8 @@ OptionsDlg::~OptionsDlg()
     m_lcSoundCard2InDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
     m_lcSoundCard2OutDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
     m_ckTxReceiveOnly->Disconnect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
+    m_btnRefreshRxAudio->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+    m_btnRefreshTxAudio->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
 
     if (m_audioPlotThread != nullptr)
     {
@@ -2812,6 +2832,32 @@ void OptionsDlg::OnTxReceiveOnlyChanged(wxCommandEvent&)
     m_tcSoundCard2OutDevice->Enable(!rxOnly);
     m_btnSoundCard2InTest->Enable(!rxOnly);
     m_btnSoundCard2OutTest->Enable(!rxOnly);
+}
+
+void OptionsDlg::OnRefreshAudioDevices(wxCommandEvent&)
+{
+    // Preserve the user's current selections so they survive the repopulation
+    wxString sel1In  = m_tcSoundCard1InDevice->GetValue();
+    wxString sel1Out = m_tcSoundCard1OutDevice->GetValue();
+    wxString sel2In  = m_tcSoundCard2InDevice->GetValue();
+    wxString sel2Out = m_tcSoundCard2OutDevice->GetValue();
+
+    // Restart engine so it re-enumerates available devices
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->start();
+
+    // Repopulate all four lists with fresh device data
+    populateAudioDeviceList(m_lcSoundCard1InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+    populateAudioDeviceList(m_lcSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+    populateAudioDeviceList(m_lcSoundCard2InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+    populateAudioDeviceList(m_lcSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+
+    // Reselect previously chosen devices (falls back to empty if device disappeared)
+    selectListDevice(m_lcSoundCard1InDevice,  m_tcSoundCard1InDevice,  sel1In);
+    selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, sel1Out);
+    selectListDevice(m_lcSoundCard2InDevice,  m_tcSoundCard2InDevice,  sel2In);
+    selectListDevice(m_lcSoundCard2OutDevice, m_tcSoundCard2OutDevice, sel2Out);
 }
 
 //-------------------------------------------------------------------------

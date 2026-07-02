@@ -198,6 +198,10 @@ class OptionsDlg : public wxDialog
         wxButton*    m_btnSoundCard2InTest;
         wxButton*    m_btnSoundCard2OutTest;
 
+        /* Audio tab - refresh buttons */
+        wxButton*    m_btnRefreshRxAudio;
+        wxButton*    m_btnRefreshTxAudio;
+
         /* Audio tab - receive only */
         wxCheckBox*  m_ckTxReceiveOnly;
 
@@ -210,6 +214,7 @@ class OptionsDlg : public wxDialog
         void OnSoundCard2InDeviceSelect(wxListEvent& event);
         void OnSoundCard2OutDeviceSelect(wxListEvent& event);
         void OnTxReceiveOnlyChanged(wxCommandEvent& event);
+        void OnRefreshAudioDevices(wxCommandEvent& event);
 
         /* test frames, other simulated channel impairments */
 
