@@ -2842,6 +2842,7 @@ void OptionsDlg::testAudioOutput(const wxString& devName, wxButton* btn)
 
     m_audioPlotThread = new std::thread([&](wxString const& devName, wxButton* btn) {
         auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->start();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
         {
@@ -2870,6 +2871,7 @@ void OptionsDlg::testAudioOutput(const wxString& devName, wxButton* btn)
                 break;
             }
         }
+        engine->stop();
 
         CallAfter([&, btn]() {
             m_audioPlotThread->join();
@@ -2897,6 +2899,7 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
 
     m_audioPlotThread = new std::thread([&](wxString const& inDev, wxString const& outDev, wxButton* btn) {
         auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->start();
         auto inDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : inDevList)
         {
@@ -2994,6 +2997,7 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
             }
             break;
         }
+        engine->stop();
 
         CallAfter([&, btn]() {
             m_audioPlotThread->join();
