@@ -38,7 +38,7 @@ class OptionsDlg : public wxDialog
 {
     public:
     OptionsDlg( wxWindow* parent,
-                wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
+                wxWindowID id = wxID_ANY, const wxString& title = _("Settings"), 
                 const wxPoint& pos = wxDefaultPosition, 
                 const wxSize& size = wxDefaultSize, 
                 long style = wxDEFAULT_DIALOG_STYLE|wxTAB_TRAVERSAL );
