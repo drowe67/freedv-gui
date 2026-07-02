@@ -23,6 +23,7 @@
 #define __OPTIONS_DIALOG__
 
 #include <wx/clrpicker.h>
+#include <wx/listctrl.h>
 #include <wx/propgrid/property.h>
 #include <wx/propgrid/props.h>
 
@@ -87,7 +88,8 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
         wxNotebookPage *m_rigControlTab; // Rig Control
         wxNotebookPage *m_displayTab; // Waterfall color, other display config
-        wxNotebookPage *m_keyerTab; // Audio devices
+        wxNotebookPage *m_rxAudioTab; // Receive Audio devices
+        wxNotebookPage *m_txAudioTab; // Transmit Audio devices
         wxNotebookPage *m_voiceKeyerTab; // Voice Keyer / Quick Record
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
         wxNotebookPage *m_simulationTab; // testing/interference
@@ -178,11 +180,17 @@ class OptionsDlg : public wxDialog
         wxButton     *m_buttonChooseQuickRecordDecodedPath;
         wxTextCtrl   *m_txtCtrlQuickRecordDecodedPath;
 
-        /* Audio tab - device selection combos */
-        wxComboBox* m_cbSoundCard1InDevice;
-        wxComboBox* m_cbSoundCard1OutDevice;
-        wxComboBox* m_cbSoundCard2InDevice;
-        wxComboBox* m_cbSoundCard2OutDevice;
+        /* Audio tab - device selection lists */
+        wxListCtrl* m_lcSoundCard1InDevice;
+        wxListCtrl* m_lcSoundCard1OutDevice;
+        wxListCtrl* m_lcSoundCard2InDevice;
+        wxListCtrl* m_lcSoundCard2OutDevice;
+
+        /* Audio tab - selected device text controls (readonly) */
+        wxTextCtrl* m_tcSoundCard1InDevice;
+        wxTextCtrl* m_tcSoundCard1OutDevice;
+        wxTextCtrl* m_tcSoundCard2InDevice;
+        wxTextCtrl* m_tcSoundCard2OutDevice;
 
         /* Audio tab - test buttons */
         wxButton*    m_btnSoundCard1InTest;
@@ -193,20 +201,14 @@ class OptionsDlg : public wxDialog
         /* Audio tab - receive only */
         wxCheckBox*  m_ckTxReceiveOnly;
 
-        /* Audio tab - sample rate labels */
-        wxStaticText* m_stSC1InSampleRate;
-        wxStaticText* m_stSC1OutSampleRate;
-        wxStaticText* m_stSC2InSampleRate;
-        wxStaticText* m_stSC2OutSampleRate;
-
         void OnSoundCard1InTest(wxCommandEvent& event);
         void OnSoundCard1OutTest(wxCommandEvent& event);
         void OnSoundCard2InTest(wxCommandEvent& event);
         void OnSoundCard2OutTest(wxCommandEvent& event);
-        void OnSoundCard1InDeviceChange(wxCommandEvent& event);
-        void OnSoundCard1OutDeviceChange(wxCommandEvent& event);
-        void OnSoundCard2InDeviceChange(wxCommandEvent& event);
-        void OnSoundCard2OutDeviceChange(wxCommandEvent& event);
+        void OnSoundCard1InDeviceSelect(wxListEvent& event);
+        void OnSoundCard1OutDeviceSelect(wxListEvent& event);
+        void OnSoundCard2InDeviceSelect(wxListEvent& event);
+        void OnSoundCard2OutDeviceSelect(wxListEvent& event);
         void OnTxReceiveOnlyChanged(wxCommandEvent& event);
 
         /* test frames, other simulated channel impairments */
@@ -315,8 +317,8 @@ class OptionsDlg : public wxDialog
          void populatePortList();
          void populateBaudRateList(int min = 0, int max = 0);
 
-         void populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction);
-         void updateSampleRateLabel(wxStaticText* label, const wxString& devName, IAudioEngine::AudioDirection direction);
+         void populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDirection direction);
+         void selectListDevice(wxListCtrl* list, wxTextCtrl* tc, const wxString& devName);
          void testAudioOutput(const wxString& devName, wxButton* btn);
          void testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn);
 

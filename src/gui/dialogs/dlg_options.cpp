@@ -20,6 +20,8 @@
 //==========================================================================
 
 #include <wx/gbsizer.h>
+#include <wx/listctrl.h>
+#include <wx/statline.h>
 #include <wx/numformatter.h>
 #include "dlg_options.h"
 
@@ -146,13 +148,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_reportingTab = new wxPanel(m_notebook, wxID_ANY);
     m_rigControlTab = new wxPanel(m_notebook, wxID_ANY);
     m_displayTab = new wxPanel(m_notebook, wxID_ANY);
-    m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
+    m_rxAudioTab = new wxPanel(m_notebook, wxID_ANY);
+    m_txAudioTab = new wxPanel(m_notebook, wxID_ANY);
     m_voiceKeyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
     m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
 
-    m_notebook->AddPage(m_keyerTab, _("Audio"));
+    m_notebook->AddPage(m_rxAudioTab, _("Receive Audio"));
+    m_notebook->AddPage(m_txAudioTab, _("Transmit Audio"));
     m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
@@ -704,86 +708,102 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_displayTab->SetSizer(sizerDisplay);
     
-    // Voice Keyer tab (now also contains audio device selection)
-    wxBoxSizer* sizerKeyer = new wxBoxSizer(wxVERTICAL);
-
     //----------------------------------------------------------------------
-    // Audio Devices - Sound Card 1 (Receive)
+    // Receive Audio tab
     //----------------------------------------------------------------------
     {
-        wxStaticBox* sbSC1 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Receive Audio"));
-        wxStaticBoxSizer* sbsSC1 = new wxStaticBoxSizer(sbSC1, wxVERTICAL);
+        wxBoxSizer* sizerRxAudio = new wxBoxSizer(wxVERTICAL);
 
-        // 4 rows × 3 cols: [label | combo | Test], [empty | sample rate | empty]
-        wxFlexGridSizer* fgsSC1 = new wxFlexGridSizer(4, 3, 3, 5);
-        fgsSC1->AddGrowableCol(1);
+        // SC1 In
+        sizerRxAudio->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Input To Computer From Radio:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard1InDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard1InTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard1InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard1InDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
+            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
 
-        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Input To Computer From Radio:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-        m_cbSoundCard1InDevice = new wxComboBox(sbSC1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-        fgsSC1->Add(m_cbSoundCard1InDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
-        m_btnSoundCard1InTest = new wxButton(sbSC1, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
-        fgsSC1->Add(m_btnSoundCard1InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        sizerRxAudio->Add(new wxStaticLine(m_rxAudioTab), 0, wxEXPAND | wxALL, 5);
 
-        fgsSC1->AddSpacer(0);
-        m_stSC1InSampleRate = new wxStaticText(sbSC1, wxID_ANY, wxEmptyString);
-        fgsSC1->Add(m_stSC1InSampleRate, 0, wxLEFT | wxBOTTOM, 3);
-        fgsSC1->AddSpacer(0);
+        // SC1 Out
+        sizerRxAudio->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Output From Computer To Speaker/Headphones:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard1OutDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard1OutTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard1OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard1OutDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
+            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
 
-        fgsSC1->Add(new wxStaticText(sbSC1, wxID_ANY, _("Output From Computer To Speaker/Headphones:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-        m_cbSoundCard1OutDevice = new wxComboBox(sbSC1, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-        fgsSC1->Add(m_cbSoundCard1OutDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
-        m_btnSoundCard1OutTest = new wxButton(sbSC1, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
-        fgsSC1->Add(m_btnSoundCard1OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-
-        fgsSC1->AddSpacer(0);
-        m_stSC1OutSampleRate = new wxStaticText(sbSC1, wxID_ANY, wxEmptyString);
-        fgsSC1->Add(m_stSC1OutSampleRate, 0, wxLEFT | wxBOTTOM, 3);
-        fgsSC1->AddSpacer(0);
-
-        sbsSC1->Add(fgsSC1, 0, wxALL | wxEXPAND, 3);
-        sizerKeyer->Add(sbsSC1, 0, wxALL | wxEXPAND, 5);
+        m_rxAudioTab->SetSizer(sizerRxAudio);
     }
 
     //----------------------------------------------------------------------
-    // Audio Devices - Sound Card 2 (Transmit)
+    // Transmit Audio tab
     //----------------------------------------------------------------------
     {
-        wxStaticBox* sbSC2 = new wxStaticBox(m_keyerTab, wxID_ANY, _("Transmit Audio"));
-        wxStaticBoxSizer* sbsSC2 = new wxStaticBoxSizer(sbSC2, wxVERTICAL);
+        wxBoxSizer* sizerTxAudio = new wxBoxSizer(wxVERTICAL);
 
-        m_ckTxReceiveOnly = new wxCheckBox(sbSC2, wxID_ANY, _("Receive only (I will not be transmitting)"));
-        sbsSC2->Add(m_ckTxReceiveOnly, 0, wxALL, 5);
+        m_ckTxReceiveOnly = new wxCheckBox(m_txAudioTab, wxID_ANY, _("Receive only (I will not be transmitting)"));
+        sizerTxAudio->Add(m_ckTxReceiveOnly, 0, wxALL, 5);
 
-        wxFlexGridSizer* fgsSC2 = new wxFlexGridSizer(4, 3, 3, 5);
-        fgsSC2->AddGrowableCol(1);
+        // SC2 In
+        sizerTxAudio->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Input From Microphone To Computer:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard2InDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard2InTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard2InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard2InDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
+            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
 
-        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Input From Microphone To Computer:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-        m_cbSoundCard2InDevice = new wxComboBox(sbSC2, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-        fgsSC2->Add(m_cbSoundCard2InDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
-        m_btnSoundCard2InTest = new wxButton(sbSC2, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
-        fgsSC2->Add(m_btnSoundCard2InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+        sizerTxAudio->Add(new wxStaticLine(m_txAudioTab), 0, wxEXPAND | wxALL, 5);
 
-        fgsSC2->AddSpacer(0);
-        m_stSC2InSampleRate = new wxStaticText(sbSC2, wxID_ANY, wxEmptyString);
-        fgsSC2->Add(m_stSC2InSampleRate, 0, wxLEFT | wxBOTTOM, 3);
-        fgsSC2->AddSpacer(0);
+        // SC2 Out
+        sizerTxAudio->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Output From Computer To Radio:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard2OutDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard2OutTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard2OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard2OutDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
+            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
 
-        fgsSC2->Add(new wxStaticText(sbSC2, wxID_ANY, _("Output From Computer To Radio:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-        m_cbSoundCard2OutDevice = new wxComboBox(sbSC2, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250,-1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-        fgsSC2->Add(m_cbSoundCard2OutDevice, 1, wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 3);
-        m_btnSoundCard2OutTest = new wxButton(sbSC2, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize);
-        fgsSC2->Add(m_btnSoundCard2OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-
-        fgsSC2->AddSpacer(0);
-        m_stSC2OutSampleRate = new wxStaticText(sbSC2, wxID_ANY, wxEmptyString);
-        fgsSC2->Add(m_stSC2OutSampleRate, 0, wxLEFT | wxBOTTOM, 3);
-        fgsSC2->AddSpacer(0);
-
-        sbsSC2->Add(fgsSC2, 0, wxALL | wxEXPAND, 3);
-        sizerKeyer->Add(sbsSC2, 0, wxALL | wxEXPAND, 5);
+        m_txAudioTab->SetSizer(sizerTxAudio);
     }
-
-    m_keyerTab->SetSizer(sizerKeyer);
 
     //----------------------------------------------------------------------
     // Voice Keyer tab
@@ -1122,7 +1142,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
 #endif // __WXMSW__
     
-    m_keyerTab->MoveBeforeInTabOrder(m_reportingTab);
+    m_rxAudioTab->MoveBeforeInTabOrder(m_txAudioTab);
+    m_txAudioTab->MoveBeforeInTabOrder(m_reportingTab);
     m_reportingTab->MoveBeforeInTabOrder(m_voiceKeyerTab);
     m_voiceKeyerTab->MoveBeforeInTabOrder(m_rigControlTab);
     m_rigControlTab->MoveBeforeInTabOrder(m_displayTab);
@@ -1198,10 +1219,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_btnSoundCard1OutTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutTest), NULL, this);
     m_btnSoundCard2InTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2InTest), NULL, this);
     m_btnSoundCard2OutTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutTest), NULL, this);
-    m_cbSoundCard1InDevice->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard1InDeviceChange), NULL, this);
-    m_cbSoundCard1OutDevice->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutDeviceChange), NULL, this);
-    m_cbSoundCard2InDevice->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard2InDeviceChange), NULL, this);
-    m_cbSoundCard2OutDevice->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutDeviceChange), NULL, this);
+    m_lcSoundCard1InDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1InDeviceSelect), NULL, this);
+    m_lcSoundCard1OutDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1OutDeviceSelect), NULL, this);
+    m_lcSoundCard2InDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
+    m_lcSoundCard2OutDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
     m_ckTxReceiveOnly->Connect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
 
     event_in_serial = 0;
@@ -1272,10 +1293,10 @@ OptionsDlg::~OptionsDlg()
     m_btnSoundCard1OutTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutTest), NULL, this);
     m_btnSoundCard2InTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2InTest), NULL, this);
     m_btnSoundCard2OutTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutTest), NULL, this);
-    m_cbSoundCard1InDevice->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard1InDeviceChange), NULL, this);
-    m_cbSoundCard1OutDevice->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutDeviceChange), NULL, this);
-    m_cbSoundCard2InDevice->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard2InDeviceChange), NULL, this);
-    m_cbSoundCard2OutDevice->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutDeviceChange), NULL, this);
+    m_lcSoundCard1InDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1InDeviceSelect), NULL, this);
+    m_lcSoundCard1OutDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1OutDeviceSelect), NULL, this);
+    m_lcSoundCard2InDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
+    m_lcSoundCard2OutDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
     m_ckTxReceiveOnly->Disconnect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
 
     if (m_audioPlotThread != nullptr)
@@ -1401,20 +1422,13 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
 
         // Audio device selection
-        populateAudioDeviceCombo(m_cbSoundCard1InDevice, IAudioEngine::AUDIO_ENGINE_IN);
-        populateAudioDeviceCombo(m_cbSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
-        populateAudioDeviceCombo(m_cbSoundCard2InDevice, IAudioEngine::AUDIO_ENGINE_IN);
-        populateAudioDeviceCombo(m_cbSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+        populateAudioDeviceList(m_lcSoundCard1InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+        populateAudioDeviceList(m_lcSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+        populateAudioDeviceList(m_lcSoundCard2InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+        populateAudioDeviceList(m_lcSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
 
-        m_cbSoundCard1InDevice->SetValue(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
-        m_cbSoundCard1OutDevice->SetValue(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
-        m_cbSoundCard2InDevice->SetValue(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName);
-        m_cbSoundCard2OutDevice->SetValue(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName);
-
-        updateSampleRateLabel(m_stSC1InSampleRate,  m_cbSoundCard1InDevice->GetValue(),  IAudioEngine::AUDIO_ENGINE_IN);
-        updateSampleRateLabel(m_stSC1OutSampleRate, m_cbSoundCard1OutDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_OUT);
-        updateSampleRateLabel(m_stSC2InSampleRate,  m_cbSoundCard2InDevice->GetValue(),  IAudioEngine::AUDIO_ENGINE_IN);
-        updateSampleRateLabel(m_stSC2OutSampleRate, m_cbSoundCard2OutDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_OUT);
+        selectListDevice(m_lcSoundCard1InDevice, m_tcSoundCard1InDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
+        selectListDevice(m_lcSoundCard2InDevice, m_tcSoundCard2InDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName);
 
         {
             wxString sc2in  = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName;
@@ -1422,8 +1436,21 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             bool rxOnly = (sc2in.IsEmpty() || sc2in == "none") &&
                           (sc2out.IsEmpty() || sc2out == "none");
             m_ckTxReceiveOnly->SetValue(rxOnly);
-            m_cbSoundCard2InDevice->Enable(!rxOnly);
-            m_cbSoundCard2OutDevice->Enable(!rxOnly);
+            if (rxOnly)
+            {
+                // 1-card mode: SC1Out is speakers
+                selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
+            }
+            else
+            {
+                // 2-card mode: SC2Out is speakers, SC1Out is radio TX output
+                selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName);
+                selectListDevice(m_lcSoundCard2OutDevice, m_tcSoundCard2OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
+            }
+            m_lcSoundCard2InDevice->Enable(!rxOnly);
+            m_tcSoundCard2InDevice->Enable(!rxOnly);
+            m_lcSoundCard2OutDevice->Enable(!rxOnly);
+            m_tcSoundCard2OutDevice->Enable(!rxOnly);
             m_btnSoundCard2InTest->Enable(!rxOnly);
             m_btnSoundCard2OutTest->Enable(!rxOnly);
         }
@@ -1612,46 +1639,45 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.quickRecordRawPath = m_txtCtrlQuickRecordRawPath->GetValue();
         wxGetApp().appConfiguration.quickRecordDecodedPath = m_txtCtrlQuickRecordDecodedPath->GetValue();
 
-        // Audio device config — save names and look up default sample rates
+        // Audio device config — save names and look up default sample rates.
+        // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
+        //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
         {
             auto audioEngine = AudioEngineFactory::GetAudioEngine();
-            struct { wxComboBox* combo; IAudioEngine::AudioDirection dir; wxString* nameOut; int* rateOut; } audioDevs[] = {
-                { m_cbSoundCard1InDevice,  IAudioEngine::AUDIO_ENGINE_IN,  nullptr, nullptr },
-                { m_cbSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT, nullptr, nullptr },
-                { m_cbSoundCard2InDevice,  IAudioEngine::AUDIO_ENGINE_IN,  nullptr, nullptr },
-                { m_cbSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT, nullptr, nullptr },
+            auto getSR = [&](const wxString& name, IAudioEngine::AudioDirection dir) -> int {
+                if (name.IsEmpty() || name == "none") return 0;
+                for (auto& dev : audioEngine->getAudioDeviceList(dir))
+                    if (dev.name.IsSameAs(name)) return dev.defaultSampleRate;
+                return 0;
             };
-            wxString devNames[4];
-            int devRates[4] = {0, 0, 0, 0};
-            for (int i = 0; i < 4; i++)
-            {
-                devNames[i] = audioDevs[i].combo->GetValue();
-                if (!devNames[i].IsEmpty() && devNames[i] != "none")
-                {
-                    auto devList = audioEngine->getAudioDeviceList(audioDevs[i].dir);
-                    for (auto& dev : devList)
-                    {
-                        if (dev.name.IsSameAs(devNames[i]))
-                        {
-                            devRates[i] = dev.defaultSampleRate;
-                            break;
-                        }
-                    }
-                }
-            }
+
+            wxString sc1in   = m_tcSoundCard1InDevice->GetValue();
+            wxString spk     = m_tcSoundCard1OutDevice->GetValue(); // "Output From Computer To Speaker/Headphones"
+            wxString sc2in   = m_tcSoundCard2InDevice->GetValue();
+            wxString radioTx = m_tcSoundCard2OutDevice->GetValue(); // "Output From Computer To Radio"
+
             if (m_ckTxReceiveOnly->GetValue())
             {
-                devNames[2] = devNames[3] = "none";
-                devRates[2] = devRates[3] = 0;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName  = sc1in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = spk;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName  = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                int r;
+                r = getSR(sc1in, IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate  = r;
+                r = getSR(spk,   IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = r;
             }
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName  = devNames[0];
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = devNames[1];
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName  = devNames[2];
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = devNames[3];
-            if (devRates[0] > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate  = devRates[0];
-            if (devRates[1] > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = devRates[1];
-            if (devRates[2] > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate  = devRates[2];
-            if (devRates[3] > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = devRates[3];
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName  = sc1in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = radioTx;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName  = sc2in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = spk;
+                int r;
+                r = getSR(sc1in,   IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate  = r;
+                r = getSR(radioTx, IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = r;
+                r = getSR(sc2in,   IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate  = r;
+                r = getSR(spk,     IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = r;
+            }
         }
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
@@ -2696,84 +2722,92 @@ void OptionsDlg::OnTestPTT(wxCommandEvent&)
 }
 
 //-------------------------------------------------------------------------
-// populateAudioDeviceCombo()
+// populateAudioDeviceList()
 //-------------------------------------------------------------------------
-void OptionsDlg::populateAudioDeviceCombo(wxComboBox* combo, IAudioEngine::AudioDirection direction)
+void OptionsDlg::populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDirection direction)
 {
-    combo->Clear();
+    list->ClearAll();
+
+    wxListItem col;
+    col.SetAlign(wxLIST_FORMAT_LEFT);
+    col.SetText(_("Device"));
+    list->InsertColumn(0, col);
+
+    col.SetAlign(wxLIST_FORMAT_LEFT);
+    col.SetText(_("API"));
+    list->InsertColumn(1, col);
+
+    col.SetAlign(wxLIST_FORMAT_CENTRE);
+    col.SetText(_("Default Sample Rate"));
+    list->InsertColumn(2, col);
+
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->start();
     auto devList = engine->getAudioDeviceList(direction);
+    engine->stop();
+
     for (auto& dev : devList)
     {
-        combo->Append(dev.name);
+        long idx = list->InsertItem(list->GetItemCount(), dev.name);
+        list->SetItem(idx, 1, dev.apiName);
+        list->SetItem(idx, 2, wxString::Format("%d Hz", dev.defaultSampleRate));
     }
-    combo->Append("none");
-    engine->stop();
+    list->InsertItem(list->GetItemCount(), "none");
+
+    list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+    list->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    list->SetColumnWidth(2, wxLIST_AUTOSIZE_USEHEADER);
 }
 
 //-------------------------------------------------------------------------
-// updateSampleRateLabel()
+// selectListDevice()
 //-------------------------------------------------------------------------
-void OptionsDlg::updateSampleRateLabel(wxStaticText* label, const wxString& devName, IAudioEngine::AudioDirection direction)
+void OptionsDlg::selectListDevice(wxListCtrl* list, wxTextCtrl* tc, const wxString& devName)
 {
-    if (devName.IsEmpty() || devName == "none")
+    wxString target = devName.IsEmpty() ? wxString("none") : devName;
+    for (long i = 0; i < list->GetItemCount(); i++)
     {
-        label->SetLabel(wxEmptyString);
-        return;
-    }
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->start();
-    auto devList = engine->getAudioDeviceList(direction);
-    engine->stop();
-    for (auto& dev : devList)
-    {
-        if (dev.name == devName.ToStdString())
+        if (list->GetItemText(i, 0).IsSameAs(target))
         {
-            label->SetLabel(wxString::Format(_("Sample rate: %d Hz"), dev.defaultSampleRate));
+            list->SetItemState(i, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED,
+                                  wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
+            list->EnsureVisible(i);
+            tc->SetValue(target);
             return;
         }
     }
-    label->SetLabel(wxEmptyString);
+    tc->SetValue(wxEmptyString);
 }
 
-void OptionsDlg::OnSoundCard1InDeviceChange(wxCommandEvent&)
+void OptionsDlg::OnSoundCard1InDeviceSelect(wxListEvent& evt)
 {
-    updateSampleRateLabel(m_stSC1InSampleRate, m_cbSoundCard1InDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_IN);
+    m_tcSoundCard1InDevice->SetValue(m_lcSoundCard1InDevice->GetItemText(evt.GetIndex(), 0));
 }
 
-void OptionsDlg::OnSoundCard1OutDeviceChange(wxCommandEvent&)
+void OptionsDlg::OnSoundCard1OutDeviceSelect(wxListEvent& evt)
 {
-    updateSampleRateLabel(m_stSC1OutSampleRate, m_cbSoundCard1OutDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_OUT);
+    m_tcSoundCard1OutDevice->SetValue(m_lcSoundCard1OutDevice->GetItemText(evt.GetIndex(), 0));
 }
 
-void OptionsDlg::OnSoundCard2InDeviceChange(wxCommandEvent&)
+void OptionsDlg::OnSoundCard2InDeviceSelect(wxListEvent& evt)
 {
-    updateSampleRateLabel(m_stSC2InSampleRate, m_cbSoundCard2InDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_IN);
+    m_tcSoundCard2InDevice->SetValue(m_lcSoundCard2InDevice->GetItemText(evt.GetIndex(), 0));
 }
 
-void OptionsDlg::OnSoundCard2OutDeviceChange(wxCommandEvent&)
+void OptionsDlg::OnSoundCard2OutDeviceSelect(wxListEvent& evt)
 {
-    updateSampleRateLabel(m_stSC2OutSampleRate, m_cbSoundCard2OutDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_OUT);
+    m_tcSoundCard2OutDevice->SetValue(m_lcSoundCard2OutDevice->GetItemText(evt.GetIndex(), 0));
 }
 
 void OptionsDlg::OnTxReceiveOnlyChanged(wxCommandEvent&)
 {
     bool rxOnly = m_ckTxReceiveOnly->GetValue();
-    m_cbSoundCard2InDevice->Enable(!rxOnly);
-    m_cbSoundCard2OutDevice->Enable(!rxOnly);
+    m_lcSoundCard2InDevice->Enable(!rxOnly);
+    m_tcSoundCard2InDevice->Enable(!rxOnly);
+    m_lcSoundCard2OutDevice->Enable(!rxOnly);
+    m_tcSoundCard2OutDevice->Enable(!rxOnly);
     m_btnSoundCard2InTest->Enable(!rxOnly);
     m_btnSoundCard2OutTest->Enable(!rxOnly);
-    if (rxOnly)
-    {
-        m_stSC2InSampleRate->SetLabel(wxEmptyString);
-        m_stSC2OutSampleRate->SetLabel(wxEmptyString);
-    }
-    else
-    {
-        updateSampleRateLabel(m_stSC2InSampleRate,  m_cbSoundCard2InDevice->GetValue(),  IAudioEngine::AUDIO_ENGINE_IN);
-        updateSampleRateLabel(m_stSC2OutSampleRate, m_cbSoundCard2OutDevice->GetValue(), IAudioEngine::AUDIO_ENGINE_OUT);
-    }
 }
 
 //-------------------------------------------------------------------------
@@ -2972,10 +3006,10 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 {
-    wxString outDev = m_cbSoundCard2OutDevice->GetValue();
+    wxString outDev = m_tcSoundCard2OutDevice->GetValue();
     if (outDev.IsEmpty() || outDev == "none")
-        outDev = m_cbSoundCard1OutDevice->GetValue();
-    testAudioInput(m_cbSoundCard1InDevice->GetValue(), outDev, m_btnSoundCard1InTest);
+        outDev = m_tcSoundCard1OutDevice->GetValue();
+    testAudioInput(m_tcSoundCard1InDevice->GetValue(), outDev, m_btnSoundCard1InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2983,7 +3017,7 @@ void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_cbSoundCard1OutDevice->GetValue(), m_btnSoundCard1OutTest);
+    testAudioOutput(m_tcSoundCard1OutDevice->GetValue(), m_btnSoundCard1OutTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2991,7 +3025,7 @@ void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 {
-    testAudioInput(m_cbSoundCard2InDevice->GetValue(), m_cbSoundCard2OutDevice->GetValue(), m_btnSoundCard2InTest);
+    testAudioInput(m_tcSoundCard2InDevice->GetValue(), m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -2999,5 +3033,5 @@ void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_cbSoundCard2OutDevice->GetValue(), m_btnSoundCard2OutTest);
+    testAudioOutput(m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2OutTest);
 }

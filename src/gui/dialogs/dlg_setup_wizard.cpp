@@ -506,7 +506,18 @@ void SetupWizard::loadConfig()
 
     // Page 0: Receive Audio
     m_cbRadioIn->SetValue(cfg.audioConfiguration.soundCard1In.deviceName);
+
+    // Page 1: Transmit Audio
+    // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
+    //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
+    wxString sc2in  = cfg.audioConfiguration.soundCard2In.deviceName;
+    wxString sc2out = cfg.audioConfiguration.soundCard2Out.deviceName;
+    bool rxOnly = (sc2in.IsEmpty() || sc2in == "none") &&
+                  (sc2out.IsEmpty() || sc2out == "none");
+    m_ckReceiveOnly->SetValue(rxOnly);
+    if (rxOnly)
     {
+        // 1-card: SC1Out is speakers
         wxString spk = cfg.audioConfiguration.soundCard1Out.deviceName;
         if (spk.IsEmpty() || spk == "none")
         {
@@ -514,21 +525,16 @@ void SetupWizard::loadConfig()
             if (def.isValid()) spk = def.name;
         }
         m_cbSpeakerOut->SetValue(spk);
-    }
-
-    // Page 1: Transmit Audio
-    wxString sc2in  = cfg.audioConfiguration.soundCard2In.deviceName;
-    wxString sc2out = cfg.audioConfiguration.soundCard2Out.deviceName;
-    bool rxOnly = (sc2in.IsEmpty() || sc2in == "none") &&
-                  (sc2out.IsEmpty() || sc2out == "none");
-    m_ckReceiveOnly->SetValue(rxOnly);
-    if (!rxOnly) {
-        m_cbMicIn->SetValue(sc2in);
-        m_cbRadioOut->SetValue(sc2out);
-    } else {
         // Pre-fill microphone with system default so the user sees a sensible suggestion
         auto def = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
         if (def.isValid()) m_cbMicIn->SetValue(def.name);
+    }
+    else
+    {
+        // 2-card: SC2Out is speakers, SC1Out is radio TX
+        m_cbSpeakerOut->SetValue(sc2out);
+        m_cbMicIn->SetValue(sc2in);
+        m_cbRadioOut->SetValue(cfg.audioConfiguration.soundCard1Out.deviceName);
     }
 
     // Page 2: Radio Control — Hamlib
@@ -579,30 +585,40 @@ void SetupWizard::saveConfig()
         return 0;
     };
 
-    // Page 0: Receive Audio
-    wxString sc1in  = m_cbRadioIn->GetValue();
-    wxString sc1out = m_cbSpeakerOut->GetValue();
-    cfg.audioConfiguration.soundCard1In.deviceName  = sc1in;
-    cfg.audioConfiguration.soundCard1Out.deviceName = sc1out;
-    int r1in = getSampleRate(sc1in, IAudioEngine::AUDIO_ENGINE_IN);
-    if (r1in > 0) cfg.audioConfiguration.soundCard1In.sampleRate = r1in;
-    int r1out = getSampleRate(sc1out, IAudioEngine::AUDIO_ENGINE_OUT);
-    if (r1out > 0) cfg.audioConfiguration.soundCard1Out.sampleRate = r1out;
+    // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
+    //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
+    wxString sc1in = m_cbRadioIn->GetValue();
+    wxString spk   = m_cbSpeakerOut->GetValue();
 
-    // Page 1: Transmit Audio
-    wxString sc2in, sc2out;
-    if (m_ckReceiveOnly->GetValue()) {
-        sc2in = sc2out = "none";
-    } else {
-        sc2in  = m_cbMicIn->GetValue();
-        sc2out = m_cbRadioOut->GetValue();
+    cfg.audioConfiguration.soundCard1In.deviceName = sc1in;
+    int r;
+    r = getSampleRate(sc1in, IAudioEngine::AUDIO_ENGINE_IN);
+    if (r > 0) cfg.audioConfiguration.soundCard1In.sampleRate = r;
+
+    if (m_ckReceiveOnly->GetValue())
+    {
+        // 1-card: SC1Out = speakers, SC2* = "none"
+        cfg.audioConfiguration.soundCard1Out.deviceName = spk;
+        r = getSampleRate(spk, IAudioEngine::AUDIO_ENGINE_OUT);
+        if (r > 0) cfg.audioConfiguration.soundCard1Out.sampleRate = r;
+        cfg.audioConfiguration.soundCard2In.deviceName  = "none";
+        cfg.audioConfiguration.soundCard2Out.deviceName = "none";
     }
-    cfg.audioConfiguration.soundCard2In.deviceName  = sc2in;
-    cfg.audioConfiguration.soundCard2Out.deviceName = sc2out;
-    int r2in = getSampleRate(sc2in, IAudioEngine::AUDIO_ENGINE_IN);
-    if (r2in > 0) cfg.audioConfiguration.soundCard2In.sampleRate = r2in;
-    int r2out = getSampleRate(sc2out, IAudioEngine::AUDIO_ENGINE_OUT);
-    if (r2out > 0) cfg.audioConfiguration.soundCard2Out.sampleRate = r2out;
+    else
+    {
+        // 2-card: SC1Out = radio TX, SC2Out = speakers
+        wxString radioTx = m_cbRadioOut->GetValue();
+        wxString sc2in   = m_cbMicIn->GetValue();
+        cfg.audioConfiguration.soundCard1Out.deviceName = radioTx;
+        r = getSampleRate(radioTx, IAudioEngine::AUDIO_ENGINE_OUT);
+        if (r > 0) cfg.audioConfiguration.soundCard1Out.sampleRate = r;
+        cfg.audioConfiguration.soundCard2In.deviceName  = sc2in;
+        r = getSampleRate(sc2in, IAudioEngine::AUDIO_ENGINE_IN);
+        if (r > 0) cfg.audioConfiguration.soundCard2In.sampleRate = r;
+        cfg.audioConfiguration.soundCard2Out.deviceName = spk;
+        r = getSampleRate(spk, IAudioEngine::AUDIO_ENGINE_OUT);
+        if (r > 0) cfg.audioConfiguration.soundCard2Out.sampleRate = r;
+    }
 
     // Page 2: Radio Control — Hamlib
     cfg.rigControlConfiguration.hamlibUseForPTT  = m_ckHamlib->GetValue();
