@@ -719,6 +719,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
+    // Suppress spurious GTK logging.
+    GTKSuppressDiagnostics();
+#endif // wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
+
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
