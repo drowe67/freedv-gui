@@ -229,14 +229,6 @@ class MainApp : public wxApp
         int        FilterEvent(wxEvent& event);
         MainFrame *frame;
 
-        // 700 options
-        bool       m_FreeDV700Combine;
-
-        // carrier attenuation
-
-        bool       m_attn_carrier_en;
-        int        m_attn_carrier;
-
         // tone interferer simulation
 
         bool       m_tone;

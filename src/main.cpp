@@ -889,9 +889,6 @@ void MainFrame::loadConfiguration_()
     }
     
     // -----------------------------------------------------------------------
-
-    wxGetApp().m_FreeDV700Combine = 1;
-
     if (wxGetApp().appConfiguration.debugVerbose)
     {
         ulog_set_level(LOG_TRACE);
@@ -901,9 +898,6 @@ void MainFrame::loadConfiguration_()
         ulog_set_level(LOG_INFO);
     }
     g_freedv_verbose = wxGetApp().appConfiguration.apiVerbose;
-
-    wxGetApp().m_attn_carrier_en = 0;
-    wxGetApp().m_attn_carrier    = 0;
 
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;

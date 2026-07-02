@@ -91,7 +91,6 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_txAudioTab; // Transmit Audio devices
         wxNotebookPage *m_voiceKeyerTab; // Voice Keyer / Quick Record
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
-        wxNotebookPage *m_simulationTab; // testing/interference
         wxNotebookPage *m_debugTab; // Debug
 
         /* Radio tab - VOX PTT Settings */
@@ -216,9 +215,6 @@ class OptionsDlg : public wxDialog
         void OnRefreshAudioDevices(wxCommandEvent& event);
 
         /* test frames, other simulated channel impairments */
-        wxCheckBox   *m_ckboxAttnCarrierEn;
-        wxTextCtrl   *m_txtAttnCarrier;
-
         wxCheckBox   *m_ckboxTone;
         wxTextCtrl   *m_txtToneFreqHz;
         wxTextCtrl   *m_txtToneAmplitude;
@@ -311,7 +307,6 @@ class OptionsDlg : public wxDialog
      private:
          void updateReportingState();
          void updateChannelNoiseState();
-         void updateAttnCarrierState();
          void updateToneState();
          void updateRigControlState();
          void updateRadioControlState();

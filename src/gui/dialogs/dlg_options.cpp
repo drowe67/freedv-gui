@@ -152,7 +152,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txAudioTab = new wxPanel(m_notebook, wxID_ANY);
     m_voiceKeyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
-    m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
 
     m_notebook->AddPage(m_rxAudioTab, _("Receive Audio"));
@@ -163,7 +162,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_voiceKeyerTab, _("Voice Keyer"));
     m_notebook->AddPage(m_displayTab, _("Display"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
-    m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
     
     bSizer30->Add(m_notebook, 1, wxALL | wxEXPAND, 3);
@@ -934,60 +932,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerModem->Add(sbSizer_modemstats,0, wxALL | wxEXPAND, 5);
         
     m_modemTab->SetSizer(sizerModem);
-    
-    // Simulation tab
-    wxBoxSizer* sizerSimulation = new wxBoxSizer(wxVERTICAL);
-    
-    //------------------------------
-    // Test Frames/Channel simulation check box
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_testFrames;
-    wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
-    sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
-
-    wxBoxSizer* attnCarrierSizer = new wxBoxSizer(wxHORIZONTAL);
-
-    m_ckboxAttnCarrierEn = new wxCheckBox(sb_testFrames, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    attnCarrierSizer->Add(m_ckboxAttnCarrierEn, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *carrierLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
-    attnCarrierSizer->Add(carrierLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    m_txtAttnCarrier = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    attnCarrierSizer->Add(m_txtAttnCarrier, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_testFrames->Add(attnCarrierSizer);
-
-    sizerSimulation->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 5);
-
-    //------------------------------
-    // Interfering tone
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_tone;
-    wxStaticBox *sb_tone = new wxStaticBox(m_simulationTab, wxID_ANY, _("Simulated Interference Tone"));
-    sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
-
-    m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
-
-    m_simulationTab->SetSizer(sizerSimulation);
-        
+            
     // Debug tab
     wxBoxSizer* sizerDebug = new wxBoxSizer(wxVERTICAL);
     
@@ -1070,6 +1015,31 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerDebug->Add(sbSizer_fifo,0, wxALL|wxEXPAND, 3);
     sizerDebug->Add(sbSizer_fifo2,0, wxALL|wxEXPAND, 3);
 
+    //------------------------------
+    // Interfering tone
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_tone;
+    wxStaticBox *sb_tone = new wxStaticBox(m_debugTab, wxID_ANY, _("Simulated Interference Tone"));
+    sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
+
+    m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerDebug->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
+
     m_debugTab->SetSizer(sizerDebug);
 
     //------------------------------
@@ -1120,8 +1090,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
-    m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
-    m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
     
@@ -1149,8 +1117,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_voiceKeyerTab->MoveBeforeInTabOrder(m_rigControlTab);
     m_rigControlTab->MoveBeforeInTabOrder(m_displayTab);
     m_displayTab->MoveBeforeInTabOrder(m_modemTab);
-    m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
-    m_simulationTab->MoveBeforeInTabOrder(m_debugTab);
+    m_modemTab->MoveBeforeInTabOrder(m_debugTab);
     
     m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
@@ -1462,9 +1429,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
         m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude));
 
-        m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
-        m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
-
         m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.fifoSizeMs.get()));
 
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
@@ -1560,7 +1524,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         // Update control state based on checkbox state.
         updateReportingState();
-        updateAttnCarrierState();
         updateToneState();
         updateRigControlState();
 
@@ -1686,11 +1649,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_tone_freq_hz = (int)tone_freq_hz;
         m_txtToneAmplitude->GetValue().ToLong(&tone_amplitude);
         wxGetApp().m_tone_amplitude = (int)tone_amplitude;
-
-        wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
-        long attn_carrier;
-        m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
-        wxGetApp().m_attn_carrier = (int)attn_carrier;
 
         long FifoSize_ms;
         m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
@@ -2071,11 +2029,6 @@ void OptionsDlg::updateReportingState()
 
         m_ckbox_use_utc_time->Enable(false);
     }
-}
-
-void OptionsDlg::updateAttnCarrierState()
-{
-    m_txtAttnCarrier->Enable(m_ckboxAttnCarrierEn->GetValue());
 }
 
 void OptionsDlg::updateToneState()
