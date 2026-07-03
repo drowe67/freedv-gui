@@ -635,6 +635,7 @@ class MainFrame : public TopFrame
         
         void updateReportingFreqList_();
         void updateFreqBoxLabel_();
+        void updateFreqBoxTooltip_();
         
         void initializeFreeDVReporter_();
         void updateVoiceKeyerButtonLabel_();

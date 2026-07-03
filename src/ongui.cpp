@@ -542,6 +542,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             }
             
             m_cboReportFrequency->SetValue(freqString);
+            updateFreqBoxTooltip_();
         }
         m_txtModeStatus->Refresh();
 
@@ -2092,6 +2093,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         }
     }
 
+    updateFreqBoxTooltip_();
+
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->refreshQSYButtonState();
@@ -2182,6 +2185,35 @@ void MainFrame::updateFreqBoxLabel_()
     {
         m_freqBox->SetLabel(asKhz ? _("Center Freq. (kHz)") : _("Center Freq. (MHz)"));
     }
+
+    updateFreqBoxTooltip_();
+}
+
+void MainFrame::updateFreqBoxTooltip_()
+{
+    // In Analog mode the readout already *is* the radio's dial frequency
+    // (GetCentreFreqOffsetHz() returns 0 there), so a tooltip would just
+    // repeat the visible value -- skip it to avoid noise.
+    auto freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get();
+    if (freq == 0 || g_analog)
+    {
+        m_cboReportFrequency->UnsetToolTip();
+        return;
+    }
+
+    auto dialFreq = DisplayToDialFreq(freq, getCurrentMode_(), false);
+
+    wxString dialFreqString;
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        dialFreqString = wxNumberFormatter::ToString(dialFreq / 1000.0, 1) + _("kHz");
+    }
+    else
+    {
+        dialFreqString = wxNumberFormatter::ToString(dialFreq / 1000.0 / 1000.0, 4) + _("MHz");
+    }
+
+    m_cboReportFrequency->SetToolTip(wxString::Format(_("%s SSB dial"), dialFreqString));
 }
 
 void MainFrame::updateReportingFreqList_()
