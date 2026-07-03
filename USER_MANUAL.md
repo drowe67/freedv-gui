@@ -885,7 +885,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib/OmniRig: Round received frequency to nearest 100 Hz. (PR #1373)
     * Tighten remaining audio settings to improve audio drops. (PR #1412)
     * Fix corruption of string config arrays containing commas. (PR #1417) - thanks @barjac!
-    * Suppress button flicker in Linux light themes. (PR #1419) - thanks @barjac!
+    * Suppress button flicker in Linux light themes. (PR #1419, PR #1421) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
