@@ -28,15 +28,10 @@
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
-
-extern int g_mode;
-
 extern int   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
@@ -1051,38 +1046,88 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
 }
 
-// check for space bar press (only when running)
-
+static bool PttKeyDown_ = false;
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
         (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
+            bool pttKeyChanging = !PttKeyDown_;
+            PttKeyDown_ = true;
+
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
-            bool reporterActiveButNotUpdatingTextMessage = 
-                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
             bool tuneActive = frame->m_btnTogTune->GetValue();
-            if (frame->m_RxRunning && !tuneActive && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) && 
+
+            // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
+            // (e.g. TOT) from immediately restarting TX -- see main.h.
+            if (frame->m_RxRunning && !tuneActive && !frame->m_pttKeyRequireRelease_ &&
+                (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
-                    if (frame->m_btnTogPTT->GetValue())
-                        frame->m_btnTogPTT->SetValue(false);
-                    else
-                        frame->m_btnTogPTT->SetValue(true);
-                    
-                    // Actually toggle PTT.
-                    frame->togglePTT();
+                    if (wxGetApp().appConfiguration.pttMomentaryMode) {
+                        // Momentary mode: start TX only on the initial key press (not repeated events).
+                        if (!g_tx.load(std::memory_order_acquire)) {
+                            frame->m_btnTogPTT->SetValue(true);
+                            frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
+                            frame->togglePTT();
+                        }
+                    } else if (pttKeyChanging) {
+                        // Latching mode: toggle TX state on each key press.
+                        if (frame->m_btnTogPTT->GetValue())
+                            frame->m_btnTogPTT->SetValue(false);
+                        else
+                            frame->m_btnTogPTT->SetValue(true);
+
+                        frame->togglePTT();
+                    }
                 }
                 else // space bar stops keyer
                     frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
-                return Event_Processed; // absorb space so we don't toggle control with focus (e.g. Start)
+                return Event_Processed; // absorb key so we don't toggle control with focus (e.g. Start)
 
+            }
+        }
+
+    // In momentary mode, stop TX when the PTT key is released.
+    if ((event.GetEventType() == wxEVT_KEY_UP) &&
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
+        {
+            PttKeyDown_ = false;
+
+            bool mainWindowActive = frame->IsActive();
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
+                !frame->m_reporterDialog->isTextMessageFieldInFocus();
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            if (frame->m_RxRunning && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
+                wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
+                wxGetApp().appConfiguration.pttMomentaryMode) {
+
+                if (frame->vk_state == VK_IDLE) {
+                    if (g_tx.load(std::memory_order_acquire)) {
+                        frame->m_btnTogPTT->SetValue(false);
+                        frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                        frame->togglePTT();
+                    } else if (frame->m_btnTogPTT->GetValue()) {
+                        // Key released before g_tx caught up -- likely still inside
+                        // togglePTT()'s TX/RX delay loop for the start that's in
+                        // progress. Calling togglePTT() here would no-op against its
+                        // re-entrancy guard, so remember the release and let
+                        // togglePTT() action it once the start finishes -- see
+                        // m_momentaryKeyReleasedDuringChangeover_ in main.h.
+                        log_info("PTT key released mid-changeover -- deferring momentary stop");
+                        frame->m_momentaryKeyReleasedDuringChangeover_ = true;
+                    }
+                }
+                return Event_Processed;
             }
         }
 
@@ -1122,17 +1167,6 @@ void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
 {
     if (txChangeoverOccurring_) return;
-
-    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
-    {
-        m_btnTogPTT->SetBackgroundColour(*wxRED);
-#if !defined(__APPLE__)
-        // macOS limitations prevent the foreground color of toggle buttons from being 
-        // reliably set, so don't mess with it in the first place.
-        m_btnTogPTT->SetForegroundColour(*wxBLACK);
-#endif // !defined(__APPLE__)
-        m_btnTogPTT->Refresh();
-    }
     event.Skip();
 }
 
@@ -1166,7 +1200,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent&)
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else
+    else 
     {
         togglePTT();
     }
@@ -1224,6 +1258,32 @@ void MainFrame::OnTOTTimer(wxTimerEvent&)
         m_btnTogPTT->SetValue(false);
         endingTx.store(true, std::memory_order_release);
         togglePTT();
+
+        // If the spacebar PTT key is still physically held down (e.g. something
+        // resting on the keyboard), holding it through the timeout must not be
+        // able to immediately re-key the rig -- that would defeat the whole
+        // point of the TOT. wxEVT_KEY_UP/DOWN aren't reliable for detecting
+        // "still held" here: on some platforms, a held key generates real
+        // key-up/key-down event pairs at the OS repeat rate rather than a
+        // single sustained key-down, so we poll the actual OS key state
+        // instead and keep the spacebar disabled until it genuinely goes up.
+        if (wxGetApp().appConfiguration.pttMomentaryMode &&
+            PttKeyDown_)
+        {
+            log_info("TOT fired while PTT key still held -- blocking restart until key is released");
+            m_pttKeyRequireRelease_ = true;
+            m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
+        }
+    }
+}
+
+void MainFrame::OnPttKeyPollTimer(wxTimerEvent&)
+{
+    if (!PttKeyDown_)
+    {
+        log_info("PTT key released -- spacebar PTT re-armed");
+        m_pttKeyRequireRelease_ = false;
+        m_pttKeyPollTimer.Stop();
     }
 }
 
@@ -1264,6 +1324,8 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
                 }
             );
             m_totWarningDialog_->Show();
+            m_totWarningDialog_->Iconize(false); // undo minimize if required
+            m_totWarningDialog_->Raise(); // brings from background to foreground if required
         }
         else
         {
@@ -1354,29 +1416,26 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
-        {
-            log_info("Waiting for EOO to be queued");
-            endingTx.store(true, std::memory_order_release);
+        log_info("Waiting for EOO to be queued");
+        endingTx.store(true, std::memory_order_release);
             
-            auto beginTime = std::chrono::high_resolution_clock::now();
-            while(true)
+        auto beginTime = std::chrono::high_resolution_clock::now();
+        while(true)
+        {
+            if (g_eoo_enqueued.load(std::memory_order_acquire))
             {
-                if (g_eoo_enqueued.load(std::memory_order_acquire))
-                {
-                    log_info("Detected that EOO has been enqueued");
-                    break;
-                }
+                log_info("Detected that EOO has been enqueued");
+                break;
+            }
  
-                wxThread::Sleep(1);
-                wxGetApp().Yield(true);
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
 
-                auto endTime = std::chrono::high_resolution_clock::now();
-                if ((endTime - beginTime) >= std::chrono::seconds(2))
-                {
-                    log_warn("Timed out waiting for EOO to be enqueued");
-                    break;
-                }
+            auto endTime = std::chrono::high_resolution_clock::now();
+            if ((endTime - beginTime) >= std::chrono::seconds(2))
+            {
+                log_warn("Timed out waiting for EOO to be enqueued");
+                break;
             }
         }
 
@@ -1471,6 +1530,15 @@ void MainFrame::togglePTT(void) {
     }
     else
     {
+        // Force PTT button colors ASAP to avoid latency after mouse up.
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
+        wxGetApp().Yield(true);
+
         // If PTT input is enabled, suspend further changes until we actually start TX.
         if (wxGetApp().m_pttInSerialPort)
         {
@@ -1589,7 +1657,7 @@ void MainFrame::togglePTT(void) {
     // here (similar to what's already done for ending TX while
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
-    m_btnTogPTT->SetLabel(_("&PTT"));
+    m_btnTogPTT->SetLabel(_("&XMIT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
 #if !defined(__APPLE__)
     // macOS limitations prevent the foreground color of toggle buttons from being 
@@ -1623,6 +1691,21 @@ void MainFrame::togglePTT(void) {
         txChangeoverOccurring_ = false;
         m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
     });
+
+    if (newTx && m_momentaryKeyReleasedDuringChangeover_)
+    {
+        // The momentary PTT key was released while this start was still in
+        // progress (see the wxEVT_KEY_UP handler in FilterEvent). Queued
+        // after the CallAfter() above so it runs once txChangeoverOccurring_
+        // has cleared, rather than no-opping against it.
+        m_momentaryKeyReleasedDuringChangeover_ = false;
+        log_info("Momentary PTT key was released while TX was starting -- stopping now");
+        CallAfter([this]() {
+            m_btnTogPTT->SetValue(false);
+            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            togglePTT();
+        });
+    }
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
@@ -1868,17 +1951,6 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 
 // Force manual resync, just in case demod gets stuck on false sync
 
-void MainFrame::OnReSync(wxCommandEvent&)
-{
-    if (m_RxRunning)  {
-        log_debug("OnReSync");
-        
-        // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-        // the next execution of the TX/RX loop.
-        g_queueResync.store(true, std::memory_order_release);
-    }
-}
-
 // Deselects item on right-click
 void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
 {
@@ -1914,7 +1986,6 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
 void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {
-        freedvInterface.resetBitStats();
         g_resyncs = 0;
         int i;
         for(i=0; i<2*g_Nc; i++) {

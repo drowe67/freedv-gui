@@ -76,6 +76,7 @@ public:
     
     ConfigurationDataElement<bool> enableSpaceBarForPTT;
     ConfigurationDataElement<int> pttKeyCode;
+    ConfigurationDataElement<bool> pttMomentaryMode;
 
     ConfigurationDataElement<wxString> voiceKeyerWaveFilePath;
     ConfigurationDataElement<wxString> voiceKeyerWaveFile;

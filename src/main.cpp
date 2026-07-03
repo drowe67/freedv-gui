@@ -43,7 +43,6 @@
 #include "os/os_interface.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
-#include "codec2_fdmdv.h"
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
@@ -61,6 +60,10 @@
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 #include "rade_api.h"
 
 using namespace std::chrono_literals;
@@ -73,11 +76,6 @@ using namespace std::placeholders;
 #define wxUSE_PCX       1
 #define wxUSE_LIBTIFF   1
 
-extern "C" {
-    extern void golay23_init(void);
-}
-
-
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
 // back functions
@@ -85,7 +83,6 @@ extern "C" {
 
 // freedv states
 int                 g_Nc;
-int                 g_mode;
 
 FreeDVInterface     freedvInterface;
 std::shared_ptr<TxRxThread> m_txThread;
@@ -93,7 +90,6 @@ std::shared_ptr<TxRxThread> m_rxThread;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
-std::atomic<bool>   g_queueResync;
 
 // test Frames
 int                 g_testFrames;
@@ -124,9 +120,6 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
 std::atomic<bool>  g_bwExpandEnabled;
-// sending and receiving Call Sign data
-std::atomic<GenericFIFO<short>*> g_txDataInFifo;
-struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
 std::atomic<int>                 g_State, g_prev_State;
@@ -728,6 +721,55 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 }
 
 //-------------------------------------------------------------------------
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+// Suppress the GTK theme :active (button-press) colour flash app-wide.
+// Queries the theme's normal button background and installs a screen-level
+// CSS rule so button:active renders identically to the resting state.
+// Fails gracefully if the named colour variables are absent (non-Breeze themes).
+static bool TryLookupThemeColour_(const char* name, GdkRGBA& out)
+{
+    GtkWidget* tmpButton = gtk_button_new();
+    GtkWidget* tmpWindow = gtk_offscreen_window_new();
+    gtk_container_add(GTK_CONTAINER(tmpWindow), tmpButton);
+    gtk_widget_show_all(tmpWindow);
+    GtkStyleContext* ctx = gtk_widget_get_style_context(tmpButton);
+    bool found = gtk_style_context_lookup_color(ctx, name, &out);
+    gtk_widget_destroy(tmpWindow);
+    return found;
+}
+
+static void SuppressButtonPressFlicker_()
+{
+    GdkRGBA bg;
+    bool found = false;
+    // theme_button_background_normal is Breeze-specific; theme_bg_color is
+    // a broader fallback. theme_base_color is deliberately excluded — it
+    // resolves to the text-field background (white in light themes).
+    const char* names[] = { "theme_button_background_normal", "theme_bg_color", nullptr };
+    for (int i = 0; names[i] && !found; i++)
+        found = TryLookupThemeColour_(names[i], bg);
+    if (!found)
+        return;
+
+    gchar* cssColour = gdk_rgba_to_string(&bg);
+    gchar* css = g_strdup_printf(
+        "button:active {"
+        "  background-color: %s;"
+        "  background-image: none;"
+        "  box-shadow: none;"
+        "}", cssColour);
+    GtkCssProvider* provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, nullptr);
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_free(css);
+    g_free(cssColour);
+    g_object_unref(provider);
+}
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 // OnInit()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
@@ -747,11 +789,12 @@ bool MainApp::OnInit()
     {
         return false;
     }
+#ifdef __WXGTK__
+    SuppressButtonPressFlicker_();
+#endif // __WXGTK__
     SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
-    golay23_init();
-
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date
     wxDateTime buildDate(wxInvalidDateTime); // silence UBSan error on some platforms
@@ -1167,10 +1210,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, true);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
-//    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
-     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
+    m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-   // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
     m_btnTogPTT->Bind(wxEVT_LEFT_DOWN, &MainFrame::OnTogBtnPTTMouseDown, this);
     m_btnTogPTT->Bind(wxEVT_LEFT_DCLICK, &MainFrame::OnTogBtnPTTMouseDown, this);
     m_btnTogPTT->Bind(wxEVT_LEAVE_WINDOW, &MainFrame::OnTogBtnPTTMouseLeave, this);
@@ -1193,6 +1234,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTOTTimer, this, ID_TIMER_TOT);
     m_totWarningTimer.SetOwner(this, ID_TIMER_TOT_WARNING);
     Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
+    m_pttKeyPollTimer.SetOwner(this, ID_TIMER_PTT_KEY_POLL);
+    Bind(wxEVT_TIMER, &MainFrame::OnPttKeyPollTimer, this, ID_TIMER_PTT_KEY_POLL);
 #endif
     
     // Create voice keyer popup menu.
@@ -1292,16 +1335,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_tx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
 
-    // data states
-    g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
-    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
-
     sox_biquad_start();
 
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
-    wxGetApp().m_testFrames = false;
     wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
 
@@ -1957,7 +1995,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             else if (
                 wxGetApp().m_sharedReporterObject && 
-                freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
                 syncState)
             {               
                 // Special case for RADE--report '--' for callsign so we can
@@ -2017,19 +2054,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // Test Frame Bit Error Updates ------------------------------------
 
-        // Toggle test frame mode at run time
-
-        if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
-            // reset stats on check box off to on transition
-            freedvInterface.resetTestFrameStats();
-        }
-        freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
         g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
         wxString modeString; 
-        if (g_mode == FREEDV_MODE_RADE) modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
-        else modeString = wxString::Format(MODE_FORMAT_STR, freedvInterface.getCurrentModeStr());
+        modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -2060,50 +2089,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemOffset());
         m_textFreqOffset->SetLabel(freqOffset);
 
-        if (g_mode == FREEDV_MODE_RADE)
-        {
-            m_textBits->SetLabel(BITS_UNK_LABEL);
-            m_textErrors->SetLabel(ERRS_UNK_LABEL);
-            m_textBER->SetLabel(BER_UNK_LABEL);
-            m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
-            m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
-        }
-        else
-        {
-            wxString bits = wxString::Format(BITS_FMT, freedvInterface.getTotalBits()); 
-            m_textBits->SetLabel(bits);
-
-            wxString errors = wxString::Format(ERRS_FMT, freedvInterface.getTotalBitErrors()); 
-            m_textErrors->SetLabel(errors);
-
-            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            wxString ber = wxString::Format(BER_FMT, b); 
-            m_textBER->SetLabel(ber);
-
-            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
-            m_textResyncs->SetLabel(resyncs);
-
-            wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
-            m_textSyncMetric->SetLabel(syncMetric);
-
-            // Codec 2 700D/E "auto EQ" equaliser variance
-            auto var = freedvInterface.getVariance();
-            wxString var_string = wxString::Format(VAR_FMT, var);
-            m_textCodec2Var->SetLabel(var_string);
-        }
-
-        if (state) {
-
-            if (g_mode == FREEDV_MODE_RADE)
-            {
-                m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
-            }
-            else
-            {
-                wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-                m_textClockOffset->SetLabel(clockOffset);
-            }
-        }
+        m_textBits->SetLabel(BITS_UNK_LABEL);
+        m_textErrors->SetLabel(ERRS_UNK_LABEL);
+        m_textBER->SetLabel(BER_UNK_LABEL);
+        m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
+        m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
+        m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
 
         /* FIFO and PortAudio under/overflow debug counters */
         optionsDlg->DisplayFifoPACounters();
@@ -2244,7 +2235,6 @@ void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
     isModemRunning.store(false, std::memory_order_release);
-    g_queueResync.store(false, std::memory_order_release);
     endingTx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
     g_tx.store(false, std::memory_order_release);
@@ -2289,25 +2279,14 @@ void MainFrame::performFreeDVOn_()
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        g_mode = FREEDV_MODE_RADE;
-        freedvInterface.addRxMode(g_mode);
-        
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
     
-        wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, true, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
-
-        // Codec2 verbosity setting
-        freedvInterface.setVerbose(g_freedv_verbose);
+        freedvInterface.start(wxGetApp().appConfiguration.fifoSizeMs, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Text field/callsign callbacks.
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
-        }
-        else
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             char temp[9];
             memset(temp, 0, 9);
@@ -2338,10 +2317,6 @@ void MainFrame::performFreeDVOn_()
         // adjust spectrum and waterfall freq scaling base on mode
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
-    
-        // Init text msg decoding
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-            freedvInterface.setTextVaricodeNum(1);
     });
 
     g_State.store(0, std::memory_order_release);
@@ -2545,10 +2520,6 @@ void MainFrame::performFreeDVOn_()
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
         });
     }
-
-    // Clear existing TX text, if any.
-    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
-    tmpFifo->reset();
 }
 
 void MainFrame::performFreeDVOff_()
@@ -2991,7 +2962,7 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
                     castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, std::move(newDeviceName));
-                }, nullptr);
+                }, this);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)

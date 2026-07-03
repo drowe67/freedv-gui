@@ -61,7 +61,6 @@ class OptionsDlg : public wxDialog
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
  
-        void    OnTestFrame(wxScrollEvent& event);
         void    OnChannelNoise(wxScrollEvent& event);
         void    OnDebugConsole(wxScrollEvent& event);
 
@@ -95,6 +94,7 @@ class OptionsDlg : public wxDialog
         wxRadioButton *m_ckboxEnableFreqChangesOnly;
         wxRadioButton *m_ckboxNoFreqModeChanges;
         wxCheckBox    *m_ckboxEnableSpacebarForPTT;
+        wxCheckBox    *m_ckboxPTTMomentaryMode;
         wxTextCtrl    *m_txtPTTKeyName;
         wxButton      *m_btnSetPTTKey;
         int            m_selectedPTTKeyCode;
@@ -137,7 +137,6 @@ class OptionsDlg : public wxDialog
         
         /* test frames, other simulated channel impairments */
 
-        wxCheckBox   *m_ckboxTestFrame;
         wxCheckBox   *m_ckboxChannelNoise;
         wxTextCtrl   *m_txtNoiseSNR;
         wxCheckBox   *m_ckboxAttnCarrierEn;

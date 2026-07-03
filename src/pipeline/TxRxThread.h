@@ -49,6 +49,7 @@
 
 // Forward declarations
 class LinkStep;
+class BeepStep;
 
 //#define ENABLE_PROCESSING_STATS
 
@@ -114,6 +115,7 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
+    BeepStep* beepStep_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
     std::unique_ptr<short[]> inputSamples_;
