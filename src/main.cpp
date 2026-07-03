@@ -833,9 +833,9 @@ bool MainApp::OnInit()
     {
         return false;
     }
-#ifdef __WXGTK__
+#if defined(__WXGTK__) && defined(HAS_GTK3)
     SuppressButtonPressFlicker_();
-#endif // __WXGTK__
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
     SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
