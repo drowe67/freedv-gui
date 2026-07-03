@@ -60,9 +60,9 @@
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
 
-#ifdef __WXGTK__
+#if defined(__WXGTK__) && defined(HAS_GTK3)
 #include <gtk/gtk.h>
-#endif // __WXGTK__
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
 
 #include "rade_api.h"
 
@@ -765,7 +765,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 }
 
 //-------------------------------------------------------------------------
-#ifdef __WXGTK__
+#if defined(__WXGTK__) && defined(HAS_GTK3)
 // Suppress the GTK theme :active (button-press) colour flash app-wide.
 // Queries the theme's normal button background and installs a screen-level
 // CSS rule so button:active renders identically to the resting state.
@@ -812,7 +812,7 @@ static void SuppressButtonPressFlicker_()
     g_free(cssColour);
     g_object_unref(provider);
 }
-#endif // __WXGTK__
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
 
 // OnInit()
 //-------------------------------------------------------------------------
