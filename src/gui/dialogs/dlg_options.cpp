@@ -730,7 +730,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
             sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
         }
 
-        sizerRxAudio->Add(new wxStaticLine(m_rxAudioTab), 0, wxEXPAND | wxALL, 5);
+        {
+            wxPanel* divider = new wxPanel(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
+            divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+            sizerRxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+        }
 
         // SC1 Out
         sizerRxAudio->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Output From Computer To Speaker/Headphones:")), 0, wxLEFT | wxTOP, 5);
@@ -788,7 +792,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
             sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
         }
 
-        sizerTxAudio->Add(new wxStaticLine(m_txAudioTab), 0, wxEXPAND | wxALL, 5);
+        {
+            wxPanel* divider = new wxPanel(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
+            divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+            sizerTxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+        }
 
         // SC2 Out
         sizerTxAudio->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Output From Computer To Radio:")), 0, wxLEFT | wxTOP, 5);
