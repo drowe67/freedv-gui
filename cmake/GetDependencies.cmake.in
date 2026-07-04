@@ -95,6 +95,7 @@ set( _windlls
     gdiplus.dll
     MSIMG32.dll
     ntdll.dll
+    CRYPT32.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
