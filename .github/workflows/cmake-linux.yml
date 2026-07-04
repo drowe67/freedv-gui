@@ -31,7 +31,7 @@ jobs:
       run: |
            sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev libtls-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -54,7 +54,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
       run: |
-        run-clang-tidy-21 -p . src/
+        run-clang-tidy-21 -p .
 
   build-appimage:
     #needs: lint

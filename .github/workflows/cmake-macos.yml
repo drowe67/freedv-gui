@@ -22,7 +22,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
+          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 libretls
 
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
@@ -49,7 +49,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
-        run-clang-tidy -p . src/
+        run-clang-tidy -p .
 
   test:
     strategy:
