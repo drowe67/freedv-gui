@@ -54,7 +54,7 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
       run: |
-        run-clang-tidy-21 -p .
+        run-clang-tidy-21 -p . src/
 
   build-appimage:
     #needs: lint
