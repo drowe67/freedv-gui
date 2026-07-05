@@ -43,6 +43,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
     , freedvReporterForcedOff("/Reporting/FreeDV/ForcedOff", false)
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
+    , freedvReporterUseTls("/Reporting/FreeDV/UseTls", true)
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
     , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
     , freedvReporterBandFilterTracksFrequency("/Reporting/FreeDV/BandFilterTracksFrequency", false)
@@ -189,6 +190,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterEnabled);
     load_(config, freedvReporterForcedOff);
     load_(config, freedvReporterHostname);
+    load_(config, freedvReporterUseTls);
     load_(config, freedvReporterBandFilter);
     load_(config, useMetricDistances);
     load_(config, freedvReporterBandFilterTracksFrequency);
@@ -281,6 +283,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterEnabled);
     save_(config, freedvReporterForcedOff);
     save_(config, freedvReporterHostname);
+    save_(config, freedvReporterUseTls);
     save_(config, freedvReporterBandFilter);
     save_(config, useMetricDistances);
     save_(config, freedvReporterBandFilterTracksFrequency);
