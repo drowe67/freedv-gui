@@ -3807,10 +3807,12 @@ void MainFrame::initializeFreeDVReporter_()
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
-            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + GetFreeDVVersion(),
-            receiveOnly);
+            receiveOnly,
+            false,
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls);
     assert(wxGetApp().m_sharedReporterObject);
     
     // If we're running, remove any existing reporter object.
