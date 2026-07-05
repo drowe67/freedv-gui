@@ -163,11 +163,11 @@ int main(int argc, char *argv[]) {
   assert(codec2 != NULL);
   nsam = codec2_samples_per_frame(codec2);
   nbit = codec2_bits_per_frame(codec2);
-  buf = (short *)malloc(nsam * sizeof(short));
+  buf = (short *)calloc(nsam, sizeof(short));
   nbyte = (nbit + 7) / 8;
-  bits = (unsigned char *)malloc(nbyte * sizeof(char));
-  softdec_bits = (float *)malloc(nbit * sizeof(float));
-  bitperchar_bits = (char *)malloc(nbit * sizeof(char));
+  bits = (unsigned char *)calloc(nbyte, sizeof(char));
+  softdec_bits = (float *)calloc(nbit, sizeof(float));
+  bitperchar_bits = (char *)calloc(nbit, sizeof(char));
   bit_errors = bits_proc = 0;
   nstart_bit = 0;
   nend_bit = nbit - 1;
