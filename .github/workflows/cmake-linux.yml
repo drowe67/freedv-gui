@@ -183,14 +183,14 @@ jobs:
         gpg --import tmp_private.pem
 
     - name: Build AppImage (unsigned)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
           ./make-appimage.sh
 
     - name: Build AppImage (signed)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
