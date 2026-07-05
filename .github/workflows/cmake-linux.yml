@@ -31,7 +31,7 @@ jobs:
       run: |
            sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev libssl-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -183,14 +183,14 @@ jobs:
         gpg --import tmp_private.pem
 
     - name: Build AppImage (unsigned)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
           ./make-appimage.sh
 
     - name: Build AppImage (signed)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |

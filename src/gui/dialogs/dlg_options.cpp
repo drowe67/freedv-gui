@@ -230,7 +230,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_freedvReporterHostname = new wxTextCtrl(sbReportingFreeDV, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
     sbSizerReportingFreeDVNoCall->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingFreeDVNoCall->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
+
+    m_ckboxFreeDVReporterUseTls = new wxCheckBox(sbReportingFreeDV, wxID_ANY, _("Secure Connection"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingFreeDVNoCall->Add(m_ckboxFreeDVReporterUseTls, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_useMetricDistances = new wxCheckBox(sbReportingFreeDV, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDVNoCall->Add(m_useMetricDistances, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -1030,6 +1033,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // FreeDV Reporter options
         m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
         m_freedvReporterHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname);
+        m_ckboxFreeDVReporterUseTls->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls);
         m_useMetricDistances->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances);
         m_useCardinalDirections->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal);
         m_ckboxFreeDVReporterForceReceiveOnly->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly);
@@ -1229,6 +1233,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // FreeDV Reporter options
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = m_freedvReporterHostname->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls = m_ckboxFreeDVReporterUseTls->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances = m_useMetricDistances->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly = m_ckboxFreeDVReporterForceReceiveOnly->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal = m_useCardinalDirections->GetValue();
@@ -1455,6 +1460,7 @@ void OptionsDlg::updateReportingState()
         m_ckboxReportingEnable->Enable(true);
         m_useMetricDistances->Enable(true);
         m_freedvReporterHostname->Enable(true);
+        m_ckboxFreeDVReporterUseTls->Enable(true);
 
         if (m_ckboxReportingEnable->GetValue())
         {
@@ -1519,6 +1525,7 @@ void OptionsDlg::updateReportingState()
         m_ckboxFreeDVReporterEnable->Enable(false);
         m_useMetricDistances->Enable(false);
         m_freedvReporterHostname->Enable(false);
+        m_ckboxFreeDVReporterUseTls->Enable(false);
         m_ckboxFreeDVReporterForceReceiveOnly->Enable(false);
         m_useCardinalDirections->Enable(false);
         m_udpHostname->Enable(false);
