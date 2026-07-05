@@ -43,7 +43,13 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     wxStaticText* labelRecordingSuffix = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording suffix:"), wxDefaultPosition, wxSize(125,-1), 0);
     gridSizerRecordingSettings->Add(labelRecordingSuffix, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, defaultRecordingSuffix, wxDefaultPosition, wxSize(125, -1), 0);
+    // '/' isn't valid in a filename suffix (e.g. portable callsigns like "G4MKT/P"
+    // passed in automatically from the callsign list/FreeDV Reporter), so replace
+    // it with '_' rather than rejecting the whole value.
+    wxString sanitizedSuffix = defaultRecordingSuffix;
+    sanitizedSuffix.Replace(wxT("/"), wxT("_"));
+
+    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, sanitizedSuffix, wxDefaultPosition, wxSize(125, -1), 0);
     gridSizerRecordingSettings->Add(recordingSuffix_, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 2);
 
     wxStaticText* labelRecordingType = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording type:"), wxDefaultPosition, wxSize(125,-1), 0);
@@ -101,7 +107,9 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     
     rawRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
-       
+
+    recordingSuffix_->Connect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
+
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
 }
@@ -113,7 +121,9 @@ BeginRecordingDialog::~BeginRecordingDialog()
     
     rawRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
-       
+
+    recordingSuffix_->Disconnect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
+
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
 }
@@ -136,6 +146,17 @@ void BeginRecordingDialog::OnClose(wxCloseEvent&)
 void BeginRecordingDialog::OnOK(wxCommandEvent&)
 {
     this->EndModal(wxOK);
+}
+
+void BeginRecordingDialog::OnRecordingSuffixChar(wxKeyEvent& event)
+{
+    // Block manual entry of '/', as it isn't valid in a filename suffix.
+    if (event.GetKeyCode() == '/')
+    {
+        return;
+    }
+
+    event.Skip();
 }
 
 void BeginRecordingDialog::OnRecordingTypeChange(wxCommandEvent&)
