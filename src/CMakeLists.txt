@@ -111,6 +111,21 @@ if(LINUX AND STATIC_LIBGCC)
     target_link_options(freedv PRIVATE -static-libgcc -static-libstdc++)
 endif(LINUX AND STATIC_LIBGCC)
 
+# On Linux/GTK builds, make the GTK3 headers directly accessible in main.cpp
+# for the button-flash suppression code.
+if(LINUX)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(GTK3 QUIET gtk+-3.0)
+        if(GTK3_FOUND)
+            message(STATUS "GTK3 development files found, will implement Linux-specific GUI workarounds")
+            target_include_directories(freedv PRIVATE ${GTK3_INCLUDE_DIRS})
+            target_link_libraries(freedv ${GTK3_LIBRARIES})
+            add_definitions(-DHAS_GTK3)
+        endif(GTK3_FOUND)
+    endif(PkgConfig_FOUND)
+endif(LINUX)
+
 # If a release tag's set, pass it to the compiler.
 if(FREEDV_VERSION_TAG)
 add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")

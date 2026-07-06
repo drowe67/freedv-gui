@@ -183,32 +183,55 @@ std::vector<int> WxWidgetsConfigStore::generateNumArrayFromString_(wxString cons
 wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> const& vec)
 {
     wxString rv = "";
-    
+
     int count = vec.size();
     for (auto& item : vec)
     {
-        rv += item;
+        wxString escaped = item;
+        escaped.Replace("\\", "\\\\");
+        escaped.Replace(",", "\\,");
+        rv += escaped;
         count--;
-        
+
         if (count > 0)
         {
             rv += ",";
         }
     }
-    
+
     return rv;
 }
 
 std::vector<wxString> WxWidgetsConfigStore::generateStrArrayFromString_(wxString const& str)
 {
     std::vector<wxString> rv;
-    
-    wxStringTokenizer tokenizer(str, ",");
-    while ( tokenizer.HasMoreTokens() )
+    if (str.IsEmpty()) return rv;
+
+    wxString current;
+    for (size_t i = 0; i < str.Length(); i++)
     {
-        wxString token = tokenizer.GetNextToken();
-        rv.push_back(token);
+        wxChar ch = str[i];
+        if (ch == '\\' && i + 1 < str.Length())
+        {
+            wxChar next = str[i + 1];
+            if (next == ',' || next == '\\')
+            {
+                current += next;
+                i++;
+                continue;
+            }
+        }
+        if (ch == ',')
+        {
+            rv.push_back(current);
+            current.Clear();
+        }
+        else
+        {
+            current += ch;
+        }
     }
-    
+    rv.push_back(current);
+
     return rv;
 }

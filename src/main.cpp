@@ -60,6 +60,10 @@
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 #include "rade_api.h"
 
 using namespace std::chrono_literals;
@@ -761,6 +765,55 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 }
 
 //-------------------------------------------------------------------------
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+// Suppress the GTK theme :active (button-press) colour flash app-wide.
+// Queries the theme's normal button background and installs a screen-level
+// CSS rule so button:active renders identically to the resting state.
+// Fails gracefully if the named colour variables are absent (non-Breeze themes).
+static bool TryLookupThemeColour_(const char* name, GdkRGBA& out)
+{
+    GtkWidget* tmpButton = gtk_button_new();
+    GtkWidget* tmpWindow = gtk_offscreen_window_new();
+    gtk_container_add(GTK_CONTAINER(tmpWindow), tmpButton);
+    gtk_widget_show_all(tmpWindow);
+    GtkStyleContext* ctx = gtk_widget_get_style_context(tmpButton);
+    bool found = gtk_style_context_lookup_color(ctx, name, &out);
+    gtk_widget_destroy(tmpWindow);
+    return found;
+}
+
+static void SuppressButtonPressFlicker_()
+{
+    GdkRGBA bg;
+    bool found = false;
+    // theme_button_background_normal is Breeze-specific; theme_bg_color is
+    // a broader fallback. theme_base_color is deliberately excluded — it
+    // resolves to the text-field background (white in light themes).
+    const char* names[] = { "theme_button_background_normal", "theme_bg_color", nullptr };
+    for (int i = 0; names[i] && !found; i++)
+        found = TryLookupThemeColour_(names[i], bg);
+    if (!found)
+        return;
+
+    gchar* cssColour = gdk_rgba_to_string(&bg);
+    gchar* css = g_strdup_printf(
+        "button:active {"
+        "  background-color: %s;"
+        "  background-image: none;"
+        "  box-shadow: none;"
+        "}", cssColour);
+    GtkCssProvider* provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, nullptr);
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_free(css);
+    g_free(cssColour);
+    g_object_unref(provider);
+}
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 // OnInit()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
@@ -780,6 +833,9 @@ bool MainApp::OnInit()
     {
         return false;
     }
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    SuppressButtonPressFlicker_();
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
     SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
@@ -3758,10 +3814,12 @@ void MainFrame::initializeFreeDVReporter_()
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
-            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + GetFreeDVVersion(),
-            receiveOnly);
+            receiveOnly,
+            false,
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls);
     assert(wxGetApp().m_sharedReporterObject);
     
     // If we're running, remove any existing reporter object.
