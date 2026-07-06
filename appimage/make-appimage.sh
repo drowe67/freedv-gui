@@ -33,7 +33,13 @@ fi
   --executable "$APPEXEC" \
   --appdir "$APPDIR" \
   --icon-file ../contrib/freedv256x256.png \
+  --custom-apprun "AppRun.sh" \
   --desktop-file $DESKTOP_FILE
+
+# Manually copy over /etc/ssl to APPDIR. Needed for OpenSSL to behave properly on non-Ubuntu
+# distros.
+mkdir -p "$APPDIR/etc/ssl/certs"
+cp -aL /etc/ssl/certs/* "$APPDIR/etc/ssl/certs"
 
 # Create the output
 ./linuxdeploy-${MACH_ARCH}.AppImage \
