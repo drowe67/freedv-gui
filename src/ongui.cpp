@@ -1584,7 +1584,24 @@ void MainFrame::togglePTT(void) {
         }
         
         // rx-> tx transition, swap to Mic In page to monitor speech
-        wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
+        // Note: we should only save the previous page if the current selection is something on
+        // the same tab group as "Frm Mic".
+        bool setCurrentNotebookTab = true;
+#if wxCHECK_VERSION(3,1,4)
+        wxAuiTabCtrl* fromMicTabControl = nullptr;
+        int fromMicTabIndex = 0;
+        if (m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
+        {
+            if (m_auiNbookCtrl->GetActiveTabCtrl() != fromMicTabControl)
+            {
+                setCurrentNotebookTab = false;
+            }
+        }
+#endif // wxCHECK_VERSION(3,1,4)
+        if (setCurrentNotebookTab)
+        {
+            wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
+        }
         
         // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
         // the current page ourselves is a better bet.
