@@ -22,6 +22,35 @@
 #include <wx/wx.h>
 #include "begin_recording.h"
 
+namespace
+{
+    // The recording suffix is used verbatim as part of a filename, and its value
+    // may come from another user's callsign via FreeDV Reporter as well as from
+    // manual entry. Restrict it to a safe whitelist rather than chasing individual
+    // characters (e.g. '/' and '\' are path separators on various platforms, ':'
+    // has special meaning to NTFS, etc.) so it can't affect where the file ends up.
+    bool IsAllowedRecordingSuffixChar(int ch)
+    {
+        return (ch >= 'a' && ch <= 'z') ||
+               (ch >= 'A' && ch <= 'Z') ||
+               (ch >= '0' && ch <= '9') ||
+               ch == '_';
+    }
+
+    wxString SanitizeRecordingSuffix(wxString const& input)
+    {
+        wxString result = input;
+        for (auto ch : result)
+        {
+            if (!IsAllowedRecordingSuffixChar(ch))
+            {
+                ch = '_';
+            }
+        }
+        return result;
+    }
+}
+
 BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& defaultRecordingSuffix) 
     : wxDialog(parent, wxID_ANY, _("Start Recording"), wxDefaultPosition, wxSize(250,-1), wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL)
 {    
@@ -43,7 +72,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     wxStaticText* labelRecordingSuffix = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording suffix:"), wxDefaultPosition, wxSize(125,-1), 0);
     gridSizerRecordingSettings->Add(labelRecordingSuffix, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
 
-    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, defaultRecordingSuffix, wxDefaultPosition, wxSize(125, -1), 0);
+    recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, SanitizeRecordingSuffix(defaultRecordingSuffix), wxDefaultPosition, wxSize(125, -1), 0);
     gridSizerRecordingSettings->Add(recordingSuffix_, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 2);
 
     wxStaticText* labelRecordingType = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording type:"), wxDefaultPosition, wxSize(125,-1), 0);
@@ -101,7 +130,9 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     
     rawRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
-       
+
+    recordingSuffix_->Connect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
+
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
 }
@@ -113,7 +144,9 @@ BeginRecordingDialog::~BeginRecordingDialog()
     
     rawRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
-       
+
+    recordingSuffix_->Disconnect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
+
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
 }
@@ -136,6 +169,31 @@ void BeginRecordingDialog::OnClose(wxCloseEvent&)
 void BeginRecordingDialog::OnOK(wxCommandEvent&)
 {
     this->EndModal(wxOK);
+}
+
+void BeginRecordingDialog::OnRecordingSuffixChar(wxKeyEvent& event)
+{
+    int keyCode = event.GetKeyCode();
+
+    // Let control/navigation keys (backspace, delete, arrows, tab, enter,
+    // Ctrl+<key> combos, etc.) pass through untouched.
+    if (keyCode < WXK_SPACE || keyCode == WXK_DELETE || keyCode >= WXK_START)
+    {
+        event.Skip();
+        return;
+    }
+
+    // Only alphanumerics and underscore are allowed through as-is; anything
+    // else (including '/', '\' and other filesystem-significant characters)
+    // is substituted with '_' on the fly rather than rejecting the keystroke.
+    if (IsAllowedRecordingSuffixChar(keyCode))
+    {
+        event.Skip();
+    }
+    else
+    {
+        recordingSuffix_->WriteText(wxT("_"));
+    }
 }
 
 void BeginRecordingDialog::OnRecordingTypeChange(wxCommandEvent&)

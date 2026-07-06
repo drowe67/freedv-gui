@@ -49,6 +49,7 @@ public:
     ConfigurationDataElement<bool> freedvReporterEnabled;
     ConfigurationDataElement<bool> freedvReporterForcedOff;
     ConfigurationDataElement<wxString> freedvReporterHostname;
+    ConfigurationDataElement<bool> freedvReporterUseTls;
     ConfigurationDataElement<int> freedvReporterBandFilter;
     ConfigurationDataElement<bool> useMetricDistances;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFrequency;
