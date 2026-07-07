@@ -894,7 +894,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Move Tune button into Control widget for improved usability. (PR #1377) - thanks @barjac!
     * Restore heard station list on launch. (PR #1358) - thanks @barjac!
     * Add momentary PTT option to FreeDV. (PR #1393)
-    * FreeDV Reporter: Connect to server via TLS by default. (PR #1422)
+    * Allow 8k sample rate for 'radio' devices. (PR #1416)
+    * FreeDV Reporter: Connect to server via TLS by default. (PR #1422, #1427)
+    * Block special characters in recording file name suffixes and default the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks @barjac!
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)

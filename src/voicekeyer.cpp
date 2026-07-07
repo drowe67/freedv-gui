@@ -143,7 +143,13 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
         wxT("Select Voice Keyer File"),
         wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+        wxT("Sound files (*.wav;*.mp3)|*.wav;*.mp3|")
         wxT("WAV files (*.wav)|*.wav|")
+        wxT("MP3 files (*.mp3)|*.mp3|")
+#else
+        wxT("WAV files (*.wav)|*.wav|")
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
         wxT("All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
         );
