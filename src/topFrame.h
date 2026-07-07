@@ -239,7 +239,7 @@ class TopFrame : public wxFrame
 
         virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
         
-        virtual void OnNotebookPageChanging(wxAuiNotebookEvent& event) { event.Skip(); }
+        virtual void OnNotebookPageChanged(wxAuiNotebookEvent& event) { event.Skip(); }
         
         virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
         

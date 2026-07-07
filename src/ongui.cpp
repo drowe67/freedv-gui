@@ -1584,21 +1584,7 @@ void MainFrame::togglePTT(void) {
         }
         
         // rx-> tx transition, swap to Mic In page to monitor speech
-        // Note: we should only save the previous page if the current selection is something on
-        // the same tab group as "Frm Mic".
-        bool setCurrentNotebookTab = true;
-#if wxCHECK_VERSION(3,1,4)
-        wxAuiTabCtrl* fromMicTabControl = nullptr;
-        int fromMicTabIndex = 0;
-        if (m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
-        {
-            if (m_auiNbookCtrl->GetActiveTabCtrl() != fromMicTabControl)
-            {
-                setCurrentNotebookTab = false;
-            }
-        }
-#endif // wxCHECK_VERSION(3,1,4)
-        if (setCurrentNotebookTab)
+        if (wxGetApp().appConfiguration.currentNotebookTab >= 0)
         {
             wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
         }
@@ -2147,29 +2133,29 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     TopFrame::OnSystemColorChanged(event);
 }
 
-void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
+void MainFrame::OnNotebookPageChanged(wxAuiNotebookEvent& event)
 {
-#if 0
-    if (m_rbRADE->GetValue())
+    // Note: we should only save the previous page if the current selection is something on
+    // the same tab group as "Frm Mic".
+    bool setCurrentNotebookTab = true;
+#if wxCHECK_VERSION(3,1,4)
+    wxAuiTabCtrl* fromMicTabControl = nullptr;
+    int fromMicTabIndex = 0;
+    if (m_panelSpeechIn != nullptr && m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
     {
-        auto newSelection = event.GetSelection();
-        auto page = m_auiNbookCtrl->GetPage(newSelection);
-        
-        // Prevent selection of tabs not yet supported by RADE.
-        if (page == m_panelScatter || 
-            page == m_panelTimeOffset || 
-            page == m_panelFreqOffset || 
-            page == m_panelTestFrameErrors ||
-            page == m_panelTestFrameErrorsHist)
+        if (m_auiNbookCtrl->GetActiveTabCtrl() != fromMicTabControl)
         {
-            log_info("Veto attempt at viewing tab %d not supported by RADE", newSelection);
-            event.Veto();
-            return;
+            setCurrentNotebookTab = false;
         }
     }
-#endif
-    
-    TopFrame::OnNotebookPageChanging(event);
+#endif // wxCHECK_VERSION(3,1,4)
+    if (setCurrentNotebookTab)
+    {
+        wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
+    }
+
+    // Allow regular processing to occur.
+    event.Skip();
 }
 
 void MainFrame::OnCenterRx(wxCommandEvent&)

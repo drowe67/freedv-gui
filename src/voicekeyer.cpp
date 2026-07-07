@@ -30,7 +30,10 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         
         // Switch back to previous tab once done with recording
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        if (wxGetApp().appConfiguration.currentNotebookTab >= 0)
+        {
+            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        }
     }
     else
     {
@@ -124,8 +127,19 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     vkFileName_ = soundFile;
     
     // Switch tab to "From Mic" during recording.
-    wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-    m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+    // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+    // the current page ourselves is a better bet.
+    size_t index = 0;
+    for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+    {
+        auto page = m_auiNbookCtrl->GetPage(index);
+        if (page == (wxWindow *)m_panelSpeechIn)
+        {
+            m_auiNbookCtrl->ChangeSelection(index);
+            page->Refresh();
+            break;
+        }
+    }
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);
