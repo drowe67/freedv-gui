@@ -511,21 +511,15 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             if (drawPlotLines) plotCtx->StrokeLine(0, y, plotWidth, y);
             y += PLOT_BORDER;
-            if (!repaintDataOnly) 
+            if (!repaintDataOnly)
             {
-                auto top = y-text_h/2;
-                if (a == m_a_min)
-                {
-                    top -= text_h/2;
-                }
-                else if ((a + m_graticule_a_step) > m_a_max)
-                {
-                    top += text_h/2;
-                }
-
-                snprintf(buf, STR_LENGTH, m_a_fmt, a);
+                // Avoid "-0.0" from floating point drift when accumulating
+                // m_graticule_a_step from m_a_min (e.g. -1.0 + 0.2*5 != 0.0).
+                float labelValue = (fabsf(a) < m_graticule_a_step * 0.001f) ? 0.0f : a;
+                snprintf(buf, STR_LENGTH, m_a_fmt, labelValue);
                 GetTextExtent(buf, &text_w, &text_h);
-                
+                auto top = y - text_h/2;
+
                 if (!disableFirstLastLabels_ || (a > m_a_min && a < m_a_max))
                 {
                     ctx->DrawText(buf, PLOT_BORDER + leftOffset_ - text_w - XLEFT_TEXT_OFFSET, top);
