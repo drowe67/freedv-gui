@@ -1639,7 +1639,7 @@ void MainFrame::togglePTT(void) {
         for (; index < m_auiNbookCtrl->GetPageCount(); index++)
         {
             auto page = m_auiNbookCtrl->GetPage(index);
-            if (page == (wxWindow *)m_panelSpeechIn)
+            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
             {
                 m_auiNbookCtrl->ChangeSelection(index);
                 page->Refresh();
