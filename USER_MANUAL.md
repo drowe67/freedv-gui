@@ -23,41 +23,29 @@ bugfixes required for an unsupported platform may be deferred or rejected, espec
 if there is impact to supported platforms. Requests for official support of new platforms 
 should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
 
-## Easy Setup
+## Setup Wizard
 
-Upon starting FreeDV for the first time, the Easy Setup dialog will appear. This
+Upon starting FreeDV for the first time, the Setup Wizard dialog will appear. This
 is a streamlined setup process for FreeDV optimized for hardware commonly used
-by amateur radio operators and is divided into three sections:
+by amateur radio operators and is divided into four sections:
 
-1. Sound card configuration,
+1. Receive audio,
+2. Transmit audio,
 2. CAT/PTT control, and
 3. Reporting.
 
-These sections are shown below:
-
-![Easy Setup dialog](contrib/easy_setup.png)
-
-Note that you can always return to this dialog by going to *Tools - Easy Setup*.
+Note that you can always return to this dialog by going to *Settings->Setup Wizard*.
 
 ### Sound Card Configuration
 
-To configure your sound card(s) using Easy Setup, simply select the sound device 
+To configure your sound card(s) using the Setup Wizard, simply select the sound device(s)
 associated with your radio and the microphone and speaker devices you wish to use
 to hear decoded audio as well as to transmit audio. If you're setting up a receive-only
-station, you can choose "None" for the transmit audio device.
-
-Additionally, if you are using a Flex 6000 series radio on the Windows platform, 
-FreeDV will automatically select the DAX TX sound device. It is necessary only to 
-select the correct "slice" for the radio sound device and the two devices to use for 
-analog receive and transmit (e.g. your computer's built in microphone and speaker devices).
-
-Note that some configurations (for example, SDR setups involving multiple radio sound
-devices) may not be able to be configured with Easy Setup. For those, you can choose
-the "Advanced" button and proceed to "Advanced Setup" below.
+station, you can check "Receive only" when prompted.
 
 ### CAT/PTT control
 
-Easy Setup supports three methods of radio control:
+Setup Wizard supports three methods of radio control:
 
 1. No radio control (e.g. using a VOX audio device such as SignaLink),
 2. Hamlib or OmniRig CAT control, and
@@ -68,11 +56,6 @@ appear. For Hamlib, these are typically the type of radio you're using as well a
 serial port it's connected to (or TCP/IP hostname:port). Serial port PTT control requires 
 the serial port your radio is using as well as whether your radio's PTT is triggered
 via the RTS or DTR pin (and the required polarity for either).
-
-If required, the "Advanced" button in this section will allow you to configure PTT input
-(e.g. for a footswitch) and additional VOX related options. The "Test" button will
-emit a constant carrier on the selected radio sound device as well as enable PTT to allow
-you to adjust your radio sound levels (see "Sound Card Levels" below).
 
 ### Reporting
 
@@ -94,13 +77,12 @@ For more information about the reporting feature, see the "FreeDV Reporting" sec
 For this setup, you just need the basic sound hardware in your computer, 
 for example a microphone/speaker on your computer.
 
-1. Open the *Tools - Audio Config* Dialog
-1. At the bottom select *Receive* Tab
+1. Open the *Setings - Edit Settings* Dialog
+1. At the bottom select *RX Audio* Tab
 1. In *Input To Computer From Radio* select your default sound input device (usually at the top)
 1. In the *Output From Computer To Speaker/Headphones* window select your default sound output device (usually at the top)
-1. At the bottom select *Transmit* Tab
-1. In *Input From Microphone To Computer* window select *none*
-1. In *Output From Computer To Radio* window select *none*
+1. At the bottom select *TX Audio* Tab
+1. Check "Receive only"
 1. Press OK to close the dialog
 
 When you press Start FreeDV will start decoding any incoming signals
@@ -310,12 +292,12 @@ receive to see if anyone is replying.  If you press the space bar or click
 the XMIT button, the voice keyer stops.  If a signal with a valid sync is 
 received for a few seconds the voice keyer also stops.
 
-The Audio tab inside Tools-Options can be used to select the wave file, set 
+The Audio tab inside Settings-Edit Settings can be used to select the wave file, set 
 the RX delay, and number of times the TX/RX cycle repeats.
 
 Additional options are also available if you right-click on the Voice Keyer button:
 
-* "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
+* "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Settings->Edit Settings.
 * "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
 * "Monitor transmitted audio": Allows monitoring of audio while transmitting the voice keyer file. If enabled, a checkmark will appear next to this option.
 
@@ -333,7 +315,7 @@ in the main window. Clicking this button will create a file beginning with the
 name "FreeDV_FromRadio" and containing the current date and time. Clicking 'Record'
 again will stop recording.
 
-The Audio tab inside Tools-Options allows control of where these recordings are
+The Audio tab inside Settings-Edit Settings allows control of where these recordings are
 saved. By default, this is inside the current user's Documents folder.
 
 # Multiple Configurations
@@ -387,7 +369,7 @@ appear as follows:
 # FreeDV Reporting
 
 FreeDV has the ability to send FreeDV signal reports to various online spotting services
-by enabling the option in Tools-Options (in the Reporting tab) and specifying your callsign 
+by enabling the option in Settings-Edit Settings (in the Reporting tab) and specifying your callsign 
 and Maidenhead grid square. When enabled, this causes FreeDV to disable the free form **Txt Msg** 
 field and only transmit the **Callsign** field. As this uses a different encoding format 
 from the free-form text field, both sides of the contact must have this enabled for the 
@@ -405,7 +387,7 @@ along with the reporting feature as a whole:
 * [FreeDV Reporter](https://qso.freedv.org/) -- also accessible via the Tools->FreeDV Reporter menu option.
 
 The frequency that FreeDV reports is set by changing the "Report Frequency" drop down box in the main window. This 
-is either in kilohertz (kHz) or megahertz (MHz) (configurable by going to Tools->Options->Rig Control and checking
+is either in kilohertz (kHz) or megahertz (MHz) (configurable by going to Settings->Edit Settings->Rig Control and checking
 or unchecking "Frequency entry in kHz") and will turn red if the entered value is invalid. If Hamlib support is 
 also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the 
 frequency is changed in the application, the radio will also change its frequency). Double-clicking on users in 
@@ -414,14 +396,14 @@ the Tools->FreeDV Reporter window will also cause this frequency to change to ma
 *Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be 
 in sync with the radio. For example, in the case of ALE, the radio's frequency changes multiple times per second while
 waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can 
-be disabled by enabling "Manual Frequency Reporting" in Tools->Options.*
+be disabled by enabling "Manual Frequency Reporting" in Settings->Edit Settings.*
 
 The FreeDV Reporter window includes a **Message:** field that allows you to broadcast a
 short status message (such as your location, antenna, or current activity) to other FreeDV
 Reporter users. Type a message and click **Send** to broadcast it, or **Clear** to remove
 the current message.
 
-*Note: messages are only broadcast when reporting is enabled in Tools->Options->Reporting
+*Note: messages are only broadcast when reporting is enabled in Settings->Edit Settings->Reporting
 and the **Reporting** toggle button in the main window is on.*
 
 Messages are not saved automatically. To save a message for later reuse, right-click the
@@ -445,7 +427,7 @@ of receipt (i.e. the most recently received callsign will appear at the top of t
 # QSO Logging
 
 FreeDV supports integration with external logging utilities that support the WSJT-X logging protocol (for example,
-[KLog](https://github.com/ea4k/klog). This can be enabled by going to Tools->Options->Reporting and enabling 
+[KLog](https://github.com/ea4k/klog). This can be enabled by going to Settings->Edit Settings->Reporting and enabling 
 the "Enable QSO Logging" option. By default, it sends packets to "localhost" (127.0.0.1) port 2237, but this
 can be changed if the logging computer is elsewhere on the network.
 
@@ -470,7 +452,7 @@ period. By default, this is enabled and set to 180 seconds (3 minutes). Fifteen 
 a window will appear along with a beep in your configured speakers or headset to allow you to either reset the timer
 or finish up your transmission. 
 
-If you desire a different timeout or want to disable the TOT, you can do so by going to Tools->Options->Rig Control
+If you desire a different timeout or want to disable the TOT, you can do so by going to Settings->Edit Settings->Rig Control
 and changing the TOT related options in that tab.
 
 # FreeDV Modes
@@ -483,12 +465,6 @@ Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 SSB | 0 | 8/10 | low | 2600 | 5/10
 RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
-
-(Note: Modes denoted by (*) above are considered "legacy" modes. These 
-modes are hidden by default and RADEV1 automatically selected as RADEV1's 
-speech quality and resillence to band conditions are superior to the
-other modes. However, usage of the legacy modes is still possible by
-going to Tools->Options->Modem and selecting "Enable Legacy Modes.)
 
 The Min SNR is roughly the SNR where you cannot converse without
 repeating yourself.  The numbers above are on channels without fading
@@ -523,7 +499,7 @@ this window as well.
 * [Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
 * [Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
 
-## Tools - Options
+## Settings - Edit Settings
 
 ### Modem Options
 
@@ -585,7 +561,7 @@ station sound card 44001 Hz, the sample clock offset would be
 
 These features were added to help diagnose sound card issues during development.
 
-### Tools - Options dialog:
+### Settings - Edit Settings dialog:
 
 Debug FIFO and PortAudio counters: used for debugging audio
 problems.  
@@ -628,7 +604,7 @@ If the PortAudio counters are incrementing on receive try:
 
 ## Full Duplex Testing with loopback
 
-Tools - Options - Half Duplex check box
+Settings - Edit Settings - Half Duplex check box
 
 FreeDV GUI can operate in full duplex mode which is useful for
 development or listening to your own FreeDV signal as only one PC is
@@ -649,7 +625,7 @@ On Linux, using the ALSA loopback module:
 ## Experimental Features
 
 Occasionally there are some features that may be unstable or otherwise not ready to officially be released.
-To experiment with these features, you can go to Tools->Options->Debugging and enable "Enable Experimental
+To experiment with these features, you can go to Settings->Edit Settings->Debugging and enable "Enable Experimental
 Features". Note that if you have problems after enabling this setting, it is recommended to disable it again to
 verify that an experimental feature is not causing trouble. (Additionally, if you're able to confirm that
 an experimental feature is causing problems, please file a bug report!)
@@ -663,7 +639,7 @@ an experimental feature is causing problems, please file a bug report!)
 
 ## FreeDV Sets Radio To Wrong Mode
 
-By default, FreeDV attempts to set the radio's mode to DIGU/USB-D. Some radios do not support data modes and only have USB. For these, you can go to Tools->Options->Rig Control and check the
+By default, FreeDV attempts to set the radio's mode to DIGU/USB-D. Some radios do not support data modes and only have USB. For these, you can go to Settings->Edit Settings->Rig Control and check the
 "Use USB instead of DIGU" option. This will cause FreeDV to use the standard USB mode for rig control instead.
 
 Note that for best results, your radio should have all processing disabled if you're using the standard USB mode. This
@@ -866,7 +842,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Enhancements:
     * RADEV2: Standardize mode as USB. (PR #1397)
-    * Combine all configuration into Tools->Settings. (PR #1418)
+    * Combine all configuration into Settings->Edit Settings. (PR #1418)
     * Rework Easy Setup window into new Setup Wizard. (PR #1418)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
