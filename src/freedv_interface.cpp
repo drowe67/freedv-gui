@@ -286,8 +286,6 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 IPipelineStep* FreeDVInterface::createReceivePipeline(
     int inputSampleRate, int outputSampleRate,
     realtime_fp<std::atomic<int>*()> const& getRxStateFn,
-    realtime_fp<int()> const& getChannelNoiseFn,
-    realtime_fp<int()> const& getChannelNoiseSnrFn,
     realtime_fp<float()> const& getFreqOffsetFn,
     realtime_fp<float*()> const& getSigPwrAvgFn)
 {
@@ -295,8 +293,6 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     assert(state != nullptr);
 
     state->getRxStateFn = getRxStateFn;
-    state->getChannelNoiseFn = getChannelNoiseFn;
-    state->getChannelNoiseSnrFn = getChannelNoiseSnrFn;
     state->getFreqOffsetFn = getFreqOffsetFn;
     state->getSigPwrAvgFn = getSigPwrAvgFn;
    

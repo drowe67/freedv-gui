@@ -20,8 +20,38 @@
 //==========================================================================
 
 #include <wx/gbsizer.h>
+#include <wx/listctrl.h>
+#include <wx/statline.h>
 #include <wx/numformatter.h>
 #include "dlg_options.h"
+
+#ifdef __WXMSW__
+#include <wx/msw/registry.h>
+#else
+#include <glob.h>
+#include <string.h>
+#endif
+
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+
+#include "rig_control/HamlibRigController.h"
+#include "rig_control/SerialPortOutRigController.h"
+
+#if defined(WIN32)
+#include "rig_control/omnirig/OmniRigController.h"
+#endif
+
+#include "audio/AudioEngineFactory.h"
+#include "audio/IAudioDevice.h"
+#include "samplerate.h"
+
+using namespace std::chrono_literals;
+
+#define OPTIONS_AUDIO_TEST_DURATION_SECS   2
+#define OPTIONS_AUDIO_RECORD_DURATION_SECS 5
 
 extern FreeDVInterface freedvInterface;
 
@@ -104,32 +134,230 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     }
     
     sessionActive_ = false;
-    
+    isTesting_ = false;
+    m_audioPlotThread = nullptr;
+
     wxPanel* panel = new wxPanel(this);
-    
+
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
-    
+
     // Create notebook and tabs.
     m_notebook = new wxNotebook(panel, wxID_ANY);
+    m_radioTab = new wxPanel(m_notebook, wxID_ANY);
     m_reportingTab = new wxPanel(m_notebook, wxID_ANY);
     m_rigControlTab = new wxPanel(m_notebook, wxID_ANY);
     m_displayTab = new wxPanel(m_notebook, wxID_ANY);
-    m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
+    m_rxAudioTab = new wxPanel(m_notebook, wxID_ANY);
+    m_txAudioTab = new wxPanel(m_notebook, wxID_ANY);
+    m_voiceKeyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
-    m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
-    
-    m_notebook->AddPage(m_reportingTab, _("Reporting"));
+
+    m_notebook->AddPage(m_rxAudioTab, _("RX Audio"));
+    m_notebook->AddPage(m_txAudioTab, _("TX Audio"));
+    m_notebook->AddPage(m_radioTab, _("Radio"));
     m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
+    m_notebook->AddPage(m_reportingTab, _("Reporting"));
+    m_notebook->AddPage(m_voiceKeyerTab, _("Voice Keyer"));
     m_notebook->AddPage(m_displayTab, _("Display"));
-    m_notebook->AddPage(m_keyerTab, _("Audio"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
-    m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
     
-    bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
-    
+    bSizer30->Add(m_notebook, 1, wxALL | wxEXPAND, 3);
+
+    // Radio tab (CAT and PTT Config)
+    wxBoxSizer* sizerRadio = new wxBoxSizer(wxVERTICAL);
+
+    // VOX tone option
+    wxStaticBox* voxBox = new wxStaticBox(m_radioTab, wxID_ANY, _("VOX PTT Settings"));
+    wxStaticBoxSizer* sizerVox = new wxStaticBoxSizer(voxBox, wxHORIZONTAL);
+    m_ckLeftChannelVoxTone = new wxCheckBox(voxBox, wxID_ANY, _("Left Channel Vox Tone"), wxDefaultPosition, wxSize(-1,-1), 0);
+    sizerVox->Add(m_ckLeftChannelVoxTone, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sizerRadio->Add(sizerVox, 0, wxEXPAND | wxALL, 5);
+
+    // Hamlib settings
+    wxStaticBox* hamlibBox = new wxStaticBox(m_radioTab, wxID_ANY, _("Hamlib Settings"));
+    wxStaticBoxSizer* sizerHamlib = new wxStaticBoxSizer(hamlibBox, wxHORIZONTAL);
+    wxGridSizer* gridSizerhl = new wxGridSizer(8, 2, 0, 0);
+    sizerHamlib->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
+
+    m_ckUseHamlibPTT = new wxCheckBox(hamlibBox, wxID_ANY, _("Enable CAT control via Hamlib"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseHamlibPTT->SetValue(false);
+    gridSizerhl->Add(m_ckUseHamlibPTT, 0, wxALIGN_CENTER_VERTICAL, 0);
+    gridSizerhl->Add(new wxStaticText(hamlibBox, -1, wxT("")), 0, wxEXPAND);
+
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbRigName = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    {
+        auto numHamlibDevices = HamlibRigController::GetNumberSupportedRadios();
+        for (auto index = 0; index < numHamlibDevices; index++)
+        {
+            m_cbRigName->Append(HamlibRigController::RigIndexToName(index));
+        }
+        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+    }
+    gridSizerhl->Add(m_cbRigName, 0, wxEXPAND, 0);
+
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Serial Device (or hostname:port):"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbSerialPort = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbSerialPort->SetMinSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbSerialPort, 0, wxEXPAND, 0);
+
+    m_stIcomCIVHex = new wxStaticText(hamlibBox, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    gridSizerhl->Add(m_stIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_tcIcomCIVHex = new wxTextCtrl(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
+    m_tcIcomCIVHex->SetMaxLength(2);
+    gridSizerhl->Add(m_tcIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbSerialRate = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    gridSizerhl->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("PTT uses:"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbPttMethod = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbPttMethod->SetSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttMethod, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("PTT Serial Device:"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbPttSerialPort = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbPttSerialPort->SetMinSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttSerialPort, 0, wxEXPAND, 0);
+
+    m_cbPttMethod->Append(wxT("CAT"));
+    m_cbPttMethod->Append(wxT("RTS"));
+    m_cbPttMethod->Append(wxT("DTR"));
+    m_cbPttMethod->Append(wxT("None"));
+    m_cbPttMethod->Append(wxT("CAT via Data port"));
+
+    wxBoxSizer* forceRtsSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceRTSOn = new wxCheckBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceRTSOn->SetToolTip(_("Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceRtsSizer->Add(m_ckForceRTSOn, 0, wxALIGN_CENTER_VERTICAL, 0);
+    forceRtsSizer->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Force RTS"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceRtsSizer, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 0);
+
+    wxBoxSizer* forceDtrSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckForceDTROn = new wxCheckBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceDTROn->SetToolTip(_("Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"));
+    forceDtrSizer->Add(m_ckForceDTROn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+    forceDtrSizer->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Force DTR"), wxDefaultPosition, wxDefaultSize, 0),
+                       0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
+    gridSizerhl->Add(forceDtrSizer, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    sizerRadio->Add(sizerHamlib, 0, wxEXPAND | wxALL, 5);
+
+    // Serial port PTT
+    wxStaticBox* serialSettingsBox = new wxStaticBox(m_radioTab, wxID_ANY, _("Serial Port Settings"));
+    wxStaticBoxSizer* sizerSerialSettings = new wxStaticBoxSizer(serialSettingsBox, wxVERTICAL);
+    sizerRadio->Add(sizerSerialSettings, 0, wxEXPAND | wxALL, 5);
+
+    wxStaticBox* pttBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT Port"));
+    wxStaticBoxSizer* sizerPttPort = new wxStaticBoxSizer(pttBox, wxVERTICAL);
+    sizerSerialSettings->Add(sizerPttPort, 0, wxEXPAND, 5);
+
+    wxGridSizer* gridSizer200 = new wxGridSizer(1, 3, 0, 0);
+
+    m_ckUseSerialPTT = new wxCheckBox(pttBox, wxID_ANY, _("Use Serial Port PTT"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckUseSerialPTT->SetValue(false);
+    gridSizer200->Add(m_ckUseSerialPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_staticTextSerialDevice = new wxStaticText(pttBox, wxID_ANY, _("Serial Device:  "), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticTextSerialDevice->Wrap(-1);
+    gridSizer200->Add(m_staticTextSerialDevice, 1, wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_cbCtlDevicePath = new wxComboBox(pttBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbCtlDevicePath->SetMinSize(wxSize(140, -1));
+    gridSizer200->Add(m_cbCtlDevicePath, 1, wxEXPAND, 2);
+
+    sizerPttPort->Add(gridSizer200, 0, wxEXPAND, 1);
+
+    wxGridSizer* gridSizer17radio = new wxGridSizer(2, 2, 0, 0);
+
+    m_rbUseDTR = new wxRadioButton(pttBox, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), wxRB_GROUP);
+    m_rbUseDTR->SetToolTip(_("Toggle DTR line for PTT"));
+    m_rbUseDTR->SetValue(1);
+    gridSizer17radio->Add(m_rbUseDTR, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_rbUseRTS = new wxRadioButton(pttBox, wxID_ANY, _("Use RTS"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_rbUseRTS->SetToolTip(_("Toggle the RTS pin for PTT"));
+    m_rbUseRTS->SetValue(1);
+    gridSizer17radio->Add(m_rbUseRTS, 0, wxALIGN_CENTER, 2);
+
+    m_ckDTRPos = new wxCheckBox(pttBox, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckDTRPos->SetToolTip(_("Set Polarity of the DTR line"));
+    m_ckDTRPos->SetValue(false);
+    gridSizer17radio->Add(m_ckDTRPos, 0, wxALIGN_CENTER, 2);
+
+    m_ckRTSPos = new wxCheckBox(pttBox, wxID_ANY, _("RTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckRTSPos->SetValue(false);
+    m_ckRTSPos->SetToolTip(_("Set Polarity of the RTS line"));
+    gridSizer17radio->Add(m_ckRTSPos, 0, wxALIGN_CENTER, 2);
+
+    sizerPttPort->Add(gridSizer17radio, 0, wxEXPAND, 2);
+
+    m_rbUseDTR->MoveBeforeInTabOrder(m_rbUseRTS);
+    m_rbUseRTS->MoveBeforeInTabOrder(m_ckDTRPos);
+    m_ckDTRPos->MoveBeforeInTabOrder(m_ckRTSPos);
+
+    wxStaticBox* pttInBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT In"));
+    wxStaticBoxSizer* pttInBoxSizer = new wxStaticBoxSizer(pttInBox, wxVERTICAL);
+    sizerSerialSettings->Add(pttInBoxSizer, 0, wxEXPAND, 5);
+
+    wxGridSizer* gridSizerPttIn = new wxGridSizer(2, 3, 0, 0);
+
+    m_ckUsePTTInput = new wxCheckBox(pttInBox, wxID_ANY, _("Enable PTT Input"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckUsePTTInput->SetValue(false);
+    gridSizerPttIn->Add(m_ckUsePTTInput, 1, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_pttInSerialDeviceLabel = new wxStaticText(pttInBox, wxID_ANY, _("Serial Device:  "), wxDefaultPosition, wxDefaultSize, 0);
+    m_pttInSerialDeviceLabel->Wrap(-1);
+    gridSizerPttIn->Add(m_pttInSerialDeviceLabel, 1, wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_cbCtlDevicePathPttIn = new wxComboBox(pttInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbCtlDevicePathPttIn->SetMinSize(wxSize(140, -1));
+    gridSizerPttIn->Add(m_cbCtlDevicePathPttIn, 1, wxEXPAND, 2);
+
+    gridSizerPttIn->AddSpacer(1);
+
+    m_ckCTSPos = new wxCheckBox(pttInBox, wxID_ANY, _("CTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckCTSPos->SetValue(false);
+    m_ckCTSPos->SetToolTip(_("Set Polarity of the CTS line"));
+    gridSizerPttIn->Add(m_ckCTSPos, 1, wxALIGN_CENTER, 5);
+
+    pttInBoxSizer->Add(gridSizerPttIn, 0, wxEXPAND, 5);
+
+#if defined(WIN32)
+    wxStaticBox* omniRigBox = new wxStaticBox(m_radioTab, wxID_ANY, _("OmniRig Settings"));
+    wxStaticBoxSizer* omniRigBoxSizer = new wxStaticBoxSizer(omniRigBox, wxHORIZONTAL);
+
+    m_ckUseOmniRig = new wxCheckBox(omniRigBox, wxID_ANY, _("Enable CAT control via OmniRig"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseOmniRig->SetValue(false);
+    omniRigBoxSizer->Add(m_ckUseOmniRig, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    omniRigBoxSizer->Add(new wxStaticText(omniRigBox, wxID_ANY, _("Rig ID:"), wxDefaultPosition, wxDefaultSize, 0),
+                      0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_cbOmniRigRigId = new wxComboBox(omniRigBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbOmniRigRigId->Append("1");
+    m_cbOmniRigRigId->Append("2");
+    omniRigBoxSizer->Add(m_cbOmniRigRigId, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sizerRadio->Add(omniRigBoxSizer, 0, wxEXPAND | wxALL, 5);
+#endif
+
+    // Test PTT button
+    wxBoxSizer* testButtonSizer = new wxBoxSizer(wxVERTICAL);
+    m_buttonTestPTT = new wxButton(m_radioTab, wxID_ANY, _("Test PTT"), wxDefaultPosition, wxDefaultSize, 0);
+    testButtonSizer->Add(m_buttonTestPTT, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    sizerRadio->Add(testButtonSizer, 0, wxALL | wxEXPAND, 5);
+
+    m_radioTab->SetSizer(sizerRadio);
+
     // Reporting tab
     wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
      
@@ -481,14 +709,134 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_displayTab->SetSizer(sizerDisplay);
     
-    // Voice Keyer tab
-    wxBoxSizer* sizerKeyer = new wxBoxSizer(wxVERTICAL);
-    
     //----------------------------------------------------------------------
-    // Voice Keyer 
+    // Receive Audio tab
+    //----------------------------------------------------------------------
+    {
+        wxBoxSizer* sizerRxAudio = new wxBoxSizer(wxVERTICAL);
+
+        // SC1 In
+        sizerRxAudio->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Input To Computer From Radio:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard1InDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard1InTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard1InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard1InDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
+            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+
+        {
+            wxPanel* divider = new wxPanel(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
+            divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+            sizerRxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+        }
+
+        // SC1 Out
+        sizerRxAudio->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Output From Computer To Speaker/Headphones:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard1OutDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard1OutTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard1OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard1OutDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
+            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
+        {
+            wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
+            refreshRow->AddStretchSpacer();
+            m_btnRefreshRxAudio = new wxButton(m_rxAudioTab, wxID_ANY, _("Refresh Device List"));
+            refreshRow->Add(m_btnRefreshRxAudio, 0, wxALL, 3);
+            sizerRxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
+        m_rxAudioTab->SetSizer(sizerRxAudio);
+    }
+
+    //----------------------------------------------------------------------
+    // Transmit Audio tab
+    //----------------------------------------------------------------------
+    {
+        wxBoxSizer* sizerTxAudio = new wxBoxSizer(wxVERTICAL);
+
+        m_ckTxReceiveOnly = new wxCheckBox(m_txAudioTab, wxID_ANY, _("Receive only (I will not be transmitting)"));
+        sizerTxAudio->Add(m_ckTxReceiveOnly, 0, wxALL, 5);
+
+        // SC2 In
+        sizerTxAudio->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Input From Microphone To Computer:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard2InDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard2InTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard2InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard2InDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
+            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+
+        {
+            wxPanel* divider = new wxPanel(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
+            divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+            sizerTxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+        }
+
+        // SC2 Out
+        sizerTxAudio->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Output From Computer To Radio:")), 0, wxLEFT | wxTOP, 5);
+        {
+            wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
+            m_lcSoundCard2OutDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
+            row->Add(m_lcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
+            m_btnSoundCard2OutTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
+            row->Add(m_btnSoundCard2OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+        }
+        {
+            wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            m_tcSoundCard2OutDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+            selRow->Add(m_tcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
+            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
+        {
+            wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
+            refreshRow->AddStretchSpacer();
+            m_btnRefreshTxAudio = new wxButton(m_txAudioTab, wxID_ANY, _("Refresh Device List"));
+            refreshRow->Add(m_btnRefreshTxAudio, 0, wxALL, 3);
+            sizerTxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+        }
+
+        m_txAudioTab->SetSizer(sizerTxAudio);
+    }
+
+    //----------------------------------------------------------------------
+    // Voice Keyer tab
     //----------------------------------------------------------------------
 
-    wxStaticBox* voiceKeyerBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer"));
+    wxBoxSizer* sizerVoiceKeyer = new wxBoxSizer(wxVERTICAL);
+
+    wxStaticBox* voiceKeyerBox = new wxStaticBox(m_voiceKeyerTab, wxID_ANY, _("Voice Keyer"));
     wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer(voiceKeyerBox, wxVERTICAL);
 
     wxBoxSizer* voiceKeyerSizer1 = new wxBoxSizer(wxHORIZONTAL);
@@ -522,15 +870,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     staticBoxSizer28a->Add(voiceKeyerSizer1);
     staticBoxSizer28a->Add(voiceKeyerSizer2);
 
-    sizerKeyer->Add(staticBoxSizer28a,0, wxALL | wxEXPAND, 5);
-    
-    m_keyerTab->SetSizer(sizerKeyer);
-    
+    sizerVoiceKeyer->Add(staticBoxSizer28a, 0, wxALL | wxEXPAND, 5);
+
     //------------------------------
     // Quick Record
     //------------------------------
-    
-    wxStaticBox* quickRecordBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record"));
+
+    wxStaticBox* quickRecordBox = new wxStaticBox(m_voiceKeyerTab, wxID_ANY, _("Quick Record"));
     wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer(quickRecordBox, wxVERTICAL);
 
     wxFlexGridSizer* quickRecordSizer = new wxFlexGridSizer(2, 3, 5, 5);
@@ -546,7 +892,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordRawPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseQuickRecordRawPath->SetMinSize(wxSize(120, -1));
     quickRecordSizer->Add(m_buttonChooseQuickRecordRawPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
+
     staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save decoded recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -557,11 +903,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordDecodedPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseQuickRecordDecodedPath->SetMinSize(wxSize(120, -1));
     quickRecordSizer->Add(m_buttonChooseQuickRecordDecodedPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
+
     sbsQuickRecord->Add(quickRecordSizer);
-    
-    sizerKeyer->Add(sbsQuickRecord,0, wxALL | wxEXPAND, 5);
-    
+
+    sizerVoiceKeyer->Add(sbsQuickRecord, 0, wxALL | wxEXPAND, 5);
+
+    m_voiceKeyerTab->SetSizer(sizerVoiceKeyer);
+
     // Modem tab
     wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
 
@@ -595,73 +943,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerModem->Add(sbSizer_modemstats,0, wxALL | wxEXPAND, 5);
         
     m_modemTab->SetSizer(sizerModem);
-    
-    // Simulation tab
-    wxBoxSizer* sizerSimulation = new wxBoxSizer(wxVERTICAL);
-    
-    //------------------------------
-    // Test Frames/Channel simulation check box
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_testFrames;
-    wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
-    sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
-
-    wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
-
-    m_ckboxChannelNoise = new wxCheckBox(sb_testFrames, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    channelNoiseSizer->Add(m_ckboxChannelNoise, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *channelNoiseDbLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
-    channelNoiseSizer->Add(channelNoiseDbLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtNoiseSNR = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
-    channelNoiseSizer->Add(m_txtNoiseSNR, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_testFrames->Add(channelNoiseSizer);
-
-    wxBoxSizer* attnCarrierSizer = new wxBoxSizer(wxHORIZONTAL);
-
-    m_ckboxAttnCarrierEn = new wxCheckBox(sb_testFrames, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    attnCarrierSizer->Add(m_ckboxAttnCarrierEn, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *carrierLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
-    attnCarrierSizer->Add(carrierLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    m_txtAttnCarrier = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    attnCarrierSizer->Add(m_txtAttnCarrier, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_testFrames->Add(attnCarrierSizer);
-
-    sizerSimulation->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 5);
-
-    //------------------------------
-    // Interfering tone
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_tone;
-    wxStaticBox *sb_tone = new wxStaticBox(m_simulationTab, wxID_ANY, _("Simulated Interference Tone"));
-    sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
-
-    m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
-
-    m_simulationTab->SetSizer(sizerSimulation);
-        
+            
     // Debug tab
     wxBoxSizer* sizerDebug = new wxBoxSizer(wxVERTICAL);
     
@@ -744,6 +1026,31 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerDebug->Add(sbSizer_fifo,0, wxALL|wxEXPAND, 3);
     sizerDebug->Add(sbSizer_fifo2,0, wxALL|wxEXPAND, 3);
 
+    //------------------------------
+    // Interfering tone
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_tone;
+    wxStaticBox *sb_tone = new wxStaticBox(m_debugTab, wxID_ANY, _("Simulated Interference Tone"));
+    sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
+
+    m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerDebug->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
+
     m_debugTab->SetSizer(sizerDebug);
 
     //------------------------------
@@ -766,7 +1073,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     panel->SetSizer(bSizer30);
     
     wxBoxSizer* winSizer = new wxBoxSizer(wxVERTICAL);
-    winSizer->Add(panel, 0, wxEXPAND);
+    winSizer->Add(panel, 1, wxEXPAND);
     
     this->SetSizerAndFit(winSizer);
     this->Layout();
@@ -794,10 +1101,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
-    m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
-    m_txtNoiseSNR->MoveBeforeInTabOrder(m_ckboxAttnCarrierEn);
-    m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
-    m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
     
@@ -819,11 +1122,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
 #endif // __WXMSW__
     
-    m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
-    m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
-    m_keyerTab->MoveBeforeInTabOrder(m_modemTab);
-    m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
-    m_simulationTab->MoveBeforeInTabOrder(m_debugTab);
+    m_rxAudioTab->MoveBeforeInTabOrder(m_txAudioTab);
+    m_txAudioTab->MoveBeforeInTabOrder(m_reportingTab);
+    m_reportingTab->MoveBeforeInTabOrder(m_voiceKeyerTab);
+    m_voiceKeyerTab->MoveBeforeInTabOrder(m_rigControlTab);
+    m_rigControlTab->MoveBeforeInTabOrder(m_displayTab);
+    m_displayTab->MoveBeforeInTabOrder(m_modemTab);
+    m_modemTab->MoveBeforeInTabOrder(m_debugTab);
     
     m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
@@ -837,8 +1142,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
-
-    m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -875,7 +1178,32 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_freqListRemove->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
     m_freqListMoveUp->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
     m_freqListMoveDown->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
-    
+
+    // Radio tab events
+    m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseHamLibClicked), NULL, this);
+    m_ckUseSerialPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseSerialClicked), NULL, this);
+#if defined(WIN32)
+    m_ckUseOmniRig->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseOmniRigClicked), NULL, this);
+#endif
+    m_ckUsePTTInput->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseSerialInputClicked), NULL, this);
+    m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::HamlibRigNameChanged), NULL, this);
+    m_buttonTestPTT->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnTestPTT), NULL, this);
+    m_cbSerialPort->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnHamlibSerialPortChanged), NULL, this);
+    m_cbPttMethod->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnHamlibPttMethodChanged), NULL, this);
+
+    // Audio tab events
+    m_btnSoundCard1InTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1InTest), NULL, this);
+    m_btnSoundCard1OutTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutTest), NULL, this);
+    m_btnSoundCard2InTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2InTest), NULL, this);
+    m_btnSoundCard2OutTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutTest), NULL, this);
+    m_lcSoundCard1InDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1InDeviceSelect), NULL, this);
+    m_lcSoundCard1OutDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1OutDeviceSelect), NULL, this);
+    m_lcSoundCard2InDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
+    m_lcSoundCard2OutDevice->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
+    m_ckTxReceiveOnly->Connect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
+    m_btnRefreshRxAudio->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+    m_btnRefreshTxAudio->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -893,8 +1221,6 @@ OptionsDlg::~OptionsDlg()
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
-
-    m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
 
     m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
     m_buttonChooseQuickRecordRawPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
@@ -929,6 +1255,35 @@ OptionsDlg::~OptionsDlg()
     m_freqListRemove->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
     m_freqListMoveUp->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
     m_freqListMoveDown->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
+
+    // Radio tab events
+    m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseHamLibClicked), NULL, this);
+    m_ckUseSerialPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseSerialClicked), NULL, this);
+    m_ckUsePTTInput->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseSerialInputClicked), NULL, this);
+    m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(OptionsDlg::HamlibRigNameChanged), NULL, this);
+    m_buttonTestPTT->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnTestPTT), NULL, this);
+    m_cbSerialPort->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnHamlibSerialPortChanged), NULL, this);
+    m_cbPttMethod->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnHamlibPttMethodChanged), NULL, this);
+
+    // Audio tab events
+    m_btnSoundCard1InTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1InTest), NULL, this);
+    m_btnSoundCard1OutTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard1OutTest), NULL, this);
+    m_btnSoundCard2InTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2InTest), NULL, this);
+    m_btnSoundCard2OutTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnSoundCard2OutTest), NULL, this);
+    m_lcSoundCard1InDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1InDeviceSelect), NULL, this);
+    m_lcSoundCard1OutDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard1OutDeviceSelect), NULL, this);
+    m_lcSoundCard2InDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2InDeviceSelect), NULL, this);
+    m_lcSoundCard2OutDevice->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(OptionsDlg::OnSoundCard2OutDeviceSelect), NULL, this);
+    m_ckTxReceiveOnly->Disconnect(wxEVT_CHECKBOX, wxCommandEventHandler(OptionsDlg::OnTxReceiveOnlyChanged), NULL, this);
+    m_btnRefreshRxAudio->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+    m_btnRefreshTxAudio->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnRefreshAudioDevices), NULL, this);
+
+    if (m_audioPlotThread != nullptr)
+    {
+        m_audioPlotThread->join();
+        delete m_audioPlotThread;
+        m_audioPlotThread = nullptr;
+    }
 }
 
 
@@ -939,6 +1294,58 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
+        // Radio tab
+        populatePortList();
+        m_ckLeftChannelVoxTone->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone);
+
+        m_ckUseHamlibPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT);
+        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+        resetIcomCIVStatus();
+        m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
+        m_cbPttSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort);
+
+        {
+            auto selectedRig = m_cbRigName->GetCurrentSelection();
+            if (selectedRig >= 0)
+            {
+                auto minBaudRate = HamlibRigController::GetMinimumSerialBaudRate(selectedRig);
+                auto maxBaudRate = HamlibRigController::GetMaximumSerialBaudRate(selectedRig);
+                populateBaudRateList(minBaudRate, maxBaudRate);
+            }
+            else
+            {
+                populateBaudRateList();
+            }
+        }
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
+            m_cbSerialRate->SetSelection(0);
+        } else {
+            m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get()));
+        }
+
+        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
+        m_cbPttMethod->SetSelection((int)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType);
+        m_ckForceRTSOn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn);
+        m_ckForceDTROn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn);
+
+        m_ckUseSerialPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT);
+        m_cbCtlDevicePath->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort);
+        m_rbUseRTS->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS);
+        m_ckRTSPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
+        m_rbUseDTR->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR);
+        m_ckDTRPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
+
+        m_ckUsePTTInput->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput);
+        m_cbCtlDevicePathPttIn->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort);
+        m_ckCTSPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS);
+
+#if defined(WIN32)
+        m_ckUseOmniRig->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig);
+        m_cbOmniRigRigId->SetSelection(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
+#endif
+
+        updateRadioControlState();
+
         // Populate FreeDV Reporter color settings
         wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
@@ -992,19 +1399,46 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_txtCtrlQuickRecordRawPath->SetValue(wxGetApp().appConfiguration.quickRecordRawPath);
         m_txtCtrlQuickRecordDecodedPath->SetValue(wxGetApp().appConfiguration.quickRecordDecodedPath);
-        
+
+        // Audio device selection
+        populateAudioDeviceList(m_lcSoundCard1InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+        populateAudioDeviceList(m_lcSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+        populateAudioDeviceList(m_lcSoundCard2InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+        populateAudioDeviceList(m_lcSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+
+        selectListDevice(m_lcSoundCard1InDevice, m_tcSoundCard1InDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
+        selectListDevice(m_lcSoundCard2InDevice, m_tcSoundCard2InDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName);
+
+        {
+            wxString sc2in  = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName;
+            wxString sc2out = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName;
+            bool rxOnly = (sc2in.IsEmpty() || sc2in == "none") &&
+                          (sc2out.IsEmpty() || sc2out == "none");
+            m_ckTxReceiveOnly->SetValue(rxOnly);
+            if (rxOnly)
+            {
+                // 1-card mode: SC1Out is speakers
+                selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
+            }
+            else
+            {
+                // 2-card mode: SC2Out is speakers, SC1Out is radio TX output
+                selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName);
+                selectListDevice(m_lcSoundCard2OutDevice, m_tcSoundCard2OutDevice, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
+            }
+            m_lcSoundCard2InDevice->Enable(!rxOnly);
+            m_tcSoundCard2InDevice->Enable(!rxOnly);
+            m_lcSoundCard2OutDevice->Enable(!rxOnly);
+            m_tcSoundCard2OutDevice->Enable(!rxOnly);
+            m_btnSoundCard2InTest->Enable(!rxOnly);
+            m_btnSoundCard2OutTest->Enable(!rxOnly);
+        }
+
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
-
-
-        m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
-        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
 
         m_ckboxTone->SetValue(wxGetApp().m_tone);
         m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
         m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude));
-
-        m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
-        m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
         m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.fifoSizeMs.get()));
 
@@ -1102,8 +1536,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         // Update control state based on checkbox state.
         updateReportingState();
-        updateChannelNoiseState();
-        updateAttnCarrierState();
         updateToneState();
         updateRigControlState();
 
@@ -1178,22 +1610,57 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.quickRecordRawPath = m_txtCtrlQuickRecordRawPath->GetValue();
         wxGetApp().appConfiguration.quickRecordDecodedPath = m_txtCtrlQuickRecordDecodedPath->GetValue();
 
-        wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
-        long noise_snr;
-        m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
-        wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
-        
+        // Audio device config — save names and look up default sample rates.
+        // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
+        //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
+        {
+            auto audioEngine = AudioEngineFactory::GetAudioEngine();
+            audioEngine->start();
+
+            auto getSR = [&](const wxString& name, IAudioEngine::AudioDirection dir) -> int {
+                if (name.IsEmpty() || name == "none") return 0;
+                for (auto& dev : audioEngine->getAudioDeviceList(dir))
+                    if (dev.name.IsSameAs(name)) return dev.defaultSampleRate;
+                return 0;
+            };
+
+            wxString sc1in   = m_tcSoundCard1InDevice->GetValue();
+            wxString spk     = m_tcSoundCard1OutDevice->GetValue(); // "Output From Computer To Speaker/Headphones"
+            wxString sc2in   = m_tcSoundCard2InDevice->GetValue();
+            wxString radioTx = m_tcSoundCard2OutDevice->GetValue(); // "Output From Computer To Radio"
+
+            if (m_ckTxReceiveOnly->GetValue())
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName  = sc1in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = spk;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName  = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                int r;
+                r = getSR(sc1in, IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate  = r;
+                r = getSR(spk,   IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = r;
+            }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName  = sc1in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = radioTx;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName  = sc2in;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = spk;
+                int r;
+                r = getSR(sc1in,   IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate  = r;
+                r = getSR(radioTx, IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = r;
+                r = getSR(sc2in,   IAudioEngine::AUDIO_ENGINE_IN);  if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate  = r;
+                r = getSR(spk,     IAudioEngine::AUDIO_ENGINE_OUT); if (r > 0) wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = r;
+            }
+
+            audioEngine->stop();
+        }
+
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
         m_txtToneFreqHz->GetValue().ToLong(&tone_freq_hz);
         wxGetApp().m_tone_freq_hz = (int)tone_freq_hz;
         m_txtToneAmplitude->GetValue().ToLong(&tone_amplitude);
         wxGetApp().m_tone_amplitude = (int)tone_amplitude;
-
-        wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
-        long attn_carrier;
-        m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
-        wxGetApp().m_attn_carrier = (int)attn_carrier;
 
         long FifoSize_ms;
         m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
@@ -1279,8 +1746,54 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_statsResetTime->GetValue().ToLong(&resetTime);
         wxGetApp().appConfiguration.statsResetTimeSecs = resetTime;
         
+        // Radio tab settings
+        wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
+
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
+        wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName =
+            (wxGetApp().m_intHamlibRig >= 0) ? HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig) : "";
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbPttSerialPort->GetValue();
+
+        {
+            long hexAddr = 0;
+            m_tcIcomCIVHex->GetValue().ToLong(&hexAddr, 16);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress = hexAddr;
+        }
+        {
+            wxString rateStr = m_cbSerialRate->GetValue();
+            if (rateStr == "default") {
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = 0;
+            } else {
+                long rateTmp;
+                rateStr.ToLong(&rateTmp);
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = rateTmp;
+            }
+        }
+
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceRTSOn = m_ckForceRTSOn->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibForceDTROn = m_ckForceDTROn->GetValue();
+
+        wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT = m_ckUseSerialPTT->IsChecked();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort = m_cbCtlDevicePath->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS = m_rbUseRTS->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS = m_ckRTSPos->IsChecked();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR = m_rbUseDTR->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR = m_ckDTRPos->IsChecked();
+
+        wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput = m_ckUsePTTInput->IsChecked();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort = m_cbCtlDevicePathPttIn->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS = m_ckCTSPos->IsChecked();
+
+#if defined(WIN32)
+        wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig = m_ckUseOmniRig->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetCurrentSelection();
+#endif
+
         if (storePersistent) {
-            wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
+            wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;
             wxGetApp().appConfiguration.save(pConfig);
             
             // Save reporting frequency units last due to how the frequency list is stored.
@@ -1365,12 +1878,6 @@ void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 }
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time
-
-void OptionsDlg::OnChannelNoise(wxScrollEvent&) {
-    wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
-    updateChannelNoiseState();
-}
-
 
 void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
     wxDirDialog pathDialog(
@@ -1537,16 +2044,6 @@ void OptionsDlg::updateReportingState()
 
         m_ckbox_use_utc_time->Enable(false);
     }
-}
-
-void OptionsDlg::updateChannelNoiseState()
-{
-    m_txtNoiseSNR->Enable(m_ckboxChannelNoise->GetValue());
-}
-
-void OptionsDlg::updateAttnCarrierState()
-{
-    m_txtAttnCarrier->Enable(m_ckboxAttnCarrierEn->GetValue());
 }
 
 void OptionsDlg::updateToneState()
@@ -1799,7 +2296,733 @@ void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent&)
         m_freqList->Insert(prevStr, idx + 1);
         m_freqList->SetSelection(idx + 1);
     }
-    
+
     // Refresh button status
     m_txtCtrlNewFrequency->SetValue(prevStr);
+}
+
+//-------------------------------------------------------------------------
+// Radio tab helper methods
+//-------------------------------------------------------------------------
+
+void OptionsDlg::populateBaudRateList(int min, int max)
+{
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800", "500000", "576000", "921600", "1000000", "1152000", "1500000", "2000000"};
+
+    auto prevSelection = m_cbSerialRate->GetCurrentSelection();
+    int oldBaud = 0;
+    if (prevSelection > 0)
+        oldBaud = wxAtoi(serialRates[prevSelection]);
+    m_cbSerialRate->Clear();
+
+    for (unsigned int i = 0; i < WXSIZEOF(serialRates); i++) {
+        auto rateAsInt = wxAtoi(serialRates[i]);
+        if (i > 0 && min > 0 && max > 0) {
+            if (min > rateAsInt || rateAsInt > max)
+                continue;
+        }
+        m_cbSerialRate->Append(serialRates[i]);
+        if (rateAsInt == oldBaud)
+            m_cbSerialRate->SetSelection(m_cbSerialRate->GetCount() - 1);
+        else if (i == 0 && prevSelection == 0)
+            m_cbSerialRate->SetSelection(0);
+    }
+}
+
+void OptionsDlg::populatePortList()
+{
+    populateBaudRateList();
+    m_cbSerialPort->Clear();
+    m_cbCtlDevicePath->Clear();
+    m_cbPttSerialPort->Clear();
+    m_cbCtlDevicePathPttIn->Clear();
+
+    std::vector<wxString> portList;
+
+#ifdef __WXMSW__
+    wxRegKey key(wxRegKey::HKLM, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"));
+    if (key.Exists() && key.Open(wxRegKey::Read))
+    {
+        size_t subkeys, values;
+        if (key.GetKeyInfo(&subkeys, NULL, &values, NULL) && key.HasValues())
+        {
+            wxString key_name;
+            long el = 1;
+            key.GetFirstValue(key_name, el);
+            for (unsigned int i = 0; i < values; i++)
+            {
+                wxString key_data;
+                key.QueryValue(key_name, key_data);
+                portList.push_back(key_data);
+                key.GetNextValue(key_name, el);
+            }
+        }
+    }
+#endif
+#if defined(__WXGTK__) || defined(__WXOSX__)
+#if defined(__FreeBSD__) || defined(__WXOSX__)
+    glob_t gl;
+#if defined(__FreeBSD__)
+    if (glob("/dev/tty*", GLOB_MARK, NULL, &gl) == 0 ||
+#else
+    if (glob("/dev/tty.*", GLOB_MARK, NULL, &gl) == 0 || // NOLINT
+#endif
+        glob("/dev/cu.*", GLOB_MARK, NULL, &gl) == 0) { // NOLINT
+        for (unsigned int i = 0; i < gl.gl_pathc; i++) {
+            if (gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1] == '/')
+                continue;
+#if defined(__FreeBSD__)
+            if (gl.gl_pathv[i][8] >= 'l' && gl.gl_pathv[i][8] <= 's') continue;
+            if (gl.gl_pathv[i][8] >= 'L' && gl.gl_pathv[i][8] <= 'S') continue;
+            if (gl.gl_pathv[i][8] == 'v') continue;
+#else
+            if (!strcmp("/dev/cu.wlan-debug", gl.gl_pathv[i])) continue;
+#endif
+#ifndef __WXOSX__
+            if (strchr(gl.gl_pathv[i], '.') != NULL) continue;
+#endif
+            portList.push_back(gl.gl_pathv[i]);
+        }
+        globfree(&gl);
+    }
+#else
+    glob_t gl;
+    if (glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl) == 0) // NOLINT
+    {
+        wxRegEx pathRegex("/sys/class/tty/([^/]+)");
+        for (unsigned int i = 0; i < gl.gl_pathc; i++) {
+            wxString path = gl.gl_pathv[i];
+            if (pathRegex.Matches(path))
+                portList.push_back("/dev/" + pathRegex.GetMatch(path, 1));
+        }
+        globfree(&gl);
+    }
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
+    {
+        for (unsigned int i = 0; i < gl.gl_pathc; i++)
+            portList.push_back(gl.gl_pathv[i]);
+        globfree(&gl);
+    }
+    if (glob("/dev/rfcomm*", GLOB_MARK, NULL, &gl) == 0) // NOLINT
+    {
+        for (unsigned int i = 0; i < gl.gl_pathc; i++)
+            portList.push_back(gl.gl_pathv[i]);
+        globfree(&gl);
+    }
+#endif
+#endif
+
+    std::sort(portList.begin(), portList.end(), [](const wxString& first, const wxString& second) {
+        wxRegEx portRegex("^([^0-9]+)([0-9]+)$");
+        wxString firstName, firstNumber, secondName, secondNumber;
+        int firstNum = 0, secondNum = 0;
+        if (portRegex.Matches(first)) {
+            firstName = portRegex.GetMatch(first, 1);
+            firstNumber = portRegex.GetMatch(first, 2);
+            firstNum = atoi(firstNumber.c_str());
+        } else { firstName = first; }
+        if (portRegex.Matches(second)) {
+            secondName = portRegex.GetMatch(second, 1);
+            secondNumber = portRegex.GetMatch(second, 2);
+            secondNum = atoi(secondNumber.c_str());
+        } else { secondName = second; }
+        return (firstName < secondName) || (firstName == secondName && firstNum < secondNum);
+    });
+
+    for (wxString& port : portList) {
+        m_cbSerialPort->Append(port);
+        m_cbPttSerialPort->Append(port);
+        m_cbCtlDevicePath->Append(port);
+        m_cbCtlDevicePathPttIn->Append(port);
+    }
+}
+
+void OptionsDlg::resetIcomCIVStatus()
+{
+    auto curSel = m_cbRigName->GetCurrentSelection();
+    std::string rigName = curSel >= 0 ? m_cbRigName->GetString(curSel).ToStdString() : "";
+    if (rigName.find("Icom") == 0) {
+        m_stIcomCIVHex->Show();
+        m_tcIcomCIVHex->Show();
+    } else {
+        m_stIcomCIVHex->Hide();
+        m_tcIcomCIVHex->Hide();
+    }
+    Layout();
+}
+
+void OptionsDlg::updateRadioControlState()
+{
+    m_ckLeftChannelVoxTone->Enable(!isTesting_);
+    m_ckUseHamlibPTT->Enable(!isTesting_);
+    m_ckUseSerialPTT->Enable(!isTesting_);
+    m_ckUsePTTInput->Enable(!isTesting_);
+#if defined(WIN32)
+    m_ckUseOmniRig->Enable(!isTesting_);
+#endif
+
+    m_cbRigName->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbSerialPort->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbSerialRate->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_tcIcomCIVHex->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbPttMethod->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+    m_cbPttSerialPort->Enable(!isTesting_ && m_ckUseHamlibPTT->GetValue());
+
+    m_cbCtlDevicePath->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_rbUseDTR->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_ckRTSPos->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_rbUseRTS->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+    m_ckDTRPos->Enable(!isTesting_ && m_ckUseSerialPTT->GetValue());
+
+    m_cbCtlDevicePathPttIn->Enable(!isTesting_ && m_ckUsePTTInput->GetValue());
+    m_ckCTSPos->Enable(!isTesting_ && m_ckUsePTTInput->GetValue());
+
+#if defined(WIN32)
+    m_cbOmniRigRigId->Enable(!isTesting_ && m_ckUseOmniRig->GetValue());
+#endif
+
+    m_buttonTestPTT->Enable(!isTesting_ && (m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue()
+#if defined(WIN32)
+        || m_ckUseOmniRig->GetValue()
+#endif
+    ));
+    m_sdbSizer5OK->Enable(!isTesting_);
+    m_sdbSizer5Cancel->Enable(!isTesting_);
+    m_sdbSizer5Apply->Enable(!isTesting_);
+
+    if (m_cbPttMethod->GetValue() == _("CAT") || m_cbPttMethod->GetValue() == _("None"))
+        m_cbPttSerialPort->Enable(false);
+}
+
+void OptionsDlg::PTTUseHamLibClicked(wxCommandEvent&)
+{
+    m_ckUseSerialPTT->SetValue(false);
+#if defined(WIN32)
+    m_ckUseOmniRig->SetValue(false);
+#endif
+    updateRadioControlState();
+}
+
+void OptionsDlg::PTTUseSerialClicked(wxCommandEvent&)
+{
+    m_ckUseHamlibPTT->SetValue(false);
+    updateRadioControlState();
+}
+
+void OptionsDlg::PTTUseSerialInputClicked(wxCommandEvent&)
+{
+    updateRadioControlState();
+}
+
+#if defined(WIN32)
+void OptionsDlg::PTTUseOmniRigClicked(wxCommandEvent&)
+{
+    m_ckUseHamlibPTT->SetValue(false);
+    updateRadioControlState();
+}
+#endif
+
+void OptionsDlg::HamlibRigNameChanged(wxCommandEvent&)
+{
+    resetIcomCIVStatus();
+    auto selected = m_cbRigName->GetCurrentSelection();
+    if (selected >= 0) {
+        auto minBaud = HamlibRigController::GetMinimumSerialBaudRate(selected);
+        auto maxBaud = HamlibRigController::GetMaximumSerialBaudRate(selected);
+        populateBaudRateList(minBaud, maxBaud);
+    } else {
+        populateBaudRateList();
+    }
+}
+
+void OptionsDlg::OnHamlibSerialPortChanged(wxCommandEvent&)
+{
+    if (m_cbPttMethod->GetValue() == _("CAT"))
+        m_cbPttSerialPort->SetValue(m_cbSerialPort->GetValue());
+}
+
+void OptionsDlg::OnHamlibPttMethodChanged(wxCommandEvent&)
+{
+    updateRadioControlState();
+}
+
+void OptionsDlg::OnTestPTT(wxCommandEvent&)
+{
+    std::shared_ptr<std::mutex> mtx = std::make_shared<std::mutex>();
+    std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
+
+    if (m_ckLeftChannelVoxTone->GetValue()) {
+        wxMessageBox("Testing of tone based PTT not supported; try PTT after pressing Start on main window",
+                     wxT("Error"), wxOK | wxICON_ERROR, this);
+    }
+
+    isTesting_ = true;
+    updateRadioControlState();
+
+    if (m_ckUseHamlibPTT->GetValue()) {
+        int rig = m_cbRigName->GetSelection();
+        wxString port = m_cbSerialPort->GetValue();
+        wxString pttPort = m_cbPttSerialPort->GetValue();
+        int serial_rate = 0;
+        {
+            wxString s = m_cbSerialRate->GetValue();
+            if (s != "default") {
+                long tmp;
+                s.ToLong(&tmp);
+                serial_rate = tmp;
+            }
+        }
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        auto pttType = (HamlibRigController::PttType)m_cbPttMethod->GetSelection();
+
+        if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8())) {
+            std::shared_ptr<HamlibRigController> hamlib =
+                std::make_shared<HamlibRigController>(
+                    rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
+                    (pttType == HamlibRigController::PTT_VIA_CAT) ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+                    false, false,
+                    m_ckForceRTSOn->GetValue(),
+                    m_ckForceDTROn->GetValue());
+
+            hamlib->onRigError += [=](IRigController*, std::string const& error) {
+                CallAfter([=]() {
+                    wxMessageBox(wxString::Format("Couldn't connect to Radio with Hamlib (%s). Make sure the Hamlib serial Device, Rate, and Params match your radio", error),
+                        wxT("Error"), wxOK | wxICON_ERROR, this);
+                    cv->notify_one();
+                });
+            };
+            hamlib->onRigConnected += [=](IRigController*) { hamlib->ptt(true); };
+            hamlib->onPttChange += [=](IRigController*, bool state) {
+                if (state) { std::this_thread::sleep_for(1s); hamlib->ptt(false); }
+                else        { cv->notify_one(); }
+            };
+
+            std::thread([=]() {
+                hamlib->connect();
+                std::unique_lock<std::mutex> lk(*mtx);
+                cv->wait(lk);
+                hamlib->disconnect();
+                CallAfter([this]() { isTesting_ = false; updateRadioControlState(); });
+            }).detach();
+        } else {
+            isTesting_ = false;
+            updateRadioControlState();
+        }
+    } else if (m_ckUseSerialPTT->IsChecked()) {
+        wxString ctrlport = m_cbCtlDevicePath->GetValue();
+        if (wxGetApp().CanAccessSerialPort((const char*)ctrlport.ToUTF8())) {
+            std::shared_ptr<SerialPortOutRigController> serialPort =
+                std::make_shared<SerialPortOutRigController>(
+                    (const char*)ctrlport.c_str(),
+                    m_rbUseRTS->GetValue(), m_ckRTSPos->IsChecked(),
+                    m_rbUseDTR->GetValue(), m_ckDTRPos->IsChecked());
+
+            serialPort->onRigError += [=](IRigController*, std::string const& error) {
+                CallAfter([=]() {
+                    wxMessageBox(wxString::Format("Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port.", ctrlport, error),
+                        wxT("Error"), wxOK | wxICON_ERROR, this);
+                });
+                cv->notify_one();
+            };
+            serialPort->onRigConnected += [=](IRigController*) { cv->notify_one(); };
+
+            std::thread([=]() {
+                serialPort->connect();
+                std::unique_lock<std::mutex> lk(*mtx);
+                cv->wait(lk);
+                if (serialPort->isConnected()) {
+                    serialPort->ptt(true);
+                    wxSleep(1);
+                    serialPort->ptt(false);
+                    serialPort->disconnect();
+                }
+                CallAfter([this]() { isTesting_ = false; updateRadioControlState(); });
+            }).detach();
+        } else {
+            isTesting_ = false;
+            updateRadioControlState();
+        }
+    }
+#if defined(WIN32)
+    else if (m_ckUseOmniRig->IsChecked()) {
+        std::shared_ptr<OmniRigController> omniRig =
+            std::make_shared<OmniRigController>(m_cbOmniRigRigId->GetCurrentSelection());
+
+        omniRig->onRigError += [=](IRigController*, std::string error) {
+            CallAfter([=]() {
+                wxMessageBox(wxString::Format("Couldn't connect to Radio with OmniRig (%s). Make sure the rig ID and OmniRig configuration is correct.", error),
+                    wxT("Error"), wxOK | wxICON_ERROR, this);
+                cv->notify_one();
+            });
+        };
+        omniRig->onRigConnected += [=](IRigController*) { omniRig->ptt(true); };
+        omniRig->onPttChange += [=](IRigController*, bool state) {
+            if (state) { std::this_thread::sleep_for(1s); omniRig->ptt(false); }
+            else        { cv->notify_one(); }
+        };
+
+        std::thread([=]() {
+            omniRig->connect();
+            std::unique_lock<std::mutex> lk(*mtx);
+            cv->wait(lk);
+            omniRig->disconnect();
+            CallAfter([this]() { isTesting_ = false; updateRadioControlState(); });
+        }).detach();
+    }
+#endif
+}
+
+//-------------------------------------------------------------------------
+// populateAudioDeviceList()
+//-------------------------------------------------------------------------
+void OptionsDlg::populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDirection direction)
+{
+    list->ClearAll();
+
+    wxListItem col;
+    col.SetAlign(wxLIST_FORMAT_LEFT);
+    col.SetText(_("Device"));
+    list->InsertColumn(0, col);
+
+    col.SetAlign(wxLIST_FORMAT_LEFT);
+    col.SetText(_("API"));
+    list->InsertColumn(1, col);
+
+    col.SetAlign(wxLIST_FORMAT_CENTRE);
+    col.SetText(_("Default Sample Rate"));
+    list->InsertColumn(2, col);
+
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
+    auto devList = engine->getAudioDeviceList(direction);
+    engine->stop();
+
+    for (auto& dev : devList)
+    {
+        long idx = list->InsertItem(list->GetItemCount(), dev.name);
+        list->SetItem(idx, 1, dev.apiName);
+        list->SetItem(idx, 2, wxString::Format("%d Hz", dev.defaultSampleRate));
+    }
+    list->InsertItem(list->GetItemCount(), "none");
+
+    list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+    list->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    list->SetColumnWidth(2, wxLIST_AUTOSIZE_USEHEADER);
+
+    // Resize column 0 to use remaining space
+    auto spaceUsed = list->GetColumnWidth(1) + list->GetColumnWidth(2);
+    auto spaceAvailable = list->GetClientSize().GetWidth() - 50; // to ensure scrollbar doesn't appear
+    auto spaceNeeded = spaceAvailable - spaceUsed;
+    if (list->GetColumnWidth(0) < spaceNeeded)
+    {
+        list->SetColumnWidth(0, spaceNeeded);
+    }
+}
+
+//-------------------------------------------------------------------------
+// selectListDevice()
+//-------------------------------------------------------------------------
+void OptionsDlg::selectListDevice(wxListCtrl* list, wxTextCtrl* tc, const wxString& devName)
+{
+    wxString target = devName.IsEmpty() ? wxString("none") : devName;
+    for (long i = 0; i < list->GetItemCount(); i++)
+    {
+        if (list->GetItemText(i, 0).IsSameAs(target))
+        {
+            list->SetItemState(i, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED,
+                                  wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
+            list->EnsureVisible(i);
+            tc->SetValue(target);
+            return;
+        }
+    }
+    tc->SetValue(wxEmptyString);
+}
+
+void OptionsDlg::OnSoundCard1InDeviceSelect(wxListEvent& evt)
+{
+    m_tcSoundCard1InDevice->SetValue(m_lcSoundCard1InDevice->GetItemText(evt.GetIndex(), 0));
+}
+
+void OptionsDlg::OnSoundCard1OutDeviceSelect(wxListEvent& evt)
+{
+    m_tcSoundCard1OutDevice->SetValue(m_lcSoundCard1OutDevice->GetItemText(evt.GetIndex(), 0));
+}
+
+void OptionsDlg::OnSoundCard2InDeviceSelect(wxListEvent& evt)
+{
+    m_tcSoundCard2InDevice->SetValue(m_lcSoundCard2InDevice->GetItemText(evt.GetIndex(), 0));
+}
+
+void OptionsDlg::OnSoundCard2OutDeviceSelect(wxListEvent& evt)
+{
+    m_tcSoundCard2OutDevice->SetValue(m_lcSoundCard2OutDevice->GetItemText(evt.GetIndex(), 0));
+}
+
+void OptionsDlg::OnTxReceiveOnlyChanged(wxCommandEvent&)
+{
+    bool rxOnly = m_ckTxReceiveOnly->GetValue();
+    m_lcSoundCard2InDevice->Enable(!rxOnly);
+    m_tcSoundCard2InDevice->Enable(!rxOnly);
+    m_lcSoundCard2OutDevice->Enable(!rxOnly);
+    m_tcSoundCard2OutDevice->Enable(!rxOnly);
+    m_btnSoundCard2InTest->Enable(!rxOnly);
+    m_btnSoundCard2OutTest->Enable(!rxOnly);
+}
+
+void OptionsDlg::OnRefreshAudioDevices(wxCommandEvent&)
+{
+    // Preserve the user's current selections so they survive the repopulation
+    wxString sel1In  = m_tcSoundCard1InDevice->GetValue();
+    wxString sel1Out = m_tcSoundCard1OutDevice->GetValue();
+    wxString sel2In  = m_tcSoundCard2InDevice->GetValue();
+    wxString sel2Out = m_tcSoundCard2OutDevice->GetValue();
+
+    // Restart engine so it re-enumerates available devices
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->start();
+
+    // Repopulate all four lists with fresh device data
+    populateAudioDeviceList(m_lcSoundCard1InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+    populateAudioDeviceList(m_lcSoundCard1OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+    populateAudioDeviceList(m_lcSoundCard2InDevice,  IAudioEngine::AUDIO_ENGINE_IN);
+    populateAudioDeviceList(m_lcSoundCard2OutDevice, IAudioEngine::AUDIO_ENGINE_OUT);
+
+    // Reselect previously chosen devices (falls back to empty if device disappeared)
+    selectListDevice(m_lcSoundCard1InDevice,  m_tcSoundCard1InDevice,  sel1In);
+    selectListDevice(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, sel1Out);
+    selectListDevice(m_lcSoundCard2InDevice,  m_tcSoundCard2InDevice,  sel2In);
+    selectListDevice(m_lcSoundCard2OutDevice, m_tcSoundCard2OutDevice, sel2Out);
+}
+
+//-------------------------------------------------------------------------
+// disableAllAudioTestButtons() / enableAllAudioTestButtons() - helpers
+//-------------------------------------------------------------------------
+static void setAudioTestButtonsEnabled(bool enabled,
+    wxButton* b1in, wxButton* b1out, wxButton* b2in, wxButton* b2out)
+{
+    b1in->Enable(enabled);
+    b1out->Enable(enabled);
+    b2in->Enable(enabled);
+    b2out->Enable(enabled);
+}
+
+//-------------------------------------------------------------------------
+// testAudioOutput() - plays a 400 Hz sine wave on the selected output device
+//-------------------------------------------------------------------------
+void OptionsDlg::testAudioOutput(const wxString& devName, wxButton* btn)
+{
+    if (devName.IsEmpty() || devName == "none")
+    {
+        wxMessageBox(_("Please select an audio output device first."), _("Audio Test"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+
+    setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+    btn->SetLabel(_("Playing"));
+
+    m_audioPlotThread = new std::thread([&](wxString const& devName, wxButton* btn) {
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->start();
+        auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+        for (auto& devInfo : devList)
+        {
+            if (devInfo.name.IsSameAs(devName))
+            {
+                int n = 0;
+                auto device = engine->getAudioDevice(devInfo.name, IAudioEngine::AUDIO_ENGINE_OUT, devInfo.defaultSampleRate, 1);
+                if (device)
+                {
+                    device->setOnAudioData([](IAudioDevice& dev, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
+                        int* np = static_cast<int*>(state);
+                        if (data != nullptr)
+                        {
+                            short* out = static_cast<short*>(data);
+                            for (size_t j = 0; j < numSamples; j++, (*np)++)
+                            {
+                                out[j] = (short)(2000.0 * cos(6.2832 * (*np) * 400.0 / dev.getSampleRate()));
+                            }
+                        }
+                    }, &n);
+                    device->setDescription("Options Audio Output Test");
+                    device->start();
+                    std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_TEST_DURATION_SECS));
+                    device->stop();
+                }
+                break;
+            }
+        }
+        engine->stop();
+
+        CallAfter([&, btn]() {
+            m_audioPlotThread->join();
+            delete m_audioPlotThread;
+            m_audioPlotThread = nullptr;
+            btn->SetLabel(_("Test"));
+            setAudioTestButtonsEnabled(true, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+        });
+    }, devName, btn);
+}
+
+//-------------------------------------------------------------------------
+// testAudioInput() - records 5 s on the input device then plays back on output
+//-------------------------------------------------------------------------
+void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn)
+{
+    if (inDevName.IsEmpty() || inDevName == "none")
+    {
+        wxMessageBox(_("Please select an audio input device first."), _("Audio Test"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+
+    setAudioTestButtonsEnabled(false, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+    btn->SetLabel(_("Recording"));
+
+    m_audioPlotThread = new std::thread([&](wxString const& inDev, wxString const& outDev, wxButton* btn) {
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->start();
+        auto inDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+        for (auto& devInfo : inDevList)
+        {
+            if (!devInfo.name.IsSameAs(inDev))
+                continue;
+
+            int inSampleRate = devInfo.defaultSampleRate;
+            int inTotalSamples = inSampleRate * OPTIONS_AUDIO_RECORD_DURATION_SECS;
+            std::vector<short> recordBuf(inTotalSamples, 0);
+
+            struct RecordState { std::vector<short>* buf; int pos; };
+            RecordState recState = { &recordBuf, 0 };
+
+            auto inDevice = engine->getAudioDevice(devInfo.name, IAudioEngine::AUDIO_ENGINE_IN, inSampleRate, 1);
+            if (inDevice)
+            {
+                inDevice->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
+                    auto* s = static_cast<RecordState*>(state);
+                    if (data != nullptr)
+                    {
+                        const short* in = static_cast<const short*>(data);
+                        for (size_t j = 0; j < numSamples && s->pos < (int)s->buf->size(); j++)
+                            (*s->buf)[s->pos++] = in[j];
+                    }
+                }, &recState);
+                inDevice->setDescription("Options Audio Input Test");
+                inDevice->start();
+                std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_RECORD_DURATION_SECS));
+                inDevice->stop();
+
+                CallAfter([btn]() { btn->SetLabel(_("Playing")); });
+
+                // Play back the recording on the output device
+                if (!outDev.IsEmpty() && outDev != "none")
+                {
+                    auto outDevList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+                    for (auto& outDevInfo : outDevList)
+                    {
+                        if (!outDevInfo.name.IsSameAs(outDev))
+                            continue;
+
+                        int outSampleRate = outDevInfo.defaultSampleRate;
+
+                        // Resample recorded buffer if input and output rates differ
+                        std::vector<short> resampledBuf;
+                        const std::vector<short>* playBuf = &recordBuf;
+
+                        if (outSampleRate != inSampleRate)
+                        {
+                            std::vector<float> floatIn(recordBuf.size());
+                            src_short_to_float_array(recordBuf.data(), floatIn.data(), (int)recordBuf.size());
+
+                            int outSamples = (int)((double)inTotalSamples * outSampleRate / inSampleRate) + 1;
+                            std::vector<float> floatOut(outSamples);
+
+                            SRC_DATA srcData = {};
+                            srcData.data_in      = floatIn.data();
+                            srcData.data_out     = floatOut.data();
+                            srcData.input_frames = (long)recordBuf.size();
+                            srcData.output_frames = (long)outSamples;
+                            srcData.end_of_input  = 1;
+                            srcData.src_ratio     = (double)outSampleRate / (double)inSampleRate;
+
+                            if (src_simple(&srcData, SRC_SINC_MEDIUM_QUALITY, 1) == 0)
+                            {
+                                resampledBuf.resize(srcData.output_frames_gen);
+                                src_float_to_short_array(floatOut.data(), resampledBuf.data(), (int)srcData.output_frames_gen);
+                                playBuf = &resampledBuf;
+                            }
+                        }
+
+                        struct PlayState { const std::vector<short>* buf; int pos; };
+                        PlayState playState = { playBuf, 0 };
+
+                        auto outDevice = engine->getAudioDevice(outDevInfo.name, IAudioEngine::AUDIO_ENGINE_OUT, outSampleRate, 1);
+                        if (outDevice)
+                        {
+                            outDevice->setOnAudioData([](IAudioDevice&, void* data, size_t numSamples, void* state) FREEDV_NONBLOCKING {
+                                auto* s = static_cast<PlayState*>(state);
+                                if (data != nullptr)
+                                {
+                                    short* out = static_cast<short*>(data);
+                                    for (size_t j = 0; j < numSamples; j++)
+                                        out[j] = (s->pos < (int)s->buf->size()) ? (*s->buf)[s->pos++] : 0;
+                                }
+                            }, &playState);
+                            outDevice->setDescription("Options Audio Input Playback");
+                            outDevice->start();
+                            std::this_thread::sleep_for(std::chrono::seconds(OPTIONS_AUDIO_RECORD_DURATION_SECS));
+                            outDevice->stop();
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        engine->stop();
+
+        CallAfter([&, btn]() {
+            m_audioPlotThread->join();
+            delete m_audioPlotThread;
+            m_audioPlotThread = nullptr;
+            btn->SetLabel(_("Test"));
+            setAudioTestButtonsEnabled(true, m_btnSoundCard1InTest, m_btnSoundCard1OutTest, m_btnSoundCard2InTest, m_btnSoundCard2OutTest);
+        });
+    }, inDevName, outDevName, btn);
+}
+
+//-------------------------------------------------------------------------
+// OnSoundCard1InTest()
+//-------------------------------------------------------------------------
+void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
+{
+    wxString outDev = m_tcSoundCard2OutDevice->GetValue();
+    if (outDev.IsEmpty() || outDev == "none")
+        outDev = m_tcSoundCard1OutDevice->GetValue();
+    testAudioInput(m_tcSoundCard1InDevice->GetValue(), outDev, m_btnSoundCard1InTest);
+}
+
+//-------------------------------------------------------------------------
+// OnSoundCard1OutTest()
+//-------------------------------------------------------------------------
+void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
+{
+    testAudioOutput(m_tcSoundCard1OutDevice->GetValue(), m_btnSoundCard1OutTest);
+}
+
+//-------------------------------------------------------------------------
+// OnSoundCard2InTest()
+//-------------------------------------------------------------------------
+void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
+{
+    testAudioInput(m_tcSoundCard2InDevice->GetValue(), m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2InTest);
+}
+
+//-------------------------------------------------------------------------
+// OnSoundCard2OutTest()
+//-------------------------------------------------------------------------
+void OptionsDlg::OnSoundCard2OutTest(wxCommandEvent&)
+{
+    testAudioOutput(m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2OutTest);
 }
