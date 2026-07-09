@@ -1270,6 +1270,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
+    // Initialize panel pointers to null before creation since "page changed" 
+    // events fire as we're adding these (and we compare against these pointers
+    // inside the handler).
+    m_panelSpectrum = nullptr;
+    m_panelWaterfall = nullptr;
+    m_panelSpeechIn = nullptr;
+    m_panelSpeechOut = nullptr;
+    m_panelDemodIn = nullptr;
+    m_panelSNR = nullptr;
+
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
     lastBand_ = BAND_OTHER;
@@ -3756,32 +3766,39 @@ bool MainFrame::validateSoundCardSetup()
     }
     else
     {
-        const int MIN_SAMPLE_RATE = 16000;
+        const int MIN_SAMPLE_RATE_ANALOG = 16000;
+        const int MIN_SAMPLE_RATE_RADIO = 8000;
         int failedSampleRate = 0;
+        int expectedSampleRate = 0;
+        int expectedSampleRate1Out = (g_nSoundCards == 1 ? MIN_SAMPLE_RATE_ANALOG : MIN_SAMPLE_RATE_RADIO);
         
         // Validate sample rates
-        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE)
+        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE_RADIO)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_RADIO;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < expectedSampleRate1Out)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+            expectedSampleRate = expectedSampleRate1Out;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE_ANALOG)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_ANALOG;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE_ANALOG)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_ANALOG;
             canRun = false;
         }
         
@@ -3789,7 +3806,7 @@ bool MainFrame::validateSoundCardSetup()
         {
             wxMessageBox(wxString::Format(
                 "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
-                failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
+                failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }
     
@@ -3807,10 +3824,12 @@ void MainFrame::initializeFreeDVReporter_()
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
-            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + GetFreeDVVersion(),
-            receiveOnly);
+            receiveOnly,
+            false,
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls);
     assert(wxGetApp().m_sharedReporterObject);
     
     // If we're running, remove any existing reporter object.

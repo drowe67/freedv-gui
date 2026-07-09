@@ -30,7 +30,10 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         
         // Switch back to previous tab once done with recording
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        if (wxGetApp().appConfiguration.currentNotebookTab >= 0)
+        {
+            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        }
     }
     else
     {
@@ -124,8 +127,67 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     vkFileName_ = soundFile;
     
     // Switch tab to "From Mic" during recording.
-    wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-    m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+    // Note: we should only save the previous page if the current selection is something on
+    // the same tab group as "Frm Mic".
+#if wxCHECK_VERSION(3,1,4)
+    wxAuiTabCtrl* fromMicTabControl = nullptr;
+    int fromMicTabIndex = 0;
+    bool validFromMicTabGroup = false;
+    if (m_panelSpeechIn != nullptr)
+    {
+        // Ignore return
+        validFromMicTabGroup = m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex);
+    }
+#endif // wxCHECK_VERSION(3,1,4)
+
+    // GetSelection() isn't the right choice here since more than one tab can be visible at
+    // the same time. We have to check the shown status of each of the other plots 
+    // AND make sure it's in the same tab control as "Frm Mic" before we can save off the
+    // current tab state.
+    // See https://forums.wxwidgets.org/viewtopic.php?t=14721 for info.
+    auto savedTab = m_auiNbookCtrl->GetSelection();
+#if wxCHECK_VERSION(3,1,4)
+    wxWindow* plotsToCheck[] = {
+        m_panelSpectrum,
+        m_panelWaterfall,
+        m_panelSpeechOut,
+        m_panelDemodIn,
+        m_panelSNR
+    };
+    for (size_t index = 0; validFromMicTabGroup && index < (sizeof(plotsToCheck) / sizeof(wxWindow*)); index++)
+    {
+        auto plot = plotsToCheck[index];
+        if (plot != nullptr && plot->IsShown())
+        {
+            // Plot is visible, now check to make sure it's in the same tab group.
+            wxAuiTabCtrl* tmpTabCtrl = nullptr;
+            int tmpTabIndex = 0;
+            if (m_auiNbookCtrl->FindTab(plot, &tmpTabCtrl, &tmpTabIndex) && tmpTabCtrl == fromMicTabControl)
+            {
+                // Found it in the same tab group, use this index for switching back on RX.
+                savedTab = m_auiNbookCtrl->GetPageIndex(plot);
+                break;
+            }
+        }
+    }
+#endif // wxCHECK_VERSION(3,1,4)
+
+    // Save currently visible plot so we can go back to it on completion.
+    wxGetApp().appConfiguration.currentNotebookTab = savedTab;
+
+    // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+    // the current page ourselves is a better bet.
+    size_t index = 0;
+    for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+    {
+        auto page = m_auiNbookCtrl->GetPage(index);
+        if (page == (wxWindow *)m_panelSpeechIn)
+        {
+            m_auiNbookCtrl->ChangeSelection(index);
+            page->Refresh();
+            break;
+        }
+    }
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);
@@ -143,7 +205,13 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
         wxT("Select Voice Keyer File"),
         wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+        wxT("Sound files (*.wav;*.mp3)|*.wav;*.mp3|")
         wxT("WAV files (*.wav)|*.wav|")
+        wxT("MP3 files (*.mp3)|*.mp3|")
+#else
+        wxT("WAV files (*.wav)|*.wav|")
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
         wxT("All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
         );
