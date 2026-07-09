@@ -866,6 +866,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Enhancements:
     * RADEV2: Standardize mode as USB. (PR #1397)
+    * Combine all configuration into Tools->Settings. (PR #1418)
+    * Rework Easy Setup window into new Setup Wizard. (PR #1418)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
 
