@@ -1270,6 +1270,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
+    // Initialize panel pointers to null before creation since "page changed" 
+    // events fire as we're adding these (and we compare against these pointers
+    // inside the handler).
+    m_panelSpectrum = nullptr;
+    m_panelWaterfall = nullptr;
+    m_panelSpeechIn = nullptr;
+    m_panelSpeechOut = nullptr;
+    m_panelDemodIn = nullptr;
+    m_panelSNR = nullptr;
+
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
     lastBand_ = BAND_OTHER;
