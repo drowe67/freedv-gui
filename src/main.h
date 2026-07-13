@@ -506,8 +506,6 @@ class MainFrame : public TopFrame
 
         void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
         
-        void OnNotebookPageChanging(wxAuiNotebookEvent& event) override;
-        
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
 

@@ -1271,6 +1271,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
+    // Initialize panel pointers to null before creation since "page changed" 
+    // events fire as we're adding these (and we compare against these pointers
+    // inside the handler).
+    m_panelSpectrum = nullptr;
+    m_panelWaterfall = nullptr;
+    m_panelSpeechIn = nullptr;
+    m_panelSpeechOut = nullptr;
+    m_panelDemodIn = nullptr;
+    m_panelSNR = nullptr;
+
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
     lastBand_ = BAND_OTHER;
@@ -1307,7 +1317,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
 
     // Add SNR window
-    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, true);
+    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
