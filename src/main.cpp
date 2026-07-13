@@ -1670,11 +1670,16 @@ MainFrame::~MainFrame()
     
     if (m_reporterDialog != nullptr)
     {
-        // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
-        // reason, so we need to grab and save the current position again.
+        // Grab and save the final position explicitly rather than relying
+        // solely on OnMove's live tracking -- Close()/Destroy() below
+        // trigger one last stray wxEVT_MOVE reporting a position with the
+        // title bar's height already stripped off, so position tracking
+        // must be stopped first or that stray event silently overwrites
+        // the correct value saved here.
         auto pos = m_reporterDialog->GetPosition();
         wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
         wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+        m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
@@ -2406,11 +2411,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
-    // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
-    // reason, so we need to grab and save the current position again.
+    // Grab and save the final position explicitly rather than relying
+    // solely on OnMove's live tracking -- Close()/Destroy() below trigger
+    // one last stray wxEVT_MOVE reporting a position with the title bar's
+    // height already stripped off, so position tracking must be stopped
+    // first or that stray event silently overwrites the correct value
+    // saved here.
     auto pos = m_reporterDialog->GetPosition();
     wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
     wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+    m_reporterDialog->stopTrackingPosition();
 
     m_reporterDialog->setReporter(nullptr);
     wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
