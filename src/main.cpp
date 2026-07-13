@@ -56,6 +56,7 @@
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/util/WindowPositionRestore.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
@@ -812,6 +813,7 @@ static void SuppressButtonPressFlicker_()
     g_free(cssColour);
     g_object_unref(provider);
 }
+
 #endif // defined(__WXGTK__) && defined(HAS_GTK3)
 
 // OnInit()
@@ -917,12 +919,13 @@ void MainFrame::loadConfiguration_()
     g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
     g_SquelchLevel /= 2.0;
     
-    Move(x, y);
     wxSize size = GetMinSize();
 
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
-    
+
+    RestoreWindowPosition(this, x, y);
+
     // XXX - with really short windows, wxWidgets sometimes doesn't size
     // the components properly until the user resizes the window (even if only
     // by a pixel or two). As a really hacky workaround, we emulate this behavior
@@ -2408,7 +2411,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
     auto pos = m_reporterDialog->GetPosition();
     wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
     wxGetApp().appConfiguration.reporterWindowTop = pos.y;
-    
+
     m_reporterDialog->setReporter(nullptr);
     wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
     m_reporterDialog->Close();

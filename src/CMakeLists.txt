@@ -10,6 +10,7 @@ set(FREEDV_SOURCES
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
+    gui/util/WindowPositionRestore.cpp
 )
 
 set(FREEDV_LINK_LIBS_OSX
@@ -122,7 +123,11 @@ if(LINUX)
             target_include_directories(freedv PRIVATE ${GTK3_INCLUDE_DIRS})
             target_link_libraries(freedv ${GTK3_LIBRARIES})
             add_definitions(-DHAS_GTK3)
+        else(GTK3_FOUND)
+            message(WARNING "GTK3 development files (gtk+-3.0.pc, e.g. package libgtk-3-dev) not found -- Linux-specific GUI workarounds (including window position restore) will be disabled")
         endif(GTK3_FOUND)
+    else(PkgConfig_FOUND)
+        message(WARNING "pkg-config not found -- cannot detect GTK3 development files, Linux-specific GUI workarounds (including window position restore) will be disabled")
     endif(PkgConfig_FOUND)
 endif(LINUX)
 
