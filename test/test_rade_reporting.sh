@@ -98,7 +98,7 @@ RECORD_PID=$!
 
 # Make sure prerequisites are available
 if [ ! -d $(pwd)/rade_src ]; then
-    git clone https://github.com/peterbmarks/radae_nopy $(pwd)/rade_src
+    git clone https://github.com/drowe67/radae $(pwd)/rade_src
 fi
 
 # Start "radio"

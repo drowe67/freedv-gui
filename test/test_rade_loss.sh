@@ -123,10 +123,6 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     cat tmp.log
 
     # Run feature files through loss tool
-    if [ ! -d $(pwd)/rade_src ]; then
-        git clone https://github.com/peterbmarks/radae_nopy $(pwd)/rade_src
-    fi
-
     $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
 fi
 
