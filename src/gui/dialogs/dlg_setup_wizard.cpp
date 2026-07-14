@@ -503,6 +503,7 @@ void SetupWizard::loadConfig()
     auto& cfg = wxGetApp().appConfiguration;
 
     auto audioEngine = AudioEngineFactory::GetAudioEngine();
+    audioEngine->start();
 
     // Page 0: Receive Audio
     m_cbRadioIn->SetValue(cfg.audioConfiguration.soundCard1In.deviceName);
@@ -570,6 +571,8 @@ void SetupWizard::loadConfig()
     m_ckReportingEnable->SetValue(cfg.reportingConfiguration.reportingEnabled);
     m_txtCallsign->SetValue(cfg.reportingConfiguration.reportingCallsign);
     m_txtGridSquare->SetValue(cfg.reportingConfiguration.reportingGridSquare);
+
+    audioEngine->stop();
 }
 
 void SetupWizard::saveConfig()
