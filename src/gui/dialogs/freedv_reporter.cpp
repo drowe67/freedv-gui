@@ -30,6 +30,7 @@
 #include <wx/textdlg.h>
 #include "../controls/MsgListPopup.h"
 #include "../util/FrequencyOps.h"
+#include "../util/WindowPositionRestore.h"
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -464,7 +465,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-    
+
     // Make sure we didn't end up placing it off the screen in a location that can't
     // easily be brought back.
 #if wxCHECK_VERSION(3,2,0)
@@ -493,7 +494,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     }
     wxGetApp().appConfiguration.reporterWindowLeft = actualPos.x;
     wxGetApp().appConfiguration.reporterWindowTop = actualPos.y;
-    SetPosition(actualPos);
+    RestoreWindowPosition(this, actualPos.x, actualPos.y);
 
     // Set up timers. Highlight clear timer has a slightly longer interval
     // to reduce CPU usage.
@@ -660,6 +661,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
         setBandFilter(freq);
     }
+}
+
+void FreeDVReporterDialog::stopTrackingPosition()
+{
+    this->Disconnect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
 }
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
@@ -1040,7 +1046,7 @@ void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
 void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
 {
     auto pos = event.GetPosition();
-   
+
     wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
     wxGetApp().appConfiguration.reporterWindowTop = pos.y;
     
