@@ -10,7 +10,6 @@ set(FREEDV_SOURCES
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
-    gui/util/WindowPositionRestore.cpp
 )
 
 set(FREEDV_LINK_LIBS_OSX
