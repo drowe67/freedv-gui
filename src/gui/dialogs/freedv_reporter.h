@@ -68,6 +68,14 @@ class FreeDVReporterDialog : public wxFrame
         void setReporter(std::shared_ptr<FreeDVReporter> const& reporter);
         void refreshQSYButtonState();
         void refreshLayout();
+
+        // Stops the window from live-tracking/persisting its own position via
+        // OnMove. Callers should invoke this after deliberately grabbing and
+        // saving the final position but before Close()/Destroy() -- closing
+        // can trigger one last stray wxEVT_MOVE (observed reporting a
+        // position with the title bar's height already stripped off) that
+        // would otherwise silently overwrite the correct saved position.
+        void stopTrackingPosition();
         
         void setBandFilter(FilterFrequency freq);
 

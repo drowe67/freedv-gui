@@ -1,7 +1,8 @@
 add_library(fdv_gui_util STATIC
     LabelOverrideAccessible.cpp
     NameOverrideAccessible.cpp
-    wxListViewComboPopup.cpp)
+    wxListViewComboPopup.cpp
+    WindowPositionRestore.cpp)
 
 target_compile_options(fdv_gui_util PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
     
