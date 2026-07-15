@@ -14,11 +14,9 @@
 #include "main.h"
 
 #include "git_version.h"
-#include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
-#include "gui/dialogs/dlg_audiooptions.h"
 #include "gui/dialogs/dlg_options.h"
-#include "gui/dialogs/dlg_ptt.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
@@ -80,45 +78,6 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
     OnExit(event);
 }
 
-//-------------------------------------------------------------------------
-// OnToolsEasySetup()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetup(wxCommandEvent&)
-{
-    EasySetupDialog* dlg = new EasySetupDialog(this);
-    if (dlg->ShowModal() == wxOK)
-    {
-        // Show/hide frequency box based on CAT control setup.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-
-        // Show/hide callsign combo box based on PSK Reporter Status
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            m_cboLastReportedCallsigns->Show();
-            m_txtCtrlCallSign->Hide();
-        }
-        else
-        {
-            m_cboLastReportedCallsigns->Hide();
-            m_txtCtrlCallSign->Show();
-        }
-
-        // Initialize FreeDV Reporter if required.
-        initializeFreeDVReporter_();
-        
-        // Relayout window so that the changes can take effect.
-        m_panel->Layout();
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnToolsEasySetupUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -154,35 +113,15 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnToolsAudio()
+// OnToolsSetupWizard()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsAudio(wxCommandEvent& event)
+void MainFrame::OnToolsSetupWizard(wxCommandEvent&)
 {
-    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
-
-    wxUnusedVar(event);
-    int rv = 0;
-    AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
-    rv = dlg->ShowModal();
-    if(rv == wxOK)
-    {
-        dlg->ExchangeData(EXCHANGE_DATA_OUT);
-
-        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
-        if (oldRxOnly != newRxOnly &&
-            wxGetApp().m_sharedReporterObject->isValidForReporting())
-        {
-            // Receive Only status has changed, refresh FreeDV Reporter
-            initializeFreeDVReporter_();
-        }
-    }
-    delete dlg;
+    SetupWizard wizard(this);
+    wizard.ShowModal();
 }
 
-//-------------------------------------------------------------------------
-// OnToolsAudioUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
+void MainFrame::OnToolsSetupWizardUI(wxUpdateUIEvent& event)
 {
     event.Enable(!m_RxRunning);
 }
@@ -337,35 +276,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 {
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    ComPortsDlg *dlg = new ComPortsDlg(NULL);
-
-    if (dlg->ShowModal() == wxID_OK)
-    {
-        // Show/hide frequency box based on CAT control configuration.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-        
-        // Reinitialize FreeDV Reporter again in case we changed PTT method.
-        initializeFreeDVReporter_();
-    }
-
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfgUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
@@ -1547,15 +1457,62 @@ void MainFrame::togglePTT(void) {
         }
         
         // rx-> tx transition, swap to Mic In page to monitor speech
-        wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-        
+
+        // Note: we should only save the previous page if the current selection is something on
+        // the same tab group as "Frm Mic".
+#if wxCHECK_VERSION(3,1,4)
+        wxAuiTabCtrl* fromMicTabControl = nullptr;
+        int fromMicTabIndex = 0;
+        bool validFromMicTabGroup = false;
+        if (m_panelSpeechIn != nullptr)
+        {
+            // Ignore return
+            validFromMicTabGroup = m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex);
+        }
+#endif // wxCHECK_VERSION(3,1,4)
+
+        // GetSelection() isn't the right choice here since more than one tab can be visible at
+        // the same time. We have to check the shown status of each of the other plots 
+        // AND make sure it's in the same tab control as "Frm Mic" before we can save off the
+        // current tab state.
+        // See https://forums.wxwidgets.org/viewtopic.php?t=14721 for info.
+        auto savedTab = m_auiNbookCtrl->GetSelection();
+#if wxCHECK_VERSION(3,1,4)
+        wxWindow* plotsToCheck[] = {
+            m_panelSpectrum,
+            m_panelWaterfall,
+            m_panelSpeechOut,
+            m_panelDemodIn,
+            m_panelSNR
+        };
+        for (size_t index = 0; validFromMicTabGroup && index < (sizeof(plotsToCheck) / sizeof(wxWindow*)); index++)
+        {
+            auto plot = plotsToCheck[index];
+            if (plot != nullptr && plot->IsShown())
+            {
+                // Plot is visible, now check to make sure it's in the same tab group.
+                wxAuiTabCtrl* tmpTabCtrl = nullptr;
+                int tmpTabIndex = 0;
+                if (m_auiNbookCtrl->FindTab(plot, &tmpTabCtrl, &tmpTabIndex) && tmpTabCtrl == fromMicTabControl)
+                {
+                    // Found it in the same tab group, use this index for switching back on RX.
+                    savedTab = m_auiNbookCtrl->GetPageIndex(plot);
+                    break;
+                }
+            }
+        }
+#endif // wxCHECK_VERSION(3,1,4)
+
+        // Save currently visible plot so we can go back to it on RX.
+        wxGetApp().appConfiguration.currentNotebookTab = savedTab;
+
         // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
         // the current page ourselves is a better bet.
         size_t index = 0;
         for (; index < m_auiNbookCtrl->GetPageCount(); index++)
         {
             auto page = m_auiNbookCtrl->GetPage(index);
-            if (page == (wxWindow *)m_panelSpeechIn)
+            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
             {
                 m_auiNbookCtrl->ChangeSelection(index);
                 page->Refresh();
@@ -2138,31 +2095,6 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
     TopFrame::OnSystemColorChanged(event);
-}
-
-void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
-{
-#if 0
-    if (m_rbRADE->GetValue())
-    {
-        auto newSelection = event.GetSelection();
-        auto page = m_auiNbookCtrl->GetPage(newSelection);
-        
-        // Prevent selection of tabs not yet supported by RADE.
-        if (page == m_panelScatter || 
-            page == m_panelTimeOffset || 
-            page == m_panelFreqOffset || 
-            page == m_panelTestFrameErrors ||
-            page == m_panelTestFrameErrorsHist)
-        {
-            log_info("Veto attempt at viewing tab %d not supported by RADE", newSelection);
-            event.Veto();
-            return;
-        }
-    }
-#endif
-    
-    TopFrame::OnNotebookPageChanging(event);
 }
 
 void MainFrame::OnCenterRx(wxCommandEvent&)

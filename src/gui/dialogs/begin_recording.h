@@ -48,7 +48,8 @@ class BeginRecordingDialog : public wxDialog
         void    OnInitDialog(wxInitDialogEvent& event);
         
         void OnRecordingTypeChange(wxCommandEvent& event);
-       
+        void OnRecordingSuffixChar(wxKeyEvent& event);
+
         wxTextCtrl *recordingSuffix_;
         wxRadioButton *rawRecording_;
         wxRadioButton *decodedRecording_;

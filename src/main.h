@@ -224,19 +224,10 @@ class MainApp : public wxApp
         bool                saveConfig();
 
         // misc
-        bool       m_channel_noise;
         float      m_channel_snr_dB;
 
         int        FilterEvent(wxEvent& event);
         MainFrame *frame;
-
-        // 700 options
-        bool       m_FreeDV700Combine;
-
-        // carrier attenuation
-
-        bool       m_attn_carrier_en;
-        int        m_attn_carrier;
 
         // tone interferer simulation
 
@@ -407,15 +398,11 @@ class MainFrame : public TopFrame
         void OnTop(wxCommandEvent& event) override;
         void OnExit( wxCommandEvent& event ) override;
 
-        void OnToolsEasySetup( wxCommandEvent& event ) override;
-        void OnToolsEasySetupUI( wxUpdateUIEvent& event ) override;
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
-        void OnToolsAudio( wxCommandEvent& event ) override;
-        void OnToolsAudioUI( wxUpdateUIEvent& event ) override;
-        void OnToolsComCfg( wxCommandEvent& event ) override;
-        void OnToolsComCfgUI( wxUpdateUIEvent& event ) override;
         void OnToolsFilter( wxCommandEvent& event ) override;
+        void OnToolsSetupWizard(wxCommandEvent& event) override;
+        void OnToolsSetupWizardUI(wxUpdateUIEvent& event) override;
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
@@ -495,8 +482,6 @@ class MainFrame : public TopFrame
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
 
         void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
-        
-        void OnNotebookPageChanging(wxAuiNotebookEvent& event) override;
         
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );

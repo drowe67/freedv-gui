@@ -86,6 +86,7 @@ class TopFrame : public wxFrame
         wxMenuBar* m_menubarMain;
         wxMenu* file;
         wxMenu* edit;
+        wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
         wxGauge* m_gaugeSNR;
@@ -151,21 +152,17 @@ class TopFrame : public wxFrame
 
         virtual void OnExit( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTop( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetup( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetupUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudio( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudioUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFilter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
+        virtual void OnToolsSetupWizard( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsSetupWizardUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -222,9 +219,7 @@ class TopFrame : public wxFrame
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
 
         virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
-        
-        virtual void OnNotebookPageChanging(wxAuiNotebookEvent& event) { event.Skip(); }
-        
+                
         virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
         
         virtual void OnRightClickCallsignList(wxMouseEvent& event) { event.Skip(); }

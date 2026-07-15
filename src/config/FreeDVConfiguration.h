@@ -88,8 +88,6 @@ public:
     ConfigurationDataElement<wxString> quickRecordRawPath;
     ConfigurationDataElement<wxString> quickRecordDecodedPath;
     
-    ConfigurationDataElement<int> noiseSNR;
-    
     ConfigurationDataElement<bool> debugConsoleEnabled; // note: Windows only
     
     ConfigurationDataElement<bool> snrSlow;

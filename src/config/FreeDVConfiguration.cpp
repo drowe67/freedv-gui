@@ -80,8 +80,6 @@ FreeDVConfiguration::FreeDVConfiguration()
     , quickRecordRawPath("/QuickRecord/SavePath", _(""))
     , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", _(""))
         
-    , noiseSNR("/Noise/noise_snr", 2)
-        
     , debugConsoleEnabled("/Debug/console", false)
         
     , snrSlow("/Audio/snrSlow", false)
@@ -194,9 +192,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, voiceKeyerRepeats);
     
     load_(config, halfDuplexMode);
-    
-    load_(config, noiseSNR);
-    
+        
     load_(config, debugConsoleEnabled);
     
     load_(config, snrSlow);
@@ -283,8 +279,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, quickRecordRawPath);
     save_(config, quickRecordDecodedPath);
-    
-    save_(config, noiseSNR);
     
     save_(config, debugConsoleEnabled);
     

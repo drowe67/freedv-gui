@@ -293,8 +293,6 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
 
     ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
-        if (mag == m_min_mag_db || mag == m_max_mag_db)
-            continue;
         y = -(mag - m_max_mag_db) * mag_dB_to_py;
         y += PLOT_BORDER + bottomOffset_;
         ctx->StrokeLine(PLOT_BORDER + leftOffset_, y,
