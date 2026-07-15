@@ -964,7 +964,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress button flicker in Linux light themes. (PR #1419, PR #1421) - thanks @barjac!
     * Only preserve previously selected tab on TX if it's in the same group as 'From Mic'. (PR #1428)
     * Scalar plot label alignment fix for Y axis of Frm Decoder/Mic/Radio, SNR and Spectrum plots. (PR #1429) - thanks @barjac!
-    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431) - thanks @barjac!
+    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431, #1433) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!

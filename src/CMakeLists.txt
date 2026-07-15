@@ -122,6 +122,14 @@ if(LINUX)
             target_include_directories(freedv PRIVATE ${GTK3_INCLUDE_DIRS})
             target_link_libraries(freedv ${GTK3_LIBRARIES})
             add_definitions(-DHAS_GTK3)
+
+            # fdv_gui_util (added via add_subdirectory(gui) above, before this
+            # point) needs these too -- WindowPositionRestore.cpp lives there,
+            # not in freedv's own sources. add_definitions()/directory-scoped
+            # include dirs only propagate to subdirectories added *after* this
+            # point, so it has to be set on the already-created target directly.
+            target_compile_definitions(fdv_gui_util PRIVATE HAS_GTK3)
+            target_include_directories(fdv_gui_util PRIVATE ${GTK3_INCLUDE_DIRS})
         else(GTK3_FOUND)
             message(WARNING "GTK3 development files (gtk+-3.0.pc, e.g. package libgtk-3-dev) not found -- Linux-specific GUI workarounds (including window position restore) will be disabled")
         endif(GTK3_FOUND)
