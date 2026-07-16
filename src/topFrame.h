@@ -281,9 +281,6 @@ public:
     bool AcceptsFocus() const;
     bool AcceptsFocusFromKeyboard() const;
     bool AcceptsFocusRecursively() const;
-    
-    wxString SavePerspective();
-    bool LoadPerspective(const wxString& layout);
 };
 
 #endif //__TOPFRAME_H__

@@ -57,6 +57,7 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/util/WindowPositionRestore.h"
+#include "gui/util/TabLayoutSerializer.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
@@ -1184,11 +1185,14 @@ setDefaultMode:
         vkFileName_ = "";
     }
     
-    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
+#if wxCHECK_VERSION(3, 3, 0)
+    if (wxGetApp().appConfiguration.tabLayout != "")
     {
-        ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+        TabLayoutDeserializer deserializer(wxGetApp().appConfiguration.tabLayout);
+        m_auiNbookCtrl->LoadLayout("notebook", deserializer);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
+#endif // wxCHECK_VERSION(3, 3, 0)
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
     modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
@@ -1631,11 +1635,13 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    if (wxGetApp().appConfiguration.experimentalFeatures)
-    {
-        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
-    }
-    
+#if wxCHECK_VERSION(3, 3, 0)
+    TabLayoutSerializer serializer;
+    m_auiNbookCtrl->SaveLayout("notebook", serializer);
+    wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+#endif // wxCHECK_VERSION(3, 3, 0)
+
+
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 

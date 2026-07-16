@@ -774,7 +774,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxBoxSizer* sbDebugOptionsSizer = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* sbDebugOptionsSizer2 = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* sbDebugOptionsSizer3 = new wxBoxSizer(wxHORIZONTAL);
 
     m_ckboxVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("Verbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
@@ -786,14 +785,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTxRxDumpFifoState = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxTxRxDumpFifoState, 0, wxALL | wxALIGN_LEFT, 5);   
     m_ckboxFreeDVAPIVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbDebugOptionsSizer2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
-    
-    m_experimentalFeatures = new wxCheckBox(sb_fifo2, wxID_ANY, _("Enable Experimental Features"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbDebugOptionsSizer3->Add(m_experimentalFeatures, 0, wxALL | wxALIGN_LEFT, 5);   
+    sbDebugOptionsSizer2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALL | wxALIGN_LEFT, 5);
 
     sbSizer_fifo2->Add(sbDebugOptionsSizer, 0, wxALL | wxEXPAND | 0);
     sbSizer_fifo2->Add(sbDebugOptionsSizer2, 0, wxALL | wxEXPAND | 0);
-    sbSizer_fifo2->Add(sbDebugOptionsSizer3, 0, wxALL | wxEXPAND | 0);
 
     sizerDebug->Add(sbSizer_fifo,0, wxALL|wxEXPAND, 3);
     sizerDebug->Add(sbSizer_fifo2,0, wxALL|wxEXPAND, 3);
@@ -1089,9 +1084,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
         m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
-        
-        m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
-       
+
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
         m_ckboxEnableLegacyModes->SetValue(wxGetApp().appConfiguration.enableLegacyModes);
@@ -1307,8 +1300,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
-        
-        wxGetApp().appConfiguration.experimentalFeatures = m_experimentalFeatures->GetValue();
 
         // General reporting config
         wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckboxReportingEnable->GetValue();
