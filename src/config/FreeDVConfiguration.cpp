@@ -105,6 +105,7 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
     
+    , experimentalFeatures("/ExperimentalFeatures", false)
     , tabLayout("/MainFrame/TabLayout", _(""))
 
     , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
@@ -240,6 +241,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, quickRecordRawPath);
     load_(config, quickRecordDecodedPath);
     
+    load_(config, experimentalFeatures);
     load_(config, tabLayout);
 
     load_(config, txRxDelayMilliseconds);
@@ -328,6 +330,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, currentSpectrumAveraging);
     
+    save_(config, experimentalFeatures);
     save_(config, tabLayout);
 
     save_(config, monitorVoiceKeyerAudio);

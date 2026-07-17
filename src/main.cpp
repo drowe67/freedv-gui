@@ -1185,20 +1185,16 @@ setDefaultMode:
         vkFileName_ = "";
     }
     
-#if wxCHECK_VERSION(3, 3, 0)
-    if (wxGetApp().appConfiguration.tabLayout != "")
+    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
     {
+#if wxCHECK_VERSION(3, 3, 0)
         TabLayoutDeserializer deserializer(wxGetApp().appConfiguration.tabLayout);
         m_auiNbookCtrl->LoadLayout("notebook", deserializer);
-        const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
-    }
 #else
-    if (wxGetApp().appConfiguration.tabLayout != "")
-    {
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+#endif // wxCHECK_VERSION(3, 3, 0)
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
-#endif // wxCHECK_VERSION(3, 3, 0)
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
     modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
@@ -1641,13 +1637,16 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
+    if (wxGetApp().appConfiguration.experimentalFeatures)
+    {
 #if wxCHECK_VERSION(3, 3, 0)
-    TabLayoutSerializer serializer;
-    m_auiNbookCtrl->SaveLayout("notebook", serializer);
-    wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+        TabLayoutSerializer serializer;
+        m_auiNbookCtrl->SaveLayout("notebook", serializer);
+        wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
 #else
-    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
 #endif // wxCHECK_VERSION(3, 3, 0)
+    }
 
 
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;

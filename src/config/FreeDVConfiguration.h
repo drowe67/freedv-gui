@@ -112,6 +112,7 @@ public:
     
     ConfigurationDataElement<int> currentSpectrumAveraging;
     
+    ConfigurationDataElement<bool> experimentalFeatures;
     ConfigurationDataElement<wxString> tabLayout;
 
     ConfigurationDataElement<bool> monitorVoiceKeyerAudio;
