@@ -123,7 +123,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     cat tmp.log
 
     # Run feature files through loss tool
-    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
+    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 --clip_start 25
 fi
 
 # Clean up PulseAudio virtual devices
