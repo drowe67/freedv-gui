@@ -1192,6 +1192,12 @@ setDefaultMode:
         m_auiNbookCtrl->LoadLayout("notebook", deserializer);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
+#else
+    if (wxGetApp().appConfiguration.tabLayout != "")
+    {
+        ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+        const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+    }
 #endif // wxCHECK_VERSION(3, 3, 0)
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
@@ -1639,6 +1645,8 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
     TabLayoutSerializer serializer;
     m_auiNbookCtrl->SaveLayout("notebook", serializer);
     wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+#else
+    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
 #endif // wxCHECK_VERSION(3, 3, 0)
 
 
