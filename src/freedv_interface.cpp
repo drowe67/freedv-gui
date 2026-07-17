@@ -47,7 +47,7 @@ extern std::atomic<bool> g_bwExpandEnabled;
 
 static const char* GetCurrentModeStrImpl_()
 {
-    return "RADEV1";
+    return "RADEV2";
 }
 
 FreeDVInterface::FreeDVInterface() :
@@ -112,7 +112,7 @@ void FreeDVInterface::start(int, bool usingReliableText)
     // TBD - modelFile may be used by RADE in the future!
     char modelFile[1];
     modelFile[0] = 0;
-    rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
+    rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_MODE_V2 | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
     assert(rade_ != nullptr);
 
     if (usingReliableText)
@@ -219,7 +219,7 @@ int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
     // Verified that rade_api.c from librade has no unbounded operations
     // as of 2025-10-03.
     FREEDV_BEGIN_VERIFIED_SAFE
-    return std::max(rade_n_tx_out(rade_), radeTxStep_->eooLengthInSamples());
+    return radeTxStep_->eooLengthInSamples();
     FREEDV_END_VERIFIED_SAFE
 }
 
@@ -248,14 +248,7 @@ void FreeDVInterface::setReliableText(const char* callsign)
     if (rade_ != nullptr && radeTextPtr_ != nullptr)
     {
         log_info("generating RADE text string");
-        int nsyms = rade_n_eoo_bits(rade_);
-        float* eooSyms = new float[nsyms];
-        assert(eooSyms);
-
-        rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign), eooSyms, nsyms);
-        rade_tx_set_eoo_bits(rade_, eooSyms);
-
-        delete[] eooSyms;
+        rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign));
     }
 }
 
@@ -276,7 +269,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
     // Special handling for RADE. Note that ParallelStep is not being used
     // as it has known issues with Bluetooth and macOS (but only with RADE;
     // analog and legacy modes appear to function properly).
-    radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_);
+    radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_, radeTextPtr_);
         
     auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
     pipeline->appendPipelineStep(radeTxStep_);

@@ -1118,7 +1118,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // memory while processing audio).
     SNR_FORMAT_STR("%ddB"),
     MODE_FORMAT_STR("Mode: %s"),
-    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
+    MODE_RADE_FORMAT_STR("Mode: RADEV2"),
     NO_SNR_LABEL("--"),
     EMPTY_STR(""),
     MODEM_LABEL("Modem"),
@@ -1994,8 +1994,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 syncState)
             {               
                 // Special case for RADE--report '--' for callsign so we can
-                // at least report that we're receiving *something*.
+                // at least report that we're receiving *something*. Only do this
+		// if we haven't gotten a callsign yet.
                 int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+		std::string lastReportedCallsign = (const char*)m_cboLastReportedCallsigns->GetValue().ToUTF8();
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
@@ -2006,7 +2008,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (!g_playFileFromRadio.load(std::memory_order_acquire))
                     {                
                         wxGetApp().m_sharedReporterObject->addReceiveRecord(
-                            "",
+                            lastReportedCallsign,
                             freedvInterface.getCurrentModeStr(),
                             freq,
                             pendingSnr
@@ -3442,7 +3444,7 @@ void MainFrame::initializeFreeDVReporter_()
     auto oldReporterObject = wxGetApp().m_sharedReporterObject;
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
+            /*wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString()*/ "reporter-radev2.k6aq.net",
             wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + GetFreeDVVersion(),
