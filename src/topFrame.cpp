@@ -20,6 +20,9 @@
 //
 //==========================================================================
 
+#include <map>
+#include <set>
+
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
@@ -211,8 +214,10 @@ wxString TabFreeAuiNotebook::SavePerspective() {
        if (!tabs.empty()) tabs += wxT("|");
        tabs += pane.name;
        tabs += wxT("=");
-
-       // add tab id's
+  
+       // Add tabs, keyed by caption rather than position. Position (AddPage() call
+       // order) isn't stable across app versions if a tab is ever added, removed, or
+       // reordered, which would silently corrupt previously-saved layouts.
        size_t page_count = tabframe->m_tabs->GetPageCount();
        for (size_t p = 0; p < page_count; ++p)
        {
@@ -223,7 +228,7 @@ wxString TabFreeAuiNotebook::SavePerspective() {
 
           if ((int)page_idx == m_curPage) tabs += wxT("*");
           else if ((int)p == tabframe->m_tabs->GetActivePage()) tabs += wxT("+");
-          tabs += wxString::Format(wxT("%zu"), page_idx);
+          tabs += page.caption;
        }
     }
     tabs += wxT("@");
@@ -237,7 +242,15 @@ wxString TabFreeAuiNotebook::SavePerspective() {
 bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     // Remove all tab ctrls (but still keep them in main index)
     const size_t tab_count = m_tabs.GetPageCount();
-    std::set<size_t> readdedTabs;
+    std::set<wxString> readdedTabs;
+
+    // Caption -> master index lookup, so saved entries resolve by tab identity
+    // rather than by position (see SavePerspective()).
+    std::map<wxString, size_t> captionToIdx;
+    for (size_t i = 0; i < tab_count; ++i) {
+        captionToIdx[m_tabs.GetPage(i).caption] = i;
+    }
+
     for (size_t i = 0; i < tab_count; ++i) {
        wxWindow* wnd = m_tabs.GetWindowFromIdx(i);
 
@@ -255,8 +268,23 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 
     size_t sel_page = 0;
 
+    // Creates a new (empty) tab group pane, docked at the bottom, named paneName.
+    auto createTabGroup = [&](const wxString& paneName) -> wxAuiTabCtrl* {
+        wxTabFrameOurs* new_tabs = new wxTabFrameOurs();
+        new_tabs->m_tabs = new wxAuiTabCtrl(this, m_tabIdCounter++);
+        new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
+        new_tabs->m_tabCtrlHeight = m_tabCtrlHeight;
+        new_tabs->m_tabs->SetFlags(m_flags);
+
+        wxAuiPaneInfo pane_info = wxAuiPaneInfo().Name(paneName).Bottom().CaptionVisible(false);
+        m_mgr.AddPane(new_tabs, pane_info);
+
+        return new_tabs->m_tabs;
+    };
+
     wxString tabs = layout.BeforeFirst(wxT('@'));
-    wxAuiTabCtrl *dest_tabs = nullptr;
+    wxAuiTabCtrl *dest_tabs = nullptr; // last group known to hold >= 1 page
+    bool anyEmptyGroupsCreated = false;
     while (1)
      {
        const wxString tab_part = tabs.BeforeFirst(wxT('|'));
@@ -267,23 +295,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 
        // Get pane name
        const wxString pane_name = tab_part.BeforeFirst(wxT('='));
-
-       // create a new tab frame
-       wxTabFrameOurs* new_tabs = new wxTabFrameOurs();
-       new_tabs->m_tabs = new wxAuiTabCtrl(this,
-                                  m_tabIdCounter++);
- //                            wxDefaultPosition,
- //                            wxDefaultSize,
- //                            wxNO_BORDER|wxWANTS_CHARS);
-       new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
-       new_tabs->m_tabCtrlHeight = m_tabCtrlHeight;
-       new_tabs->m_tabs->SetFlags(m_flags);
-       dest_tabs = new_tabs->m_tabs;
-
-       // create a pane info structure with the information
-       // about where the pane should be added
-       wxAuiPaneInfo pane_info = wxAuiPaneInfo().Name(pane_name).Bottom().CaptionVisible(false);
-       m_mgr.AddPane(new_tabs, pane_info);
+       wxAuiTabCtrl* new_group = createTabGroup(pane_name);
 
        // Get list of tab id's and move them to pane
        wxString tab_list = tab_part.AfterFirst(wxT('='));
@@ -299,36 +311,71 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
              tab = tab.Mid(1);
           }
 
-          const size_t tab_idx = wxAtoi(tab.c_str());
-          if (tab_idx >= GetPageCount()) continue;
+          auto captionIt = captionToIdx.find(tab);
+          if (captionIt == captionToIdx.end()) continue; // tab no longer exists (e.g. removed in a newer version)
+          const size_t tab_idx = captionIt->second;
 
           // Move tab to pane
           wxAuiNotebookPage& page = m_tabs.GetPage(tab_idx);
-          const size_t newpage_idx = dest_tabs->GetPageCount();
-          dest_tabs->InsertPage(page.window, page, newpage_idx);
-          readdedTabs.insert(tab_idx);
+          const size_t newpage_idx = new_group->GetPageCount();
+          new_group->InsertPage(page.window, page, newpage_idx);
+          readdedTabs.insert(tab);
 
           if (c == wxT('+')) activePage = newpage_idx;
           else if ( c == wxT('*')) sel_page = tab_idx;
        }
-       if (activePage >= 0) dest_tabs->SetActivePage(activePage);
-       dest_tabs->DoShowHide();
+
+       if (new_group->GetPageCount() == 0)
+       {
+           // None of this group's saved entries resolved to a current tab (e.g. an
+           // old, pre-caption-keyed saved layout - see SavePerspective()). Leaving a
+           // zero-page tab group behind confuses wxAuiNotebook's own drag-and-drop
+           // handling (crashes with an assertion failure in GetPage() when the user
+           // later drags a tab near it), so sweep it up below instead.
+           anyEmptyGroupsCreated = true;
+       }
+       else
+       {
+           if (activePage >= 0) new_group->SetActivePage(activePage);
+           new_group->DoShowHide();
+           dest_tabs = new_group;
+       }
 
        tabs = tabs.AfterFirst(wxT('|'));
     }
 
+    if (anyEmptyGroupsCreated)
+    {
+        RemoveEmptyTabFrames();
+    }
+
     // Load the frame perspective
     const wxString frames = layout.AfterFirst(wxT('@'));
-    m_mgr.LoadPerspective(frames);
+    bool framesLoaded = m_mgr.LoadPerspective(frames);
+
+    bool ok = true;
+    if (dest_tabs == nullptr)
+    {
+        // Saved layout string parsed to zero tab groups (e.g. empty/corrupted). Rather
+        // than crash on the dereference below, fall back to one default group holding
+        // every tab, matching what a first-run/no-saved-layout state looks like.
+        log_warn("Tab layout persistence: saved layout produced no tab groups; falling back to default layout.");
+        dest_tabs = createTabGroup(wxT("default"));
+        ok = false;
+    }
+    else if (!framesLoaded)
+    {
+        log_warn("Tab layout persistence: failed to restore frame perspective; layout may not match what was saved.");
+        ok = false;
+    }
 
     // Reinsert tabs that weren't persisted before
-    assert(dest_tabs != nullptr); // We should have found/created at least one tab group already.
     for (size_t i = 0; i < tab_count; ++i) {
-        if (readdedTabs.find(i) != readdedTabs.end())
+        wxAuiNotebookPage& page = m_tabs.GetPage(i);
+        if (readdedTabs.find(page.caption) != readdedTabs.end())
         {
             continue;
         }
-        wxAuiNotebookPage& page = m_tabs.GetPage(i);
         const size_t newpage_idx = dest_tabs->GetPageCount();
         dest_tabs->InsertPage(page.window, page, newpage_idx);
     }
@@ -337,7 +384,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     m_curPage = -1;
     SetSelection(sel_page);
 
-    return true;
+    return ok;
 }
 #endif // !wxCHECK_VERSION(3, 3, 0)
 
