@@ -84,6 +84,28 @@ class wxListViewComboPopup;
 // returns wxDefaultPosition there and lets GTK position it automatically.
 wxPoint LeftOffsetContextMenuPosition(wxWindow* btn);
 
+// A self-contained "card" that stands in for a wxStaticBox/wxStaticBoxSizer
+// group, with a tinted background that covers the whole box including its
+// title. A native wxStaticBox paints its title directly on the border,
+// outside the area any child window can draw into, and largely ignores
+// SetBackgroundColour on Windows/macOS, so neither tinting the box directly
+// nor nesting a panel inside it can cover the whole group cleanly. Add
+// children to this panel (as their parent) and to GetContentSizer().
+class TintedGroupBox : public wxPanel
+{
+    public:
+        TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation);
+
+        virtual void SetLabel(const wxString& label) override;
+        virtual wxString GetLabel() const override;
+
+        wxSizer* GetContentSizer() const { return m_contentSizer; }
+
+    private:
+        wxStaticText* m_title;
+        wxSizer* m_contentSizer;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
 ///////////////////////////////////////////////////////////////////////////////
@@ -121,7 +143,7 @@ class TopFrame : public wxFrame
         
         wxStatusBar* m_statusBar1;
 
-        wxStaticBox* statsBox;
+        TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;
         wxStaticText  *m_textCurrentDecodeMode;
         wxStaticText  *m_textBits;
@@ -142,9 +164,8 @@ class TopFrame : public wxFrame
 
         wxSizer* rightSizer;
 
-        wxStaticBox* modeBox;
-        wxStaticBoxSizer* sbSizer_mode;
-        
+        TintedGroupBox* modeBox;
+
         wxMenuItem* m_menuItemPlayFileFromRadio;
         wxMenuItem* m_menuItemExportConfig;
         wxMenuItem* m_menuItemImportConfig;
@@ -249,9 +270,9 @@ class TopFrame : public wxFrame
         wxToggleButton* m_btnTogTune;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
-        wxStaticBox*  m_freqBox;
-        wxStaticBox*  m_txLevelBox;
-        wxStaticBox* micSpeakerBox;
+        TintedGroupBox*  m_freqBox;
+        TintedGroupBox*  m_txLevelBox;
+        TintedGroupBox* micSpeakerBox;
 
         TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 
