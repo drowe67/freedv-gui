@@ -408,7 +408,36 @@ static wxColour GroupBoxBackgroundColour()
 {
     wxColour base = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
     bool isDark = base.GetLuminance() < 0.5;
-    return base.ChangeLightness(isDark ? 115 : 93);
+    wxColour shaded = base.ChangeLightness(isDark ? 115 : 93);
+
+    // Nudge the shaded card colour towards blue. Purely a lightness shift is
+    // invisible on themes (e.g. Breeze Light) whose window colour has no
+    // saturation to begin with, so blend in a small amount of hue directly.
+    wxColour tint(0, 120, 255);
+    int tintPct = 8;
+
+    // Testing hook: FREEDV_GROUPBOX_TINT=RRGGBB[:pct] overrides the tint
+    // colour/strength above at runtime, so different values can be tried
+    // without a rebuild.
+    if (wxString env; wxGetEnv(wxT("FREEDV_GROUPBOX_TINT"), &env))
+    {
+        wxString colourPart = env.BeforeFirst(':');
+        wxString pctPart = env.AfterFirst(':');
+        wxColour parsed(wxT("#") + colourPart);
+        if (parsed.IsOk())
+        {
+            tint = parsed;
+        }
+        long pctVal;
+        if (!pctPart.IsEmpty() && pctPart.ToLong(&pctVal))
+        {
+            tintPct = (int)pctVal;
+        }
+    }
+    unsigned char r = (unsigned char)((shaded.Red()   * (100 - tintPct) + tint.Red()   * tintPct) / 100);
+    unsigned char g = (unsigned char)((shaded.Green() * (100 - tintPct) + tint.Green() * tintPct) / 100);
+    unsigned char b = (unsigned char)((shaded.Blue()  * (100 - tintPct) + tint.Blue()  * tintPct) / 100);
+    return wxColour(r, g, b);
 }
 
 TintedGroupBox::TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation)
