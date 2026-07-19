@@ -969,9 +969,21 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnOnOff->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnOnOff), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnAnalogClick), NULL, this);
     m_togBtnVoiceKeyer->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnVoiceKeyerClick), NULL, this);
-    m_togBtnVoiceKeyer->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
+
+#if defined(__WXGTK__)
+    // wxGTK fires wxEVT_CONTEXT_MENU on button-press for these widgets,
+    // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP
+    // instead. MSW/OSX are unaffected (MSW generates the event on
+    // button-up already; OSX uses ctrl-click), so this is GTK-specific.
+    // Confirmed present on both wxGTK 3.2 and 3.3+, unlike the windowless
+    // widget case below, so no version gate here.
+    m_togBtnVoiceKeyer->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTogBtnVoiceKeyerRightClick(ctx); });
+    m_btnTogPTT->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTogBtnPTTRightClick(ctx); });
+#else
+    m_togBtnVoiceKeyer->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
+#endif
 
     m_BtnCallSignReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCallSignReset), NULL, this);
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
@@ -996,15 +1008,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTxLevelPP->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
     m_btnTogTune->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
 
-#if wxCHECK_VERSION(3, 3, 0)
+#if wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__)
     // wxGTK 3.3+ fires wxEVT_CONTEXT_MENU on button-press for these widget types,
     // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP instead.
+    // MSW/OSX are unaffected (MSW generates the event on button-up already;
+    // OSX uses ctrl-click), so this is GTK-specific.
     m_txLevelBox->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTxLevelContextMenu(ctx); });
     m_txtTxLevelNum->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTxLevelContextMenu(ctx); });
     m_btnTogTune->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTuneAttenContextMenu(ctx); });
 #else
     // wxGTK < 3.3 does not generate RIGHT_UP for windowless widget types
     // (wxStaticBox, wxStaticText); CONTEXT_MENU works without the dismiss issue.
+    // (Also used as-is on MSW/OSX regardless of wx version -- see above.)
     m_txLevelBox->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_txtTxLevelNum->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_btnTogTune->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTuneAttenContextMenu), NULL, this);
@@ -1089,9 +1104,11 @@ TopFrame::~TopFrame()
     m_togBtnOnOff->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnOnOff), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnAnalogClick), NULL, this);
     m_togBtnVoiceKeyer->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnVoiceKeyerClick), NULL, this);
-    m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
+#if !defined(__WXGTK__)
+    m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
+#endif
     
     m_btnCenterRx->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
 
@@ -1108,7 +1125,7 @@ TopFrame::~TopFrame()
     m_btnTxLevelM->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecr), NULL, this);
     m_btnTxLevelP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncr), NULL, this);
     m_btnTxLevelPP->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelIncrBig), NULL, this);
-#if !wxCHECK_VERSION(3, 3, 0)
+#if !(wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__))
     m_txLevelBox->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_txtTxLevelNum->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTxLevelContextMenu), NULL, this);
     m_btnTogTune->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTuneAttenContextMenu), NULL, this);

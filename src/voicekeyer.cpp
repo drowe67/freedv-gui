@@ -208,7 +208,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
     chooseVKFileMenuItem_->Enable(vk_state == VK_IDLE);
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
-    
+
     // Trigger right-click menu popup in a location that will prevent it from
     // ending up off the screen.
     auto sz = m_togBtnVoiceKeyer->GetSize();
