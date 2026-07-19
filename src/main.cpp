@@ -1184,7 +1184,12 @@ setDefaultMode:
         vkFileName_ = "";
     }
     
-    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
+    // Cache this now rather than re-reading the live config value at exit time: the
+    // checkbox can be toggled mid-session without reloading/reapplying a layout (that
+    // only happens here, at startup), so exit-time save must be gated on the same
+    // flag value the load decision above used, not whatever it's since been changed to.
+    tabLayoutPersistenceEnabledAtStartup_ = wxGetApp().appConfiguration.experimentalFeatures;
+    if (tabLayoutPersistenceEnabledAtStartup_ && wxGetApp().appConfiguration.tabLayout != "")
     {
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
@@ -1250,6 +1255,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     terminating_ = false;
     realigned_ = false;
     syncState_ = false;
+    tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
     badSnrFound_ = false;
 
@@ -1632,7 +1638,7 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    if (wxGetApp().appConfiguration.experimentalFeatures)
+    if (tabLayoutPersistenceEnabledAtStartup_)
     {
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
     }
