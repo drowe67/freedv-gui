@@ -971,11 +971,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnVoiceKeyer->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnVoiceKeyerClick), NULL, this);
     m_btnTogPTT->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
 
-#if wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__)
-    // wxGTK 3.3+ fires wxEVT_CONTEXT_MENU on button-press for these widget types,
-    // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP instead.
-    // MSW/OSX are unaffected (MSW generates the event on button-up already;
-    // OSX uses ctrl-click), so this is GTK-specific.
+#if defined(__WXGTK__)
+    // wxGTK fires wxEVT_CONTEXT_MENU on button-press for these widgets,
+    // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP
+    // instead. MSW/OSX are unaffected (MSW generates the event on
+    // button-up already; OSX uses ctrl-click), so this is GTK-specific.
+    // Confirmed present on both wxGTK 3.2 and 3.3+, unlike the windowless
+    // widget case below, so no version gate here.
     m_togBtnVoiceKeyer->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTogBtnVoiceKeyerRightClick(ctx); });
     m_btnTogPTT->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnTogBtnPTTRightClick(ctx); });
 #else
@@ -1103,7 +1105,7 @@ TopFrame::~TopFrame()
     m_togBtnAnalog->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnAnalogClick), NULL, this);
     m_togBtnVoiceKeyer->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnVoiceKeyerClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
-#if !(wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__))
+#if !defined(__WXGTK__)
     m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
 #endif
