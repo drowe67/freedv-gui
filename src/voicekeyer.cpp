@@ -210,15 +210,9 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
 
     // Trigger right-click menu popup in a location that will prevent it from
-    // ending up off the screen. Deferred via CallAfter so it opens after the
-    // originating right-click's press/release (and its implicit pointer
-    // grab) has fully completed -- otherwise on GTK the matching button-up
-    // is delivered straight to the freshly-opened menu, selecting whatever
-    // is under the cursor before the menu can be read.
+    // ending up off the screen.
     auto sz = m_togBtnVoiceKeyer->GetSize();
-    CallAfter([this, sz]() {
-        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
-    });
+    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )

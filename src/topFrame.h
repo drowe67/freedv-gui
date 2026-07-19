@@ -199,7 +199,7 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) { event.Skip(); }
-        
+
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) { event.Skip(); }
 
