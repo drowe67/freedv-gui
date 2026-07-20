@@ -260,15 +260,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         wxSize size = GetSize();
         auto w = size.GetWidth();
         auto h = size.GetHeight();
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w + 1, h + 1);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
