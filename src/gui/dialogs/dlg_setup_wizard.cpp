@@ -339,8 +339,11 @@ wxPanel* SetupWizard::makeReportingPage()
 
     m_stCallsign = new wxStaticText(page, wxID_ANY, _("Callsign:"));
     grid->Add(m_stCallsign, 0, wxALIGN_CENTER_VERTICAL);
+    wxTextValidator callsignValidator(wxFILTER_INCLUDE_CHAR_LIST);
+    callsignValidator.SetCharIncludes(wxT("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/"));
     m_txtCallsign = new wxTextCtrl(page, wxID_ANY, wxEmptyString,
-                                    wxDefaultPosition, wxSize(160, -1));
+                                    wxDefaultPosition, wxSize(160, -1), 0, callsignValidator);
+    m_txtCallsign->SetMaxLength(REPORTING_CALLSIGN_MAX_LENGTH);
     grid->Add(m_txtCallsign, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
     m_stGridSquare = new wxStaticText(page, wxID_ANY, _("Grid Square:"));

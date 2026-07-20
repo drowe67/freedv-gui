@@ -2301,9 +2301,9 @@ void MainFrame::performFreeDVOn_()
         // Text field/callsign callbacks.
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
-            char temp[9];
-            memset(temp, 0, 9);
-            strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
+            char temp[REPORTING_CALLSIGN_MAX_LENGTH + 1];
+            memset(temp, 0, sizeof(temp));
+            strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), REPORTING_CALLSIGN_MAX_LENGTH); // One less than the size of temp to ensure we don't overwrite the null.
             log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
             

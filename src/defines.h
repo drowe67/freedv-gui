@@ -104,6 +104,11 @@
 // Text messaging Data
 #define MAX_CALLSIGN         80
 
+// Maximum length (in characters) of the callsign reported over the air
+// (e.g. via RADE's reliable text feature) and to FreeDV Reporter/PSK Reporter.
+// Valid characters are A-Z, 0-9 and '/'.
+#define REPORTING_CALLSIGN_MAX_LENGTH 32
+
 // Real-time memory block size
 #define CODEC2_REAL_TIME_MEMORY_SIZE (512*1024)
    
