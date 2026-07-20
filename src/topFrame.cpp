@@ -33,7 +33,29 @@
 #include "gui/util/LabelOverrideAccessible.h"
 #include "util/logging/ulog.h"
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif // GDK_WINDOWING_WAYLAND
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 extern int g_playFileToMicInEventId;
+
+wxPoint LeftOffsetContextMenuPosition(wxWindow* btn)
+{
+#if defined(__WXGTK__) && defined(HAS_GTK3) && defined(GDK_WINDOWING_WAYLAND)
+    GdkDisplay* display = gdk_display_get_default();
+    if (display != nullptr && GDK_IS_WAYLAND_DISPLAY(display))
+    {
+        return wxDefaultPosition;
+    }
+#endif // defined(__WXGTK__) && defined(HAS_GTK3) && defined(GDK_WINDOWING_WAYLAND)
+
+    auto sz = btn->GetSize();
+    return wxPoint(-sz.GetWidth() - 25, 0);
+}
+
 extern int g_recFileFromRadioEventId;
 extern int g_recFileFromDecoderEventId;
 extern int g_playFileFromRadioEventId;

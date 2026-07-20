@@ -78,6 +78,14 @@
 
 class wxListViewComboPopup;
 
+// Popup position for a right-click menu anchored to the left of btn (to
+// avoid running off the right screen edge on X11). On GTK/Wayland, GDK's
+// own popup placement already avoids screen edges correctly, and this
+// manual offset doesn't translate to Wayland's surface-relative anchor
+// model (it ends up placed at the toplevel's origin instead), so this
+// returns wxDefaultPosition there and lets GTK position it automatically.
+wxPoint LeftOffsetContextMenuPosition(wxWindow* btn);
+
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
 ///////////////////////////////////////////////////////////////////////////////
