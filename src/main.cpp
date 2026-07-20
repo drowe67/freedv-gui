@@ -1892,6 +1892,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
         // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
+        std::string lastReportedCallsign = (const char*)m_cboLastReportedCallsigns->GetValue().ToUTF8();
         if (wxGetApp().m_reporters.size() > 0 && wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             const char* text = freedvInterface.getReliableText();
@@ -1925,6 +1926,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         freqString = wxNumberFormatter::ToString(freq, 4);
                     }
 
+                    bool addedCallsign = lastReportedCallsign != rxCallsign;
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
                         m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign ||
                         m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
@@ -1946,6 +1948,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->SetColumnWidth(0, getIdealStationsHeardColumnLength_(0));
                         m_lastReportedCallsignListView->SetColumnWidth(1, getIdealStationsHeardColumnLength_(1));
                         m_lastReportedCallsignListView->SetColumnWidth(2, getIdealStationsHeardColumnLength_(2));
+
+                        addedCallsign = true;
                     }
                     
                     wxString snrAsString;
@@ -1975,7 +1979,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             pendingSnr,
                             freqLongLong);
         
-                        if (!g_playFileFromRadio.load(std::memory_order_acquire))
+                        if (!g_playFileFromRadio.load(std::memory_order_acquire) && addedCallsign)
                         {
                             for (auto& obj : wxGetApp().m_reporters)
                             {
@@ -1986,6 +1990,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                                     pendingSnr);
                             }
                         }
+                        else if (addedCallsign && wxGetApp().m_sharedReporterObject)
+                        {
+                            // Special case: toggle highlight on FreeDV Reporter but do not
+                            // report to other services as we've already done so earlier.
+                            wxGetApp().m_sharedReporterObject->addReceiveRecord(
+                                pendingCallsign,
+                                freedvInterface.getCurrentModeStr(),
+                                freq,
+                                pendingSnr
+                            );
+                        }
                     }
                 }
             }
@@ -1995,9 +2010,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {               
                 // Special case for RADE--report '--' for callsign so we can
                 // at least report that we're receiving *something*. Only do this
-		// if we haven't gotten a callsign yet.
+                // if we haven't gotten a callsign yet.
                 int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-		std::string lastReportedCallsign = (const char*)m_cboLastReportedCallsigns->GetValue().ToUTF8();
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
