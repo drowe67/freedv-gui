@@ -895,11 +895,11 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
             });
         };
 
-        rig->onRigConnected += [=, this](IRigController*) {
+        rig->onRigConnected += [=](IRigController*) {
             rig->ptt(true);
         };
 
-        rig->onPttChange += [=, this](IRigController*, bool state) {
+        rig->onPttChange += [=](IRigController*, bool state) {
             if (state)
             {
                 std::this_thread::sleep_for(1s);
