@@ -884,15 +884,15 @@ void MainFrame::loadConfiguration_()
     // by a pixel or two). As a really hacky workaround, we emulate this behavior
     // when restoring window sizing. These resize events also happen after configuration
     // is restored but I'm not sure this is necessary.
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w + 1, h + 1);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
@@ -1085,7 +1085,12 @@ void MainFrame::loadConfiguration_()
         vkFileName_ = "";
     }
     
-    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
+    // Cache this now rather than re-reading the live config value at exit time: the
+    // checkbox can be toggled mid-session without reloading/reapplying a layout (that
+    // only happens here, at startup), so exit-time save must be gated on the same
+    // flag value the load decision above used, not whatever it's since been changed to.
+    tabLayoutPersistenceEnabledAtStartup_ = wxGetApp().appConfiguration.experimentalFeatures;
+    if (tabLayoutPersistenceEnabledAtStartup_ && wxGetApp().appConfiguration.tabLayout != "")
     {
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
@@ -1149,6 +1154,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     terminating_ = false;
     realigned_ = false;
     syncState_ = false;
+    tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
 
     // Add config file name to title bar if provided at the command line.
@@ -1505,7 +1511,7 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    if (wxGetApp().appConfiguration.experimentalFeatures)
+    if (tabLayoutPersistenceEnabledAtStartup_)
     {
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
     }
@@ -2062,15 +2068,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             auto w = minSize.GetWidth();
             auto h = minSize.GetHeight();
 
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w + 1, h + 1);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });

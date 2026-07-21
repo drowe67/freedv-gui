@@ -127,53 +127,8 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     vkFileName_ = soundFile;
     
     // Switch tab to "From Mic" during recording.
-    // Note: we should only save the previous page if the current selection is something on
-    // the same tab group as "Frm Mic".
-#if wxCHECK_VERSION(3,1,4)
-    wxAuiTabCtrl* fromMicTabControl = nullptr;
-    int fromMicTabIndex = 0;
-    bool validFromMicTabGroup = false;
-    if (m_panelSpeechIn != nullptr)
-    {
-        // Ignore return
-        validFromMicTabGroup = m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex);
-    }
-#endif // wxCHECK_VERSION(3,1,4)
-
-    // GetSelection() isn't the right choice here since more than one tab can be visible at
-    // the same time. We have to check the shown status of each of the other plots 
-    // AND make sure it's in the same tab control as "Frm Mic" before we can save off the
-    // current tab state.
-    // See https://forums.wxwidgets.org/viewtopic.php?t=14721 for info.
-    auto savedTab = m_auiNbookCtrl->GetSelection();
-#if wxCHECK_VERSION(3,1,4)
-    wxWindow* plotsToCheck[] = {
-        m_panelSpectrum,
-        m_panelWaterfall,
-        m_panelSpeechOut,
-        m_panelDemodIn,
-        m_panelSNR
-    };
-    for (size_t index = 0; validFromMicTabGroup && index < (sizeof(plotsToCheck) / sizeof(wxWindow*)); index++)
-    {
-        auto plot = plotsToCheck[index];
-        if (plot != nullptr && plot->IsShown())
-        {
-            // Plot is visible, now check to make sure it's in the same tab group.
-            wxAuiTabCtrl* tmpTabCtrl = nullptr;
-            int tmpTabIndex = 0;
-            if (m_auiNbookCtrl->FindTab(plot, &tmpTabCtrl, &tmpTabIndex) && tmpTabCtrl == fromMicTabControl)
-            {
-                // Found it in the same tab group, use this index for switching back on RX.
-                savedTab = m_auiNbookCtrl->GetPageIndex(plot);
-                break;
-            }
-        }
-    }
-#endif // wxCHECK_VERSION(3,1,4)
-
     // Save currently visible plot so we can go back to it on completion.
-    wxGetApp().appConfiguration.currentNotebookTab = savedTab;
+    wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
 
     // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
     // the current page ourselves is a better bet.
@@ -253,11 +208,10 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
     chooseVKFileMenuItem_->Enable(vk_state == VK_IDLE);
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
-    
+
     // Trigger right-click menu popup in a location that will prevent it from
     // ending up off the screen.
-    auto sz = m_togBtnVoiceKeyer->GetSize();
-    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
