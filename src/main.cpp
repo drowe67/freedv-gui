@@ -1122,11 +1122,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // fully optimized for real-time use yet (i.e. it dynamically allocates
     // memory while processing audio).
     SNR_FORMAT_STR("%ddB"),
-    MODE_FORMAT_STR("Mode: %s"),
-    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
     NO_SNR_LABEL("--"),
     EMPTY_STR(""),
-    MODEM_LABEL("Modem"),
+    RADEV2_LABEL("RADEV2"),
     BITS_UNK_LABEL("Bits: unk"),
     ERRS_UNK_LABEL("Errs: unk"),
     BER_UNK_LABEL("BER: unk"),
@@ -1152,7 +1150,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SetThreadName("GUI");
 
     terminating_ = false;
-    realigned_ = false;
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
@@ -1887,7 +1884,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(MODEM_LABEL);
+                m_textSync->SetLabel(RADEV2_LABEL);
                 m_textSync->Refresh();
             }
         }
@@ -2053,36 +2050,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
-
-        // update stats on main page
-        wxString modeString; 
-        modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
-        bool relayout = 
-            m_textCurrentDecodeMode->GetLabel() != modeString &&
-            !realigned_;
-        m_textCurrentDecodeMode->SetLabel(modeString);
-        if (relayout)
-        {
-            // XXX - force resize events to make mode string re-center itself.
-            wxSize minSize = GetSize();
-            auto w = minSize.GetWidth();
-            auto h = minSize.GetHeight();
-
-            CallAfter([=, this]()
-            {
-                SetSize(w, h);
-            });
-            CallAfter([=, this]()
-            {
-                SetSize(w + 1, h + 1);
-            });
-            CallAfter([=, this]()
-            {
-                SetSize(w, h);
-            });
-            
-            realigned_ = true;
-        }
 
         wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemOffset());
         m_textFreqOffset->SetLabel(freqOffset);
@@ -2280,8 +2247,7 @@ void MainFrame::performFreeDVOn_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_textSync->Enable();
-        m_textCurrentDecodeMode->Enable();
-        
+
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
@@ -2604,7 +2570,6 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_textSync->Disable();
-        m_textCurrentDecodeMode->Disable();
 
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();

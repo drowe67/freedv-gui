@@ -145,7 +145,6 @@ class TopFrame : public wxFrame
 
         TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;
-        wxStaticText  *m_textCurrentDecodeMode;
         wxStaticText  *m_textBits;
         wxStaticText  *m_textErrors;
         wxStaticText  *m_textBER;
@@ -156,8 +155,7 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textCodec2Var;
 
         wxStaticText  *m_textSync;
-        wxButton      *m_btnCenterRx;
-        
+
         wxToggleButton      *m_audioRecord;
         
         wxButton*     m_logQSO;
@@ -188,7 +186,6 @@ class TopFrame : public wxFrame
         virtual void OnToolsSetupWizard( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsSetupWizardUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }

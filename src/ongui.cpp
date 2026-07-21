@@ -1448,8 +1448,7 @@ void MainFrame::togglePTT(void) {
         // enable sync text
 
         m_textSync->Enable();
-        m_textCurrentDecodeMode->Enable();
-        
+
         // Re-enable buttons.
         m_togBtnOnOff->Enable(true);
         m_togBtnAnalog->Enable(true);
@@ -1494,7 +1493,6 @@ void MainFrame::togglePTT(void) {
         // disable sync text
 
         m_textSync->Disable();
-        m_textCurrentDecodeMode->Disable();
 
         // Disable On/Off button.
         m_togBtnOnOff->Enable(false);
@@ -2028,11 +2026,6 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
     TopFrame::OnSystemColorChanged(event);
-}
-
-void MainFrame::OnCenterRx(wxCommandEvent&)
-{
-    clickTune(FDMDV_FCENTRE);
 }
 
 void MainFrame::updateReportingFreqList_()

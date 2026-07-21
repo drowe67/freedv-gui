@@ -414,8 +414,6 @@ class MainFrame : public TopFrame
         void OnToolsLoadDefaultConfig( wxCommandEvent& event ) override;
         void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) override;
 
-        void OnCenterRx(wxCommandEvent& event) override;
-
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;
         void OnHelpAbout( wxCommandEvent& event ) override;
@@ -510,11 +508,9 @@ class MainFrame : public TopFrame
         
     private:
         const wxString SNR_FORMAT_STR;
-        const wxString MODE_FORMAT_STR;
-        const wxString MODE_RADE_FORMAT_STR;
         const wxString NO_SNR_LABEL;
         const wxString EMPTY_STR;
-        const wxString MODEM_LABEL;
+        const wxString RADEV2_LABEL;
         const wxString BITS_UNK_LABEL;
         const wxString ERRS_UNK_LABEL;
         const wxString BER_UNK_LABEL;
@@ -599,7 +595,6 @@ class MainFrame : public TopFrame
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
 
         bool terminating_; // used for terminating FreeDV
-        bool realigned_; // used to inhibit resize hack once already done
         bool syncState_; // GUI copy of current sync state
 
         // Caches appConfiguration.experimentalFeatures as of the last tab layout load
