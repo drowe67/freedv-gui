@@ -601,6 +601,11 @@ class MainFrame : public TopFrame
         bool terminating_; // used for terminating FreeDV
         bool realigned_; // used to inhibit resize hack once already done
         bool syncState_; // GUI copy of current sync state
+
+        // Caches appConfiguration.experimentalFeatures as of the last tab layout load
+        // attempt, so exit-time save uses that instead of a possibly-since-toggled live
+        // value (toggling the checkbox mid-session doesn't reload/reapply a layout).
+        bool tabLayoutPersistenceEnabledAtStartup_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
@@ -622,6 +627,7 @@ class MainFrame : public TopFrame
         
         void initializeFreeDVReporter_();
         void updateVoiceKeyerButtonLabel_();
+        int captureCurrentMicGroupTab_();
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);

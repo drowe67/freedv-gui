@@ -43,7 +43,7 @@ static wxSizer* makePageHeader(wxWindow* parent, const wxString& title, const wx
     t->SetFont(f);
     hs->Add(t, 0, wxBOTTOM, 4);
     hs->Add(new wxStaticText(parent, wxID_ANY, desc), 0, wxBOTTOM, 8);
-    hs->Add(new wxStaticLine(parent), 0, wxEXPAND | wxBOTTOM, 8);
+    hs->Add(new wxStaticLine(parent), 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
     return hs;
 }
 
@@ -65,10 +65,10 @@ SetupWizard::SetupWizard(wxWindow* parent)
     m_book->AddPage(makeTxPage(),        wxEmptyString);
     m_book->AddPage(makeRadioPage(),     wxEmptyString);
     m_book->AddPage(makeReportingPage(), wxEmptyString);
-    topSizer->Add(m_book, 1, wxEXPAND | wxALL, 10);
+    topSizer->Add(m_book, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 10);
 
     // Navigation bar
-    topSizer->Add(new wxStaticLine(this), 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
+    topSizer->Add(new wxStaticLine(this), 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 10);
     wxBoxSizer* navSizer = new wxBoxSizer(wxHORIZONTAL);
     wxButton* btnCancel = new wxButton(this, wxID_CANCEL, _("Cancel"));
     m_btnPrev   = new wxButton(this, wxID_ANY, _("< Previous"));
@@ -79,7 +79,7 @@ SetupWizard::SetupWizard(wxWindow* parent)
     navSizer->Add(m_btnPrev,   0, wxRIGHT, 4);
     navSizer->Add(m_btnNext,   0, wxRIGHT, 4);
     navSizer->Add(m_btnFinish, 0);
-    topSizer->Add(navSizer, 0, wxEXPAND | wxALL, 10);
+    topSizer->Add(navSizer, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 10);
 
     SetSizerAndFit(topSizer);
 
@@ -124,28 +124,28 @@ wxPanel* SetupWizard::makeReceivePage()
     vs->Add(makePageHeader(page,
         _("Step 1 of 4: Receive Audio"),
         _("Select the audio devices used for receiving transmissions.")),
-        0, wxEXPAND);
+        0, static_cast<int>(wxEXPAND));
 
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, 8, 8);
     grid->AddGrowableCol(1, 1);
 
     grid->Add(new wxStaticText(page, wxID_ANY, _("Input To Computer From Radio:")),
-              0, wxALIGN_CENTER_VERTICAL);
+              0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
     m_cbRadioIn = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                   wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                   wxCB_DROPDOWN | wxCB_READONLY);
     populateAudioCombo(m_cbRadioIn, IAudioEngine::AUDIO_ENGINE_IN);
-    grid->Add(m_cbRadioIn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_cbRadioIn, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     grid->Add(new wxStaticText(page, wxID_ANY, _("Output From Computer To Speaker/Headphones:")),
-              0, wxALIGN_CENTER_VERTICAL);
+              0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
     m_cbSpeakerOut = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                      wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                      wxCB_DROPDOWN | wxCB_READONLY);
     populateAudioCombo(m_cbSpeakerOut, IAudioEngine::AUDIO_ENGINE_OUT);
-    grid->Add(m_cbSpeakerOut, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_cbSpeakerOut, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
-    vs->Add(grid, 0, wxEXPAND);
+    vs->Add(grid, 0, static_cast<int>(wxEXPAND));
     page->SetSizer(vs);
     return page;
 }
@@ -158,7 +158,7 @@ wxPanel* SetupWizard::makeTxPage()
     vs->Add(makePageHeader(page,
         _("Step 2 of 4: Transmit Audio"),
         _("Select the audio devices used for transmitting. Skip if you\nonly want to receive.")),
-        0, wxEXPAND);
+        0, static_cast<int>(wxEXPAND));
 
     m_ckReceiveOnly = new wxCheckBox(page, wxID_ANY,
         _("Receive only (I will not be transmitting)"));
@@ -168,22 +168,22 @@ wxPanel* SetupWizard::makeTxPage()
     grid->AddGrowableCol(1, 1);
 
     m_stMicIn = new wxStaticText(page, wxID_ANY, _("Input From Microphone To Computer:"));
-    grid->Add(m_stMicIn, 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_stMicIn, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
     m_cbMicIn = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                 wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                 wxCB_DROPDOWN | wxCB_READONLY);
     populateAudioCombo(m_cbMicIn, IAudioEngine::AUDIO_ENGINE_IN);
-    grid->Add(m_cbMicIn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_cbMicIn, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stRadioOut = new wxStaticText(page, wxID_ANY, _("Output From Computer To Radio:"));
-    grid->Add(m_stRadioOut, 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_stRadioOut, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
     m_cbRadioOut = new wxComboBox(page, wxID_ANY, wxEmptyString,
                                    wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                    wxCB_DROPDOWN | wxCB_READONLY);
     populateAudioCombo(m_cbRadioOut, IAudioEngine::AUDIO_ENGINE_OUT);
-    grid->Add(m_cbRadioOut, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_cbRadioOut, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
-    vs->Add(grid, 0, wxEXPAND);
+    vs->Add(grid, 0, static_cast<int>(wxEXPAND));
     page->SetSizer(vs);
     return page;
 }
@@ -196,7 +196,7 @@ wxPanel* SetupWizard::makeRadioPage()
     vs->Add(makePageHeader(page,
         _("Step 3 of 4: Radio Control"),
         _("Configure PTT (Push-To-Talk) control for your radio.\nLeave all options unchecked if you do not need PTT control.")),
-        0, wxEXPAND);
+        0, static_cast<int>(wxEXPAND));
 
     // --- Hamlib section ---
     wxStaticBoxSizer* hamlibBox = new wxStaticBoxSizer(wxVERTICAL,
@@ -204,13 +204,13 @@ wxPanel* SetupWizard::makeRadioPage()
     wxStaticBox* hamlibSB = hamlibBox->GetStaticBox();
 
     m_ckHamlib = new wxCheckBox(hamlibSB, wxID_ANY, _("Enable CAT control via Hamlib"));
-    hamlibBox->Add(m_ckHamlib, 0, wxALL, 4);
+    hamlibBox->Add(m_ckHamlib, 0, static_cast<int>(wxALL), 4);
 
     wxFlexGridSizer* hGrid = new wxFlexGridSizer(5, 2, 6, 8);
     hGrid->AddGrowableCol(1, 1);
 
     m_stRigName = new wxStaticText(hamlibSB, wxID_ANY, _("Rig Model:"));
-    hGrid->Add(m_stRigName, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hGrid->Add(m_stRigName, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbRigName = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                   wxDefaultPosition, wxSize(220, -1), 0, nullptr,
                                   wxCB_DROPDOWN | wxCB_READONLY);
@@ -219,25 +219,25 @@ wxPanel* SetupWizard::makeRadioPage()
         for (int i = 0; i < numRigs; i++)
             m_cbRigName->Append(HamlibRigController::RigIndexToName(i));
     }
-    hGrid->Add(m_cbRigName, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    hGrid->Add(m_cbRigName, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stSerialPort = new wxStaticText(hamlibSB, wxID_ANY, _("Serial Device:"));
-    hGrid->Add(m_stSerialPort, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hGrid->Add(m_stSerialPort, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbSerialPort = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                      wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                      wxCB_DROPDOWN);
     m_cbSerialPort->SetMinSize(wxSize(140, -1));
-    hGrid->Add(m_cbSerialPort, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    hGrid->Add(m_cbSerialPort, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stSerialRate = new wxStaticText(hamlibSB, wxID_ANY, _("Serial Rate:"));
-    hGrid->Add(m_stSerialRate, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hGrid->Add(m_stSerialRate, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbSerialRate = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                      wxDefaultPosition, wxSize(110, -1), 0, nullptr,
                                      wxCB_DROPDOWN);
-    hGrid->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL);
+    hGrid->Add(m_cbSerialRate, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stPttMethod = new wxStaticText(hamlibSB, wxID_ANY, _("PTT uses:"));
-    hGrid->Add(m_stPttMethod, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hGrid->Add(m_stPttMethod, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbPttMethod = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                     wxDefaultPosition, wxSize(120, -1), 0, nullptr,
                                     wxCB_DROPDOWN | wxCB_READONLY);
@@ -246,18 +246,18 @@ wxPanel* SetupWizard::makeRadioPage()
     m_cbPttMethod->Append(_("DTR"));
     m_cbPttMethod->Append(_("None"));
     m_cbPttMethod->Append(_("CAT via Data port"));
-    hGrid->Add(m_cbPttMethod, 0, wxALIGN_CENTER_VERTICAL);
+    hGrid->Add(m_cbPttMethod, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stPttSerialPort = new wxStaticText(hamlibSB, wxID_ANY, _("PTT Serial Device:"));
-    hGrid->Add(m_stPttSerialPort, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hGrid->Add(m_stPttSerialPort, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbPttSerialPort = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                         wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                         wxCB_DROPDOWN);
     m_cbPttSerialPort->SetMinSize(wxSize(140, -1));
-    hGrid->Add(m_cbPttSerialPort, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    hGrid->Add(m_cbPttSerialPort, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
-    hamlibBox->Add(hGrid, 0, wxEXPAND | wxALL, 4);
-    vs->Add(hamlibBox, 0, wxEXPAND | wxBOTTOM, 8);
+    hamlibBox->Add(hGrid, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 4);
+    vs->Add(hamlibBox, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
 
     // --- Serial PTT section ---
     wxStaticBoxSizer* serialBox = new wxStaticBoxSizer(wxVERTICAL,
@@ -265,35 +265,35 @@ wxPanel* SetupWizard::makeRadioPage()
     wxStaticBox* serialSB = serialBox->GetStaticBox();
 
     m_ckSerialPTT = new wxCheckBox(serialSB, wxID_ANY, _("Enable serial port PTT"));
-    serialBox->Add(m_ckSerialPTT, 0, wxALL, 4);
+    serialBox->Add(m_ckSerialPTT, 0, static_cast<int>(wxALL), 4);
 
     wxFlexGridSizer* sGrid = new wxFlexGridSizer(2, 2, 6, 8);
     sGrid->AddGrowableCol(1, 1);
 
     m_stCtlDevice = new wxStaticText(serialSB, wxID_ANY, _("Control Device:"));
-    sGrid->Add(m_stCtlDevice, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    sGrid->Add(m_stCtlDevice, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbCtlDevicePath = new wxComboBox(serialSB, wxID_ANY, wxEmptyString,
                                         wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                         wxCB_DROPDOWN);
     m_cbCtlDevicePath->SetMinSize(wxSize(140, -1));
-    sGrid->Add(m_cbCtlDevicePath, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    sGrid->Add(m_cbCtlDevicePath, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     sGrid->Add(new wxStaticText(serialSB, wxID_ANY, _("Signal:")),
-               0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+               0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     wxBoxSizer* signalRow = new wxBoxSizer(wxHORIZONTAL);
     m_rbUseRTS = new wxRadioButton(serialSB, wxID_ANY, _("RTS"), wxDefaultPosition,
                                     wxDefaultSize, wxRB_GROUP);
     m_ckRTSPos = new wxCheckBox(serialSB, wxID_ANY, _("Inverted"));
     m_rbUseDTR = new wxRadioButton(serialSB, wxID_ANY, _("DTR"));
     m_ckDTRPos = new wxCheckBox(serialSB, wxID_ANY, _("Inverted"));
-    signalRow->Add(m_rbUseRTS, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 4);
-    signalRow->Add(m_ckRTSPos, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 12);
-    signalRow->Add(m_rbUseDTR, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 4);
-    signalRow->Add(m_ckDTRPos, 0, wxALIGN_CENTER_VERTICAL);
-    sGrid->Add(signalRow, 0, wxALIGN_CENTER_VERTICAL);
+    signalRow->Add(m_rbUseRTS, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 4);
+    signalRow->Add(m_ckRTSPos, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 12);
+    signalRow->Add(m_rbUseDTR, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 4);
+    signalRow->Add(m_ckDTRPos, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
+    sGrid->Add(signalRow, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
-    serialBox->Add(sGrid, 0, wxEXPAND | wxALL, 4);
-    vs->Add(serialBox, 0, wxEXPAND | wxBOTTOM, 8);
+    serialBox->Add(sGrid, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 4);
+    vs->Add(serialBox, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
 
 #if defined(WIN32)
     // --- OmniRig section (Windows only) ---
@@ -302,19 +302,19 @@ wxPanel* SetupWizard::makeRadioPage()
     wxStaticBox* omniSB = omniBox->GetStaticBox();
 
     m_ckOmniRig = new wxCheckBox(omniSB, wxID_ANY, _("Enable OmniRig"));
-    omniBox->Add(m_ckOmniRig, 0, wxALL, 4);
+    omniBox->Add(m_ckOmniRig, 0, static_cast<int>(wxALL), 4);
 
     wxFlexGridSizer* oGrid = new wxFlexGridSizer(1, 2, 6, 8);
     m_stOmniRigId = new wxStaticText(omniSB, wxID_ANY, _("Rig:"));
-    oGrid->Add(m_stOmniRigId, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    oGrid->Add(m_stOmniRigId, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     m_cbOmniRigRigId = new wxComboBox(omniSB, wxID_ANY, wxEmptyString,
                                        wxDefaultPosition, wxDefaultSize, 0, nullptr,
                                        wxCB_DROPDOWN | wxCB_READONLY);
     m_cbOmniRigRigId->Append(_("Rig 1"));
     m_cbOmniRigRigId->Append(_("Rig 2"));
-    oGrid->Add(m_cbOmniRigRigId, 0, wxALIGN_CENTER_VERTICAL);
-    omniBox->Add(oGrid, 0, wxEXPAND | wxALL, 4);
-    vs->Add(omniBox, 0, wxEXPAND | wxBOTTOM, 8);
+    oGrid->Add(m_cbOmniRigRigId, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
+    omniBox->Add(oGrid, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 4);
+    vs->Add(omniBox, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
 #endif
 
     page->SetSizer(vs);
@@ -329,7 +329,7 @@ wxPanel* SetupWizard::makeReportingPage()
     vs->Add(makePageHeader(page,
         _("Step 4 of 4: Reporting"),
         _("Optionally report your station to FreeDV Reporter and PSK Reporter.\nA valid callsign and grid square are required.")),
-        0, wxEXPAND);
+        0, static_cast<int>(wxEXPAND));
 
     m_ckReportingEnable = new wxCheckBox(page, wxID_ANY, _("Enable station reporting"));
     vs->Add(m_ckReportingEnable, 0, wxBOTTOM, 10);
@@ -344,15 +344,15 @@ wxPanel* SetupWizard::makeReportingPage()
     m_txtCallsign = new wxTextCtrl(page, wxID_ANY, wxEmptyString,
                                     wxDefaultPosition, wxSize(160, -1), 0, callsignValidator);
     m_txtCallsign->SetMaxLength(REPORTING_CALLSIGN_MAX_LENGTH);
-    grid->Add(m_txtCallsign, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_txtCallsign, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     m_stGridSquare = new wxStaticText(page, wxID_ANY, _("Grid Square:"));
-    grid->Add(m_stGridSquare, 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_stGridSquare, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
     m_txtGridSquare = new wxTextCtrl(page, wxID_ANY, wxEmptyString,
                                       wxDefaultPosition, wxSize(100, -1));
-    grid->Add(m_txtGridSquare, 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(m_txtGridSquare, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
-    vs->Add(grid, 0, wxEXPAND | wxBOTTOM, 10);
+    vs->Add(grid, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 10);
 
     page->SetSizer(vs);
     return page;

@@ -179,15 +179,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         wxSize size = GetSize();
         auto w = size.GetWidth();
         auto h = size.GetHeight();
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w + 1, h + 1);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
@@ -1050,8 +1050,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
-    auto sz = m_btnTogPTT->GetSize();
-    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
 }
 
 //-------------------------------------------------------------------------
@@ -1238,6 +1237,35 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
         dlg->Destroy();
         m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
     }
+}
+
+// Returns the notebook page index that should be restored once we're done showing
+// "Frm Mic" (e.g. on RX, or after voice keyer recording finishes).
+//
+// GetSelection() isn't the right choice here since more than one tab group can be
+// visible at the same time once tabs have been split (e.g. via a saved custom tab
+// layout) - see https://forums.wxwidgets.org/viewtopic.php?t=14721. Instead, ask the
+// specific tab group that "Frm Mic" lives in what's actually active there.
+int MainFrame::captureCurrentMicGroupTab_()
+{
+    auto savedTab = m_auiNbookCtrl->GetSelection();
+
+#if wxCHECK_VERSION(3,1,4)
+    wxAuiTabCtrl* fromMicTabControl = nullptr;
+    int fromMicTabIndex = 0;
+    if (m_panelSpeechIn != nullptr &&
+        m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
+    {
+        int localActiveIdx = fromMicTabControl->GetActivePage();
+        if (localActiveIdx >= 0 && localActiveIdx < (int)fromMicTabControl->GetPageCount())
+        {
+            wxWindow* activeWindow = fromMicTabControl->GetWindowFromIdx(localActiveIdx);
+            savedTab = m_auiNbookCtrl->GetPageIndex(activeWindow);
+        }
+    }
+#endif // wxCHECK_VERSION(3,1,4)
+
+    return savedTab;
 }
 
 void MainFrame::togglePTT(void) {
@@ -1446,53 +1474,8 @@ void MainFrame::togglePTT(void) {
         
         // rx-> tx transition, swap to Mic In page to monitor speech
 
-        // Note: we should only save the previous page if the current selection is something on
-        // the same tab group as "Frm Mic".
-#if wxCHECK_VERSION(3,1,4)
-        wxAuiTabCtrl* fromMicTabControl = nullptr;
-        int fromMicTabIndex = 0;
-        bool validFromMicTabGroup = false;
-        if (m_panelSpeechIn != nullptr)
-        {
-            // Ignore return
-            validFromMicTabGroup = m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex);
-        }
-#endif // wxCHECK_VERSION(3,1,4)
-
-        // GetSelection() isn't the right choice here since more than one tab can be visible at
-        // the same time. We have to check the shown status of each of the other plots 
-        // AND make sure it's in the same tab control as "Frm Mic" before we can save off the
-        // current tab state.
-        // See https://forums.wxwidgets.org/viewtopic.php?t=14721 for info.
-        auto savedTab = m_auiNbookCtrl->GetSelection();
-#if wxCHECK_VERSION(3,1,4)
-        wxWindow* plotsToCheck[] = {
-            m_panelSpectrum,
-            m_panelWaterfall,
-            m_panelSpeechOut,
-            m_panelDemodIn,
-            m_panelSNR
-        };
-        for (size_t index = 0; validFromMicTabGroup && index < (sizeof(plotsToCheck) / sizeof(wxWindow*)); index++)
-        {
-            auto plot = plotsToCheck[index];
-            if (plot != nullptr && plot->IsShown())
-            {
-                // Plot is visible, now check to make sure it's in the same tab group.
-                wxAuiTabCtrl* tmpTabCtrl = nullptr;
-                int tmpTabIndex = 0;
-                if (m_auiNbookCtrl->FindTab(plot, &tmpTabCtrl, &tmpTabIndex) && tmpTabCtrl == fromMicTabControl)
-                {
-                    // Found it in the same tab group, use this index for switching back on RX.
-                    savedTab = m_auiNbookCtrl->GetPageIndex(plot);
-                    break;
-                }
-            }
-        }
-#endif // wxCHECK_VERSION(3,1,4)
-
         // Save currently visible plot so we can go back to it on RX.
-        wxGetApp().appConfiguration.currentNotebookTab = savedTab;
+        wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
 
         // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
         // the current page ourselves is a better bet.
