@@ -63,6 +63,7 @@ using namespace std::chrono_literals;
 #include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
+#include "DebugRecordStep.h"
 #include "BeepStep.h"
 #include "MixStep.h"
 
@@ -314,6 +315,11 @@ void TxRxThread::initializePipeline_()
     {
         pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
 
+        // XXX - DEBUG ONLY
+        // Record last 10 minutes of audio from session
+        wxFileName recordFile(NonblockingWxGetApp().appConfiguration.voiceKeyerWaveFilePath, "FreeDVDebugAudio.wav");
+        std::string recordFileStr = (const char*)recordFile.GetFullPath().ToUTF8();
+        
         auto activeRxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
 
         // Record from radio step (optional)
@@ -424,6 +430,14 @@ void TxRxThread::initializePipeline_()
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
             helper_
         );
+
+        auto debugRecordStep = new DebugRecordStep(8000, 60 * 60 * 12, recordFileStr); // 12 hours
+	auto debugRecordPipeline = new AudioPipeline(inputSampleRate_, 8000);
+	debugRecordPipeline->appendPipelineStep(debugRecordStep);
+
+	auto debugRecordTap = new TapStep(inputSampleRate_, debugRecordPipeline);
+        rfDemodulationPipeline->appendPipelineStep(debugRecordTap);
+
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
         // Resample for plot step (speech out)

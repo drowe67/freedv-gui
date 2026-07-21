@@ -311,6 +311,7 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
         bool                    txChangeoverOccurring_;
+        bool                    badSnrFound_;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
