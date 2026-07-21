@@ -262,15 +262,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         wxSize size = GetSize();
         auto w = size.GetWidth();
         auto h = size.GetHeight();
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w + 1, h + 1);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
@@ -1188,8 +1188,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
-    auto sz = m_btnTogPTT->GetSize();
-    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
 }
 
 //-------------------------------------------------------------------------
