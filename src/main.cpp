@@ -2023,15 +2023,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                         // Reset SNR for next "over".
                         g_snr = 0;
-
-                        if (badSnrFound_)
-                        {
-                            // XXX DEBUG ONLY - Automatically stop RX if bad SNR found.
-                            CallAfter([&]() {
-                                wxCommandEvent tmpEvent;
-                                OnTogBtnOnOff(tmpEvent);
-                            });
-                        }
                     }
                 }
                 m_timeSinceSyncLoss = 0;
@@ -2041,6 +2032,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 // Counts the amount of time since losing sync. Once we exceed
                 // wxGetApp().appConfiguration.statsResetTimeSecs, we will reset the stats. 
                 m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
+
+                if (badSnrFound_)
+                {
+                    // XXX DEBUG ONLY - Automatically stop RX if bad SNR found.
+                    CallAfter([&]() {
+                        wxCommandEvent tmpEvent;
+                        OnTogBtnOnOff(tmpEvent);
+                    });
+                }
             }
         
             if (oldColor != newColor)
