@@ -983,6 +983,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
     * Update wxWidgets to 3.3.3. (PR #1439)
+    * Require C++20 to build FreeDV. (PR #1440)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 

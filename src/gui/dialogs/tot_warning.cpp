@@ -37,7 +37,7 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
     wxStaticText* msgText = new wxStaticText(panel, wxID_ANY,
         _("Transmit time-out is imminent!"),
         wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
-    topSizer->Add(msgText, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 10);
+    topSizer->Add(msgText, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_HORIZONTAL), 10);
 
     m_countdownText_ = new wxStaticText(panel, wxID_ANY, wxT(""),
         wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
@@ -45,15 +45,15 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
     countdownFont.SetPointSize(countdownFont.GetPointSize() * 2);
     countdownFont.SetWeight(wxFONTWEIGHT_BOLD);
     m_countdownText_->SetFont(countdownFont);
-    topSizer->Add(m_countdownText_, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    topSizer->Add(m_countdownText_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_HORIZONTAL), 5);
 
     wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_extendBtn_ = new wxButton(panel, wxID_ANY, _("Reset Timer"));
     m_extendBtn_->SetToolTip(_("Resets the Time-Out Timer to extend transmission."));
-    btnSizer->Add(m_extendBtn_, 0, wxALL, 5);
+    btnSizer->Add(m_extendBtn_, 0, static_cast<int>(wxALL), 5);
 
-    topSizer->Add(btnSizer, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    topSizer->Add(btnSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_HORIZONTAL), 5);
 
     panel->SetSizer(topSizer);
 
