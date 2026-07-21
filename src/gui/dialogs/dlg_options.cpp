@@ -720,23 +720,23 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         {
             wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
             m_lcSoundCard1InDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
-            row->Add(m_lcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
+            row->Add(m_lcSoundCard1InDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
             m_btnSoundCard1InTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
-            row->Add(m_btnSoundCard1InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            row->Add(m_btnSoundCard1InTest, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
         {
             wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
-            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
             m_tcSoundCard1InDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
-            selRow->Add(m_tcSoundCard1InDevice, 1, wxEXPAND | wxALL, 3);
-            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            selRow->Add(m_tcSoundCard1InDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+            sizerRxAudio->Add(selRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
 
         {
             wxPanel* divider = new wxPanel(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
             divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
-            sizerRxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+            sizerRxAudio->Add(divider, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 18);
         }
 
         // SC1 Out
@@ -744,25 +744,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         {
             wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
             m_lcSoundCard1OutDevice = new wxListCtrl(m_rxAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
-            row->Add(m_lcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
+            row->Add(m_lcSoundCard1OutDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
             m_btnSoundCard1OutTest = new wxButton(m_rxAudioTab, wxID_ANY, _("Test"));
-            row->Add(m_btnSoundCard1OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-            sizerRxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            row->Add(m_btnSoundCard1OutTest, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
+            sizerRxAudio->Add(row, 1, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
         {
             wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
-            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            selRow->Add(new wxStaticText(m_rxAudioTab, wxID_ANY, _("Selected:")), 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
             m_tcSoundCard1OutDevice = new wxTextCtrl(m_rxAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
-            selRow->Add(m_tcSoundCard1OutDevice, 1, wxEXPAND | wxALL, 3);
-            sizerRxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+            selRow->Add(m_tcSoundCard1OutDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+            sizerRxAudio->Add(selRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
         {
             wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
             refreshRow->AddStretchSpacer();
             m_btnRefreshRxAudio = new wxButton(m_rxAudioTab, wxID_ANY, _("Refresh Device List"));
-            refreshRow->Add(m_btnRefreshRxAudio, 0, wxALL, 3);
-            sizerRxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+            refreshRow->Add(m_btnRefreshRxAudio, 0, static_cast<int>(wxALL), 3);
+            sizerRxAudio->Add(refreshRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
         m_rxAudioTab->SetSizer(sizerRxAudio);
@@ -782,23 +782,23 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         {
             wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
             m_lcSoundCard2InDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
-            row->Add(m_lcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
+            row->Add(m_lcSoundCard2InDevice, 1, static_cast<int>(wxEXPAND) | wxALL, 3);
             m_btnSoundCard2InTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
-            row->Add(m_btnSoundCard2InTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            row->Add(m_btnSoundCard2InTest, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
         {
             wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
-            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
             m_tcSoundCard2InDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
-            selRow->Add(m_tcSoundCard2InDevice, 1, wxEXPAND | wxALL, 3);
-            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            selRow->Add(m_tcSoundCard2InDevice, 1, static_cast<int>(wxEXPAND) | wxALL, 3);
+            sizerTxAudio->Add(selRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
 
         {
             wxPanel* divider = new wxPanel(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxSize(-1, 3));
             divider->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
-            sizerTxAudio->Add(divider, 0, wxEXPAND | wxALL, 18);
+            sizerTxAudio->Add(divider, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 18);
         }
 
         // SC2 Out
@@ -806,25 +806,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         {
             wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
             m_lcSoundCard2OutDevice = new wxListCtrl(m_txAudioTab, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_HRULES | wxLC_VRULES | wxLC_SINGLE_SEL);
-            row->Add(m_lcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
+            row->Add(m_lcSoundCard2OutDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
             m_btnSoundCard2OutTest = new wxButton(m_txAudioTab, wxID_ANY, _("Test"));
-            row->Add(m_btnSoundCard2OutTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
-            sizerTxAudio->Add(row, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+            row->Add(m_btnSoundCard2OutTest, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
+            sizerTxAudio->Add(row, 1, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 2);
         }
         {
             wxBoxSizer* selRow = new wxBoxSizer(wxHORIZONTAL);
-            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
+            selRow->Add(new wxStaticText(m_txAudioTab, wxID_ANY, _("Selected:")), 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 3);
             m_tcSoundCard2OutDevice = new wxTextCtrl(m_txAudioTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
-            selRow->Add(m_tcSoundCard2OutDevice, 1, wxEXPAND | wxALL, 3);
-            sizerTxAudio->Add(selRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+            selRow->Add(m_tcSoundCard2OutDevice, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+            sizerTxAudio->Add(selRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
         {
             wxBoxSizer* refreshRow = new wxBoxSizer(wxHORIZONTAL);
             refreshRow->AddStretchSpacer();
             m_btnRefreshTxAudio = new wxButton(m_txAudioTab, wxID_ANY, _("Refresh Device List"));
-            refreshRow->Add(m_btnRefreshTxAudio, 0, wxALL, 3);
-            sizerTxAudio->Add(refreshRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 2);
+            refreshRow->Add(m_btnRefreshTxAudio, 0, static_cast<int>(wxALL), 3);
+            sizerTxAudio->Add(refreshRow, 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT | wxBOTTOM, 2);
         }
 
         m_txAudioTab->SetSizer(sizerTxAudio);
@@ -1035,21 +1035,21 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
 
     m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_tone->Add(m_ckboxTone, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_tone->Add(toneFreqLabel, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
 
     m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_tone->Add(m_txtToneFreqHz, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_tone->Add(m_staticTextta, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
 
     m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_tone->Add(m_txtToneAmplitude, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerDebug->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
+    sizerDebug->Add(sbSizer_tone,0, static_cast<int>(wxALL)|wxEXPAND, 5);
 
     m_debugTab->SetSizer(sizerDebug);
 
