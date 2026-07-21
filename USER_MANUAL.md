@@ -866,7 +866,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress button flicker in Linux light themes. (PR #1419, PR #1421) - thanks @barjac!
     * Only preserve previously selected tab on TX if it's in the same group as 'From Mic'. (PR #1428)
     * Scalar plot label alignment fix for Y axis of Frm Decoder/Mic/Radio, SNR and Spectrum plots. (PR #1429) - thanks @barjac!
-    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431) - thanks @barjac!
+    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431, #1433) - thanks @barjac!
+    * Harden experimental tab layout persistence. (PR #1434) - thanks @barjac!
+    * Fix right-click context menus dismissing before they can be read (GTK) (PR #1437) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
@@ -878,9 +880,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow 8k sample rate for 'radio' devices. (PR #1416)
     * FreeDV Reporter: Connect to server via TLS by default. (PR #1422, #1427)
     * Block special characters in recording file name suffixes and default the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks @barjac!
+    * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
+    * Update wxWidgets to 3.3.3. (PR #1439)
+    * Require C++20 to build FreeDV. (PR #1440)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
 
