@@ -55,6 +55,7 @@
 #include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/util/FrequencyOps.h"
 #include "gui/util/WindowPositionRestore.h"
 
 #include "util/logging/ulog.h"
@@ -923,14 +924,13 @@ void MainFrame::loadConfiguration_()
     // Adjust frequency entry labels
     wxListItem colInfo;
     m_lastReportedCallsignListView->GetColumn(1, colInfo);
+    updateFreqBoxLabel_();
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Radio Freq. (kHz)"));
         colInfo.SetText(_("kHz"));
     }
     else
     {
-        m_freqBox->SetLabel(_("Radio Freq. (MHz)"));
         colInfo.SetText(_("MHz"));
     }
     m_lastReportedCallsignListView->SetColumn(1, colInfo);
@@ -2406,11 +2406,15 @@ void MainFrame::performFreeDVOn_()
                     (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
                     wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
                 {
-                    wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        
+                    // The offset depends only on g_analog (real analog voice
+                    // mode), not on the hamlibUseAnalogModes label preference.
+                    auto mode = getCurrentMode_();
+                    wxGetApp().rigFrequencyController->setFrequency(
+                        DisplayToDialFreq(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, mode, g_analog != 0));
+
                     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
                     {
-                        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                        wxGetApp().rigFrequencyController->setMode(mode);
                     }
                 }
                     
