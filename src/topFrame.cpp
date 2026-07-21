@@ -413,8 +413,8 @@ static wxColour GroupBoxBackgroundColour()
     // Nudge the shaded card colour towards blue. Purely a lightness shift is
     // invisible on themes (e.g. Breeze Light) whose window colour has no
     // saturation to begin with, so blend in a small amount of hue directly.
-    wxColour tint(0, 120, 255);
-    int tintPct = 8;
+    wxColour tint(0, 85, 255);
+    int tintPct = 20;
 
     // Testing hook: FREEDV_GROUPBOX_TINT=RRGGBB[:pct] overrides the tint
     // colour/strength above at runtime, so different values can be tried
