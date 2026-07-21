@@ -119,6 +119,7 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , showDecodeStats("/Debug/showDecodeStats", false)
     , enableLegacyModes("/Modem/enableLegacyModes", false)
+    , autoStartOnLaunch("/Modem/autoStartOnLaunch", false)
 {
     // empty
 }
@@ -250,6 +251,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, showDecodeStats);
     load_(config, enableLegacyModes);
+    load_(config, autoStartOnLaunch);
 
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
@@ -344,6 +346,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, showDecodeStats);
     save_(config, enableLegacyModes);
+    save_(config, autoStartOnLaunch);
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);

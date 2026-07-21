@@ -1515,9 +1515,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             }
         });
     }
-    
+    else if (wxGetApp().appConfiguration.autoStartOnLaunch)
+    {
+        // Simulate a press of the Start button once the main window is up,
+        // but only if the audio configuration is actually valid. Checking
+        // silently first avoids popping up error dialogs (or the Easy Setup
+        // dialog) at launch for users who haven't fully configured audio yet.
+        CallAfter([&]() {
+            if (!validateSoundCardSetup(true)) return;
+
+            m_togBtnOnOff->SetValue(true);
+            wxCommandEvent onEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
+            onEvent.SetEventObject(m_togBtnOnOff);
+            OnTogBtnOnOff(onEvent);
+        });
+    }
+
     wxGetApp().appConfiguration.firstTimeUse = false;
-    
+
     //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
@@ -3691,17 +3706,18 @@ void MainFrame::startRxStream()
     }
 }
 
-bool MainFrame::validateSoundCardSetup()
+bool MainFrame::validateSoundCardSetup(bool silent)
 {
     bool canRun = true;
-    
+
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
+    engine->setOnEngineError([this, silent](IAudioEngine&, std::string error, void*) {
+        if (silent) return;
         CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
-                "Error encountered while initializing the audio engine: %s.", 
-                error), wxT("Error"), wxOK, this); 
+                "Error encountered while initializing the audio engine: %s.",
+                error), wxT("Error"), wxOK, this);
         });
     }, nullptr);
     engine->start();
@@ -3751,37 +3767,43 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Display Easy Setup dialog.
-        CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control status
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        if (!silent)
+        {
+            // Initial setup. Display Easy Setup dialog.
+            CallAfter([&]() {
+                EasySetupDialog* dlg = new EasySetupDialog(this);
+                if (dlg->ShowModal() == wxOK)
                 {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
+                    // Show/hide frequency box based on CAT control status
+                    m_freqBox->Show(isFrequencyControlEnabled_());
 
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
-        });
+                    // Show/hide callsign combo box based on PSK Reporter Status
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+                    {
+                        m_cboLastReportedCallsigns->Show();
+                        m_txtCtrlCallSign->Hide();
+                    }
+                    else
+                    {
+                        m_cboLastReportedCallsigns->Hide();
+                        m_txtCtrlCallSign->Show();
+                    }
+
+                    // Relayout window so that the changes can take effect.
+                    m_panel->Layout();
+                }
+            });
+        }
         canRun = false;
     }
     else if (!canRun)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
-            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        if (!silent)
+        {
+            wxMessageBox(wxString::Format(
+                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.",
+                failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        }
     }
     else
     {
@@ -3821,10 +3843,10 @@ bool MainFrame::validateSoundCardSetup()
             canRun = false;
         }
         
-        if (!canRun)
+        if (!canRun && !silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.",
                 failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }
