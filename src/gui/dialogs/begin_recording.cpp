@@ -70,47 +70,47 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
 
     // Recording suffix
     wxStaticText* labelRecordingSuffix = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording suffix:"), wxDefaultPosition, wxSize(125,-1), 0);
-    gridSizerRecordingSettings->Add(labelRecordingSuffix, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+    gridSizerRecordingSettings->Add(labelRecordingSuffix, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 2);
 
     recordingSuffix_ = new wxTextCtrl(recordingSettingsBox, wxID_ANY, SanitizeRecordingSuffix(defaultRecordingSuffix), wxDefaultPosition, wxSize(125, -1), 0);
-    gridSizerRecordingSettings->Add(recordingSuffix_, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 2);
+    gridSizerRecordingSettings->Add(recordingSuffix_, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxEXPAND, 2);
 
     wxStaticText* labelRecordingType = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording type:"), wxDefaultPosition, wxSize(125,-1), 0);
-    gridSizerRecordingSettings->Add(labelRecordingType, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+    gridSizerRecordingSettings->Add(labelRecordingType, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 2);
 
     wxBoxSizer* typeSizer = new wxBoxSizer(wxHORIZONTAL);
     rawRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Off Air"));
     rawRecording_->SetValue(true);
-    typeSizer->Add(rawRecording_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    typeSizer->Add(rawRecording_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     decodedRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Decoded"));
-    typeSizer->Add(decodedRecording_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
-    gridSizerRecordingSettings->Add(typeSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
+    typeSizer->Add(decodedRecording_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
+    gridSizerRecordingSettings->Add(typeSizer, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
     wxStaticText* labelRecordingFormat = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording format:"), wxDefaultPosition, wxSize(125,-1), 0);
-    gridSizerRecordingSettings->Add(labelRecordingFormat, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 2);
+    gridSizerRecordingSettings->Add(labelRecordingFormat, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 2);
 
     wxBoxSizer* formatSizer = new wxBoxSizer(wxHORIZONTAL);
     formatWav_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("WAV"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     formatWav_->SetValue(true);
-    formatSizer->Add(formatWav_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    formatSizer->Add(formatWav_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     formatMp3_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("MP3"));
     formatMp3_->Enable(false);
-    formatSizer->Add(formatMp3_, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
-    gridSizerRecordingSettings->Add(formatSizer, 0, wxALIGN_CENTER_VERTICAL, 2);
+    formatSizer->Add(formatMp3_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
+    gridSizerRecordingSettings->Add(formatSizer, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
-    recordingSettingsBoxSizer->Add(gridSizerRecordingSettings, 0, wxEXPAND | wxALIGN_LEFT, 2);
-    sectionSizer->Add(recordingSettingsBoxSizer, 0, wxALL | wxEXPAND, 2);
+    recordingSettingsBoxSizer->Add(gridSizerRecordingSettings, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_LEFT), 2);
+    sectionSizer->Add(recordingSettingsBoxSizer, 0, static_cast<int>(wxALL) | wxEXPAND, 2);
 
     // OK/Cancel buttons
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_buttonOK = new wxButton(panel, wxID_ANY, _("Start"));
-    buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
+    buttonSizer->Add(m_buttonOK, 0, static_cast<int>(wxALL), 2);
 
     m_buttonCancel = new wxButton(panel, wxID_CANCEL);
-    buttonSizer->Add(m_buttonCancel, 0, wxALL, 2);
+    buttonSizer->Add(m_buttonCancel, 0, static_cast<int>(wxALL), 2);
 
-    sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
+    sectionSizer->Add(buttonSizer, 0, static_cast<int>(wxALL) | wxALIGN_CENTER, 2);
     
     // Trigger auto-layout of window.
     // ==============================
