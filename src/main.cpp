@@ -928,15 +928,15 @@ void MainFrame::loadConfiguration_()
     // by a pixel or two). As a really hacky workaround, we emulate this behavior
     // when restoring window sizing. These resize events also happen after configuration
     // is restored but I'm not sure this is necessary.
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w + 1, h + 1);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
@@ -2291,15 +2291,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             auto w = minSize.GetWidth();
             auto h = minSize.GetHeight();
 
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w + 1, h + 1);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });
