@@ -112,12 +112,21 @@ kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 60 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
     #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
     #fi
+
+    sleep 5
+
+    if [ "$OPERATING_SYSTEM" == "Linux" ]; then
+        paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
+    else
+        sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
+    fi
+
     wait $FDV_PID
     FREEDV_EXIT_CODE=$?
     cat tmp.log
