@@ -404,7 +404,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 // grouped control boxes read as a distinct "card" instead of blending into
 // the surrounding panel. Works out from the live system colour rather than
 // a hardcoded value so it tracks whatever light/dark theme is active.
-static wxColour GroupBoxBackgroundColour()
+wxColour GroupBoxBackgroundColour()
 {
     wxColour base = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
     bool isDark = base.GetLuminance() < 0.5;

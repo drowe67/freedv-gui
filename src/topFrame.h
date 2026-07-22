@@ -106,6 +106,10 @@ class TintedGroupBox : public wxPanel
         wxSizer* m_contentSizer;
 };
 
+// Returns the same tinted "card" background colour used by TintedGroupBox,
+// for other controls (e.g. plot graticule label margins) that want to match.
+wxColour GroupBoxBackgroundColour();
+
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
 ///////////////////////////////////////////////////////////////////////////////

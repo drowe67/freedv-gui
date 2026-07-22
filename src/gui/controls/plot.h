@@ -80,6 +80,11 @@
 
 class MainFrame;
 
+// Declared in topFrame.cpp. Returns the same tinted "card" background colour
+// used by TintedGroupBox, so the graticule label margin around each graph
+// matches the rest of the modernised GUI.
+wxColour GroupBoxBackgroundColour();
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotPanel
 //
