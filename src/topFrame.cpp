@@ -862,21 +862,23 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------------------
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start Modem"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
-    controlBox->GetContentSizer()->Add(m_togBtnOnOff, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_togBtnOnOff, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxTOP) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->AddSpacer(4);
 
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
     m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("Switch to A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
-    controlBox->GetContentSizer()->Add(m_togBtnAnalog, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_togBtnAnalog, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->AddSpacer(4);
 
     //------------------------------
     // Tune Toggle
     //------------------------------
     m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("&Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
-    controlBox->GetContentSizer()->Add(m_btnTogTune, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_btnTogTune, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxBOTTOM) | static_cast<int>(wxEXPAND), 5);
     m_btnTogTune->Enable(false);
 
     //------------------------------
