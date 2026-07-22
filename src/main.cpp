@@ -57,6 +57,7 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/util/WindowPositionRestore.h"
+#include "gui/util/TabLayoutSerializer.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
@@ -869,10 +870,6 @@ bool MainApp::OnInit()
     frame = new MainFrame(NULL);
     SetTopWindow(frame);
 
-    // Should guarantee that the first plot tab defined is the one
-    // displayed. But it doesn't when built from command line.  Why?
-
-    frame->m_auiNbookCtrl->ChangeSelection(0);
     frame->Layout();    
     frame->Show();
     g_parent = frame;
@@ -1191,8 +1188,16 @@ setDefaultMode:
     tabLayoutPersistenceEnabledAtStartup_ = wxGetApp().appConfiguration.experimentalFeatures;
     if (tabLayoutPersistenceEnabledAtStartup_ && wxGetApp().appConfiguration.tabLayout != "")
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutDeserializer deserializer(wxGetApp().appConfiguration.tabLayout);
+        m_auiNbookCtrl->LoadLayout("notebook", deserializer);
+#else
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+#endif // wxCHECK_VERSION(3, 3, 0)
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+
+        // Select previous active tab.
+        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
@@ -1639,9 +1644,16 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
 
     if (tabLayoutPersistenceEnabledAtStartup_)
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutSerializer serializer;
+        m_auiNbookCtrl->SaveLayout("notebook", serializer);
+        wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+#else
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+#endif // wxCHECK_VERSION(3, 3, 0)
     }
-    
+
+
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
