@@ -2105,6 +2105,53 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
 }
 
+void MainFrame::OnShowGroupBox(wxCommandEvent& event)
+{
+    auto index = event.GetId() - ID_SHOW_GROUPBOX_BASE;
+
+    TintedGroupBox* box = nullptr;
+    ConfigurationDataElement<bool>* configValue = nullptr;
+
+    switch (index)
+    {
+        case 0: box = snrBox; configValue = &wxGetApp().appConfiguration.showSnrBox; break;
+        case 1: box = levelBox; configValue = &wxGetApp().appConfiguration.showLevelBox; break;
+        case 2: box = syncBox; configValue = &wxGetApp().appConfiguration.showSyncBox; break;
+        case 3: box = audioBox; configValue = &wxGetApp().appConfiguration.showAudioRecordingBox; break;
+        case 4: box = logBox; configValue = &wxGetApp().appConfiguration.showLoggingBox; break;
+        case 5: box = reporterBox; configValue = &wxGetApp().appConfiguration.showReportingBox; break;
+        case 6: box = m_txLevelBox; configValue = &wxGetApp().appConfiguration.showTxAttenuationBox; break;
+        case 7: box = micSpeakerBox; configValue = &wxGetApp().appConfiguration.showSpeakerLevelBox; break;
+        default: return;
+    }
+
+    bool newValue = !((bool)*configValue);
+    *configValue = newValue;
+
+    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
+    menuItem->Check(newValue);
+    box->Show(newValue);
+
+    // See the equivalent block in OnToolsOptions() -- wxWidgets sometimes
+    // doesn't reflow short windows properly after a Show()/Hide() until a
+    // resize happens, so nudge it with one.
+    wxSize size = GetSize();
+    auto w = size.GetWidth();
+    auto h = size.GetHeight();
+    CallAfter([=, this]()
+    {
+        SetSize(w, h);
+    });
+    CallAfter([=, this]()
+    {
+        SetSize(w + 1, h + 1);
+    });
+    CallAfter([=, this]()
+    {
+        SetSize(w, h);
+    });
+}
+
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)
 {
     event.Enable(!m_RxRunning);

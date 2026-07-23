@@ -1098,6 +1098,32 @@ void MainFrame::loadConfiguration_()
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
+    // Apply persisted "Show" menu visibility to the optional group boxes
+    // (menu items default to checked at construction time, since TopFrame
+    // itself has no access to appConfiguration -- this is where the real
+    // saved state actually takes effect, same as statsBox above).
+    {
+        std::vector<std::pair<TintedGroupBox*, bool> > showBoxState {
+            { snrBox, wxGetApp().appConfiguration.showSnrBox },
+            { levelBox, wxGetApp().appConfiguration.showLevelBox },
+            { syncBox, wxGetApp().appConfiguration.showSyncBox },
+            { audioBox, wxGetApp().appConfiguration.showAudioRecordingBox },
+            { logBox, wxGetApp().appConfiguration.showLoggingBox },
+            { reporterBox, wxGetApp().appConfiguration.showReportingBox },
+            { m_txLevelBox, wxGetApp().appConfiguration.showTxAttenuationBox },
+            { micSpeakerBox, wxGetApp().appConfiguration.showSpeakerLevelBox },
+        };
+        for (size_t index = 0; index < showBoxState.size(); index++)
+        {
+            showBoxState[index].first->Show(showBoxState[index].second);
+            auto menuItem = showMenu_->FindItem(ID_SHOW_GROUPBOX_BASE + index);
+            if (menuItem != nullptr)
+            {
+                menuItem->Check(showBoxState[index].second);
+            }
+        }
+    }
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     

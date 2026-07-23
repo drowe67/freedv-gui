@@ -22,6 +22,7 @@
 
 #include <map>
 #include <set>
+#include <vector>
 
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
@@ -571,6 +572,34 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_menubarMain->Append(tools, _("&Tools"));
 
+    // "Show" menu: lets the user hide optional group boxes to build a
+    // leaner display, independent of the feature-driven visibility already
+    // used for Squelch/Mode/Radio Freq/Stats. Order here is index order for
+    // OnShowGroupBox's event ID offset (ID_SHOW_GROUPBOX_BASE + index) --
+    // keep the two in sync if adding/removing an entry. Checked state here
+    // is just the default (visible); TopFrame has no access to
+    // wxGetApp()/appConfiguration (that's MainFrame's job), so the real
+    // persisted state is applied to both the boxes and these checkmarks in
+    // MainFrame::loadConfiguration_(), same as statsBox/modeBox/etc.
+    showMenu_ = new wxMenu();
+    std::vector<wxString> showMenuItems {
+        _("SNR"),
+        _("Level"),
+        _("Sync"),
+        _("Audio Recording"),
+        _("Logging"),
+        _("FDV Reporting"),
+        _("TX Attenuation"),
+        _("Speaker Level"),
+    };
+    for (size_t index = 0; index < showMenuItems.size(); index++)
+    {
+        auto menuItem = showMenu_->Append(ID_SHOW_GROUPBOX_BASE + index, showMenuItems[index], wxEmptyString, wxITEM_CHECK);
+        menuItem->Check(true);
+        this->Connect(ID_SHOW_GROUPBOX_BASE + index, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnShowGroupBox));
+    }
+    m_menubarMain->Append(showMenu_, _("&Show"));
+
     help = new wxMenu();
     wxMenuItem* m_menuItemHelpUpdates;
     m_menuItemHelpUpdates = new wxMenuItem(help, wxID_ANY, wxString(_("&Check for Updates")) , _("Checks for updates to FreeDV"), wxITEM_NORMAL);
@@ -604,7 +633,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxSizer* leftOuterSizer = new wxBoxSizer(wxVERTICAL);
     wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
-    TintedGroupBox* snrBox = new TintedGroupBox(m_panel, _("SNR"), wxVERTICAL);
+    snrBox = new TintedGroupBox(m_panel, _("SNR"), wxVERTICAL);
 
     //------------------------------
     // S/N ratio Gauge (vert. bargraph)
@@ -632,7 +661,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Signal Level(vert. bargraph)
     //------------------------------
-    TintedGroupBox* levelBox = new TintedGroupBox(m_panel, _("Level"), wxHORIZONTAL);
+    levelBox = new TintedGroupBox(m_panel, _("Level"), wxHORIZONTAL);
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
@@ -646,7 +675,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Sync  Indicator box
     //------------------------------
-    TintedGroupBox* syncBox = new TintedGroupBox(m_panel, _("Sync"), wxVERTICAL);
+    syncBox = new TintedGroupBox(m_panel, _("Sync"), wxVERTICAL);
 
     m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("RADEV2"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     syncBox->GetContentSizer()->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
@@ -657,7 +686,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Audio Recording/Playback
     //------------------------------
-    TintedGroupBox* audioBox = new TintedGroupBox(m_panel, _("Audio Recording"), wxVERTICAL);
+    audioBox = new TintedGroupBox(m_panel, _("Audio Recording"), wxVERTICAL);
 
     m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
     m_audioRecord->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
@@ -668,7 +697,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // QSO logging
     //------------------------------
-    TintedGroupBox* logBox = new TintedGroupBox(m_panel, _("Logging"), wxVERTICAL);
+    logBox = new TintedGroupBox(m_panel, _("Logging"), wxVERTICAL);
 
     m_logQSO = new wxButton(logBox, wxID_ANY, _("Log QSO"), wxDefaultPosition, wxDefaultSize, 0);
     m_logQSO->SetToolTip(_("Logs most recent QSO."));
@@ -680,7 +709,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // FreeDV Reporter quick options
     //------------------------------
-    TintedGroupBox* reporterBox = new TintedGroupBox(m_panel, _("FDV Reporting"), wxVERTICAL);
+    reporterBox = new TintedGroupBox(m_panel, _("FDV Reporting"), wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
     m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings->Reporting."));

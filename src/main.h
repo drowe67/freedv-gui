@@ -509,7 +509,10 @@ class MainFrame : public TopFrame
 
         void OnToggleReporterVisibility (wxCommandEvent& event) override;
         void OnTogBtnTune(wxCommandEvent& event) override;
-        
+
+        void OnShowGroupBox(wxCommandEvent& event) override;
+
+
     private:
         const wxString SNR_FORMAT_STR;
         const wxString NO_SNR_LABEL;

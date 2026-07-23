@@ -74,6 +74,10 @@
 
 #define ID_MODE_COLLAPSE 1100
 
+// Base ID for the main window's "Show" menu's group-box visibility toggle
+// items; 8 consecutive IDs from here (see OnShowGroupBox).
+#define ID_SHOW_GROUPBOX_BASE 1200
+
 class wxListViewComboPopup;
 
 // Popup position for a right-click menu anchored to the left of btn (to
@@ -123,9 +127,12 @@ class TopFrame : public wxFrame
         wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
+        wxMenu* showMenu_;
+        TintedGroupBox* snrBox;
         wxGauge* m_gaugeSNR;
         wxStaticText* m_textSNR;
         wxCheckBox* m_ckboxSNR;
+        TintedGroupBox* levelBox;
         wxGauge* m_gaugeLevel;
         wxStaticText* m_textLevel;
 
@@ -161,10 +168,13 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textSyncMetric;
         wxStaticText  *m_textCodec2Var;
 
+        TintedGroupBox* syncBox;
         wxStaticText  *m_textSync;
 
+        TintedGroupBox* audioBox;
         wxToggleButton      *m_audioRecord;
-        
+
+        TintedGroupBox* logBox;
         wxButton*     m_logQSO;
 
         wxSizer* rightSizer;
@@ -175,6 +185,7 @@ class TopFrame : public wxFrame
         wxMenuItem* m_menuItemExportConfig;
         wxMenuItem* m_menuItemImportConfig;
 
+        TintedGroupBox* reporterBox;
         wxToggleButton *m_reporterHidden;
     
         // Virtual event handlers, override them in your derived class
@@ -262,6 +273,8 @@ class TopFrame : public wxFrame
         virtual void OnToggleReporterVisibility (wxCommandEvent& event) { event.Skip(); }
         
         virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
+
+        virtual void OnShowGroupBox(wxCommandEvent& event) { event.Skip(); }
 
         void setVoiceKeyerButtonLabel_(wxString filename);
         

@@ -113,7 +113,19 @@ public:
     ConfigurationDataElement<int> reportingUserMsgColWidth;
     
     ConfigurationDataElement<bool> showDecodeStats;
-    
+
+    // Independent user-toggleable visibility for the main window's optional
+    // group boxes (Show menu), separate from the feature-driven visibility
+    // of e.g. Radio Freq/Stats.
+    ConfigurationDataElement<bool> showSnrBox;
+    ConfigurationDataElement<bool> showLevelBox;
+    ConfigurationDataElement<bool> showSyncBox;
+    ConfigurationDataElement<bool> showAudioRecordingBox;
+    ConfigurationDataElement<bool> showLoggingBox;
+    ConfigurationDataElement<bool> showReportingBox;
+    ConfigurationDataElement<bool> showTxAttenuationBox;
+    ConfigurationDataElement<bool> showSpeakerLevelBox;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
