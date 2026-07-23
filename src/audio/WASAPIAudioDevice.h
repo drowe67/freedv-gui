@@ -125,7 +125,7 @@ void WASAPIAudioDevice::copyFloatToShort_(T* source, int numFrames)
     {
         for (int innerIndex = 0; innerIndex < numChannels_; innerIndex++)
         {
-            tmpBuf_[index * numChannels_ + innerIndex] = source[index * numChannels_ + innerIndex] * std::numeric_limits<short>::max();
+            tmpBuf_[index * numChannels_ + innerIndex] = source[index * numChannels_ + innerIndex] * (std::numeric_limits<short>::max() / 2);
         }
     }
 }
@@ -137,7 +137,7 @@ void WASAPIAudioDevice::copyShortToFloat_(T* dest, int numFrames)
     {
         for (int innerIndex = 0; innerIndex < numChannels_; innerIndex++)
         {
-            dest[index * numChannels_ + innerIndex] = (T)tmpBuf_[index * numChannels_ + innerIndex] / std::numeric_limits<short>::max();
+            dest[index * numChannels_ + innerIndex] = (T)tmpBuf_[index * numChannels_ + innerIndex] / (std::numeric_limits<short>::max() / 2);
         }
     }
 }

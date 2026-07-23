@@ -774,7 +774,7 @@ OSStatus MacAudioDevice::InputProc_(
             {
                 for (UInt32 chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
                 {
-                    thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * 32767;
+                    thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * 16384;
                 }
             }
             
