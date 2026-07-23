@@ -60,7 +60,10 @@ void wxListViewComboPopup::OnMouseMove(wxMouseEvent& event)
 
     if (m_value != -1)
     {
-        Select(m_value, false);
+        if (m_value < wxListView::GetItemCount())
+        {
+            Select(m_value, false);
+        }
         m_value = -1;
     }
 
