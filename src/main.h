@@ -374,7 +374,12 @@ class MainFrame : public TopFrame
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
         void StopRecFileFromDecoder();
-        
+
+        // Shows (or, given an empty string, dismisses) the tinted info bar used
+        // for transient playback/recording status -- replaces the old native
+        // status bar strip, which took up a permanently reserved line.
+        void ShowPlaybackStatus(const wxString& msg);
+
         bool isReceiveOnly();
         
     protected:
@@ -441,7 +446,6 @@ class MainFrame : public TopFrame
 
         virtual void OnLogQSO(wxCommandEvent& event) override;
         
-        void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
 
         //System Events

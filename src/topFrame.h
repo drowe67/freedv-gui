@@ -43,8 +43,8 @@
 #include <wx/tglbtn.h>
 #include <wx/slider.h>
 #include <wx/checkbox.h>
-#include <wx/statusbr.h>
 #include <wx/frame.h>
+#include <wx/infobar.h>
 #include <wx/statbmp.h>
 #include <wx/stattext.h>
 #include <wx/button.h>
@@ -129,7 +129,6 @@ class TopFrame : public wxFrame
         wxGauge* m_gaugeLevel;
         wxStaticText* m_textLevel;
 
-        wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
         
         wxComboCtrl*   m_cboLastReportedCallsigns;
@@ -145,7 +144,11 @@ class TopFrame : public wxFrame
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
-        wxStatusBar* m_statusBar1;
+        // Explicitly wxInfoBarGeneric (not the wxInfoBar macro, which resolves
+        // to a native GtkInfoBar-backed class on GTK) so that SetBackgroundColour
+        // below reliably tints it the same way as TintedGroupBox, rather than
+        // being overridden by the native widget's own GTK theme/CSS.
+        wxInfoBarGeneric* m_infoBar;
 
         TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;
@@ -227,7 +230,6 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnPTT_UI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnOnOffUI(wxUpdateUIEvent& event ) { event.Skip(); }
 
-        virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }

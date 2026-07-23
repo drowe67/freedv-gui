@@ -112,6 +112,22 @@ bool MainApp::CanAccessSerialPort(std::string const& portName)
 }
 
 //----------------------------------------------------------------
+// ShowPlaybackStatus()
+//----------------------------------------------------------------
+
+void MainFrame::ShowPlaybackStatus(const wxString& msg)
+{
+    if (msg.IsEmpty())
+    {
+        m_infoBar->Dismiss();
+    }
+    else
+    {
+        m_infoBar->ShowMessage(msg);
+    }
+}
+
+//----------------------------------------------------------------
 // isReceiveOnly()
 //----------------------------------------------------------------
 

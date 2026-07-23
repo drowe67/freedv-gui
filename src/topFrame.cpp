@@ -447,11 +447,20 @@ TintedGroupBox::TintedGroupBox(wxWindow* parent, const wxString& title, wxOrient
 
     wxBoxSizer* outerSizer = new wxBoxSizer(wxVERTICAL);
 
+    // An empty title omits the label entirely (and the space it would
+    // reserve), for boxes that don't need one.
     m_title = new wxStaticText(this, wxID_ANY, title);
-    wxFont titleFont = m_title->GetFont();
-    titleFont.SetWeight(wxFONTWEIGHT_BOLD);
-    m_title->SetFont(titleFont);
-    outerSizer->Add(m_title, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxLEFT | wxRIGHT, 6);
+    if (title.IsEmpty())
+    {
+        m_title->Hide();
+    }
+    else
+    {
+        wxFont titleFont = m_title->GetFont();
+        titleFont.SetWeight(wxFONTWEIGHT_BOLD);
+        m_title->SetFont(titleFont);
+        outerSizer->Add(m_title, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxLEFT | wxRIGHT, 6);
+    }
 
     m_contentSizer = new wxBoxSizer(orientation);
     outerSizer->Add(m_contentSizer, 1, wxEXPAND | wxALL, 6);
@@ -738,32 +747,28 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     // lower middle used for user ID
 
-    wxBoxSizer* lowerSizer;
-    lowerSizer = new wxBoxSizer(wxHORIZONTAL);
+    TintedGroupBox* stationBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
 
     wxBoxSizer* modeStatusSizer;
     modeStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtModeStatus = new wxStaticText(m_panel, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtModeStatus = new wxStaticText(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
     m_txtModeStatus->SetMinSize(wxSize(80,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
-    lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
-
-    m_BtnCallSignReset = new wxButton(m_panel, wxID_ANY, _("&Clear"), wxDefaultPosition, wxDefaultSize, 0);
-    lowerSizer->Add(m_BtnCallSignReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
+    stationBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
 
     wxBoxSizer* bSizer15;
     bSizer15 = new wxBoxSizer(wxVERTICAL);
-    m_txtCtrlCallSign = new wxTextCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_txtCtrlCallSign = new wxTextCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
     m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
 
-    m_cboLastReportedCallsigns = new wxComboCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
-    m_lastReportedCallsignListView = new wxListViewComboPopup(m_BtnCallSignReset);
+    m_cboLastReportedCallsigns = new wxComboCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
+    m_lastReportedCallsignListView = new wxListViewComboPopup(m_cboLastReportedCallsigns);
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
     m_cboLastReportedCallsigns->SetSizeHints(wxSize(400,-1));
     m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
-    
+
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 100);
     m_lastReportedCallsignListView->InsertColumn(1, wxT("Frequency"), wxLIST_FORMAT_RIGHT, 75);
     m_lastReportedCallsignListView->InsertColumn(2, wxT("Date/Time"), wxLIST_FORMAT_LEFT, 175);
@@ -772,9 +777,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     bSizer15->Add(m_txtCtrlCallSign, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
     bSizer15->Add(m_cboLastReportedCallsigns, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
 
-    lowerSizer->Add(bSizer15, 1, static_cast<int>(wxEXPAND), 5);
-    lowerSizer->SetMinSize(wxSize(375,-1));
-    centerSizer->Add(lowerSizer, 0, static_cast<int>(wxEXPAND), 2);
+    stationBox->GetContentSizer()->Add(bSizer15, 1, static_cast<int>(wxEXPAND), 5);
+    stationBox->SetMinSize(wxSize(375,-1));
+    centerSizer->Add(stationBox, 0, static_cast<int>(wxEXPAND), 2);
     centerSizer->SetMinSize(wxSize(375,375));
     bSizer1->Add(centerSizer, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
     
@@ -898,11 +903,20 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(controlBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
     bSizer1->Add(rightSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
-    
-    m_panel->SetSizerAndFit(bSizer1);
-    this->Layout();
 
-    m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
+    // Playback/recording status: a tinted info bar spanning the full window
+    // width, in place of the old native status bar. It occupies zero height
+    // until ShowPlaybackStatus() gives it a message, then slides back down
+    // to zero when dismissed, rather than permanently reserving a blank line.
+    wxBoxSizer* outerSizer = new wxBoxSizer(wxVERTICAL);
+    outerSizer->Add(bSizer1, 1, static_cast<int>(wxEXPAND), 0);
+
+    m_infoBar = new wxInfoBarGeneric(m_panel);
+    m_infoBar->SetBackgroundColour(GroupBoxBackgroundColour());
+    outerSizer->Add(m_infoBar, 0, static_cast<int>(wxEXPAND), 0);
+
+    m_panel->SetSizerAndFit(outerSizer);
+    this->Layout();
 
     //=====================================================
     // End of layout
@@ -911,7 +925,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------
     // Tab ordering for accessibility
     //-------------------
-    m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
+    m_auiNbookCtrl->MoveBeforeInTabOrder(stationBox);
     
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_btnTogTune);
@@ -979,7 +993,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
 #endif
 
-    m_BtnCallSignReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCallSignReset), NULL, this);
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
 
         

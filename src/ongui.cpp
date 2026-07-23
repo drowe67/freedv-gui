@@ -376,7 +376,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 m_txtModeStatus->Enable(true);
                 break;
             default:
-                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->SetLabel(wxEmptyString);
                 m_txtModeStatus->Enable(false);
                 break;
         }
@@ -484,7 +484,7 @@ void MainFrame::onRadioConnected_(IRigController*)
 void MainFrame::onRadioDisconnected_(IRigController*)
 {
     CallAfter([&]() {
-        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->SetLabel(wxEmptyString);
         m_txtModeStatus->Enable(false);
     });
 }
@@ -1749,18 +1749,6 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     event.Skip();
 }
 
-void MainFrame::OnCallSignReset(wxCommandEvent&)
-{
-    m_pcallsign = m_callsign;
-    memset(m_callsign, 0, MAX_CALLSIGN);
-    wxString s;
-    s.Printf("%s", m_callsign);
-    m_txtCtrlCallSign->SetValue(s);
-    
-    m_lastReportedCallsignListView->DeleteAllItems();
-    m_cboLastReportedCallsigns->SetText(_(""));
-}
-
 void MainFrame::OnLogQSO(wxCommandEvent&)
 {
     wxString dxCall;
@@ -1857,7 +1845,7 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
         index = m_lastReportedCallsignListView->GetFirstSelected();
     }
     m_cboLastReportedCallsigns->SetText("");
-    m_BtnCallSignReset->SetFocus();
+    m_cboLastReportedCallsigns->SetFocus();
 }
 
 void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
@@ -1873,7 +1861,7 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
     {
         // Make sure we're not selected if no callsigns selected.
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
-        m_BtnCallSignReset->SetFocus();
+        m_cboLastReportedCallsigns->SetFocus();
     }
     event.Skip();
 }
