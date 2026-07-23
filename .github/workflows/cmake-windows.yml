@@ -232,7 +232,7 @@ jobs:
     - name: Install Python dependencies
       shell: pwsh
       run: |
-          pip install torch==2.7.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install matplotlib
  
     - name: Grant FreeDV access to the microphone 
