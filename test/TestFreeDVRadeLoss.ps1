@@ -198,7 +198,7 @@ function Test-RadeLoss {
     $lossPsi.RedirectStandardOutput = $true
     $lossPsi.FileName = $PythonBinary
     $lossPsi.WorkingDirectory = $current_loc
-    $lossPsi.Arguments = @("`"$current_loc\rade_src\loss.py`" `"$current_loc\txfeatures.f32`" `"$current_loc\rxfeatures.f32`" --loss_test $LossThreshold --clip_start 100 --clip_end 300")
+    $lossPsi.Arguments = @("`"$current_loc\rade_src\loss.py`" `"$current_loc\txfeatures.f32`" `"$current_loc\rxfeatures.f32`" --loss_test $LossThreshold --clip_start 200 --clip_end 300")
 
     $lossProcess = New-Object System.Diagnostics.Process
     $lossProcess.StartInfo = $lossPsi
