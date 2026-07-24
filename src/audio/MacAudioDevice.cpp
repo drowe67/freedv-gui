@@ -46,6 +46,7 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
 constexpr static int MS_TO_NSEC = 1000000;
+constexpr static int INT16_AUDIO_SCALE = 16384;
 
 // The I/O interval time in seconds.
 constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
@@ -774,7 +775,7 @@ OSStatus MacAudioDevice::InputProc_(
             {
                 for (UInt32 chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
                 {
-                    thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * 16384;
+                    thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * INT16_AUDIO_SCALE;
                 }
             }
             
@@ -820,7 +821,7 @@ OSStatus MacAudioDevice::OutputProc_(
         {
             for (UInt32 chan = 0; chan < ioData->mNumberBuffers; chan++)
             {
-                ((float*)ioData->mBuffers[chan].mData)[index] = thisObj->inputFrames_[thisObj->numChannels_ * index + chan] / 32767.0;
+                ((float*)ioData->mBuffers[chan].mData)[index] = thisObj->inputFrames_[thisObj->numChannels_ * index + chan] / INT16_AUDIO_SCALE;
             }
         }
     }
