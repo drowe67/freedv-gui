@@ -48,8 +48,8 @@ constexpr static int MS_TO_SEC = 1000;
 constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
-constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
-constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 40;
+constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 10;
+constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 20;
 
 static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
 {
@@ -906,9 +906,9 @@ void MacAudioDevice::startRealTimeWork()
     }
 }
 
-void MacAudioDevice::stopRealTimeWork(bool /*fastMode*/)
+void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = 10; //((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
+    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
 }
 
