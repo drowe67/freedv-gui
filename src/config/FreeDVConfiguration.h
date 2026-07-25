@@ -131,6 +131,17 @@ public:
     ConfigurationDataElement<wxString> groupBoxTintColor;
     ConfigurationDataElement<int> groupBoxTintPercent;
 
+    // Ordered lists of the movable "Show menu" group boxes currently on each
+    // side of the main window (right-click a box's title to move it), using
+    // the same box index enumeration as ID_SHOW_GROUPBOX_BASE/OnShowGroupBox:
+    // 0=SNR, 1=Level, 2=Sync, 3=AudioRecording, 4=Logging, 5=FDVReporting,
+    // 6=TXAttenuation, 7=SpeakerLevel. Defaults match the original hardcoded
+    // layout. A box's presence in a list is independent of its show/hide
+    // state -- hiding a box leaves it in place in whichever list already
+    // has it, so it reappears in the same position when shown again.
+    ConfigurationDataElement<std::vector<int>> groupBoxLeftOrder;
+    ConfigurationDataElement<std::vector<int>> groupBoxRightOrder;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

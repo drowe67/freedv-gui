@@ -511,6 +511,7 @@ class MainFrame : public TopFrame
         void OnTogBtnTune(wxCommandEvent& event) override;
 
         void OnShowGroupBox(wxCommandEvent& event) override;
+        void OnGroupBoxRightClick(int boxIndex) override;
 
 
     private:
@@ -614,6 +615,12 @@ class MainFrame : public TopFrame
         
         void loadConfiguration_();
         void applyGroupBoxTint_();
+        void nudgeResize_();
+        TintedGroupBox* groupBoxForIndex_(int boxIndex);
+        void reflowGroupBoxes_();
+        void hideGroupBox_(int boxIndex);
+        void moveGroupBoxToOtherSide_(int boxIndex);
+        void moveGroupBoxUpDown_(int boxIndex, int direction);
         void restoreCallsignListFromCsv_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);

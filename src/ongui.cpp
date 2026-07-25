@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 
 #include "main.h"
 
@@ -179,21 +180,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // by a pixel or two). As a really hacky workaround, we emulate this behavior
         // when restoring window sizing. These resize events also happen after configuration
         // is restored but I'm not sure this is necessary.
-        wxSize size = GetSize();
-        auto w = size.GetWidth();
-        auto h = size.GetHeight();
-        CallAfter([=, this]()
-        {
-            SetSize(w, h);
-        });
-        CallAfter([=, this]()
-        {
-            SetSize(w + 1, h + 1);
-        });
-        CallAfter([=, this]()
-        {
-            SetSize(w, h);
-        });
+        nudgeResize_();
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -2135,24 +2122,50 @@ void MainFrame::OnShowGroupBox(wxCommandEvent& event)
     menuItem->Check(newValue);
     box->Show(newValue);
 
-    // See the equivalent block in OnToolsOptions() -- wxWidgets sometimes
-    // doesn't reflow short windows properly after a Show()/Hide() until a
-    // resize happens, so nudge it with one.
-    wxSize size = GetSize();
-    auto w = size.GetWidth();
-    auto h = size.GetHeight();
-    CallAfter([=, this]()
+    nudgeResize_();
+}
+
+// Right-click on a movable group box's title/background (Stage 10): builds
+// a Hide/Move to other side/Move up/Move down popup menu for that one box.
+// boxIndex uses the same 0-7 enumeration as the Show menu/OnShowGroupBox.
+void MainFrame::OnGroupBoxRightClick(int boxIndex)
+{
+    static const wxString labels[8] = {
+        _("SNR"), _("Level"), _("Sync"), _("Audio Recording"),
+        _("Logging"), _("FDV Reporting"), _("TX Attenuation"), _("Speaker Level"),
+    };
+    if (boxIndex < 0 || boxIndex > 7)
     {
-        SetSize(w, h);
-    });
-    CallAfter([=, this]()
-    {
-        SetSize(w + 1, h + 1);
-    });
-    CallAfter([=, this]()
-    {
-        SetSize(w, h);
-    });
+        return;
+    }
+    wxString label = labels[boxIndex];
+
+    auto& leftOrder = wxGetApp().appConfiguration.groupBoxLeftOrder;
+    auto& rightOrder = wxGetApp().appConfiguration.groupBoxRightOrder;
+
+    auto leftVec = leftOrder.get();
+    auto rightVec = rightOrder.get();
+    bool onLeft = std::find(leftVec.begin(), leftVec.end(), boxIndex) != leftVec.end();
+    std::vector<int>& sameSideVec = onLeft ? leftVec : rightVec;
+    auto it = std::find(sameSideVec.begin(), sameSideVec.end(), boxIndex);
+    bool isFirst = (it == sameSideVec.begin());
+    bool isLast = (it != sameSideVec.end()) && ((it + 1) == sameSideVec.end());
+
+    wxMenu menu;
+    auto hideItem = menu.Append(wxID_ANY, wxString::Format(_("Hide %s"), label));
+    menu.AppendSeparator();
+    auto moveSideItem = menu.Append(wxID_ANY, onLeft ? _("Move to Right Side") : _("Move to Left Side"));
+    auto moveUpItem = menu.Append(wxID_ANY, _("Move Up"));
+    moveUpItem->Enable(!isFirst);
+    auto moveDownItem = menu.Append(wxID_ANY, _("Move Down"));
+    moveDownItem->Enable(!isLast);
+
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { hideGroupBox_(boxIndex); }, hideItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxToOtherSide_(boxIndex); }, moveSideItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxUpDown_(boxIndex, -1); }, moveUpItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxUpDown_(boxIndex, +1); }, moveDownItem->GetId());
+
+    PopupMenu(&menu);
 }
 
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)

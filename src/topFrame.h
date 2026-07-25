@@ -95,10 +95,22 @@ wxPoint LeftOffsetContextMenuPosition(wxWindow* btn);
 // SetBackgroundColour on Windows/macOS, so neither tinting the box directly
 // nor nesting a panel inside it can cover the whole group cleanly. Add
 // children to this panel (as their parent) and to GetContentSizer().
+//
+// Passing a non-negative contextMenuBoxIndex (the same 0-7 index used by the
+// Show menu/ID_SHOW_GROUPBOX_BASE) makes the box's title/background
+// right-clickable: it wires up its own context-menu handling and forwards to
+// TopFrame::OnGroupBoxRightClick(index) so the box can be hidden/moved
+// (Stage 10). This is deliberately a separate index, not the box's own
+// wxWindowID -- the box's actual id stays wxID_ANY regardless, so this
+// doesn't collide with the Show menu's own wxMenuItem ids, which happen to
+// live in the same numeric ID space (ID_SHOW_GROUPBOX_BASE onwards) but are
+// a completely different kind of object. Boxes not part of that set
+// (Control, Radio Freq, Stats, etc.) just leave the default -1 and get no
+// context menu.
 class TintedGroupBox : public wxPanel
 {
     public:
-        TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation);
+        TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation, int contextMenuBoxIndex = -1);
         ~TintedGroupBox();
 
         virtual void SetLabel(const wxString& label) override;
@@ -186,9 +198,16 @@ class TopFrame : public wxFrame
         TintedGroupBox* logBox;
         wxButton*     m_logQSO;
 
+        // Both need to be reachable at runtime (not just constructor-local)
+        // so a box can be moved between sides / reordered (Stage 10).
+        wxSizer* leftSizer;
         wxSizer* rightSizer;
 
         TintedGroupBox* modeBox;
+
+        // Fixed (non-movable) box on the right, kept last in rightSizer
+        // across any reorder -- see MainFrame::reflowGroupBoxes_().
+        TintedGroupBox* controlBox;
 
         wxMenuItem* m_menuItemPlayFileFromRadio;
         wxMenuItem* m_menuItemExportConfig;
@@ -286,8 +305,18 @@ class TopFrame : public wxFrame
         virtual void OnShowGroupBox(wxCommandEvent& event) { event.Skip(); }
 
         void setVoiceKeyerButtonLabel_(wxString filename);
-        
+
     public:
+        // Called directly (not routed through the wx event system, hence
+        // public rather than protected like the other virtual handlers
+        // above -- TintedGroupBox is a sibling class, not a subclass) by a
+        // TintedGroupBox constructed with a real id when its title/background
+        // is right-clicked, with boxIndex = id - ID_SHOW_GROUPBOX_BASE. Empty
+        // here for the same reason as OnShowGroupBox: TopFrame has no access
+        // to wxGetApp()/appConfiguration, so the real menu (Hide/Move to
+        // other side/Move up/down) is only built in MainFrame's override.
+        virtual void OnGroupBoxRightClick(int) { }
+
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
