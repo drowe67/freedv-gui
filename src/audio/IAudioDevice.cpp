@@ -64,9 +64,9 @@ void IAudioDevice::startRealTimeWork()
     startTime_ = std::chrono::steady_clock::now();
 }
 
-void IAudioDevice::stopRealTimeWork(bool fastMode)
+void IAudioDevice::stopRealTimeWork(bool /*fastMode*/)
 {
-    auto sleepTime = fastMode ? 10ms : 20ms;
+    auto sleepTime = 10ms;
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(sleepTime - (endTime - startTime_) - std::chrono::nanoseconds(extraTimeNs_));
     
