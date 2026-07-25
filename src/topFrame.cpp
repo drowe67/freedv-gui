@@ -20,6 +20,7 @@
 //
 //==========================================================================
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <vector>
@@ -401,6 +402,20 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
     return ok;
 }
 
+namespace {
+    // Tint colour/strength applied by GroupBoxBackgroundColour() below, set
+    // via SetGroupBoxTint() from the persisted Display options once
+    // configuration is loaded. Defaults match the original hardcoded values
+    // so the very first run (before any config exists) looks the same as
+    // before this became configurable.
+    wxColour s_groupBoxTintColour(0, 85, 255);
+    int s_groupBoxTintPercent = 20;
+
+    // Every currently-live TintedGroupBox, so a tint change from Options can
+    // be re-applied immediately rather than only on next restart.
+    std::vector<TintedGroupBox*> s_tintedGroupBoxes;
+}
+
 // Returns a background colour offset from the system window colour so that
 // grouped control boxes read as a distinct "card" instead of blending into
 // the surrounding panel. Works out from the live system colour rather than
@@ -411,34 +426,33 @@ wxColour GroupBoxBackgroundColour()
     bool isDark = base.GetLuminance() < 0.5;
     wxColour shaded = base.ChangeLightness(isDark ? 115 : 93);
 
-    // Nudge the shaded card colour towards blue. Purely a lightness shift is
-    // invisible on themes (e.g. Breeze Light) whose window colour has no
-    // saturation to begin with, so blend in a small amount of hue directly.
-    wxColour tint(0, 85, 255);
-    int tintPct = 20;
+    // Nudge the shaded card colour towards blue (by default). Purely a
+    // lightness shift is invisible on themes (e.g. Breeze Light) whose
+    // window colour has no saturation to begin with, so blend in a small
+    // amount of hue directly.
+    const wxColour& tint = s_groupBoxTintColour;
+    int tintPct = s_groupBoxTintPercent;
 
-    // Testing hook: FREEDV_GROUPBOX_TINT=RRGGBB[:pct] overrides the tint
-    // colour/strength above at runtime, so different values can be tried
-    // without a rebuild.
-    if (wxString env; wxGetEnv(wxT("FREEDV_GROUPBOX_TINT"), &env))
-    {
-        wxString colourPart = env.BeforeFirst(':');
-        wxString pctPart = env.AfterFirst(':');
-        wxColour parsed(wxT("#") + colourPart);
-        if (parsed.IsOk())
-        {
-            tint = parsed;
-        }
-        long pctVal;
-        if (!pctPart.IsEmpty() && pctPart.ToLong(&pctVal))
-        {
-            tintPct = (int)pctVal;
-        }
-    }
     unsigned char r = (unsigned char)((shaded.Red()   * (100 - tintPct) + tint.Red()   * tintPct) / 100);
     unsigned char g = (unsigned char)((shaded.Green() * (100 - tintPct) + tint.Green() * tintPct) / 100);
     unsigned char b = (unsigned char)((shaded.Blue()  * (100 - tintPct) + tint.Blue()  * tintPct) / 100);
     return wxColour(r, g, b);
+}
+
+void SetGroupBoxTint(const wxColour& colour, int percent)
+{
+    s_groupBoxTintColour = colour;
+    s_groupBoxTintPercent = percent;
+}
+
+void RefreshGroupBoxTints()
+{
+    wxColour newColour = GroupBoxBackgroundColour();
+    for (auto box : s_tintedGroupBoxes)
+    {
+        box->SetBackgroundColour(newColour);
+        box->Refresh();
+    }
 }
 
 TintedGroupBox::TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation)
@@ -467,6 +481,15 @@ TintedGroupBox::TintedGroupBox(wxWindow* parent, const wxString& title, wxOrient
     outerSizer->Add(m_contentSizer, 1, wxEXPAND | wxALL, 6);
 
     SetSizer(outerSizer);
+
+    s_tintedGroupBoxes.push_back(this);
+}
+
+TintedGroupBox::~TintedGroupBox()
+{
+    s_tintedGroupBoxes.erase(
+        std::remove(s_tintedGroupBoxes.begin(), s_tintedGroupBoxes.end(), this),
+        s_tintedGroupBoxes.end());
 }
 
 void TintedGroupBox::SetLabel(const wxString& label)

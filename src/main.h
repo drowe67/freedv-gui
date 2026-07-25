@@ -613,6 +613,7 @@ class MainFrame : public TopFrame
         bool        validateSoundCardSetup();
         
         void loadConfiguration_();
+        void applyGroupBoxTint_();
         void restoreCallsignListFromCsv_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);

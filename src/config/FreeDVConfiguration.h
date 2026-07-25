@@ -126,6 +126,11 @@ public:
     ConfigurationDataElement<bool> showTxAttenuationBox;
     ConfigurationDataElement<bool> showSpeakerLevelBox;
 
+    // Group box tint colour/strength (Display options tab), replacing the
+    // old FREEDV_GROUPBOX_TINT testing-only environment variable.
+    ConfigurationDataElement<wxString> groupBoxTintColor;
+    ConfigurationDataElement<int> groupBoxTintPercent;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

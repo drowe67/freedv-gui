@@ -1124,6 +1124,10 @@ void MainFrame::loadConfiguration_()
         }
     }
 
+    // Apply persisted group box tint colour/strength (also defaulted at
+    // TopFrame construction time, same reasoning as showBoxState above).
+    applyGroupBoxTint_();
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     
@@ -1426,6 +1430,30 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
+}
+
+// Applies the persisted group box tint colour/strength and re-colours every
+// currently-live tinted window (group boxes, the playback status info bar,
+// and the AUI notebook's plot pages) so a change made in Options takes
+// effect immediately instead of requiring a restart.
+void MainFrame::applyGroupBoxTint_()
+{
+    wxColour tintColour(wxGetApp().appConfiguration.groupBoxTintColor);
+    int tintPercent = wxGetApp().appConfiguration.groupBoxTintPercent;
+    SetGroupBoxTint(tintColour, tintPercent);
+    RefreshGroupBoxTints();
+
+    wxColour bg = GroupBoxBackgroundColour();
+
+    m_infoBar->SetBackgroundColour(bg);
+    m_infoBar->Refresh();
+
+    for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+    {
+        wxWindow* page = m_auiNbookCtrl->GetPage(index);
+        page->SetBackgroundColour(bg);
+        page->Refresh();
+    }
 }
 
 void MainFrame::restoreCallsignListFromCsv_()

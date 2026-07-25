@@ -168,6 +168,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Show/hide frequency box based on CAT control configuration.
         m_freqBox->Show(isFrequencyControlEnabled_());
         
+        // Re-apply group box tint colour/strength in case it was changed.
+        applyGroupBoxTint_();
+
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 

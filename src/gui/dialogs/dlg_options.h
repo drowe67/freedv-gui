@@ -26,6 +26,7 @@
 #include <wx/listctrl.h>
 #include <wx/propgrid/property.h>
 #include <wx/propgrid/props.h>
+#include <wx/spinctrl.h>
 
 #include "../../main.h"
 #include "defines.h"
@@ -161,7 +162,11 @@ class OptionsDlg : public wxDialog
         wxColourPickerCtrl* m_freedvReporterRxForegroundColor;
         wxColourPickerCtrl* m_freedvReporterMsgBackgroundColor;
         wxColourPickerCtrl* m_freedvReporterMsgForegroundColor;
-        
+
+        /* Group box tint colour/strength */
+        wxColourPickerCtrl* m_groupBoxTintColor;
+        wxSpinCtrl* m_groupBoxTintPercent;
+
         /* Spectrum plot averaging */
         wxComboBox*             m_cbxNumSpectrumAveraging;
 
