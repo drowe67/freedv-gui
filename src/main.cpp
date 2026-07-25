@@ -459,7 +459,7 @@ void MainApp::UnitTest_()
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
-                std::this_thread::sleep_for(100ms);
+                std::this_thread::sleep_for(20ms);
                 auto newSync = freedvInterface.getSync();
                 if (newSync != sync)
                 {
@@ -474,7 +474,7 @@ void MainApp::UnitTest_()
             auto sync = 0;
             for (int i = 0; i < utTxTimeSeconds*10; i++)
             {
-                std::this_thread::sleep_for(100ms);
+                std::this_thread::sleep_for(20ms);
                 auto newSync = freedvInterface.getSync();
                 if (newSync != sync)
                 {
