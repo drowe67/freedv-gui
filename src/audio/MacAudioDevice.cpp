@@ -45,7 +45,7 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
-constexpr static int MS_TO_NSEC = 1000000;
+//constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
 constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 10;
