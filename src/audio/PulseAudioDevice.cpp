@@ -323,6 +323,7 @@ void PulseAudioDevice::setHelperRealTime()
 #endif // defined(USE_RTKIT)
 }
 
+#if 0
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
@@ -382,6 +383,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     MustStopWork_ = false;
 #endif // 0
 }
+#endif
 
 void PulseAudioDevice::clearHelperRealTime()
 {

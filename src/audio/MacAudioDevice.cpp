@@ -904,13 +904,16 @@ void MacAudioDevice::startRealTimeWork()
         leaveWorkgroup_();
         joinWorkgroup_();
     }
+    
+    IAudioDevice::startRealTimeWork();
 }
 
+/*
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
     auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
-}
+}*/
 
 void MacAudioDevice::clearHelperRealTime()
 {
