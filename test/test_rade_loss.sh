@@ -119,7 +119,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
     #fi
 
-    sleep 5
+    sleep 7
 
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
