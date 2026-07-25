@@ -2124,9 +2124,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         freqString = wxNumberFormatter::ToString(freq, 4);
                     }
 
-                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
+                    if ((m_lastReportedCallsignListView->GetItemCount() == 0 || 
                         m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign ||
-                        m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
+                        m_lastReportedCallsignListView->GetItemText(0, 1) != freqString) ||
+                        m_lastReportedCallsignListView->GetItemTextColour(0) == wxColour(160, 160, 160))
                     {
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = EMPTY_STR;
