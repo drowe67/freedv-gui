@@ -62,11 +62,11 @@ public:
     
     // Lets audio system know that we're beginning to do work with the
     // received audio.
-    virtual void startRealTimeWork() override { /* empty */ }
+    virtual void startRealTimeWork() override;
     
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork(bool fastMode = false) override { (void)fastMode; std::this_thread::sleep_for(10ms); }
+    virtual void stopRealTimeWork(bool fastMode = false) override;
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override { /* empty */ }
@@ -129,6 +129,10 @@ protected:
     
     AudioDeviceChangedCallbackFn onAudioDeviceChangedFunction;
     void* onAudioDeviceChangedState;
+    
+private:
+    int extraTimeNs_ = 0;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 };
 
 #endif // I_AUDIO_DEVICE_H
