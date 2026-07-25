@@ -337,7 +337,7 @@ void MainApp::UnitTest_()
     }
     std::this_thread::sleep_for(2s);
     
-    constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
+    constexpr int MAX_TIME_AS_COUNTER = 60000; // 20 minutes
     if (testName == "tx")
     {
         if (utTxOutFile != "")
@@ -383,7 +383,7 @@ void MainApp::UnitTest_()
                 int counter = 0;
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
-                    std::this_thread::sleep_for(100ms);
+                    std::this_thread::sleep_for(20ms);
                 } 
             }
             else
@@ -472,7 +472,7 @@ void MainApp::UnitTest_()
         {
             // Receive for txtime seconds
             auto sync = 0;
-            for (int i = 0; i < utTxTimeSeconds*10; i++)
+            for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
                 auto newSync = freedvInterface.getSync();

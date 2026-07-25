@@ -144,7 +144,7 @@ function Test-RadeLoss {
 
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 60 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi

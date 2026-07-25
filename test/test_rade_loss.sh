@@ -112,7 +112,7 @@ kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 60 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
