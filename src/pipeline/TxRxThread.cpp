@@ -681,12 +681,21 @@ void TxRxThread::reportStats_()
 {
     if (numTimeSamples_ > 0)
     {
-        std::tm * minTm = std::localtime(&minTime_);
-        std::tm * maxTm = std::localtime(&maxTime_);
+        // localtime() isn't thread-safe (shared static buffer); use the
+        // reentrant variant since TX and RX threads can call this concurrently.
+        std::tm minTm{};
+        std::tm maxTm{};
+#if defined(_WIN32)
+        localtime_s(&minTm, &minTime_);
+        localtime_s(&maxTm, &maxTime_);
+#else
+        localtime_r(&minTime_, &minTm);
+        localtime_r(&maxTime_, &maxTm);
+#endif // defined(_WIN32)
         char bufMin[32];
         char bufMax[32];
-        std::strftime(bufMin, 32, "%H:%M:%S", minTm);
-        std::strftime(bufMax, 32, "%H:%M:%S", maxTm);
+        std::strftime(bufMin, 32, "%H:%M:%S", &minTm);
+        std::strftime(bufMax, 32, "%H:%M:%S", &maxTm);
         
         log_info("m_tx = %d, min = %f ns [%s], max = %f ns [%s], mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, bufMin, maxDuration_, bufMax, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
     }
