@@ -493,7 +493,16 @@ void MainApp::UnitTest_()
     
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
- 
+
+    // Report FIFO under/overrun counts observed during this run. These indicate
+    // dropouts in the real-time audio path (e.g. the TX/RX thread falling behind
+    // the sound card) that can manifest as feature loss in RADE loss tests.
+    log_info("FIFO stats: infifo1_full=%d outfifo1_empty=%d infifo2_full=%d outfifo2_empty=%d",
+              g_infifo1_full.load(std::memory_order_acquire),
+              g_outfifo1_empty.load(std::memory_order_acquire),
+              g_infifo2_full.load(std::memory_order_acquire),
+              g_outfifo2_empty.load(std::memory_order_acquire));
+
     // Fire event to stop FreeDV
     log_info("Firing stop");
     CallAfter([this]() {
