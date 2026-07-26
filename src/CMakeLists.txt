@@ -20,6 +20,14 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
+# Enable TX/RX processing loop timing stats (see TxRxThread::reportStats_) in
+# all builds, including release, so real-time scheduling stalls can be
+# diagnosed on any build variant (e.g. the release DMG exercised by
+# test-app-folder CI jobs, which don't set UNITTEST). Overhead per frame is a
+# couple of clock reads and an accumulate; reportStats_ only logs once per
+# TX/RX session, at thread shutdown.
+add_compile_definitions(ENABLE_PROCESSING_STATS)
+
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
