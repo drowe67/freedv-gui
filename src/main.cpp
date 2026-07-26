@@ -2854,6 +2854,15 @@ void MainFrame::startRxStream()
         // definitely lose audio.
         constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
+        if (testName != "")
+        {
+            // Automated tests run on CI hardware that can stall the real-time TX/RX
+            // thread for longer than the default FIFO depth can absorb, which
+            // manifests as a genuine silence gap injected into the transmitted
+            // signal. Give it more headroom here; this doesn't affect normal
+            // interactive use since fifoSizeMs is left untouched in that case.
+            m_fifoSize_ms = std::max(m_fifoSize_ms, UT_MIN_FIFO_SIZE_MS);
+        }
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 

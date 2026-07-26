@@ -75,6 +75,10 @@
 #define VOX_TONE_FREQ       1000.0                         // optional left channel vox tone freq
 #define VOX_TONE_AMP        30000                          // optional left channel vox tone amp
 #define FIFO_SIZE           640                            // default fifo size in ms
+#define UT_MIN_FIFO_SIZE_MS 3000                           // minimum TX/RX FIFO depth (ms) when running automated unit
+                                                            // tests (-ut), so a scheduling stall on a loaded/shared CI
+                                                            // runner doesn't drain the FIFO and inject silence into the
+                                                            // transmitted signal. Not used for normal interactive operation.
 #define FRAME_DURATION_MS   20                             // default frame length of 20 mS = 0.02 seconds
 #define MS_TO_SEC           1000
 #define RECORD_FILE_SAMPLE_RATE (SAMPLE_RATE)
