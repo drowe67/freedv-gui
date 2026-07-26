@@ -123,7 +123,6 @@ jobs:
           ${{github.workspace}}/build_osx/txfeatures.f32
           ${{github.workspace}}/build_osx/rxfeatures.f32
           ${{github.workspace}}/build_osx/tmp.log
-        archive: false
         if-no-files-found: warn
 
     #- name: Zip up traces
@@ -327,5 +326,4 @@ jobs:
           ${{github.workspace}}/rxfeatures.f32
           ${{github.workspace}}/tmp.log
           ${{github.workspace}}/temp-test.txt
-        archive: false
         if-no-files-found: warn
