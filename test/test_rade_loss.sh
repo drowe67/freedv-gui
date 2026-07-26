@@ -79,18 +79,18 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 if [ ! -d "$(pwd)/rade_src" ]; then
     git clone -b main https://github.com/drowe67/radae.git rade_src
 fi
-sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
+#sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
+    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
 else
-    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+TX_ARGS="-txfile $(pwd)/rade_src/wav/all.wav -txfeaturefile $(pwd)/txfeatures.f32 "
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
@@ -112,14 +112,14 @@ kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 60 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
     #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
     #fi
 
-    sleep 7
+    sleep 5
 
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
