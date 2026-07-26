@@ -162,13 +162,14 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
         g_loopPlayFileFromRadio = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
 
+        wxString displayName = fileName + wxT(".") + extension;
         wxString statusText = "";
         if(extension == wxT("raw")) {
-            statusText = wxString::Format(wxT("Playing raw file %s as radio input (assuming Fs=%d)"), soundFile, (int)sfInfo.samplerate);
+            statusText = wxString::Format(wxT("Playing raw file %s as radio input (assuming Fs=%d)"), displayName, (int)sfInfo.samplerate);
         }
         else
         {
-            statusText = wxString::Format(wxT("Playing file %s as radio input"), soundFile);
+            statusText = wxString::Format(wxT("Playing file %s as radio input"), displayName);
         }
         ShowPlaybackStatus(statusText);
         log_debug("OnPlayFileFromRadio:: Playing File Fs = %d", (int)sfInfo.samplerate);
@@ -321,7 +322,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
                     return;
                 }
 
-                ShowPlaybackStatus(wxT("Recording file ") + soundFile + wxT(" from decoder"));
+                ShowPlaybackStatus(wxT("Recording file ") + fileName + wxT(" from decoder"));
                 g_recFileFromDecoder = true;
             }
             else

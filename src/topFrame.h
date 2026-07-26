@@ -177,6 +177,8 @@ class TopFrame : public wxFrame
         // below reliably tints it the same way as TintedGroupBox, rather than
         // being overridden by the native widget's own GTK theme/CSS.
         wxInfoBarGeneric* m_infoBar;
+        int m_lastInfoBarHeight = 0;
+        bool m_playbackStatusVisible = false;
 
         TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;

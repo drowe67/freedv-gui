@@ -117,13 +117,33 @@ bool MainApp::CanAccessSerialPort(std::string const& portName)
 
 void MainFrame::ShowPlaybackStatus(const wxString& msg)
 {
-    if (msg.IsEmpty())
+    bool show = !msg.IsEmpty();
+    if (show)
     {
-        m_infoBar->Dismiss();
+        m_infoBar->ShowMessage(msg);
     }
     else
     {
-        m_infoBar->ShowMessage(msg);
+        m_infoBar->Dismiss();
+    }
+
+    // Grow/shrink the frame itself by the info bar's own natural height on
+    // each show/dismiss transition, so it doesn't borrow that space from
+    // the rest of the window (which can shrink the notebook's plot height
+    // directly, or tip a movable group box column's wrap-sizer over its
+    // column threshold, causing an unrelated-looking layout rearrange).
+    if (show != m_playbackStatusVisible)
+    {
+        m_playbackStatusVisible = show;
+        int delta = show ? m_lastInfoBarHeight : -m_lastInfoBarHeight;
+        if (delta != 0)
+        {
+            CallAfter([this, delta]()
+            {
+                wxSize sz = GetSize();
+                SetSize(sz.GetWidth(), sz.GetHeight() + delta);
+            });
+        }
     }
 }
 

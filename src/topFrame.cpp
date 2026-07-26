@@ -996,6 +996,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_infoBar->SetBackgroundColour(GroupBoxBackgroundColour());
     outerSizer->Add(m_infoBar, 0, static_cast<int>(wxEXPAND), 0);
 
+    // Natural one-line height of the info bar, used by ShowPlaybackStatus()
+    // to compensate the frame's size when showing/dismissing it. Measured
+    // via GetBestSize() (font/icon/padding driven, so stable regardless of
+    // current Show() state) rather than observed reactively via a size
+    // event -- Dismiss() doesn't reliably produce a matching "back to zero"
+    // wxEVT_SIZE on this widget, so an event-driven approach only catches
+    // the first-ever appearance and silently misses every subsequent
+    // show/dismiss cycle.
+    m_lastInfoBarHeight = m_infoBar->GetBestSize().GetHeight();
+
     m_panel->SetSizerAndFit(outerSizer);
     this->Layout();
 
