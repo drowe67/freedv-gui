@@ -1284,6 +1284,13 @@ void MainFrame::togglePTT(void) {
     // the drain loops below, which would corrupt newTx at the end if not checked.
     const bool wasInTx = g_tx.load(std::memory_order_acquire);
 
+    // Diagnostic: measure how long this function keeps the main thread busy.
+    // togglePTT() runs synchronously here (UI updates, Yield() polling loops,
+    // reporter/rig-control calls) right at the PTT transition, which is
+    // exactly where the real-time TX/RX thread has been observed to stall
+    // under load -- this timing lets us check whether the two are correlated.
+    auto togglePTTStart_ = highResClock.now();
+
     // Change tabbed page in centre panel depending on PTT state
 
     if (wasInTx)
@@ -1614,6 +1621,11 @@ void MainFrame::togglePTT(void) {
         m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
         wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
+    }
+
+    {
+        auto togglePTTElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(highResClock.now() - togglePTTStart_).count();
+        log_info("togglePTT: %s transition kept main thread busy for %lld ms", wasInTx ? "TX->RX" : "RX->TX", (long long)togglePTTElapsedMs);
     }
 
     CallAfter([&]() {
