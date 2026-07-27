@@ -162,7 +162,7 @@ function Test-RadeLoss {
     $playPsi.FileName = "sox.exe"
     $playPsi.WorkingDirectory = $current_loc
     $quoted_play_device = "`"" + $ComputerToRadioDevice + "`""
-    $playPsi.Arguments = @("-t wav `"$current_loc\test.wav`" -t waveaudio $quoted_play_device")
+    $playPsi.Arguments = @("--buffer 32768 -t wav `"$current_loc\test.wav`" -t waveaudio $quoted_play_device")
 
     $playProcess = New-Object System.Diagnostics.Process
     $playProcess.StartInfo = $playPsi

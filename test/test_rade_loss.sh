@@ -124,7 +124,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
     else
-        sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
+        sox --buffer 32768 -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
     fi
 
     wait $FDV_PID
