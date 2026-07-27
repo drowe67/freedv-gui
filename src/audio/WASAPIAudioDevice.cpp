@@ -549,7 +549,6 @@ void WASAPIAudioDevice::setHelperRealTime()
     }
 }
 
-/*
 void WASAPIAudioDevice::startRealTimeWork() 
 {
     startTime_ = std::chrono::steady_clock::now();
@@ -584,7 +583,7 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         // Fallback to a simple sleep.
         IAudioDevice::stopRealTimeWork(fastMode);
     }
-}*/
+}
 
 void WASAPIAudioDevice::clearHelperRealTime()
 {
