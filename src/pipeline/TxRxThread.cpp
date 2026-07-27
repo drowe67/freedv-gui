@@ -799,42 +799,45 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             auto inputPtr = inputSamples_.get();
-            int nread = cbData->infifo2->read(inputPtr, nsam_in_48);            
+            int nread = cbData->infifo2->read(inputPtr, nsam_in_48);
             if (nread != 0)
             {
-                inputPtr = inputSamplesZeros_.get();
-            }
-            if (nread != 0 && endingTx.load(std::memory_order_acquire))
-            {
-                if (!hasEooBeenSent_)
+                if (endingTx.load(std::memory_order_acquire))
                 {
-                    // Special case for handling RADE EOT
-                    freedvInterface.restartTxVocoder();
-                    hasEooBeenSent_ = true;
-                }
-
-                auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                if (nout > 0 && outputSamples != nullptr)
-                {
-                    if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                    if (!hasEooBeenSent_)
                     {
-                        FREEDV_BEGIN_VERIFIED_SAFE
-                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
-                        FREEDV_END_VERIFIED_SAFE
+                        // Special case for handling RADE EOT
+                        freedvInterface.restartTxVocoder();
+                        hasEooBeenSent_ = true;
+                    }
+
+                    auto outputSamples = pipeline_->execute(inputSamplesZeros_.get(), 0, &nout);
+                    if (nout > 0 && outputSamples != nullptr)
+                    {
+                        if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                        {
+                            FREEDV_BEGIN_VERIFIED_SAFE
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
+                            FREEDV_END_VERIFIED_SAFE
+                        }
+                    }
+                    else
+                    {
+                        g_eoo_enqueued.store(true, std::memory_order_release);
                     }
                 }
-                else
-                {
-                    g_eoo_enqueued.store(true, std::memory_order_release);
-                }
+
+                // No microphone audio available yet. Rather than encoding synthesized
+                // silence just to keep outfifo1 topped up, stop generating frames for
+                // this cycle -- the next iteration will pick up once real audio has
+                // arrived, instead of burning time encoding (and transmitting) frames
+                // nobody asked for.
                 break;
             }
-            else
-            {
-                g_eoo_enqueued.store(false, std::memory_order_release);
-                hasEooBeenSent_ = false;
-            }
-            
+
+            g_eoo_enqueued.store(false, std::memory_order_release);
+            hasEooBeenSent_ = false;
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
