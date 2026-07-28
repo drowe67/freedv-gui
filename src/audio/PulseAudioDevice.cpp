@@ -252,7 +252,7 @@ void PulseAudioDevice::setHelperRealTime()
     sigset_t signal_set;
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGXCPU);
-    sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
+    pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
 #endif // 0
 
 #if defined(USE_RTKIT)
