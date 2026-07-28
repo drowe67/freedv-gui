@@ -43,7 +43,7 @@ using namespace std::chrono_literals;
 // TX audio to reach the radio.
 #define PULSE_TARGET_LATENCY_US 20000
 
-#if 1
+#if 0
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 #endif // 0
  
@@ -200,7 +200,7 @@ void PulseAudioDevice::setHelperRealTime()
     // timing is so unreliable and due to the fact that Linux actually
     // kills processes that it deems as using "too much" CPU while in
     // real-time, it's better just to use normal scheduling for now.
-#if 1
+#if 0
     // Set RLIMIT_RTTIME, required for rtkit
     struct rlimit rlim;
     memset(&rlim, 0, sizeof(rlim));
@@ -252,7 +252,7 @@ void PulseAudioDevice::setHelperRealTime()
     sigset_t signal_set;
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGXCPU);
-    pthread_sigmask(SIG_UNBLOCK, &signal_set, NULL);
+    sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
 #endif // 0
 
 #if defined(USE_RTKIT)
@@ -325,13 +325,6 @@ void PulseAudioDevice::setHelperRealTime()
 
 void PulseAudioDevice::startRealTimeWork()
 {
-    IAudioDevice::startRealTimeWork();
-    MustStopWork_ = false;
-}
-
-#if 0
-void PulseAudioDevice::startRealTimeWork()
-{
     sleepFallback_ = false;
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
@@ -389,7 +382,6 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     MustStopWork_ = false;
 #endif // 0
 }
-#endif
 
 void PulseAudioDevice::clearHelperRealTime()
 {
@@ -397,7 +389,7 @@ void PulseAudioDevice::clearHelperRealTime()
 }
 
 // Disabled for now as thread-local variables are apparently not RT-safe.
-#if 1
+#if 0
 bool PulseAudioDevice::mustStopWork() FREEDV_NONBLOCKING
 {
     return MustStopWork_;
@@ -524,7 +516,7 @@ void PulseAudioDevice::HandleXCPU_(int, siginfo_t *, void *)
 {
     // Notify thread that it has to stop work immediately and sleep.
     log_warn("Taking too much CPU handling real-time tasks, pausing for a bit");
-#if 1
+#if 0
     MustStopWork_ = true;
 #endif // 0
 }

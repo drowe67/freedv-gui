@@ -46,7 +46,7 @@
 
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
-//#include "samplerate.h"
+#include "samplerate.h"
 
 using namespace std::chrono_literals;
 
@@ -2935,7 +2935,6 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
 
                         if (outSampleRate != inSampleRate)
                         {
-#if 0
                             std::vector<float> floatIn(recordBuf.size());
                             src_short_to_float_array(recordBuf.data(), floatIn.data(), (int)recordBuf.size());
 
@@ -2956,7 +2955,6 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
                                 src_float_to_short_array(floatOut.data(), resampledBuf.data(), (int)srcData.output_frames_gen);
                                 playBuf = &resampledBuf;
                             }
-#endif
                         }
 
                         struct PlayState { const std::vector<short>* buf; int pos; };
