@@ -45,7 +45,7 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
-constexpr static int MS_TO_NSEC = 1000000;
+//constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
 constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
@@ -905,13 +905,16 @@ void MacAudioDevice::startRealTimeWork()
         leaveWorkgroup_();
         joinWorkgroup_();
     }
+    
+    IAudioDevice::startRealTimeWork();
 }
 
+/*
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
     auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
-}
+}*/
 
 void MacAudioDevice::clearHelperRealTime()
 {

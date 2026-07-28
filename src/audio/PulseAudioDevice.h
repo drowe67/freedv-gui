@@ -58,12 +58,12 @@ public:
 
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork(bool fastMode = false) override;
+    //virtual void stopRealTimeWork(bool fastMode = false) override;
 
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
 
-#if 0
+#if 1
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
     // XXX - disabled as current implementation uses thread_local (not RT safe).
