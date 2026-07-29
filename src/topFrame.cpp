@@ -531,6 +531,12 @@ wxString TintedGroupBox::GetLabel() const
     return m_title->GetLabel();
 }
 
+void TintedGroupBox::SetToolTip(const wxString& tip)
+{
+    wxPanel::SetToolTip(tip);
+    m_title->SetToolTip(tip);
+}
+
 //=========================================================================
 // Code that lays out the main application window
 //=========================================================================
@@ -728,10 +734,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Sync  Indicator box
     //------------------------------
     syncBox = new TintedGroupBox(m_panel, _("Sync"), wxVERTICAL, 2);
+    wxString syncBoxToolTip = _("Shows the current FreeDV mode. Green indicates the modem is synchronised with the received signal; red indicates no sync.");
+    syncBox->SetToolTip(syncBoxToolTip);
 
     m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     syncBox->GetContentSizer()->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
+    m_textSync->SetToolTip(syncBoxToolTip);
 
     leftSizer->Add(syncBox,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 

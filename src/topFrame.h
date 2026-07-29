@@ -116,6 +116,11 @@ class TintedGroupBox : public wxPanel
         virtual void SetLabel(const wxString& label) override;
         virtual wxString GetLabel() const override;
 
+        // Applies to the title and background as well as the panel itself,
+        // so it shows no matter where in the box the mouse is (barring
+        // content widgets that set their own, more specific tooltip).
+        void SetToolTip(const wxString& tip);
+
         wxSizer* GetContentSizer() const { return m_contentSizer; }
 
     private:
