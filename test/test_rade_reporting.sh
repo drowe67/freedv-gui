@@ -112,9 +112,9 @@ RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$1" == "mpp" ]; then
-    TX_ARGS="-txtime 1 -txattempts 7 "
+    TX_ARGS="-txtime 10 -txattempts 7 "
 else
-    TX_ARGS="-txtime 1 -txattempts 2 "
+    TX_ARGS="-txtime 10 -txattempts 2 "
 fi
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS >tmp.log 2>&1 &
 
