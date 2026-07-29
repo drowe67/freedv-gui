@@ -603,6 +603,7 @@ class MainFrame : public TopFrame
 
         bool terminating_; // used for terminating FreeDV
         bool syncState_; // GUI copy of current sync state
+        bool realigned_; // one-shot latch: has the Sync box mode text been re-centred yet?
 
         // Caches appConfiguration.experimentalFeatures as of the last tab layout load
         // attempt, so exit-time save uses that instead of a possibly-since-toggled live

@@ -1186,6 +1186,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     terminating_ = false;
     syncState_ = false;
+    realigned_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
 
@@ -2157,7 +2158,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(freedvInterface.getCurrentModeStr());
                 m_textSync->Refresh();
             }
         }
@@ -2323,6 +2323,34 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
+
+        wxString modeString = freedvInterface.getCurrentModeStr();
+        bool relayout =
+            m_textSync->GetLabel() != modeString &&
+            !realigned_;
+        m_textSync->SetLabel(modeString);
+        if (relayout)
+        {
+            // XXX - force resize events to make mode string re-center itself.
+            wxSize minSize = GetSize();
+            auto w = minSize.GetWidth();
+            auto h = minSize.GetHeight();
+
+            CallAfter([=, this]()
+            {
+                SetSize(w, h);
+            });
+            CallAfter([=, this]()
+            {
+                SetSize(w + 1, h + 1);
+            });
+            CallAfter([=, this]()
+            {
+                SetSize(w, h);
+            });
+
+            realigned_ = true;
+        }
 
         wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemOffset());
         m_textFreqOffset->SetLabel(freqOffset);
