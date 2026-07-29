@@ -1160,7 +1160,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SNR_FORMAT_STR("%ddB"),
     NO_SNR_LABEL("--"),
     EMPTY_STR(""),
-    RADEV2_LABEL("RADEV2"),
     BITS_UNK_LABEL("Bits: unk"),
     ERRS_UNK_LABEL("Errs: unk"),
     BER_UNK_LABEL("BER: unk"),
@@ -2158,7 +2157,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(RADEV2_LABEL);
+                m_textSync->SetLabel(freedvInterface.getCurrentModeStr());
                 m_textSync->Refresh();
             }
         }

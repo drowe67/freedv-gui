@@ -518,7 +518,6 @@ class MainFrame : public TopFrame
         const wxString SNR_FORMAT_STR;
         const wxString NO_SNR_LABEL;
         const wxString EMPTY_STR;
-        const wxString RADEV2_LABEL;
         const wxString BITS_UNK_LABEL;
         const wxString ERRS_UNK_LABEL;
         const wxString BER_UNK_LABEL;

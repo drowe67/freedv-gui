@@ -729,7 +729,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     syncBox = new TintedGroupBox(m_panel, _("Sync"), wxVERTICAL, 2);
 
-    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("RADEV2"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     syncBox->GetContentSizer()->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
 
