@@ -909,17 +909,6 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    // EXPERIMENT: fall back to the same flat sleep_for(10ms) that Windows/Linux
-    // currently use (via the base class), instead of waiting on the hardware
-    // callback-driven semaphore below. Testing whether the semaphore wait
-    // (paired with the one-time THREAD_TIME_CONSTRAINT_POLICY declaration in
-    // setHelperRealTime()) is what's letting the real-time thread get
-    // preempted for hundreds of ms to over a second under load, since that
-    // failure mode has only been observed on macOS and not on Windows/Linux
-    // (which don't tie their pacing to external hardware callback timing).
-    IAudioDevice::stopRealTimeWork(fastMode);
-    return;
-
     auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
 }

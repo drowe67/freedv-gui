@@ -49,7 +49,7 @@ param (
 
     [double]
     # The maximum acceptable RADE feature loss fraction before the test is considered failed.
-    $LossThreshold = 0.0895,
+    $LossThreshold = 0.0891,
 
     [string]
     # Path or filename of the Python interpreter used to run loss.py.
@@ -100,7 +100,7 @@ function Test-RadeLoss {
     $recordPsi.FileName = "sox.exe"
     $recordPsi.WorkingDirectory = $current_loc
     $quoted_record_device = "`"" + $RadioToComputerDevice + "`""
-    $recordPsi.Arguments = @("--buffer 32768 -t waveaudio $quoted_record_device -c 1 -t wav -r 48000 `"$current_loc\test.wav`"")
+    $recordPsi.Arguments = @("--buffer 128000 -t waveaudio $quoted_record_device -c 1 -t wav -r 48000 `"$current_loc\test.wav`"")
 
     $recordProcess = New-Object System.Diagnostics.Process
     $recordProcess.StartInfo = $recordPsi
@@ -162,7 +162,7 @@ function Test-RadeLoss {
     $playPsi.FileName = "sox.exe"
     $playPsi.WorkingDirectory = $current_loc
     $quoted_play_device = "`"" + $ComputerToRadioDevice + "`""
-    $playPsi.Arguments = @("--buffer 32768 -t wav `"$current_loc\test.wav`" -t waveaudio $quoted_play_device")
+    $playPsi.Arguments = @("--buffer 128000 -t wav `"$current_loc\test.wav`" -t waveaudio $quoted_play_device")
 
     $playProcess = New-Object System.Diagnostics.Process
     $playProcess.StartInfo = $playPsi

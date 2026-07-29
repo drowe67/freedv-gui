@@ -85,7 +85,7 @@ sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
 else
-    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+    sox --buffer 128000 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
@@ -124,7 +124,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
     else
-        sox --buffer 32768 -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
+        sox --buffer 128000 -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
     fi
 
     wait $FDV_PID
@@ -132,7 +132,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     cat tmp.log
 
     # Run feature files through loss tool
-    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.0895 --clip_start 100 --clip_end 300
+    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.0891 --clip_start 100 --clip_end 300
 fi
 
 # Clean up PulseAudio virtual devices
