@@ -967,6 +967,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431, #1433) - thanks @barjac!
     * Harden experimental tab layout persistence. (PR #1434) - thanks @barjac!
     * Fix right-click context menus dismissing before they can be read (GTK) (PR #1437) - thanks @barjac!
+    * Unconditionally add new station to Heard Station list if first heard. (PR #1444)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
