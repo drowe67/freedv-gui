@@ -111,6 +111,13 @@ cat tmp.log
 kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
+# Workaround/performance improvement: strip silence at beginning and end of recording
+# As well as reducing the amount of audio that needs to be played back, it also helps
+# ensure we don't accidentally run into a potential RADEV2 bug (https://github.com/freedv/rade_c/issues/8)
+# Note: commands adapted from https://digitalcardboard.com/blog/2009/08/25/the-sox-of-silence/
+sox test.wav test_stripped.wav silence 1 0.1 1% reverse
+sox test_stripped.wav test.wav silence 1 0.1 1% reverse
+
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
     FDV_PID=$!

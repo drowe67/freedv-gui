@@ -142,6 +142,22 @@ function Test-RadeLoss {
         return $false
     }
 
+    # Workaround/performance improvement: strip silence at beginning and end of recording
+    # As well as reducing the amount of audio that needs to be played back, it also helps
+    # ensure we don't accidentally run into a potential RADEV2 bug (https://github.com/freedv/rade_c/issues/8)
+    # Note: commands adapted from https://digitalcardboard.com/blog/2009/08/25/the-sox-of-silence/
+    $recordPsi.Arguments = @("sox test.wav test_stripped.wav silence 1 0.1 1% reverse")
+    $stripProcess = New-Object System.Diagnostics.Process
+    $stripProcess.StartInto = $recordPsi
+    [void]$stripProcess.Start()
+    $stripProcess.WaitForExit()
+
+    $recordPsi.Arguments = @("sox test_stripped.wav test.wav silence 1 0.1 1% reverse")
+    $stripProcess = New-Object System.Diagnostics.Process
+    $stripProcess.StartInto = $recordPsi
+    [void]$stripProcess.Start()
+    $stripProcess.WaitForExit()
+
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
     $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
