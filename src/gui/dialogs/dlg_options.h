@@ -219,6 +219,8 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtToneFreqHz;
         wxTextCtrl   *m_txtToneAmplitude;
 
+        wxCheckBox   *m_ckboxAutoStartOnLaunch;
+
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
 

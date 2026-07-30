@@ -105,6 +105,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
         
     , showDecodeStats("/Debug/showDecodeStats", false)
+    , autoStartOnLaunch("/Modem/autoStartOnLaunch", false)
 {
     // empty
 }
@@ -224,6 +225,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reportingUserMsgColWidth);
     
     load_(config, showDecodeStats);
+    load_(config, autoStartOnLaunch);
 
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
@@ -306,6 +308,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reportingUserMsgColWidth);
     
     save_(config, showDecodeStats);
+    save_(config, autoStartOnLaunch);
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);
