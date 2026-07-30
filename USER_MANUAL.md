@@ -980,6 +980,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Connect to server via TLS by default. (PR #1422, #1427)
     * Block special characters in recording file name suffixes and default the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks @barjac!
     * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
+    * Automatically start decoding on FreeDV startup. (PR #1436)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
@@ -987,6 +988,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Require C++20 to build FreeDV. (PR #1440)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
+    * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)
 
 ## V2.3.1 May 2026
 

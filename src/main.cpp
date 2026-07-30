@@ -57,6 +57,7 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/util/WindowPositionRestore.h"
+#include "gui/util/TabLayoutSerializer.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
@@ -869,10 +870,6 @@ bool MainApp::OnInit()
     frame = new MainFrame(NULL);
     SetTopWindow(frame);
 
-    // Should guarantee that the first plot tab defined is the one
-    // displayed. But it doesn't when built from command line.  Why?
-
-    frame->m_auiNbookCtrl->ChangeSelection(0);
     frame->Layout();    
     frame->Show();
     g_parent = frame;
@@ -1191,8 +1188,16 @@ setDefaultMode:
     tabLayoutPersistenceEnabledAtStartup_ = wxGetApp().appConfiguration.experimentalFeatures;
     if (tabLayoutPersistenceEnabledAtStartup_ && wxGetApp().appConfiguration.tabLayout != "")
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutDeserializer deserializer(wxGetApp().appConfiguration.tabLayout);
+        m_auiNbookCtrl->LoadLayout("notebook", deserializer);
+#else
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+#endif // wxCHECK_VERSION(3, 3, 0)
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+
+        // Select previous active tab.
+        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
@@ -1515,9 +1520,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             }
         });
     }
-    
+    else if (wxGetApp().appConfiguration.autoStartOnLaunch)
+    {
+        // Simulate a press of the Start button once the main window is up,
+        // but only if the audio configuration is actually valid. Checking
+        // silently first avoids popping up error dialogs (or the Easy Setup
+        // dialog) at launch for users who haven't fully configured audio yet.
+        CallAfter([&]() {
+            if (!validateSoundCardSetup(true)) return;
+
+            m_togBtnOnOff->SetValue(true);
+            wxCommandEvent onEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
+            onEvent.SetEventObject(m_togBtnOnOff);
+            OnTogBtnOnOff(onEvent);
+        });
+    }
+
     wxGetApp().appConfiguration.firstTimeUse = false;
-    
+
     //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
@@ -1639,9 +1659,16 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
 
     if (tabLayoutPersistenceEnabledAtStartup_)
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutSerializer serializer;
+        m_auiNbookCtrl->SaveLayout("notebook", serializer);
+        wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+#else
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+#endif // wxCHECK_VERSION(3, 3, 0)
     }
-    
+
+
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
@@ -3692,17 +3719,18 @@ void MainFrame::startRxStream()
     }
 }
 
-bool MainFrame::validateSoundCardSetup()
+bool MainFrame::validateSoundCardSetup(bool silent)
 {
     bool canRun = true;
-    
+
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
+    engine->setOnEngineError([this, silent](IAudioEngine&, std::string error, void*) {
+        if (silent) return;
         CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
-                "Error encountered while initializing the audio engine: %s.", 
-                error), wxT("Error"), wxOK, this); 
+                "Error encountered while initializing the audio engine: %s.",
+                error), wxT("Error"), wxOK, this);
         });
     }, nullptr);
     engine->start();
@@ -3752,37 +3780,43 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Display Easy Setup dialog.
-        CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control status
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        if (!silent)
+        {
+            // Initial setup. Display Easy Setup dialog.
+            CallAfter([&]() {
+                EasySetupDialog* dlg = new EasySetupDialog(this);
+                if (dlg->ShowModal() == wxOK)
                 {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
+                    // Show/hide frequency box based on CAT control status
+                    m_freqBox->Show(isFrequencyControlEnabled_());
 
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
-        });
+                    // Show/hide callsign combo box based on PSK Reporter Status
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+                    {
+                        m_cboLastReportedCallsigns->Show();
+                        m_txtCtrlCallSign->Hide();
+                    }
+                    else
+                    {
+                        m_cboLastReportedCallsigns->Hide();
+                        m_txtCtrlCallSign->Show();
+                    }
+
+                    // Relayout window so that the changes can take effect.
+                    m_panel->Layout();
+                }
+            });
+        }
         canRun = false;
     }
     else if (!canRun)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
-            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        if (!silent)
+        {
+            wxMessageBox(wxString::Format(
+                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.",
+                failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        }
     }
     else
     {
@@ -3822,10 +3856,10 @@ bool MainFrame::validateSoundCardSetup()
             canRun = false;
         }
         
-        if (!canRun)
+        if (!canRun && !silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.",
                 failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }
