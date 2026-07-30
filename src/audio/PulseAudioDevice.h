@@ -54,11 +54,11 @@ public:
     virtual void setHelperRealTime() override;
 
     // Lets audio system know that we're starting work on received audio.
-    virtual void startRealTimeWork() override;
+    //virtual void startRealTimeWork() override;
 
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork(bool fastMode = false) override;
+    //virtual void stopRealTimeWork(bool fastMode = false) override;
 
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
