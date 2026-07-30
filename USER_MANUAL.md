@@ -986,6 +986,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Require C++20 to build FreeDV. (PR #1440)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
+    * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)
 
 ## V2.3.1 May 2026
 

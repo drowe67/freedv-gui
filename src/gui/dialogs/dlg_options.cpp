@@ -1089,9 +1089,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
         m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
-        
+
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
-       
+
+
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
         m_ckboxEnableLegacyModes->SetValue(wxGetApp().appConfiguration.enableLegacyModes);
@@ -1307,7 +1308,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
-        
+
         wxGetApp().appConfiguration.experimentalFeatures = m_experimentalFeatures->GetValue();
 
         // General reporting config
