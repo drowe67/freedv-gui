@@ -23,6 +23,7 @@
 #define __TOPFRAME_H__
 
 #include "git_version.h"
+#include <wx/version.h>
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/intl.h>
@@ -289,9 +290,15 @@ public:
     bool AcceptsFocus() const;
     bool AcceptsFocusFromKeyboard() const;
     bool AcceptsFocusRecursively() const;
-    
+
+#if !wxCHECK_VERSION(3, 3, 0)
+    // wxAuiNotebook::SaveLayout()/LoadLayout() are only available in
+    // wxWidgets 3.3+. Older wxWidgets (e.g. as still packaged by some
+    // Linux distributions) falls back to this hand-rolled implementation
+    // so that tab layout persistence is still available.
     wxString SavePerspective();
     bool LoadPerspective(const wxString& layout);
+#endif // !wxCHECK_VERSION(3, 3, 0)
 };
 
 #endif //__TOPFRAME_H__
