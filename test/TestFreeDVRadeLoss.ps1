@@ -167,7 +167,7 @@ function Test-RadeLoss {
     [void]$process.Start()
     $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 
-    Start-Sleep -Seconds 5
+    Start-Sleep -Milliseconds 4995
 
     # Play the recorded TX audio back into FreeDV's RX input
     $playPsi = New-Object System.Diagnostics.ProcessStartInfo
