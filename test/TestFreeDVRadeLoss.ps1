@@ -148,13 +148,13 @@ function Test-RadeLoss {
     # Note: commands adapted from https://digitalcardboard.com/blog/2009/08/25/the-sox-of-silence/
     $recordPsi.Arguments = @("sox test.wav test_stripped.wav silence 1 0.1 1% reverse")
     $stripProcess = New-Object System.Diagnostics.Process
-    $stripProcess.StartInto = $recordPsi
+    $stripProcess.StartInfo = $recordPsi
     [void]$stripProcess.Start()
     $stripProcess.WaitForExit()
 
     $recordPsi.Arguments = @("sox test_stripped.wav test.wav silence 1 0.1 1% reverse")
     $stripProcess = New-Object System.Diagnostics.Process
-    $stripProcess.StartInto = $recordPsi
+    $stripProcess.StartInfo = $recordPsi
     [void]$stripProcess.Start()
     $stripProcess.WaitForExit()
 
