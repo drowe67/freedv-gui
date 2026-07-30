@@ -83,9 +83,9 @@ sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
+    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 --format s16le test.wav &
 else
-    sox --buffer 128000 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+    sox --buffer 128000 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 -b 16 -e signed-integer test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 

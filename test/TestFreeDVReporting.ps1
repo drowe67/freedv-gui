@@ -77,7 +77,7 @@ function Test-FreeDV {
     $soxPsi.FileName = "sox.exe"
     $soxPsi.WorkingDirectory = $current_loc
     $quoted_device = "`"" + $RadioToComputerDevice + "`""
-    $soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 48000 -t wav `"$current_loc\test.wav`"")
+    $soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 48000 -t wav -e signed-integer -b 16 `"$current_loc\test.wav`"")
     
     $soxProcess = New-Object System.Diagnostics.Process
     $soxProcess.StartInfo = $soxPsi

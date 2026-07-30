@@ -90,9 +90,9 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" test.wav &
+    parecord --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" --format s16le test.wav &
 else
-    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
+    sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 -b 16 -e signed-integer test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
