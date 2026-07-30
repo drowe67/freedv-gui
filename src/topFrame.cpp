@@ -29,6 +29,11 @@
 #include <wx/numformatter.h>
 
 #include "topFrame.h"
+
+#if !wxCHECK_VERSION(3, 3, 0)
+#include <set>
+#endif // !wxCHECK_VERSION(3, 3, 0)
+
 #include "gui/util/NameOverrideAccessible.h"
 #include "gui/util/LabelOverrideAccessible.h"
 #include "util/logging/ulog.h"
@@ -65,9 +70,11 @@ extern int g_txLevel;
 #define MIC_SPKR_LEVEL_FORMAT_STR "%s%s"
 #define DECIBEL_STR "dB"
 
+#if !wxCHECK_VERSION(3, 3, 0)
 // THIS IS VERY MUCH A HACK! wxTabFrame is not in the public interface and should
-// not be here, even named as something else. Unfortunately this is needed to get 
-// the tab state loaded and saved. Here's hoping this interface remains stable.
+// not be here, even named as something else. Unfortunately this is needed to get
+// the tab state loaded and saved on wxWidgets versions older than 3.3, which lack
+// wxAuiNotebook::SaveLayout()/LoadLayout(). Here's hoping this interface remains stable.
 //
 // (Last retrieved from wxWidgets 3.0.5.1 on August 8, 2023.)
 class wxTabFrameOurs : public wxWindow
@@ -194,20 +201,22 @@ public:
     wxAuiTabCtrl* m_tabs;
     int m_tabCtrlHeight;
 };
- 
-TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook() 
-{ 
+#endif // !wxCHECK_VERSION(3, 3, 0)
+
+TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook()
+{
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
 }
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
-    
+
 bool TabFreeAuiNotebook::AcceptsFocus() const { return false; }
 bool TabFreeAuiNotebook::AcceptsFocusFromKeyboard() const { return false; }
 bool TabFreeAuiNotebook::AcceptsFocusRecursively() const { return false; }
 
+#if !wxCHECK_VERSION(3, 3, 0)
 // SavePerspective and LoadPerspective below credit https://forums.kirix.com/viewtopicdafe.html?f=15&t=542
 // with minor modifications to make it compile on modern wxWidgets.
 wxString TabFreeAuiNotebook::SavePerspective() {
@@ -223,7 +232,7 @@ wxString TabFreeAuiNotebook::SavePerspective() {
              continue;
 
          wxTabFrameOurs* tabframe = (wxTabFrameOurs*)pane.window;
-  
+
        if (!tabs.empty()) tabs += wxT("|");
        tabs += pane.name;
        tabs += wxT("=");
@@ -399,6 +408,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 
     return ok;
 }
+#endif // !wxCHECK_VERSION(3, 3, 0)
 
 //=========================================================================
 // Code that lays out the main application window

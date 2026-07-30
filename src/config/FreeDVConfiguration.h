@@ -114,6 +114,8 @@ public:
     
     ConfigurationDataElement<bool> showDecodeStats;
     
+    ConfigurationDataElement<bool> autoStartOnLaunch;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
