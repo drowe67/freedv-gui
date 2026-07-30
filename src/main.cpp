@@ -142,6 +142,11 @@ std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
+
+// Same as g_outfifo1_empty, but only counts underruns that occur while actually
+// keyed up (g_tx == true), so idle pre/post-PTT padding doesn't mask real
+// mid-transmission dropouts.
+std::atomic<int>    g_outfifo1_empty_while_tx;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
@@ -493,7 +498,17 @@ void MainApp::UnitTest_()
     
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
- 
+
+    // Report FIFO under/overrun counts observed during this run. These indicate
+    // dropouts in the real-time audio path (e.g. the TX/RX thread falling behind
+    // the sound card) that can manifest as feature loss in RADE loss tests.
+    log_info("FIFO stats: infifo1_full=%d outfifo1_empty=%d infifo2_full=%d outfifo2_empty=%d outfifo1_empty_while_tx=%d",
+              g_infifo1_full.load(std::memory_order_acquire),
+              g_outfifo1_empty.load(std::memory_order_acquire),
+              g_infifo2_full.load(std::memory_order_acquire),
+              g_outfifo2_empty.load(std::memory_order_acquire),
+              g_outfifo1_empty_while_tx.load(std::memory_order_acquire));
+
     // Fire event to stop FreeDV
     log_info("Firing stop");
     CallAfter([this]() {
@@ -3111,6 +3126,7 @@ void MainFrame::startRxStream()
         g_outfifo1_empty.store(0, std::memory_order_release);
         g_infifo2_full.store(0, std::memory_order_release);
         g_outfifo2_empty.store(0, std::memory_order_release);
+        g_outfifo1_empty_while_tx.store(0, std::memory_order_release);
         for (int i=0; i<4; i++) {
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
@@ -3630,6 +3646,10 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+        if (g_tx.load(std::memory_order_acquire))
+        {
+            g_outfifo1_empty_while_tx.fetch_add(1, std::memory_order_release);
+        }
     }
     else
     {
