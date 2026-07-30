@@ -325,7 +325,7 @@ void MacAudioDevice::start()
 
         deviceFormat.mSampleRate = sampleRate_;
         deviceFormat.mFormatID = kAudioFormatLinearPCM;
-        deviceFormat.mFormatFlags = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved; // macOS only accepts floats
+        deviceFormat.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked | kAudioFormatFlagIsNonInterleaved; // macOS only accepts floats
         deviceFormat.mFramesPerPacket = 1;
         deviceFormat.mChannelsPerFrame = numChannels_;
         deviceFormat.mBitsPerChannel = sizeof(Float32) * 8;

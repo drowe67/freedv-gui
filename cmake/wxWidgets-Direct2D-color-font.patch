@@ -1,8 +1,8 @@
 diff --git a/include/wx/msw/setup.h b/include/wx/msw/setup.h
-index e3086e2c4..219adb30b 100644
+index be0f273ea..b8de9dbfe 100644
 --- a/include/wx/msw/setup.h
 +++ b/include/wx/msw/setup.h
-@@ -1541,7 +1541,7 @@
+@@ -1538,7 +1538,7 @@
  #if defined(_MSC_VER)
      #define wxUSE_GRAPHICS_DIRECT2D wxUSE_GRAPHICS_CONTEXT
  #else
@@ -98,25 +98,11 @@ index 97139f054..66858dfd0 100644
  }
  
  void wxTipWindowView::OnMouseClick(wxMouseEvent& WXUNUSED(event))
-diff --git a/src/msw/graphicsd2d.cpp b/src/msw/graphicsd2d.cpp
-index de32e5d64..daf5c6d54 100644
---- a/src/msw/graphicsd2d.cpp
-+++ b/src/msw/graphicsd2d.cpp
-@@ -4818,7 +4818,8 @@ void wxD2DContext::DoDrawText(const wxString& str, wxDouble x, wxDouble y)
-     GetRenderTarget()->DrawTextLayout(
-         D2D1::Point2F(x, y),
-         textLayout,
--        fontData->GetBrushData().GetBrush());
-+        fontData->GetBrushData().GetBrush(),
-+        D2D1_DRAW_TEXT_OPTIONS::D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
- }
- 
- bool wxD2DContext::EnsureInitialized()
 diff --git a/src/osx/cocoa/dataview.mm b/src/osx/cocoa/dataview.mm
-index 87ce901da..5509255e0 100644
+index 65b49a57b..ebc46a951 100644
 --- a/src/osx/cocoa/dataview.mm
 +++ b/src/osx/cocoa/dataview.mm
-@@ -1570,6 +1570,7 @@ -(id) init
+@@ -1570,6 +1570,7 @@ outlineView:(NSOutlineView*)outlineView
          [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:NO];
          [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:YES];
          [self setTarget:self];
