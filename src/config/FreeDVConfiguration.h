@@ -114,6 +114,8 @@ public:
     
     ConfigurationDataElement<bool> showDecodeStats;
 
+    ConfigurationDataElement<bool> autoStartOnLaunch;
+
     // Independent user-toggleable visibility for the main window's optional
     // group boxes (Show menu), separate from the feature-driven visibility
     // of e.g. Radio Freq/Stats.

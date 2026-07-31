@@ -105,6 +105,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
         
     , showDecodeStats("/Debug/showDecodeStats", false)
+    , autoStartOnLaunch("/Modem/autoStartOnLaunch", false)
     , showSnrBox("/UI/ShowSnrBox", true)
     , showLevelBox("/UI/ShowLevelBox", true)
     , showSyncBox("/UI/ShowSyncBox", true)
@@ -236,6 +237,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reportingUserMsgColWidth);
     
     load_(config, showDecodeStats);
+    load_(config, autoStartOnLaunch);
 
     load_(config, showSnrBox);
     load_(config, showLevelBox);
@@ -333,6 +335,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reportingUserMsgColWidth);
     
     save_(config, showDecodeStats);
+    save_(config, autoStartOnLaunch);
 
     save_(config, showSnrBox);
     save_(config, showLevelBox);

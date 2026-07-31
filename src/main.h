@@ -611,7 +611,7 @@ class MainFrame : public TopFrame
         bool tabLayoutPersistenceEnabledAtStartup_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
-        bool        validateSoundCardSetup();
+        bool        validateSoundCardSetup(bool silent = false);
         
         void loadConfiguration_();
         void applyGroupBoxTint_();
