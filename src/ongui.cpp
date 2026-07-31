@@ -2004,6 +2004,13 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
     TopFrame::OnSystemColorChanged(event);
+
+    // Group box tint is derived from wxSYS_COLOUR_WINDOW (see
+    // GroupBoxBackgroundColour()), which is now current, but the boxes
+    // themselves cache that colour and need re-colouring to pick it up --
+    // otherwise a live light/dark switch (e.g. macOS Appearance) leaves the
+    // old tint in place until restart.
+    applyGroupBoxTint_();
 }
 
 void MainFrame::updateReportingFreqList_()
