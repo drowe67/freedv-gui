@@ -284,6 +284,22 @@ jobs:
           powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
           powercfg /setactive SCHEME_CURRENT
 
+    - name: Configure crash dump collection for FreeDV
+      shell: pwsh
+      run: |
+          # Windows Error Reporting will write a dump here any time freedv.exe
+          # crashes (unhandled exception/access violation), even if the test
+          # script itself doesn't notice anything went wrong (e.g. a crash
+          # mid-run that a subsequent step just sees as a hang or empty output).
+          $dumpFolder = "${{github.workspace}}\CrashDumps"
+          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
+
+          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
+          New-Item -Path $werKey -Force | Out-Null
+          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
+          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
+          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord
+
     - name: Test RADE
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
@@ -322,4 +338,12 @@ jobs:
         name: screenshot-${{ matrix.arch }}.png
         path: ${{github.workspace}}/screenshot-${{ matrix.arch }}.png
         archive: false
+
+    - name: Upload crash dumps
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: crashdumps-${{ matrix.arch }}
+        path: ${{github.workspace}}\CrashDumps\*.dmp
+        if-no-files-found: ignore
 
