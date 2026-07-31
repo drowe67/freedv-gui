@@ -90,7 +90,7 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 -txradeinfile $(pwd)/rade_encoder_input.wav "
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
@@ -131,7 +131,7 @@ PHASE_CORRECTION_SEC=0.010
 run_rade_loss_attempt () {
     local playback_file="$1"
 
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 -rxradeinfile $(pwd)/rade_decoder_input.wav >tmp.log 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then

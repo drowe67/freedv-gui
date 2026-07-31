@@ -28,6 +28,15 @@ SNDFILE* g_sfRecDecoderFile;
 bool g_recFileFromDecoder;
 int                 g_recFileFromDecoderEventId;
 
+// -ut mode only: records the raw audio immediately before it enters the RADE (or other
+// digital mode) encoder/decoder, so a decode-quality issue seen in CI can be reproduced
+// offline against the same audio using the RADE tools directly.
+SNDFILE* g_sfRecRadeEncoderInputFile;
+bool g_recRadeEncoderInput;
+
+SNDFILE* g_sfRecRadeDecoderInputFile;
+bool g_recRadeDecoderInput;
+
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
 int                 g_sfFs;

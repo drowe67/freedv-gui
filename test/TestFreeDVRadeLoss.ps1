@@ -201,7 +201,7 @@ function Test-RadeLoss {
     $psi.RedirectStandardOutput = $true
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`" /txradeinfile `"$current_loc\rade_encoder_input.wav`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -247,7 +247,7 @@ function Test-RadeLoss {
 
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
 
     $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
 
@@ -263,7 +263,7 @@ function Test-RadeLoss {
         & sox.exe -n -r 48000 -c 1 -b 16 -e signed-integer "$current_loc\silence_pad.wav" trim 0 0.010
         & sox.exe "$current_loc\silence_pad.wav" "$current_loc\test.wav" "$current_loc\test_shifted.wav"
 
-        $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+        $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
         $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test_shifted.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
     }
 

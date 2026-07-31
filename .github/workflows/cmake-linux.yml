@@ -596,4 +596,15 @@ jobs:
           echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
+    # Raw audio immediately before the RADE encoder/decoder from the rade_loss test, so a
+    # decode-quality issue seen here can be reproduced offline against the RADE tools directly.
+    - name: Upload RADE encoder/decoder input recordings
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: rade-io-${{ matrix.os }}-${{ matrix.sanitizer }}-${{ matrix.native-audio }}
+        path: |
+          ${{github.workspace}}/build_linux/rade_encoder_input.wav
+          ${{github.workspace}}/build_linux/rade_decoder_input.wav
+        if-no-files-found: ignore
 

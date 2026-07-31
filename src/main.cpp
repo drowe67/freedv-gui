@@ -177,6 +177,11 @@ extern bool                g_recVoiceKeyerFile;
 extern SNDFILE* g_sfRecDecoderFile;
 extern bool g_recFileFromDecoder;
 
+extern SNDFILE* g_sfRecRadeEncoderInputFile;
+extern bool g_recRadeEncoderInput;
+extern SNDFILE* g_sfRecRadeDecoderInputFile;
+extern bool g_recRadeDecoderInput;
+
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
@@ -237,8 +242,10 @@ wxString testName;
 wxString utFreeDVMode;
 wxString utTxFile;
 wxString utTxOutFile;
+wxString utTxRadeInFile;
 wxString utRxFile;
 wxString utRxOutFile;
+wxString utRxRadeInFile;
 std::string utTxFeatureFile;
 std::string utRxFeatureFile;
 long utTxTimeSeconds;
@@ -352,6 +359,17 @@ void MainApp::UnitTest_()
             g_recFileFromModulator = true;
         }
 
+        if (utTxRadeInFile != "")
+        {
+            SF_INFO recSf;
+            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            recSf.channels   = 1;
+            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+            g_sfRecRadeEncoderInputFile = sf_open((const char*)utTxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
+            g_recRadeEncoderInput = true;
+        }
+
         log_info("Transmitting %d times", utTxAttempts);
         for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
@@ -432,6 +450,13 @@ void MainApp::UnitTest_()
             g_recFileFromModulator = false;
             sf_close(g_sfRecFileFromModulator);
         }
+
+        if (g_sfRecRadeEncoderInputFile)
+        {
+            g_recRadeEncoderInput = false;
+            sf_close(g_sfRecRadeEncoderInputFile);
+            g_sfRecRadeEncoderInputFile = nullptr;
+        }
     }
     else
     {
@@ -444,6 +469,17 @@ void MainApp::UnitTest_()
 
             g_sfRecDecoderFile = sf_open((const char*)utRxOutFile.ToUTF8(), SFM_WRITE, &recSf);
             g_recFileFromDecoder = true;
+        }
+
+        if (utRxRadeInFile != "")
+        {
+            SF_INFO recSf;
+            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+            recSf.channels   = 1;
+            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+            g_sfRecRadeDecoderInputFile = sf_open((const char*)utRxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
+            g_recRadeDecoderInput = true;
         }
 
         if (utRxFile != "")
@@ -489,6 +525,13 @@ void MainApp::UnitTest_()
         {
             g_recFileFromDecoder = false;
             sf_close(g_sfRecDecoderFile);
+        }
+
+        if (g_sfRecRadeDecoderInputFile)
+        {
+            g_recRadeDecoderInput = false;
+            sf_close(g_sfRecRadeDecoderInputFile);
+            g_sfRecRadeDecoderInputFile = nullptr;
         }
     }
     
@@ -536,8 +579,10 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
     parser.AddOption("rxoutfile", wxEmptyString, "In UT mode, records RX output to the given WAV file.");
+    parser.AddOption("rxradeinfile", wxEmptyString, "In UT mode, records the raw audio fed into the RADE decoder to the given WAV file.");
     parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
     parser.AddOption("txoutfile", wxEmptyString, "In UT mode, records TX output to the given WAV file.");
+    parser.AddOption("txradeinfile", wxEmptyString, "In UT mode, records the raw audio fed into the RADE encoder to the given WAV file.");
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
@@ -674,6 +719,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             log_info("Recording RX output to %s", (const char*)utRxOutFile.ToUTF8());
         }
 
+        if (parser.Found("rxradeinfile", &utRxRadeInFile))
+        {
+            log_info("Recording RADE decoder input to %s", (const char*)utRxRadeInFile.ToUTF8());
+        }
+
         if (parser.Found("txfile", &utTxFile))
         {
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
@@ -682,6 +732,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("txoutfile", &utTxOutFile))
         {
             log_info("Recording TX output to %s", (const char*)utTxOutFile.ToUTF8());
+        }
+
+        if (parser.Found("txradeinfile", &utTxRadeInFile))
+        {
+            log_info("Recording RADE encoder input to %s", (const char*)utTxRadeInFile.ToUTF8());
         }
 
         if (parser.Found("txtime", &utTxTimeSeconds))
