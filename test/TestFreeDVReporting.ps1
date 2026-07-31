@@ -179,9 +179,11 @@ function Test-FreeDV {
     Write-Host "$err_output"
     Write-Host "$output"
 
-    # Check for RX callsign
+    # Check for RX callsign. RX plays back the whole recording rather than stopping at the
+    # first decode, so a re-sync partway through can legitimately decode the callsign more
+    # than once -- that's still a pass, not a failure.
     $syncs = ($err_output_fdv -split "`r?`n") | Where { $_.Contains("Reporting callsign ZZ0ZZZ @ SNR") }
-    if (($process.ExitCode -eq 0) -and ($syncs.Count -eq 1)) {
+    if (($process.ExitCode -eq 0) -and ($syncs.Count -ge 1)) {
         return $true
     }
     return $false
