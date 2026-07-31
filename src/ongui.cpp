@@ -2005,22 +2005,27 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     // when the user switches between light and dark mode.
     TopFrame::OnSystemColorChanged(event);
 
-    // Group box tint is derived from wxSYS_COLOUR_WINDOW (see
-    // GroupBoxBackgroundColour()), but on GTK, wxSystemSettings' own cached
-    // reference widget hasn't necessarily picked up the new theme yet at the
-    // point this event fires -- reading it synchronously here can still see
-    // the outgoing colour (observed: dark->light intermittently no-ops).
-    // Deferring to the next idle pass gives GTK's style context time to
-    // settle first. That's sufficient under native Wayland, but under
-    // XWayland (e.g. GDK_BACKEND=x11) the settle can still lag behind a
-    // single idle pass, so back it up with a short real-time retry too.
+    // Fast path for immediate feedback where this event fires reliably
+    // (native Wayland, macOS, Windows). Not relied on alone --
+    // m_groupBoxTintPollTimer (see OnGroupBoxTintPollTimer() below) is the
+    // actual backstop, since under XWayland this event is unreliable (one
+    // direction doesn't fire it at all) and even when it does fire,
+    // wxSystemSettings' own colour cache can still be a full theme-switch
+    // behind reality at this point -- see GetGroupBoxBaseColour().
     CallAfter([this]() { applyGroupBoxTint_(); });
-    m_groupBoxTintRetryTimer.StartOnce(250);
 }
 
-void MainFrame::OnGroupBoxTintRetryTimer(wxTimerEvent&)
+// Backstop for the group box tint: wxEVT_SYS_COLOUR_CHANGED can't be relied
+// on alone (see OnSystemColorChanged() above), so this polls at a low
+// frequency and only does any work when the live system colour (see
+// GetGroupBoxBaseColour()) has actually changed since the last time
+// applyGroupBoxTint_() ran.
+void MainFrame::OnGroupBoxTintPollTimer(wxTimerEvent&)
 {
-    applyGroupBoxTint_();
+    if (GetGroupBoxBaseColour() != m_lastGroupBoxTintBaseColour)
+    {
+        applyGroupBoxTint_();
+    }
 }
 
 void MainFrame::updateReportingFreqList_()

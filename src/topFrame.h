@@ -133,6 +133,16 @@ class TintedGroupBox : public wxPanel
 // for other controls (e.g. plot graticule label margins) that want to match.
 wxColour GroupBoxBackgroundColour();
 
+// The live, untinted system window colour GroupBoxBackgroundColour() is
+// based on -- exposed separately so callers that need to detect a raw
+// theme change (rather than compute the tinted colour) can use the same
+// reliable source. See s_colourReferenceWindow in topFrame.cpp.
+wxColour GetGroupBoxBaseColour();
+
+// A reliable light/dark-appropriate text/axis colour (see plot.h for why
+// this exists -- used by graph axis-label drawing).
+wxColour GetGroupBoxForegroundColour();
+
 // Sets the tint colour/strength used by GroupBoxBackgroundColour() (persisted
 // via the Display options tab). RefreshGroupBoxTints() then re-applies the
 // resulting colour to every currently-live TintedGroupBox so the change is

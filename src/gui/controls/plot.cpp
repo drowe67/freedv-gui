@@ -180,7 +180,7 @@ void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
     int p;
     char buf[STR_LENGTH];
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetGroupBoxForegroundColour());
     ctx->SetFont(tmpFont);
     
     // Vertical gridlines

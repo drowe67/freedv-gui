@@ -442,7 +442,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!repaintDataOnly)
     {
-        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetGroupBoxForegroundColour());
         ctx->SetFont(tmpFont);
     }
  

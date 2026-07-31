@@ -119,7 +119,7 @@ enum {
         ID_TIMER_TOT,           // Time-Out Timer
         ID_TIMER_TOT_WARNING,   // Polls remaining TOT time to show warning
         ID_TIMER_PTT_KEY_POLL,  // Polls physical PTT key state after a forced TX stop
-        ID_TIMER_GROUPBOX_TINT_RETRY, // Re-applies group box tint shortly after a system theme change
+        ID_TIMER_GROUPBOX_TINT_POLL, // Backstop poll for group box tint on system theme changes
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -334,11 +334,16 @@ class MainFrame : public TopFrame
         // m_pttKeyRequireRelease_ below.
         wxTimer                 m_pttKeyPollTimer;
 
-        // One-shot: some window managers/backends (e.g. XWayland, forced via
-        // GDK_BACKEND=x11) don't settle wxSYS_COLOUR_WINDOW to the new theme
-        // by the time wxEVT_SYS_COLOUR_CHANGED's immediate CallAfter runs, so
-        // this re-applies the tint again shortly after as a backstop.
-        wxTimer                 m_groupBoxTintRetryTimer;
+        // Continuous, low-frequency poll backstop for the group box tint:
+        // under XWayland (e.g. GDK_BACKEND=x11), a light<-dark switch in one
+        // direction reliably fires wxEVT_SYS_COLOUR_CHANGED but the other
+        // direction doesn't fire it at all, so re-tinting can't rely solely
+        // on that event. See OnGroupBoxTintPollTimer().
+        wxTimer                 m_groupBoxTintPollTimer;
+
+        // Last colour seen from GetGroupBoxBaseColour() by applyGroupBoxTint_(),
+        // so the poll timer only does work when it has actually changed.
+        wxColour                m_lastGroupBoxTintBaseColour;
 #endif
 
         // TOT warning state
@@ -498,7 +503,7 @@ class MainFrame : public TopFrame
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
         void OnPttKeyPollTimer(wxTimerEvent& evt);
-        void OnGroupBoxTintRetryTimer(wxTimerEvent& evt);
+        void OnGroupBoxTintPollTimer(wxTimerEvent& evt);
         void playTotBeep_();
         void stopTotBeep_();
         

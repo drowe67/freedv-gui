@@ -29,6 +29,7 @@
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
 #include <wx/numformatter.h>
+#include <wx/textfile.h>
 
 #include "topFrame.h"
 
@@ -424,6 +425,88 @@ namespace {
     // Every currently-live TintedGroupBox, so a tint change from Options can
     // be re-applied immediately rather than only on next restart.
     std::vector<TintedGroupBox*> s_tintedGroupBoxes;
+
+#if !defined(__WXGTK__) || !defined(HAS_GTK3)
+    // Fallback-only (non-GTK3 builds -- see GetGroupBoxBaseColour() below):
+    // real (1x1, otherwise untouched) child of the main frame, so at least
+    // a live *widget* is consulted rather than only wxSystemSettings.
+    // Created in TopFrame's constructor, before any TintedGroupBox/
+    // PlotPanel exists to need it.
+    wxWindow* s_colourReferenceWindow = nullptr;
+#endif
+}
+
+wxColour GetGroupBoxBaseColour()
+{
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // wx's own colour caching -- wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW),
+    // and (confirmed by testing) even a real live widget's own
+    // GetBackgroundColour() -- doesn't reliably track theme changes under
+    // XWayland: switching produces a value that's a full theme-switch
+    // behind reality, not just briefly stale. Confirmed via direct
+    // instrumentation of ~/.config/gtk-3.0/settings.ini that the
+    // underlying desktop state itself (GTK's own
+    // gtk-application-prefer-dark-theme setting) updates correctly and
+    // promptly on every switch, both directions -- the bug is entirely in
+    // wx's GTK colour-cache invalidation, not upstream of it.
+    //
+    // Reading gtk_settings_get_default()'s own in-process property directly
+    // (bypassing wx's colour APIs) fixes that, but isn't itself fully
+    // reliable either -- confirmed by testing that under wx 3.2 specifically,
+    // it can start wrong at launch and never correct itself for the rest of
+    // the session (unlike wx 3.3, where it's correct from the first read).
+    // So use it only as a fallback; prefer parsing the same settings.ini
+    // file directly, since that's the one thing confirmed accurate and
+    // prompt in every test done today, independent of wx version.
+    //
+    // Trade-off either way: two representative light/dark tones (close to
+    // common themes' actual window colour, e.g. Breeze) rather than the
+    // exact live wxSYS_COLOUR_WINDOW shade, since that exact value isn't
+    // reliably obtainable at all right now under this combination --
+    // correct light/dark direction, promptly, beats exact colour-matching
+    // that's proven unreliable to read live.
+    bool preferDark = false;
+    bool foundInSettingsFile = false;
+    // Deliberately not wxStandardPaths::GetUserConfigDir() -- on Unix that
+    // returns plain $HOME (a wx compatibility quirk), not ~/.config.
+    wxString settingsPath = wxGetHomeDir() + wxT("/.config/gtk-3.0/settings.ini");
+    wxTextFile settingsFile;
+    if (settingsFile.Open(settingsPath))
+    {
+        for (wxString line = settingsFile.GetFirstLine(); !settingsFile.Eof(); line = settingsFile.GetNextLine())
+        {
+            wxString trimmed = line;
+            trimmed.Trim(false).Trim(true);
+            if (trimmed.StartsWith(wxT("gtk-application-prefer-dark-theme")))
+            {
+                preferDark = trimmed.Lower().Contains(wxT("true")) || trimmed.Contains(wxT("=1"));
+                foundInSettingsFile = true;
+                break;
+            }
+        }
+        settingsFile.Close();
+    }
+    if (!foundInSettingsFile)
+    {
+        gboolean gtkPreferDark = FALSE;
+        g_object_get(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", &gtkPreferDark, NULL);
+        preferDark = gtkPreferDark;
+    }
+    return preferDark ? wxColour(20, 22, 24) : wxColour(255, 255, 255);
+#else
+    if (s_colourReferenceWindow != nullptr)
+    {
+        return s_colourReferenceWindow->GetBackgroundColour();
+    }
+    return wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+#endif
+}
+
+wxColour GetGroupBoxForegroundColour()
+{
+    wxColour base = GetGroupBoxBaseColour();
+    bool isDark = base.GetLuminance() < 0.5;
+    return isDark ? wxColour(255, 255, 255) : wxColour(0, 0, 0);
 }
 
 // Returns a background colour offset from the system window colour so that
@@ -432,7 +515,7 @@ namespace {
 // a hardcoded value so it tracks whatever light/dark theme is active.
 wxColour GroupBoxBackgroundColour()
 {
-    wxColour base = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    wxColour base = GetGroupBoxBaseColour();
     bool isDark = base.GetLuminance() < 0.5;
     wxColour shaded = base.ChangeLightness(isDark ? 115 : 93);
 
@@ -555,7 +638,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
-    
+
+#if !defined(__WXGTK__) || !defined(HAS_GTK3)
+    // See s_colourReferenceWindow's declaration above for why this exists.
+    // GTK3 builds don't need it (GetGroupBoxBaseColour() reads GTK settings
+    // directly there) -- skipped entirely on them, since an extra untracked
+    // child sitting directly on the frame outside any sizer turned out to
+    // interfere with the frame's own resize/layout propagation.
+    s_colourReferenceWindow = new wxWindow(this, wxID_ANY, wxPoint(0, 0), wxSize(1, 1));
+#endif
+
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic
     SetAccessible(new NameOverrideAccessible([&]() {

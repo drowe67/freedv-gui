@@ -1139,6 +1139,10 @@ void MainFrame::loadConfiguration_()
     // TopFrame construction time, same reasoning as showBoxState above).
     applyGroupBoxTint_();
 
+    // Backstop poll (see m_groupBoxTintPollTimer's declaration in main.h
+    // for why wxEVT_SYS_COLOUR_CHANGED alone isn't reliable enough here).
+    m_groupBoxTintPollTimer.Start(500, wxTIMER_CONTINUOUS);
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     
@@ -1291,8 +1295,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
     m_pttKeyPollTimer.SetOwner(this, ID_TIMER_PTT_KEY_POLL);
     Bind(wxEVT_TIMER, &MainFrame::OnPttKeyPollTimer, this, ID_TIMER_PTT_KEY_POLL);
-    m_groupBoxTintRetryTimer.SetOwner(this, ID_TIMER_GROUPBOX_TINT_RETRY);
-    Bind(wxEVT_TIMER, &MainFrame::OnGroupBoxTintRetryTimer, this, ID_TIMER_GROUPBOX_TINT_RETRY);
+    m_groupBoxTintPollTimer.SetOwner(this, ID_TIMER_GROUPBOX_TINT_POLL);
+    Bind(wxEVT_TIMER, &MainFrame::OnGroupBoxTintPollTimer, this, ID_TIMER_GROUPBOX_TINT_POLL);
 #endif
     
     // Create voice keyer popup menu.
@@ -1472,6 +1476,7 @@ void MainFrame::applyGroupBoxTint_()
     RefreshGroupBoxTints();
 
     wxColour bg = GroupBoxBackgroundColour();
+    wxColour rawBase = GetGroupBoxBaseColour();
 
     m_infoBar->SetBackgroundColour(bg);
     m_infoBar->Refresh();
@@ -1482,6 +1487,10 @@ void MainFrame::applyGroupBoxTint_()
         page->SetBackgroundColour(bg);
         page->Refresh();
     }
+
+    // Record what the system window colour was as of this refresh, so
+    // OnGroupBoxTintPollTimer() only does work once it's actually changed.
+    m_lastGroupBoxTintBaseColour = rawBase;
 }
 
 // XXX - with really short windows, wxWidgets sometimes doesn't size the
