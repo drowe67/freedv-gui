@@ -2006,11 +2006,13 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     TopFrame::OnSystemColorChanged(event);
 
     // Group box tint is derived from wxSYS_COLOUR_WINDOW (see
-    // GroupBoxBackgroundColour()), which is now current, but the boxes
-    // themselves cache that colour and need re-colouring to pick it up --
-    // otherwise a live light/dark switch (e.g. macOS Appearance) leaves the
-    // old tint in place until restart.
-    applyGroupBoxTint_();
+    // GroupBoxBackgroundColour()), but on GTK, wxSystemSettings' own cached
+    // reference widget hasn't necessarily picked up the new theme yet at the
+    // point this event fires -- reading it synchronously here can still see
+    // the outgoing colour (observed: dark->light intermittently no-ops).
+    // Deferring to the next idle pass gives GTK's style context time to
+    // settle first.
+    CallAfter([this]() { applyGroupBoxTint_(); });
 }
 
 void MainFrame::updateReportingFreqList_()
