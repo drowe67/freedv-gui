@@ -117,7 +117,7 @@ jobs:
     # decode-quality issue seen here can be reproduced offline against the RADE tools directly.
     - name: Upload RADE encoder/decoder input recordings
       uses: actions/upload-artifact@v7
-      if: always()
+      if: ${{ always() && matrix.sanitizer == 'WITH_ASAN=0' }}
       with:
         name: rade-io-${{ matrix.os }}-${{ matrix.sanitizer }}
         path: |
@@ -314,3 +314,15 @@ jobs:
           pip3 install torch matplotlib
           FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           grep "PASS" temp-test.txt
+
+    # Raw audio immediately before the RADE encoder/decoder from the rade_loss test, so a
+    # decode-quality issue seen here can be reproduced offline against the RADE tools directly.
+    - name: Upload RADE encoder/decoder input recordings
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: rade-io-app-${{ matrix.os }}
+        path: |
+          ${{github.workspace}}/rade_encoder_input.wav
+          ${{github.workspace}}/rade_decoder_input.wav
+        if-no-files-found: ignore
