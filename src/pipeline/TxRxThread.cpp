@@ -143,10 +143,10 @@ extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
 extern bool g_recFileFromDecoder;
 
-extern SNDFILE* g_sfRecRadeEncoderInputFile;
-extern bool g_recRadeEncoderInput;
-extern SNDFILE* g_sfRecRadeDecoderInputFile;
-extern bool g_recRadeDecoderInput;
+extern std::atomic<SNDFILE*> g_sfRecRadeEncoderInputFile;
+extern std::atomic<bool> g_recRadeEncoderInput;
+extern std::atomic<SNDFILE*> g_sfRecRadeDecoderInputFile;
+extern std::atomic<bool> g_recRadeDecoderInput;
 
 #include "sox_biquad.h"
 
@@ -276,7 +276,7 @@ void TxRxThread::initializePipeline_()
         // same audio using the RADE tools directly.
         auto recordRadeEncoderInputStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE,
-            []() { return g_sfRecRadeEncoderInputFile; },
+            []() { return g_sfRecRadeEncoderInputFile.load(std::memory_order_acquire); },
             [](int) {
                 // empty
             });
@@ -442,7 +442,7 @@ void TxRxThread::initializePipeline_()
         // same audio using the RADE tools directly.
         auto recordRadeDecoderInputStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE,
-            []() { return g_sfRecRadeDecoderInputFile; },
+            []() { return g_sfRecRadeDecoderInputFile.load(std::memory_order_acquire); },
             [](int) {
                 // empty
             });

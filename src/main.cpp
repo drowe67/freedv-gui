@@ -177,10 +177,10 @@ extern bool                g_recVoiceKeyerFile;
 extern SNDFILE* g_sfRecDecoderFile;
 extern bool g_recFileFromDecoder;
 
-extern SNDFILE* g_sfRecRadeEncoderInputFile;
-extern bool g_recRadeEncoderInput;
-extern SNDFILE* g_sfRecRadeDecoderInputFile;
-extern bool g_recRadeDecoderInput;
+extern std::atomic<SNDFILE*> g_sfRecRadeEncoderInputFile;
+extern std::atomic<bool> g_recRadeEncoderInput;
+extern std::atomic<SNDFILE*> g_sfRecRadeDecoderInputFile;
+extern std::atomic<bool> g_recRadeDecoderInput;
 
 wxWindow           *g_parent;
 
