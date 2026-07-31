@@ -2011,8 +2011,16 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     // point this event fires -- reading it synchronously here can still see
     // the outgoing colour (observed: dark->light intermittently no-ops).
     // Deferring to the next idle pass gives GTK's style context time to
-    // settle first.
+    // settle first. That's sufficient under native Wayland, but under
+    // XWayland (e.g. GDK_BACKEND=x11) the settle can still lag behind a
+    // single idle pass, so back it up with a short real-time retry too.
     CallAfter([this]() { applyGroupBoxTint_(); });
+    m_groupBoxTintRetryTimer.StartOnce(250);
+}
+
+void MainFrame::OnGroupBoxTintRetryTimer(wxTimerEvent&)
+{
+    applyGroupBoxTint_();
 }
 
 void MainFrame::updateReportingFreqList_()

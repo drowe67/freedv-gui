@@ -1291,6 +1291,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
     m_pttKeyPollTimer.SetOwner(this, ID_TIMER_PTT_KEY_POLL);
     Bind(wxEVT_TIMER, &MainFrame::OnPttKeyPollTimer, this, ID_TIMER_PTT_KEY_POLL);
+    m_groupBoxTintRetryTimer.SetOwner(this, ID_TIMER_GROUPBOX_TINT_RETRY);
+    Bind(wxEVT_TIMER, &MainFrame::OnGroupBoxTintRetryTimer, this, ID_TIMER_GROUPBOX_TINT_RETRY);
 #endif
     
     // Create voice keyer popup menu.

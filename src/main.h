@@ -119,6 +119,7 @@ enum {
         ID_TIMER_TOT,           // Time-Out Timer
         ID_TIMER_TOT_WARNING,   // Polls remaining TOT time to show warning
         ID_TIMER_PTT_KEY_POLL,  // Polls physical PTT key state after a forced TX stop
+        ID_TIMER_GROUPBOX_TINT_RETRY, // Re-applies group box tint shortly after a system theme change
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -332,6 +333,12 @@ class MainFrame : public TopFrame
         // TX stop, so a held key can't immediately restart TX -- see
         // m_pttKeyRequireRelease_ below.
         wxTimer                 m_pttKeyPollTimer;
+
+        // One-shot: some window managers/backends (e.g. XWayland, forced via
+        // GDK_BACKEND=x11) don't settle wxSYS_COLOUR_WINDOW to the new theme
+        // by the time wxEVT_SYS_COLOUR_CHANGED's immediate CallAfter runs, so
+        // this re-applies the tint again shortly after as a backstop.
+        wxTimer                 m_groupBoxTintRetryTimer;
 #endif
 
         // TOT warning state
@@ -491,6 +498,7 @@ class MainFrame : public TopFrame
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
         void OnPttKeyPollTimer(wxTimerEvent& evt);
+        void OnGroupBoxTintRetryTimer(wxTimerEvent& evt);
         void playTotBeep_();
         void stopTotBeep_();
         
