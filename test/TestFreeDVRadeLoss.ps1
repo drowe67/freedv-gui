@@ -146,13 +146,13 @@ function Test-RadeLoss {
     # As well as reducing the amount of audio that needs to be played back, it also helps
     # ensure we don't accidentally run into a potential RADEV2 bug (https://github.com/freedv/rade_c/issues/8)
     # Note: commands adapted from https://digitalcardboard.com/blog/2009/08/25/the-sox-of-silence/
-    $recordPsi.Arguments = @("sox test.wav test_stripped.wav silence 1 0.1 1% reverse")
+    $recordPsi.Arguments = @("test.wav test_stripped.wav silence 1 0.1 1% reverse")
     $stripProcess = New-Object System.Diagnostics.Process
     $stripProcess.StartInfo = $recordPsi
     [void]$stripProcess.Start()
     $stripProcess.WaitForExit()
 
-    $recordPsi.Arguments = @("sox test_stripped.wav test.wav silence 1 0.1 1% reverse")
+    $recordPsi.Arguments = @("test_stripped.wav test.wav silence 1 0.1 1% reverse")
     $stripProcess = New-Object System.Diagnostics.Process
     $stripProcess.StartInfo = $recordPsi
     [void]$stripProcess.Start()
