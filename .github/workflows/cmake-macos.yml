@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15]  # ARM64
+        os: [macos-26]  # ARM64
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
