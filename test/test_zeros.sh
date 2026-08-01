@@ -108,7 +108,9 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE >tmp.log 2>&1 & #| tee tmp.log
+# Note: uses filenames distinct from rade_loss/rade_reporting's own recordings, since
+# fullduplex_* runs first in the ctest sequence and shares a working directory with them.
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE -txradeinfile $(pwd)/fullduplex_rade_encoder_input.wav -rxradeinfile $(pwd)/fullduplex_rade_decoder_input.wav >tmp.log 2>&1 & #| tee tmp.log
 
 FDV_PID=$!
 

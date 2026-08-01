@@ -646,5 +646,7 @@ jobs:
         path: |
           ${{github.workspace}}/build_linux/rade_encoder_input.wav
           ${{github.workspace}}/build_linux/rade_decoder_input.wav
+          ${{github.workspace}}/build_linux/fullduplex_rade_encoder_input.wav
+          ${{github.workspace}}/build_linux/fullduplex_rade_decoder_input.wav
         if-no-files-found: ignore
 
