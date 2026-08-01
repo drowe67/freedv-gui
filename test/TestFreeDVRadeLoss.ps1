@@ -245,6 +245,12 @@ function Test-RadeLoss {
     [void]$stripProcess.Start()
     $stripProcess.WaitForExit()
 
+    # Snapshot under a name distinct from TestFreeDVReporting.ps1's own test.wav, since it
+    # runs later in the same workflow job and would otherwise overwrite it before CI can
+    # upload it -- this is the raw modulated waveform actually played back for RX, for
+    # offline reproduction with the RADE tools.
+    Copy-Item "$current_loc\test.wav" "$current_loc\rade_loss_test.wav"
+
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
     $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")

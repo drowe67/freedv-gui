@@ -118,6 +118,12 @@ kill $RECORD_PID
 sox test.wav test_stripped.wav silence 1 0.1 1% reverse
 sox test_stripped.wav test.wav silence 1 0.1 1% reverse
 
+# Snapshot under a name distinct from test_zeros.sh/test_rade_reporting.sh's own test.wav,
+# since they run later in the same ctest sequence and would otherwise overwrite it before
+# CI can upload it -- this is the raw modulated waveform actually played back for RX, for
+# offline reproduction with the RADE tools.
+cp test.wav rade_loss_test.wav
+
 LOSS_THRESHOLD=0.0891
 
 # RADEV2 has a known upstream bug (https://github.com/freedv/rade_c/issues/8): feature loss is

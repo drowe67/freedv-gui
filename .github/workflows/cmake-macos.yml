@@ -125,6 +125,7 @@ jobs:
           ${{github.workspace}}/build_osx/rade_decoder_input.wav
           ${{github.workspace}}/build_osx/fullduplex_rade_encoder_input.wav
           ${{github.workspace}}/build_osx/fullduplex_rade_decoder_input.wav
+          ${{github.workspace}}/build_osx/rade_loss_test.wav
         if-no-files-found: ignore
 
     #- name: Zip up traces
@@ -327,4 +328,5 @@ jobs:
         path: |
           ${{github.workspace}}/rade_encoder_input.wav
           ${{github.workspace}}/rade_decoder_input.wav
+          ${{github.workspace}}/rade_loss_test.wav
         if-no-files-found: ignore

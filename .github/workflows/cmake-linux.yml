@@ -296,6 +296,7 @@ jobs:
         path: |
           ${{github.workspace}}/rade_encoder_input.wav
           ${{github.workspace}}/rade_decoder_input.wav
+          ${{github.workspace}}/rade_loss_test.wav
         if-no-files-found: ignore
 
   test-appimage-ubuntu:
@@ -429,6 +430,7 @@ jobs:
         path: |
           ${{github.workspace}}/rade_encoder_input.wav
           ${{github.workspace}}/rade_decoder_input.wav
+          ${{github.workspace}}/rade_loss_test.wav
         if-no-files-found: ignore
 
   test-application:
@@ -648,5 +650,6 @@ jobs:
           ${{github.workspace}}/build_linux/rade_decoder_input.wav
           ${{github.workspace}}/build_linux/fullduplex_rade_encoder_input.wav
           ${{github.workspace}}/build_linux/fullduplex_rade_decoder_input.wav
+          ${{github.workspace}}/build_linux/rade_loss_test.wav
         if-no-files-found: ignore
 

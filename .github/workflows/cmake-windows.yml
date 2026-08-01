@@ -359,5 +359,6 @@ jobs:
           ${{github.workspace}}\FreeDV-Install-Location\bin\rade_decoder_input.wav
           ${{github.workspace}}\FreeDV-Install-Location\bin\fullduplex_rade_encoder_input.wav
           ${{github.workspace}}\FreeDV-Install-Location\bin\fullduplex_rade_decoder_input.wav
+          ${{github.workspace}}\FreeDV-Install-Location\bin\rade_loss_test.wav
         if-no-files-found: ignore
 
