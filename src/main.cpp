@@ -346,6 +346,32 @@ void MainApp::UnitTest_()
     std::this_thread::sleep_for(2s);
     
     constexpr int MAX_TIME_AS_COUNTER = 60000; // 20 minutes
+
+    // Opened unconditionally (not scoped to the tx/rx branch below) because a full-duplex
+    // test runs both TX and RX simultaneously under a single -ut rx invocation -- the
+    // encoder-input recording needs to be active then too, not just during a "tx" test.
+    if (utTxRadeInFile != "")
+    {
+        SF_INFO recSf;
+        recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        recSf.channels   = 1;
+        recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+        g_sfRecRadeEncoderInputFile = sf_open((const char*)utTxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
+        g_recRadeEncoderInput = true;
+    }
+
+    if (utRxRadeInFile != "")
+    {
+        SF_INFO recSf;
+        recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        recSf.channels   = 1;
+        recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
+
+        g_sfRecRadeDecoderInputFile = sf_open((const char*)utRxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
+        g_recRadeDecoderInput = true;
+    }
+
     if (testName == "tx")
     {
         if (utTxOutFile != "")
@@ -357,17 +383,6 @@ void MainApp::UnitTest_()
 
             g_sfRecFileFromModulator = sf_open((const char*)utTxOutFile.ToUTF8(), SFM_WRITE, &recSf);
             g_recFileFromModulator = true;
-        }
-
-        if (utTxRadeInFile != "")
-        {
-            SF_INFO recSf;
-            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-            recSf.channels   = 1;
-            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
-
-            g_sfRecRadeEncoderInputFile = sf_open((const char*)utTxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
-            g_recRadeEncoderInput = true;
         }
 
         log_info("Transmitting %d times", utTxAttempts);
@@ -450,13 +465,6 @@ void MainApp::UnitTest_()
             g_recFileFromModulator = false;
             sf_close(g_sfRecFileFromModulator);
         }
-
-        if (g_sfRecRadeEncoderInputFile)
-        {
-            g_recRadeEncoderInput = false;
-            sf_close(g_sfRecRadeEncoderInputFile);
-            g_sfRecRadeEncoderInputFile = nullptr;
-        }
     }
     else
     {
@@ -469,17 +477,6 @@ void MainApp::UnitTest_()
 
             g_sfRecDecoderFile = sf_open((const char*)utRxOutFile.ToUTF8(), SFM_WRITE, &recSf);
             g_recFileFromDecoder = true;
-        }
-
-        if (utRxRadeInFile != "")
-        {
-            SF_INFO recSf;
-            recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-            recSf.channels   = 1;
-            recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
-
-            g_sfRecRadeDecoderInputFile = sf_open((const char*)utRxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
-            g_recRadeDecoderInput = true;
         }
 
         if (utRxFile != "")
@@ -526,15 +523,24 @@ void MainApp::UnitTest_()
             g_recFileFromDecoder = false;
             sf_close(g_sfRecDecoderFile);
         }
-
-        if (g_sfRecRadeDecoderInputFile)
-        {
-            g_recRadeDecoderInput = false;
-            sf_close(g_sfRecRadeDecoderInputFile);
-            g_sfRecRadeDecoderInputFile = nullptr;
-        }
     }
-    
+
+    // Closed unconditionally to match the unconditional open above -- see comment there
+    // on why these can't be scoped to just the tx or rx branch.
+    if (g_sfRecRadeEncoderInputFile)
+    {
+        g_recRadeEncoderInput = false;
+        sf_close(g_sfRecRadeEncoderInputFile);
+        g_sfRecRadeEncoderInputFile = nullptr;
+    }
+
+    if (g_sfRecRadeDecoderInputFile)
+    {
+        g_recRadeDecoderInput = false;
+        sf_close(g_sfRecRadeDecoderInputFile);
+        g_sfRecRadeDecoderInputFile = nullptr;
+    }
+
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
  
