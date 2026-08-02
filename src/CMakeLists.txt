@@ -135,7 +135,17 @@ if(LINUX)
             # before trusting the independent pkg-config detection.
             include(CheckCXXSymbolExists)
             set(CMAKE_REQUIRED_INCLUDES ${wxWidgets_INCLUDE_DIRS})
-            set(CMAKE_REQUIRED_DEFINITIONS ${wxWidgets_DEFINITIONS})
+            # wxWidgets_DEFINITIONS is a list of bare macro tokens (correct
+            # for the COMPILE_DEFINITIONS property UsewxWidgets.cmake sets
+            # it via) -- but CMAKE_REQUIRED_DEFINITIONS needs full "-DFOO"
+            # strings. Without the prefix, check_cxx_symbol_exists's probe
+            # compile passes each bare token as a raw command-line argument,
+            # which the compiler treats as a (nonexistent) input filename
+            # and errors out on -- silently failing the whole check closed
+            # (WX_BUILT_FOR_GTK3 always false) even on a real GTK3 wx build.
+            set(WX_GTK3_PROBE_DEFINITIONS ${wxWidgets_DEFINITIONS})
+            list(TRANSFORM WX_GTK3_PROBE_DEFINITIONS PREPEND "-D")
+            set(CMAKE_REQUIRED_DEFINITIONS ${WX_GTK3_PROBE_DEFINITIONS})
             set(CMAKE_REQUIRED_FLAGS "${wxWidgets_CXX_FLAGS}")
             check_cxx_symbol_exists(__WXGTK3__ "wx/defs.h" WX_BUILT_FOR_GTK3)
             unset(CMAKE_REQUIRED_INCLUDES)
