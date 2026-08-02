@@ -1870,8 +1870,15 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
         m_lastReportedCallsignListView->Select(index, false);
         index = m_lastReportedCallsignListView->GetFirstSelected();
     }
-    m_cboLastReportedCallsigns->SetText("");
-    m_BtnCallSignReset->SetFocus();
+    // Deselect only -- leave the displayed callsign text alone, consistent
+    // with how the FreeDV Reporter list's right-click-to-deselect behaves.
+    // See OnCloseCallsignList() for why this is deferred and followed by a
+    // forced repaint.
+    CallAfter([this]() {
+        m_BtnCallSignReset->SetFocus();
+        m_cboLastReportedCallsigns->Refresh();
+        m_cboLastReportedCallsigns->Update();
+    });
 }
 
 void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
@@ -1887,7 +1894,20 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
     {
         // Make sure we're not selected if no callsigns selected.
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
-        m_BtnCallSignReset->SetFocus();
+
+        // Deferred via CallAfter so it runs once the popup's own dismissal
+        // processing has fully finished.
+        CallAfter([this]() {
+            m_BtnCallSignReset->SetFocus();
+
+            // The popup window overlaps the combo's own value area while
+            // open; on dismiss GTK doesn't always damage/repaint that
+            // region, so the combo can be left showing its stale
+            // "focused/selected" look from before the popup covered it.
+            // Force a fresh, synchronous repaint.
+            m_cboLastReportedCallsigns->Refresh();
+            m_cboLastReportedCallsigns->Update();
+        });
     }
     event.Skip();
 }
