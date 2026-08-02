@@ -1839,7 +1839,6 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
     // See OnCloseCallsignList() for why this is deferred and followed by a
     // forced repaint.
     CallAfter([this]() {
-        m_BtnCallSignReset->SetFocus();
         m_cboLastReportedCallsigns->Refresh();
         m_cboLastReportedCallsigns->Update();
     });
@@ -1862,8 +1861,6 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
         // Deferred via CallAfter so it runs once the popup's own dismissal
         // processing has fully finished.
         CallAfter([this]() {
-            m_BtnCallSignReset->SetFocus();
-
             // The popup window overlaps the combo's own value area while
             // open; on dismiss GTK doesn't always damage/repaint that
             // region, so the combo can be left showing its stale
