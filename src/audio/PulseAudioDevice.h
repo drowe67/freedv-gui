@@ -63,7 +63,7 @@ public:
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
 
-#if 0
+#if 1
     // Returns true if real-time thread MUST sleep ASAP. Failure to do so
     // may result in SIGKILL being sent to the process by the kernel.
     // XXX - disabled as current implementation uses thread_local (not RT safe).
