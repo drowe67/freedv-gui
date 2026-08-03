@@ -421,6 +421,13 @@ void TxRxThread::initializePipeline_()
         // RX demodulation step
         auto bypassRfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         auto rfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+
+        // 12-hour ring buffer. Passed into createReceivePipeline() so it's inserted
+        // into the same AudioPipeline as RADEReceiveStep (sharing one auto-inserted
+        // resampler) instead of being tapped upstream and independently re-resampled --
+        // that way the recording matches exactly what RADE demodulates.
+        auto debugRecordStep = new DebugRecordStep(8000, 60 * 60 * 12, recordFileStr); // 12 hours
+
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },
@@ -428,15 +435,9 @@ void TxRxThread::initializePipeline_()
             +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
             +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
-            helper_
+            helper_,
+            debugRecordStep
         );
-
-        auto debugRecordStep = new DebugRecordStep(8000, 60 * 60 * 12, recordFileStr); // 12 hours
-	auto debugRecordPipeline = new AudioPipeline(inputSampleRate_, 8000);
-	debugRecordPipeline->appendPipelineStep(debugRecordStep);
-
-	auto debugRecordTap = new TapStep(inputSampleRate_, debugRecordPipeline);
-        rfDemodulationPipeline->appendPipelineStep(debugRecordTap);
 
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 

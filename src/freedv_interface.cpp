@@ -39,6 +39,7 @@
 #include "pipeline/AudioPipeline.h"
 #include "pipeline/BandwidthExpandStep.h"
 #include "pipeline/EitherOrStep.h"
+#include "pipeline/DebugRecordStep.h"
 
 #include "util/logging/ulog.h"
 
@@ -809,7 +810,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     realtime_fp<int()> const& getChannelNoiseSnrFn,
     realtime_fp<float()> const& getFreqOffsetFn,
     realtime_fp<float*()> const& getSigPwrAvgFn,
-    std::shared_ptr<IRealtimeHelper> realtimeHelper)
+    std::shared_ptr<IRealtimeHelper> realtimeHelper,
+    DebugRecordStep* debugRecordStep)
 {
     std::vector<IPipelineStep*> parallelSteps;
 
@@ -836,8 +838,16 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         rxStep->setRxStateFn(getRxStateFn);
 
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
+        if (debugRecordStep != nullptr)
+        {
+            // Insert into the same AudioPipeline (and thus behind the same
+            // auto-inserted resampler) as rxStep, rather than tapping upstream
+            // and independently re-resampling -- so this records exactly what
+            // RADEReceiveStep receives, not a separately-resampled copy of it.
+            pipeline->appendPipelineStep(debugRecordStep);
+        }
         pipeline->appendPipelineStep(rxStep);
-     
+
         auto bwExpandStep = new BandwidthExpandStep();
         auto bwExpandBypass = new AudioPipeline(bwExpandStep->getInputSampleRate(), bwExpandStep->getOutputSampleRate());
         
