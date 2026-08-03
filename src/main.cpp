@@ -2979,13 +2979,31 @@ void MainFrame::performFreeDVOff_()
         wxGetApp().rigPttController->ptt(false);
         wxGetApp().rigPttController->disconnect();
     }
-    wxGetApp().rigPttController = nullptr;
+    // Dropping the last shared_ptr reference below runs the controller's
+    // destructor, which blocks until the rig actually finishes
+    // disconnecting. Against an unresponsive radio (e.g. powered off, via
+    // rigctld) that can take far longer than Hamlib's own client-side
+    // timeout/retry settings suggest, since those don't bound however long
+    // rigctld itself waits on the physical radio it's talking to. Move the
+    // last reference onto a detached thread so that wait can't hold up
+    // turning the modem off (or app shutdown) -- the controller stays
+    // alive exactly as long as it needs to, just off to the side rather
+    // than blocking here.
+    std::thread([ptr = std::move(wxGetApp().rigPttController)]() mutable
+    {
+        SetThreadName("RigPttDisconnect");
+        ptr = nullptr;
+    }).detach();
 
     if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected())
     {
         wxGetApp().rigFrequencyController->disconnect();
     }
-    wxGetApp().rigFrequencyController = nullptr;
+    std::thread([ptr = std::move(wxGetApp().rigFrequencyController)]() mutable
+    {
+        SetThreadName("RigFreqDisconnect");
+        ptr = nullptr;
+    }).detach();
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
