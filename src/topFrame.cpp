@@ -470,8 +470,13 @@ wxColour GetGroupBoxBaseColour()
     // Deliberately not wxStandardPaths::GetUserConfigDir() -- on Unix that
     // returns plain $HOME (a wx compatibility quirk), not ~/.config.
     wxString settingsPath = wxGetHomeDir() + wxT("/.config/gtk-3.0/settings.ini");
+    // A fresh user profile may not have this file at all (nothing has ever
+    // written GTK settings for them) -- that's not an error, just fall
+    // through to the gtk_settings_get_default() fallback below. Checking
+    // existence up front also avoids wxTextFile::Open() logging a failure
+    // on every poll (see m_groupBoxTintPollTimer, every 500ms).
     wxTextFile settingsFile;
-    if (settingsFile.Open(settingsPath))
+    if (wxFileExists(settingsPath) && settingsFile.Open(settingsPath))
     {
         for (wxString line = settingsFile.GetFirstLine(); !settingsFile.Eof(); line = settingsFile.GetNextLine())
         {
