@@ -2445,23 +2445,39 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
-    // Grab and save the final position explicitly rather than relying
-    // solely on OnMove's live tracking -- Close()/Destroy() below trigger
-    // one last stray wxEVT_MOVE reporting a position with the title bar's
-    // height already stripped off, so position tracking must be stopped
-    // first or that stray event silently overwrites the correct value
-    // saved here.
-    auto pos = m_reporterDialog->GetPosition();
-    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
-    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
-    m_reporterDialog->stopTrackingPosition();
+    if (terminating_)
+    {
+        // A previous close request already kicked off the async RX/PTT
+        // shutdown below, which calls Destroy() itself once done (see
+        // OnTogBtnOnOff()) -- nothing left to do here. Without this guard,
+        // a repeat close request while that shutdown is still in progress
+        // (e.g. slow Hamlib rig disconnect against an unresponsive radio)
+        // re-enters this handler with m_reporterDialog already null
+        // (cleared on the first pass below), crashing on the unconditional
+        // GetPosition() call.
+        return;
+    }
 
-    m_reporterDialog->setReporter(nullptr);
-    wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
-    m_reporterDialog->Close();
-    m_reporterDialog->Destroy();
-    m_reporterDialog = nullptr;
-    
+    if (m_reporterDialog != nullptr)
+    {
+        // Grab and save the final position explicitly rather than relying
+        // solely on OnMove's live tracking -- Close()/Destroy() below trigger
+        // one last stray wxEVT_MOVE reporting a position with the title bar's
+        // height already stripped off, so position tracking must be stopped
+        // first or that stray event silently overwrites the correct value
+        // saved here.
+        auto pos = m_reporterDialog->GetPosition();
+        wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+        wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+        m_reporterDialog->stopTrackingPosition();
+
+        m_reporterDialog->setReporter(nullptr);
+        wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
+    }
+
     if (m_RxRunning)
     {
         if (m_btnTogPTT->GetValue())
