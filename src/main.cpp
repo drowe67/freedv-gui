@@ -2449,12 +2449,13 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
     {
         // A previous close request already kicked off the async RX/PTT
         // shutdown below, which calls Destroy() itself once done (see
-        // OnTogBtnOnOff()) -- nothing left to do here. Without this guard,
-        // a repeat close request while that shutdown is still in progress
-        // (e.g. slow Hamlib rig disconnect against an unresponsive radio)
-        // re-enters this handler with m_reporterDialog already null
-        // (cleared on the first pass below), crashing on the unconditional
-        // GetPosition() call.
+        // OnTogBtnOnOff()) -- nothing left to do here. This guards more than
+        // just the m_reporterDialog dereference below: m_RxRunning isn't
+        // cleared until deep inside that shutdown (stopRxStream(), called
+        // after the rig-disconnect code), so a repeat close request arriving
+        // first would otherwise fall into the `if (m_RxRunning)` block again
+        // and re-enter OnTogBtnOnOff() a second time concurrently with the
+        // shutdown already in progress.
         return;
     }
 
@@ -2988,21 +2989,29 @@ void MainFrame::performFreeDVOff_()
     // last reference onto a detached thread so that wait can't hold up
     // turning the modem off (or app shutdown) -- the controller stays
     // alive exactly as long as it needs to, just off to the side rather
-    // than blocking here.
-    std::thread([ptr = std::move(wxGetApp().rigPttController)]() mutable
+    // than blocking here. The associated future lets a terminating shutdown
+    // (see OnTogBtnOnOff()) wait a bounded amount of time for this to finish
+    // before the process exits out from under the thread.
+    std::promise<void> pttDisconnectProm;
+    rigPttDisconnectFuture_ = pttDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigPttController), prom = std::move(pttDisconnectProm)]() mutable
     {
         SetThreadName("RigPttDisconnect");
         ptr = nullptr;
+        prom.set_value();
     }).detach();
 
     if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected())
     {
         wxGetApp().rigFrequencyController->disconnect();
     }
-    std::thread([ptr = std::move(wxGetApp().rigFrequencyController)]() mutable
+    std::promise<void> freqDisconnectProm;
+    rigFreqDisconnectFuture_ = freqDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigFrequencyController), prom = std::move(freqDisconnectProm)]() mutable
     {
         SetThreadName("RigFreqDisconnect");
         ptr = nullptr;
+        prom.set_value();
     }).detach();
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
@@ -3123,7 +3132,27 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
             SetThreadName("TurningOff");
 
             performFreeDVOff_();
-            
+
+            if (terminating_)
+            {
+                // We're about to destroy the frame and let the process exit,
+                // which would kill the detached rig-disconnect threads from
+                // performFreeDVOff_() mid-flight if a slow/unresponsive rig
+                // hasn't finished with them yet -- e.g. a queued ptt(false)
+                // might never reach the radio. Give them a bounded chance to
+                // finish first; an unresponsive rig still can't hang shutdown
+                // indefinitely, it just gets abandoned after the grace period.
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+                if (rigPttDisconnectFuture_.valid())
+                {
+                    rigPttDisconnectFuture_.wait_until(deadline);
+                }
+                if (rigFreqDisconnectFuture_.valid())
+                {
+                    rigFreqDisconnectFuture_.wait_until(deadline);
+                }
+            }
+
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
