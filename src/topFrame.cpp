@@ -1050,7 +1050,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_freqBox->GetContentSizer()->Add(txtReportFreqSizer, 1, static_cast<int>(wxEXPAND), 1);
     //m_freqBox->GetContentSizer()->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
 
-    rightSizer->Add(reportFrequencySizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+    rightSizer->Add(txtReportFreqSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
     
     /* new --- */
 
