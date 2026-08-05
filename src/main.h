@@ -49,6 +49,7 @@
 #include <wx/numformatter.h>
 
 #include <stdint.h>
+#include <future>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 #include <cpuid.h>
 #endif
@@ -617,6 +618,15 @@ class MainFrame : public TopFrame
         bool terminating_; // used for terminating FreeDV
         bool syncState_; // GUI copy of current sync state
         bool realigned_; // one-shot latch: has the Sync box mode text been re-centred yet?
+
+        // Signalled once the detached rig PTT/frequency controller disconnect
+        // threads (see performFreeDVOff_()) finish tearing down. Only waited on,
+        // with a bounded timeout, when terminating_ is set -- lets a responsive
+        // rig disconnect cleanly before the process exits out from under the
+        // detached thread, without reintroducing an unbounded hang against an
+        // unresponsive one.
+        std::future<void> rigPttDisconnectFuture_;
+        std::future<void> rigFreqDisconnectFuture_;
 
         // Caches appConfiguration.experimentalFeatures as of the last tab layout load
         // attempt, so exit-time save uses that instead of a possibly-since-toggled live
