@@ -2195,23 +2195,40 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
-    // Grab and save the final position explicitly rather than relying
-    // solely on OnMove's live tracking -- Close()/Destroy() below trigger
-    // one last stray wxEVT_MOVE reporting a position with the title bar's
-    // height already stripped off, so position tracking must be stopped
-    // first or that stray event silently overwrites the correct value
-    // saved here.
-    auto pos = m_reporterDialog->GetPosition();
-    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
-    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
-    m_reporterDialog->stopTrackingPosition();
+    if (terminating_)
+    {
+        // A previous close request already kicked off the async RX/PTT
+        // shutdown below, which calls Destroy() itself once done (see
+        // OnTogBtnOnOff()) -- nothing left to do here. This guards more than
+        // just the m_reporterDialog dereference below: m_RxRunning isn't
+        // cleared until deep inside that shutdown (stopRxStream(), called
+        // after the rig-disconnect code), so a repeat close request arriving
+        // first would otherwise fall into the `if (m_RxRunning)` block again
+        // and re-enter OnTogBtnOnOff() a second time concurrently with the
+        // shutdown already in progress.
+        return;
+    }
 
-    m_reporterDialog->setReporter(nullptr);
-    wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
-    m_reporterDialog->Close();
-    m_reporterDialog->Destroy();
-    m_reporterDialog = nullptr;
-    
+    if (m_reporterDialog != nullptr)
+    {
+        // Grab and save the final position explicitly rather than relying
+        // solely on OnMove's live tracking -- Close()/Destroy() below trigger
+        // one last stray wxEVT_MOVE reporting a position with the title bar's
+        // height already stripped off, so position tracking must be stopped
+        // first or that stray event silently overwrites the correct value
+        // saved here.
+        auto pos = m_reporterDialog->GetPosition();
+        wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+        wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+        m_reporterDialog->stopTrackingPosition();
+
+        m_reporterDialog->setReporter(nullptr);
+        wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
+    }
+
     if (m_RxRunning)
     {
         if (m_btnTogPTT->GetValue())
@@ -2592,13 +2609,39 @@ void MainFrame::performFreeDVOff_()
         wxGetApp().rigPttController->ptt(false);
         wxGetApp().rigPttController->disconnect();
     }
-    wxGetApp().rigPttController = nullptr;
+    // Dropping the last shared_ptr reference below runs the controller's
+    // destructor, which blocks until the rig actually finishes
+    // disconnecting. Against an unresponsive radio (e.g. powered off, via
+    // rigctld) that can take far longer than Hamlib's own client-side
+    // timeout/retry settings suggest, since those don't bound however long
+    // rigctld itself waits on the physical radio it's talking to. Move the
+    // last reference onto a detached thread so that wait can't hold up
+    // turning the modem off (or app shutdown) -- the controller stays
+    // alive exactly as long as it needs to, just off to the side rather
+    // than blocking here. The associated future lets a terminating shutdown
+    // (see OnTogBtnOnOff()) wait a bounded amount of time for this to finish
+    // before the process exits out from under the thread.
+    std::promise<void> pttDisconnectProm;
+    rigPttDisconnectFuture_ = pttDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigPttController), prom = std::move(pttDisconnectProm)]() mutable
+    {
+        SetThreadName("RigPttDisconnect");
+        ptr = nullptr;
+        prom.set_value();
+    }).detach();
 
     if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected())
     {
         wxGetApp().rigFrequencyController->disconnect();
     }
-    wxGetApp().rigFrequencyController = nullptr;
+    std::promise<void> freqDisconnectProm;
+    rigFreqDisconnectFuture_ = freqDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigFrequencyController), prom = std::move(freqDisconnectProm)]() mutable
+    {
+        SetThreadName("RigFreqDisconnect");
+        ptr = nullptr;
+        prom.set_value();
+    }).detach();
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
@@ -2713,7 +2756,27 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
             SetThreadName("TurningOff");
 
             performFreeDVOff_();
-            
+
+            if (terminating_)
+            {
+                // We're about to destroy the frame and let the process exit,
+                // which would kill the detached rig-disconnect threads from
+                // performFreeDVOff_() mid-flight if a slow/unresponsive rig
+                // hasn't finished with them yet -- e.g. a queued ptt(false)
+                // might never reach the radio. Give them a bounded chance to
+                // finish first; an unresponsive rig still can't hang shutdown
+                // indefinitely, it just gets abandoned after the grace period.
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+                if (rigPttDisconnectFuture_.valid())
+                {
+                    rigPttDisconnectFuture_.wait_until(deadline);
+                }
+                if (rigFreqDisconnectFuture_.valid())
+                {
+                    rigFreqDisconnectFuture_.wait_until(deadline);
+                }
+            }
+
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
