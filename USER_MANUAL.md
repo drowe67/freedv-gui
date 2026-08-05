@@ -841,7 +841,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V3.0.0 TBD 2026
 
 1. Enhancements:
-    * RADEV2: Standardize mode as USB. (PR #1397)
+    * RADEV2: Standardize mode as USB. (PR #1397, #1454) - thanks @barjac!
     * Combine all configuration into Settings->Edit Settings. (PR #1418)
     * Rework Easy Setup window into new Setup Wizard. (PR #1418, #1432)
 2. Other:
@@ -866,11 +866,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress button flicker in Linux light themes. (PR #1419, PR #1421) - thanks @barjac!
     * Only preserve previously selected tab on TX if it's in the same group as 'From Mic'. (PR #1428)
     * Scalar plot label alignment fix for Y axis of Frm Decoder/Mic/Radio, SNR and Spectrum plots. (PR #1429) - thanks @barjac!
-    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431, #1433, #1449) - thanks @barjac!
+    * Fix window position restore under KWin and labwc (main window + FreeDV Reporter window). (PR #1431, #1433, #1449, #1450) - thanks @barjac!
     * Harden experimental tab layout persistence. (PR #1434) - thanks @barjac!
     * Fix right-click context menus dismissing before they can be read (GTK) (PR #1437) - thanks @barjac!
     * Unconditionally add new station to Heard Station list if first heard. (PR #1444)
     * Fix heard-stations callsign combo stuck-highlight, right-click behaviour, and a stale-index crash (PR #1448) - thanks @barjac!
+    * Fix crash and long hang on main window close with an unresponsive rig (PR #1452) - thanks @barjac!
+    * Fix Radio Frequency coloring on dark/light mode transition. (PR #1453)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!

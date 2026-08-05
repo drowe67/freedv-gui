@@ -399,10 +399,10 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         bool isUsbFreq = newFreq >= 10000000 || is60MeterBand;
         bool isLsbFreq = newFreq < 10000000 && !is60MeterBand;
 
-        bool isMatchingMode = 
+        bool isMatchingMode =
             (!g_analog && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-            (isUsbFreq && (mode == IRigFrequencyController::USB)) ||
-            (isLsbFreq && (mode == IRigFrequencyController::LSB));
+            (g_analog && isUsbFreq && (mode == IRigFrequencyController::USB)) ||
+            (g_analog && isLsbFreq && (mode == IRigFrequencyController::LSB));
 
         if (isMatchingMode)
         {
@@ -2057,8 +2057,16 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 
 void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
-    // Works around issues on wxWidgets with certain controls not changing backgrounds
+    // Works around issues on wxWidgets with certain controls not changing colors
     // when the user switches between light and dark mode.
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    }
+    else
+    {
+        m_cboReportFrequency->SetForegroundColour(*wxRED);
+    }
     TopFrame::OnSystemColorChanged(event);
 }
 
