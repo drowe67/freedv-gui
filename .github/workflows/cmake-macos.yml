@@ -192,7 +192,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
