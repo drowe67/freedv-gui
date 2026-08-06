@@ -263,9 +263,10 @@ void PlotScatter::add_new_samples_eye(float samples[], int n)
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotScatter::OnSize(wxSizeEvent&)
+void PlotScatter::OnSize(wxSizeEvent& event)
 {
     // todo: clear screen
+    event.Skip();
 }
 
 //----------------------------------------------------------------

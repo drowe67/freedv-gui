@@ -108,7 +108,7 @@ PlotSpectrum::~PlotSpectrum()
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotSpectrum::OnSize(wxSizeEvent&) {
+void PlotSpectrum::OnSize(wxSizeEvent& event) {
     // Determine correct left offset based on font size
     int text_w = 0;
     int text_h = 0;
@@ -122,6 +122,7 @@ void PlotSpectrum::OnSize(wxSizeEvent&) {
         bottomOffset_ = std::max(bottomOffset_, text_h);
     }
     bottomOffset_ = std::max(bottomOffset_, (int)YBOTTOM_OFFSET);
+    event.Skip();
 }
 
 //----------------------------------------------------------------
