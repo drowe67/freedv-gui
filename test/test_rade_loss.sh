@@ -91,7 +91,7 @@ RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
 TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 -txradeinfile $(pwd)/rade_encoder_input.wav "
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
+($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log) &
 
 FDV_PID=$!
 
@@ -105,7 +105,7 @@ FDV_PID=$!
 #pw-top -b -n 5
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
-cat tmp.log
+#cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
@@ -137,7 +137,7 @@ PHASE_CORRECTION_SEC=0.010
 run_rade_loss_attempt () {
     local playback_file="$1"
 
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 -rxradeinfile $(pwd)/rade_decoder_input.wav >tmp.log 2>&1 &
+    ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 -rxradeinfile $(pwd)/rade_decoder_input.wav 2>&1 | tee tmp.log) &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
@@ -154,7 +154,7 @@ run_rade_loss_attempt () {
 
     wait $FDV_PID
     FREEDV_EXIT_CODE=$?
-    cat tmp.log
+    #cat tmp.log
 
     # Run feature files through loss tool
     LOSS_OUTPUT=$($PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test $LOSS_THRESHOLD --clip_start 100 --clip_end 300)
