@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 
 #include "main.h"
 
@@ -168,6 +169,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Show/hide frequency box based on CAT control configuration.
         m_freqBox->Show(isFrequencyControlEnabled_());
         
+        // Re-apply group box tint colour/strength in case it was changed.
+        applyGroupBoxTint_();
+
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
@@ -176,21 +180,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // by a pixel or two). As a really hacky workaround, we emulate this behavior
         // when restoring window sizing. These resize events also happen after configuration
         // is restored but I'm not sure this is necessary.
-        wxSize size = GetSize();
-        auto w = size.GetWidth();
-        auto h = size.GetHeight();
-        CallAfter([=, this]()
-        {
-            SetSize(w, h);
-        });
-        CallAfter([=, this]()
-        {
-            SetSize(w + 1, h + 1);
-        });
-        CallAfter([=, this]()
-        {
-            SetSize(w, h);
-        });
+        nudgeResize_();
 
         // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -376,7 +366,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 m_txtModeStatus->Enable(true);
                 break;
             default:
-                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->SetLabel(wxEmptyString);
                 m_txtModeStatus->Enable(false);
                 break;
         }
@@ -484,7 +474,7 @@ void MainFrame::onRadioConnected_(IRigController*)
 void MainFrame::onRadioDisconnected_(IRigController*)
 {
     CallAfter([&]() {
-        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->SetLabel(wxEmptyString);
         m_txtModeStatus->Enable(false);
     });
 }
@@ -1448,8 +1438,7 @@ void MainFrame::togglePTT(void) {
         // enable sync text
 
         m_textSync->Enable();
-        m_textCurrentDecodeMode->Enable();
-        
+
         // Re-enable buttons.
         m_togBtnOnOff->Enable(true);
         m_togBtnAnalog->Enable(true);
@@ -1494,7 +1483,6 @@ void MainFrame::togglePTT(void) {
         // disable sync text
 
         m_textSync->Disable();
-        m_textCurrentDecodeMode->Disable();
 
         // Disable On/Off button.
         m_togBtnOnOff->Enable(false);
@@ -1751,18 +1739,6 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     event.Skip();
 }
 
-void MainFrame::OnCallSignReset(wxCommandEvent&)
-{
-    m_pcallsign = m_callsign;
-    memset(m_callsign, 0, MAX_CALLSIGN);
-    wxString s;
-    s.Printf("%s", m_callsign);
-    m_txtCtrlCallSign->SetValue(s);
-    
-    m_lastReportedCallsignListView->DeleteAllItems();
-    m_cboLastReportedCallsigns->SetText(_(""));
-}
-
 void MainFrame::OnLogQSO(wxCommandEvent&)
 {
     wxString dxCall;
@@ -1863,7 +1839,7 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
     // See OnCloseCallsignList() for why this is deferred and followed by a
     // forced repaint.
     CallAfter([this]() {
-        m_BtnCallSignReset->SetFocus();
+        this->SetFocus();
         m_cboLastReportedCallsigns->Refresh();
         m_cboLastReportedCallsigns->Update();
     });
@@ -1886,7 +1862,7 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
         // Deferred via CallAfter so it runs once the popup's own dismissal
         // processing has fully finished.
         CallAfter([this]() {
-            m_BtnCallSignReset->SetFocus();
+            this->SetFocus();
 
             // The popup window overlaps the combo's own value area while
             // open; on dismiss GTK doesn't always damage/repaint that
@@ -2056,11 +2032,28 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
         m_cboReportFrequency->SetForegroundColour(*wxRED);
     }
     TopFrame::OnSystemColorChanged(event);
+
+    // Fast path for immediate feedback where this event fires reliably
+    // (native Wayland, macOS, Windows). Not relied on alone --
+    // m_groupBoxTintPollTimer (see OnGroupBoxTintPollTimer() below) is the
+    // actual backstop, since under XWayland this event is unreliable (one
+    // direction doesn't fire it at all) and even when it does fire,
+    // wxSystemSettings' own colour cache can still be a full theme-switch
+    // behind reality at this point -- see GetGroupBoxBaseColour().
+    CallAfter([this]() { applyGroupBoxTint_(); });
 }
 
-void MainFrame::OnCenterRx(wxCommandEvent&)
+// Backstop for the group box tint: wxEVT_SYS_COLOUR_CHANGED can't be relied
+// on alone (see OnSystemColorChanged() above), so this polls at a low
+// frequency and only does any work when the live system colour (see
+// GetGroupBoxBaseColour()) has actually changed since the last time
+// applyGroupBoxTint_() ran.
+void MainFrame::OnGroupBoxTintPollTimer(wxTimerEvent&)
 {
-    clickTune(FDMDV_FCENTRE);
+    if (GetGroupBoxBaseColour() != m_lastGroupBoxTintBaseColour)
+    {
+        applyGroupBoxTint_();
+    }
 }
 
 void MainFrame::updateReportingFreqList_()
@@ -2150,6 +2143,79 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
     }
     
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
+}
+
+void MainFrame::OnShowGroupBox(wxCommandEvent& event)
+{
+    auto index = event.GetId() - ID_SHOW_GROUPBOX_BASE;
+
+    TintedGroupBox* box = nullptr;
+    ConfigurationDataElement<bool>* configValue = nullptr;
+
+    switch (index)
+    {
+        case 0: box = snrBox; configValue = &wxGetApp().appConfiguration.showSnrBox; break;
+        case 1: box = levelBox; configValue = &wxGetApp().appConfiguration.showLevelBox; break;
+        case 2: box = syncBox; configValue = &wxGetApp().appConfiguration.showSyncBox; break;
+        case 3: box = audioBox; configValue = &wxGetApp().appConfiguration.showAudioRecordingBox; break;
+        case 4: box = logBox; configValue = &wxGetApp().appConfiguration.showLoggingBox; break;
+        case 5: box = reporterBox; configValue = &wxGetApp().appConfiguration.showReportingBox; break;
+        case 6: box = m_txLevelBox; configValue = &wxGetApp().appConfiguration.showTxAttenuationBox; break;
+        case 7: box = micSpeakerBox; configValue = &wxGetApp().appConfiguration.showSpeakerLevelBox; break;
+        default: return;
+    }
+
+    bool newValue = !((bool)*configValue);
+    *configValue = newValue;
+
+    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
+    menuItem->Check(newValue);
+    box->Show(newValue);
+
+    nudgeResize_();
+}
+
+// Right-click on a movable group box's title/background (Stage 10): builds
+// a Hide/Move to other side/Move up/Move down popup menu for that one box.
+// boxIndex uses the same 0-7 enumeration as the Show menu/OnShowGroupBox.
+void MainFrame::OnGroupBoxRightClick(int boxIndex)
+{
+    static const wxString labels[8] = {
+        _("SNR"), _("Level"), _("Sync"), _("Audio Recording"),
+        _("Logging"), _("FDV Reporting"), _("TX Attenuation"), _("Speaker Level"),
+    };
+    if (boxIndex < 0 || boxIndex > 7)
+    {
+        return;
+    }
+    wxString label = labels[boxIndex];
+
+    auto& leftOrder = wxGetApp().appConfiguration.groupBoxLeftOrder;
+    auto& rightOrder = wxGetApp().appConfiguration.groupBoxRightOrder;
+
+    auto leftVec = leftOrder.get();
+    auto rightVec = rightOrder.get();
+    bool onLeft = std::find(leftVec.begin(), leftVec.end(), boxIndex) != leftVec.end();
+    std::vector<int>& sameSideVec = onLeft ? leftVec : rightVec;
+    auto it = std::find(sameSideVec.begin(), sameSideVec.end(), boxIndex);
+    bool isFirst = (it == sameSideVec.begin());
+    bool isLast = (it != sameSideVec.end()) && ((it + 1) == sameSideVec.end());
+
+    wxMenu menu;
+    auto hideItem = menu.Append(wxID_ANY, wxString::Format(_("Hide %s"), label));
+    menu.AppendSeparator();
+    auto moveSideItem = menu.Append(wxID_ANY, onLeft ? _("Move to Right Side") : _("Move to Left Side"));
+    auto moveUpItem = menu.Append(wxID_ANY, _("Move Up"));
+    moveUpItem->Enable(!isFirst);
+    auto moveDownItem = menu.Append(wxID_ANY, _("Move Down"));
+    moveDownItem->Enable(!isLast);
+
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { hideGroupBox_(boxIndex); }, hideItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxToOtherSide_(boxIndex); }, moveSideItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxUpDown_(boxIndex, -1); }, moveUpItem->GetId());
+    menu.Bind(wxEVT_MENU, [this, boxIndex](wxCommandEvent&) { moveGroupBoxUpDown_(boxIndex, +1); }, moveDownItem->GetId());
+
+    PopupMenu(&menu);
 }
 
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)

@@ -106,6 +106,18 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , showDecodeStats("/Debug/showDecodeStats", false)
     , autoStartOnLaunch("/Modem/autoStartOnLaunch", false)
+    , showSnrBox("/UI/ShowSnrBox", true)
+    , showLevelBox("/UI/ShowLevelBox", true)
+    , showSyncBox("/UI/ShowSyncBox", true)
+    , showAudioRecordingBox("/UI/ShowAudioRecordingBox", true)
+    , showLoggingBox("/UI/ShowLoggingBox", true)
+    , showReportingBox("/UI/ShowReportingBox", true)
+    , showTxAttenuationBox("/UI/ShowTxAttenuationBox", true)
+    , showSpeakerLevelBox("/UI/ShowSpeakerLevelBox", true)
+    , groupBoxTintColor("/UI/GroupBoxTintColor", "#0055FF")
+    , groupBoxTintPercent("/UI/GroupBoxTintPercent", 20)
+    , groupBoxLeftOrder("/UI/GroupBoxLeftOrder", { 0, 1, 2, 3, 4, 5 })
+    , groupBoxRightOrder("/UI/GroupBoxRightOrder", { 6, 7 })
 {
     // empty
 }
@@ -227,6 +239,21 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, showDecodeStats);
     load_(config, autoStartOnLaunch);
 
+    load_(config, showSnrBox);
+    load_(config, showLevelBox);
+    load_(config, showSyncBox);
+    load_(config, showAudioRecordingBox);
+    load_(config, showLoggingBox);
+    load_(config, showReportingBox);
+    load_(config, showTxAttenuationBox);
+    load_(config, showSpeakerLevelBox);
+
+    load_(config, groupBoxTintColor);
+    load_(config, groupBoxTintPercent);
+
+    load_(config, groupBoxLeftOrder);
+    load_(config, groupBoxRightOrder);
+
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
 }
@@ -309,6 +336,21 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, showDecodeStats);
     save_(config, autoStartOnLaunch);
+
+    save_(config, showSnrBox);
+    save_(config, showLevelBox);
+    save_(config, showSyncBox);
+    save_(config, showAudioRecordingBox);
+    save_(config, showLoggingBox);
+    save_(config, showReportingBox);
+    save_(config, showTxAttenuationBox);
+    save_(config, showSpeakerLevelBox);
+
+    save_(config, groupBoxTintColor);
+    save_(config, groupBoxTintPercent);
+
+    save_(config, groupBoxLeftOrder);
+    save_(config, groupBoxRightOrder);
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);

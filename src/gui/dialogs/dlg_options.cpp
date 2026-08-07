@@ -682,7 +682,28 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_reporterColor->Add(reporterColorSizer, 0, static_cast<int>(wxALL), 5);
 
     sizerDisplay->Add(sbSizer_reporterColor, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
-    
+
+    //----------------------------------------------------------
+    // Group box tint
+    //----------------------------------------------------------
+    wxStaticBox* sb_groupBoxTint = new wxStaticBox(m_displayTab, wxID_ANY, _("Group Box Tint"));
+    wxStaticBoxSizer* sbSizer_groupBoxTint = new wxStaticBoxSizer(sb_groupBoxTint, wxHORIZONTAL);
+
+    wxStaticText* labelGroupBoxTintColor = new wxStaticText(sb_groupBoxTint, wxID_ANY, wxT("Tint colour:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_groupBoxTint->Add(labelGroupBoxTintColor, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_groupBoxTintColor = new wxColourPickerCtrl(sb_groupBoxTint, wxID_ANY);
+    sbSizer_groupBoxTint->Add(m_groupBoxTintColor, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText* labelGroupBoxTintPercent = new wxStaticText(sb_groupBoxTint, wxID_ANY, wxT("Blend into theme (%):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_groupBoxTint->Add(labelGroupBoxTintPercent, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_groupBoxTintPercent = new wxSpinCtrl(sb_groupBoxTint, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 20);
+    m_groupBoxTintPercent->SetToolTip(_("How strongly the tint colour is blended into each box's theme-derived shade. 0% ignores the tint colour entirely (plain theme shade); 100% uses the tint colour as-is, with no light/dark theme adaptation."));
+    sbSizer_groupBoxTint->Add(m_groupBoxTintPercent, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerDisplay->Add(sbSizer_groupBoxTint, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+
     // Plot settings
     wxStaticBox* sb_PlotSettings = new wxStaticBox(m_displayTab, wxID_ANY, _("Plot settings"));
     wxStaticBoxSizer* sbSizer_PlotSettings =  new wxStaticBoxSizer(sb_PlotSettings, wxVERTICAL);
@@ -1370,6 +1391,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_freedvReporterMsgBackgroundColor->SetColour(msgBackgroundColor);
         m_freedvReporterMsgForegroundColor->SetColour(msgForegroundColor);
 
+        // Populate group box tint colour/strength
+        wxColour groupBoxTintColor(wxGetApp().appConfiguration.groupBoxTintColor);
+        m_groupBoxTintColor->SetColour(groupBoxTintColor);
+        m_groupBoxTintPercent->SetValue((int)wxGetApp().appConfiguration.groupBoxTintPercent);
+
         // Populate reporting frequency list.
         for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
         {
@@ -1574,6 +1600,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         wxColour msgForegroundColor = m_freedvReporterMsgForegroundColor->GetColour();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor = msgForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour groupBoxTintColor = m_groupBoxTintColor->GetColour();
+        wxGetApp().appConfiguration.groupBoxTintColor = groupBoxTintColor.GetAsString(wxC2S_HTML_SYNTAX);
+        wxGetApp().appConfiguration.groupBoxTintPercent = m_groupBoxTintPercent->GetValue();
 
         // Save new reporting frequency list.
         std::vector<wxString> tmpList;

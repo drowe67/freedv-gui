@@ -120,6 +120,7 @@ enum {
         ID_TIMER_TOT,           // Time-Out Timer
         ID_TIMER_TOT_WARNING,   // Polls remaining TOT time to show warning
         ID_TIMER_PTT_KEY_POLL,  // Polls physical PTT key state after a forced TX stop
+        ID_TIMER_GROUPBOX_TINT_POLL, // Backstop poll for group box tint on system theme changes
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -333,6 +334,17 @@ class MainFrame : public TopFrame
         // TX stop, so a held key can't immediately restart TX -- see
         // m_pttKeyRequireRelease_ below.
         wxTimer                 m_pttKeyPollTimer;
+
+        // Continuous, low-frequency poll backstop for the group box tint:
+        // under XWayland (e.g. GDK_BACKEND=x11), a light<-dark switch in one
+        // direction reliably fires wxEVT_SYS_COLOUR_CHANGED but the other
+        // direction doesn't fire it at all, so re-tinting can't rely solely
+        // on that event. See OnGroupBoxTintPollTimer().
+        wxTimer                 m_groupBoxTintPollTimer;
+
+        // Last colour seen from GetGroupBoxBaseColour() by applyGroupBoxTint_(),
+        // so the poll timer only does work when it has actually changed.
+        wxColour                m_lastGroupBoxTintBaseColour;
 #endif
 
         // TOT warning state
@@ -375,7 +387,12 @@ class MainFrame : public TopFrame
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
         void StopRecFileFromDecoder();
-        
+
+        // Shows (or, given an empty string, dismisses) the tinted info bar used
+        // for transient playback/recording status -- replaces the old native
+        // status bar strip, which took up a permanently reserved line.
+        void ShowPlaybackStatus(const wxString& msg);
+
         bool isReceiveOnly();
         
     protected:
@@ -415,8 +432,6 @@ class MainFrame : public TopFrame
         void OnToolsLoadDefaultConfig( wxCommandEvent& event ) override;
         void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) override;
 
-        void OnCenterRx(wxCommandEvent& event) override;
-
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;
         void OnHelpAbout( wxCommandEvent& event ) override;
@@ -444,7 +459,6 @@ class MainFrame : public TopFrame
 
         virtual void OnLogQSO(wxCommandEvent& event) override;
         
-        void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
 
         //System Events
@@ -490,6 +504,7 @@ class MainFrame : public TopFrame
         void OnTOTTimer(wxTimerEvent& evt);
         void OnTOTWarningTimer(wxTimerEvent& evt);
         void OnPttKeyPollTimer(wxTimerEvent& evt);
+        void OnGroupBoxTintPollTimer(wxTimerEvent& evt);
         void playTotBeep_();
         void stopTotBeep_();
         
@@ -508,14 +523,15 @@ class MainFrame : public TopFrame
 
         void OnToggleReporterVisibility (wxCommandEvent& event) override;
         void OnTogBtnTune(wxCommandEvent& event) override;
-        
+
+        void OnShowGroupBox(wxCommandEvent& event) override;
+        void OnGroupBoxRightClick(int boxIndex) override;
+
+
     private:
         const wxString SNR_FORMAT_STR;
-        const wxString MODE_FORMAT_STR;
-        const wxString MODE_RADE_FORMAT_STR;
         const wxString NO_SNR_LABEL;
         const wxString EMPTY_STR;
-        const wxString MODEM_LABEL;
         const wxString BITS_UNK_LABEL;
         const wxString ERRS_UNK_LABEL;
         const wxString BER_UNK_LABEL;
@@ -600,8 +616,8 @@ class MainFrame : public TopFrame
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
 
         bool terminating_; // used for terminating FreeDV
-        bool realigned_; // used to inhibit resize hack once already done
         bool syncState_; // GUI copy of current sync state
+        bool realigned_; // one-shot latch: has the Sync box mode text been re-centred yet?
 
         // Signalled once the detached rig PTT/frequency controller disconnect
         // threads (see performFreeDVOff_()) finish tearing down. Only waited on,
@@ -621,6 +637,13 @@ class MainFrame : public TopFrame
         bool        validateSoundCardSetup(bool silent = false);
         
         void loadConfiguration_();
+        void applyGroupBoxTint_();
+        void nudgeResize_();
+        TintedGroupBox* groupBoxForIndex_(int boxIndex);
+        void reflowGroupBoxes_();
+        void hideGroupBox_(int boxIndex);
+        void moveGroupBoxToOtherSide_(int boxIndex);
+        void moveGroupBoxUpDown_(int boxIndex, int direction);
         void restoreCallsignListFromCsv_();
         void resetStats_();
         void exportConfiguration_(wxConfigBase* config);

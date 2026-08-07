@@ -80,6 +80,18 @@
 
 class MainFrame;
 
+// Declared in topFrame.cpp. Returns the same tinted "card" background colour
+// used by TintedGroupBox, so the graticule label margin around each graph
+// matches the rest of the modernised GUI.
+wxColour GroupBoxBackgroundColour();
+
+// Declared in topFrame.cpp. A reliable light/dark-appropriate text/axis
+// colour, for graph label/axis drawing that would otherwise read
+// wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT) directly -- which,
+// like wxSYS_COLOUR_WINDOW, doesn't reliably track live theme changes
+// under XWayland.
+wxColour GetGroupBoxForegroundColour();
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotPanel
 //
