@@ -129,11 +129,71 @@ jobs:
 
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
-  dist:
+  dist-pgo-instrument:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26-intel, macos-26]  # ARM64, x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
+
+    - name: Install needed packages
+      run: |
+        brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
+
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: ./build_macos_sound_drivers.sh
+
+    - name: Workaround macOS permission issues
+      timeout-minutes: 1
+      run: |
+          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
+
+    - name: Make sure resource hogs aren't running
+      shell: bash
+      run: |
+          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
+
+    - name: Build instrumented freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 ./build_osx.sh
+
+    - name: Generate optimization profile
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          cd build_osx
+          LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
+
+    - name: Stash profile data
+      uses: actions/upload-artifact@v7
+      with:
+        name: profdata-${{ matrix.os }}
+        path: ${{github.workspace}}/build_osx/*.profraw
+
+  dist-pgo-build:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    #needs: ['lint']
+    needs: ['dist-pgo-instrument']
 
     steps:
     - uses: actions/checkout@v6
@@ -167,40 +227,16 @@ jobs:
         security find-identity -v macos-build.keychain
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
-    - name: Install VB-Cable
-      shell: bash
-      working-directory: ${{github.workspace}}
+    - name: Download profile data
+      uses: actions/download-artifact@v8
+      with:
+        merge-multiple: false
+        pattern: profdata-*
+        path: ${{github.workspace}}
+
+    - name: Merge profile data
       run: |
-          brew install vb-cable
-
-    - name: Install other virtual audio devices
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_macos_sound_drivers.sh
-
-    - name: Workaround macOS permission issues
-      timeout-minutes: 1
-      run: |
-          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
-
-    - name: Make sure resource hogs aren't running
-      shell: bash
-      run: |
-          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
-
-    #- name: Build instrumented freedv-gui
-    #  shell: bash
-    #  working-directory: ${{github.workspace}}
-    #  run: |
-    #      BUILD_TYPE=Release UT_ENABLE=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ OBJCXX=$(brew --prefix llvm@20)/bin/clang ./build_osx.sh
-
-    #- name: Generate optimization profile
-    #  shell: bash
-    #  working-directory: ${{github.workspace}}
-    #  run: |
-    #      cd build_osx
-    #      LLVM_PROFILE_FILE="code-%p.profraw" FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test/generate_pgo_profiles.sh 2>&1
-    #      $(brew --prefix llvm@20)/bin/llvm-profdata merge -output ${{ github.workspace }}/code.profdata code-*.profraw
+          $(xcrun -find llvm-profdata) merge -output ${{ github.workspace }}/code.profdata ${{github.workspace}}/profdata-macos-26-intel/code-*.profraw ${{github.workspace}}/profdata-macos-26/code-*.profraw
 
     - name: Build freedv-gui (unsigned)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
@@ -208,7 +244,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata ./build_osx.sh 
 
     - name: Build freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -216,7 +252,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
@@ -248,13 +284,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, x86_64, ARM64
+        os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: ['dist', 'lint']
+    needs: ['dist-pgo-build']
 
     steps:
     - uses: actions/checkout@v6
+
+    - uses: actions/download-artifact@v8
+      with:
+        merge-multiple: true
+        pattern: FreeDV*.dmg
+        path: ${{github.workspace}}
 
     - uses: actions/download-artifact@v8
       with:
