@@ -64,6 +64,7 @@ class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;
 class RADEReceiveStep;
+class DebugRecordStep;
 
 // Anything above 255 is a RADE mode. There's only one right now,
 // this is just for future expansion.
@@ -145,7 +146,8 @@ public:
         realtime_fp<int()> const& getChannelNoiseSnrFn,
         realtime_fp<float()> const& getFreqOffsetFn,
         realtime_fp<float*()> const& getSigPwrAvgFn,
-        std::shared_ptr<IRealtimeHelper> realtimeHelper
+        std::shared_ptr<IRealtimeHelper> realtimeHelper,
+        DebugRecordStep* debugRecordStep
     );
 
     void restartTxVocoder() FREEDV_NONBLOCKING;
