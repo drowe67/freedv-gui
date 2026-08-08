@@ -101,15 +101,6 @@ if [ ! -d $(pwd)/rade_src ]; then
     git clone https://github.com/drowe67/radae $(pwd)/rade_src
 fi
 
-# Start "radio"
-if [ "$1" == "mpp" ]; then
-    TIMES_BEFORE_KILL=1
-else
-    TIMES_BEFORE_KILL=1
-fi
-python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
-RADIO_PID=$!
-
 # Start FreeDV in test mode to record TX
 if [ "$1" == "mpp" ]; then
     TX_ARGS="-txtime 30 -txattempts 1 "
@@ -172,8 +163,5 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
-
-# End radio process as it's no longer needed
-kill $RADIO_PID
 
 exit $FREEDV_EXIT_CODE

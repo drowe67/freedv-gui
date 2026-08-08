@@ -88,29 +88,6 @@ function Test-FreeDV {
     $soxProcess.StartInfo = $soxPsi
     [void]$soxProcess.Start()
     
-    # Start mock rigctld
-    $rigctlPsi = New-Object System.Diagnostics.ProcessStartInfo
-    $rigctlPsi.CreateNoWindow = $true
-    $rigctlPsi.UseShellExecute = $false
-    $rigctlPsi.RedirectStandardError = $true
-    $rigctlPsi.RedirectStandardOutput = $true
-    $rigctlPsi.FileName = "python.exe"
-    $rigctlPsi.WorkingDirectory = $current_loc
-    $quoted_tmp_filename = "`"" + "hamlibserver.py" + "`""
-    $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $soxProcess.Id + " 1")
-    
-    $rigctlProcess = New-Object System.Diagnostics.Process
-    $rigctlProcess.StartInfo = $rigctlPsi
-    [void]$rigctlProcess.Start()
-
-    # Wait for hamlibserver.py to open its listen socket before starting FreeDV,
-    # because Python startup on slow CI machines can take several seconds.
-    $deadline = (Get-Date).AddSeconds(30)
-    while ((Get-Date) -lt $deadline) {
-        if (Get-NetTCPConnection -LocalPort 4575 -State Listen -ErrorAction SilentlyContinue) { break }
-        Start-Sleep -Milliseconds 250
-    }
-
     # Start freedv.exe
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.CreateNoWindow = $true
@@ -175,15 +152,6 @@ function Test-FreeDV {
     Write-Host "$err_output_fdv"
     Write-Host "$output"
     
-    # Kill mock rigctld
-    $rigctlProcess.Kill()
-    $err_output = $rigctlProcess.StandardError.ReadToEnd()
-    $output = $rigctlProcess.StandardOutput.ReadToEnd()
-    $rigctlProcess.WaitForExit()
-
-    Write-Host "$err_output"
-    Write-Host "$output"
-
     # Check for RX callsign. RX plays back the whole recording rather than stopping at the
     # first decode, so a re-sync partway through can legitimately decode the callsign more
     # than once -- that's still a pass, not a failure.
