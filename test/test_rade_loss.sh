@@ -126,14 +126,6 @@ cp test.wav rade_loss_test.wav
 
 LOSS_THRESHOLD=0.0891
 
-# RADEV2 has a known upstream bug (https://github.com/freedv/rade_c/issues/8): feature loss is
-# periodic with RADE's ~20ms frame period, and there's a narrow (~4ms) window within that period
-# where loss lands well above baseline purely because of *when* sync happens to be acquired, not
-# because of an actual quality regression. If the first attempt lands in that window, shift the
-# played-back recording by half a period (10ms -- as far from the bad window as possible) and
-# retry once before concluding this is a real failure.
-PHASE_CORRECTION_SEC=0.010
-
 run_rade_loss_attempt () {
     local playback_file="$1"
 
@@ -144,7 +136,7 @@ run_rade_loss_attempt () {
     #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
     #fi
 
-    sleep 4.995
+    sleep 5
 
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
         paplay --file-format=wav --device "$PLAY_DEVICE" "$playback_file" &
@@ -163,13 +155,6 @@ run_rade_loss_attempt () {
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     run_rade_loss_attempt test.wav
-
-    if ! echo "$LOSS_OUTPUT" | grep -q "PASS"; then
-        echo "Loss test failed on first attempt; retrying with a ${PHASE_CORRECTION_SEC}s phase-shifted recording in case this is the known RADEV2 sync-timing artifact (https://github.com/freedv/rade_c/issues/8)..."
-        sox -n -r 48000 -c 1 -b 16 -e signed-integer silence_pad.wav trim 0 $PHASE_CORRECTION_SEC
-        sox silence_pad.wav test.wav test_shifted.wav
-        run_rade_loss_attempt test_shifted.wav
-    fi
 fi
 
 # Clean up PulseAudio virtual devices
