@@ -116,7 +116,7 @@ if [ "$1" == "mpp" ]; then
 else
     TX_ARGS="-txtime 30 -txattempts 1 "
 fi
-($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS 2>&1 | tee tmp.log) &
+($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS 2>&1 | tee tmp.log) &
 
 FDV_PID=$!
 
