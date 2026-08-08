@@ -59,6 +59,11 @@ function Test-FreeDV {
 
     $current_loc = Get-Location
 
+    # Clone radae repo (contains the test audio and the loss.py comparison tool) if not already present.
+    if (-not (Test-Path "$current_loc\rade_src")) {
+        & git.exe clone -b main https://github.com/drowe67/radae.git "$current_loc\rade_src"
+    }
+    
     # Generate new conf 
     $conf_tmpl = Get-Content "$current_loc\freedv-ctest-reporting.conf.tmpl"
     $conf_tmpl = $conf_tmpl.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $RadioToComputerDevice)
@@ -92,7 +97,7 @@ function Test-FreeDV {
     $rigctlPsi.FileName = "python.exe"
     $rigctlPsi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + "hamlibserver.py" + "`""
-    $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $soxProcess.Id)
+    $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $soxProcess.Id + " 1")
     
     $rigctlProcess = New-Object System.Diagnostics.Process
     $rigctlProcess.StartInfo = $rigctlPsi
@@ -115,7 +120,7 @@ function Test-FreeDV {
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txtime 10")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txtime 30 /txattempts 1 /txfile `"$current_loc\rade_src\wav\all.wav`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
