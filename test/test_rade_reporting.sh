@@ -138,9 +138,9 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
 
     # Add noise to recording to test performance
     if [ "$1" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     elif [ "$1" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -13 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
