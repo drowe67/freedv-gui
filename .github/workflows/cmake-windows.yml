@@ -65,12 +65,13 @@ jobs:
       run: |
           export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
           echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
+          mv ${FREEDV_INSTALLER_FILE} instrumented-${FREEDV_INSTALLER_FILE}
 
     - name: Stash for next step
       uses: actions/upload-artifact@v7
       with:
         name: instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        path: ${{github.workspace}}/build_windows/instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
   collect-pgo-profile:
