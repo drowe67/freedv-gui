@@ -40,6 +40,7 @@
 #include "pipeline/BandwidthExpandStep.h"
 #include "pipeline/EitherOrStep.h"
 #include "pipeline/DebugRecordStep.h"
+#include "pipeline/TapStep.h"
 
 #include "util/logging/ulog.h"
 
@@ -840,11 +841,14 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
         if (debugRecordStep != nullptr)
         {
-            // Insert into the same AudioPipeline (and thus behind the same
-            // auto-inserted resampler) as rxStep, rather than tapping upstream
-            // and independently re-resampling -- so this records exactly what
-            // RADEReceiveStep receives, not a separately-resampled copy of it.
-            pipeline->appendPipelineStep(debugRecordStep);
+            // Tap into the same AudioPipeline (and thus behind the same
+            // auto-inserted resampler) as rxStep, rather than tapping further
+            // upstream and independently re-resampling -- so this records
+            // exactly what RADEReceiveStep receives, not a separately-resampled
+            // copy of it. Wrapped in a TapStep so the actual recording work
+            // (including ring-buffer eviction once it fills) runs on its own
+            // background thread instead of the real-time RX path.
+            pipeline->appendPipelineStep(new TapStep(debugRecordStep->getInputSampleRate(), debugRecordStep));
         }
         pipeline->appendPipelineStep(rxStep);
 

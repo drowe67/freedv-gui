@@ -44,6 +44,10 @@ private:
     int sampleRate_;
     GenericFIFO<short> inputSampleFifo_;
     std::string fileName_;
+    // Scratch space for bulk-discarding evicted samples in execute();
+    // sized to one second, matching the max-block-size convention used
+    // elsewhere in the pipeline (e.g. RADEReceiveStep/RADETransmitStep).
+    std::unique_ptr<short[]> discardBuf_;
 };
 
 

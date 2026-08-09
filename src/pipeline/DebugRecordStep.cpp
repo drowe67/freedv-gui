@@ -28,6 +28,7 @@ DebugRecordStep::DebugRecordStep(int sampleRate, int numSecondsToRecord, std::st
     : sampleRate_(sampleRate)
     , inputSampleFifo_(sampleRate * numSecondsToRecord)
     , fileName_(fileName)
+    , discardBuf_(std::make_unique<short[]>(sampleRate))
 {
     // empty
 }
@@ -76,12 +77,15 @@ int DebugRecordStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 
 short* DebugRecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
-    while (inputSampleFifo_.numFree() < numInputSamples)
+    // Evict oldest samples in one bulk read (one CAS) rather than looping
+    // one sample at a time, which showed up as real-time jitter once the
+    // multi-hour ring buffer filled and every call had to evict.
+    int deficit = numInputSamples - inputSampleFifo_.numFree();
+    if (deficit > 0)
     {
-        short tmp = 0;
-        inputSampleFifo_.read(&tmp, 1);
+        inputSampleFifo_.read(discardBuf_.get(), deficit);
     }
-    
+
     inputSampleFifo_.write(inputSamples, numInputSamples);
     
     // Just a passthrough.
