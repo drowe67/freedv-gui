@@ -969,6 +969,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix right-click context menus dismissing before they can be read (GTK) (PR #1437) - thanks @barjac!
     * Unconditionally add new station to Heard Station list if first heard. (PR #1444)
     * Fix heard-stations callsign combo stuck-highlight, right-click behaviour, and a stale-index crash (PR #1448) - thanks @barjac!
+    * Fix crash and long hang on main window close with an unresponsive rig (PR #1452) - thanks @barjac!
+    * Fix Radio Frequency coloring on dark/light mode transition. (PR #1453)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
@@ -987,6 +989,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Upgrade Hamlib to 4.7.2. (PR #1413)
     * Update wxWidgets to 3.3.3. (PR #1439)
     * Require C++20 to build FreeDV. (PR #1440)
+    * Enable LTO/PGO for macOS .app build. (PR #1456)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
     * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)

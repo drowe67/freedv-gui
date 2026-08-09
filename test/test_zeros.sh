@@ -108,7 +108,7 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE >tmp.log 2>&1 & #| tee tmp.log
+($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log) &
 
 FDV_PID=$!
 
@@ -122,7 +122,7 @@ FDV_PID=$!
 #pw-top -b -n 5
 wait $FDV_PID
 FREEDV_EXIT_STATUS=$?
-cat tmp.log
+#cat tmp.log
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then

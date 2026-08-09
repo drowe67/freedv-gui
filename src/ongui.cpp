@@ -2178,8 +2178,16 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 
 void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
-    // Works around issues on wxWidgets with certain controls not changing backgrounds
+    // Works around issues on wxWidgets with certain controls not changing colors
     // when the user switches between light and dark mode.
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    }
+    else
+    {
+        m_cboReportFrequency->SetForegroundColour(*wxRED);
+    }
     TopFrame::OnSystemColorChanged(event);
 }
 
