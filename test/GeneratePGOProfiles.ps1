@@ -133,7 +133,13 @@ $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 # Read output from the RX run
 #$err_output = $process.StandardError.ReadToEnd()
 #$output = $process.StandardOutput.ReadToEnd()
-$process.WaitForExit()
+if (-not $process.WaitForExit(2*60*1000)) {
+try {
+    $process.Kill()
+} catch {
+    # Ignore failure as SoX may have already exited on its own
+}
+}
 $freedv_exit_code = $process.ExitCode
 
 #Write-Host "$output"
