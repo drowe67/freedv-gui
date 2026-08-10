@@ -158,6 +158,12 @@ jobs:
     #  with:
     #    detached: true
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ github.job }}-${{ matrix.os }}
+        max-size: "2G"
+
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
@@ -187,7 +193,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 CC="ccache cc" CXX="ccache c++" OBJCXX="ccache cc" ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
