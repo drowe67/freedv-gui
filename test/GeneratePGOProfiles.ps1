@@ -122,6 +122,8 @@ try {
 $soxProcess.WaitForExit()
 
 $psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+$psi.RedirectStandardError = $false
+$psi.RedirectStandardOutput = $false
 
 $process = New-Object System.Diagnostics.Process
 $process.StartInfo = $psi
@@ -129,12 +131,12 @@ $process.StartInfo = $psi
 $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 
 # Read output from the RX run
-$err_output = $process.StandardError.ReadToEnd()
-$output = $process.StandardOutput.ReadToEnd()
+#$err_output = $process.StandardError.ReadToEnd()
+#$output = $process.StandardOutput.ReadToEnd()
 $process.WaitForExit()
 $freedv_exit_code = $process.ExitCode
 
-Write-Host "$output"
-Write-Host "$err_output"
+#Write-Host "$output"
+#Write-Host "$err_output"
 
 exit $freedv_exit_code
