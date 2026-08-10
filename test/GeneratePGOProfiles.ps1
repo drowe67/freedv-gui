@@ -83,8 +83,8 @@ $soxPsi.RedirectStandardError = $false
 $soxPsi.RedirectStandardOutput = $false
 $soxPsi.FileName = "sox.exe"
 $soxPsi.WorkingDirectory = $current_loc
-$quoted_rec_device = "`"" + $ComputerToRadioDevice + "`""
-$soxPsi.Arguments = @("--buffer 32768 -t waveaudio $quoted_rec_device -c 1 -t wav `"$current_loc\test.wav`"")
+$quoted_device = "`"" + $RadioToComputerDevice + "`""
+$soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 48000 -t wav `"$current_loc\test.wav`"")
 
 $soxProcess = New-Object System.Diagnostics.Process
 $soxProcess.StartInfo = $soxPsi
@@ -122,8 +122,6 @@ try {
 $soxProcess.WaitForExit()
 
 $psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
-$psi.RedirectStandardError = $false
-$psi.RedirectStandardOutput = $false
 
 $process = New-Object System.Diagnostics.Process
 $process.StartInfo = $psi
@@ -133,16 +131,10 @@ $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 # Read output from the RX run
 #$err_output = $process.StandardError.ReadToEnd()
 #$output = $process.StandardOutput.ReadToEnd()
-if (-not $process.WaitForExit(2*60*1000)) {
-try {
-    $process.Kill()
-} catch {
-    # Ignore failure as SoX may have already exited on its own
-}
-}
+$process.WaitForExit()
 $freedv_exit_code = $process.ExitCode
 
-#Write-Host "$output"
-#Write-Host "$err_output"
+Write-Host "$output"
+Write-Host "$err_output"
 
 exit $freedv_exit_code
