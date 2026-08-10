@@ -93,7 +93,8 @@ jobs:
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
       MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
       COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-
+      LLVM_PROFILE_FILE: "code-%p.profraw"
+      
     steps: 
     - uses: actions/checkout@v6
     - uses: actions/download-artifact@v8
