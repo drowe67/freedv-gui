@@ -210,7 +210,7 @@ jobs:
       with:
         name: profile-${{ matrix.arch }}
         path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.profraw
-          
+
   build-pgo-use-profile:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
@@ -257,7 +257,7 @@ jobs:
     - name: Merge profile data
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
-        llvm-profdata merge -output ${{ github.workspace }}/code.profdata ${{ github.workspace }}/profile-${{ matrix.arch }}/*.profraw
+        llvm-profdata merge -output ${{ github.workspace }}/code.profdata ${{ github.workspace }}/*.profraw
 
     - name: Configure code signing tunnel
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
