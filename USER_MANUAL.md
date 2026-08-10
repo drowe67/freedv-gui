@@ -892,6 +892,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update wxWidgets to 3.3.3. (PR #1439)
     * Require C++20 to build FreeDV. (PR #1440)
     * Enable LTO/PGO for macOS .app build. (PR #1456)
+    * Enable PGO for Windows builds. (PR #1457)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
     * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)

@@ -14,11 +14,7 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  build-pgo-inst:
     outputs: 
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
@@ -28,10 +24,6 @@ jobs:
         arch: [x86_64, aarch64]
 
     runs-on: ubuntu-22.04
-
-    env:
-      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
-      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
 
     steps:
     - uses: actions/checkout@v6
@@ -49,6 +41,224 @@ jobs:
       run: |
         wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
         tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+
+    - name: Configure freedv-gui (unsigned)
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake -DENABLE_LTO=1 -DPGO_INSTRUMENT=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build freedv-gui (unsigned)
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
+        make -j$(nproc) package
+
+    - name: Calculate installer filename
+      shell: bash
+      id: installer-filename
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+          export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
+          echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
+          mv ${FREEDV_INSTALLER_FILE} instrumented-${FREEDV_INSTALLER_FILE}
+
+    - name: Stash for next step
+      uses: actions/upload-artifact@v7
+      with:
+        name: instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        path: ${{github.workspace}}/build_windows/instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
+
+  collect-pgo-profile:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-11-arm]
+        arch: [x86_64, aarch64]
+        exclude:
+        - runner: windows-2022
+          arch: aarch64
+        - runner: windows-11-arm 
+          arch: x86_64
+
+    runs-on: ${{ matrix.runner }}
+    needs: build-pgo-inst
+    env:
+      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+      LLVM_PROFILE_FILE: "code-%p.profraw"
+      
+    steps: 
+    - uses: actions/checkout@v6
+    - uses: actions/download-artifact@v8
+      with:
+        merge-multiple: true
+        pattern: instrumented-FreeDV-2*-${{ matrix.arch }}.exe
+        path: ${{github.workspace}}
+  
+    - uses: TheMrMilchmann/setup-msvc-dev@v4
+      with:
+        arch: x64
+
+    - name: Install VAC ("analog" sound device)
+      run: |
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
+          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
+          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
+          $outputFile = '${{github.workspace}}\vac.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+
+    - name: Install VB-Cable ("Radio" sound device)
+      run: |
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+          
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
+
+    - name: Install FreeDV on hard drive
+      shell: pwsh
+      run: |
+          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
+  
+    - name: Copy test scripts to install folder
+      shell: pwsh
+      run: |
+          Copy-Item -Path ${{github.workspace}}/test/GeneratePGOProfiles.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-pgo.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+ 
+    - name: Install SoX
+      shell: pwsh
+      run: |
+           choco install sox.portable
+ 
+    - name: Grant FreeDV access to the microphone 
+      run: |
+          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
+          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
+
+    - name: Start Windows Audio Service
+      run: |
+          Restart-Service -Name audiosrv -Force
+          $deadline = (Get-Date).AddSeconds(60)
+          do {
+              Start-Sleep -Seconds 2
+              $deviceNames = (Get-CimInstance win32_sounddevice).Name
+          } until (
+              ($deviceNames -match "VB-Audio Virtual Cable") -and
+              ($deviceNames -match "Virtual Audio Cable") -or
+              ((Get-Date) -gt $deadline)
+          )
+
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Get-CimInstance win32_sounddevice
+
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
+          Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
+
+    - name: Set High Performance power plan to prevent CPU frequency scaling
+      if: ${{ matrix.runner == 'windows-11-arm' }}
+      shell: pwsh
+      run: |
+          # Prevent ARM CPU boost->base frequency transitions during audio tests.
+          # This is the Windows equivalent of the Linux "performance" CPU governor.
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          # Explicitly pin minimum processor performance to 100% so the ARM CPU
+          # does not scale down after exhausting its boost budget.
+          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
+          powercfg /setactive SCHEME_CURRENT
+
+    - name: Generate PGO data
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          .\GeneratePGOProfiles.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" 
+      timeout-minutes: 10
+
+    - name: Stash profile data
+      uses: actions/upload-artifact@v7
+      with:
+        name: profile-${{ matrix.arch }}
+        path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.profraw
+
+  build-pgo-use-profile:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    outputs: 
+      INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+
+    runs-on: ubuntu-22.04
+    needs: collect-pgo-profile
+
+    env:
+      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
+      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Download profile data
+      uses: actions/download-artifact@v8
+      with:
+        pattern: profile-${{ matrix.arch }}
+        path: ${{github.workspace}}
+  
+    - name: Install required packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
+
+    - name: Download MinGW LLVM
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+        tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+
+    - name: Merge profile data
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        llvm-profdata merge -output ${{ github.workspace }}/code.profdata ${{ github.workspace }}/*.profraw
 
     - name: Configure code signing tunnel
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
@@ -104,7 +314,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPGO_USE_PROFILE=${{github.workspace}}/code.profdata -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Configure freedv-gui (signed)
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
@@ -114,7 +324,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPGO_USE_PROFILE=${{github.workspace}}/code.profdata -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Build freedv-gui (unsigned)
       if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
@@ -162,7 +372,7 @@ jobs:
           arch: x86_64
 
     runs-on: ${{ matrix.runner }}
-    needs: build
+    needs: build-pgo-use-profile
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
