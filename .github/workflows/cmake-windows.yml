@@ -141,8 +141,8 @@ jobs:
     - name: Copy test scripts to install folder
       shell: pwsh
       run: |
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/GeneratePGOProfiles.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-pgo.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
  
     - name: Install SoX
       shell: pwsh
@@ -198,18 +198,18 @@ jobs:
           powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
           powercfg /setactive SCHEME_CURRENT
 
-    - name: Test RADE
+    - name: Generate PGO data
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1
+          .\GeneratePGOProfiles.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" 
       timeout-minutes: 10
 
     - name: Stash profile data
       uses: actions/upload-artifact@v7
       with:
         name: profile-${{ matrix.arch }}
-        path: ${{github.workspace}}/FreeDV-Install-Location/*.profraw
+        path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.profraw
           
   build-pgo-use-profile:
     # The CMake configure and build commands are platform agnostic and should work equally
