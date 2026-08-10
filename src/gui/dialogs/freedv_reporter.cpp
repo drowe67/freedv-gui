@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <sstream>
+#include <set>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
@@ -240,17 +241,22 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             }
         }
 
-        auto maxIndex = 
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0 ? 
-            -1 : 
-            *std::max_element(
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
-            );
+        // Append any indices not already present, regardless of whether the
+        // gap is at the end (e.g. NUM_COLS grew since this config was last
+        // saved) or in the middle (e.g. a corrupted/truncated saved value) --
+        // a max-element-based approach only catches the former and can leave
+        // a permanently-missing column if one drops out of the middle of an
+        // otherwise-full-length list.
+        std::set<int> presentIndices(
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end());
 
-        for (auto index = maxIndex + 1; index < NUM_COLS; index++)
+        for (auto index = 0; index < NUM_COLS; index++)
         {
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
+            if (presentIndices.find(index) == presentIndices.end())
+            {
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
+            }
         }
     }
 
