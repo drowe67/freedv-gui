@@ -123,14 +123,22 @@ $soxProcess.WaitForExit()
 
 $psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
+$conf_tmpl = Get-Content "$current_loc\freedv-pgo.conf.tmpl"
+$conf_tmpl = $conf_tmpl.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $RadioToComputerDevice)
+$conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_RADIO_DEVICE@", $ComputerToRadioDevice)
+$conf_tmpl = $conf_tmpl.Replace("@FREEDV_MICROPHONE_TO_COMPUTER_DEVICE@", $MicrophoneToComputerDevice)
+$conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@", $ComputerToSpeakerDevice)
+$conf_file = "$current_loc\freedv-pgo.conf"
+$conf_tmpl | Set-Content -Path $conf_file
+
 $process = New-Object System.Diagnostics.Process
 $process.StartInfo = $psi
 [void]$process.Start()
 $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 
 # Read output from the RX run
-#$err_output = $process.StandardError.ReadToEnd()
-#$output = $process.StandardOutput.ReadToEnd()
+$err_output = $process.StandardError.ReadToEnd()
+$output = $process.StandardOutput.ReadToEnd()
 $process.WaitForExit()
 $freedv_exit_code = $process.ExitCode
 
