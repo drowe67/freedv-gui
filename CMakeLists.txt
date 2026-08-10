@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 2.3.0)
+set(PROJECT_VERSION 2.4.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -116,7 +116,7 @@ if(APPLE)
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -g")
 endif(APPLE)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -276,9 +276,9 @@ endif(USE_STATIC_DEPS)
 if (LINUX)
     message(STATUS "Looking for DBus...")
     find_package(DBus)
-    if (DBUS_FOUND)
+    if (DBus_FOUND)
         message(STATUS "Found DBus, will attempt to use rtkit for real-time threading")
-    endif (DBUS_FOUND)
+    endif (DBus_FOUND)
 endif (LINUX)
 
 #
@@ -406,38 +406,14 @@ find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
 #
-# Build RADE. 
-# (TBD - allow override with own build, similar to Codec2)
-include(cmake/BuildRADE.cmake)
-
-#
-# Build RNNoise
-# (TBD - allow override with own build)
-include(cmake/BuildRNNoise.cmake)
+# Build freedv-backend
+# 
+include(cmake/BuildFreeDVBackend.cmake)
 
 #
 # Build codec2
 #
 include(cmake/BuildCodec2.cmake)
-
-# Look for libebur128 (loudness measurement)
-if(NOT USE_STATIC_EBUR128)
-    message(STATUS "Looking for ebur128...")
-    find_library(LIBEBUR128 ebur128)
-    find_path(LIBEBUR128_INCLUDE_DIR ebur128.h)
-    message(STATUS "  ebur128 library: ${LIBEBUR128}")
-    message(STATUS "  ebur128 headers: ${LIBEBUR128_INCLUDE_DIR}")
-    if(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
-        list(APPEND FREEDV_LINK_LIBS ${LIBEBUR128})
-        include_directories(${LIBEBUR128_INCLUDE_DIR})
-    else(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
-        message(STATUS "Will attempt static build of ebur128.")
-        include(cmake/BuildEbur128.cmake)
-    endif(LIBEBUR128 AND LIBEBUR128_INCLUDE_DIR)
-else(NOT USE_STATIC_LIBEBUR128)
-    message(STATUS "Will attempt static build of ebur128.")
-    include(cmake/BuildEbur128.cmake)
-endif(NOT USE_STATIC_EBUR128)
 
 if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")

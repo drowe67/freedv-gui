@@ -23,6 +23,7 @@
 #define __TOPFRAME_H__
 
 #include "git_version.h"
+#include <wx/version.h>
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/intl.h>
@@ -77,6 +78,14 @@
 #define ID_MODE_COLLAPSE 1100
 
 class wxListViewComboPopup;
+
+// Popup position for a right-click menu anchored to the left of btn (to
+// avoid running off the right screen edge on X11). On GTK/Wayland, GDK's
+// own popup placement already avoids screen edges correctly, and this
+// manual offset doesn't translate to Wayland's surface-relative anchor
+// model (it ends up placed at the toplevel's origin instead), so this
+// returns wxDefaultPosition there and lets GTK position it automatically.
+wxPoint LeftOffsetContextMenuPosition(wxWindow* btn);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
@@ -143,7 +152,7 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb1600;
 
         wxSizer* rightSizer;
-        
+
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
         
@@ -182,6 +191,8 @@ class TopFrame : public wxFrame
         virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsImportConfig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsImportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
+        virtual void OnToolsLoadDefaultConfig( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsLoadDefaultConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -197,7 +208,7 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) { event.Skip(); }
-        
+
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) { event.Skip(); }
 
@@ -236,9 +247,7 @@ class TopFrame : public wxFrame
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
 
         virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
-        
-        virtual void OnNotebookPageChanging(wxAuiNotebookEvent& event) { event.Skip(); }
-        
+                
         virtual void OnResetMicSpkrLevel(wxMouseEvent& event) { event.Skip(); }
         
         virtual void OnRightClickCallsignList(wxMouseEvent& event) { event.Skip(); }
@@ -249,7 +258,7 @@ class TopFrame : public wxFrame
         virtual void OnToggleReporterVisibility (wxCommandEvent& event) { event.Skip(); }
         
         virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
-        
+
         void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:
@@ -281,9 +290,15 @@ public:
     bool AcceptsFocus() const;
     bool AcceptsFocusFromKeyboard() const;
     bool AcceptsFocusRecursively() const;
-    
+
+#if !wxCHECK_VERSION(3, 3, 0)
+    // wxAuiNotebook::SaveLayout()/LoadLayout() are only available in
+    // wxWidgets 3.3+. Older wxWidgets (e.g. as still packaged by some
+    // Linux distributions) falls back to this hand-rolled implementation
+    // so that tab layout persistence is still available.
     wxString SavePerspective();
     bool LoadPerspective(const wxString& layout);
+#endif // !wxCHECK_VERSION(3, 3, 0)
 };
 
 #endif //__TOPFRAME_H__

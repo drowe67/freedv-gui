@@ -16,7 +16,7 @@ endif(MINGW AND CMAKE_CROSSCOMPILING)
 
 include(ExternalProject)
 ExternalProject_Add(build_hamlib
-    URL https://github.com/Hamlib/Hamlib/archive/refs/tags/4.7.1.zip
+    URL https://github.com/Hamlib/Hamlib/archive/refs/tags/4.7.2.zip
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     PATCH_COMMAND ${HAMLIB_PATCH_CMD}
@@ -46,3 +46,6 @@ list(APPEND FREEDV_STATIC_DEPS hamlib)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
 set(HAMLIB_ADD_DEPENDENCY TRUE)
+
+add_definitions(-DHAMLIB_USE_FRIENDLY_ERRORS)
+add_definitions(-DHAMLIB_CONST_WORKAROUND)

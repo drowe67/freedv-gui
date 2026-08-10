@@ -23,7 +23,7 @@
 #ifndef OMNIRIG_CONTROLLER_H
 #define OMNIRIG_CONTROLLER_H
 
-#include "util/ThreadedObject.h"
+#include "ThreadedObject.h"
 #include "../IRigFrequencyController.h"
 #include "../IRigPttController.h"
 #include "omnirig.h"

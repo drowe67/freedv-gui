@@ -283,6 +283,10 @@ int HamlibRigController::RigNameToIndex(std::string const& rigName)
 std::string HamlibRigController::RigIndexToName(unsigned int rigIndex)
 {
     InitializeHamlibLibrary();
+    if (rigIndex >= RigNameList_.size())
+    {
+        return "";
+    }
     return RigNameList_[rigIndex];
 }
 
@@ -441,8 +445,13 @@ void HamlibRigController::connectImpl_()
         log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
         rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
     }
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
-    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
+
+    // Initially allow two retries if we time out while sending commands. This is needed
+    // to better support Icom marine radios due to their ability to power themselves on
+    // when rig_open is called (they're unable to immediately respond to commands while
+    // powering up and thus results in spurious Hamlib errors being displayed to users).
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "2");
+    rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "2");
             
     result = rig_open(tmpRig);
     if (result == RIG_OK) 
@@ -483,6 +492,12 @@ void HamlibRigController::connectImpl_()
             currMode_ = RIG_MODE_NONE; // to make setModeImpl_ actually run
             setModeImpl_(pendingMode_);
         }
+
+        // Disable timeouts. Now that we're able to connect and send the initial
+        // commands required by FreeDV, if we somehow have an issue sending commands 
+        // later we want to let the user know ASAP.
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "0");
+        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "0");
     
         return;
     }
@@ -519,6 +534,7 @@ void HamlibRigController::disconnectImpl_()
             {
                 setModeHelper_(currVfo, origMode_);
             }
+
         }
         
         origFreq_ = 0;
@@ -597,6 +613,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
 
     if (currFreq_ == frequencyHz)
     {
+        log_warn("Attempting to set to same frequency (%" PRIu64 " Hz), ignoring", frequencyHz);
         return;
     }
     
@@ -621,7 +638,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
         }
     }
 
-    vfo_t currVfo = getCurrentVfo_(); 
+    vfo_t currVfo = getWritableVfo_();
     setFrequencyHelper_(currVfo, frequencyHz);
 
     if (pttSet_)
@@ -705,7 +722,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
         }
     }
 
-    vfo_t currVfo = getCurrentVfo_(); 
+    vfo_t currVfo = getWritableVfo_();
     setModeHelper_(currVfo, hamlibMode);
 
     if (pttSet_)
@@ -831,6 +848,14 @@ freqAttempt:
                 origFreq_ = freq;
                 origMode_ = mode;
             }
+            else
+            {
+                // currFreq_ should only be set after initial retrieval of frequency/mode
+                // as the user could specify a frequency to change to on startup. Otherwise,
+                // that would be overwritten and the frequency change would not happen.
+                currFreq_ = freq;
+                currMode_ = mode;
+            }
             
             // Reset get freq/mode error count since we don't want intermittent errors
             // to cause a popup.
@@ -862,6 +887,33 @@ vfo_t HamlibRigController::getCurrentVfo_()
         }
     }
     
+    return vfo;
+}
+
+vfo_t HamlibRigController::getWritableVfo_()
+{
+    vfo_t vfo = getCurrentVfo_();
+
+    if (vfo == RIG_VFO_MEM)
+    {
+        // Hamlib can't set frequency/mode directly on a memory channel --
+        // switch to VFO A first so the subsequent set_freq/set_mode call
+        // succeeds instead of failing with "Invalid parameter".
+        auto tmpRig = rig_.load(std::memory_order_acquire);
+        if (tmpRig != nullptr)
+        {
+            int result = rig_set_vfo(tmpRig, RIG_VFO_A);
+            if (result == RIG_OK)
+            {
+                vfo = RIG_VFO_A;
+            }
+            else
+            {
+                log_debug("rig_set_vfo: error = %s ", rigerror(result));
+            }
+        }
+    }
+
     return vfo;
 }
 
@@ -970,6 +1022,20 @@ modeAttempt:
     if (setOkay)
     {
         currMode_ = mode;
+
+        // We request the frequency to be set again to work around an issue with the 
+        // FTDX10 where mode changes between LSB and USB cause the VFO frequency to shift
+        // by 700 Hz. This ensures that the frequency we're currently set to is in sync
+        // with the VFO frequency.
+        if (currFreq_ > 0)
+        {
+            result = rig_set_freq(tmpRig, currVfo, currFreq_);
+            if (result != RIG_OK)
+            {
+                log_debug("rig_set_freq: error = %s ", rigerror(result));
+            }
+        }
+
         if (!destroying_)
         {
             requestCurrentFrequencyModeImpl_();

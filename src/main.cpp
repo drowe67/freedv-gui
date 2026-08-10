@@ -22,6 +22,7 @@
 
 #include <inttypes.h>
 #include <time.h>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <vector>
@@ -47,6 +48,7 @@
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
+#include "reporting/UdpReporter.h"
 
 #include "logging/WSJTXNetworkLogger.h"
 
@@ -54,9 +56,15 @@
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/util/WindowPositionRestore.h"
+#include "gui/util/TabLayoutSerializer.h"
 
 #include "util/logging/ulog.h"
 #include "util/audio_spin_mutex.h"
+
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
 
 #include "rade_api.h"
 
@@ -205,8 +213,38 @@ std::atomic<bool> isModemRunning;
 
 FILE *ftest;
 
-// Config file management 
+// Config file management
 wxConfigBase *pConfig = NULL;
+
+// Name used for the separate state-store config object (distinct from the main
+// app config so the last-used path is readable regardless of which backend is
+// active).  On Windows this becomes HKCU\Software\CODEC2-Project\FreeDV-State;
+// on macOS/Linux it becomes a file in the per-user config directory.
+static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
+static const wxChar* const FREEDV_VENDOR_NAME = wxT("CODEC2-Project");
+static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
+
+wxString getLastUsedConfigPath()
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    wxString path;
+    stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
+    return path;
+}
+
+void saveLastUsedConfigPath(const wxString& path)
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    stateConfig.Write(LAST_USED_CONFIG_KEY, path);
+    stateConfig.Flush();
+}
+
+void clearLastUsedConfigPath()
+{
+    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    stateConfig.Write(LAST_USED_CONFIG_KEY, wxEmptyString);
+    stateConfig.Flush();
+}
 
 // Unit test management
 wxString testName;
@@ -215,8 +253,8 @@ wxString utTxFile;
 wxString utTxOutFile;
 wxString utRxFile;
 wxString utRxOutFile;
-wxString utTxFeatureFile;
-wxString utRxFeatureFile;
+std::string utTxFeatureFile;
+std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
 
@@ -571,7 +609,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     if (parser.Found("f", &configPath))
     {
         log_info("Loading configuration from %s", (const char*)configPath.ToUTF8());
-        pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
+        pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
         wxConfigBase::Set(pConfig);
         
         // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
@@ -626,7 +664,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             // Need to explicitly create the wxFileConfig on Linux so that we can force wxWidgets
             // to load configuration files under a subdirectory. Otherwise, simply FileLayout_XDG
             // above will use ~/.config/freedv.conf.
-            pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+            pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, newFileLocation, newFileLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
 
             wxConfigBase::Set(pConfig);
             defaultConfigFilePath = tempNewFile.GetPath();
@@ -634,6 +672,31 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+
+        // If a config file was previously loaded via "Use Configuration...",
+        // restore it now so the user's last session is preserved.
+        wxString lastUsedPath = getLastUsedConfigPath();
+        if (!lastUsedPath.IsEmpty())
+        {
+            if (wxFileExists(lastUsedPath))
+            {
+                log_info("Restoring last-used configuration from %s",
+                         (const char*)lastUsedPath.ToUTF8());
+                pConfig = new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME,
+                                           lastUsedPath, lastUsedPath,
+                                           wxCONFIG_USE_LOCAL_FILE);
+                wxConfigBase::Set(pConfig);
+                wxFileName fn(lastUsedPath);
+                customConfigFileName = fn.GetFullName();
+                defaultConfigFilePath = fn.GetPath();
+            }
+            else
+            {
+                log_warn("Last-used config file '%s' no longer exists; reverting to default.",
+                         (const char*)lastUsedPath.ToUTF8());
+                clearLastUsedConfigPath();
+            }
+        }
     }
 
     pConfig = wxConfigBase::Get();
@@ -686,20 +749,74 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
-    if (parser.Found("rxfeaturefile", &utRxFeatureFile))
+    wxString utRxFeatureFileTmp; 
+    if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
-        log_info("Capturing RADE RX features into file %s", (const char*)utRxFeatureFile.ToUTF8());
+        utRxFeatureFile = utRxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE RX features into file %s", utRxFeatureFile.c_str());
     }
-    
-    if (parser.Found("txfeaturefile", &utTxFeatureFile))
+   
+    wxString utTxFeatureFileTmp; 
+    if (parser.Found("txfeaturefile", &utTxFeatureFileTmp))
     {
-        log_info("Capturing RADE TX features into file %s", (const char*)utTxFeatureFile.ToUTF8());
+        utTxFeatureFile = utTxFeatureFileTmp.ToUTF8();
+        log_info("Capturing RADE TX features into file %s", utTxFeatureFile.c_str());
     }
     
     return true;
 }
 
 //-------------------------------------------------------------------------
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+// Suppress the GTK theme :active (button-press) colour flash app-wide.
+// Queries the theme's normal button background and installs a screen-level
+// CSS rule so button:active renders identically to the resting state.
+// Fails gracefully if the named colour variables are absent (non-Breeze themes).
+static bool TryLookupThemeColour_(const char* name, GdkRGBA& out)
+{
+    GtkWidget* tmpButton = gtk_button_new();
+    GtkWidget* tmpWindow = gtk_offscreen_window_new();
+    gtk_container_add(GTK_CONTAINER(tmpWindow), tmpButton);
+    gtk_widget_show_all(tmpWindow);
+    GtkStyleContext* ctx = gtk_widget_get_style_context(tmpButton);
+    bool found = gtk_style_context_lookup_color(ctx, name, &out);
+    gtk_widget_destroy(tmpWindow);
+    return found;
+}
+
+static void SuppressButtonPressFlicker_()
+{
+    GdkRGBA bg;
+    bool found = false;
+    // theme_button_background_normal is Breeze-specific; theme_bg_color is
+    // a broader fallback. theme_base_color is deliberately excluded — it
+    // resolves to the text-field background (white in light themes).
+    const char* names[] = { "theme_button_background_normal", "theme_bg_color", nullptr };
+    for (int i = 0; names[i] && !found; i++)
+        found = TryLookupThemeColour_(names[i], bg);
+    if (!found)
+        return;
+
+    gchar* cssColour = gdk_rgba_to_string(&bg);
+    gchar* css = g_strdup_printf(
+        "button:active {"
+        "  background-color: %s;"
+        "  background-image: none;"
+        "  box-shadow: none;"
+        "}", cssColour);
+    GtkCssProvider* provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, nullptr);
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_free(css);
+    g_free(cssColour);
+    g_object_unref(provider);
+}
+
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 // OnInit()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
@@ -719,7 +836,10 @@ bool MainApp::OnInit()
     {
         return false;
     }
-    SetVendorName(wxT("CODEC2-Project"));
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    SuppressButtonPressFlicker_();
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+    SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();
@@ -750,10 +870,6 @@ bool MainApp::OnInit()
     frame = new MainFrame(NULL);
     SetTopWindow(frame);
 
-    // Should guarantee that the first plot tab defined is the one
-    // displayed. But it doesn't when built from command line.  Why?
-
-    frame->m_auiNbookCtrl->ChangeSelection(0);
     frame->Layout();    
     frame->Show();
     g_parent = frame;
@@ -800,26 +916,27 @@ void MainFrame::loadConfiguration_()
     g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
     g_SquelchLevel /= 2.0;
     
-    Move(x, y);
     wxSize size = GetMinSize();
 
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
-    
+
+    RestoreWindowPosition(this, x, y);
+
     // XXX - with really short windows, wxWidgets sometimes doesn't size
     // the components properly until the user resizes the window (even if only
     // by a pixel or two). As a really hacky workaround, we emulate this behavior
     // when restoring window sizing. These resize events also happen after configuration
     // is restored but I'm not sure this is necessary.
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w + 1, h + 1);
     });
-    CallAfter([=]()
+    CallAfter([=, this]()
     {
         SetSize(w, h);
     });
@@ -868,8 +985,11 @@ void MainFrame::loadConfiguration_()
     // for backwards compatibility.    
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
-        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", -1);
+        if (wxGetApp().m_intHamlibRig >= 0)
+        {
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
+        }
     }
     else
     {
@@ -991,6 +1111,9 @@ setDefaultMode:
     // Show/hide frequency box based on CAT control status
     m_freqBox->Show(isFrequencyControlEnabled_());
 
+    restoreCallsignListFromCsv_();
+    m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
+
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
     {
@@ -1058,10 +1181,23 @@ setDefaultMode:
         vkFileName_ = "";
     }
     
-    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
+    // Cache this now rather than re-reading the live config value at exit time: the
+    // checkbox can be toggled mid-session without reloading/reapplying a layout (that
+    // only happens here, at startup), so exit-time save must be gated on the same
+    // flag value the load decision above used, not whatever it's since been changed to.
+    tabLayoutPersistenceEnabledAtStartup_ = wxGetApp().appConfiguration.experimentalFeatures;
+    if (tabLayoutPersistenceEnabledAtStartup_ && wxGetApp().appConfiguration.tabLayout != "")
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutDeserializer deserializer(wxGetApp().appConfiguration.tabLayout);
+        m_auiNbookCtrl->LoadLayout("notebook", deserializer);
+#else
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+#endif // wxCHECK_VERSION(3, 3, 0)
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+
+        // Select previous active tab.
+        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
@@ -1124,6 +1260,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     terminating_ = false;
     realigned_ = false;
     syncState_ = false;
+    tabLayoutPersistenceEnabledAtStartup_ = false;
+    txChangeoverOccurring_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1145,6 +1283,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
+
+    // Initialize panel pointers to null before creation since "page changed" 
+    // events fire as we're adding these (and we compare against these pointers
+    // inside the handler).
+    m_panelSpectrum = nullptr;
+    m_panelWaterfall = nullptr;
+    m_panelSpeechIn = nullptr;
+    m_panelSpeechOut = nullptr;
+    m_panelDemodIn = nullptr;
+    m_panelSNR = nullptr;
 
     m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
@@ -1182,13 +1330,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
 
     // Add SNR window
-    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, true);
+    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
-//    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
-     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
+    m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-   // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
+    m_btnTogPTT->Bind(wxEVT_LEFT_DOWN, &MainFrame::OnTogBtnPTTMouseDown, this);
+    m_btnTogPTT->Bind(wxEVT_LEFT_DCLICK, &MainFrame::OnTogBtnPTTMouseDown, this);
+    m_btnTogPTT->Bind(wxEVT_LEAVE_WINDOW, &MainFrame::OnTogBtnPTTMouseLeave, this);
 
     loadConfiguration_();
     
@@ -1203,7 +1352,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     m_plotTimer.SetOwner(this, ID_TIMER_UPDATE_OTHER);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
-    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);
+    m_totTimer.SetOwner(this, ID_TIMER_TOT);
+    Bind(wxEVT_TIMER, &MainFrame::OnTOTTimer, this, ID_TIMER_TOT);
+    m_totWarningTimer.SetOwner(this, ID_TIMER_TOT_WARNING);
+    Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
+    m_pttKeyPollTimer.SetOwner(this, ID_TIMER_PTT_KEY_POLL);
+    Bind(wxEVT_TIMER, &MainFrame::OnPttKeyPollTimer, this, ID_TIMER_PTT_KEY_POLL);
 #endif
     
     // Create voice keyer popup menu.
@@ -1365,9 +1520,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             }
         });
     }
-    
+    else if (wxGetApp().appConfiguration.autoStartOnLaunch)
+    {
+        // Simulate a press of the Start button once the main window is up,
+        // but only if the audio configuration is actually valid. Checking
+        // silently first avoids popping up error dialogs (or the Easy Setup
+        // dialog) at launch for users who haven't fully configured audio yet.
+        CallAfter([&]() {
+            if (!validateSoundCardSetup(true)) return;
+
+            m_togBtnOnOff->SetValue(true);
+            wxCommandEvent onEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
+            onEvent.SetEventObject(m_togBtnOnOff);
+            OnTogBtnOnOff(onEvent);
+        });
+    }
+
     wxGetApp().appConfiguration.firstTimeUse = false;
-    
+
     //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
@@ -1381,9 +1551,74 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_dump_timing = g_dump_fifo_state = 0;
 }
 
+void MainFrame::restoreCallsignListFromCsv_()
+{
+    auto csvPath = wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath.get();
+    if (csvPath.IsEmpty())
+        return;
+
+    std::ifstream file(csvPath.ToStdString());
+    if (!file.is_open())
+        return;
+
+    std::vector<std::string> lines;
+    std::string line;
+    bool firstLine = true;
+    while (std::getline(file, line))
+    {
+        if (firstLine) { firstLine = false; continue; } // skip CSV header
+        if (!line.empty())
+            lines.push_back(line);
+    }
+
+    const int MAX_RESTORE_ROWS = 100;
+    if ((int)lines.size() > MAX_RESTORE_ROWS)
+        lines.erase(lines.begin(), lines.begin() + ((int)lines.size() - MAX_RESTORE_ROWS));
+
+    bool freqAsKhz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+
+    for (auto& csvLine : lines)
+    {
+        // CSV columns: date,time,callsign,mode,frequency_hz,snr_db
+        std::istringstream ss(csvLine);
+        std::string date, time, callsign, mode, freqStr, snrStr;
+        if (!std::getline(ss, date, ',')) continue;
+        if (!std::getline(ss, time, ',')) continue;
+        if (!std::getline(ss, callsign, ',')) continue;
+        if (!std::getline(ss, mode, ',')) continue;
+        if (!std::getline(ss, freqStr, ',')) continue;
+        if (!std::getline(ss, snrStr)) continue;
+
+        uint64_t freqHz = 0;
+        try { freqHz = std::stoull(freqStr); } catch (...) { continue; }
+
+        wxString freqDisplay;
+        if (freqAsKhz)
+            freqDisplay = wxNumberFormatter::ToString(freqHz / 1000.0, 1);
+        else
+            freqDisplay = wxNumberFormatter::ToString(freqHz / 1000000.0, 4);
+
+        wxString dateTime = wxString::Format("%s %s", date, time);
+
+        int snrInt = 0;
+        try { snrInt = std::stoi(snrStr); } catch (...) { continue; }
+        wxString snrDisplay;
+        snrDisplay.Printf(SNR_FORMAT_STR_NO_DB, (float)snrInt);
+
+        auto index = m_lastReportedCallsignListView->InsertItem(0, wxString(callsign), 0);
+        m_lastReportedCallsignListView->SetItem(index, 1, freqDisplay);
+        m_lastReportedCallsignListView->SetItem(index, 2, dateTime);
+        m_lastReportedCallsignListView->SetItem(index, 3, snrDisplay);
+        m_lastReportedCallsignListView->SetItemTextColour(index, wxColour(160, 160, 160));
+    }
+
+    for (int col = 0; col < 4; col++)
+        m_lastReportedCallsignListView->SetColumnWidth(col, getIdealStationsHeardColumnLength_(col));
+}
+
 static std::recursive_mutex stoppingMutex;
 
-void MainFrame::setConfiguration_(wxFileConfig* config)
+void MainFrame::setConfiguration_(wxConfigBase* config)
 {
     pConfig = config;
     wxConfigBase::Set(pConfig);
@@ -1422,11 +1657,18 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    if (wxGetApp().appConfiguration.experimentalFeatures)
+    if (tabLayoutPersistenceEnabledAtStartup_)
     {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutSerializer serializer;
+        m_auiNbookCtrl->SaveLayout("notebook", serializer);
+        wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
+#else
         wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+#endif // wxCHECK_VERSION(3, 3, 0)
     }
-    
+
+
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
@@ -1461,11 +1703,16 @@ MainFrame::~MainFrame()
     
     if (m_reporterDialog != nullptr)
     {
-        // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
-        // reason, so we need to grab and save the current position again.
+        // Grab and save the final position explicitly rather than relying
+        // solely on OnMove's live tracking -- Close()/Destroy() below
+        // trigger one last stray wxEVT_MOVE reporting a position with the
+        // title bar's height already stripped off, so position tracking
+        // must be stopped first or that stray event silently overwrites
+        // the correct value saved here.
         auto pos = m_reporterDialog->GetPosition();
         wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
         wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+        m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
@@ -1904,9 +2151,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         freqString = wxNumberFormatter::ToString(freq, 4);
                     }
 
-                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
+                    if ((m_lastReportedCallsignListView->GetItemCount() == 0 || 
                         m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign ||
-                        m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
+                        m_lastReportedCallsignListView->GetItemText(0, 1) != freqString) ||
+                        (m_lastReportedCallsignListView->GetItemCount() > 0 && m_lastReportedCallsignListView->GetItemTextColour(0) == wxColour(160, 160, 160)))
                     {
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = EMPTY_STR;
@@ -2059,15 +2307,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             auto w = minSize.GetWidth();
             auto h = minSize.GetHeight();
 
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w + 1, h + 1);
             });
-            CallAfter([=]()
+            CallAfter([=, this]()
             {
                 SetSize(w, h);
             });
@@ -2197,18 +2445,40 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
-    // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
-    // reason, so we need to grab and save the current position again.
-    auto pos = m_reporterDialog->GetPosition();
-    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
-    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
-    
-    m_reporterDialog->setReporter(nullptr);
-    wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
-    m_reporterDialog->Close();
-    m_reporterDialog->Destroy();
-    m_reporterDialog = nullptr;
-    
+    if (terminating_)
+    {
+        // A previous close request already kicked off the async RX/PTT
+        // shutdown below, which calls Destroy() itself once done (see
+        // OnTogBtnOnOff()) -- nothing left to do here. This guards more than
+        // just the m_reporterDialog dereference below: m_RxRunning isn't
+        // cleared until deep inside that shutdown (stopRxStream(), called
+        // after the rig-disconnect code), so a repeat close request arriving
+        // first would otherwise fall into the `if (m_RxRunning)` block again
+        // and re-enter OnTogBtnOnOff() a second time concurrently with the
+        // shutdown already in progress.
+        return;
+    }
+
+    if (m_reporterDialog != nullptr)
+    {
+        // Grab and save the final position explicitly rather than relying
+        // solely on OnMove's live tracking -- Close()/Destroy() below trigger
+        // one last stray wxEVT_MOVE reporting a position with the title bar's
+        // height already stripped off, so position tracking must be stopped
+        // first or that stray event silently overwrites the correct value
+        // saved here.
+        auto pos = m_reporterDialog->GetPosition();
+        wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+        wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+        m_reporterDialog->stopTrackingPosition();
+
+        m_reporterDialog->setReporter(nullptr);
+        wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
+    }
+
     if (m_RxRunning)
     {
         if (m_btnTogPTT->GetValue())
@@ -2334,8 +2604,8 @@ void MainFrame::performFreeDVOn_()
 
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
-        m_cboLastReportedCallsigns->Enable(false);
-            
+        restoreCallsignListFromCsv_();
+        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
         m_cboLastReportedCallsigns->SetText(wxT(""));
         
         m_logQSO->Disable();
@@ -2584,11 +2854,19 @@ void MainFrame::performFreeDVOn_()
                         if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                         {
                             wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-                            
+
                             if (!m_reporterHidden->GetValue())
                             {
                                 wxGetApp().m_sharedReporterObject->showOurselves();
                             }
+                        }
+
+                        if (wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled)
+                        {
+                            auto udpBroadcastReporter = std::make_shared<UdpReporter>(
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress->ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort);
+                            wxGetApp().m_reporters.push_back(udpBroadcastReporter);
                         }
 
                         // Enable FreeDV Reporter timer (every 5 minutes).
@@ -2702,13 +2980,39 @@ void MainFrame::performFreeDVOff_()
         wxGetApp().rigPttController->ptt(false);
         wxGetApp().rigPttController->disconnect();
     }
-    wxGetApp().rigPttController = nullptr;
+    // Dropping the last shared_ptr reference below runs the controller's
+    // destructor, which blocks until the rig actually finishes
+    // disconnecting. Against an unresponsive radio (e.g. powered off, via
+    // rigctld) that can take far longer than Hamlib's own client-side
+    // timeout/retry settings suggest, since those don't bound however long
+    // rigctld itself waits on the physical radio it's talking to. Move the
+    // last reference onto a detached thread so that wait can't hold up
+    // turning the modem off (or app shutdown) -- the controller stays
+    // alive exactly as long as it needs to, just off to the side rather
+    // than blocking here. The associated future lets a terminating shutdown
+    // (see OnTogBtnOnOff()) wait a bounded amount of time for this to finish
+    // before the process exits out from under the thread.
+    std::promise<void> pttDisconnectProm;
+    rigPttDisconnectFuture_ = pttDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigPttController), prom = std::move(pttDisconnectProm)]() mutable
+    {
+        SetThreadName("RigPttDisconnect");
+        ptr = nullptr;
+        prom.set_value();
+    }).detach();
 
     if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected())
     {
         wxGetApp().rigFrequencyController->disconnect();
     }
-    wxGetApp().rigFrequencyController = nullptr;
+    std::promise<void> freqDisconnectProm;
+    rigFreqDisconnectFuture_ = freqDisconnectProm.get_future();
+    std::thread([ptr = std::move(wxGetApp().rigFrequencyController), prom = std::move(freqDisconnectProm)]() mutable
+    {
+        SetThreadName("RigFreqDisconnect");
+        ptr = nullptr;
+        prom.set_value();
+    }).detach();
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
@@ -2752,8 +3056,8 @@ void MainFrame::performFreeDVOff_()
         m_rb700d->Enable();
         m_rb700e->Enable();
         
-        m_logQSO->Disable();
-        
+        m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
+
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
         {
@@ -2828,7 +3132,27 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
             SetThreadName("TurningOff");
 
             performFreeDVOff_();
-            
+
+            if (terminating_)
+            {
+                // We're about to destroy the frame and let the process exit,
+                // which would kill the detached rig-disconnect threads from
+                // performFreeDVOff_() mid-flight if a slow/unresponsive rig
+                // hasn't finished with them yet -- e.g. a queued ptt(false)
+                // might never reach the radio. Give them a bounded chance to
+                // finish first; an unresponsive rig still can't hang shutdown
+                // indefinitely, it just gets abandoned after the grace period.
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+                if (rigPttDisconnectFuture_.valid())
+                {
+                    rigPttDisconnectFuture_.wait_until(deadline);
+                }
+                if (rigFreqDisconnectFuture_.valid())
+                {
+                    rigFreqDisconnectFuture_.wait_until(deadline);
+                }
+            }
+
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
@@ -3103,7 +3427,7 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setOnAudioDeviceChanged([](IAudioDevice&, std::string newDeviceName, void* state) {
                     MainFrame* castedThis = (MainFrame*)state;
                     castedThis->CallAfter(&MainFrame::handleAudioDeviceChange_<2, false>, std::move(newDeviceName));
-                }, nullptr);
+                }, this);
                 txInSoundDevice->setOnAudioData(&OnTxInAudioData_, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
@@ -3458,17 +3782,18 @@ void MainFrame::startRxStream()
     }
 }
 
-bool MainFrame::validateSoundCardSetup()
+bool MainFrame::validateSoundCardSetup(bool silent)
 {
     bool canRun = true;
-    
+
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*) {
+    engine->setOnEngineError([this, silent](IAudioEngine&, std::string error, void*) {
+        if (silent) return;
         CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
-                "Error encountered while initializing the audio engine: %s.", 
-                error), wxT("Error"), wxOK, this); 
+                "Error encountered while initializing the audio engine: %s.",
+                error), wxT("Error"), wxOK, this);
         });
     }, nullptr);
     engine->start();
@@ -3518,74 +3843,87 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Display Easy Setup dialog.
-        CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control status
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        if (!silent)
+        {
+            // Initial setup. Display Easy Setup dialog.
+            CallAfter([&]() {
+                EasySetupDialog* dlg = new EasySetupDialog(this);
+                if (dlg->ShowModal() == wxOK)
                 {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
+                    // Show/hide frequency box based on CAT control status
+                    m_freqBox->Show(isFrequencyControlEnabled_());
 
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
-        });
+                    // Show/hide callsign combo box based on PSK Reporter Status
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+                    {
+                        m_cboLastReportedCallsigns->Show();
+                        m_txtCtrlCallSign->Hide();
+                    }
+                    else
+                    {
+                        m_cboLastReportedCallsigns->Hide();
+                        m_txtCtrlCallSign->Show();
+                    }
+
+                    // Relayout window so that the changes can take effect.
+                    m_panel->Layout();
+                }
+            });
+        }
         canRun = false;
     }
     else if (!canRun)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
-            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        if (!silent)
+        {
+            wxMessageBox(wxString::Format(
+                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.",
+                failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+        }
     }
     else
     {
-        const int MIN_SAMPLE_RATE = 16000;
+        const int MIN_SAMPLE_RATE_ANALOG = 16000;
+        const int MIN_SAMPLE_RATE_RADIO = 8000;
         int failedSampleRate = 0;
+        int expectedSampleRate = 0;
+        int expectedSampleRate1Out = (g_nSoundCards == 1 ? MIN_SAMPLE_RATE_ANALOG : MIN_SAMPLE_RATE_RADIO);
         
         // Validate sample rates
-        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE)
+        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE_RADIO)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_RADIO;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < expectedSampleRate1Out)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+            expectedSampleRate = expectedSampleRate1Out;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE_ANALOG)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_ANALOG;
             canRun = false;
         }
-        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE)
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE_ANALOG)
         {
             failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
             failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate;
+            expectedSampleRate = MIN_SAMPLE_RATE_ANALOG;
             canRun = false;
         }
         
-        if (!canRun)
+        if (!canRun && !silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
-                failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.",
+                failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }
     
@@ -3603,10 +3941,12 @@ void MainFrame::initializeFreeDVReporter_()
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
-            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + GetFreeDVVersion(),
-            receiveOnly);
+            receiveOnly,
+            false,
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterUseTls);
     assert(wxGetApp().m_sharedReporterObject);
     
     // If we're running, remove any existing reporter object.
@@ -3762,61 +4102,67 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
-    if (toRead < size)
+    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
     }
-
-    cbData->outfifo1->read(tmpOutput, toRead);
-    auto numChannels = dev.getNumChannels();
-    auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
-    auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
-    auto sr = dev.getSampleRate();
-
-    if (isTuning)
-    {
-        // This may be better as a pipeline step but would also add additional
-        // complexity (i.e. additional decision steps to let through the sine wave
-        // vs. regular TX).
-        auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
-
-        // Load once before the loop and store once after to avoid per-sample atomic
-        // memory barriers, which can cause the audio callback to overrun its deadline.
-        auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
-        const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
-        for (unsigned long index = 0; index < size; index++)
-        {
-            auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
-            for (int i = 0; i < numChannels; i++)
-            {
-                *audioData++ = carrierSample;
-            }
-            // Conditional branch is cheaper than integer division (% sr).
-            if (++sineWaveSampleNumber >= (int)sr)
-                sineWaveSampleNumber = 0;
-        }
-        cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
-    }
     else
     {
-        for (size_t count = 0; count < size; count++, audioData += numChannels)
+        if (toRead >= size)
         {
-            auto output = (count < toRead) ? tmpOutput[count] : 0;
+            cbData->outfifo1->read(tmpOutput, size);
+        }
 
-            // write signal to all channels to start. This is so that
-            // the compiler can optimize for the most common case.
-            for (auto j = 0; j < numChannels; j++)
+        auto numChannels = dev.getNumChannels();
+        auto enableVoxTone = g_tx.load(std::memory_order_acquire) && cbData->leftChannelVoxTone.load(std::memory_order_acquire);
+        auto sr = dev.getSampleRate();
+
+        if (isTuning)
+        {
+            // This may be better as a pipeline step but would also add additional
+            // complexity (i.e. additional decision steps to let through the sine wave
+            // vs. regular TX).
+            auto txLevel = g_tuneLevelScale.load(std::memory_order_acquire) * (SHRT_MAX / 2);
+
+            // Load once before the loop and store once after to avoid per-sample atomic
+            // memory barriers, which can cause the audio callback to overrun its deadline.
+            auto sineWaveSampleNumber = cbData->tuneSineWaveSampleNumber.load(std::memory_order_acquire);
+            const double phaseIncrement = 2.0 * M_PI * FDMDV_FCENTRE / sr;
+            for (unsigned long index = 0; index < size; index++)
             {
-                audioData[j] = output;
+                auto carrierSample = txLevel * sin(phaseIncrement * sineWaveSampleNumber);
+                for (int i = 0; i < numChannels; i++)
+                {
+                    *audioData++ = carrierSample;
+                }
+                // Conditional branch is cheaper than integer division (% sr).
+                if (++sineWaveSampleNumber >= (int)sr)
+                    sineWaveSampleNumber = 0;
             }
-                        
-            // If VOX tone is enabled, go back through and add the VOX tone
-            // on the left channel.
-            if (enableVoxTone)
+            cbData->tuneSineWaveSampleNumber.store(sineWaveSampleNumber, std::memory_order_release);
+        }
+        else
+        {
+            for (size_t count = 0; count < size; count++, audioData += numChannels)
             {
-                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
-                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                 auto output = (count < toRead) ? tmpOutput[count] : 0;
+
+                // write signal to all channels to start. This is so that
+                // the compiler can optimize for the most common case.
+                for (auto j = 0; j < numChannels; j++)
+                {
+                    audioData[j] = output;
+                }
+                        
+                // If VOX tone is enabled, go back through and add the VOX tone
+                // on the left channel.
+                if (enableVoxTone)
+                {
+                    cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/sr;
+                    cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                    audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                }
             }
         }
     }
@@ -3850,14 +4196,16 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     {
         g_outfifo2_empty.fetch_add(1, std::memory_order_release);
     }
-
-    cbData->outfifo2->read(tmpOutput, toRead);
-    auto numChannels = dev.getNumChannels();
-    for (size_t count = 0; count < size; count++)
+    else
     {
-        for (int j = 0; j < numChannels; j++)
+        cbData->outfifo2->read(tmpOutput, toRead);
+        auto numChannels = dev.getNumChannels();
+        for (size_t count = 0; count < size; count++)
         {
-            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+            for (int j = 0; j < numChannels; j++)
+            {
+                *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
+            }
         }
     }
 }

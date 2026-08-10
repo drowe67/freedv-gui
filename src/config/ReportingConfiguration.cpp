@@ -45,6 +45,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
     , freedvReporterForcedOff("/Reporting/FreeDV/ForcedOff", false)
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
+    , freedvReporterUseTls("/Reporting/FreeDV/UseTls", true)
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
     , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
     , freedvReporterBandFilterTracksFrequency("/Reporting/FreeDV/BandFilterTracksFrequency", false)
@@ -65,7 +66,11 @@ ReportingConfiguration::ReportingConfiguration()
     , udpReportingEnabled("/Reporting/UDP/Enable", false)
     , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
     , udpReportingPort("/Reporting/UDP/Port", 2237)
-        
+
+    , udpBroadcastEnabled("/Reporting/UDPBroadcast/Enable", false)
+    , udpBroadcastAddress("/Reporting/UDPBroadcast/Address", _("224.0.0.1"))
+    , udpBroadcastPort("/Reporting/UDPBroadcast/Port", 7177)
+
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
 
     , reportingFrequencyList("/Reporting/FrequencyList", {
@@ -189,6 +194,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterEnabled);
     load_(config, freedvReporterForcedOff);
     load_(config, freedvReporterHostname);
+    load_(config, freedvReporterUseTls);
     load_(config, freedvReporterBandFilter);
     load_(config, useMetricDistances);
     load_(config, freedvReporterBandFilterTracksFrequency);
@@ -201,6 +207,10 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, udpReportingEnabled);
     load_(config, udpReportingHostname);
     load_(config, udpReportingPort);
+
+    load_(config, udpBroadcastEnabled);
+    load_(config, udpBroadcastAddress);
+    load_(config, udpBroadcastPort);
 
     load_(config, freedvReporterColumnOrder);
     load_(config, freedvReporterColumnVisibility);
@@ -279,6 +289,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterEnabled);
     save_(config, freedvReporterForcedOff);
     save_(config, freedvReporterHostname);
+    save_(config, freedvReporterUseTls);
     save_(config, freedvReporterBandFilter);
     save_(config, useMetricDistances);
     save_(config, freedvReporterBandFilterTracksFrequency);
@@ -300,7 +311,11 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, udpReportingEnabled);
     save_(config, udpReportingHostname);
     save_(config, udpReportingPort);
-    
+
+    save_(config, udpBroadcastEnabled);
+    save_(config, udpBroadcastAddress);
+    save_(config, udpBroadcastPort);
+
     save_(config, useUTCForReporting);
     
     save_(config, reportingFrequencyAsKhz);

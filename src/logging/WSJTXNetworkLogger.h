@@ -27,8 +27,8 @@
 #include <chrono>
 
 #include "ILogger.h"
-#include "../util/UdpHandler.h"
-#include "../util/ThreadedTimer.h"
+#include "UdpHandler.h"
+#include "ThreadedTimer.h"
 
 class WSJTXNetworkLogger : protected UdpHandler, public ILogger
 {

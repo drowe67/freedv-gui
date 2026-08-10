@@ -29,7 +29,7 @@
 #include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
-#include "../util/sanitizers.h"
+#include "freedv_sanitizers.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 

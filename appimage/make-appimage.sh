@@ -1,23 +1,7 @@
 #!/bin/bash -e
 
-TARGET=${1:-all}
-
-if [[ "${TARGET}" == "all" ]]; then
-    export APPNAME="FreeDV"
-    export APPEXEC=../build_linux/src/freedv
-    export APPRUN="AppRun.sh"
-    export RADE_SRC="rade_src"
-elif [[ "${TARGET}" == "freedv-flex" ]]; then
-    export APPNAME="FreeDV-FlexRadio"
-    export APPEXEC=../build_linux/src/integrations/flex/freedv-flex
-    export APPRUN="AppRun-FlexRadio.sh"
-    export RADE_SRC="rade_integ_src"
-elif [[ "${TARGET}" == "freedv-ka9q" ]]; then
-    export APPNAME="FreeDV-KA9Q"
-    export APPEXEC=../build_linux/src/integrations/ka9q/freedv-ka9q
-    export APPRUN="AppRun-KA9Q.sh"
-    export RADE_SRC="rade_integ_src"
-fi
+export APPNAME="FreeDV"
+export APPEXEC=../build_linux/src/freedv
 
 DESKTOP_FILE="$APPNAME.desktop"
 APPDIR="$APPNAME.AppDir"
@@ -46,24 +30,22 @@ else
 fi
 
 ./linuxdeploy-${MACH_ARCH}.AppImage \
---executable "$APPEXEC" \
---appdir "$APPDIR" \
---icon-file ../contrib/freedv256x256.png \
---custom-apprun=$APPRUN \
---desktop-file $DESKTOP_FILE
+  --executable "$APPEXEC" \
+  --appdir "$APPDIR" \
+  --icon-file ../contrib/freedv256x256.png \
+  --custom-apprun "AppRun.sh" \
+  --desktop-file $DESKTOP_FILE
+
+# Manually copy over /etc/ssl to APPDIR. Needed for OpenSSL to behave properly on non-Ubuntu
+# distros.
+mkdir -p "$APPDIR/etc/ssl/certs"
+cp -aL /etc/ssl/certs/* "$APPDIR/etc/ssl/certs"
 
 # Create the output
-if [[ "${TARGET}" == "all" ]]; then
-    ./linuxdeploy-${MACH_ARCH}.AppImage \
-        --appdir "$APPDIR" \
-        --plugin gtk \
-        --output appimage
-else
-    # GTK plugin not needed for integrations
-    ./linuxdeploy-${MACH_ARCH}.AppImage \
-        --appdir "$APPDIR" \
-        --output appimage
-fi
+./linuxdeploy-${MACH_ARCH}.AppImage \
+  --appdir "$APPDIR" \
+  --plugin gtk \
+  --output appimage
 
 # Include version number in AppImage filename
 FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`

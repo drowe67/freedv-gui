@@ -7,6 +7,9 @@
 #include <sstream>
 #include <iomanip>
 #include <locale>
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 #include "main.h"
 
@@ -19,6 +22,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
+#include "gui/util/FrequencyOps.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -58,9 +62,11 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+extern std::atomic<bool>     g_totBeepActive;
+
 static wxString bandNameForFilter(FilterFrequency band);
 
-std::atomic<bool> g_eoo_enqueued;
+extern std::atomic<bool> g_eoo_enqueued;
 
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -254,15 +260,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         wxSize size = GetSize();
         auto w = size.GetWidth();
         auto h = size.GetHeight();
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w + 1, h + 1);
         });
-        CallAfter([=]()
+        CallAfter([=, this]()
         {
             SetSize(w, h);
         });
@@ -485,12 +491,23 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 break;
         }
 
+        // Round to the nearest 100 Hz.
+        uint64_t wholeFreq = freq / 100;
+        uint64_t remainder = freq % 100;
+
+        if (remainder >= 50)
+        {
+            wholeFreq++;
+        }
+
+        auto newFreq = wholeFreq * 100;
+
         // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-        bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
+        bool is60MeterBand = newFreq >= 5250000 && newFreq <= 5450000;
 
         // Update color based on the mode and current frequency.
-        bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-        bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+        bool isUsbFreq = newFreq >= 10000000 || is60MeterBand;
+        bool isLsbFreq = newFreq < 10000000 && !is60MeterBand;
 
         bool isMatchingMode = 
             (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
@@ -514,11 +531,11 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             wxString freqString;            
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                freqString = wxNumberFormatter::ToString(freq / 1000.0, 1);
+                freqString = wxNumberFormatter::ToString(newFreq / 1000.0, 1);
             }
             else
             {
-                freqString = wxNumberFormatter::ToString(freq / 1000.0 / 1000.0, 4);
+                freqString = wxNumberFormatter::ToString(newFreq / 1000.0 / 1000.0, 4);
             }
             
             // Set internal reporting frequency to ensure we don't immediately request
@@ -527,8 +544,8 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
             auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = freq;
-            if (oldFreq != freq)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+            if (oldFreq != newFreq)
             {
                 for (auto& ptr : wxGetApp().m_reporters)
                 {
@@ -541,7 +558,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         m_txtModeStatus->Refresh();
 
         // Auto-save outgoing band levels, then load the new band's levels
-        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
+        auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(newFreq);
         if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
         {
             autoSaveCurrentBandLevels_();
@@ -586,10 +603,17 @@ void MainFrame::onRadioDisconnected_(IRigController*)
 bool MainFrame::OpenHamlibRig() {
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT != true)
        return false;
-    if (wxGetApp().m_intHamlibRig == 0)
+    
+    int rig = wxGetApp().m_intHamlibRig;    
+    if (rig == -1)
+    {
+        std::string fullErr = "The radio's model is empty. This is likely due to changes in Hamlib between FreeDV releases. Please click Stop Modem, double-check your CAT settings and push Start Modem again.";
+        CallAfter([&, fullErr]() {
+            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        });
         return false;
-
-    int rig = wxGetApp().m_intHamlibRig;
+    }
+    
     wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
     wxString pttPort = wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort;
     auto pttType = (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
@@ -864,24 +888,18 @@ void MainFrame::applyTxLevel()
     bool isTuning = m_btnTogTune->GetValue();
     wxString fmtString;
 
+    if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
+    if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
+    g_txLevelScale.store(exp(g_txLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
+    if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
+    if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
+    g_tuneLevelScale.store(exp(g_tuneLevel / 10.0 / 20.0 * log(10.0)), std::memory_order_release);
+
     if (isTuning)
-    {
-        if (g_tuneLevel < TX_ATTENUATION_MIN) g_tuneLevel = TX_ATTENUATION_MIN;
-        if (g_tuneLevel > TX_ATTENUATION_MAX) g_tuneLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_tuneLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_tuneLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-    }
     else
-    {
-        if (g_txLevel < TX_ATTENUATION_MIN) g_txLevel = TX_ATTENUATION_MIN;
-        if (g_txLevel > TX_ATTENUATION_MAX) g_txLevel = TX_ATTENUATION_MAX;
-        float dbLoss = g_txLevel / 10.0;
-        float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-        g_txLevelScale.store(scaleFactor, std::memory_order_release);
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-    }
 
     m_txtTxLevelNum->SetLabel(fmtString);
 
@@ -961,38 +979,46 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
 
 void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
 {
+    wxMenu menu;
+
+    auto minItem = menu.Append(wxID_ANY, _("Set tune output to minimum (-30 dB)"));
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        g_tuneLevel = TX_ATTENUATION_MIN;
+        applyTxLevel();
+    }, minItem->GetId());
+
     uint64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
     FilterFrequency bandEnum = FreeDVReporterDialog::getFilterForFrequency_(freq);
-    wxString bandName = bandNameForFilter(bandEnum); // string used for display labels and map keys
+    wxString bandName = bandNameForFilter(bandEnum);
 
-    if (bandName.IsEmpty())
-        return;
+    if (!bandName.IsEmpty())
+    {
+        menu.AppendSeparator();
+        auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
+        bool hasSaved = (atten->find(bandName) != atten->end());
 
-    auto& atten = wxGetApp().appConfiguration.tuneAttenByBand;
-    bool hasSaved = (atten->find(bandName) != atten->end());
+        wxString toggleLabel = hasSaved
+            ? wxString::Format(_("Disable auto-save of tune atten for %s"), bandName)
+            : wxString::Format(_("Enable auto-save of tune atten for %s"),  bandName);
+        auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
+        auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
+        restoreItem->Enable(hasSaved);
 
-    wxMenu menu;
-    wxString toggleLabel = hasSaved
-        ? wxString::Format(_("Disable auto-save of tune atten for %s"), bandName)
-        : wxString::Format(_("Enable auto-save of tune atten for %s"),  bandName);
-    auto toggleItem  = menu.Append(wxID_ANY, toggleLabel);
-    auto restoreItem = menu.Append(wxID_ANY, wxString::Format(_("Restore tune atten level for %s"), bandName));
-    restoreItem->Enable(hasSaved);
-
-    menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
-        if (hasSaved)
-            wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
-        else
-        {
-            tuneLoadedLevel_ = g_tuneLevel; // record restore point at Enable time
-            wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
-        }
-        wxGetApp().appConfiguration.save(pConfig);
-    }, toggleItem->GetId());
-    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
-        g_tuneLevel = tuneLoadedLevel_;
-        applyTxLevel();
-    }, restoreItem->GetId());
+        menu.Bind(wxEVT_MENU, [this, bandName, hasSaved](wxCommandEvent&) {
+            if (hasSaved)
+                wxGetApp().appConfiguration.tuneAttenByBand->erase(bandName);
+            else
+            {
+                tuneLoadedLevel_ = g_tuneLevel;
+                wxGetApp().appConfiguration.tuneAttenByBand->insert_or_assign(bandName, g_tuneLevel);
+            }
+            wxGetApp().appConfiguration.save(pConfig);
+        }, toggleItem->GetId());
+        menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+            g_tuneLevel = tuneLoadedLevel_;
+            applyTxLevel();
+        }, restoreItem->GetId());
+    }
 
     PopupMenu(&menu);
 }
@@ -1055,44 +1081,92 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent&)
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
 }
 
-// check for space bar press (only when running)
-
+static bool PttKeyDown_ = false;
 int MainApp::FilterEvent(wxEvent& event)
 {
     if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
-        (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
         {
+            bool pttKeyChanging = !PttKeyDown_;
+            PttKeyDown_ = true;
+
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             bool mainWindowActive = frame->IsActive();
-            bool reporterActiveButNotUpdatingTextMessage = 
-                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
-            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            bool tuneActive = frame->m_btnTogTune->GetValue();
+
+            // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
+            // (e.g. TOT) from immediately restarting TX -- see main.h.
+            if (frame->m_RxRunning && !tuneActive && !frame->m_pttKeyRequireRelease_ &&
+                (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls tx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
-                    if (frame->m_btnTogPTT->GetValue())
-                        frame->m_btnTogPTT->SetValue(false);
-                    else
-                        frame->m_btnTogPTT->SetValue(true);
+                    if (wxGetApp().appConfiguration.pttMomentaryMode) {
+                        // Momentary mode: start TX only on the initial key press (not repeated events).
+                        if (!g_tx.load(std::memory_order_acquire)) {
+                            frame->m_btnTogPTT->SetValue(true);
+                            frame->m_btnTogPTT->SetBackgroundColour(*wxRED);
+                            frame->togglePTT();
+                        }
+                    } else if (pttKeyChanging) {
+                        // Latching mode: toggle TX state on each key press.
+                        if (frame->m_btnTogPTT->GetValue())
+                            frame->m_btnTogPTT->SetValue(false);
+                        else
+                            frame->m_btnTogPTT->SetValue(true);
 
-                    // Update background color of button here because when toggling PTT via keyboard,
-                    // the background color for some reason doesn't update inside togglePTT().
-                    frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
-
-                    // Actually toggle PTT.
-                    frame->togglePTT();
+                        frame->togglePTT();
+                    }
                 }
                 else // space bar stops keyer
                     frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
-                return true; // absorb space so we don't toggle control with focus (e.g. Start)
+                return Event_Processed; // absorb key so we don't toggle control with focus (e.g. Start)
 
             }
         }
 
-    return -1;
+    // In momentary mode, stop TX when the PTT key is released.
+    if ((event.GetEventType() == wxEVT_KEY_UP) &&
+        (((wxKeyEvent&)event).GetKeyCode() == wxGetApp().appConfiguration.pttKeyCode))
+        {
+            PttKeyDown_ = false;
+
+            bool mainWindowActive = frame->IsActive();
+            bool reporterActiveButNotUpdatingTextMessage =
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
+                !frame->m_reporterDialog->isTextMessageFieldInFocus();
+            bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
+            if (frame->m_RxRunning && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
+                wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
+                wxGetApp().appConfiguration.pttMomentaryMode) {
+
+                if (frame->vk_state == VK_IDLE) {
+                    if (g_tx.load(std::memory_order_acquire)) {
+                        frame->m_btnTogPTT->SetValue(false);
+                        frame->m_btnTogPTT->SetBackgroundColour(wxNullColour);
+                        frame->togglePTT();
+                    } else if (frame->m_btnTogPTT->GetValue()) {
+                        // Key released before g_tx caught up -- likely still inside
+                        // togglePTT()'s TX/RX delay loop for the start that's in
+                        // progress. Calling togglePTT() here would no-op against its
+                        // re-entrancy guard, so remember the release and let
+                        // togglePTT() action it once the start finishes -- see
+                        // m_momentaryKeyReleasedDuringChangeover_ in main.h.
+                        log_info("PTT key released mid-changeover -- deferring momentary stop");
+                        frame->m_momentaryKeyReleasedDuringChangeover_ = true;
+                    }
+                }
+                return Event_Processed;
+            }
+        }
+
+    return Event_Skip;
 }
 
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
@@ -1112,34 +1186,272 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
-    auto sz = m_btnTogPTT->GetSize();
-    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnPTTMouseDown()
+// Set TX colour immediately on mouse press when going RX->TX, avoiding a GTK
+// blue-flash during the TX delay before togglePTT() sets it on release.
+// Only fires when the pipeline is genuinely in RX (g_tx false); during the
+// TX->RX drain g_tx is still true, so clicks there are correctly ignored.
+// NOTE for upstream: this is a simple cosmetic fix. A fuller alternative would
+// be to start TX here on press and suppress the togglePTT() call on release.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseDown(wxMouseEvent& event)
+{
+    if (txChangeoverOccurring_) return;
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnPTTMouseLeave()
+// Reset premature TX colour if mouse leaves button before release and TX
+// has not actually started, preventing a stuck-red button.
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTMouseLeave(wxMouseEvent& event)
+{
+    if (!m_btnTogPTT->GetValue() && !g_tx.load(std::memory_order_acquire))
+    {
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
+        m_btnTogPTT->Refresh();
+    }
+    event.Skip();
 }
 
 //-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
+void MainFrame::OnTogBtnPTT (wxCommandEvent&)
 {
     if (vk_state == VK_TX)
     {
         // Disable TX via VK code to prevent state inconsistencies.
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
-    else
-    {        
+    else 
+    {
         togglePTT();
     }
-    event.Skip();
+}
+
+void MainFrame::playTotBeep_()
+{
+    log_info("Playing TOT beep");
+
+    if (g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_totBeepActive.store(true, std::memory_order_release);
+}
+
+void MainFrame::stopTotBeep_()
+{
+    log_info("Stopping TOT beep");
+    m_totLastBeepTime_ = {};
+    if (!g_totBeepActive.load(std::memory_order_acquire))
+        return;
+
+    g_totBeepActive.store(false, std::memory_order_release);
+}
+
+//-------------------------------------------------------------------------
+// OnTOTTimer()
+// Time-Out Timer handler: fires when the configured TX time limit expires.
+//-------------------------------------------------------------------------
+void MainFrame::OnTOTTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire))
+        return;
+
+    log_info("Time-Out Timer (TOT) expired — stopping transmit");
+
+    if (m_totWarningTimer.IsRunning())
+        m_totWarningTimer.Stop();
+
+    if (m_totWarningDialog_)
+    {
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
+    }
+    m_totCurrentDurationMs = 0;
+    stopTotBeep_();
+
+    if (vk_state == VK_TX)
+    {
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else
+    {
+        m_btnTogPTT->SetValue(false);
+        endingTx.store(true, std::memory_order_release);
+        togglePTT();
+
+        // If the spacebar PTT key is still physically held down (e.g. something
+        // resting on the keyboard), holding it through the timeout must not be
+        // able to immediately re-key the rig -- that would defeat the whole
+        // point of the TOT. wxEVT_KEY_UP/DOWN aren't reliable for detecting
+        // "still held" here: on some platforms, a held key generates real
+        // key-up/key-down event pairs at the OS repeat rate rather than a
+        // single sustained key-down, so we poll the actual OS key state
+        // instead and keep the spacebar disabled until it genuinely goes up.
+        if (wxGetApp().appConfiguration.pttMomentaryMode &&
+            PttKeyDown_)
+        {
+            log_info("TOT fired while PTT key still held -- blocking restart until key is released");
+            m_pttKeyRequireRelease_ = true;
+            m_pttKeyPollTimer.Start(30, wxTIMER_CONTINUOUS);
+        }
+    }
+}
+
+void MainFrame::OnPttKeyPollTimer(wxTimerEvent&)
+{
+    if (!PttKeyDown_)
+    {
+        log_info("PTT key released -- spacebar PTT re-armed");
+        m_pttKeyRequireRelease_ = false;
+        m_pttKeyPollTimer.Stop();
+    }
+}
+
+void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
+{
+    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+        return;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_totTxStartTime).count();
+    int remaining = m_totCurrentDurationMs - (int)elapsed;
+
+    if (remaining > 0 && remaining <= 15000)
+    {
+        // Beep once when the window pops up.
+        bool firstBeep = (m_totLastBeepTime_ == decltype(m_totLastBeepTime_){});
+        if (firstBeep) {
+            playTotBeep_();
+            m_totLastBeepTime_ = now;
+        }
+
+        if (!m_totWarningDialog_)
+        {
+            m_totWarningDialog_ = new TotWarningDialog(
+                this, remaining,
+                [this]() {
+                    m_totWarningDialog_->Destroy();
+                    m_totWarningDialog_ = nullptr;
+                    
+                    if (!g_tx.load(std::memory_order_acquire) || m_totCurrentDurationMs <= 0)
+                        return;
+
+                    m_totCurrentDurationMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+                    m_totTxStartTime = std::chrono::high_resolution_clock::now();
+                    m_totTimer.Start(m_totCurrentDurationMs, wxTIMER_ONE_SHOT);
+                    m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
+                    log_info("Time-Out Timer (TOT) extended — %d ms remaining", m_totCurrentDurationMs);
+                }
+            );
+            m_totWarningDialog_->Show();
+            m_totWarningDialog_->Iconize(false); // undo minimize if required
+            m_totWarningDialog_->Raise(); // brings from background to foreground if required
+        }
+        else
+        {
+            m_totWarningDialog_->updateRemainingTime(remaining);
+        }
+    }
+    else if (remaining > 15000 && m_totWarningDialog_)
+    {
+        auto dlg = m_totWarningDialog_;
+        m_totWarningDialog_ = nullptr;
+        dlg->Destroy();
+        m_totLastBeepTime_ = decltype(m_totLastBeepTime_){};
+    }
+}
+
+// Returns the notebook page index that should be restored once we're done showing
+// "Frm Mic" (e.g. on RX, or after voice keyer recording finishes).
+//
+// GetSelection() isn't the right choice here since more than one tab group can be
+// visible at the same time once tabs have been split (e.g. via a saved custom tab
+// layout) - see https://forums.wxwidgets.org/viewtopic.php?t=14721. Instead, ask the
+// specific tab group that "Frm Mic" lives in what's actually active there.
+int MainFrame::captureCurrentMicGroupTab_()
+{
+    auto savedTab = m_auiNbookCtrl->GetSelection();
+
+#if wxCHECK_VERSION(3,1,4)
+    wxAuiTabCtrl* fromMicTabControl = nullptr;
+    int fromMicTabIndex = 0;
+    if (m_panelSpeechIn != nullptr &&
+        m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
+    {
+        int localActiveIdx = fromMicTabControl->GetActivePage();
+        if (localActiveIdx >= 0 && localActiveIdx < (int)fromMicTabControl->GetPageCount())
+        {
+            wxWindow* activeWindow = fromMicTabControl->GetWindowFromIdx(localActiveIdx);
+            savedTab = m_auiNbookCtrl->GetPageIndex(activeWindow);
+        }
+    }
+#endif // wxCHECK_VERSION(3,1,4)
+
+    return savedTab;
 }
 
 void MainFrame::togglePTT(void) {
+    // Guard against re-entrant calls during the TX drain (Yield() processes events).
+    // This is necessary because we are not disabling the button during the changeover,
+    // as doing so causes the text on the button to be unreadable.
+    if (txChangeoverOccurring_) 
+    {
+        return;
+    }
+    txChangeoverOccurring_ = true;
+
     std::chrono::high_resolution_clock highResClock;
+
+    // Record direction now; button value may be toggled by a stray click during
+    // the drain loops below, which would corrupt newTx at the end if not checked.
+    const bool wasInTx = g_tx.load(std::memory_order_acquire);
 
     // Change tabbed page in centre panel depending on PTT state
 
-    if (g_tx.load(std::memory_order_acquire))
+    if (wasInTx)
     {
+        // Amber during TX->RX drain: distinct from TX (red) and RX (default),
+        // black text readable throughout. Foreground is pinned explicitly
+        // (not just left to the GTK theme) since some themes/window states
+        // - e.g. backdrop while the TOT warning dialog has focus - would
+        // otherwise dim or recolour the default text away from black.
+        m_btnTogPTT->SetBackgroundColour(wxColour(255, 165, 0));
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
+        m_btnTogPTT->SetLabel("TX Ending");
+        m_btnTogPTT->Refresh();
+
+        // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
+        if (m_totTimer.IsRunning())
+            m_totTimer.Stop();
+        if (m_totWarningTimer.IsRunning())
+            m_totWarningTimer.Stop();
+        if (m_totWarningDialog_)
+        {
+            auto dlg = m_totWarningDialog_;
+            m_totWarningDialog_ = nullptr;
+            dlg->Destroy();
+        }
+        m_totCurrentDurationMs = 0;
+        stopTotBeep_();
+
         // If PTT input is enabled, suspend further changes until after EOO is sent.
         if (wxGetApp().m_pttInSerialPort)
         {
@@ -1219,37 +1531,15 @@ void MainFrame::togglePTT(void) {
         {
             latency = outDevice->getLatencyInMicroseconds();
         }
-        auto pttResponseTime = 0;
 
-        // Also take into account any latency between the computer and radio.
-        // The only way to do this is by tracking how long it takes to respond
-        // to PTT requests (and that's not necessarily great, either). Normally
-        // this component should be a small part of the overall latency, but it
-        // could be larger when dealing with SDR radios that are on the network.
-        //
-        // Note: This may not provide accurate results until after going from 
-        // TX->RX the first time, but one missed report during a session shouldn't 
-        // be a huge deal.
-        auto pttController = wxGetApp().rigPttController;
-        if (pttController)
-        {
-            // We only need to worry about the time getting to the radio,
-            // not the time to get from the radio to us.
-            pttResponseTime = std::max(
-                pttController->getRigResponseTimeMicroseconds() / 2,
-                wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds.get());
-            wxGetApp().appConfiguration.rigControlConfiguration.rigResponseTimeMicroseconds = pttResponseTime;
-        }
-
-        auto totalPauseTime = latency + pttResponseTime;
         log_info(
-            "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
-            totalPauseTime, latency, pttResponseTime);
+            "Pausing for a minimum of %d us before TX->RX to allow remaining audio to go out", 
+            latency);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::microseconds(totalPauseTime))
+            if (diff >= std::chrono::microseconds(latency))
             {
                 break;
             }
@@ -1306,6 +1596,15 @@ void MainFrame::togglePTT(void) {
     }
     else
     {
+        // Force PTT button colors ASAP to avoid latency after mouse up.
+        m_btnTogPTT->SetBackgroundColour(*wxRED);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(*wxBLACK);
+#endif // !defined(__APPLE__)
+        wxGetApp().Yield(true);
+
         // If PTT input is enabled, suspend further changes until we actually start TX.
         if (wxGetApp().m_pttInSerialPort)
         {
@@ -1313,15 +1612,17 @@ void MainFrame::togglePTT(void) {
         }
         
         // rx-> tx transition, swap to Mic In page to monitor speech
-        wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-        
+
+        // Save currently visible plot so we can go back to it on RX.
+        wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
+
         // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
         // the current page ourselves is a better bet.
         size_t index = 0;
         for (; index < m_auiNbookCtrl->GetPageCount(); index++)
         {
             auto page = m_auiNbookCtrl->GetPage(index);
-            if (page == (wxWindow *)m_panelSpeechIn)
+            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
             {
                 m_auiNbookCtrl->ChangeSelection(index);
                 page->Refresh();
@@ -1338,8 +1639,10 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    auto newTx = m_btnTogPTT->GetValue();
-    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    // Use wasInTx to determine direction: don't let a stray click during the drain
+    // flip newTx and leave the radio keyed with the pipeline in the wrong state.
+    auto newTx = !wasInTx;
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
         wxGetApp().rigPttController->ptt(newTx);
     }
@@ -1355,9 +1658,6 @@ void MainFrame::togglePTT(void) {
     {
         obj->transmit(freedvInterface.getCurrentTxModeStr(), newTx);
     }
-
-    // Change button color depending on TX status.
-    m_btnTogPTT->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
     
     // If we're recording, switch to/from modulator and radio.
     if (g_sfRecFile != nullptr)
@@ -1399,7 +1699,20 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx.store(true, std::memory_order_release);
-                
+
+        // Start Time-Out Timer if enabled.
+        if (wxGetApp().appConfiguration.rigControlConfiguration.totTimerEnabled &&
+            wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs > 0)
+        {
+            int totMs = wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs * 1000;
+            log_info("Starting Time-Out Timer (%d seconds)", wxGetApp().appConfiguration.rigControlConfiguration.totTimerSecs.get());
+            m_totTimer.Start(totMs, wxTIMER_ONE_SHOT);
+
+            m_totTxStartTime = std::chrono::high_resolution_clock::now();
+            m_totCurrentDurationMs = totMs;
+            m_totWarningTimer.Start(500, wxTIMER_CONTINUOUS);
+        }
+
         if (wxGetApp().m_pttInSerialPort)
         {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
@@ -1412,7 +1725,13 @@ void MainFrame::togglePTT(void) {
     // here (similar to what's already done for ending TX while
     // using the voice keyer).
     m_btnTogPTT->SetValue(newTx);
+    m_btnTogPTT->SetLabel(_("&XMIT"));
     m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+#if !defined(__APPLE__)
+    // macOS limitations prevent the foreground color of toggle buttons from being 
+    // reliably set, so don't mess with it in the first place.
+    m_btnTogPTT->SetForegroundColour(m_btnTogPTT->GetValue() ? *wxBLACK : wxNullColour);
+#endif // !defined(__APPLE__)
     
     // The Report Frequency drop-down should not be modifiable during TX.
     // Additionally, tuning during normal TX is verboten.
@@ -1436,7 +1755,25 @@ void MainFrame::togglePTT(void) {
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 
-    CallAfter([&]() { m_sliderMicSpkrLevel->Refresh(); }); // Redraw doesn't happen immediately otherwise in some environments
+    CallAfter([&]() {
+        txChangeoverOccurring_ = false;
+        m_sliderMicSpkrLevel->Refresh(); // Redraw doesn't happen immediately otherwise in some environments
+    });
+
+    if (newTx && m_momentaryKeyReleasedDuringChangeover_)
+    {
+        // The momentary PTT key was released while this start was still in
+        // progress (see the wxEVT_KEY_UP handler in FilterEvent). Queued
+        // after the CallAfter() above so it runs once txChangeoverOccurring_
+        // has cleared, rather than no-opping against it.
+        m_momentaryKeyReleasedDuringChangeover_ = false;
+        log_info("Momentary PTT key was released while TX was starting -- stopping now");
+        CallAfter([this]() {
+            m_btnTogPTT->SetValue(false);
+            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            togglePTT();
+        });
+    }
 }
 
 void MainFrame::OnTogBtnTune(wxCommandEvent&)
@@ -1481,28 +1818,9 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    bool is60MeterBand = 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
-    
     bool useAnalog = 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
-    HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
-    
-    HamlibRigController::Mode newMode;
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
-        !is60MeterBand)
-    {
-        newMode = lsbMode;
-    }
-    else
-    {
-        newMode = usbMode;
-    }
-
-    return newMode;
+    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
 }
 
 //-------------------------------------------------------------------------
@@ -1667,8 +1985,15 @@ void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
         m_lastReportedCallsignListView->Select(index, false);
         index = m_lastReportedCallsignListView->GetFirstSelected();
     }
-    m_cboLastReportedCallsigns->SetText("");
-    m_BtnCallSignReset->SetFocus();
+    // Deselect only -- leave the displayed callsign text alone, consistent
+    // with how the FreeDV Reporter list's right-click-to-deselect behaves.
+    // See OnCloseCallsignList() for why this is deferred and followed by a
+    // forced repaint.
+    CallAfter([this]() {
+        m_BtnCallSignReset->SetFocus();
+        m_cboLastReportedCallsigns->Refresh();
+        m_cboLastReportedCallsigns->Update();
+    });
 }
 
 void MainFrame::OnOpenCallsignList( wxCommandEvent& event )
@@ -1684,7 +2009,20 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
     {
         // Make sure we're not selected if no callsigns selected.
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
-        m_BtnCallSignReset->SetFocus();
+
+        // Deferred via CallAfter so it runs once the popup's own dismissal
+        // processing has fully finished.
+        CallAfter([this]() {
+            m_BtnCallSignReset->SetFocus();
+
+            // The popup window overlaps the combo's own value area while
+            // open; on dismiss GTK doesn't always damage/repaint that
+            // region, so the combo can be left showing its stale
+            // "focused/selected" look from before the popup covered it.
+            // Force a fresh, synchronous repaint.
+            m_cboLastReportedCallsigns->Refresh();
+            m_cboLastReportedCallsigns->Update();
+        });
     }
     event.Skip();
 }
@@ -1775,7 +2113,9 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
     }
 
     if (freqStr != oldFreqString)
-    {      
+    {
+        log_info("Request frequency change to %" PRIu64 " Hz", wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get());
+
         // Report current frequency to reporters
         for (auto& ptr : wxGetApp().m_reporters)
         {
@@ -1835,34 +2175,17 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 
 void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
-    // Works around issues on wxWidgets with certain controls not changing backgrounds
+    // Works around issues on wxWidgets with certain controls not changing colors
     // when the user switches between light and dark mode.
-    TopFrame::OnSystemColorChanged(event);
-}
-
-void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
-{
-#if 0
-    if (m_rbRADE->GetValue())
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
     {
-        auto newSelection = event.GetSelection();
-        auto page = m_auiNbookCtrl->GetPage(newSelection);
-        
-        // Prevent selection of tabs not yet supported by RADE.
-        if (page == m_panelScatter || 
-            page == m_panelTimeOffset || 
-            page == m_panelFreqOffset || 
-            page == m_panelTestFrameErrors ||
-            page == m_panelTestFrameErrorsHist)
-        {
-            log_info("Veto attempt at viewing tab %d not supported by RADE", newSelection);
-            event.Veto();
-            return;
-        }
+        m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     }
-#endif
-    
-    TopFrame::OnNotebookPageChanging(event);
+    else
+    {
+        m_cboReportFrequency->SetForegroundColour(*wxRED);
+    }
+    TopFrame::OnSystemColorChanged(event);
 }
 
 void MainFrame::OnCenterRx(wxCommandEvent&)
@@ -2026,7 +2349,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     }
 
     // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
-    wxFileName fn(path);        
+    wxFileName fn(path);
     wxGetApp().customConfigFileName = fn.GetFullName();
 
     SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
@@ -2038,4 +2361,47 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
 #endif // defined(UNOFFICIAL_RELEASE)
     setConfiguration_(importConfig);
+
+    // Remember this file so it is automatically restored on the next startup.
+    saveLastUsedConfigPath(path);
+}
+
+void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
+}
+
+void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    wxMessageDialog messageDialog(
+        this, _("This will load the default FreeDV configuration. Are you sure?"),
+        _("Load Default Configuration"),
+        wxYES_NO | wxICON_QUESTION | wxCENTRE);
+
+    if (messageDialog.ShowModal() != wxID_YES)
+        return;
+
+    // Create a platform-appropriate default config:
+    // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
+    // uses the default file location (wxFileConfig).  This becomes the
+    // active pConfig going forward — no need to restore the old one.
+    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    
+    setConfiguration_(defaultConfig);
+
+    // Remove the last-used config path so startup reverts to the default next time.
+    clearLastUsedConfigPath();
+
+    // Clear any custom config file indicator from the title bar.
+    wxGetApp().customConfigFileName = wxEmptyString;
+    SetTitle(_("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()));
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate(wxInvalidDateTime);
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
+#endif // defined(UNOFFICIAL_RELEASE)
 }

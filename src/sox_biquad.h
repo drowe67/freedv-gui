@@ -22,7 +22,7 @@
 #ifndef __SOX_BIQUAD__
 #define __SOX_BIQUAD__
 
-#include "util/sanitizers.h"
+#include "freedv_sanitizers.h"
 
 #ifdef __cplusplus
 extern "C" {

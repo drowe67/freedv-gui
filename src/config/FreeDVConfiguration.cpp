@@ -48,6 +48,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowWidth("/Windows/FreeDVReporter/width", -1)
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
+    , msgEditDialogWidth("/Windows/FreeDVReporter/msgEditDialogWidth", -1)
     , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", 5) /* FREQUENCY_COL */
     , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
@@ -70,7 +71,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
         
     , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
-        
+    , pttKeyCode("/Rig/PttKeyCode", WXK_SPACE)
+    , pttMomentaryMode("/Rig/PttMomentaryMode", false)
+
     , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", _(""))
     , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
     , voiceKeyerRxPause("/VoiceKeyer/RxPause", 10)
@@ -116,6 +119,7 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , showDecodeStats("/Debug/showDecodeStats", false)
     , enableLegacyModes("/Modem/enableLegacyModes", false)
+    , autoStartOnLaunch("/Modem/autoStartOnLaunch", false)
 {
     // empty
 }
@@ -144,6 +148,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reporterWindowWidth);
     load_(config, reporterWindowHeight);
     load_(config, reporterWindowVisible);
+    load_(config, msgEditDialogWidth);
     load_(config, reporterWindowCurrentSort);
     load_(config, reporterWindowCurrentSortDirection);
     
@@ -160,7 +165,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, playFileFromRadioPath);
     
     load_(config, enableSpaceBarForPTT);
-    
+    load_(config, pttKeyCode);
+    load_(config, pttMomentaryMode);
+
     load_(config, voiceKeyerWaveFilePath);
     load_(config, voiceKeyerWaveFile);
     
@@ -244,6 +251,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, showDecodeStats);
     load_(config, enableLegacyModes);
+    load_(config, autoStartOnLaunch);
 
     load_(config, txAttenByBand);
     load_(config, tuneAttenByBand);
@@ -273,6 +281,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reporterWindowWidth);
     save_(config, reporterWindowHeight);
     save_(config, reporterWindowVisible);
+    save_(config, msgEditDialogWidth);
     save_(config, reporterWindowCurrentSort);
     save_(config, reporterWindowCurrentSortDirection);
     
@@ -289,7 +298,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, playFileFromRadioPath);
     
     save_(config, enableSpaceBarForPTT);
-    
+    save_(config, pttKeyCode);
+    save_(config, pttMomentaryMode);
+
     save_(config, voiceKeyerWaveFilePath);
     save_(config, voiceKeyerWaveFile);
     save_(config, voiceKeyerRxPause);
@@ -335,6 +346,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, showDecodeStats);
     save_(config, enableLegacyModes);
+    save_(config, autoStartOnLaunch);
 
     save_(config, txAttenByBand);
     save_(config, tuneAttenByBand);

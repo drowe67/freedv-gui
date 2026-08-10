@@ -12,7 +12,6 @@ concurrency:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
-  TORCH_RELEASE: 2.9.1
 
   # Needed to suppress possible cause of test errors.
   # See https://github.com/alexmurray/emacs-snap/issues/60
@@ -32,7 +31,7 @@ jobs:
       run: |
            sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb at-spi2-core libebur128-dev libwxgtk3.2-dev python3-numpy python3-numpy-dev python3-dev libssl-dev
 
     - name: Spellcheck codebase
       shell: bash
@@ -49,8 +48,8 @@ jobs:
         mkdir build_linux
         cd build_linux
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
-        # Partially build so we have all required .h and .c/.cpp files
-        make -j$(nproc) build_rade build_codec2 build_rnnoise
+        # Build so we have all required .h and .c/.cpp files
+        make -j$(nproc)
 
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_linux
@@ -67,7 +66,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04-arm, ubuntu-22.04]
-        target: [all, freedv-ka9q, freedv-flex]
 
     runs-on: ${{ matrix.os }}
 
@@ -122,6 +120,13 @@ jobs:
            sudo apt-get install libpulse-dev sox git libasound2-dev libao-dev libgsm1-dev xvfb pulseaudio pulseaudio-utils metacity at-spi2-core libdbus-1-dev libgtk-3-dev python3 python3-dev python3-venv libebur128-dev pkg-config
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
@@ -131,17 +136,12 @@ jobs:
       run: |
           python3 -m venv rade-venv
           . ./rade-venv/bin/activate
-          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
-
-    - name: Set up Docker Buildx
-      if: ${{ matrix.target == 'freedv-flex' }}
-      uses: docker/setup-buildx-action@v4
 
     - name: Build instrumented freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
@@ -149,7 +149,6 @@ jobs:
     - name: Generate optimization profile
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
@@ -170,22 +169,10 @@ jobs:
     - name: Build PGO optimized freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.target == 'all' }}
       run: |
           . ./rade-venv/bin/activate
           rm -rf build_linux
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
-
-    - name: Build target
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: ${{ matrix.target != 'all' }}
-      run: |
-          . ./rade-venv/bin/activate
-          mkdir build_linux
-          cd build_linux
-          CC=clang-21 CXX=clang++-21 cmake -DENABLE_LTO=1 -DSTATIC_LIBGCC=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_NATIVE_AUDIO=1 .. 
-          make -j$(nproc) ${{ matrix.target }}
 
     - name: Initialize GPG keys
       if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
@@ -203,18 +190,18 @@ jobs:
         gpg --import tmp_private.pem
 
     - name: Build AppImage (unsigned)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY == '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
-          ./make-appimage.sh ${{ matrix.target }}
+          ./make-appimage.sh
 
     - name: Build AppImage (signed)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID != '' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
-          LDAI_SIGN=1 LDAI_SIGN_KEY="${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}" ./make-appimage.sh ${{ matrix.target }}
+          LDAI_SIGN=1 LDAI_SIGN_KEY="${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}" ./make-appimage.sh
 
     - name: Calculate AppImage filename
       shell: bash
@@ -223,37 +210,11 @@ jobs:
       run: |
           echo "APPIMAGE_FILENAME=$(echo -n FreeDV*.AppImage)" >> "$GITHUB_OUTPUT"
 
-    - name: Generate waveform file
-      shell: bash
-      working-directory: ${{github.workspace}}/src/integrations/flex
-      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
-      run: |
-        cp ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }} FreeDV-FlexRadio.AppImage
-        ./FreeDV-FlexRadio.AppImage --appimage-extract
-        ls -lR squashfs-root
-        export FREEDV_VERSION=`cat ${{github.workspace}}/build_linux/freedv-version.txt`
-        docker buildx build --label com.flexradio.waveform.version=$FREEDV_VERSION --output type=oci,compression=gzip,dest=freedv-waveform-${FREEDV_VERSION}.tar.gz --tag=freedv-waveform .
-
-    - name: Calculate waveform filename
-      shell: bash
-      id: flex-waveform-filename
-      working-directory: ${{github.workspace}}/src/integrations/flex
-      run: |
-          echo "FLEX_WAVEFORM_FILENAME=$(echo -n freedv-waveform*.tar.gz)" >> "$GITHUB_OUTPUT"
-
     - name: Upload AppImage
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
-        archive: false
-
-    - name: Upload waveform file
-      uses: actions/upload-artifact@v7
-      if: ${{ matrix.target == 'freedv-flex' && matrix.os == 'ubuntu-22.04-arm' }}
-      with:
-        name: ${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
-        path: ${{github.workspace}}/src/integrations/flex/${{ steps.flex-waveform-filename.outputs.FLEX_WAVEFORM_FILENAME }}
         archive: false
 
   test-appimage-fedora:
@@ -379,6 +340,13 @@ jobs:
       run: |
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo apt-get install pulseaudio pulseaudio-utils metacity
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
@@ -394,7 +362,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Sanity check RADE
@@ -547,6 +515,13 @@ jobs:
       run: |
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo apt-get install libwxgtk3.0-gtk3-dev pulseaudio 
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
@@ -568,7 +543,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          pip3 install torch==${{ env.TORCH_RELEASE }} --index-url https://download.pytorch.org/whl/cpu
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           pip3 install matplotlib
 
     - name: Build freedv-gui 
@@ -607,9 +582,10 @@ jobs:
               export MAX_EXECUTION_TIMES=2
           else
               export MAX_EXECUTION_TIMES=1
-          fi 
+          fi
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
+          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
     - name: Execute unit tests
@@ -635,9 +611,10 @@ jobs:
               export MAX_EXECUTION_TIMES=2
           else
               export MAX_EXECUTION_TIMES=1
-          fi 
+          fi
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
+          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
 
 

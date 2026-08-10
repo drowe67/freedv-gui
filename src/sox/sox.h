@@ -24,7 +24,7 @@ LSX_ and lsx_ symbols should not be used by libSoX-based applications.
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../util/sanitizers.h"
+#include "freedv_sanitizers.h"
 
 #if defined(__cplusplus)
 extern "C" {

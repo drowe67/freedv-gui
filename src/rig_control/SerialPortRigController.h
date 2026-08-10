@@ -27,7 +27,7 @@
 #include <vector>
 #include <mutex>
 
-#include "util/ThreadedObject.h"
+#include "ThreadedObject.h"
 #include "IRigController.h"
 
 #ifdef _WIN32

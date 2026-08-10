@@ -30,7 +30,10 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         
         // Switch back to previous tab once done with recording
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        if (wxGetApp().appConfiguration.currentNotebookTab >= 0)
+        {
+            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+        }
     }
     else
     {
@@ -124,8 +127,22 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     vkFileName_ = soundFile;
     
     // Switch tab to "From Mic" during recording.
-    wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-    m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+    // Save currently visible plot so we can go back to it on completion.
+    wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
+
+    // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+    // the current page ourselves is a better bet.
+    size_t index = 0;
+    for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+    {
+        auto page = m_auiNbookCtrl->GetPage(index);
+        if (page == (wxWindow *)m_panelSpeechIn)
+        {
+            m_auiNbookCtrl->ChangeSelection(index);
+            page->Refresh();
+            break;
+        }
+    }
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);
@@ -143,7 +160,13 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
         wxT("Select Voice Keyer File"),
         wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
+#if !defined(SNDFILE_NO_MP3_SUPPORT)
+        wxT("Sound files (*.wav;*.mp3)|*.wav;*.mp3|")
         wxT("WAV files (*.wav)|*.wav|")
+        wxT("MP3 files (*.mp3)|*.mp3|")
+#else
+        wxT("WAV files (*.wav)|*.wav|")
+#endif // !defined(SNDFILE_NO_MP3_SUPPORT)
         wxT("All files (*.*)|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
         );
@@ -185,11 +208,10 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
     bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
     chooseVKFileMenuItem_->Enable(vk_state == VK_IDLE);
     recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
-    
+
     // Trigger right-click menu popup in a location that will prevent it from
     // ending up off the screen.
-    auto sz = m_togBtnVoiceKeyer->GetSize();
-    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
@@ -309,8 +331,13 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         // to Mic In
 
         if (vk_event == VK_SPACE_BAR) {
-            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+            // macOS limitations prevent the foreground color of toggle buttons from being 
+            // reliably set, so don't mess with it in the first place.
+            m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
             endingTx.store(true, std::memory_order_release);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
@@ -321,8 +348,13 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         }
 
         if (vk_event == VK_PLAY_FINISHED) {
-            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetValue(false);
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+            // macOS limitations prevent the foreground color of toggle buttons from being 
+            // reliably set, so don't mess with it in the first place.
+            m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
             endingTx.store(true, std::memory_order_release);
             CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
@@ -404,8 +436,13 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     default:
         // catch anything we missed
 
-        m_btnTogPTT->SetValue(false); 
+        m_btnTogPTT->SetValue(false);
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+#if !defined(__APPLE__)
+        // macOS limitations prevent the foreground color of toggle buttons from being 
+        // reliably set, so don't mess with it in the first place.
+        m_btnTogPTT->SetForegroundColour(wxNullColour);
+#endif // !defined(__APPLE__)
         endingTx.store(true, std::memory_order_release);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);

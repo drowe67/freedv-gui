@@ -85,6 +85,11 @@ else
 fi
 RECORD_PID=$!
 
+# Make sure prerequisites are available
+if [ ! -d $(pwd)/rade_src ]; then
+    git clone https://github.com/drowe67/radae $(pwd)/rade_src
+fi
+
 # Start "radio"
 if [ "$2" == "mpp" ]; then
     TIMES_BEFORE_KILL=6
@@ -100,7 +105,7 @@ if [ "$2" == "mpp" ]; then
 else
     TX_ARGS="-txtime 1 -txattempts 2 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS >tmp.log 2>&1 &
+($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/mooneer.wav $TX_ARGS 2>&1 | tee tmp.log) &
 
 FDV_PID=$!
 
@@ -114,7 +119,7 @@ FDV_PID=$!
 #pw-top -b -n 5
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
-cat tmp.log
+#cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
@@ -132,7 +137,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
         mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
     fi
 
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
+    ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav 2>&1 | tee tmp.log) &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
@@ -140,7 +145,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     #fi
     wait $FDV_PID
     FREEDV_EXIT_CODE=$?
-    cat tmp.log
+    #cat tmp.log
 fi
 
 # Clean up PulseAudio virtual devices

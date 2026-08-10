@@ -93,6 +93,7 @@ function Test-FreeDV {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     [void]$process.Start()
+    $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal
 
     # Read output from process
     $err_output = $process.StandardError.ReadToEnd();

@@ -49,6 +49,7 @@ public:
     ConfigurationDataElement<bool> freedvReporterEnabled;
     ConfigurationDataElement<bool> freedvReporterForcedOff;
     ConfigurationDataElement<wxString> freedvReporterHostname;
+    ConfigurationDataElement<bool> freedvReporterUseTls;
     ConfigurationDataElement<int> freedvReporterBandFilter;
     ConfigurationDataElement<bool> useMetricDistances;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFrequency;
@@ -70,7 +71,11 @@ public:
     ConfigurationDataElement<bool> udpReportingEnabled;
     ConfigurationDataElement<wxString> udpReportingHostname;
     ConfigurationDataElement<int> udpReportingPort;
-    
+
+    ConfigurationDataElement<bool> udpBroadcastEnabled;
+    ConfigurationDataElement<wxString> udpBroadcastAddress;
+    ConfigurationDataElement<int> udpBroadcastPort;
+
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;

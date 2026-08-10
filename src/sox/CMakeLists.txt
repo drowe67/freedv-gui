@@ -19,3 +19,5 @@ add_library(fdv_sox STATIC
     vol.c
     xmalloc.h
     xmalloc.c)
+
+target_link_libraries(fdv_sox PRIVATE fdv_util)
