@@ -163,6 +163,7 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.os }}
         max-size: "5G"
+        create-symlink: true
 
     - name: Install needed packages
       run: |
@@ -222,6 +223,7 @@ jobs:
       with:
         key: ${{ github.job }}
         max-size: "5G"
+        create-symlink: true
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
