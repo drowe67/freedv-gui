@@ -193,7 +193,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 CC="ccache cc" CXX="ccache c++" OBJCXX="ccache cc" ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 USE_CCACHE=1 ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash
@@ -269,7 +269,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release CC="ccache cc" CXX="ccache c++" OBJCXX="ccache cc" UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata ./build_osx.sh 
+          BUILD_TYPE=Release USE_CCACHE=1 UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata ./build_osx.sh 
 
     - name: Build freedv-gui (signed)
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
@@ -277,7 +277,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
-          BUILD_TYPE=Release UT_ENABLE=0 CC="ccache cc" CXX="ccache c++" OBJCXX="ccache cc" UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 USE_CCACHE=1 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata CODESIGN_IDENTITY=${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }} CODESIGN_KEYCHAIN_PROFILE=${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }} ./build_osx.sh
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
