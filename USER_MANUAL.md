@@ -1,4 +1,3 @@
-
 # Introduction
 
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
