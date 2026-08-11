@@ -32,7 +32,8 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
-        max-size: "2G"
+        max-size: "5G"
+        verbose: 2
 
     - name: Install required packages
       shell: bash
@@ -245,7 +246,8 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
-        max-size: "2G"
+        max-size: "5G"
+        verbose: 2
 
     - name: Download profile data
       uses: actions/download-artifact@v8
