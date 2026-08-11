@@ -239,7 +239,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         // size() == NUM_COLS looks fine, but the content is still wrong, so
         // that column can never be created and any lookup for it later
         // asserts/crashes.
-        auto order = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder.operator->();
+        auto& order = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder;
         std::set<int> presentIndices;
         auto iter = order->begin();
         while (iter != order->end())
