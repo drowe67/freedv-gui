@@ -972,6 +972,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix heard-stations callsign combo stuck-highlight, right-click behaviour, and a stale-index crash (PR #1448) - thanks @barjac!
     * Fix crash and long hang on main window close with an unresponsive rig (PR #1452) - thanks @barjac!
     * Fix Radio Frequency coloring on dark/light mode transition. (PR #1453)
+    * Fix FreeDV Reporter column-order corruption and Last TX column width. (PR #1458) - thanks @barjac!
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
