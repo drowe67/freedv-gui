@@ -163,7 +163,7 @@ jobs:
     # enough on both platforms to avoid inadvertent matches.
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
-      if: ${{ matrix.os == "macos-26-intel" }}
+      if: ${{ matrix.os == 'macos-26-intel' }}
       with:
         key: ${{ github.job }}-x86_64
         max-size: "5G"
@@ -171,7 +171,7 @@ jobs:
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
-      if: ${{ matrix.os == "macos-26" }}
+      if: ${{ matrix.os == 'macos-26' }}
       with:
         key: ${{ github.job }}-aarch64
         max-size: "5G"
