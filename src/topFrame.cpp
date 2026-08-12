@@ -425,15 +425,6 @@ namespace {
     // Every currently-live TintedGroupBox, so a tint change from Options can
     // be re-applied immediately rather than only on next restart.
     std::vector<TintedGroupBox*> s_tintedGroupBoxes;
-
-#if !defined(__WXGTK__) || !defined(HAS_GTK3)
-    // Fallback-only (non-GTK3 builds -- see GetGroupBoxBaseColour() below):
-    // real (1x1, otherwise untouched) child of the main frame, so at least
-    // a live *widget* is consulted rather than only wxSystemSettings.
-    // Created in TopFrame's constructor, before any TintedGroupBox/
-    // PlotPanel exists to need it.
-    wxWindow* s_colourReferenceWindow = nullptr;
-#endif
 }
 
 wxColour GetGroupBoxBaseColour()
@@ -499,10 +490,6 @@ wxColour GetGroupBoxBaseColour()
     }
     return preferDark ? wxColour(20, 22, 24) : wxColour(255, 255, 255);
 #else
-    if (s_colourReferenceWindow != nullptr)
-    {
-        return s_colourReferenceWindow->GetBackgroundColour();
-    }
     return wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
 #endif
 }
@@ -644,14 +631,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
 
-#if !defined(__WXGTK__) || !defined(HAS_GTK3)
-    // See s_colourReferenceWindow's declaration above for why this exists.
-    // GTK3 builds don't need it (GetGroupBoxBaseColour() reads GTK settings
-    // directly there) -- skipped entirely on them, since an extra untracked
-    // child sitting directly on the frame outside any sizer turned out to
-    // interfere with the frame's own resize/layout propagation.
-    s_colourReferenceWindow = new wxWindow(this, wxID_ANY, wxPoint(0, 0), wxSize(1, 1));
-#endif
 
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic
