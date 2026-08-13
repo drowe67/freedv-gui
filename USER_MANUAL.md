@@ -992,6 +992,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Require C++20 to build FreeDV. (PR #1440)
     * Enable LTO/PGO for macOS .app build. (PR #1456)
     * Enable PGO for Windows builds. (PR #1457)
+    * Add support for CCache. (PR #1328)
 4. Other:
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
     * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)
