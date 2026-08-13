@@ -1078,6 +1078,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     rightSizer->Add(controlBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
+    // Radio Freq.'s only content is a 150px-min combo box, so it's the
+    // narrowest natural width of this column's boxes -- wxWrapSizer's
+    // per-item wxEXPAND is meant to stretch it to match its widest sibling,
+    // but that's not reliable on all platforms/widget styles (seen narrower
+    // than the rest of the column on MSW, where the native combo box is more
+    // compact than GTK/Cocoa's). Pin it explicitly instead of relying on the
+    // sizer to stretch it.
+    int freqColumnWidth = std::max({m_txLevelBox->GetBestSize().x,
+                                     micSpeakerBox->GetBestSize().x,
+                                     controlBox->GetBestSize().x});
+    m_freqBox->SetMinSize(wxSize(freqColumnWidth, -1));
+
     bSizer1->Add(rightSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
 
     // Playback/recording status: a tinted info bar spanning the full window
