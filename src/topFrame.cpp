@@ -823,7 +823,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxString syncBoxToolTip = _("Shows the current FreeDV mode. Green indicates the modem is synchronised with the received signal; red indicates no sync.");
     syncBox->SetToolTip(syncBoxToolTip);
 
-    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     syncBox->GetContentSizer()->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
     m_textSync->SetToolTip(syncBoxToolTip);
