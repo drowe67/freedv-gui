@@ -2437,8 +2437,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (updated)
         {
             // Peak Reading meter: updates peaks immediately, then slowly decays
-            int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
-            m_gaugeLevel->SetValue(maxScaled);
+            int maxScaled = m_maxLevel == 0 ? -90 : 20 * std::log10((float)m_maxLevel/32767.0); // log(0) is undefined
+            m_gaugeLevel->SetValue(maxScaled + 90); // 1/32767 -> -90dB
             if (((float)maxScaled/100) > tooHighThresh)
                 m_textLevel->SetLabel(TOO_HIGH_LABEL);
             else
