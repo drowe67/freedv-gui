@@ -1240,7 +1240,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SYNC_UNK_LABEL("Sync: unk"),
     VAR_UNK_LABEL("Var: unk"),
     CLK_OFF_UNK_LABEL("ClkOff: unk"),
-    TOO_HIGH_LABEL("Clip"),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
@@ -2392,7 +2391,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
-        float tooHighThresh;
         if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
@@ -2406,7 +2404,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (maxDemodIn > m_maxLevel)
                 m_maxLevel = maxDemodIn;
 
-            tooHighThresh = FROM_RADIO_MAX;
             updated = true;
         }
         else if (timerId == ID_TIMER_SPEECH_IN)
@@ -2423,7 +2420,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (maxSpeechIn > m_maxLevel)
                 m_maxLevel = maxSpeechIn;
 
-           tooHighThresh = FROM_MIC_MAX;
            updated = true;
         }
 
@@ -2432,11 +2428,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // Peak Reading meter: updates peaks immediately, then slowly decays
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
-            if (((float)maxScaled/100) > tooHighThresh)
-                m_textLevel->SetLabel(TOO_HIGH_LABEL);
-            else
-                m_textLevel->SetLabel(EMPTY_STR);
-
             m_maxLevel *= LEVEL_BETA;
         }
     }
@@ -2744,7 +2735,6 @@ void MainFrame::performFreeDVOn_()
     m_maxLevel = 0;
     executeOnUiThreadAndWait_([&]() 
     {
-        m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
         
         if (wxGetApp().logger != nullptr)
