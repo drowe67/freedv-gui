@@ -1465,9 +1465,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 }
 
 // Applies the persisted group box tint colour/strength and re-colours every
-// currently-live tinted window (group boxes, the playback status info bar,
-// and the AUI notebook's plot pages) so a change made in Options takes
-// effect immediately instead of requiring a restart.
+// currently-live tinted window (group boxes -- which now includes the
+// playback status info bar's own box -- and the AUI notebook's plot pages)
+// so a change made in Options takes effect immediately instead of requiring
+// a restart.
 void MainFrame::applyGroupBoxTint_()
 {
     wxColour tintColour(wxGetApp().appConfiguration.groupBoxTintColor);
@@ -1477,9 +1478,6 @@ void MainFrame::applyGroupBoxTint_()
 
     wxColour bg = GroupBoxBackgroundColour();
     wxColour rawBase = GetGroupBoxBaseColour();
-
-    m_infoBar->SetBackgroundColour(bg);
-    m_infoBar->Refresh();
 
     for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
     {

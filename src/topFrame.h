@@ -45,7 +45,6 @@
 #include <wx/slider.h>
 #include <wx/checkbox.h>
 #include <wx/frame.h>
-#include <wx/infobar.h>
 #include <wx/statbmp.h>
 #include <wx/stattext.h>
 #include <wx/button.h>
@@ -188,13 +187,12 @@ class TopFrame : public wxFrame
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
-        // Explicitly wxInfoBarGeneric (not the wxInfoBar macro, which resolves
-        // to a native GtkInfoBar-backed class on GTK) so that SetBackgroundColour
-        // below reliably tints it the same way as TintedGroupBox, rather than
-        // being overridden by the native widget's own GTK theme/CSS.
-        wxInfoBarGeneric* m_infoBar;
-        int m_lastInfoBarHeight = 0;
-        bool m_playbackStatusVisible = false;
+        // Playback/recording status message. Plain wxStaticText rather than
+        // wxInfoBar -- it's kept permanently visible in a fixed-size row
+        // shared with the station box (see TopFrame's constructor), and
+        // wxInfoBar has no way to suppress its built-in close button, which
+        // makes no sense on a bar that's never dismissed.
+        wxStaticText* m_infoBar;
 
         TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;

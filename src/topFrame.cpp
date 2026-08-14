@@ -923,39 +923,72 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     // lower middle used for user ID
 
-    TintedGroupBox* stationBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
-
-    wxBoxSizer* modeStatusSizer;
-    modeStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtModeStatus = new wxStaticText(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    // Mode/sideband indicator ("USB" etc.) gets its own box now, separate
+    // from the station box below -- see its placement (left of the status
+    // box) further down, alongside statusBox's construction.
+    TintedGroupBox* modeBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+    wxBoxSizer* modeStatusSizer = new wxBoxSizer(wxVERTICAL);
+    m_txtModeStatus = new wxStaticText(modeBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
     m_txtModeStatus->SetMinSize(wxSize(80,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
-    stationBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
+    modeBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
+
+    TintedGroupBox* stationBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+
+    // Bold "Heard:" label, matching statusBox's "Status:" label further down.
+    wxStaticText* stationBoxLabel = new wxStaticText(stationBox, wxID_ANY, _("Heard:"));
+    wxFont stationBoxLabelFont = stationBoxLabel->GetFont();
+    stationBoxLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    stationBoxLabel->SetFont(stationBoxLabelFont);
+    stationBox->GetContentSizer()->Add(stationBoxLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
 
     wxBoxSizer* bSizer15;
     bSizer15 = new wxBoxSizer(wxVERTICAL);
     m_txtCtrlCallSign = new wxTextCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
-    m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
+    // Wide enough for a callsign plus a suffix (e.g. "VK3ABC/QRP", "M7XYZ/MM"),
+    // not just a bare callsign.
+    m_txtCtrlCallSign->SetSizeHints(wxSize(150,-1));
 
     m_cboLastReportedCallsigns = new wxComboCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
     m_lastReportedCallsignListView = new wxListViewComboPopup(m_cboLastReportedCallsigns);
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
-    m_cboLastReportedCallsigns->SetSizeHints(wxSize(400,-1));
+    // Same reasoning as m_txtCtrlCallSign's SetSizeHints() above -- this is
+    // the *collapsed* control's own width (it only ever shows one selected
+    // callsign), separate from the dropdown's own width set below.
+    m_cboLastReportedCallsigns->SetSizeHints(wxSize(150,-1));
     m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
+    // The dropdown's four columns (100+75+175+50 = 400px) need far more
+    // room than the collapsed control itself ever does -- it only ever
+    // displays a single selected callsign. SetPopupMinWidth() sizes the
+    // *popup* independently of the anchor control's own width (extending
+    // left of it if needed) rather than forcing the whole combo, and with
+    // it the station box and this whole row, to stay artificially wide
+    // just so a dropdown that's rarely open has room.
+    m_cboLastReportedCallsigns->SetPopupMinWidth(420);
 
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 100);
     m_lastReportedCallsignListView->InsertColumn(1, wxT("Frequency"), wxLIST_FORMAT_RIGHT, 75);
     m_lastReportedCallsignListView->InsertColumn(2, wxT("Date/Time"), wxLIST_FORMAT_LEFT, 175);
     m_lastReportedCallsignListView->InsertColumn(3, wxT("SNR"), wxLIST_FORMAT_RIGHT, 50);
 
-    bSizer15->Add(m_txtCtrlCallSign, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
-    bSizer15->Add(m_cboLastReportedCallsigns, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
+    bSizer15->Add(m_txtCtrlCallSign, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
+    bSizer15->Add(m_cboLastReportedCallsigns, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
 
     stationBox->GetContentSizer()->Add(bSizer15, 1, static_cast<int>(wxEXPAND), 5);
-    stationBox->SetMinSize(wxSize(375,-1));
-    centerSizer->Add(stationBox, 0, static_cast<int>(wxEXPAND), 2);
+    // No explicit SetMinSize() here (there used to be one pinning this to
+    // 375px) -- an explicit width overrides GetBestSize() entirely rather
+    // than acting as a floor under it, and 375 is narrower than what the
+    // last-reported-callsigns combo actually needs (SetSizeHints(400,-1)
+    // below, plus its own padding), which cropped the combo's dropdown once
+    // stationBox stopped always being stretched wider than its minimum (see
+    // its new placement below). Let it size from its content instead.
+
+    // stationBox itself is added below, alongside the playback/recording
+    // info bar, in a full-width row below the left/center/right columns
+    // (see near the end of this constructor) rather than here in the
+    // center column.
     centerSizer->SetMinSize(wxSize(375,375));
     bSizer1->Add(centerSizer, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
     
@@ -1092,26 +1125,69 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     bSizer1->Add(rightSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
 
-    // Playback/recording status: a tinted info bar spanning the full window
-    // width, in place of the old native status bar. It occupies zero height
-    // until ShowPlaybackStatus() gives it a message, then slides back down
-    // to zero when dismissed, rather than permanently reserving a blank line.
+    // Playback/recording status, sharing one permanent full-width row (below
+    // the left/center/right columns) with the station box (mode/callsign)
+    // rather than its own full-width row that used to grow/shrink the whole
+    // frame on every show/dismiss -- that dynamic resize (see
+    // ShowPlaybackStatus()) proved fragile, tipping the left column's
+    // wrap-sizer into an extra column or corrupting the AUI side-by-side
+    // plot panes' proportions, neither of which reliably reverted
+    // afterwards. Never resizes the frame at all now, at any point -- only
+    // the sizer proportions below change.
+    // TintedGroupBox (empty title, like stationBox below) rather than plain
+    // widgets parented directly to m_panel -- a TintedGroupBox's tinted
+    // background fills its whole allocated rectangle, whereas individually
+    // tinting bare child widgets only colours tightly around their own text,
+    // leaving the untinted panel background showing through the padding
+    // around them and making the row look broken up rather than one
+    // continuous "box" like every other group box in the window.
+    TintedGroupBox* statusBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+
+    // Bold "Status:" label, styled like a TintedGroupBox's own title, so
+    // this row's left portion reads as a labelled field rather than
+    // unexplained blank space while it's empty (which is most of the time).
+    wxStaticText* infoBarLabel = new wxStaticText(statusBox, wxID_ANY, _("Status:"));
+    wxFont infoBarLabelFont = infoBarLabel->GetFont();
+    infoBarLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    infoBarLabel->SetFont(infoBarLabelFont);
+    statusBox->GetContentSizer()->Add(infoBarLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
+
+    m_infoBar = new wxStaticText(statusBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    // No wxEXPAND here -- in a horizontal sizer, proportion alone already
+    // grows the item to fill the available *width* (the main axis);
+    // wxEXPAND additionally stretches it to the row's full *height* (the
+    // cross axis), which is what pinned the text to the top of the row
+    // instead of it sitting at its natural line height, centred like the
+    // "Status:" label next to it.
+    statusBox->GetContentSizer()->Add(m_infoBar, 1, wxALIGN_CENTER_VERTICAL, 0);
+
+    // The info bar always claims whatever space the station box doesn't
+    // need, rather than the two splitting the row evenly -- the station box
+    // has real content (the last-reported-callsigns combo and its dropdown
+    // need a comfortable minimum width to display their columns), so it
+    // keeps its natural size and sits on the right; the info bar effectively
+    // pads it away from the left edge. wxWrapSizer rather than a plain
+    // wxBoxSizer so the two boxes stack (info bar above station box) instead
+    // of being squeezed illegibly narrow, on windows too narrow to fit both
+    // side by side.
+    // All three boxes get wxEXPAND here, so they're all stretched to match
+    // the row's height -- inevitably set by stationBox, whose native
+    // combo/textctrl are taller than a plain line of text and can't shrink
+    // below that without clipping. Trying to keep the other two boxes at
+    // their own shorter natural height (no wxEXPAND) instead just left
+    // three different box heights in the same row, which looked worse than
+    // all three sharing one. Each box's own content is already added with
+    // wxALIGN_CENTER_VERTICAL (no wxEXPAND) inside its own content sizer,
+    // so it stays centred within the extra height rather than stretching
+    // itself.
+    wxWrapSizer* bottomRowSizer = new wxWrapSizer(wxHORIZONTAL, wxREMOVE_LEADING_SPACES);
+    bottomRowSizer->Add(modeBox, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+    bottomRowSizer->Add(statusBox, 1, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+    bottomRowSizer->Add(stationBox, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+
     wxBoxSizer* outerSizer = new wxBoxSizer(wxVERTICAL);
     outerSizer->Add(bSizer1, 1, static_cast<int>(wxEXPAND), 0);
-
-    m_infoBar = new wxInfoBarGeneric(m_panel);
-    m_infoBar->SetBackgroundColour(GroupBoxBackgroundColour());
-    outerSizer->Add(m_infoBar, 0, static_cast<int>(wxEXPAND), 0);
-
-    // Natural one-line height of the info bar, used by ShowPlaybackStatus()
-    // to compensate the frame's size when showing/dismissing it. Measured
-    // via GetBestSize() (font/icon/padding driven, so stable regardless of
-    // current Show() state) rather than observed reactively via a size
-    // event -- Dismiss() doesn't reliably produce a matching "back to zero"
-    // wxEVT_SIZE on this widget, so an event-driven approach only catches
-    // the first-ever appearance and silently misses every subsequent
-    // show/dismiss cycle.
-    m_lastInfoBarHeight = m_infoBar->GetBestSize().GetHeight();
+    outerSizer->Add(bottomRowSizer, 0, static_cast<int>(wxEXPAND), 2);
 
     m_panel->SetSizerAndFit(outerSizer);
     this->Layout();

@@ -117,34 +117,15 @@ bool MainApp::CanAccessSerialPort(std::string const& portName)
 
 void MainFrame::ShowPlaybackStatus(const wxString& msg)
 {
-    bool show = !msg.IsEmpty();
-    if (show)
-    {
-        m_infoBar->ShowMessage(msg);
-    }
-    else
-    {
-        m_infoBar->Dismiss();
-    }
-
-    // Grow/shrink the frame itself by the info bar's own natural height on
-    // each show/dismiss transition, so it doesn't borrow that space from
-    // the rest of the window (which can shrink the notebook's plot height
-    // directly, or tip a movable group box column's wrap-sizer over its
-    // column threshold, causing an unrelated-looking layout rearrange).
-    if (show != m_playbackStatusVisible)
-    {
-        m_playbackStatusVisible = show;
-        int delta = show ? m_lastInfoBarHeight : -m_lastInfoBarHeight;
-        if (delta != 0)
-        {
-            CallAfter([this, delta]()
-            {
-                wxSize sz = GetSize();
-                SetSize(sz.GetWidth(), sz.GetHeight() + delta);
-            });
-        }
-    }
+    // The info bar shares a single permanent row with the station box
+    // (mode/callsign) -- see its construction in topFrame.cpp -- rather
+    // than occupying its own full-width row that used to grow/shrink the
+    // whole frame on every show/dismiss. Its own slot in that row is a fixed
+    // proportion (it always fills whatever space the station box isn't
+    // using), so only the text changes here -- nothing about the frame's or
+    // the row's size is touched.
+    m_infoBar->SetLabel(msg);
+    m_panel->Layout();
 }
 
 //----------------------------------------------------------------
