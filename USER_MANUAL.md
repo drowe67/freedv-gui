@@ -986,6 +986,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Block special characters in recording file name suffixes and default the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks @barjac!
     * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
     * Automatically start decoding on FreeDV startup. (PR #1436)
+    * Remove "Clip" indicator from main window to reduce confusion. (PR #1461)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)

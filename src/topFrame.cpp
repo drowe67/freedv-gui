@@ -573,13 +573,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 40, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH); // log scale, -40 dB to 0 dB
-    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
+    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
     
-    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(35,-1), wxALIGN_CENTRE);
-    m_textLevel->SetForegroundColour(wxColour(255,0,0));
-    levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_VERTICAL, 1);
-
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     
     //------------------------------
