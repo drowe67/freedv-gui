@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <sstream>
+#include <set>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
@@ -136,7 +137,12 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
             break;
         case LAST_TX_DATE_COL:
             colName = wxT("Last TX");
-            minWidth = 60;
+            // Same minWidth as Last Update -- both show the same date/time
+            // format, but Last TX is frequently still empty for every row
+            // when the dialog first opens (many spotted stations haven't
+            // transmitted yet this session), so autosizing against its own
+            // content alone leaves it too narrow until real data arrives.
+            minWidth = 100;
             break;
         case LAST_RX_CALLSIGN_COL:
             colName = wxT("RX Call");
@@ -222,17 +228,27 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     spotsDataModel_ = new FreeDVReporterDataModel(this);
     m_listSpots->AssociateModel(spotsDataModel_.get());
 
-    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() != NUM_COLS)
     {
-        // Generate default column ordering
-        log_info("Generating missing column ordering");
-        auto iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
-        while (iter != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end())
+        // Validate and repair the persisted column ordering unconditionally
+        // (not just when its length looks wrong) -- checking size() alone
+        // isn't reliable, since a config value saved by a build with a
+        // different NUM_COLS (e.g. master vs. v3.0-dev, which has one fewer
+        // column) can happen to still have the right *length* for this
+        // build's NUM_COLS while containing an out-of-range entry from the
+        // old scheme and missing a valid index that entry crowded out --
+        // size() == NUM_COLS looks fine, but the content is still wrong, so
+        // that column can never be created and any lookup for it later
+        // asserts/crashes.
+        auto& order = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder;
+        std::set<int> presentIndices;
+        auto iter = order->begin();
+        while (iter != order->end())
         {
-            if (*iter >= RIGHTMOST_COL)
+            // Strip anything out of range for this build's NUM_COLS, and any
+            // duplicate of an index already kept.
+            if (*iter >= RIGHTMOST_COL || !presentIndices.insert(*iter).second)
             {
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->erase(iter);
-                iter = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin();
+                iter = order->erase(iter);
             }
             else
             {
@@ -240,17 +256,16 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
             }
         }
 
-        auto maxIndex = 
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->size() == 0 ? 
-            -1 : 
-            *std::max_element(
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->begin(),
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->end()
-            );
-
-        for (auto index = maxIndex + 1; index < NUM_COLS; index++)
+        if ((int)order->size() != NUM_COLS)
         {
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder->push_back(index);
+            log_info("Generating missing column ordering");
+            for (auto index = 0; index < NUM_COLS; index++)
+            {
+                if (presentIndices.find(index) == presentIndices.end())
+                {
+                    order->push_back(index);
+                }
+            }
         }
     }
 
@@ -1431,6 +1446,24 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
 void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
+    // Keep Last TX at least as wide as Last Update's actual current width --
+    // both show the same date/time format, but Last TX is frequently still
+    // empty for every row when the dialog first opens (many spotted
+    // stations haven't transmitted yet this session), so its own autosize
+    // alone leaves it too narrow until real content exists. Checked here
+    // (a timer that's already running continuously) rather than once at
+    // construction time, since neither column's real autosized width is
+    // known reliably that early -- the dialog isn't shown yet and no real
+    // spot data has arrived, so querying GetWidth() then only captures a
+    // premature, header-only value for both columns instead of Last
+    // Update's genuine one.
+    auto lastUpdateWidth = getColumnForModelColId_(LAST_UPDATE_DATE_COL)->GetWidth();
+    auto lastTxCol = getColumnForModelColId_(LAST_TX_DATE_COL);
+    if (lastTxCol->GetWidth() < lastUpdateWidth)
+    {
+        lastTxCol->SetWidth(lastUpdateWidth);
+    }
+
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
@@ -1664,15 +1697,27 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
         log_info("New column ordering: %s", ss.str().c_str());
     });
 #else
+    // Walk every column actually present (not just the first NUM_COLS
+    // positions) and keep only real model columns -- nothing pins the
+    // trailing sentinel spacer column (model ID RIGHTMOST_COL, added purely
+    // to soak up leftover header width) to the last visual position during a
+    // drag reorder, so it can end up among the first NUM_COLS positions.
+    // Assuming it never would silently dropped a real column off the end of
+    // the saved order and persisted the sentinel's ID in its place instead --
+    // the source of a "new empty column" appearing after reordering.
     std::stringstream ss;
     std::vector<int> newColPositions;
-    for (unsigned int index = 0; index < NUM_COLS; index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         auto dvc = m_listSpots->GetColumn(index);
-        newColPositions.push_back(dvc->GetModelColumn());
-        ss << dvc->GetModelColumn() << " ";
+        auto modelCol = dvc->GetModelColumn();
+        if (modelCol < (unsigned int)NUM_COLS)
+        {
+            newColPositions.push_back(modelCol);
+            ss << modelCol << " ";
+        }
     }
-    
+
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnOrder = newColPositions;
     log_info("New column ordering: %s", ss.str().c_str());
 #endif // defined(WIN32)

@@ -26,6 +26,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}
+        max-size: "5G"
+
     - name: Install required packages
       shell: bash
       run: |
@@ -47,7 +53,7 @@ jobs:
       run: |
         mkdir build_linux
         cd build_linux
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(nproc)
 
@@ -74,6 +80,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'ubuntu-22.04-arm' }}
+      with:
+        key: ${{ github.job }}-aarch64
+        max-size: "5G"
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      with:
+        key: ${{ github.job }}-x86_64
+        max-size: "5G"
 
     - name: Install LLVM/Clang >=20.0 
       run: |
@@ -144,7 +164,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 USE_CCACHE=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
       shell: bash
@@ -457,6 +477,12 @@ jobs:
     #  with:
     #    detached: true
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}-${{ matrix.native-audio }}
+        max-size: "5G"
+
     - name: Install LLVM/Clang >=20.0 
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
@@ -552,7 +578,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -560,7 +586,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
