@@ -987,6 +987,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
     * Automatically start decoding on FreeDV startup. (PR #1436)
     * Remove "Clip" indicator from main window to reduce confusion. (PR #1461)
+    * Use log scale for Level meter and take mic level before AGC. (PR #1464)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
