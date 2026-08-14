@@ -331,6 +331,7 @@ void WASAPIAudioDevice::start()
         // Allocate temporary buffer
         tmpBuf_ = new short[sampleRate_];
         assert(tmpBuf_ != nullptr);
+        memset(tmpBuf_, 0, bufferFrameCount_ * numChannels_ * sizeof(short));
 
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
@@ -355,7 +356,6 @@ void WASAPIAudioDevice::start()
                 return;
             }
 
-            memset(tmpBuf_, 0, bufferFrameCount_ * numChannels_ * sizeof(short));
             if (onAudioDataFunction)
             {
                 onAudioDataFunction(*this, tmpBuf_, bufferFrameCount_, onAudioDataState);
