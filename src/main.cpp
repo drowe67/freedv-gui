@@ -147,6 +147,7 @@ constexpr int PLOT_BUF_MULTIPLIER=8;
 GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+GenericFIFO<short>  g_plotSpeechInFifoBeforeAGC(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
 int                 g_nSoundCards;
@@ -1831,6 +1832,7 @@ int MainFrame::getIdealStationsHeardColumnLength_(int col)
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
+    short speechInPlotSamplesBeforeAGC[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
     bool txState = false;
@@ -1900,6 +1902,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           }
           m_panelSpeechIn->add_new_short_samples(speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechIn->refreshData();
+          
+          if (g_plotSpeechInFifoBeforeAGC.read(speechInPlotSamplesBeforeAGC, WAVEFORM_PLOT_BUF))
+          {
+              memset(speechInPlotSamplesBeforeAGC, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+          }
       }
       else if (timerId == ID_TIMER_SPEECH_OUT)
       {
@@ -2416,8 +2423,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // peak from this DT sampling period
             int maxSpeechIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (maxSpeechIn < abs(speechInPlotSamples[i]))
-                    maxSpeechIn = abs(speechInPlotSamples[i]);
+                if (maxSpeechIn < abs(speechInPlotSamplesBeforeAGC[i]))
+                    maxSpeechIn = abs(speechInPlotSamplesBeforeAGC[i]);
 
             // peak from last second
             if (maxSpeechIn > m_maxLevel)
