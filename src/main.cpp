@@ -20,6 +20,7 @@
 //
 //==========================================================================
 
+#include <algorithm>
 #include <inttypes.h>
 #include <time.h>
 #include <fstream>
@@ -38,6 +39,7 @@
 #include <wx/uilocale.h>
 #endif // wxCHECK_VERSION(3,2,0)
 
+#include "defines.h"
 #include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -1942,8 +1944,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          }
          else
          {
-            // Assume zero spectrum to avoid waterfall artifacts
-            memset(g_avmag_waterfall, 0, sizeof(float) * MODEM_STATS_NSPEC);
+            // Assume zero spectrum to avoid waterfall artifacts. Note:
+            // this display's dB scale runs 0 (loudest) to MIN_MAG_DB
+            // (quietest) -- memset()'ing to zero bytes sets every bin to
+            // 0.0 dB, the *loudest* possible value, not silence, which
+            // painted the waterfall solid instead of blanking it. Fill
+            // with MIN_MAG_DB instead so it actually reads as quiet/black.
+            std::fill_n(g_avmag_waterfall, MODEM_STATS_NSPEC, MIN_MAG_DB);
             memcpy(g_avmag_spectrum, g_avmag_waterfall, sizeof(g_avmag_waterfall));
          }
 
@@ -2591,9 +2598,13 @@ void MainFrame::performFreeDVOn_()
 
     executeOnUiThreadAndWait_([&]() 
     {
-        // Zero out spectrum plots
-        memset(g_avmag_waterfall, 0, sizeof(g_avmag_waterfall));
-        memset(g_avmag_spectrum, 0, sizeof(g_avmag_waterfall));
+        // Blank out spectrum plots. Note: this display's dB scale runs 0
+        // (loudest) to MIN_MAG_DB (quietest) -- memset()'ing to zero bytes
+        // sets every bin to 0.0 dB, the *loudest* possible value, not
+        // silence. Fill with MIN_MAG_DB instead so it actually reads as
+        // quiet/black.
+        std::fill_n(g_avmag_waterfall, MODEM_STATS_NSPEC, MIN_MAG_DB);
+        std::fill_n(g_avmag_spectrum, MODEM_STATS_NSPEC, MIN_MAG_DB);
 
         // Reset plot FIFOs
         g_plotDemodInFifo.reset();

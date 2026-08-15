@@ -443,7 +443,23 @@ void PlotWaterfall::plotPixelData()
         }
     }
 
-    m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
+    // A row with every bin sitting exactly at the display floor is the
+    // synthetic "blanked" placeholder fed in during half-duplex TX (see
+    // main.cpp's "Assume zero spectrum to avoid waterfall artifacts"
+    // handling), not real spectrum data -- real RX/RADE spectra essentially
+    // never have their loudest bin sitting exactly at MIN_MAG_DB. Render it
+    // as plain black and leave the auto-ranging baseline (m_max_mag)
+    // untouched, rather than running it through the normal relative
+    // intensity scale below, which treats *any* perfectly flat row as "at
+    // its own peak" and paints it full-scale regardless of the row's
+    // actual absolute level -- confirmed live: filling the placeholder with
+    // MIN_MAG_DB alone still produced a colour ramp (green fading to red)
+    // as m_max_mag caught up to the new flat level, not the intended blank.
+    bool silentRow = (max_mag <= MIN_MAG_DB);
+    if (!silentRow)
+    {
+        m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
+    }
     m_min_mag = max_mag - 20.0;
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
 
@@ -471,7 +487,7 @@ void PlotWaterfall::plotPixelData()
         index = px;
         assert(index < MODEM_STATS_NSPEC);
 
-        intensity = (int)std::clamp((intensity_per_dB * (m_magDb[index] - m_min_mag)), 0.f, 255.f);
+        intensity = silentRow ? 0 : (int)std::clamp((intensity_per_dB * (m_magDb[index] - m_min_mag)), 0.f, 255.f);
 
         int pixelPos = (px * 3);
             
