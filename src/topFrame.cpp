@@ -501,6 +501,42 @@ wxColour GetGroupBoxForegroundColour()
     return isDark ? wxColour(255, 255, 255) : wxColour(0, 0, 0);
 }
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+namespace {
+    // Created lazily on first use and kept around for the whole app
+    // lifetime (re-loading new CSS into it on every live theme change is
+    // how the colour actually updates -- see ApplyMeterGaugeColours()).
+    GtkCssProvider* s_meterCssProvider = nullptr;
+}
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
+void ApplyMeterGaugeColours()
+{
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // wxGTK's wxGauge has no SetBarColour()-equivalent API -- it's a plain
+    // GtkProgressBar, entirely theme-drawn. Most dark GTK themes' default
+    // progress-bar fill colour sits close enough in luminance to the
+    // (also theme-drawn) trough behind it that the SNR/Level meters read as
+    // almost solid background, with no visible moving bar at all. Left
+    // alone on light themes, where the default fill already reads fine
+    // against the trough.
+    if (s_meterCssProvider == nullptr)
+    {
+        s_meterCssProvider = gtk_css_provider_new();
+        gtk_style_context_add_provider_for_screen(
+            gdk_screen_get_default(),
+            GTK_STYLE_PROVIDER(s_meterCssProvider),
+            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+
+    bool isDark = GetGroupBoxBaseColour().GetLuminance() < 0.5;
+    const char* css = isDark
+        ? ".freedv-meter progress { background-color: #E0E0E0; background-image: none; }"
+        : "";
+    gtk_css_provider_load_from_data(s_meterCssProvider, css, -1, nullptr);
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+}
+
 // Returns a background colour offset from the system window colour so that
 // grouped control boxes read as a distinct "card" instead of blending into
 // the surrounding panel. Works out from the live system colour rather than
@@ -784,6 +820,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 45, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // See ApplyMeterGaugeColours() -- tags this gauge so its CSS rule can
+    // target it specifically, without affecting any other progress bar.
+    gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(m_gaugeSNR->GetHandle())), "freedv-meter");
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
     snrBox->GetContentSizer()->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|static_cast<int>(wxALL), 10);
 
     //------------------------------
@@ -809,6 +850,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(m_gaugeLevel->GetHandle())), "freedv-meter");
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
     levelBox->GetContentSizer()->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
 
     m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(35,-1), wxALIGN_CENTRE);
@@ -948,6 +992,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtModeStatus = new wxStaticText(modeBox, wxID_ANY, wxT("USB-D"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtModeStatus->SetMinSize(m_txtModeStatus->GetBestSize());
     m_txtModeStatus->SetLabel(wxEmptyString);
+    // Same reasoning as m_txtCtrlCallSign's SetForegroundColour() further
+    // down -- re-applied on every live theme change too, see
+    // applyGroupBoxTint_() in main.cpp.
+    m_txtModeStatus->SetForegroundColour(GetGroupBoxForegroundColour());
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
     modeStatusSizer->Add(m_txtModeStatus, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
     modeBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
@@ -968,10 +1016,19 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Wide enough for a callsign plus a suffix (e.g. "VK3ABC/QRP", "M7XYZ/MM"),
     // not just a bare callsign.
     m_txtCtrlCallSign->SetSizeHints(wxSize(150,-1));
+    // Explicit foreground, re-applied on every live theme change too (see
+    // applyGroupBoxTint_() in main.cpp) -- left to its native default, this
+    // control's text colour doesn't reliably follow a live light/dark
+    // switch the way its background does (same class of wx/GTK colour-cache
+    // staleness already worked around for GetGroupBoxBaseColour()), leaving
+    // dark text unreadable against a freshly-dark background or vice versa.
+    m_txtCtrlCallSign->SetForegroundColour(GetGroupBoxForegroundColour());
 
     m_cboLastReportedCallsigns = new wxComboCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
     m_lastReportedCallsignListView = new wxListViewComboPopup(m_cboLastReportedCallsigns);
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
+    // Same reasoning as m_txtCtrlCallSign's SetForegroundColour() above.
+    m_cboLastReportedCallsigns->SetForegroundColour(GetGroupBoxForegroundColour());
     // Same reasoning as m_txtCtrlCallSign's SetSizeHints() above -- this is
     // the *collapsed* control's own width (it only ever shows one selected
     // callsign), separate from the dropdown's own width set below.
@@ -1209,6 +1266,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_panel->SetSizerAndFit(outerSizer);
     this->Layout();
+
+    ApplyMeterGaugeColours();
 
     //=====================================================
     // End of layout

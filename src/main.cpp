@@ -1475,9 +1475,11 @@ void MainFrame::applyGroupBoxTint_()
     int tintPercent = wxGetApp().appConfiguration.groupBoxTintPercent;
     SetGroupBoxTint(tintColour, tintPercent);
     RefreshGroupBoxTints();
+    ApplyMeterGaugeColours();
 
     wxColour bg = GroupBoxBackgroundColour();
     wxColour rawBase = GetGroupBoxBaseColour();
+    wxColour fg = GetGroupBoxForegroundColour();
 
     for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
     {
@@ -1485,6 +1487,15 @@ void MainFrame::applyGroupBoxTint_()
         page->SetBackgroundColour(bg);
         page->Refresh();
     }
+
+    // See their construction in topFrame.cpp for why these need an explicit
+    // re-apply rather than following a live theme switch on their own.
+    m_txtCtrlCallSign->SetForegroundColour(fg);
+    m_txtCtrlCallSign->Refresh();
+    m_cboLastReportedCallsigns->SetForegroundColour(fg);
+    m_cboLastReportedCallsigns->Refresh();
+    m_txtModeStatus->SetForegroundColour(fg);
+    m_txtModeStatus->Refresh();
 
     // Record what the system window colour was as of this refresh, so
     // OnGroupBoxTintPollTimer() only does work once it's actually changed.

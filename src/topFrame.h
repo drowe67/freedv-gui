@@ -149,6 +149,12 @@ wxColour GetGroupBoxForegroundColour();
 void SetGroupBoxTint(const wxColour& colour, int percent);
 void RefreshGroupBoxTints();
 
+// Re-applies a light, clearly-visible fill colour to the SNR/Level meter
+// gauges when the current theme is dark (a no-op on light themes, and a
+// no-op entirely outside GTK3). Call once at startup and again whenever the
+// live theme changes, same as RefreshGroupBoxTints().
+void ApplyMeterGaugeColours();
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
