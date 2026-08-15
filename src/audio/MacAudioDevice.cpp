@@ -358,6 +358,7 @@ void MacAudioDevice::start()
         // Allocate buffers
         inputFrames_ = new short[(maxFrameSize + 1) * numChannels_];
         assert(inputFrames_ != nullptr);
+        memset(inputFrames_, 0, sizeof(short) * (maxFrameSize + 1) * numChannels_);
 
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
