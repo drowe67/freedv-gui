@@ -20,6 +20,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}
+        max-size: "5G"
+
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
@@ -42,7 +48,7 @@ jobs:
       run: |
         mkdir build_osx
         cd build_osx
-        CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        CC=clang CXX=clang++ cmake -DCMAKE_OBJCXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(sysctl -n hw.logicalcpu)
     
@@ -63,6 +69,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}
+        create-symlink: true
+        max-size: "5G"
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -160,6 +173,25 @@ jobs:
     #  with:
     #    detached: true
 
+    # There's a bug where macos-26 ends up downloading macos-26-intel's cache and thus 
+    # having few/no cache hits. To prevent this, we make sure that the cache key is unique
+    # enough on both platforms to avoid inadvertent matches.
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'macos-26-intel' }}
+      with:
+        key: ${{ github.job }}-x86_64
+        max-size: "5G"
+        create-symlink: true
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'macos-26' }}
+      with:
+        key: ${{ github.job }}-aarch64
+        max-size: "5G"
+        create-symlink: true
+
     - name: Install needed packages
       run: |
         brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
@@ -189,7 +221,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 ./build_osx.sh
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=0 BUILD_DEPS=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 USE_CCACHE=1 ./build_osx.sh
 
     - name: Generate optimization profile
       shell: bash

@@ -28,6 +28,13 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.arch }}
+        max-size: "5G"
+        verbose: 2
+
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
@@ -49,7 +56,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DPGO_INSTRUMENT=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+        cmake -DENABLE_LTO=1 -DPGO_INSTRUMENT=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Build freedv-gui (unsigned)
       shell: bash
