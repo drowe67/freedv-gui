@@ -927,10 +927,28 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // from the station box below -- see its placement (left of the status
     // box) further down, alongside statusBox's construction.
     TintedGroupBox* modeBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+
+    // Bold "Mode:" label, matching statusBox's "Status:" and stationBox's
+    // "Heard:" labels.
+    wxStaticText* modeBoxLabel = new wxStaticText(modeBox, wxID_ANY, _("Mode:"));
+    wxFont modeBoxLabelFont = modeBoxLabel->GetFont();
+    modeBoxLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    modeBoxLabel->SetFont(modeBoxLabelFont);
+    modeBox->GetContentSizer()->Add(modeBoxLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
+
+    // No centring here (see the "Mode:" label above, which does that job
+    // instead) -- but it still needs a min width reserving room for the
+    // longest value ("USB-D"/"LSB-D"), measured from the actual current
+    // font rather than a guessed constant. Without it, a session that
+    // starts with the modem stopped (label empty) sizes this box to zero
+    // content width, and it never grows once real text appears later --
+    // wxStaticText doesn't widen its own container on SetLabel() -- so
+    // e.g. "USB" would render truncated to "U".
     wxBoxSizer* modeStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtModeStatus = new wxStaticText(modeBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_txtModeStatus = new wxStaticText(modeBox, wxID_ANY, wxT("USB-D"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtModeStatus->SetMinSize(m_txtModeStatus->GetBestSize());
+    m_txtModeStatus->SetLabel(wxEmptyString);
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_txtModeStatus->SetMinSize(wxSize(80,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
     modeBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
 
