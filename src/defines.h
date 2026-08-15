@@ -72,7 +72,7 @@
 #define VOX_TONE_FREQ       1000.0                         // optional left channel vox tone freq
 #define VOX_TONE_AMP        30000                          // optional left channel vox tone amp
 #define FIFO_SIZE           640                            // default fifo size in ms
-#define FRAME_DURATION_MS   40                             // default frame length of 20 mS = 0.02 seconds
+#define FRAME_DURATION_MS   10                             // default frame length of 20 mS = 0.02 seconds
 #define MS_TO_SEC           1000
 #define RECORD_FILE_SAMPLE_RATE (SAMPLE_RATE)
 
