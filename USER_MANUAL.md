@@ -973,6 +973,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Radio Frequency coloring on dark/light mode transition. (PR #1453)
     * Fix FreeDV Reporter column-order corruption and Last TX column width. (PR #1458) - thanks @barjac!
     * Fix waterfall/spectrum filling solid colour during half-duplex TX. (PR #1462) - thanks @barjac!
+    * Windows/macOS: Zero audio on startup. (PR #1463)
+    * Fix issue causing TX thread to use more CPU time than expected with no audio available. (PR #1465)
 2. Enhancements:
     * Add UDP broadcast of received callsigns. (PR #1367)
     * Add Time-Out Timer (TOT) capability to FreeDV. (PR #1366, #1398, #1405) - thanks @barjac!
@@ -986,6 +988,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Block special characters in recording file name suffixes and default the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks @barjac!
     * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
     * Automatically start decoding on FreeDV startup. (PR #1436)
+    * Remove "Clip" indicator from main window to reduce confusion. (PR #1461)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)
