@@ -847,6 +847,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 hasEooBeenSent_ = false;
             }
             
+            if (nread != 0)
+            {
+                break;
+            }
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
