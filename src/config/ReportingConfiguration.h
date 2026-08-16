@@ -76,6 +76,7 @@ public:
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;
+    ConfigurationDataElement<std::vector<wxString> > reportingFrequencyListCentred;
 
     ConfigurationDataElement<wxString> freedvReporterTxRowBackgroundColor;
     ConfigurationDataElement<wxString> freedvReporterTxRowForegroundColor;
@@ -91,6 +92,11 @@ public:
 
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
+
+private:
+    std::vector<wxString> convertFrequencyListFromStorage_(std::vector<wxString> const& list);
+    std::vector<wxString> convertFrequencyListToStorage_(std::vector<wxString> const& list);
+    void migrateFrequencyListToCentred_(wxConfigBase* config);
 };
 
 #endif // REPORTING_CONFIGURATION_H
