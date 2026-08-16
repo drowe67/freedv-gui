@@ -240,7 +240,7 @@ When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
 
 1. On receive, FreeDV is not very sensitive to the **From Radio**
-level, adjust so it is mid-range and not clipping.  FreeDV uses phase
+level, adjust so that the Level meter is around 75% scale and not clipping.  FreeDV uses phase
 shift keying (PSK) so is not sensitive to amplitude.
 
 1. The transmit level from your computer to your radio is important.
@@ -274,7 +274,7 @@ a poor SNR at the receiver.  This is a very common problem.
  1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
-average is about half the maximum.
+average is about 75% of max scale on the Level meter.
 
 ## Audio Processing
 
