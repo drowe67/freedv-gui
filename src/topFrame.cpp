@@ -856,7 +856,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     levelBox = new TintedGroupBox(m_panel, _("Level"), wxHORIZONTAL, 1);
 
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH);
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
 #if defined(__WXGTK__) && defined(HAS_GTK3)
     gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(m_gaugeLevel->GetHandle())), "freedv-meter");

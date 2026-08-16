@@ -26,6 +26,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}
+        max-size: "5G"
+
     - name: Install required packages
       shell: bash
       run: |
@@ -47,7 +53,7 @@ jobs:
       run: |
         mkdir build_linux
         cd build_linux
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(nproc)
 
@@ -74,6 +80,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'ubuntu-22.04-arm' }}
+      with:
+        key: ${{ github.job }}-aarch64
+        max-size: "5G"
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      with:
+        key: ${{ github.job }}-x86_64
+        max-size: "5G"
 
     - name: Install LLVM/Clang >=20.0 
       run: |
@@ -120,6 +140,13 @@ jobs:
            sudo apt-get install libpulse-dev sox git libasound2-dev libao-dev libgsm1-dev xvfb pulseaudio pulseaudio-utils metacity at-spi2-core libdbus-1-dev libgtk-3-dev python3 python3-dev python3-venv libebur128-dev pkg-config
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
@@ -137,7 +164,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
+          BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 USE_CCACHE=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
       shell: bash
@@ -333,6 +360,13 @@ jobs:
       run: |
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo apt-get install pulseaudio pulseaudio-utils metacity
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
@@ -443,6 +477,12 @@ jobs:
     #  with:
     #    detached: true
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}-${{ matrix.native-audio }}
+        max-size: "5G"
+
     - name: Install LLVM/Clang >=20.0 
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
@@ -501,6 +541,13 @@ jobs:
       run: |
            mkdir -p ~/.config/pulse
            echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
            sudo apt-get install libwxgtk3.0-gtk3-dev pulseaudio 
            sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
@@ -531,7 +578,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -539,7 +586,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash

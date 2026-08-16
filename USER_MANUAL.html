@@ -1149,7 +1149,7 @@ group as ‘From Mic’. (PR #1428)</li>
 SNR and Spectrum plots. (PR #1429) - thanks <span class="citation"
 data-cites="barjac">@barjac</span>!</li>
 <li>Fix window position restore under KWin and labwc (main window +
-FreeDV Reporter window). (PR #1431, #1433, #1449) - thanks <span
+FreeDV Reporter window). (PR #1431, #1433, #1449, #1450) - thanks <span
 class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Harden experimental tab layout persistence. (PR #1434) - thanks
 <span class="citation" data-cites="barjac">@barjac</span>!</li>
@@ -1158,6 +1158,20 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 data-cites="barjac">@barjac</span>!</li>
 <li>Unconditionally add new station to Heard Station list if first
 heard. (PR #1444)</li>
+<li>Fix heard-stations callsign combo stuck-highlight, right-click
+behaviour, and a stale-index crash (PR #1448) - thanks <span
+class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>Fix crash and long hang on main window close with an unresponsive
+rig (PR #1452) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
+<li>Fix Radio Frequency coloring on dark/light mode transition. (PR
+#1453)</li>
+<li>Fix FreeDV Reporter column-order corruption and Last TX column
+width. (PR #1458) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
+<li>Windows/macOS: Zero audio on startup. (PR #1463)</li>
+<li>Fix issue causing TX thread to use more CPU time than expected with
+no audio available. (PR #1465)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1185,6 +1199,8 @@ the voice keyer file selector to show .wav and .mp3. (PR #1424) - thanks
 (PR #1438) - thanks <span class="citation"
 data-cites="barjac">@barjac</span>!</li>
 <li>Automatically start decoding on FreeDV startup. (PR #1436)</li>
+<li>Remove “Clip” indicator from main window to reduce confusion. (PR
+#1461)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1192,6 +1208,9 @@ data-cites="barjac">@barjac</span>!</li>
 <li>Upgrade Hamlib to 4.7.2. (PR #1413)</li>
 <li>Update wxWidgets to 3.3.3. (PR #1439)</li>
 <li>Require C++20 to build FreeDV. (PR #1440)</li>
+<li>Enable LTO/PGO for macOS .app build. (PR #1456)</li>
+<li>Enable PGO for Windows builds. (PR #1457)</li>
+<li>Add support for CCache. (PR #1328)</li>
 </ul></li>
 <li>Other:
 <ul>
