@@ -217,6 +217,17 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
+
+        // Equalizer step (optional based on filter state)
+        auto equalizerStep = new EqualizerStep(
+            inputSampleRate_, 
+            &g_rxUserdata->micInEQEnable,
+            &g_rxUserdata->sbqMicInBass,
+            &g_rxUserdata->sbqMicInMid,
+            &g_rxUserdata->sbqMicInTreble,
+            &g_rxUserdata->sbqMicInVol,
+            g_rxUserdata->micEqLock);
+        pipeline_->appendPipelineStep(equalizerStep);
         
         // Resample for plot step (before AGC)
         auto resampleForPlotStepBeforeAGC = new ResampleForPlotStep(&g_plotSpeechInFifoBeforeAGC);
@@ -243,17 +254,6 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassAgc);
         pipeline_->appendPipelineStep(eitherOrAgcStep); 
 
-        // Equalizer step (optional based on filter state)
-        auto equalizerStep = new EqualizerStep(
-            inputSampleRate_, 
-            &g_rxUserdata->micInEQEnable,
-            &g_rxUserdata->sbqMicInBass,
-            &g_rxUserdata->sbqMicInMid,
-            &g_rxUserdata->sbqMicInTreble,
-            &g_rxUserdata->sbqMicInVol,
-            g_rxUserdata->micEqLock);
-        pipeline_->appendPipelineStep(equalizerStep);
-        
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
         {
