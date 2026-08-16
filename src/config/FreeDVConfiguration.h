@@ -130,8 +130,18 @@ public:
 
     // Group box tint colour/strength (Display options tab), replacing the
     // old FREEDV_GROUPBOX_TINT testing-only environment variable.
+    //
+    // groupBoxTintColor/groupBoxTintPercent are the original, pre-light/dark
+    // single pair. They're no longer written, only read once at startup to
+    // migrate existing values into both of the pairs below on first run
+    // after upgrading (see FreeDVConfiguration::load()).
     ConfigurationDataElement<wxString> groupBoxTintColor;
     ConfigurationDataElement<int> groupBoxTintPercent;
+
+    ConfigurationDataElement<wxString> groupBoxTintColorLight;
+    ConfigurationDataElement<int> groupBoxTintPercentLight;
+    ConfigurationDataElement<wxString> groupBoxTintColorDark;
+    ConfigurationDataElement<int> groupBoxTintPercentDark;
 
     // Ordered lists of the movable "Show menu" group boxes currently on each
     // side of the main window (right-click a box's title to move it), using

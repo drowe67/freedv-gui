@@ -416,11 +416,15 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 namespace {
     // Tint colour/strength applied by GroupBoxBackgroundColour() below, set
     // via SetGroupBoxTint() from the persisted Display options once
-    // configuration is loaded. Defaults match the original hardcoded values
-    // so the very first run (before any config exists) looks the same as
-    // before this became configurable.
-    wxColour s_groupBoxTintColour(0, 85, 255);
-    int s_groupBoxTintPercent = 20;
+    // configuration is loaded. Kept as separate light/dark pairs so each
+    // theme remembers its own look; GroupBoxBackgroundColour() below selects
+    // between them per-call based on the live theme. Defaults match the
+    // original hardcoded values so the very first run (before any config
+    // exists) looks the same as before this became configurable.
+    wxColour s_groupBoxTintColourLight(0, 85, 255);
+    int s_groupBoxTintPercentLight = 20;
+    wxColour s_groupBoxTintColourDark(0, 85, 255);
+    int s_groupBoxTintPercentDark = 20;
 
     // Every currently-live TintedGroupBox, so a tint change from Options can
     // be re-applied immediately rather than only on next restart.
@@ -550,9 +554,11 @@ wxColour GroupBoxBackgroundColour()
     // Nudge the shaded card colour towards blue (by default). Purely a
     // lightness shift is invisible on themes (e.g. Breeze Light) whose
     // window colour has no saturation to begin with, so blend in a small
-    // amount of hue directly.
-    const wxColour& tint = s_groupBoxTintColour;
-    int tintPct = s_groupBoxTintPercent;
+    // amount of hue directly. Light and dark themes keep independent
+    // colour/strength pairs (see SetGroupBoxTint()), since a blend judged
+    // right on one theme is rarely right on the other.
+    const wxColour& tint = isDark ? s_groupBoxTintColourDark : s_groupBoxTintColourLight;
+    int tintPct = isDark ? s_groupBoxTintPercentDark : s_groupBoxTintPercentLight;
 
     unsigned char r = (unsigned char)((shaded.Red()   * (100 - tintPct) + tint.Red()   * tintPct) / 100);
     unsigned char g = (unsigned char)((shaded.Green() * (100 - tintPct) + tint.Green() * tintPct) / 100);
@@ -560,10 +566,12 @@ wxColour GroupBoxBackgroundColour()
     return wxColour(r, g, b);
 }
 
-void SetGroupBoxTint(const wxColour& colour, int percent)
+void SetGroupBoxTint(const wxColour& lightColour, int lightPercent, const wxColour& darkColour, int darkPercent)
 {
-    s_groupBoxTintColour = colour;
-    s_groupBoxTintPercent = percent;
+    s_groupBoxTintColourLight = lightColour;
+    s_groupBoxTintPercentLight = lightPercent;
+    s_groupBoxTintColourDark = darkColour;
+    s_groupBoxTintPercentDark = darkPercent;
 }
 
 void RefreshGroupBoxTints()

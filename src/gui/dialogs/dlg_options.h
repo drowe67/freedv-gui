@@ -163,7 +163,13 @@ class OptionsDlg : public wxDialog
         wxColourPickerCtrl* m_freedvReporterMsgBackgroundColor;
         wxColourPickerCtrl* m_freedvReporterMsgForegroundColor;
 
-        /* Group box tint colour/strength */
+        /* Group box tint colour/strength. Edits whichever of the persisted
+         * light/dark pairs matches the theme that's active when the dialog
+         * is opened -- see sb_groupBoxTint's title, updated in ExchangeData()
+         * to say which one, and applyGroupBoxTint_()/GroupBoxBackgroundColour()
+         * in topFrame.cpp for how both pairs are kept live regardless of
+         * which one is being edited. */
+        wxStaticBox* sb_groupBoxTint;
         wxColourPickerCtrl* m_groupBoxTintColor;
         wxSpinCtrl* m_groupBoxTintPercent;
 

@@ -1471,9 +1471,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 // a restart.
 void MainFrame::applyGroupBoxTint_()
 {
-    wxColour tintColour(wxGetApp().appConfiguration.groupBoxTintColor);
-    int tintPercent = wxGetApp().appConfiguration.groupBoxTintPercent;
-    SetGroupBoxTint(tintColour, tintPercent);
+    wxColour lightColour(wxGetApp().appConfiguration.groupBoxTintColorLight);
+    int lightPercent = wxGetApp().appConfiguration.groupBoxTintPercentLight;
+    wxColour darkColour(wxGetApp().appConfiguration.groupBoxTintColorDark);
+    int darkPercent = wxGetApp().appConfiguration.groupBoxTintPercentDark;
+    SetGroupBoxTint(lightColour, lightPercent, darkColour, darkPercent);
     RefreshGroupBoxTints();
     ApplyMeterGaugeColours();
 
@@ -1496,6 +1498,15 @@ void MainFrame::applyGroupBoxTint_()
     m_cboLastReportedCallsigns->Refresh();
     m_txtModeStatus->SetForegroundColour(fg);
     m_txtModeStatus->Refresh();
+
+    // Keep the FreeDV Reporter window (if open) in the same tinted style --
+    // it's created once and kept alive in the background, so it needs the
+    // same explicit re-apply as the controls above rather than picking up
+    // a live theme/tint change on its own.
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->RefreshTint();
+    }
 
     // Record what the system window colour was as of this refresh, so
     // OnGroupBoxTintPollTimer() only does work once it's actually changed.

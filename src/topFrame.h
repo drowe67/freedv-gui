@@ -143,10 +143,13 @@ wxColour GetGroupBoxBaseColour();
 wxColour GetGroupBoxForegroundColour();
 
 // Sets the tint colour/strength used by GroupBoxBackgroundColour() (persisted
-// via the Display options tab). RefreshGroupBoxTints() then re-applies the
-// resulting colour to every currently-live TintedGroupBox so the change is
+// via the Display options tab), as separate pairs for light and dark themes
+// -- GroupBoxBackgroundColour() picks whichever pair matches the live theme
+// on every call, so both are always kept current even though only one is
+// visibly in effect at a time. RefreshGroupBoxTints() then re-applies the
+// resulting colour to every currently-live TintedGroupBox so a change is
 // visible immediately, without needing a restart.
-void SetGroupBoxTint(const wxColour& colour, int percent);
+void SetGroupBoxTint(const wxColour& lightColour, int lightPercent, const wxColour& darkColour, int darkPercent);
 void RefreshGroupBoxTints();
 
 // Re-applies a light, clearly-visible fill colour to the SNR/Level meter
