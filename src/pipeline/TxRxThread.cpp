@@ -823,7 +823,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             auto inputPtr = inputSamples_.get();
-            int nread = cbData->infifo2->read(inputPtr, nsam_in_48);            
+            int nread = cbData->infifo2->read(inputPtr, nsam_in_48);
             if (nread != 0)
             {
                 inputPtr = inputSamplesZeros_.get();
@@ -861,7 +861,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 g_eoo_enqueued.store(false, std::memory_order_release);
                 hasEooBeenSent_ = false;
             }
-            
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
@@ -883,6 +883,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             endTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
+
+            if (nread != 0)
+            {
+                break;
+            }
         }
     }
     else
