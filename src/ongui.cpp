@@ -1753,6 +1753,9 @@ void MainFrame::togglePTT(void) {
         wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 1), DECIBEL_STR);
         m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
+    
+    // Reset maximum level for the Level meter.
+    m_maxLevel = 0;
 
     CallAfter([&]() {
         txChangeoverOccurring_ = false;
