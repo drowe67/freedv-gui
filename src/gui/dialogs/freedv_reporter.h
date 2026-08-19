@@ -69,6 +69,13 @@ class FreeDVReporterDialog : public wxFrame
         void refreshQSYButtonState();
         void refreshLayout();
 
+        // Re-applies the main window's group box tint colour to this
+        // window's own background (the spots list picks up the tint on its
+        // own via the existing highlight-clear timer -- see updateHighlights()).
+        // Called once at startup and again whenever the tint or the live
+        // light/dark theme changes, same as MainFrame::applyGroupBoxTint_().
+        void RefreshTint();
+
         // Stops the window from live-tracking/persisting its own position via
         // OnMove. Callers should invoke this after deliberately grabbing and
         // saving the final position but before Close()/Destroy() -- closing

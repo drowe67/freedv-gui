@@ -62,6 +62,12 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
     m_penDotDash        = wxPen(wxColor(0xD0, 0xD0, 0xD0), 1, wxPENSTYLE_DOT_DASH);
     m_penSolid          = wxPen(wxColor(0x00, 0x00, 0x00), 1, wxPENSTYLE_SOLID);
     SetBackgroundStyle(wxBG_STYLE_PAINT);
+
+    // Tint the graticule label margin (the area outside the black plot
+    // rectangle where axis labels are drawn) to match the surrounding
+    // TintedGroupBox card colour instead of the plain window colour.
+    SetBackgroundColour(GroupBoxBackgroundColour());
+
     m_label_size = 10.0;
 }
 
@@ -174,7 +180,7 @@ void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
     int p;
     char buf[STR_LENGTH];
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetGroupBoxForegroundColour());
     ctx->SetFont(tmpFont);
     
     // Vertical gridlines

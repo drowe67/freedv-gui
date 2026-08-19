@@ -44,7 +44,6 @@
 #include <wx/tglbtn.h>
 #include <wx/slider.h>
 #include <wx/checkbox.h>
-#include <wx/statusbr.h>
 #include <wx/frame.h>
 #include <wx/statbmp.h>
 #include <wx/stattext.h>
@@ -75,6 +74,10 @@
 
 #define ID_MODE_COLLAPSE 1100
 
+// Base ID for the main window's "Show" menu's group-box visibility toggle
+// items; 8 consecutive IDs from here (see OnShowGroupBox).
+#define ID_SHOW_GROUPBOX_BASE 1200
+
 class wxListViewComboPopup;
 
 // Popup position for a right-click menu anchored to the left of btn (to
@@ -84,6 +87,77 @@ class wxListViewComboPopup;
 // model (it ends up placed at the toplevel's origin instead), so this
 // returns wxDefaultPosition there and lets GTK position it automatically.
 wxPoint LeftOffsetContextMenuPosition(wxWindow* btn);
+
+// A self-contained "card" that stands in for a wxStaticBox/wxStaticBoxSizer
+// group, with a tinted background that covers the whole box including its
+// title. A native wxStaticBox paints its title directly on the border,
+// outside the area any child window can draw into, and largely ignores
+// SetBackgroundColour on Windows/macOS, so neither tinting the box directly
+// nor nesting a panel inside it can cover the whole group cleanly. Add
+// children to this panel (as their parent) and to GetContentSizer().
+//
+// Passing a non-negative contextMenuBoxIndex (the same 0-7 index used by the
+// Show menu/ID_SHOW_GROUPBOX_BASE) makes the box's title/background
+// right-clickable: it wires up its own context-menu handling and forwards to
+// TopFrame::OnGroupBoxRightClick(index) so the box can be hidden/moved
+// (Stage 10). This is deliberately a separate index, not the box's own
+// wxWindowID -- the box's actual id stays wxID_ANY regardless, so this
+// doesn't collide with the Show menu's own wxMenuItem ids, which happen to
+// live in the same numeric ID space (ID_SHOW_GROUPBOX_BASE onwards) but are
+// a completely different kind of object. Boxes not part of that set
+// (Control, Radio Freq, Stats, etc.) just leave the default -1 and get no
+// context menu.
+class TintedGroupBox : public wxPanel
+{
+    public:
+        TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation, int contextMenuBoxIndex = -1);
+        ~TintedGroupBox();
+
+        virtual void SetLabel(const wxString& label) override;
+        virtual wxString GetLabel() const override;
+
+        // Applies to the title and background as well as the panel itself,
+        // so it shows no matter where in the box the mouse is (barring
+        // content widgets that set their own, more specific tooltip).
+        void SetToolTip(const wxString& tip);
+
+        wxSizer* GetContentSizer() const { return m_contentSizer; }
+
+    private:
+        wxStaticText* m_title;
+        wxSizer* m_contentSizer;
+};
+
+// Returns the same tinted "card" background colour used by TintedGroupBox,
+// for other controls (e.g. plot graticule label margins) that want to match.
+wxColour GroupBoxBackgroundColour();
+
+// The live, untinted system window colour GroupBoxBackgroundColour() is
+// based on -- exposed separately so callers that need to detect a raw
+// theme change (rather than compute the tinted colour) can use the same
+// reliable source. See s_colourReferenceWindow in topFrame.cpp.
+wxColour GetGroupBoxBaseColour();
+
+// A reliable light/dark-appropriate text/axis colour (see plot.h for why
+// this exists -- used by graph axis-label drawing).
+wxColour GetGroupBoxForegroundColour();
+
+// Sets the tint colour/strength used by GroupBoxBackgroundColour() (persisted
+// via the Display options tab), as separate pairs for light and dark themes
+// -- GroupBoxBackgroundColour() picks whichever pair matches the live theme
+// on every call, so both are always kept current even though only one is
+// visibly in effect at a time. RefreshGroupBoxTints() then re-applies the
+// resulting colour to every currently-live TintedGroupBox so a change is
+// visible immediately, without needing a restart.
+void SetGroupBoxTint(const wxColour& lightColour, int lightPercent, const wxColour& darkColour, int darkPercent);
+void RefreshGroupBoxTints();
+
+// Re-applies a light, clearly-visible fill colour to the SNR/Level meter
+// gauges when the current theme is dark (a no-op on light themes, and a
+// no-op entirely outside GTK3). Call once at startup and again whenever the
+// live theme changes, same as RefreshGroupBoxTints().
+void ApplyMeterGaugeColours();
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
@@ -98,12 +172,14 @@ class TopFrame : public wxFrame
         wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
+        wxMenu* showMenu_;
+        TintedGroupBox* snrBox;
         wxGauge* m_gaugeSNR;
         wxStaticText* m_textSNR;
         wxCheckBox* m_ckboxSNR;
+        TintedGroupBox* levelBox;
         wxGauge* m_gaugeLevel;
 
-        wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
         
         wxComboCtrl*   m_cboLastReportedCallsigns;
@@ -119,11 +195,15 @@ class TopFrame : public wxFrame
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
-        wxStatusBar* m_statusBar1;
+        // Playback/recording status message. Plain wxStaticText rather than
+        // wxInfoBar -- it's kept permanently visible in a fixed-size row
+        // shared with the station box (see TopFrame's constructor), and
+        // wxInfoBar has no way to suppress its built-in close button, which
+        // makes no sense on a bar that's never dismissed.
+        wxStaticText* m_infoBar;
 
-        wxStaticBox* statsBox;
+        TintedGroupBox* statsBox;
         wxButton*     m_BtnBerReset;
-        wxStaticText  *m_textCurrentDecodeMode;
         wxStaticText  *m_textBits;
         wxStaticText  *m_textErrors;
         wxStaticText  *m_textBER;
@@ -133,22 +213,31 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textSyncMetric;
         wxStaticText  *m_textCodec2Var;
 
+        TintedGroupBox* syncBox;
         wxStaticText  *m_textSync;
-        wxButton      *m_btnCenterRx;
-        
+
+        TintedGroupBox* audioBox;
         wxToggleButton      *m_audioRecord;
-        
+
+        TintedGroupBox* logBox;
         wxButton*     m_logQSO;
 
+        // Both need to be reachable at runtime (not just constructor-local)
+        // so a box can be moved between sides / reordered (Stage 10).
+        wxSizer* leftSizer;
         wxSizer* rightSizer;
 
-        wxStaticBox* modeBox;
-        wxStaticBoxSizer* sbSizer_mode;
-        
+        TintedGroupBox* modeBox;
+
+        // Fixed (non-movable) box on the right, kept last in rightSizer
+        // across any reorder -- see MainFrame::reflowGroupBoxes_().
+        TintedGroupBox* controlBox;
+
         wxMenuItem* m_menuItemPlayFileFromRadio;
         wxMenuItem* m_menuItemExportConfig;
         wxMenuItem* m_menuItemImportConfig;
 
+        TintedGroupBox* reporterBox;
         wxToggleButton *m_reporterHidden;
     
         // Virtual event handlers, override them in your derived class
@@ -167,7 +256,6 @@ class TopFrame : public wxFrame
         virtual void OnToolsSetupWizard( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsSetupWizardUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -205,7 +293,6 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnPTT_UI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnOnOffUI(wxUpdateUIEvent& event ) { event.Skip(); }
 
-        virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
@@ -239,9 +326,21 @@ class TopFrame : public wxFrame
         
         virtual void OnTogBtnTune(wxCommandEvent& event) { event.Skip(); }
 
+        virtual void OnShowGroupBox(wxCommandEvent& event) { event.Skip(); }
+
         void setVoiceKeyerButtonLabel_(wxString filename);
-        
+
     public:
+        // Called directly (not routed through the wx event system, hence
+        // public rather than protected like the other virtual handlers
+        // above -- TintedGroupBox is a sibling class, not a subclass) by a
+        // TintedGroupBox constructed with a real id when its title/background
+        // is right-clicked, with boxIndex = id - ID_SHOW_GROUPBOX_BASE. Empty
+        // here for the same reason as OnShowGroupBox: TopFrame has no access
+        // to wxGetApp()/appConfiguration, so the real menu (Hide/Move to
+        // other side/Move up/down) is only built in MainFrame's override.
+        virtual void OnGroupBoxRightClick(int) { }
+
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
@@ -249,9 +348,9 @@ class TopFrame : public wxFrame
         wxToggleButton* m_btnTogTune;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
-        wxStaticBox*  m_freqBox;
-        wxStaticBox*  m_txLevelBox;
-        wxStaticBox* micSpeakerBox;
+        TintedGroupBox*  m_freqBox;
+        TintedGroupBox*  m_txLevelBox;
+        TintedGroupBox* micSpeakerBox;
 
         TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 

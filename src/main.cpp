@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <inttypes.h>
 #include <time.h>
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -1105,6 +1106,45 @@ void MainFrame::loadConfiguration_()
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
+    // Apply persisted left/right ordering to the movable group boxes (also
+    // defaulted to the original hardcoded layout at TopFrame construction
+    // time, same reasoning as showBoxState/tint below).
+    reflowGroupBoxes_();
+
+    // Apply persisted "Show" menu visibility to the optional group boxes
+    // (menu items default to checked at construction time, since TopFrame
+    // itself has no access to appConfiguration -- this is where the real
+    // saved state actually takes effect, same as statsBox above).
+    {
+        std::vector<std::pair<TintedGroupBox*, bool> > showBoxState {
+            { snrBox, wxGetApp().appConfiguration.showSnrBox },
+            { levelBox, wxGetApp().appConfiguration.showLevelBox },
+            { syncBox, wxGetApp().appConfiguration.showSyncBox },
+            { audioBox, wxGetApp().appConfiguration.showAudioRecordingBox },
+            { logBox, wxGetApp().appConfiguration.showLoggingBox },
+            { reporterBox, wxGetApp().appConfiguration.showReportingBox },
+            { m_txLevelBox, wxGetApp().appConfiguration.showTxAttenuationBox },
+            { micSpeakerBox, wxGetApp().appConfiguration.showSpeakerLevelBox },
+        };
+        for (size_t index = 0; index < showBoxState.size(); index++)
+        {
+            showBoxState[index].first->Show(showBoxState[index].second);
+            auto menuItem = showMenu_->FindItem(ID_SHOW_GROUPBOX_BASE + index);
+            if (menuItem != nullptr)
+            {
+                menuItem->Check(showBoxState[index].second);
+            }
+        }
+    }
+
+    // Apply persisted group box tint colour/strength (also defaulted at
+    // TopFrame construction time, same reasoning as showBoxState above).
+    applyGroupBoxTint_();
+
+    // Backstop poll (see m_groupBoxTintPollTimer's declaration in main.h
+    // for why wxEVT_SYS_COLOUR_CHANGED alone isn't reliable enough here).
+    m_groupBoxTintPollTimer.Start(500, wxTIMER_CONTINUOUS);
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     
@@ -1129,11 +1169,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // fully optimized for real-time use yet (i.e. it dynamically allocates
     // memory while processing audio).
     SNR_FORMAT_STR("%ddB"),
-    MODE_FORMAT_STR("Mode: %s"),
-    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
     NO_SNR_LABEL("--"),
     EMPTY_STR(""),
-    MODEM_LABEL("Modem"),
     BITS_UNK_LABEL("Bits: unk"),
     ERRS_UNK_LABEL("Errs: unk"),
     BER_UNK_LABEL("BER: unk"),
@@ -1158,8 +1195,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SetThreadName("GUI");
 
     terminating_ = false;
-    realigned_ = false;
     syncState_ = false;
+    realigned_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
 
@@ -1259,6 +1296,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTOTWarningTimer, this, ID_TIMER_TOT_WARNING);
     m_pttKeyPollTimer.SetOwner(this, ID_TIMER_PTT_KEY_POLL);
     Bind(wxEVT_TIMER, &MainFrame::OnPttKeyPollTimer, this, ID_TIMER_PTT_KEY_POLL);
+    m_groupBoxTintPollTimer.SetOwner(this, ID_TIMER_GROUPBOX_TINT_POLL);
+    Bind(wxEVT_TIMER, &MainFrame::OnGroupBoxTintPollTimer, this, ID_TIMER_GROUPBOX_TINT_POLL);
 #endif
     
     // Create voice keyer popup menu.
@@ -1424,6 +1463,269 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
+}
+
+// Applies the persisted group box tint colour/strength and re-colours every
+// currently-live tinted window (group boxes -- which now includes the
+// playback status info bar's own box -- and the AUI notebook's plot pages)
+// so a change made in Options takes effect immediately instead of requiring
+// a restart.
+void MainFrame::applyGroupBoxTint_()
+{
+    wxColour lightColour(wxGetApp().appConfiguration.groupBoxTintColorLight);
+    int lightPercent = wxGetApp().appConfiguration.groupBoxTintPercentLight;
+    wxColour darkColour(wxGetApp().appConfiguration.groupBoxTintColorDark);
+    int darkPercent = wxGetApp().appConfiguration.groupBoxTintPercentDark;
+    SetGroupBoxTint(lightColour, lightPercent, darkColour, darkPercent);
+    RefreshGroupBoxTints();
+    ApplyMeterGaugeColours();
+
+    wxColour bg = GroupBoxBackgroundColour();
+    wxColour rawBase = GetGroupBoxBaseColour();
+    wxColour fg = GetGroupBoxForegroundColour();
+
+    for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+    {
+        wxWindow* page = m_auiNbookCtrl->GetPage(index);
+        page->SetBackgroundColour(bg);
+        page->Refresh();
+    }
+
+    // See their construction in topFrame.cpp for why these need an explicit
+    // re-apply rather than following a live theme switch on their own.
+    m_txtCtrlCallSign->SetForegroundColour(fg);
+    m_txtCtrlCallSign->Refresh();
+    m_cboLastReportedCallsigns->SetForegroundColour(fg);
+    m_cboLastReportedCallsigns->Refresh();
+    m_txtModeStatus->SetForegroundColour(fg);
+    m_txtModeStatus->Refresh();
+
+    // Keep the FreeDV Reporter window (if open) in the same tinted style --
+    // it's created once and kept alive in the background, so it needs the
+    // same explicit re-apply as the controls above rather than picking up
+    // a live theme/tint change on its own.
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->RefreshTint();
+    }
+
+    // Record what the system window colour was as of this refresh, so
+    // OnGroupBoxTintPollTimer() only does work once it's actually changed.
+    m_lastGroupBoxTintBaseColour = rawBase;
+}
+
+// XXX - with really short windows, wxWidgets sometimes doesn't size the
+// components properly until the user resizes the window (even if only by a
+// pixel or two). As a really hacky workaround, we emulate this behavior
+// after any change that shows/hides or moves a group box.
+void MainFrame::nudgeResize_()
+{
+    wxSize size = GetSize();
+    auto w = size.GetWidth();
+    auto h = size.GetHeight();
+    CallAfter([=, this]()
+    {
+        SetSize(w, h);
+    });
+    CallAfter([=, this]()
+    {
+        SetSize(w + 1, h + 1);
+    });
+    CallAfter([=, this]()
+    {
+        SetSize(w, h);
+    });
+}
+
+// Maps a Show-menu/right-click-menu box index (see ID_SHOW_GROUPBOX_BASE) to
+// its TintedGroupBox pointer.
+TintedGroupBox* MainFrame::groupBoxForIndex_(int boxIndex)
+{
+    switch (boxIndex)
+    {
+        case 0: return snrBox;
+        case 1: return levelBox;
+        case 2: return syncBox;
+        case 3: return audioBox;
+        case 4: return logBox;
+        case 5: return reporterBox;
+        case 6: return m_txLevelBox;
+        case 7: return micSpeakerBox;
+        default: return nullptr;
+    }
+}
+
+// Rebuilds leftSizer/rightSizer from the persisted groupBoxLeftOrder/
+// groupBoxRightOrder lists, so a box's side and position within its side
+// (right-click its title -> Hide/Move to other side/Move up/Move down) take
+// effect immediately. The two fixed boxes (statsBox on the left; m_freqBox
+// and controlBox on the right) are never part of either list and are always
+// re-added last, in their original relative order.
+void MainFrame::reflowGroupBoxes_()
+{
+    auto& leftOrder = wxGetApp().appConfiguration.groupBoxLeftOrder;
+    auto& rightOrder = wxGetApp().appConfiguration.groupBoxRightOrder;
+
+    // Defensive repair: if the persisted lists don't between them cover
+    // exactly the 8 movable boxes once each (e.g. a hand-edited or
+    // corrupted config file), fall back to the original hardcoded layout
+    // rather than silently dropping a box from the window entirely.
+    std::vector<int> combined = leftOrder.get();
+    auto rightVec = rightOrder.get();
+    combined.insert(combined.end(), rightVec.begin(), rightVec.end());
+    std::sort(combined.begin(), combined.end());
+    bool valid = (combined.size() == 8);
+    for (int index = 0; valid && index < 8; index++)
+    {
+        valid = (combined[(size_t)index] == index);
+    }
+    if (!valid)
+    {
+        leftOrder = std::vector<int> { 0, 1, 2, 3, 4, 5 };
+        rightOrder = std::vector<int> { 6, 7 };
+    }
+
+    leftSizer->Clear(false);
+    rightSizer->Clear(false);
+
+    for (int index : leftOrder.get())
+    {
+        TintedGroupBox* box = groupBoxForIndex_(index);
+        if (box != nullptr)
+        {
+            leftSizer->Add(box, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+        }
+    }
+    leftSizer->Add(statsBox, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
+    for (int index : rightOrder.get())
+    {
+        TintedGroupBox* box = groupBoxForIndex_(index);
+        if (box != nullptr)
+        {
+            rightSizer->Add(box, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+        }
+    }
+    rightSizer->Add(m_freqBox, 0, static_cast<int>(wxALL), 2);
+    rightSizer->Add(controlBox, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
+    m_panel->Layout();
+    m_panel->Refresh();
+
+    // Deliberately no nudgeResize_() call here: this is also called from
+    // loadConfiguration_() during startup, before the persisted window size
+    // has actually been restored (that restore is itself queued via
+    // CallAfter, further down in loadConfiguration_()). Queuing our own
+    // resize nudge here would capture GetSize() at *this* pre-restore
+    // moment and, once it runs, clobber the real restored size with that
+    // stale one. Callers that change box order at runtime (after startup,
+    // when there's no other resize event to force a reflow) call
+    // nudgeResize_() themselves right after this returns.
+}
+
+// Hides a movable group box -- same effect as unchecking its entry in the
+// Show menu, available directly from its own right-click menu too.
+void MainFrame::hideGroupBox_(int boxIndex)
+{
+    TintedGroupBox* box = groupBoxForIndex_(boxIndex);
+    if (box == nullptr)
+    {
+        return;
+    }
+
+    ConfigurationDataElement<bool>* configValue = nullptr;
+    switch (boxIndex)
+    {
+        case 0: configValue = &wxGetApp().appConfiguration.showSnrBox; break;
+        case 1: configValue = &wxGetApp().appConfiguration.showLevelBox; break;
+        case 2: configValue = &wxGetApp().appConfiguration.showSyncBox; break;
+        case 3: configValue = &wxGetApp().appConfiguration.showAudioRecordingBox; break;
+        case 4: configValue = &wxGetApp().appConfiguration.showLoggingBox; break;
+        case 5: configValue = &wxGetApp().appConfiguration.showReportingBox; break;
+        case 6: configValue = &wxGetApp().appConfiguration.showTxAttenuationBox; break;
+        case 7: configValue = &wxGetApp().appConfiguration.showSpeakerLevelBox; break;
+        default: return;
+    }
+
+    *configValue = false;
+    box->Show(false);
+
+    auto menuItem = showMenu_->FindItem(ID_SHOW_GROUPBOX_BASE + boxIndex);
+    if (menuItem != nullptr)
+    {
+        menuItem->Check(false);
+    }
+
+    wxGetApp().appConfiguration.save(pConfig);
+    nudgeResize_();
+}
+
+// Moves a box to the end of the other side's order list, leaving its
+// existing side's relative order otherwise untouched.
+void MainFrame::moveGroupBoxToOtherSide_(int boxIndex)
+{
+    auto& leftOrder = wxGetApp().appConfiguration.groupBoxLeftOrder;
+    auto& rightOrder = wxGetApp().appConfiguration.groupBoxRightOrder;
+
+    auto leftVec = leftOrder.get();
+    auto rightVec = rightOrder.get();
+
+    auto leftIt = std::find(leftVec.begin(), leftVec.end(), boxIndex);
+    if (leftIt != leftVec.end())
+    {
+        leftVec.erase(leftIt);
+        rightVec.push_back(boxIndex);
+    }
+    else
+    {
+        auto rightIt = std::find(rightVec.begin(), rightVec.end(), boxIndex);
+        if (rightIt == rightVec.end())
+        {
+            return; // not currently in either list -- shouldn't happen
+        }
+        rightVec.erase(rightIt);
+        leftVec.push_back(boxIndex);
+    }
+
+    leftOrder = leftVec;
+    rightOrder = rightVec;
+    wxGetApp().appConfiguration.save(pConfig);
+    reflowGroupBoxes_();
+    nudgeResize_();
+}
+
+// Swaps a box with its neighbour above (direction -1) or below (direction
+// +1) within whichever side's order list currently contains it. A no-op if
+// already at that end (the calling menu item should already be disabled in
+// that case).
+void MainFrame::moveGroupBoxUpDown_(int boxIndex, int direction)
+{
+    auto& leftOrder = wxGetApp().appConfiguration.groupBoxLeftOrder;
+    auto& rightOrder = wxGetApp().appConfiguration.groupBoxRightOrder;
+
+    for (auto* order : { &leftOrder, &rightOrder })
+    {
+        auto vec = order->get();
+        auto it = std::find(vec.begin(), vec.end(), boxIndex);
+        if (it == vec.end())
+        {
+            continue;
+        }
+
+        long pos = it - vec.begin();
+        long newPos = pos + direction;
+        if (newPos < 0 || (size_t)newPos >= vec.size())
+        {
+            return;
+        }
+
+        std::swap(vec[(size_t)pos], vec[(size_t)newPos]);
+        *order = vec;
+        wxGetApp().appConfiguration.save(pConfig);
+        reflowGroupBoxes_();
+        nudgeResize_();
+        return;
+    }
 }
 
 void MainFrame::restoreCallsignListFromCsv_()
@@ -1919,7 +2221,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-                m_textSync->SetLabel(MODEM_LABEL);
                 m_textSync->Refresh();
             }
         }
@@ -2087,13 +2388,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        // update stats on main page
-        wxString modeString; 
-        modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
-        bool relayout = 
-            m_textCurrentDecodeMode->GetLabel() != modeString &&
+        wxString modeString = freedvInterface.getCurrentModeStr();
+        bool relayout =
+            m_textSync->GetLabel() != modeString &&
             !realigned_;
-        m_textCurrentDecodeMode->SetLabel(modeString);
+        m_textSync->SetLabel(modeString);
         if (relayout)
         {
             // XXX - force resize events to make mode string re-center itself.
@@ -2113,7 +2412,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 SetSize(w, h);
             });
-            
+
             realigned_ = true;
         }
 
@@ -2326,8 +2625,7 @@ void MainFrame::performFreeDVOn_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_textSync->Enable();
-        m_textCurrentDecodeMode->Enable();
-        
+
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
@@ -2675,7 +2973,6 @@ void MainFrame::performFreeDVOff_()
     executeOnUiThreadAndWait_([&]() 
     {
         m_textSync->Disable();
-        m_textCurrentDecodeMode->Disable();
 
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
