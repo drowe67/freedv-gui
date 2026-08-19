@@ -462,6 +462,29 @@ wxColour GetGroupBoxBaseColour()
     // that's proven unreliable to read live.
     bool preferDark = false;
     bool foundInSettingsFile = false;
+
+    // GTK_THEME (e.g. "Adwaita:dark") forces GTK to use that theme/variant
+    // outright, overriding whatever settings.ini/xsettings would otherwise
+    // select -- some launch setups (e.g. a launcher script pinning GTK to
+    // Adwaita because the desktop's own custom theme renders badly with
+    // this GTK3/wxWidgets build) rely on this rather than the desktop's
+    // usual settings.ini. When present, it's a more authoritative signal
+    // than either check below, and it sidesteps a real problem on wx 3.2:
+    // a machine using this launch style may have no settings.ini at all
+    // (falling through to the gtk_settings_get_default() read below), and
+    // that read is confirmed unreliable specifically on wx 3.2 -- it can
+    // start wrong at launch and never self-correct for the rest of the
+    // session. So check GTK_THEME first and skip both fallbacks if set.
+    wxString gtkThemeEnv;
+    if (wxGetEnv(wxT("GTK_THEME"), &gtkThemeEnv) && gtkThemeEnv.Lower().Contains(wxT(":dark")))
+    {
+        return wxColour(20, 22, 24);
+    }
+    else if (!gtkThemeEnv.IsEmpty() && gtkThemeEnv.Lower().Contains(wxT(":light")))
+    {
+        return wxColour(255, 255, 255);
+    }
+
     // Deliberately not wxStandardPaths::GetUserConfigDir() -- on Unix that
     // returns plain $HOME (a wx compatibility quirk), not ~/.config.
     wxString settingsPath = wxGetHomeDir() + wxT("/.config/gtk-3.0/settings.ini");
