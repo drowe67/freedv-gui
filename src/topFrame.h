@@ -179,7 +179,6 @@ class TopFrame : public wxFrame
         wxCheckBox* m_ckboxSNR;
         TintedGroupBox* levelBox;
         wxGauge* m_gaugeLevel;
-        wxStaticText* m_textLevel;
 
         wxTextCtrl*   m_txtCtrlCallSign;
         
