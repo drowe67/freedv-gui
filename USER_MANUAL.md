@@ -237,7 +237,7 @@ generate 0.2dB steps whilst hovering anywhere over the TX Attenuation
 control area. Values below 0 dB attenuate the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
-main window tabs (From Radio, From Mic, To Speaker).
+main window tabs (From Radio, From Mic, To Mod, To Speaker).
 
 1. On receive, FreeDV is not very sensitive to the **From Radio**
 level, adjust so that the Level meter is around 75% scale and not clipping.  FreeDV uses phase
@@ -273,8 +273,14 @@ a poor SNR at the receiver.  This is a very common problem.
    
  1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
-1. Adjust the microphone audio so the peaks are not clipping, and the
-average is about 75% of max scale on the Level meter.
+1. Adjust the microphone audio using your operating system's volume settings so the peaks are not clipping, 
+and the average is about 75% of max scale on the Level meter. If additional adjustments are needed, the "Mic Level"
+slider on the right hand side of the main window will allow you to adjust audio levels +/- 20 dB. The "From Mic" tab 
+will show audio after Mic Level adjustments, but before AGC (if enabled). If additional adjustments are performed,
+the peaks in this plot should not exceed approximately +/- 0.5.  
+
+1. AGC is enabled by default and is recommended that it remain on. If desired, it can be disabled by going to Tools->Filters.
+The "To Mod" plot shows the audio that will ultimately be transmitted out over the air, after AGC (if enabled) processing.
 
 ## Audio Processing
 
