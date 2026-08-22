@@ -86,7 +86,18 @@
 // Level Gauge
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
-#define LEVEL_BETA           0.99
+
+// Decay rate for the Level meter.
+// Calculated based on desired 12dB/sec decay:
+// -40 = 20 log(x/INT16_MAX)
+// -2 = log(x/INT16_MAX)
+// 10^-2 = x/INT16_MAX
+// 0.01 * INT16_MAX = 327 = x
+//
+// 40/12 = 3.33s to fully decay = 33 timer fires @ DT sec
+// 327 = 32767 * y^33
+// 33rd root of 0.01 = 0.86
+#define LEVEL_BETA           0.86
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
