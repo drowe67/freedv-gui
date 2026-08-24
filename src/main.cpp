@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include <algorithm>
+#include <cmath>
 #include <inttypes.h>
 #include <time.h>
 #include <fstream>
@@ -2443,7 +2444,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // in both directions, approximating a real VU meter's needle
             // swing (see LEVEL_METER_ALPHA in defines.h).
             m_maxLevel += (tickPeak - m_maxLevel) * LEVEL_METER_ALPHA;
-            int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
+
+            // 100% maps to LEVEL_METER_REFERENCE_DB, not true 0dBFS -- see
+            // that constant's comment in defines.h for why.
+            static const float levelMeterRefAmplitude = 32767.0f * powf(10.0f, (float)LEVEL_METER_REFERENCE_DB / 20.0f);
+            int maxScaled = (int)(100.0 * ((float)m_maxLevel/levelMeterRefAmplitude));
+            maxScaled = std::min(maxScaled, 100);
             m_gaugeLevel->SetValue(maxScaled);
 
             // DIAGNOSTIC ONLY: confirm whether a low reading traces back to

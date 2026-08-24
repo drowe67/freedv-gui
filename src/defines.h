@@ -92,6 +92,16 @@
 // ~300ms rise/fall time constant at our DT=100ms update rate.
 #define LEVEL_METER_ALPHA    0.28
 
+// dBFS level that maps to 100% on the TX level meter's scale, set below
+// true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
+// around half scale (matching the old meter's look/feel that users are
+// used to), while genuine full-scale peaks still show above the old
+// meter's normal operating range instead of pegging at the same point as
+// everyday speech. -8dB chosen empirically (2026-08-24): with the RX/TX
+// gauge-contamination bug fixed, -23 LUFS measured ~20% on the old 0dBFS
+// scale; -8dB brings that to ~50%.
+#define LEVEL_METER_REFERENCE_DB (-8.0)
+
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
 #define TX_ATTENUATION_MAX (0)
