@@ -108,11 +108,11 @@
 // scale; -8dB brings that to ~50%.
 #define LEVEL_METER_REFERENCE_DB (-8.0)
 
-// Acceptable-range marker drawn as a thin green strip above the level
+// Acceptable-range marker drawn as a thin green strip below the level
 // meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
 // ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above.
-#define LEVEL_METER_TARGET_LOW_PCT  40
-#define LEVEL_METER_TARGET_HIGH_PCT 60
+#define LEVEL_METER_TARGET_LOW_PCT  30
+#define LEVEL_METER_TARGET_HIGH_PCT 70
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */

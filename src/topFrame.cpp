@@ -583,7 +583,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // to LEVEL_METER_TARGET_HIGH_PCT) below the gauge -- a plain painted panel
     // rather than a custom meter widget. TX-only: shown/hidden alongside the
     // gauge's RX/TX branch switch in OnTimer().
-    m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(270,5));
+    m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,5));
     m_levelTargetMarker->SetToolTip(_("Acceptable TX level range"));
     m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
         wxPaintDC dc(m_levelTargetMarker);
