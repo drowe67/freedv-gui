@@ -603,6 +603,19 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|wxTOP, 2);
     m_levelTargetMarker->Hide(); // TX-only; OnTimer() shows/hides it with the RX/TX branch switch.
 
+    // Sizer-based centering of a plain wxPanel against a native wxGauge
+    // proved unreliable in testing (kept coming out left-anchored despite
+    // matching requested sizes/flags) -- force the marker's X/width to
+    // exactly match the gauge's actual rendered rectangle instead, synced
+    // whenever the box is laid out/resized.
+    levelBox->Bind(wxEVT_SIZE, [this](wxSizeEvent& evt) {
+        evt.Skip();
+        wxPoint gaugePos = m_gaugeLevel->GetPosition();
+        wxSize gaugeSize = m_gaugeLevel->GetSize();
+        wxPoint markerPos = m_levelTargetMarker->GetPosition();
+        m_levelTargetMarker->SetSize(gaugePos.x, markerPos.y, gaugeSize.GetWidth(), m_levelTargetMarker->GetSize().GetHeight());
+    });
+
     levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
 
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
