@@ -2398,18 +2398,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
+        int tickPeak = 0;
         if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
-            int maxDemodIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (maxDemodIn < abs(demodInPlotSamples[i]))
-                    maxDemodIn = abs(demodInPlotSamples[i]);
-
-            // peak from last second
-            if (maxDemodIn > m_maxLevel)
-                m_maxLevel = maxDemodIn;
+                if (tickPeak < abs(demodInPlotSamples[i]))
+                    tickPeak = abs(demodInPlotSamples[i]);
 
             updated = true;
         }
@@ -2418,24 +2414,24 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // transmit mode - display From Mic peaks
 
             // peak from this DT sampling period
-            int maxSpeechIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (maxSpeechIn < abs(speechInPlotSamples[i]))
-                    maxSpeechIn = abs(speechInPlotSamples[i]);
-
-            // peak from last second
-            if (maxSpeechIn > m_maxLevel)
-                m_maxLevel = maxSpeechIn;
+                if (tickPeak < abs(speechInPlotSamples[i]))
+                    tickPeak = abs(speechInPlotSamples[i]);
 
            updated = true;
         }
 
         if (updated)
         {
-            // Peak Reading meter: updates peaks immediately, then slowly decays
+            // Moving-average ("moving coil meter") ballistics: the bar swings
+            // toward each tick's peak instead of jumping straight to it and
+            // only slowly decaying, so a single brief transient no longer
+            // reads as a full-scale spike. Same attack/release time constant
+            // in both directions, approximating a real VU meter's needle
+            // swing (see LEVEL_METER_ALPHA in defines.h).
+            m_maxLevel += (tickPeak - m_maxLevel) * LEVEL_METER_ALPHA;
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
             m_gaugeLevel->SetValue(maxScaled);
-            m_maxLevel *= LEVEL_BETA;
         }
     }
 }

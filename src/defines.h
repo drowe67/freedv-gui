@@ -86,7 +86,11 @@
 // Level Gauge
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
-#define LEVEL_BETA           0.99
+
+// Moving-average ("moving coil meter") ballistics for the peak level meter.
+// alpha = 1 - exp(-DT/tau), with tau=0.3s approximating a real VU meter's
+// ~300ms rise/fall time constant at our DT=100ms update rate.
+#define LEVEL_METER_ALPHA    0.28
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
