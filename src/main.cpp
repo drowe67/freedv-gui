@@ -2417,6 +2417,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if (tickPeak < abs(demodInPlotSamples[i]))
                     tickPeak = abs(demodInPlotSamples[i]);
 
+            // Target-range marker is TX-only.
+            if (m_levelTargetMarker->IsShown())
+            {
+                m_levelTargetMarker->Hide();
+                m_levelTargetMarker->GetParent()->Layout();
+            }
+
             updated = true;
         }
         else if (timerId == ID_TIMER_SPEECH_IN)
@@ -2431,6 +2438,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
                 if (tickPeak < abs(levelMeterMicSamples[i]))
                     tickPeak = abs(levelMeterMicSamples[i]);
+
+            if (!m_levelTargetMarker->IsShown())
+            {
+                m_levelTargetMarker->Show();
+                m_levelTargetMarker->GetParent()->Layout();
+            }
 
            updated = true;
         }
