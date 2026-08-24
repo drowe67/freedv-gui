@@ -572,10 +572,32 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
     levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
 
+    wxBoxSizer* levelGaugeSizer = new wxBoxSizer(wxVERTICAL);
+
+    // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
+    // to LEVEL_METER_TARGET_HIGH_PCT) just above the gauge -- a plain painted
+    // panel rather than a custom meter widget.
+    m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,5));
+    m_levelTargetMarker->SetToolTip(_("Acceptable level range"));
+    m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+        wxPaintDC dc(m_levelTargetMarker);
+        wxSize sz = m_levelTargetMarker->GetClientSize();
+        dc.SetBackground(wxBrush(m_levelTargetMarker->GetParent()->GetBackgroundColour()));
+        dc.Clear();
+        int loX = sz.GetWidth() * LEVEL_METER_TARGET_LOW_PCT / 100;
+        int hiX = sz.GetWidth() * LEVEL_METER_TARGET_HIGH_PCT / 100;
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
+        dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
+    });
+    levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
+
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
-    
+    levelGaugeSizer->Add(m_gaugeLevel, 0, wxTOP, 2);
+
+    levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
+
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     
     //------------------------------

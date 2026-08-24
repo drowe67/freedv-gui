@@ -96,7 +96,7 @@
 // symmetric exponential average with tau=LEVEL_METER_TIME_CONSTANT_SEC;
 // the trade-off is added latency to genuine level changes, accepted
 // deliberately in exchange for not reacting to short-lived extremes.
-#define LEVEL_METER_TIME_CONSTANT_SEC 2.0
+#define LEVEL_METER_TIME_CONSTANT_SEC 1.0
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
@@ -107,6 +107,12 @@
 // gauge-contamination bug fixed, -23 LUFS measured ~20% on the old 0dBFS
 // scale; -8dB brings that to ~50%.
 #define LEVEL_METER_REFERENCE_DB (-8.0)
+
+// Acceptable-range marker drawn as a thin green strip above the level
+// meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
+// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above.
+#define LEVEL_METER_TARGET_LOW_PCT  40
+#define LEVEL_METER_TARGET_HIGH_PCT 60
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
