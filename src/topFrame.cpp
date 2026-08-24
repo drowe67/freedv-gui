@@ -29,6 +29,7 @@
 #include <wx/numformatter.h>
 
 #include "topFrame.h"
+#include "defines.h"
 
 #if !wxCHECK_VERSION(3, 3, 0)
 #include <set>
