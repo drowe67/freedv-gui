@@ -106,7 +106,7 @@
 // everyday speech. -8dB chosen empirically (2026-08-24): with the RX/TX
 // gauge-contamination bug fixed, -23 LUFS measured ~20% on the old 0dBFS
 // scale; -8dB brings that to ~50%.
-#define LEVEL_METER_REFERENCE_DB (-8.0)
+#define LEVEL_METER_REFERENCE_DB (-11.0)
 
 // Acceptable-range marker drawn as a thin green strip below the level
 // meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
