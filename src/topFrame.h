@@ -104,6 +104,7 @@ class TopFrame : public wxFrame
         wxCheckBox* m_ckboxSNR;
         wxGauge* m_gaugeLevel;
         wxPanel* m_levelTargetMarker;
+        bool m_levelTargetMarkerActive;
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;

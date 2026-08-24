@@ -577,7 +577,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
     // to LEVEL_METER_TARGET_HIGH_PCT) just above the gauge -- a plain painted
-    // panel rather than a custom meter widget.
+    // panel rather than a custom meter widget. Always visible (never
+    // Show()/Hide()'d) -- GTK doesn't finish allocating a widget's real
+    // on-screen position until it's been shown once, and reading its
+    // geometry immediately after a first Show()+Layout() during TX
+    // confirmed it was still stuck at (0,0) regardless (2026-08-24
+    // diagnostic). TX-only-ness is now purely a paint-time decision via
+    // m_levelTargetMarkerActive, toggled+Refresh()'d by OnTimer() instead.
+    m_levelTargetMarkerActive = false;
     m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,5));
     m_levelTargetMarker->SetToolTip(_("Acceptable level range"));
     m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
@@ -585,47 +592,22 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
         wxSize sz = m_levelTargetMarker->GetClientSize();
         dc.SetBackground(wxBrush(m_levelTargetMarker->GetParent()->GetBackgroundColour()));
         dc.Clear();
-        int loX = sz.GetWidth() * LEVEL_METER_TARGET_LOW_PCT / 100;
-        int hiX = sz.GetWidth() * LEVEL_METER_TARGET_HIGH_PCT / 100;
-        dc.SetPen(*wxTRANSPARENT_PEN);
-        dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
-        dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
+        if (m_levelTargetMarkerActive)
+        {
+            int loX = sz.GetWidth() * LEVEL_METER_TARGET_LOW_PCT / 100;
+            int hiX = sz.GetWidth() * LEVEL_METER_TARGET_HIGH_PCT / 100;
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
+            dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
+        }
     });
     levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
-    m_levelTargetMarker->Hide(); // TX-only; OnTimer() shows/hides it with the RX/TX branch switch.
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
     levelGaugeSizer->Add(m_gaugeLevel, 0, wxTOP, 2);
 
     levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
-
-    // DIAGNOSTIC ONLY: log the actual widget geometry once, to see exactly
-    // why the marker isn't aligning with the gauge instead of guessing
-    // through more rebuild cycles.
-    levelBox->Bind(wxEVT_SIZE, [this, levelBox](wxSizeEvent& evt) {
-        evt.Skip();
-        static bool scheduled = false;
-        if (!scheduled)
-        {
-            scheduled = true;
-            // Deferred via CallAfter -- reading geometry directly in the size
-            // handler ran ahead of the sizer's own layout pass for that same
-            // event (both children read back as (0,0)). CallAfter queues
-            // this for after the current event cycle, once layout's settled.
-            this->CallAfter([this, levelBox]() {
-                wxSize gaugeSz = m_gaugeLevel->GetSize();
-                wxPoint gaugePos = m_gaugeLevel->GetPosition();
-                wxSize markerSz = m_levelTargetMarker->GetSize();
-                wxPoint markerPos = m_levelTargetMarker->GetPosition();
-                wxSize boxSz = levelBox->GetSize();
-                log_debug("LevelBox geometry (deferred): box=%dx%d gauge pos=(%d,%d) size=%dx%d marker pos=(%d,%d) size=%dx%d",
-                    boxSz.GetWidth(), boxSz.GetHeight(),
-                    gaugePos.x, gaugePos.y, gaugeSz.GetWidth(), gaugeSz.GetHeight(),
-                    markerPos.x, markerPos.y, markerSz.GetWidth(), markerSz.GetHeight());
-            });
-        }
-    });
 
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     
