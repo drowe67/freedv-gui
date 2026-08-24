@@ -87,10 +87,14 @@
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
 
-// Moving-average ("moving coil meter") ballistics for the peak level meter.
-// alpha = 1 - exp(-DT/tau), with tau=0.3s approximating a real VU meter's
-// ~300ms rise/fall time constant at our DT=100ms update rate.
-#define LEVEL_METER_ALPHA    0.28
+// PPM-style ballistics for the peak level meter: instant attack (jump
+// straight to each tick's peak, catching transients with no added latency),
+// release at a fixed dB/sec rate (a straight-line fall, not an average --
+// avoids the bounce/latency a running average causes). 15dB/sec is in the
+// range typical broadcast PPMs use (IEC 60268-10 ballpark). The original
+// peak-hold code effectively released at ~0.87dB/sec (0.99 per 100ms
+// tick), which is why a transient used to visibly linger for ~20+ seconds.
+#define LEVEL_METER_RELEASE_DB_PER_SEC 15.0
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings

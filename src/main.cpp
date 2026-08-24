@@ -2437,13 +2437,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (updated)
         {
-            // Moving-average ("moving coil meter") ballistics: the bar swings
-            // toward each tick's peak instead of jumping straight to it and
-            // only slowly decaying, so a single brief transient no longer
-            // reads as a full-scale spike. Same attack/release time constant
-            // in both directions, approximating a real VU meter's needle
-            // swing (see LEVEL_METER_ALPHA in defines.h).
-            m_maxLevel += (tickPeak - m_maxLevel) * LEVEL_METER_ALPHA;
+            // PPM-style ballistics: instant attack (jump straight to a new
+            // peak), fixed dB/sec release (a straight-line fall rather than
+            // a running average, so it doesn't bounce/lag chasing dips --
+            // see LEVEL_METER_RELEASE_DB_PER_SEC in defines.h).
+            static const float levelMeterReleaseFactor = powf(10.0f, -(float)(LEVEL_METER_RELEASE_DB_PER_SEC * DT) / 20.0f);
+            m_maxLevel = std::max((float)tickPeak, m_maxLevel * levelMeterReleaseFactor);
 
             // 100% maps to LEVEL_METER_REFERENCE_DB, not true 0dBFS -- see
             // that constant's comment in defines.h for why.
