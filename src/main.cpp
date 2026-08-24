@@ -2404,9 +2404,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         bool updated = false;
         int tickPeak = 0;
-        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        if (timerId == ID_TIMER_DEMOD_IN && !g_tx.load(std::memory_order_relaxed) && m_RxRunning)
         {
             // receive mode - display From Radio peaks
+            // Note: txState is a per-call local only populated when timerId
+            // is ID_TIMER_UPDATE_OTHER/ID_TIMER_SNR, so it's stale (always
+            // false) here -- read g_tx directly instead, otherwise this
+            // branch also fires during TX and stomps the TX mic reading.
             // peak from this DT sampling period
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
                 if (tickPeak < abs(demodInPlotSamples[i]))
