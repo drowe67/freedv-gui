@@ -577,7 +577,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
-    levelGaugeSizer->Add(m_gaugeLevel, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxEXPAND));
+    levelGaugeSizer->Add(m_gaugeLevel, 0, static_cast<int>(wxEXPAND));
 
     // Thin static strip marking the acceptable TX range (LEVEL_METER_TARGET_LOW_PCT
     // to LEVEL_METER_TARGET_HIGH_PCT) below the gauge -- a plain painted panel
