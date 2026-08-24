@@ -600,6 +600,27 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
 
+    // DIAGNOSTIC ONLY: log the actual widget geometry once, to see exactly
+    // why the marker isn't aligning with the gauge instead of guessing
+    // through more rebuild cycles.
+    levelBox->Bind(wxEVT_SIZE, [this, levelBox](wxSizeEvent& evt) {
+        evt.Skip();
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            wxSize gaugeSz = m_gaugeLevel->GetSize();
+            wxPoint gaugePos = m_gaugeLevel->GetPosition();
+            wxSize markerSz = m_levelTargetMarker->GetSize();
+            wxPoint markerPos = m_levelTargetMarker->GetPosition();
+            wxSize boxSz = levelBox->GetSize();
+            log_debug("LevelBox geometry: box=%dx%d gauge pos=(%d,%d) size=%dx%d marker pos=(%d,%d) size=%dx%d",
+                boxSz.GetWidth(), boxSz.GetHeight(),
+                gaugePos.x, gaugePos.y, gaugeSz.GetWidth(), gaugeSz.GetHeight(),
+                markerPos.x, markerPos.y, markerSz.GetWidth(), markerSz.GetHeight());
+        }
+    });
+
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     
     //------------------------------
