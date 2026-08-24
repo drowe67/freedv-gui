@@ -150,6 +150,10 @@ GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
+// Separate pre-AGC/pre-EQ tap for the TX level meter, so it reflects true
+// mic drive rather than the "Frm Mic" plot's post-AGC/EQ encoder input.
+GenericFIFO<short>  g_levelMeterMicFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+
 // Soundcard config
 int                 g_nSoundCards;
 
@@ -1834,6 +1838,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
+    short levelMeterMicSamples[WAVEFORM_PLOT_BUF];
     bool txState = false;
     bool halfDuplexState = false;
     int syncState = 0;
@@ -2411,12 +2416,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else if (timerId == ID_TIMER_SPEECH_IN)
         {
-            // transmit mode - display From Mic peaks
+            // transmit mode - display true mic drive (pre-AGC/EQ), separate
+            // from the "Frm Mic" plot which shows post-AGC/EQ encoder input.
+            if (g_levelMeterMicFifo.read(levelMeterMicSamples, WAVEFORM_PLOT_BUF)) {
+                memset(levelMeterMicSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+            }
 
             // peak from this DT sampling period
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-                if (tickPeak < abs(speechInPlotSamples[i]))
-                    tickPeak = abs(speechInPlotSamples[i]);
+                if (tickPeak < abs(levelMeterMicSamples[i]))
+                    tickPeak = abs(levelMeterMicSamples[i]);
 
            updated = true;
         }
@@ -2599,6 +2608,7 @@ void MainFrame::performFreeDVOn_()
         g_plotDemodInFifo.reset();
         g_plotSpeechOutFifo.reset();
         g_plotSpeechInFifo.reset();
+        g_levelMeterMicFifo.reset();
 
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
