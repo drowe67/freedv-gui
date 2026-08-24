@@ -2443,6 +2443,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 m_levelTargetMarker->Show();
                 m_levelTargetMarker->GetParent()->Layout();
+
+                // DIAGNOSTIC ONLY: previous geometry log was captured while
+                // still hidden (GTK doesn't allocate hidden widgets, so it
+                // read back as (0,0)) -- log again now that it's actually
+                // visible, to see the real position/size once shown.
+                wxSize gaugeSz = m_gaugeLevel->GetSize();
+                wxPoint gaugePos = m_gaugeLevel->GetPosition();
+                wxSize markerSz = m_levelTargetMarker->GetSize();
+                wxPoint markerPos = m_levelTargetMarker->GetPosition();
+                log_debug("LevelBox geometry (on TX show): gauge pos=(%d,%d) size=%dx%d marker pos=(%d,%d) size=%dx%d",
+                    gaugePos.x, gaugePos.y, gaugeSz.GetWidth(), gaugeSz.GetHeight(),
+                    markerPos.x, markerPos.y, markerSz.GetWidth(), markerSz.GetHeight());
             }
 
            updated = true;
