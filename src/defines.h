@@ -96,7 +96,7 @@
 // symmetric exponential average with tau=LEVEL_METER_TIME_CONSTANT_SEC;
 // the trade-off is added latency to genuine level changes, accepted
 // deliberately in exchange for not reacting to short-lived extremes.
-#define LEVEL_METER_TIME_CONSTANT_SEC 0.5
+#define LEVEL_METER_TIME_CONSTANT_SEC 1.0
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
