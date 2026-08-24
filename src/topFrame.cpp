@@ -575,20 +575,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     wxBoxSizer* levelGaugeSizer = new wxBoxSizer(wxVERTICAL);
 
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
-    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
-    levelGaugeSizer->Add(m_gaugeLevel, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
-
-    // Thin static strip marking the acceptable TX range (LEVEL_METER_TARGET_LOW_PCT
-    // to LEVEL_METER_TARGET_HIGH_PCT) below the gauge -- a plain painted panel
-    // rather than a custom meter widget. TX-only: shown/hidden alongside the
-    // gauge's RX/TX branch switch in OnTimer(). SetMinSize() is required --
-    // unlike wxGauge, a plain wxPanel doesn't report its constructor size as
-    // a sizer min-size on its own, which was leaving it at some smaller
-    // size and left-anchored instead of centred under the gauge.
+    // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
+    // to LEVEL_METER_TARGET_HIGH_PCT) just above the gauge -- a plain painted
+    // panel rather than a custom meter widget.
     m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,5));
-    m_levelTargetMarker->SetMinSize(wxSize(135,5));
-    m_levelTargetMarker->SetToolTip(_("Acceptable TX level range"));
+    m_levelTargetMarker->SetToolTip(_("Acceptable level range"));
     m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
         wxPaintDC dc(m_levelTargetMarker);
         wxSize sz = m_levelTargetMarker->GetClientSize();
@@ -600,21 +591,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
         dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
         dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
     });
-    levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|wxTOP, 2);
+    levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
     m_levelTargetMarker->Hide(); // TX-only; OnTimer() shows/hides it with the RX/TX branch switch.
 
-    // Sizer-based centering of a plain wxPanel against a native wxGauge
-    // proved unreliable in testing (kept coming out left-anchored despite
-    // matching requested sizes/flags) -- force the marker's X/width to
-    // exactly match the gauge's actual rendered rectangle instead, synced
-    // whenever the box is laid out/resized.
-    levelBox->Bind(wxEVT_SIZE, [this](wxSizeEvent& evt) {
-        evt.Skip();
-        wxPoint gaugePos = m_gaugeLevel->GetPosition();
-        wxSize gaugeSize = m_gaugeLevel->GetSize();
-        wxPoint markerPos = m_levelTargetMarker->GetPosition();
-        m_levelTargetMarker->SetSize(gaugePos.x, markerPos.y, gaugeSize.GetWidth(), m_levelTargetMarker->GetSize().GetHeight());
-    });
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
+    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
+    levelGaugeSizer->Add(m_gaugeLevel, 0, wxTOP, 2);
 
     levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
 
