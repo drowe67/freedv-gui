@@ -605,19 +605,25 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // through more rebuild cycles.
     levelBox->Bind(wxEVT_SIZE, [this, levelBox](wxSizeEvent& evt) {
         evt.Skip();
-        static bool logged = false;
-        if (!logged)
+        static bool scheduled = false;
+        if (!scheduled)
         {
-            logged = true;
-            wxSize gaugeSz = m_gaugeLevel->GetSize();
-            wxPoint gaugePos = m_gaugeLevel->GetPosition();
-            wxSize markerSz = m_levelTargetMarker->GetSize();
-            wxPoint markerPos = m_levelTargetMarker->GetPosition();
-            wxSize boxSz = levelBox->GetSize();
-            log_debug("LevelBox geometry: box=%dx%d gauge pos=(%d,%d) size=%dx%d marker pos=(%d,%d) size=%dx%d",
-                boxSz.GetWidth(), boxSz.GetHeight(),
-                gaugePos.x, gaugePos.y, gaugeSz.GetWidth(), gaugeSz.GetHeight(),
-                markerPos.x, markerPos.y, markerSz.GetWidth(), markerSz.GetHeight());
+            scheduled = true;
+            // Deferred via CallAfter -- reading geometry directly in the size
+            // handler ran ahead of the sizer's own layout pass for that same
+            // event (both children read back as (0,0)). CallAfter queues
+            // this for after the current event cycle, once layout's settled.
+            this->CallAfter([this, levelBox]() {
+                wxSize gaugeSz = m_gaugeLevel->GetSize();
+                wxPoint gaugePos = m_gaugeLevel->GetPosition();
+                wxSize markerSz = m_levelTargetMarker->GetSize();
+                wxPoint markerPos = m_levelTargetMarker->GetPosition();
+                wxSize boxSz = levelBox->GetSize();
+                log_debug("LevelBox geometry (deferred): box=%dx%d gauge pos=(%d,%d) size=%dx%d marker pos=(%d,%d) size=%dx%d",
+                    boxSz.GetWidth(), boxSz.GetHeight(),
+                    gaugePos.x, gaugePos.y, gaugeSz.GetWidth(), gaugeSz.GetHeight(),
+                    markerPos.x, markerPos.y, markerSz.GetWidth(), markerSz.GetHeight());
+            });
         }
     });
 
