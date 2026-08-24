@@ -2450,14 +2450,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/levelMeterRefAmplitude));
             maxScaled = std::min(maxScaled, 100);
             m_gaugeLevel->SetValue(maxScaled);
-
-            // DIAGNOSTIC ONLY: confirm whether a low reading traces back to
-            // a low tickPeak (upstream tap/fifo issue) or to the ballistics
-            // math (this calculation) eating a healthy peak.
-            if (timerId == ID_TIMER_SPEECH_IN)
-            {
-                log_debug("LevelMeter TX: tickPeak=%d m_maxLevel=%.1f maxScaled=%d", tickPeak, m_maxLevel, maxScaled);
-            }
         }
     }
 }
