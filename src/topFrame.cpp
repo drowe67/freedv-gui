@@ -588,14 +588,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
         wxPaintDC dc(m_levelTargetMarker);
         wxSize sz = m_levelTargetMarker->GetClientSize();
-        dc.SetBackground(wxBrush(m_levelTargetMarker->GetParent()->GetBackgroundColour()));
-        dc.Clear();
 
-        // Outline the panel's full extent so its bounds are visible even
-        // when the off-target background matches the surrounding UI --
-        // DIAGNOSTIC, confirming whether the panel itself is sized/placed
-        // correctly (2026-08-24: user couldn't tell where the widget's
-        // bounds were without this reference).
+        // DIAGNOSTIC (2026-08-24): solid, distinct off-target colour instead
+        // of matching the surrounding UI, so background-blending can't be
+        // mistaken for (or mask) a real positioning bug. Outline confirms
+        // the panel's own true bounds too.
+        dc.SetBackground(wxBrush(wxColour(220, 220, 220)));
+        dc.Clear();
         dc.SetPen(wxPen(wxColour(128, 128, 128), 1));
         dc.SetBrush(*wxTRANSPARENT_BRUSH);
         dc.DrawRectangle(0, 0, sz.GetWidth(), sz.GetHeight());
