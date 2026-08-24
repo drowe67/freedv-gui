@@ -2437,12 +2437,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (updated)
         {
-            // PPM-style ballistics: instant attack (jump straight to a new
-            // peak), fixed dB/sec release (a straight-line fall rather than
-            // a running average, so it doesn't bounce/lag chasing dips --
-            // see LEVEL_METER_RELEASE_DB_PER_SEC in defines.h).
-            static const float levelMeterReleaseFactor = powf(10.0f, -(float)(LEVEL_METER_RELEASE_DB_PER_SEC * DT) / 20.0f);
-            m_maxLevel = std::max((float)tickPeak, m_maxLevel * levelMeterReleaseFactor);
+            // Running average of tickPeak, deliberately slow (see
+            // LEVEL_METER_TIME_CONSTANT_SEC in defines.h) so brief
+            // transients wash out instead of individually pegging the
+            // meter -- this is NOT a peak-follower.
+            static const float levelMeterAlpha = 1.0f - expf(-(float)DT / (float)LEVEL_METER_TIME_CONSTANT_SEC);
+            m_maxLevel += ((float)tickPeak - m_maxLevel) * levelMeterAlpha;
 
             // 100% maps to LEVEL_METER_REFERENCE_DB, not true 0dBFS -- see
             // that constant's comment in defines.h for why.

@@ -87,14 +87,16 @@
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
 
-// PPM-style ballistics for the peak level meter: instant attack (jump
-// straight to each tick's peak, catching transients with no added latency),
-// release at a fixed dB/sec rate (a straight-line fall, not an average --
-// avoids the bounce/latency a running average causes). 15dB/sec is in the
-// range typical broadcast PPMs use (IEC 60268-10 ballpark). The original
-// peak-hold code effectively released at ~0.87dB/sec (0.99 per 100ms
-// tick), which is why a transient used to visibly linger for ~20+ seconds.
-#define LEVEL_METER_RELEASE_DB_PER_SEC 15.0
+// Running average (NOT an instantaneous peak-follower) of the level
+// meter's per-tick peaks, deliberately slow so a single loud
+// syllable/plosive gets smoothed into the average instead of individually
+// pegging the meter -- confirmed needed 2026-08-24: an instant-attack
+// design pegged on the 't' of "two" while ebumeter hadn't even reached
+// -23 LUFS and the pre-encode plot was well within normal limits. A
+// symmetric exponential average with tau=LEVEL_METER_TIME_CONSTANT_SEC;
+// the trade-off is added latency to genuine level changes, accepted
+// deliberately in exchange for not reacting to short-lived extremes.
+#define LEVEL_METER_TIME_CONSTANT_SEC 2.0
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
