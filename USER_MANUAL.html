@@ -1267,8 +1267,8 @@ speech codec bits</td>
 </table>
 <h1 data-number="19" id="release-notes"><span
 class="header-section-number">19</span> Release Notes</h1>
-<h2 data-number="19.1" id="v2.4.0-tbd-2026"><span
-class="header-section-number">19.1</span> V2.4.0 TBD 2026</h2>
+<h2 data-number="19.1" id="v2.4.0-august-2026"><span
+class="header-section-number">19.1</span> V2.4.0 August 2026</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -1324,6 +1324,9 @@ data-cites="barjac">@barjac</span>!</li>
 <li>Fix FreeDV Reporter column-order corruption and Last TX column
 width. (PR #1458) - thanks <span class="citation"
 data-cites="barjac">@barjac</span>!</li>
+<li>Fix waterfall/spectrum filling solid colour during half-duplex TX.
+(PR #1462) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
 <li>Windows/macOS: Zero audio on startup. (PR #1463)</li>
 <li>Fix issue causing TX thread to use more CPU time than expected with
 no audio available. (PR #1465)</li>
@@ -1375,150 +1378,11 @@ data-cites="barjac">@barjac</span>!</li>
 #1435)</li>
 </ul></li>
 </ol>
-<h2 data-number="19.2" id="v2.3.1-may-2026"><span
-class="header-section-number">19.2</span> V2.3.1 May 2026</h2>
-<ol type="1">
-<li>Bugfixes:
-<ul>
-<li>Fix TX/tune level context menus on Linux distros using wxWidgets
-&lt;= 3.2. (PR #1333) - thanks <span class="citation"
-data-cites="barjac">@barjac</span>!</li>
-<li>Fix audio routing problems on Windows due to hardware offloading.
-(PR #1335)</li>
-<li>Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks
-<span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Fix missing Hamlib defines when building from source (PR #1353) -
-thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>FreeDV Reporter: Fix issue preventing mode changes on double-click.
-(PR #1343)</li>
-<li>Fix compiler warning/error in EventHandler when using GCC 16.1. (PR
-#1347)</li>
-<li>Improve Flex waveform RX audio quality. (PR #1338, #1348, 1356)</li>
-<li>Flex: Use version number without Git hash for waveform registration.
-(PR #1359)</li>
-<li>Fix intermittent CSV logging corruption. (PR #1361)</li>
-<li>Hamlib: Fix bug preventing frequency change after changing on the
-radio. (PR #1363)</li>
-<li>KA9Q: Remove custom AppRun script causing audio distortion. (PR
-#1364)</li>
-</ul></li>
-<li>Enhancements:
-<ul>
-<li>Allow use of a custom key for PTT. (PR #1309)</li>
-<li>Improve Reporter message list usability. (PR #1310) - thanks <span
-class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Clarify Reporter on/off tooltip. (PR #1345)</li>
-</ul></li>
-</ol>
-<h2 data-number="19.3" id="v2.3.0-may-2026"><span
-class="header-section-number">19.3</span> V2.3.0 May 2026</h2>
-<ol type="1">
-<li>Bugfixes:
-<ul>
-<li>Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR
-#1220)</li>
-<li>FreeDV Reporter: Fix display issues on non-English systems. (PR
-#1217)</li>
-<li>Update audio device list in Easy Setup after opening advanced audio
-setup. (PR #1223)</li>
-<li>Easy Setup: Fix crash while displaying Hamlib error. (PR #1224)</li>
-<li>Force numpy to 2.3.x due to illegal instruction errors. (PR
-#1230)</li>
-<li>FreeDV Reporter: Disable autosizing enable/disable on Linux. (PR
-#1231)</li>
-<li>Improve reliability of Start/Stop and PTT buttons. (PR #1236)</li>
-<li>Hamlib: Reenable FLRig/rigctl timeouts. (PR #1233)</li>
-<li>Hamlib/OmniRig: Ignore frequency/mode query during TX. (PR
-#1246)</li>
-<li>Fix audio dropouts on Linux. (PR #1266)</li>
-<li>OmniRig: Use frequency from VFO if we get a zero frequency. (PR
-#1274)</li>
-<li>Fix bugs related to display of Mic/Speaker Level slider. (PR #1281)
-- thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Fix bug causing main window’s menu to disappear when Reporter is
-displayed. (PR #1282)</li>
-<li>Flex: Prevent multiple slices from being in FreeDV mode. (PR
-#1270)</li>
-<li>Further improve audio dropouts. (PR #1287)</li>
-<li>FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR
-#1289)</li>
-<li>Fix RADE related compiler errors. (PR #1299)</li>
-<li>Logging: fix incorrect time when using UTC due to DST. (PR #1302) -
-thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Ensure that PTT is actually off when opening Hamlib connection. (PR
-#1308)</li>
-<li>Fix race condition preventing frequency/mode from changing on start
-with SmartSDR 4.2. (PR #1314, #1320, #1321, #1322)</li>
-<li>Fix inability to open web browser in AppImages (e.g. when viewing
-callsign info). (PR #1326)</li>
-</ul></li>
-<li>Enhancements:
-<ul>
-<li>FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared()
-for performance. (PR #1212)</li>
-<li>Optimize “From XXX” plot performance. (PR #1238, #1239)</li>
-<li>Logging: Send WSJT-X ‘Decode’ message to indicate RX’d SNR. (PR
-#1248)</li>
-<li>Remove Python from RADE implementation to improve performance. (PR
-#1251)</li>
-<li>Add ability to hide self from FreeDV Reporter list. (PR #1260,
-#1278)</li>
-<li>Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265,
-#1317, #1322)</li>
-<li>Add SNR plot to main window. (PR #1250, #1261)</li>
-<li>Bring back RX frequency indicator for RADE. (PR #1265, #1283)</li>
-<li>Improve usability of attenuation control in the main window. (PR
-#1268) - thanks <span class="citation"
-data-cites="barjac">@barjac</span>!</li>
-<li>Use RNNoise for improved noise canceling during TX. (PR #1276,
-#1307)</li>
-<li>FreeDV Reporter: Add ability to filter based on individual columns.
-(PR #1285)</li>
-<li>Improve spectrum and waterfall plot appearance on small displays.
-(PR #1288) - thanks <span class="citation"
-data-cites="barjac">@barjac</span>!</li>
-<li>Add optional per-band TX attenuation saving. (PR #1284, #1323) -
-thanks <span class="citation" data-cites="barjac">@barjac</span>!</li>
-<li>Log heard callsigns to a CSV file. (PR #1290, #1293)</li>
-<li>Add ability to load and save different FreeDV configurations. (PR
-#1296)</li>
-<li>Hamlib: Add options to force RTS and DTR on. (PR #1292)</li>
-<li>Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR
-#1306)</li>
-<li>Easy Setup: Also emit audio tone through speakers. (PR #1033)</li>
-<li>Switch to r8brain for audio resampling. (PR #1307)</li>
-</ul></li>
-<li>Build system:
-<ul>
-<li>Update Python to 3.14.3. (PR #1221)</li>
-<li>Update Hamlib to 4.7.1. (PR #1226, #1314)</li>
-<li>Update wxWidgets to 3.3.2. (PR #1244)</li>
-<li>Flex: Update Docker container version to match AppImage version. (PR
-#1256)</li>
-<li>Reenable Windows on ARM builds previously disabled in 2.0.0. (PR
-#1297, #1300)</li>
-<li>Add automated code signing support for Windows builds. (PR
-#1312)</li>
-</ul></li>
-<li>Documentation:
-<ul>
-<li>Update README instructions to reflect current Windows build steps.
-(PR #1232)</li>
-<li>Add OmniRig troubleshooting to the user manual. (PR #1264)</li>
-<li>Update FlexRadio waveform README to reflect SmartSDR 4.2 release.
-(PR #1311)</li>
-</ul></li>
-<li>Other:
-<ul>
-<li>Audio resampling logic consolidated in one location for ease of
-maintenance. (PR #1286, #1307)</li>
-</ul></li>
-</ol>
-<h2 data-number="19.4" id="earlier-than-v2.2.0"><span
-class="header-section-number">19.4</span> Earlier than V2.2.0</h2>
+<h2 data-number="19.2" id="earlier-than-v2.3.0"><span
+class="header-section-number">19.2</span> Earlier than V2.3.0</h2>
 <p>See <a
 href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
-for more information about changes in versions prior to 2.2.0.</p>
+for more information about changes in versions prior to 2.3.0.</p>
 <h1 data-number="20" id="references"><span
 class="header-section-number">20</span> References</h1>
 <ul>
