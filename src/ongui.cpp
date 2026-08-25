@@ -14,11 +14,9 @@
 #include "main.h"
 
 #include "git_version.h"
-#include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
-#include "gui/dialogs/dlg_audiooptions.h"
 #include "gui/dialogs/dlg_options.h"
-#include "gui/dialogs/dlg_ptt.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
@@ -28,17 +26,10 @@
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
-
-extern int g_mode;
-
-extern int   g_SquelchActive;
-extern float g_SquelchLevel;
 extern int   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
@@ -87,45 +78,6 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
     OnExit(event);
 }
 
-//-------------------------------------------------------------------------
-// OnToolsEasySetup()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetup(wxCommandEvent&)
-{
-    EasySetupDialog* dlg = new EasySetupDialog(this);
-    if (dlg->ShowModal() == wxOK)
-    {
-        // Show/hide frequency box based on CAT control setup.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-
-        // Show/hide callsign combo box based on PSK Reporter Status
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            m_cboLastReportedCallsigns->Show();
-            m_txtCtrlCallSign->Hide();
-        }
-        else
-        {
-            m_cboLastReportedCallsigns->Hide();
-            m_txtCtrlCallSign->Show();
-        }
-
-        // Initialize FreeDV Reporter if required.
-        initializeFreeDVReporter_();
-        
-        // Relayout window so that the changes can take effect.
-        m_panel->Layout();
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnToolsEasySetupUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -161,35 +113,15 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnToolsAudio()
+// OnToolsSetupWizard()
 //-------------------------------------------------------------------------
-void MainFrame::OnToolsAudio(wxCommandEvent& event)
+void MainFrame::OnToolsSetupWizard(wxCommandEvent&)
 {
-    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
-
-    wxUnusedVar(event);
-    int rv = 0;
-    AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
-    rv = dlg->ShowModal();
-    if(rv == wxOK)
-    {
-        dlg->ExchangeData(EXCHANGE_DATA_OUT);
-
-        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
-        if (oldRxOnly != newRxOnly &&
-            wxGetApp().m_sharedReporterObject->isValidForReporting())
-        {
-            // Receive Only status has changed, refresh FreeDV Reporter
-            initializeFreeDVReporter_();
-        }
-    }
-    delete dlg;
+    SetupWizard wizard(this);
+    wizard.ShowModal();
 }
 
-//-------------------------------------------------------------------------
-// OnToolsAudioUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
+void MainFrame::OnToolsSetupWizardUI(wxUpdateUIEvent& event)
 {
     event.Enable(!m_RxRunning);
 }
@@ -238,19 +170,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Show/hide stats box
         statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
-        
-        // Show/hide legacy modes
-        modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        
-        bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && !m_rbRADE->GetValue();
-        squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_sliderSQ->Enable(isEnabled);
-        m_ckboxSQ->Enable(isEnabled);
-        m_textSQ->Enable(isEnabled);
-        m_btnCenterRx->Enable(isEnabled);
-        m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-        m_BtnReSync->Enable(isEnabled);
-        m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
         // XXX - with really short windows, wxWidgets sometimes doesn't size
         // the components properly until the user resizes the window (even if only
@@ -358,35 +277,6 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 {
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    ComPortsDlg *dlg = new ComPortsDlg(NULL);
-
-    if (dlg->ShowModal() == wxID_OK)
-    {
-        // Show/hide frequency box based on CAT control configuration.
-        m_freqBox->Show(isFrequencyControlEnabled_());
-        
-        // Reinitialize FreeDV Reporter again in case we changed PTT method.
-        initializeFreeDVReporter_();
-    }
-
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfgUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
@@ -509,9 +399,10 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
         bool isUsbFreq = newFreq >= 10000000 || is60MeterBand;
         bool isLsbFreq = newFreq < 10000000 && !is60MeterBand;
 
-        bool isMatchingMode = 
-            (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-            (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+        bool isMatchingMode =
+            (!g_analog && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+            (g_analog && isUsbFreq && (mode == IRigFrequencyController::USB)) ||
+            (g_analog && isLsbFreq && (mode == IRigFrequencyController::LSB));
 
         if (isMatchingMode)
         {
@@ -797,18 +688,6 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
 }
 
 //-------------------------------------------------------------------------
-// OnCmdSliderScroll()
-//-------------------------------------------------------------------------
-void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
-{
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
-    m_textSQ->SetLabel(sqsnr_string);
-
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
 // bandNameForFilter() - maps FilterFrequency enum to config key string
 //-------------------------------------------------------------------------
 static wxString bandNameForFilter(FilterFrequency band)
@@ -1043,21 +922,6 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
-}
-
-//-------------------------------------------------------------------------
-// OnCheckSQClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent&)
-{
-    if(!g_SquelchActive)
-    {
-        g_SquelchActive = true;
-    }
-    else
-    {
-        g_SquelchActive = false;
-    }
 }
 
 void MainFrame::setsnrBeta(bool snrSlow)
@@ -1479,29 +1343,26 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
-        {
-            log_info("Waiting for EOO to be queued");
-            endingTx.store(true, std::memory_order_release);
+        log_info("Waiting for EOO to be queued");
+        endingTx.store(true, std::memory_order_release);
             
-            auto beginTime = std::chrono::high_resolution_clock::now();
-            while(true)
+        auto beginTime = std::chrono::high_resolution_clock::now();
+        while(true)
+        {
+            if (g_eoo_enqueued.load(std::memory_order_acquire))
             {
-                if (g_eoo_enqueued.load(std::memory_order_acquire))
-                {
-                    log_info("Detected that EOO has been enqueued");
-                    break;
-                }
+                log_info("Detected that EOO has been enqueued");
+                break;
+            }
  
-                wxThread::Sleep(1);
-                wxGetApp().Yield(true);
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
 
-                auto endTime = std::chrono::high_resolution_clock::now();
-                if ((endTime - beginTime) >= std::chrono::seconds(2))
-                {
-                    log_warn("Timed out waiting for EOO to be enqueued");
-                    break;
-                }
+            auto endTime = std::chrono::high_resolution_clock::now();
+            if ((endTime - beginTime) >= std::chrono::seconds(2))
+            {
+                log_warn("Timed out waiting for EOO to be enqueued");
+                break;
             }
         }
 
@@ -1817,9 +1678,10 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
-    bool useAnalog = 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
-    return GetModeForFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, useAnalog);
+    return GetModeForFrequency(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, 
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
+        g_analog);
 }
 
 //-------------------------------------------------------------------------
@@ -1827,6 +1689,8 @@ HamlibRigController::Mode MainFrame::getCurrentMode_()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
 {
+    auto oldMode = getCurrentMode_();
+
     if (g_analog == 0) {
         g_analog = 1;
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
@@ -1856,7 +1720,27 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
-        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        auto currentMode = getCurrentMode_();
+
+        constexpr int LSB_USB_FREQ_SHIFT_HZ = 3000;
+        if (currentMode == HamlibRigController::LSB && g_analog)
+        {
+            // If analog is enabled, we should add +3 kHz to the frequency to 
+            // ensure we're still listening to the same passband that we were
+            // previously prior to the analog switch.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency + LSB_USB_FREQ_SHIFT_HZ;
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
+        else if (oldMode == HamlibRigController::LSB && !g_analog)
+        {
+            // Revert previous mode shift.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency - LSB_USB_FREQ_SHIFT_HZ;
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
+
+        wxGetApp().rigFrequencyController->setMode(currentMode);
     }
 
     g_State.store(0, std::memory_order_release);
@@ -1963,17 +1847,6 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
 
 // Force manual resync, just in case demod gets stuck on false sync
 
-void MainFrame::OnReSync(wxCommandEvent&)
-{
-    if (m_RxRunning)  {
-        log_debug("OnReSync");
-        
-        // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-        // the next execution of the TX/RX loop.
-        g_queueResync.store(true, std::memory_order_release);
-    }
-}
-
 // Deselects item on right-click
 void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
 {
@@ -2029,15 +1902,12 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
 void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {
-        freedvInterface.resetBitStats();
         g_resyncs = 0;
         int i;
         for(i=0; i<2*g_Nc; i++) {
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-        // resets variance stats every time it is called
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
 }
 

@@ -25,7 +25,7 @@
 #include "os/os_interface.h"
 
 #include "plot_waterfall.h"
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
+#include "defines.h" // for FDMDV_FCENTRE
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 

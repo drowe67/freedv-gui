@@ -61,8 +61,6 @@
 
 #include "gui/util/wxListViewComboPopup.h"
 
-#include "freedv_api.h" // for FREEDV_MODE_*
-
 ///////////////////////////////////////////////////////////////////////////
 
 #define ID_OPEN 1000
@@ -97,6 +95,7 @@ class TopFrame : public wxFrame
         wxMenuBar* m_menubarMain;
         wxMenu* file;
         wxMenu* edit;
+        wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
         wxGauge* m_gaugeSNR;
@@ -120,9 +119,6 @@ class TopFrame : public wxFrame
         wxSlider* m_sliderMicSpkrLevel;
         wxStaticText* m_txtMicSpkrLevelNum;
         
-        wxSlider* m_sliderSQ;        
-        wxCheckBox* m_ckboxSQ;
-        wxStaticText* m_textSQ;
         wxStatusBar* m_statusBar1;
 
         wxStaticBox* statsBox;
@@ -138,17 +134,11 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textCodec2Var;
 
         wxStaticText  *m_textSync;
-        wxButton      *m_BtnReSync;
         wxButton      *m_btnCenterRx;
         
         wxToggleButton      *m_audioRecord;
         
         wxButton*     m_logQSO;
-
-        wxRadioButton *m_rbRADE;
-        wxRadioButton *m_rb700d;
-        wxRadioButton *m_rb700e;
-        wxRadioButton *m_rb1600;
 
         wxSizer* rightSizer;
 
@@ -170,21 +160,17 @@ class TopFrame : public wxFrame
 
         virtual void OnExit( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTop( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetup( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsEasySetupUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudio( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsAudioUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsFilter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
+        virtual void OnToolsSetupWizard( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsSetupWizardUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfig( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsExportConfigUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -197,12 +183,8 @@ class TopFrame : public wxFrame
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnHelpAbout( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpManual( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnCmdSliderScroll( wxScrollEvent& event ) { event.Skip(); }
-        virtual void OnCheckSQClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCheckSNRClick( wxCommandEvent& event ) { event.Skip(); }
 
-        virtual void OnTogBtnLoopRx( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnLoopTx( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnOnOff( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
@@ -225,7 +207,6 @@ class TopFrame : public wxFrame
 
         virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
         
@@ -269,7 +250,6 @@ class TopFrame : public wxFrame
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
         wxStaticBox*  m_freqBox;
-        wxStaticBox*  squelchBox;
         wxStaticBox*  m_txLevelBox;
         wxStaticBox* micSpeakerBox;
 

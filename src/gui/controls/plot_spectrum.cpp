@@ -24,7 +24,7 @@
 #include <wx/wx.h>
 
 #include "plot_spectrum.h"
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
+#include "defines.h" // for FDMDV_FCENTRE
 
 #define HZ_GRANULARITY 10
 

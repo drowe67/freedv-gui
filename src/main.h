@@ -66,9 +66,7 @@
 #include <intrin.h>
 #endif
 
-#include "codec2.h"
-#include "codec2_fifo.h"
-#include "modem_stats.h"
+#include "pipeline/modem_stats.h"
 
 #include "topFrame.h"
 #include "gui/dialogs/filter_frequency.h"
@@ -227,21 +225,10 @@ class MainApp : public wxApp
         bool                saveConfig();
 
         // misc
-
-        bool       m_testFrames;
-        bool       m_channel_noise;
         float      m_channel_snr_dB;
 
         int        FilterEvent(wxEvent& event);
         MainFrame *frame;
-
-        // 700 options
-        bool       m_FreeDV700Combine;
-
-        // carrier attenuation
-
-        bool       m_attn_carrier_en;
-        int        m_attn_carrier;
 
         // tone interferer simulation
 
@@ -413,15 +400,11 @@ class MainFrame : public TopFrame
         void OnTop(wxCommandEvent& event) override;
         void OnExit( wxCommandEvent& event ) override;
 
-        void OnToolsEasySetup( wxCommandEvent& event ) override;
-        void OnToolsEasySetupUI( wxUpdateUIEvent& event ) override;
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
-        void OnToolsAudio( wxCommandEvent& event ) override;
-        void OnToolsAudioUI( wxUpdateUIEvent& event ) override;
-        void OnToolsComCfg( wxCommandEvent& event ) override;
-        void OnToolsComCfgUI( wxUpdateUIEvent& event ) override;
         void OnToolsFilter( wxCommandEvent& event ) override;
+        void OnToolsSetupWizard(wxCommandEvent& event) override;
+        void OnToolsSetupWizardUI(wxUpdateUIEvent& event) override;
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
@@ -439,8 +422,6 @@ class MainFrame : public TopFrame
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;
         void OnHelpAbout( wxCommandEvent& event ) override;
         void OnHelpManual( wxCommandEvent& event ) override;
-        void OnCmdSliderScroll( wxScrollEvent& event ) override;
-        void OnCheckSQClick( wxCommandEvent& event ) override;
         void OnCheckSNRClick( wxCommandEvent& event ) override;
 
         // Toggle Buttons
@@ -466,7 +447,6 @@ class MainFrame : public TopFrame
         
         void OnCallSignReset( wxCommandEvent& event ) override;
         void OnBerReset( wxCommandEvent& event ) override;
-        void OnReSync( wxCommandEvent& event ) override;
 
         //System Events
         void OnPaint(wxPaintEvent& event);
@@ -482,8 +462,6 @@ class MainFrame : public TopFrame
 #endif
 
         int VoiceKeyerStartTx(void);
-
-        void OnChangeTxMode( wxCommandEvent& event ) override;
         
         void applyTxLevel();
         void OnTxLevelDecrBig( wxCommandEvent& event ) override;

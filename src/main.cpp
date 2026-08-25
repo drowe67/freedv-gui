@@ -45,7 +45,6 @@
 #include "os/os_interface.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
-#include "codec2_fdmdv.h"
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
@@ -55,8 +54,8 @@
 #include "logging/WSJTXNetworkLogger.h"
 
 #include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/dlg_filter.h"
-#include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/util/WindowPositionRestore.h"
 #include "gui/util/TabLayoutSerializer.h"
@@ -80,11 +79,6 @@ using namespace std::placeholders;
 #define wxUSE_PCX       1
 #define wxUSE_LIBTIFF   1
 
-extern "C" {
-    extern void golay23_init(void);
-}
-
-
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
 // back functions
@@ -92,7 +86,6 @@ extern "C" {
 
 // freedv states
 int                 g_Nc;
-int                 g_mode;
 
 FreeDVInterface     freedvInterface;
 std::shared_ptr<TxRxThread> m_txThread;
@@ -100,13 +93,11 @@ std::shared_ptr<TxRxThread> m_rxThread;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
-std::atomic<bool>   g_queueResync;
 
 // test Frames
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-std::atomic<int>    g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
@@ -124,8 +115,6 @@ int g_tuneLevel = 0;
 std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
-int   g_SquelchActive;
-float g_SquelchLevel;
 int   g_analog;
 std::atomic<bool>   g_tx;
 float g_snr;
@@ -133,9 +122,6 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
 std::atomic<bool>  g_bwExpandEnabled;
-// sending and receiving Call Sign data
-std::atomic<GenericFIFO<short>*> g_txDataInFifo;
-struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
 std::atomic<int>                 g_State, g_prev_State;
@@ -335,38 +321,6 @@ void MainApp::UnitTest_()
     
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
-
-    // Select FreeDV mode.
-    wxRadioButton* modeBtn = nullptr;
-    if (utFreeDVMode == "RADEV1")
-    {
-        modeBtn = frame->m_rbRADE;
-    }
-    else if (utFreeDVMode == "700D")
-    {
-        modeBtn = frame->m_rb700d;
-    }
-    else if (utFreeDVMode == "700E")
-    {
-        modeBtn = frame->m_rb700e;
-    }
-    else if (utFreeDVMode == "1600")
-    {
-        modeBtn = frame->m_rb1600;
-    }
-    
-    if (modeBtn != nullptr)
-    {
-        log_info("Firing mode change");
-        /*sim.MouseMove(modeBtn->GetScreenPosition());
-        sim.MouseClick();*/
-        CallAfter([this, modeBtn]() {
-            modeBtn->SetValue(true);
-            wxCommandEvent* modeEvent = new wxCommandEvent(wxEVT_RADIOBUTTON, modeBtn->GetId());
-            modeEvent->SetEventObject(modeBtn);
-            QueueEvent(modeEvent);
-        });
-    }
     
     // Fire event to start FreeDV
     log_info("Firing start");
@@ -825,6 +779,11 @@ static void SuppressButtonPressFlicker_()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
+    // Suppress spurious GTK logging.
+    GTKSuppressDiagnostics();
+#endif // wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
+
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
@@ -846,8 +805,6 @@ bool MainApp::OnInit()
     SetVendorName(FREEDV_VENDOR_NAME);
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
-    golay23_init();
-
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date
     wxDateTime buildDate(wxInvalidDateTime); // silence UBSan error on some platforms
@@ -915,10 +872,6 @@ void MainFrame::loadConfiguration_()
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
-
-    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
-    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
-    g_SquelchLevel /= 2.0;
     
     wxSize size = GetMinSize();
 
@@ -1001,9 +954,6 @@ void MainFrame::loadConfiguration_()
     }
     
     // -----------------------------------------------------------------------
-
-    wxGetApp().m_FreeDV700Combine = 1;
-
     if (wxGetApp().appConfiguration.debugVerbose)
     {
         ulog_set_level(LOG_TRACE);
@@ -1013,9 +963,6 @@ void MainFrame::loadConfiguration_()
         ulog_set_level(LOG_INFO);
     }
     g_freedv_verbose = wxGetApp().appConfiguration.apiVerbose;
-
-    wxGetApp().m_attn_carrier_en = 0;
-    wxGetApp().m_attn_carrier    = 0;
 
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
@@ -1047,65 +994,19 @@ void MainFrame::loadConfiguration_()
         m_cboReportFrequency->SetValue(sVal);
     }
 
-    int defaultMode = wxGetApp().appConfiguration.currentFreeDVMode.getDefaultVal();
-    int mode = wxGetApp().appConfiguration.currentFreeDVMode;
-setDefaultMode:
-    if (mode == 0)
-    {
-        m_rb1600->SetValue(1);
-    }
-    else if (mode == 4)
-    {
-        m_rb700d->SetValue(1);
-    }
-    else if (mode == 5)
-    {
-        m_rb700e->SetValue(1);
-    }
-    else if (mode == FREEDV_MODE_RADE)
-    {
-        m_rbRADE->SetValue(1);
-    }
-    else
-    {
-        // Default to RADE otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
-    }
-    
-    // Disable controls not supported by RADE.
-    bool isEnabled = wxGetApp().appConfiguration.enableLegacyModes && mode != FREEDV_MODE_RADE;
-    squelchBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_sliderSQ->Enable(isEnabled);
-    m_ckboxSQ->Enable(isEnabled);
-    m_textSQ->Enable(isEnabled);
-    m_btnCenterRx->Enable(isEnabled);
-    m_btnCenterRx->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_BtnReSync->Enable(isEnabled);
-    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
-
-    if (!isEnabled)
-    {
-        m_textBits->SetLabel("Bits: unk");
-        m_textErrors->SetLabel("Errs: unk");
-        m_textBER->SetLabel("BER: unk");
-        m_textFreqOffset->SetLabel("FrqOff: unk");
-        m_textSyncMetric->SetLabel("Sync: unk");
-        m_textCodec2Var->SetLabel("Var: unk");
-        m_textClockOffset->SetLabel("ClkOff: unk");
-    }
+    m_textBits->SetLabel("Bits: unk");
+    m_textErrors->SetLabel("Errs: unk");
+    m_textBER->SetLabel("BER: unk");
+    m_textFreqOffset->SetLabel("FrqOff: unk");
+    m_textSyncMetric->SetLabel("Sync: unk");
+    m_textCodec2Var->SetLabel("Var: unk");
+    m_textClockOffset->SetLabel("ClkOff: unk");
     
     pConfig->SetPath(wxT("/"));
     
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
-
-    // squelch settings
-    m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB";
-    m_textSQ->SetLabel(sqsnr_string);
-    m_ckboxSQ->SetValue(g_SquelchActive);
 
     // SNR settings
 
@@ -1205,8 +1106,6 @@ setDefaultMode:
     }
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
-    modeBox->Show(wxGetApp().appConfiguration.enableLegacyModes);
-    m_BtnReSync->Show(wxGetApp().appConfiguration.enableLegacyModes);
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1466,17 +1365,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_tx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
 
-    // data states
-    g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
-    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
-
     sox_biquad_start();
 
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
-    wxGetApp().m_testFrames = false;
-    wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
 
     optionsDlg = new OptionsDlg(NULL);
@@ -1503,29 +1396,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
-        // Initial setup. Display Easy Setup dialog.
+        // Initial setup — show the setup wizard.
         CallAfter([&]() {
-            EasySetupDialog* dlg = new EasySetupDialog(this);
-            if (dlg->ShowModal() == wxOK)
-            {
-                // Show/hide frequency box based on CAT control configuration.
-                m_freqBox->Show(isFrequencyControlEnabled_());
-
-                // Show/hide callsign combo box based on PSK Reporter Status
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-                {
-                    m_cboLastReportedCallsigns->Show();
-                    m_txtCtrlCallSign->Hide();
-                }
-                else
-                {
-                    m_cboLastReportedCallsigns->Hide();
-                    m_txtCtrlCallSign->Show();
-                }
-
-                // Relayout window so that the changes can take effect.
-                m_panel->Layout();
-            }
+            SetupWizard wizard(this);
+            wizard.ShowModal();
         });
     }
     else if (wxGetApp().appConfiguration.autoStartOnLaunch)
@@ -1676,24 +1550,8 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
 #endif // wxCHECK_VERSION(3, 3, 0)
     }
 
-
-    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
-    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
-
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     autoSaveCurrentBandLevels_(false);
-
-    int mode = FREEDV_MODE_RADE;
-    if (m_rb1600->GetValue())
-        mode = 0;
-    if (m_rb700d->GetValue())
-        mode = 4;
-    if (m_rb700e->GetValue())
-        mode = 5;
-    if (m_rbRADE->GetValue())
-        mode = FREEDV_MODE_RADE;
-    
-    wxGetApp().appConfiguration.currentFreeDVMode = mode;
     wxGetApp().appConfiguration.save(config);
 }
 
@@ -2087,58 +1945,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         g_prev_State.store(state, std::memory_order_release);
 
-        // send Callsign ----------------------------------------------------
-
-        char callsign[MAX_CALLSIGN];
-        memset(callsign, 0, MAX_CALLSIGN);
-    
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            strncpy(callsign, (const char*) wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString->mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
-            if (strlen(callsign) < MAX_CALLSIGN - 1)
-            {
-                strncat(callsign, "\r", 2);
-            }     
-     
-            // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-            char* sendBuffer = &callsign[0];
-            auto txDataFifo = g_txDataInFifo.load(std::memory_order_acquire);
-            if ((unsigned)txDataFifo->numUsed() < strlen(sendBuffer)) {
-                unsigned int  i;
-
-                // write chars to tx data fifo
-                for(i = 0; i < strlen(sendBuffer); i++) {
-                    short ashort = (unsigned char)sendBuffer[i];
-                    txDataFifo->write(&ashort, 1);
-                }
-            }
-
-            // See if any Callsign info received --------------------------------
-
-            short ashort;
-            while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-                unsigned char incomingChar = (unsigned char)ashort;
-        
-                // Pre-1.5.1 behavior, where text is handled as-is.
-                if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                {                        
-                    // CR completes line. Fill in remaining positions with zeroes.
-                    if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
-                    {
-                        memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
-                    }
-            
-                    // Reset to the beginning.
-                    m_pcallsign = m_callsign;
-                }
-                else
-                {
-                    *m_pcallsign++ = incomingChar;
-                }
-                m_txtCtrlCallSign->SetValue(m_callsign);
-            }
-        }
-
         // We should only report to reporters when all of the following are true:
         // a) The callsign encoder indicates a valid callsign has been received.
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
@@ -2244,7 +2050,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             else if (
                 wxGetApp().m_sharedReporterObject && 
-                freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
                 syncState)
             {               
                 // Special case for RADE--report '--' for callsign so we can
@@ -2301,27 +2106,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
-    
-        // set some run time options (if applicable)
-        freedvInterface.setRunTimeOptions(
-            (int)wxGetApp().appConfiguration.freedv700Clip,
-            (int)wxGetApp().appConfiguration.freedv700TxBPF);
-
-        // Test Frame Bit Error Updates ------------------------------------
-
-        // Toggle test frame mode at run time
-
-        if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
-            // reset stats on check box off to on transition
-            freedvInterface.resetTestFrameStats();
-        }
-        freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise.store(wxGetApp().m_channel_noise, std::memory_order_release);
 
         // update stats on main page
         wxString modeString; 
-        if (g_mode == FREEDV_MODE_RADE) modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
-        else modeString = wxString::Format(MODE_FORMAT_STR, freedvInterface.getCurrentModeStr());
+        modeString = MODE_RADE_FORMAT_STR; // optimization to reduce allocs
         bool relayout = 
             m_textCurrentDecodeMode->GetLabel() != modeString &&
             !realigned_;
@@ -2352,50 +2140,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         wxString freqOffset = wxString::Format(FRQ_OFF_FMT, freedvInterface.getCurrentRxModemOffset());
         m_textFreqOffset->SetLabel(freqOffset);
 
-        if (g_mode == FREEDV_MODE_RADE)
-        {
-            m_textBits->SetLabel(BITS_UNK_LABEL);
-            m_textErrors->SetLabel(ERRS_UNK_LABEL);
-            m_textBER->SetLabel(BER_UNK_LABEL);
-            m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
-            m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
-        }
-        else
-        {
-            wxString bits = wxString::Format(BITS_FMT, freedvInterface.getTotalBits()); 
-            m_textBits->SetLabel(bits);
-
-            wxString errors = wxString::Format(ERRS_FMT, freedvInterface.getTotalBitErrors()); 
-            m_textErrors->SetLabel(errors);
-
-            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-            wxString ber = wxString::Format(BER_FMT, b); 
-            m_textBER->SetLabel(ber);
-
-            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
-            m_textResyncs->SetLabel(resyncs);
-
-            wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
-            m_textSyncMetric->SetLabel(syncMetric);
-
-            // Codec 2 700D/E "auto EQ" equaliser variance
-            auto var = freedvInterface.getVariance();
-            wxString var_string = wxString::Format(VAR_FMT, var);
-            m_textCodec2Var->SetLabel(var_string);
-        }
-
-        if (state) {
-
-            if (g_mode == FREEDV_MODE_RADE)
-            {
-                m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
-            }
-            else
-            {
-                wxString clockOffset = wxString::Format(CLK_OFF_FMT, (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-                m_textClockOffset->SetLabel(clockOffset);
-            }
-        }
+        m_textBits->SetLabel(BITS_UNK_LABEL);
+        m_textErrors->SetLabel(ERRS_UNK_LABEL);
+        m_textBER->SetLabel(BER_UNK_LABEL);
+        m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
+        m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
+        m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
 
         /* FIFO and PortAudio under/overflow debug counters */
         optionsDlg->DisplayFifoPACounters();
@@ -2546,62 +2296,10 @@ void MainFrame::OnExit(wxCommandEvent&)
     }
 }
 
-void MainFrame::OnChangeTxMode( wxCommandEvent& event )
-{
-    auto eventObject = (wxRadioButton*)event.GetEventObject();
-    auto newMode = g_mode;
-    if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
-    {
-        newMode = FREEDV_MODE_1600;
-    }
-    else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
-    {
-        newMode = FREEDV_MODE_RADE;
-    }
-    else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
-    {
-        newMode = FREEDV_MODE_700D;
-    }
-    else if (eventObject == m_rb700e || (eventObject == nullptr && m_rb700e->GetValue())) 
-    {
-        newMode = FREEDV_MODE_700E;
-    }
-
-    if (newMode != g_mode)
-    {
-        g_mode = newMode; 
-        if (freedvInterface.isRunning())
-        {
-            // Need to change the TX interface live.
-            freedvInterface.changeTxMode(g_mode);
-        }
-    
-        // Force recreation of EQ filters.
-        m_newMicInFilter = true;
-        m_newSpkOutFilter = true;
-    
-        // Report TX change to registered reporters
-        auto txStatus = g_tx.load(std::memory_order_acquire);
-        for (auto& obj : wxGetApp().m_reporters)
-        {
-            obj->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
-        }
-    
-        // Disable controls not supported by RADE
-        bool isEnabled = g_mode != FREEDV_MODE_RADE;
-        m_sliderSQ->Enable(isEnabled);
-        m_ckboxSQ->Enable(isEnabled);
-        m_textSQ->Enable(isEnabled);
-        m_btnCenterRx->Enable(isEnabled);
-        m_BtnReSync->Enable(isEnabled);
-    }
-}
-
 void MainFrame::performFreeDVOn_()
 {
     log_debug("Start .....");
     isModemRunning.store(false, std::memory_order_release);
-    g_queueResync.store(false, std::memory_order_release);
     endingTx.store(false, std::memory_order_release);
     g_voice_keyer_tx.store(false, std::memory_order_release);
     g_tx.store(false, std::memory_order_release);
@@ -2652,68 +2350,14 @@ void MainFrame::performFreeDVOn_()
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        // determine what mode we are using
-        wxCommandEvent tmpEvent;
-        OnChangeTxMode(tmpEvent);
-
-        if (!wxGetApp().appConfiguration.enableLegacyModes || !wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
-        {
-            m_rb1600->Disable();
-            m_rbRADE->Disable();
-            m_rb700d->Disable();
-            m_rb700e->Disable();
-            
-            if (!wxGetApp().appConfiguration.enableLegacyModes)
-            {
-                // If legacy modes are not enabled, RADE is the only option.
-                g_mode = FREEDV_MODE_RADE;
-            }
-            freedvInterface.addRxMode(g_mode);
-        }
-        else
-        {
-            m_rbRADE->Disable();
-                    
-            int rxModes[] = {
-                FREEDV_MODE_1600,
-                FREEDV_MODE_700E,
-                FREEDV_MODE_700D,
-            };
-
-            for (auto& mode : rxModes)
-            {
-                freedvInterface.addRxMode(mode);
-            }
-        
-            // If we're receive-only, it doesn't make sense to be able to change TX mode.
-            if (g_nSoundCards <= 1)
-            {
-                m_rb1600->Disable();
-                m_rbRADE->Disable();
-                m_rb700d->Disable();
-                m_rb700e->Disable();
-            }
-        }
-        
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
     
-        wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
-
-        // Codec 2 VQ Equaliser
-        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
-
-        // Codec2 verbosity setting
-        freedvInterface.setVerbose(g_freedv_verbose);
+        freedvInterface.start(wxGetApp().appConfiguration.fifoSizeMs, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Text field/callsign callbacks.
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-        {
-            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
-        }
-        else
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             char temp[9];
             memset(temp, 0, 9);
@@ -2738,23 +2382,12 @@ void MainFrame::performFreeDVOn_()
             g_error_histn[i] = 0;
         }
 
-        // init Codec 2 LPC Post Filter (FreeDV 1600)
-        freedvInterface.setLpcPostFilter(
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta,
-                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma);
-
         log_debug("freedv_get_n_speech_samples(tx): %d", freedvInterface.getTxNumSpeechSamples());
         log_debug("freedv_get_speech_sample_rate(tx): %d", freedvInterface.getTxSpeechSampleRate());
     
         // adjust spectrum and waterfall freq scaling base on mode
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
-    
-        // Init text msg decoding
-        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-            freedvInterface.setTextVaricodeNum(1);
     });
 
     g_State.store(0, std::memory_order_release);
@@ -2855,7 +2488,7 @@ void MainFrame::performFreeDVOn_()
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
-                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         });
                     }
                     else
@@ -2953,10 +2586,6 @@ void MainFrame::performFreeDVOn_()
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
         });
     }
-
-    // Clear existing TX text, if any.
-    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
-    tmpFifo->reset();
 }
 
 void MainFrame::performFreeDVOff_()
@@ -3073,11 +2702,6 @@ void MainFrame::performFreeDVOff_()
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-    
-        m_rbRADE->Enable();
-        m_rb1600->Enable();
-        m_rb700d->Enable();
-        m_rb700e->Enable();
         
         m_logQSO->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
 
@@ -3351,7 +2975,7 @@ void MainFrame::startRxStream()
         if (g_nSoundCards == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
-                wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
+                wxMessageBox(wxT("No Sound Cards configured, use Tools->Settings to configure"), wxT("Error"), wxOK);
             });
             
             m_RxRunning = false;
@@ -3868,31 +3492,12 @@ bool MainFrame::validateSoundCardSetup(bool silent)
     {
         if (!silent)
         {
-            // Initial setup. Display Easy Setup dialog.
+            // No audio devices configured — open Options so the user can set them up.
             CallAfter([&]() {
-                EasySetupDialog* dlg = new EasySetupDialog(this);
-                if (dlg->ShowModal() == wxOK)
-                {
-                    // Show/hide frequency box based on CAT control status
-                    m_freqBox->Show(isFrequencyControlEnabled_());
-
-                    // Show/hide callsign combo box based on PSK Reporter Status
-                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-                    {
-                        m_cboLastReportedCallsigns->Show();
-                        m_txtCtrlCallSign->Hide();
-                    }
-                    else
-                    {
-                        m_cboLastReportedCallsigns->Hide();
-                        m_txtCtrlCallSign->Show();
-                    }
-
-                    // Relayout window so that the changes can take effect.
-                    m_panel->Layout();
-                }
+                wxCommandEvent dummy;
+                OnToolsOptions(dummy);
             });
-        }
+	}
         canRun = false;
     }
     else if (!canRun)
@@ -3900,7 +3505,7 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         if (!silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.",
+                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Settings to check your settings.",
                 failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
         }
     }
@@ -3945,7 +3550,7 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         if (!canRun && !silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.",
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Settings to check your settings.",
                 failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
         }
     }

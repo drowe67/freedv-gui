@@ -44,7 +44,7 @@ ComputeRfSpectrumStep::ComputeRfSpectrumStep(
     rxSpectrum_ = new float[MODEM_STATS_NSPEC];
     assert(rxSpectrum_ != nullptr);
 
-    rxFdm_ = new COMP[FS];
+    rxFdm_ = new RADE_COMP[FS];
     assert(rxFdm_ != nullptr);
 }
 

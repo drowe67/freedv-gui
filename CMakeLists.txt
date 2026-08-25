@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 2.4.0)
+set(PROJECT_VERSION 3.0.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -410,11 +410,6 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # 
 include(cmake/BuildFreeDVBackend.cmake)
 
-#
-# Build codec2
-#
-include(cmake/BuildCodec2.cmake)
-
 if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
 endif(NOT USE_NATIVE_AUDIO AND LINUX)
@@ -771,21 +766,17 @@ set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
 endif(NOT SANITIZERS_ENABLED)
 endif(NOT ENABLE_RTSAN)
 
-DefineAudioTest(700D)
-DefineAudioTest(700E)
-DefineAudioTest(1600)
-
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
 if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT SANITIZERS_ENABLED)
 
-add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
+add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh awgn)
 if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT SANITIZERS_ENABLED)
 
-add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
+add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh mpp)
 if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT SANITIZERS_ENABLED)
