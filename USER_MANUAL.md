@@ -947,6 +947,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.4.1 TBD 2026
+
+TBD
+
 ## V2.4.0 August 2026
 
 1. Bugfixes:
