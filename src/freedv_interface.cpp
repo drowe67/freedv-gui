@@ -561,7 +561,7 @@ int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
         // Verified that rade_api.c from librade has no unbounded operations
         // as of 2025-10-03.
         FREEDV_BEGIN_VERIFIED_SAFE
-        return std::max(rade_n_tx_out(rade_), radeTxStep_->eooLengthInSamples());
+        return std::max(rade_n_tx_out(rade_), radeTxStep_ != nullptr ? radeTxStep_->eooLengthInSamples() : rade_n_tx_eoo_out(rade_));
         FREEDV_END_VERIFIED_SAFE
     }
 
