@@ -102,9 +102,16 @@
 // LEVEL_METER_TARGET_HIGH_PCT..RAMP_HIGH_PCT. Which zone applies is decided
 // by the meter's own previous (already-smoothed) reading, not the raw
 // incoming peak, so the ramp itself moves gradually and doesn't flicker
-// between rates right at a boundary.
+// between rates right at a boundary. LEVEL_METER_FAST_TIME_CONSTANT_SEC
+// must stay comfortably above DT (the ~100ms tick period) -- a value much
+// smaller than one tick gives the EMA essentially no memory between ticks
+// (alpha -> 1), so it just displays whichever single 100ms window's raw
+// peak happened to land; a lone plosive/quiet gap could then snap the
+// meter straight to an end-stop or straight to zero with nothing to damp
+// it (confirmed 2026-08-27: seen live with the original 0.02s value).
+// 0.15s (~1.5 ticks) still reads as snappy but blends 2-3 windows.
 #define LEVEL_METER_TIME_CONSTANT_SEC 1.5
-#define LEVEL_METER_FAST_TIME_CONSTANT_SEC 0.02
+#define LEVEL_METER_FAST_TIME_CONSTANT_SEC 0.15
 #define LEVEL_METER_RAMP_LOW_PCT  15
 #define LEVEL_METER_RAMP_HIGH_PCT 85
 
