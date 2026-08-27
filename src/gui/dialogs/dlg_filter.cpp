@@ -639,7 +639,19 @@ void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
 void FilterDlg::OnAgcEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release); // forces immediate change at pipeline level
+    if (wxGetApp().appConfiguration.filterConfiguration.agcEnabled)
+    {
+        // Mic level should be reset to 0 if AGC is enabled.
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+        m_MicInVol.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
+        setGain(&m_MicInVol);
+
+        plotMicInFilterSpectrum();
+        adjRunTimeMicInFilter();
+    }
+
     ExchangeData(EXCHANGE_DATA_OUT);
+    updateControlState();
 }
 
 void FilterDlg::OnBwExpandEnable(wxScrollEvent&) {
@@ -662,7 +674,7 @@ void FilterDlg::updateControlState()
     m_MicInTreble.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     m_MicInTreble.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInVol.sliderGain->Enable(true);
+    m_MicInVol.sliderGain->Enable(!wxGetApp().appConfiguration.filterConfiguration.agcEnabled);
     
     m_MicInDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     

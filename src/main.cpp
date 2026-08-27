@@ -899,7 +899,12 @@ void MainFrame::loadConfiguration_()
     
     // Load AGC state
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
-    
+    if (wxGetApp().appConfiguration.filterConfiguration.agcEnabled)
+    {
+        // Mic level should be reset to 0 if AGC is enabled.
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
+    }
+
     // Load BW expander state
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release);
     
@@ -1821,14 +1826,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
              if (m_filterDialog->haveVolumesBeenChanged())
              {
                 auto sliderVal = 0.0;
-                if (txState)
-                {
-                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
-                }
-                else
-                {
-                    sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-                }
+                sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
 
                 if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
                 {
