@@ -87,16 +87,26 @@
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
 
-// Running average (NOT an instantaneous peak-follower) of the level
-// meter's per-tick peaks, deliberately slow so a single loud
-// syllable/plosive gets smoothed into the average instead of individually
-// pegging the meter -- confirmed needed 2026-08-24: an instant-attack
-// design pegged on the 't' of "two" while ebumeter hadn't even reached
-// -23 LUFS and the pre-encode plot was well within normal limits. A
-// symmetric exponential average with tau=LEVEL_METER_TIME_CONSTANT_SEC;
-// the trade-off is added latency to genuine level changes, accepted
-// deliberately in exchange for not reacting to short-lived extremes.
-#define LEVEL_METER_TIME_CONSTANT_SEC 1.0
+// Running average (NOT a simple instantaneous peak-follower) of the level
+// meter's per-tick peaks. Uses an adaptive time constant rather than one
+// fixed value: slow (LEVEL_METER_TIME_CONSTANT_SEC) across the acceptable
+// LEVEL_METER_TARGET_LOW_PCT..HIGH_PCT range, so genuine level-setting is
+// smoothed against individual syllables/plosives (confirmed needed
+// 2026-08-24: a fixed instant-attack design pegged on the 't' of "two"
+// while ebumeter hadn't even reached -23 LUFS and the pre-encode plot was
+// well within normal limits) -- but fast (LEVEL_METER_FAST_TIME_CONSTANT_SEC)
+// below LEVEL_METER_RAMP_LOW_PCT or above LEVEL_METER_RAMP_HIGH_PCT, so the
+// meter snaps up quickly when speech starts from silence and doesn't hang
+// around in the red after a genuine overload, ramping linearly between the
+// two rates across LEVEL_METER_RAMP_LOW_PCT..TARGET_LOW_PCT and
+// LEVEL_METER_TARGET_HIGH_PCT..RAMP_HIGH_PCT. Which zone applies is decided
+// by the meter's own previous (already-smoothed) reading, not the raw
+// incoming peak, so the ramp itself moves gradually and doesn't flicker
+// between rates right at a boundary.
+#define LEVEL_METER_TIME_CONSTANT_SEC 1.5
+#define LEVEL_METER_FAST_TIME_CONSTANT_SEC 0.02
+#define LEVEL_METER_RAMP_LOW_PCT  15
+#define LEVEL_METER_RAMP_HIGH_PCT 85
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
@@ -110,7 +120,9 @@
 
 // Acceptable-range marker drawn as a thin green strip below the level
 // meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
-// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above.
+// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above. Also used
+// as the inner edge of the adaptive time-constant ramp above, so the
+// meter's slowest ballistics line up exactly with the visible green zone.
 #define LEVEL_METER_TARGET_LOW_PCT  30
 #define LEVEL_METER_TARGET_HIGH_PCT 70
 

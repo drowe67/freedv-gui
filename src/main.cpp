@@ -2450,16 +2450,39 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (updated)
         {
-            // Running average of tickPeak, deliberately slow (see
-            // LEVEL_METER_TIME_CONSTANT_SEC in defines.h) so brief
-            // transients wash out instead of individually pegging the
-            // meter -- this is NOT a peak-follower.
-            static const float levelMeterAlpha = 1.0f - expf(-(float)DT / (float)LEVEL_METER_TIME_CONSTANT_SEC);
-            m_maxLevel += ((float)tickPeak - m_maxLevel) * levelMeterAlpha;
-
             // 100% maps to LEVEL_METER_REFERENCE_DB, not true 0dBFS -- see
             // that constant's comment in defines.h for why.
             static const float levelMeterRefAmplitude = 32767.0f * powf(10.0f, (float)LEVEL_METER_REFERENCE_DB / 20.0f);
+
+            // Adaptive time constant (see defines.h): slow through the
+            // acceptable TARGET_LOW..HIGH_PCT range, fast outside
+            // RAMP_LOW..HIGH_PCT, ramping linearly between. Keyed off the
+            // meter's own previous reading (not tickPeak) so the ramp
+            // itself can't flicker tick-to-tick right at a boundary.
+            float prevPct = 100.0f * ((float)m_maxLevel / levelMeterRefAmplitude);
+            float tau;
+            if (prevPct <= LEVEL_METER_RAMP_LOW_PCT || prevPct >= LEVEL_METER_RAMP_HIGH_PCT)
+            {
+                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC;
+            }
+            else if (prevPct < LEVEL_METER_TARGET_LOW_PCT)
+            {
+                float frac = (prevPct - LEVEL_METER_RAMP_LOW_PCT) / (float)(LEVEL_METER_TARGET_LOW_PCT - LEVEL_METER_RAMP_LOW_PCT);
+                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_TIME_CONSTANT_SEC);
+            }
+            else if (prevPct > LEVEL_METER_TARGET_HIGH_PCT)
+            {
+                float frac = (LEVEL_METER_RAMP_HIGH_PCT - prevPct) / (float)(LEVEL_METER_RAMP_HIGH_PCT - LEVEL_METER_TARGET_HIGH_PCT);
+                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_TIME_CONSTANT_SEC);
+            }
+            else
+            {
+                tau = LEVEL_METER_TIME_CONSTANT_SEC;
+            }
+
+            float levelMeterAlpha = 1.0f - expf(-(float)DT / tau);
+            m_maxLevel += ((float)tickPeak - m_maxLevel) * levelMeterAlpha;
+
             int maxScaled = (int)(100.0 * ((float)m_maxLevel/levelMeterRefAmplitude));
             maxScaled = std::min(maxScaled, 100);
             m_gaugeLevel->SetValue(maxScaled);
