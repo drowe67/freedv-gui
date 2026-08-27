@@ -857,7 +857,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 
-## V2.4.0 TBD 2026
+## V2.4.1 TBD 2026
+
+TBD
+
+## V2.4.0 August 2026
 
 1. Bugfixes:
     * Hamlib: Allow two timeouts during connection process to allow Icom marine radios to behave better. (PR #1369, #1388)
@@ -912,86 +916,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FlexRadio/KA9Q integrations moved to freedv-integrations repo. (PR #1368)
     * Improve tab save/load behavior on systems with wxWidgets 3.3+. (PR #1435)
 
-## V2.3.1 May 2026
+## Earlier than V2.3.0
 
-1. Bugfixes:
-    * Fix TX/tune level context menus on Linux distros using wxWidgets <= 3.2. (PR #1333) - thanks @barjac!
-    * Fix audio routing problems on Windows due to hardware offloading. (PR #1335)
-    * Hamlib: Detect empty rig name on start. (PR #1339, #1351) - thanks @barjac!
-    * Fix missing Hamlib defines when building from source (PR #1353) - thanks @barjac!
-    * FreeDV Reporter: Fix issue preventing mode changes on double-click. (PR #1343)
-    * Fix compiler warning/error in EventHandler when using GCC 16.1. (PR #1347)
-    * Improve Flex waveform RX audio quality. (PR #1338, #1348, 1356)
-    * Flex: Use version number without Git hash for waveform registration. (PR #1359)
-    * Fix intermittent CSV logging corruption. (PR #1361)
-    * Hamlib: Fix bug preventing frequency change after changing on the radio. (PR #1363)
-    * KA9Q: Remove custom AppRun script causing audio distortion. (PR #1364)
-2. Enhancements:
-    * Allow use of a custom key for PTT. (PR #1309)
-    * Improve Reporter message list usability. (PR #1310) - thanks @barjac!
-    * Clarify Reporter on/off tooltip. (PR #1345)
-
-## V2.3.0 May 2026
-
-1. Bugfixes:
-    * Linux: fix semaphore wakeup timing to reduce audio dropouts. (PR #1220)
-    * FreeDV Reporter: Fix display issues on non-English systems. (PR #1217)
-    * Update audio device list in Easy Setup after opening advanced audio setup. (PR #1223)
-    * Easy Setup: Fix crash while displaying Hamlib error. (PR #1224)
-    * Force numpy to 2.3.x due to illegal instruction errors. (PR #1230)
-    * FreeDV Reporter: Disable autosizing enable/disable on Linux. (PR #1231)
-    * Improve reliability of Start/Stop and PTT buttons. (PR #1236)
-    * Hamlib: Reenable FLRig/rigctl timeouts. (PR #1233)
-    * Hamlib/OmniRig: Ignore frequency/mode query during TX. (PR #1246)
-    * Fix audio dropouts on Linux. (PR #1266)
-    * OmniRig: Use frequency from VFO if we get a zero frequency. (PR #1274)
-    * Fix bugs related to display of Mic/Speaker Level slider. (PR #1281) - thanks @barjac!
-    * Fix bug causing main window's menu to disappear when Reporter is displayed. (PR #1282)
-    * Flex: Prevent multiple slices from being in FreeDV mode. (PR #1270)
-    * Further improve audio dropouts. (PR #1287)
-    * FreeDV Reporter: Fix inability to use mouse wheel on Msg column. (PR #1289)
-    * Fix RADE related compiler errors. (PR #1299)
-    * Logging: fix incorrect time when using UTC due to DST. (PR #1302) - thanks @barjac!
-    * Ensure that PTT is actually off when opening Hamlib connection. (PR #1308)
-    * Fix race condition preventing frequency/mode from changing on start with SmartSDR 4.2. (PR #1314, #1320, #1321, #1322)
-    * Fix inability to open web browser in AppImages (e.g. when viewing callsign info). (PR #1326)
-2. Enhancements:
-    * FreeDV Reporter: Use ItemsAdded/ItemsDeleted instead of Cleared() for performance. (PR #1212)
-    * Optimize "From XXX" plot performance. (PR #1238, #1239)
-    * Logging: Send WSJT-X 'Decode' message to indicate RX'd SNR. (PR #1248)
-    * Remove Python from RADE implementation to improve performance. (PR #1251)
-    * Add ability to hide self from FreeDV Reporter list. (PR #1260, #1278)
-    * Add Tune button to allow tuning antennas/rigs. (PR #1259, #1265, #1317, #1322)
-    * Add SNR plot to main window. (PR #1250, #1261)
-    * Bring back RX frequency indicator for RADE. (PR #1265, #1283)
-    * Improve usability of attenuation control in the main window. (PR #1268) - thanks @barjac!
-    * Use RNNoise for improved noise canceling during TX. (PR #1276, #1307)
-    * FreeDV Reporter: Add ability to filter based on individual columns. (PR #1285)
-    * Improve spectrum and waterfall plot appearance on small displays. (PR #1288) - thanks @barjac!
-    * Add optional per-band TX attenuation saving. (PR #1284, #1323) - thanks @barjac!
-    * Log heard callsigns to a CSV file. (PR #1290, #1293)
-    * Add ability to load and save different FreeDV configurations. (PR #1296)
-    * Hamlib: Add options to force RTS and DTR on. (PR #1292)
-    * Add recogniition of SmartSDR 4.2+ DAX devices to Easy Setup. (PR #1306)
-    * Easy Setup: Also emit audio tone through speakers. (PR #1033)
-    * Switch to r8brain for audio resampling. (PR #1307)
-3. Build system:
-    * Update Python to 3.14.3. (PR #1221)
-    * Update Hamlib to 4.7.1. (PR #1226, #1314)
-    * Update wxWidgets to 3.3.2. (PR #1244)
-    * Flex: Update Docker container version to match AppImage version. (PR #1256)
-    * Reenable Windows on ARM builds previously disabled in 2.0.0. (PR #1297, #1300)
-    * Add automated code signing support for Windows builds. (PR #1312)
-4. Documentation:
-    * Update README instructions to reflect current Windows build steps. (PR #1232)
-    * Add OmniRig troubleshooting to the user manual. (PR #1264)
-    * Update FlexRadio waveform README to reflect SmartSDR 4.2 release. (PR #1311)
-5. Other:
-    * Audio resampling logic consolidated in one location for ease of maintenance. (PR #1286, #1307)
-
-## Earlier than V2.2.0
-
-See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.2.0.
+See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
 
 # References
 
