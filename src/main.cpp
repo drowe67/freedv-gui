@@ -135,7 +135,6 @@ constexpr int PLOT_BUF_MULTIPLIER=8;
 GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifoBeforeEQ(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
-GenericFIFO<short>  g_plotSpeechInFifoBeforeAGC(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifoAfterAGC(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
@@ -1192,7 +1191,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSpectrum = nullptr;
     m_panelWaterfall = nullptr;
     m_panelSpeechIn = nullptr;
-    m_panelCoderIn = nullptr;
     m_panelSpeechOut = nullptr;
     m_panelDemodIn = nullptr;
     m_panelSNR = nullptr;
@@ -1227,10 +1225,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
-
-    // Add Coder Input window
-    m_panelCoderIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelCoderIn, _("To Mod"), false, wxNullBitmap);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
@@ -1697,7 +1691,6 @@ int MainFrame::getIdealStationsHeardColumnLength_(int col)
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
     short speechInPlotSamplesBeforeEQ[WAVEFORM_PLOT_BUF];
-    short speechInPlotSamplesBeforeAGC[WAVEFORM_PLOT_BUF];
     short speechInPlotSamplesAfterAGC[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
@@ -1763,17 +1756,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
       }
       else if (timerId == ID_TIMER_SPEECH_IN)
       {
-          if (g_plotSpeechInFifoBeforeAGC.read(speechInPlotSamplesBeforeAGC, WAVEFORM_PLOT_BUF)) {
-              memset(speechInPlotSamplesBeforeAGC, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-          }
-          m_panelSpeechIn->add_new_short_samples(speechInPlotSamplesBeforeAGC, WAVEFORM_PLOT_BUF, 32767);
-          m_panelSpeechIn->refreshData();
-          
           if (g_plotSpeechInFifoAfterAGC.read(speechInPlotSamplesAfterAGC, WAVEFORM_PLOT_BUF)) {
               memset(speechInPlotSamplesAfterAGC, 0, WAVEFORM_PLOT_BUF*sizeof(short));
           }
-          m_panelCoderIn->add_new_short_samples(speechInPlotSamplesAfterAGC, WAVEFORM_PLOT_BUF, 32767);
-          m_panelCoderIn->refreshData();
+          m_panelSpeechIn->add_new_short_samples(speechInPlotSamplesAfterAGC, WAVEFORM_PLOT_BUF, 32767);
+          m_panelSpeechIn->refreshData();
           
           if (g_plotSpeechInFifoBeforeEQ.read(speechInPlotSamplesBeforeEQ, WAVEFORM_PLOT_BUF))
           {
@@ -2321,7 +2308,6 @@ void MainFrame::performFreeDVOn_()
         g_plotDemodInFifo.reset();
         g_plotSpeechOutFifo.reset();
         g_plotSpeechInFifoBeforeEQ.reset();
-        g_plotSpeechInFifoBeforeAGC.reset();
         g_plotSpeechInFifoAfterAGC.reset();
 
         m_txtCtrlCallSign->SetValue(wxT(""));

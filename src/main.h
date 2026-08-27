@@ -293,7 +293,6 @@ class MainFrame : public TopFrame
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScalar*             m_panelSpeechIn;
-        PlotScalar*             m_panelCoderIn;
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
         PlotScalar*             m_panelSNR;

@@ -91,7 +91,6 @@ extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
-extern GenericFIFO<short> g_plotSpeechInFifoBeforeAGC;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
@@ -234,18 +233,6 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInVol,
             g_rxUserdata->micEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
-
-        // Resample for plot step (after equalizer, before AGC)
-        auto resampleForPlotStepBeforeAGC = new ResampleForPlotStep(&g_plotSpeechInFifoBeforeAGC);
-        auto resampleForPlotPipelineBeforeAGC = new AudioPipeline(inputSampleRate_, resampleForPlotStepBeforeAGC->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotResamplerBeforeAGC = new ResampleStep(inputSampleRate_, resampleForPlotStepBeforeAGC->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipelineBeforeAGC->appendPipelineStep(resampleForPlotResamplerBeforeAGC);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipelineBeforeAGC->appendPipelineStep(resampleForPlotStepBeforeAGC);
-
-        auto resampleForPlotTapBeforeAGC = new TapStep(inputSampleRate_, resampleForPlotPipelineBeforeAGC);
-        pipeline_->appendPipelineStep(resampleForPlotTapBeforeAGC);
 
         // AGC step (optional)
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
