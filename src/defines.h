@@ -94,24 +94,33 @@
 // smoothed against individual syllables/plosives (confirmed needed
 // 2026-08-24: a fixed instant-attack design pegged on the 't' of "two"
 // while ebumeter hadn't even reached -23 LUFS and the pre-encode plot was
-// well within normal limits) -- but fast (LEVEL_METER_FAST_TIME_CONSTANT_SEC)
-// below LEVEL_METER_RAMP_LOW_PCT or above LEVEL_METER_RAMP_HIGH_PCT, so the
-// meter snaps up quickly when speech starts from silence and doesn't hang
-// around in the red after a genuine overload, ramping linearly between the
-// two rates across LEVEL_METER_RAMP_LOW_PCT..TARGET_LOW_PCT and
+// well within normal limits) -- but fast below LEVEL_METER_RAMP_LOW_PCT
+// (LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC) or above LEVEL_METER_RAMP_HIGH_PCT
+// (LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC -- deliberately slower than the
+// low end, see below), so the meter snaps up quickly when speech starts
+// from silence and doesn't hang around in the red after a genuine
+// overload, ramping linearly between the two rates across
+// LEVEL_METER_RAMP_LOW_PCT..TARGET_LOW_PCT and
 // LEVEL_METER_TARGET_HIGH_PCT..RAMP_HIGH_PCT. Which zone applies is decided
 // by the meter's own previous (already-smoothed) reading, not the raw
 // incoming peak, so the ramp itself moves gradually and doesn't flicker
-// between rates right at a boundary. LEVEL_METER_FAST_TIME_CONSTANT_SEC
-// must stay comfortably above DT (the ~100ms tick period) -- a value much
-// smaller than one tick gives the EMA essentially no memory between ticks
+// between rates right at a boundary. Both fast constants must stay
+// comfortably above DT (the ~100ms tick period) -- a value much smaller
+// than one tick gives the EMA essentially no memory between ticks
 // (alpha -> 1), so it just displays whichever single 100ms window's raw
 // peak happened to land; a lone plosive/quiet gap could then snap the
 // meter straight to an end-stop or straight to zero with nothing to damp
-// it (confirmed 2026-08-27: seen live with the original 0.02s value).
-// 0.15s (~1.5 ticks) still reads as snappy but blends 2-3 windows.
+// it (confirmed 2026-08-27: seen live with the original single 0.02s
+// value used at both ends).
 #define LEVEL_METER_TIME_CONSTANT_SEC 1.5
-#define LEVEL_METER_FAST_TIME_CONSTANT_SEC 0.15
+// Low end (near silence): 0.15s (~1.5 ticks) reads as snappy but still
+// blends 2-3 windows.
+#define LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC 0.15
+// High end (at/above overload): kept deliberately slower than the low end
+// -- test value, raised from 0.15s on the theory that a too-fast release
+// out of the red risks the meter dropping away before a genuine overload
+// has actually registered with the user.
+#define LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC 0.5
 #define LEVEL_METER_RAMP_LOW_PCT  15
 #define LEVEL_METER_RAMP_HIGH_PCT 85
 

@@ -2461,19 +2461,23 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // itself can't flicker tick-to-tick right at a boundary.
             float prevPct = 100.0f * ((float)m_maxLevel / levelMeterRefAmplitude);
             float tau;
-            if (prevPct <= LEVEL_METER_RAMP_LOW_PCT || prevPct >= LEVEL_METER_RAMP_HIGH_PCT)
+            if (prevPct <= LEVEL_METER_RAMP_LOW_PCT)
             {
-                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC;
+                tau = LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC;
+            }
+            else if (prevPct >= LEVEL_METER_RAMP_HIGH_PCT)
+            {
+                tau = LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC;
             }
             else if (prevPct < LEVEL_METER_TARGET_LOW_PCT)
             {
                 float frac = (prevPct - LEVEL_METER_RAMP_LOW_PCT) / (float)(LEVEL_METER_TARGET_LOW_PCT - LEVEL_METER_RAMP_LOW_PCT);
-                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_TIME_CONSTANT_SEC);
+                tau = LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC);
             }
             else if (prevPct > LEVEL_METER_TARGET_HIGH_PCT)
             {
                 float frac = (LEVEL_METER_RAMP_HIGH_PCT - prevPct) / (float)(LEVEL_METER_RAMP_HIGH_PCT - LEVEL_METER_TARGET_HIGH_PCT);
-                tau = LEVEL_METER_FAST_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_TIME_CONSTANT_SEC);
+                tau = LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC + frac * (LEVEL_METER_TIME_CONSTANT_SEC - LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC);
             }
             else
             {
