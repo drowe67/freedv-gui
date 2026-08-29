@@ -2188,8 +2188,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (updated)
         {
             // Peak Reading meter: updates peaks immediately, then slowly decays
-            int maxScaled = m_maxLevel == 0 ? -40 : 20 * std::log10((float)m_maxLevel/32767.0); // log(0) is undefined
-            m_gaugeLevel->SetValue(std::max(-40, maxScaled) + 40); // 1/32767 -> -90dB
+            int maxScaled = m_maxLevel == 0 ? -LEVEL_GAUGE_MIN_DB : 20 * std::log10((float)m_maxLevel/32767.0); // log(0) is undefined
+            m_gaugeLevel->SetValue(std::max(-LEVEL_GAUGE_MIN_DB, maxScaled) + LEVEL_GAUGE_MIN_DB); // 1/32767 -> -30dB
             m_maxLevel *= LEVEL_BETA;
         }
     }

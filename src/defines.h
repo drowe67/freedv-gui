@@ -29,6 +29,9 @@
 #define FDMDV_SCALE \
   825 /* suggested scaling for 16 bit shorts                            */
 
+// Minimum level for the Level gauge, negated.
+#define LEVEL_GAUGE_MIN_DB 30
+
 // Spectrogram and Waterfall
 
 #define MIN_MAG_DB        -40.0     // min of spectrogram/waterfall magnitude axis

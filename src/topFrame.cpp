@@ -29,6 +29,7 @@
 #include <wx/numformatter.h>
 
 #include "topFrame.h"
+#include "defines.h"
 
 #if !wxCHECK_VERSION(3, 3, 0)
 #include <set>
@@ -570,7 +571,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
     levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
 
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 40, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH); // log scale, -40 dB to 0 dB
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, LEVEL_GAUGE_MIN_DB, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH); // log scale, -30 dB to 0 dB
     m_gaugeLevel->SetToolTip(_("RX: Peak level of radio's audio output, TX: Peak level of microphone audio as recorded by FreeDV (before AGC/level settings)."));
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
     
