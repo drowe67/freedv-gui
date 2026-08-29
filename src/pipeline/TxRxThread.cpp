@@ -96,6 +96,7 @@ extern bool g_loopPlayFileToMicIn;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
+extern GenericFIFO<short> g_levelMeterMicFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
 extern int g_mode;
 extern int g_txLevel;
@@ -216,6 +217,21 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
+
+        // Level meter tap (pre-AGC, pre-EQ). Kept separate from the "Frm Mic"
+        // plot tap below, which intentionally reflects post-AGC/EQ encoder
+        // input -- this one exists so the TX level meter can show true mic
+        // drive/overdrive, which AGC would otherwise mask.
+        auto levelMeterTapStep = new ResampleForPlotStep(&g_levelMeterMicFifo);
+        auto levelMeterTapPipeline = new AudioPipeline(inputSampleRate_, levelMeterTapStep->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto levelMeterTapResampler = new ResampleStep(inputSampleRate_, levelMeterTapStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        levelMeterTapPipeline->appendPipelineStep(levelMeterTapResampler);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        levelMeterTapPipeline->appendPipelineStep(levelMeterTapStep);
+
+        auto levelMeterTap = new TapStep(inputSampleRate_, levelMeterTapPipeline);
+        pipeline_->appendPipelineStep(levelMeterTap);
 
         // AGC step (optional)
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);

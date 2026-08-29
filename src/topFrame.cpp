@@ -29,6 +29,7 @@
 #include <wx/numformatter.h>
 
 #include "topFrame.h"
+#include "defines.h"
 
 #if !wxCHECK_VERSION(3, 3, 0)
 #include <set>
@@ -572,10 +573,46 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
     levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
 
+    wxBoxSizer* levelGaugeSizer = new wxBoxSizer(wxVERTICAL);
+
+    // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
+    // to LEVEL_METER_TARGET_HIGH_PCT) just above the gauge -- a plain painted
+    // panel rather than a custom meter widget. Always visible (never
+    // Show()/Hide()'d) -- GTK doesn't finish allocating a widget's real
+    // on-screen position until it's been shown once, and reading its
+    // geometry immediately after a first Show()+Layout() during TX
+    // confirmed it was still stuck at (0,0) regardless (2026-08-24
+    // diagnostic). TX-only-ness is now purely a paint-time decision via
+    // m_levelTargetMarkerActive, toggled+Refresh()'d by OnTimer() instead.
+    m_levelTargetMarkerActive = false;
+    m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,3));
+    m_levelTargetMarker->SetToolTip(_("Acceptable level range (amber = too low, green = target, red = too high)"));
+    m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+        wxPaintDC dc(m_levelTargetMarker);
+        wxSize sz = m_levelTargetMarker->GetClientSize();
+        dc.SetBackground(wxBrush(m_levelTargetMarker->GetParent()->GetBackgroundColour()));
+        dc.Clear();
+        if (m_levelTargetMarkerActive)
+        {
+            int loX = sz.GetWidth() * LEVEL_METER_TARGET_LOW_PCT / 100;
+            int hiX = sz.GetWidth() * LEVEL_METER_TARGET_HIGH_PCT / 100;
+            dc.SetPen(*wxTRANSPARENT_PEN);
+            dc.SetBrush(wxBrush(wxColour(255, 165, 0)));
+            dc.DrawRectangle(0, 0, loX, sz.GetHeight());
+            dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
+            dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
+            dc.SetBrush(wxBrush(*wxRED));
+            dc.DrawRectangle(hiX, 0, sz.GetWidth() - hiX, sz.GetHeight());
+        }
+    });
+    levelGaugeSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
+
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
-    
+    levelGaugeSizer->Add(m_gaugeLevel, 0, wxTOP, 0);
+
+    levelSizer->Add(levelGaugeSizer, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
+
     leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     
     //------------------------------

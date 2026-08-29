@@ -86,7 +86,75 @@
 // Level Gauge
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
-#define LEVEL_BETA           0.99
+
+// Running average (NOT a simple instantaneous peak-follower) of the level
+// meter's per-tick peaks. Uses an adaptive time constant rather than one
+// fixed value: slow (LEVEL_METER_TIME_CONSTANT_SEC) across the acceptable
+// LEVEL_METER_TARGET_LOW_PCT..HIGH_PCT range, so genuine level-setting is
+// smoothed against individual syllables/plosives (confirmed needed
+// 2026-08-24: a fixed instant-attack design pegged on the 't' of "two"
+// while ebumeter hadn't even reached -23 LUFS and the pre-encode plot was
+// well within normal limits) -- but fast below LEVEL_METER_RAMP_LOW_PCT
+// (LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC) or above LEVEL_METER_RAMP_HIGH_PCT
+// (LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC -- deliberately slower than the
+// low end, see below), so the meter snaps up quickly when speech starts
+// from silence and doesn't hang around in the red after a genuine
+// overload, ramping linearly between the two rates across
+// LEVEL_METER_RAMP_LOW_PCT..TARGET_LOW_PCT and
+// LEVEL_METER_TARGET_HIGH_PCT..RAMP_HIGH_PCT. Which zone applies is decided
+// by the meter's own previous (already-smoothed) reading, not the raw
+// incoming peak, so the ramp itself moves gradually and doesn't flicker
+// between rates right at a boundary. Both fast constants must stay
+// comfortably above DT (the ~100ms tick period) -- a value much smaller
+// than one tick gives the EMA essentially no memory between ticks
+// (alpha -> 1), so it just displays whichever single 100ms window's raw
+// peak happened to land; a lone plosive/quiet gap could then snap the
+// meter straight to an end-stop or straight to zero with nothing to damp
+// it (confirmed 2026-08-27: seen live with the original single 0.02s
+// value used at both ends).
+#define LEVEL_METER_TIME_CONSTANT_SEC 1.5
+// Low end (near silence): 0.15s (~1.5 ticks) reads as snappy but still
+// blends 2-3 windows.
+#define LEVEL_METER_FAST_LOW_TIME_CONSTANT_SEC 0.15
+// High end (at/above overload): kept deliberately slower than the low end
+// -- test value, raised from 0.15s on the theory that a too-fast release
+// out of the red risks the meter dropping away before a genuine overload
+// has actually registered with the user.
+#define LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC 0.5
+#define LEVEL_METER_RAMP_LOW_PCT  15
+// High-end ramp taken all the way to 100% (the scale's ceiling) rather
+// than stopping at 85% -- with the ramp ending at 85%, the last 15% of
+// scale was already flat at the fully-fast
+// LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC rate, which read as a rapid
+// jump once a loud excursion crossed 85%. Extending the ramp's top edge
+// to 100% keeps tau decreasing all the way to the ceiling, so the meter
+// keeps damping itself further into the red instead of hitting full
+// responsiveness 15% of the scale early. Safe even for genuine clipping
+// readings above 100% (m_maxLevel/prevPct are not clamped) because the
+// `prevPct >= LEVEL_METER_RAMP_HIGH_PCT` flat-tau branch still catches
+// everything at or above this boundary before the ramp's linear
+// interpolation is evaluated, so tau can never extrapolate past
+// LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC. Confirmed on-air 2026-08-29
+// on the sibling v3.0-dev+PR-1464 build.
+#define LEVEL_METER_RAMP_HIGH_PCT 100
+
+// dBFS level that maps to 100% on the TX level meter's scale, set below
+// true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
+// around half scale (matching the old meter's look/feel that users are
+// used to), while genuine full-scale peaks still show above the old
+// meter's normal operating range instead of pegging at the same point as
+// everyday speech. -8dB chosen empirically (2026-08-24): with the RX/TX
+// gauge-contamination bug fixed, -23 LUFS measured ~20% on the old 0dBFS
+// scale; -8dB brings that to ~50%.
+#define LEVEL_METER_REFERENCE_DB (-6.0)
+
+// Acceptable-range marker drawn as a thin green strip below the level
+// meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
+// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above. Also used
+// as the inner edge of the adaptive time-constant ramp above, so the
+// meter's slowest ballistics line up exactly with the visible green zone.
+#define LEVEL_METER_TARGET_LOW_PCT  30
+#define LEVEL_METER_TARGET_HIGH_PCT 70
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
