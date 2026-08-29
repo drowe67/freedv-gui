@@ -32,6 +32,14 @@
 // Minimum level for the Level gauge, negated.
 #define LEVEL_GAUGE_MIN_DB 30
 
+// Acceptable-range marker drawn as a thin green strip below the level
+// meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
+// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above. Also used
+// as the inner edge of the adaptive time-constant ramp above, so the
+// meter's slowest ballistics line up exactly with the visible green zone.
+#define LEVEL_METER_TARGET_LOW_PCT  30
+#define LEVEL_METER_TARGET_HIGH_PCT 85
+
 // Spectrogram and Waterfall
 
 #define MIN_MAG_DB        -40.0     // min of spectrogram/waterfall magnitude axis

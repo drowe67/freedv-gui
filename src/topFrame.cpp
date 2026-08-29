@@ -569,14 +569,42 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxStaticBoxSizer* levelSizer;
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
-    levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
+    levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
 
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, LEVEL_GAUGE_MIN_DB, wxDefaultPosition, wxSize(100,15), wxGA_SMOOTH); // log scale, -30 dB to 0 dB
+    // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
+    // to LEVEL_METER_TARGET_HIGH_PCT) just above the gauge -- a plain painted
+    // panel rather than a custom meter widget. Always visible (never
+    // Show()/Hide()'d) -- GTK doesn't finish allocating a widget's real
+    // on-screen position until it's been shown once, and reading its
+    // geometry immediately after a first Show()+Layout() during TX
+    // confirmed it was still stuck at (0,0) regardless (2026-08-24
+    // diagnostic). 
+    m_levelTargetMarker = new wxPanel(levelBox, wxID_ANY, wxDefaultPosition, wxSize(135,3));
+    m_levelTargetMarker->SetToolTip(_("Acceptable level range (amber = too low, green = target, red = too high)"));
+    m_levelTargetMarker->Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+        wxPaintDC dc(m_levelTargetMarker);
+        wxSize sz = m_levelTargetMarker->GetClientSize();
+        dc.SetBackground(wxBrush(m_levelTargetMarker->GetParent()->GetBackgroundColour()));
+        dc.Clear();
+
+        int loX = sz.GetWidth() * LEVEL_METER_TARGET_LOW_PCT / 100;
+        int hiX = sz.GetWidth() * LEVEL_METER_TARGET_HIGH_PCT / 100;
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.SetBrush(wxBrush(wxColour(255, 165, 0)));
+        dc.DrawRectangle(0, 0, loX, sz.GetHeight());
+        dc.SetBrush(wxBrush(wxColour(0, 200, 0)));
+        dc.DrawRectangle(loX, 0, hiX - loX, sz.GetHeight());
+        dc.SetBrush(wxBrush(*wxRED));
+        dc.DrawRectangle(hiX, 0, sz.GetWidth() - hiX, sz.GetHeight());
+    });
+    levelSizer->Add(m_levelTargetMarker, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL));
+
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, LEVEL_GAUGE_MIN_DB, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH); // log scale, -30 dB to 0 dB
     m_gaugeLevel->SetToolTip(_("RX: Peak level of radio's audio output, TX: Peak level of microphone audio as recorded by FreeDV (before AGC/level settings)."));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
+    levelSizer->Add(m_gaugeLevel, 1, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxALL), 10);
     
-    leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
-    
+    leftSizer->Add(levelSizer ,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+
     //------------------------------
     // Sync  Indicator box
     //------------------------------
