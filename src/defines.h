@@ -122,7 +122,21 @@
 // has actually registered with the user.
 #define LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC 0.5
 #define LEVEL_METER_RAMP_LOW_PCT  15
-#define LEVEL_METER_RAMP_HIGH_PCT 85
+// High-end ramp taken all the way to 100% (the scale's ceiling) rather
+// than stopping at 85% -- with the ramp ending at 85%, the last 15% of
+// scale was already flat at the fully-fast
+// LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC rate, which read as a rapid
+// jump once a loud excursion crossed 85%. Extending the ramp's top edge
+// to 100% keeps tau decreasing all the way to the ceiling, so the meter
+// keeps damping itself further into the red instead of hitting full
+// responsiveness 15% of the scale early. Safe even for genuine clipping
+// readings above 100% (m_maxLevel/prevPct are not clamped) because the
+// `prevPct >= LEVEL_METER_RAMP_HIGH_PCT` flat-tau branch still catches
+// everything at or above this boundary before the ramp's linear
+// interpolation is evaluated, so tau can never extrapolate past
+// LEVEL_METER_FAST_HIGH_TIME_CONSTANT_SEC. Confirmed on-air 2026-08-29
+// on the sibling v3.0-dev+PR-1464 build.
+#define LEVEL_METER_RAMP_HIGH_PCT 100
 
 // dBFS level that maps to 100% on the TX level meter's scale, set below
 // true digital full scale (0 dBFS) so a nominal -23 LUFS test signal swings
