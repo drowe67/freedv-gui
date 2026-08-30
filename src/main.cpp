@@ -1846,7 +1846,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     
     // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
+    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR || timerId == ID_TIMER_DEMOD_IN)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -2398,15 +2398,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
-        if (timerId == ID_TIMER_DEMOD_IN && !g_tx.load(std::memory_order_relaxed) && m_RxRunning)
+        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
-            // Note: txState is a per-call local only populated when timerId
-            // is ID_TIMER_UPDATE_OTHER/ID_TIMER_SNR, so it's stale (always
-            // false) here -- read g_tx directly instead, otherwise this
-            // branch also fires during TX and stomps the TX mic reading
-            // with demod-in (RX) peaks.
-            // peak from this DT sampling period
             int maxDemodIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
                 if (maxDemodIn < abs(demodInPlotSamples[i]))
