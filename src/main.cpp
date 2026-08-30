@@ -2157,19 +2157,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
-            int maxDemodIn = m_maxLevel;
-            int numAboveCurrentMax = 0;
+            int maxDemodIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
             {
                 if (maxDemodIn < abs(demodInPlotSamples[i]))
                 {
                     maxDemodIn = abs(demodInPlotSamples[i]);
-                    numAboveCurrentMax++;
                 }
             }
 
             // peak from last second
-            if (maxDemodIn > m_maxLevel && numAboveCurrentMax >= (LEVEL_METER_MAX_THRESHOLD_PERCENT * WAVEFORM_PLOT_BUF))
+            if (maxDemodIn > m_maxLevel)
                 m_maxLevel = maxDemodIn;
 
             updated = true;
@@ -2179,19 +2177,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // transmit mode - display From Mic peaks
 
             // peak from this DT sampling period
-            int maxSpeechIn = m_maxLevel;
-            int numAboveCurrentMax = 0;
+            int maxSpeechIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
             {
                 if (maxSpeechIn < abs(speechInPlotSamplesBeforeEQ[i]))
                 {
                     maxSpeechIn = abs(speechInPlotSamplesBeforeEQ[i]);
-                    numAboveCurrentMax++;
                 }
             }
 
             // peak from last second
-            if (maxSpeechIn > m_maxLevel && numAboveCurrentMax >= (LEVEL_METER_MAX_THRESHOLD_PERCENT * WAVEFORM_PLOT_BUF))
+            if (maxSpeechIn > m_maxLevel)
                 m_maxLevel = maxSpeechIn;
 
            updated = true;
