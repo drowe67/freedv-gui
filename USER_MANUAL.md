@@ -859,7 +859,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V2.4.1 TBD 2026
 
-TBD
+1. Bugfixes:
+    * Add logic to prevent FIFO sizes that are too small to allow TX thread to function. (PR #1474)
+    * Fix RX/TX level-meter gauge contamination. (PR #1475) - thanks @barjac!
 
 ## V2.4.0 August 2026
 
