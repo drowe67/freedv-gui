@@ -1765,7 +1765,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     
     // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR)
+    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR || timerId == ID_TIMER_DEMOD_IN)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -2228,7 +2228,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
-            // peak from this DT sampling period
             int maxDemodIn = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
                 if (maxDemodIn < abs(demodInPlotSamples[i]))
@@ -2992,12 +2991,24 @@ void MainFrame::startRxStream()
         constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
-        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
+
+        // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
+        // Theoretically allows up to three TX packets to be queued at a time at minimum
+        // (depending on mode).
+        int soundCard1OutFifoSizeSamples = std::max(
+            3 * (freedvInterface.getTxNNomModemSamples() * wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate) / freedvInterface.getTxModemSampleRate(),
+            m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000);
 
         if (g_nSoundCards == 2)
         {
             int soundCard2InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
-            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
+
+            // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
+            // Theoretically allows up to three RX packets to be queued at a time at minimum
+            // (depending on mode).
+            int soundCard2OutFifoSizeSamples = std::max(
+                3 * (freedvInterface.getRxNumSpeechSamples() * wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate) / freedvInterface.getRxSpeechSampleRate(),
+                m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000);
             g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = new GenericFIFO<short>(soundCard2InFifoSizeSamples);
             g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
