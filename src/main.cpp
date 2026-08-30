@@ -2157,13 +2157,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
-            int maxDemodIn = 0;
+            int maxDemodIn = m_maxLevel;
+            int numAboveCurrentMax = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+            {
                 if (maxDemodIn < abs(demodInPlotSamples[i]))
+                {
                     maxDemodIn = abs(demodInPlotSamples[i]);
+                    numAboveCurrentMax++;
+                }
+            }
 
             // peak from last second
-            if (maxDemodIn > m_maxLevel)
+            if (maxDemodIn > m_maxLevel && numAboveCurrentMax >= (LEVEL_METER_MAX_THRESHOLD_PERCENT * WAVEFORM_PLOT_BUF))
                 m_maxLevel = maxDemodIn;
 
             updated = true;
@@ -2173,13 +2179,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // transmit mode - display From Mic peaks
 
             // peak from this DT sampling period
-            int maxSpeechIn = 0;
+            int maxSpeechIn = m_maxLevel;
+            int numAboveCurrentMax = 0;
             for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+            {
                 if (maxSpeechIn < abs(speechInPlotSamplesBeforeEQ[i]))
+                {
                     maxSpeechIn = abs(speechInPlotSamplesBeforeEQ[i]);
+                    numAboveCurrentMax++;
+                }
+            }
 
             // peak from last second
-            if (maxSpeechIn > m_maxLevel)
+            if (maxSpeechIn > m_maxLevel && numAboveCurrentMax >= (LEVEL_METER_MAX_THRESHOLD_PERCENT * WAVEFORM_PLOT_BUF))
                 m_maxLevel = maxSpeechIn;
 
            updated = true;
@@ -3481,7 +3493,7 @@ bool MainFrame::validateSoundCardSetup(bool silent)
                 wxCommandEvent dummy;
                 OnToolsOptions(dummy);
             });
-	}
+        }
         canRun = false;
     }
     else if (!canRun)

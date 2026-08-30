@@ -32,6 +32,12 @@
 // Minimum level for the Level gauge, negated.
 #define LEVEL_GAUGE_MIN_DB 30
 
+// Level meter: Percentage threshold of samples above the current maximum
+// before we adopt a new maximum sample level. This is intended to filter
+// out brief spikes and prevent overadjustment of input levels downward
+// by the user.
+#define LEVEL_METER_MAX_THRESHOLD_PERCENT (0.05f)
+
 // Acceptable-range marker drawn as a thin green strip below the level
 // meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
 // ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above. Also used
