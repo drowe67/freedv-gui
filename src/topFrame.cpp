@@ -20,13 +20,16 @@
 //
 //==========================================================================
 
+#include <algorithm>
 #include <map>
 #include <set>
+#include <vector>
 
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
 #include <wx/numformatter.h>
+#include <wx/textfile.h>
 
 #include "topFrame.h"
 
@@ -410,6 +413,282 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 }
 #endif // !wxCHECK_VERSION(3, 3, 0)
 
+namespace {
+    // Tint colour/strength applied by GroupBoxBackgroundColour() below, set
+    // via SetGroupBoxTint() from the persisted Display options once
+    // configuration is loaded. Kept as separate light/dark pairs so each
+    // theme remembers its own look; GroupBoxBackgroundColour() below selects
+    // between them per-call based on the live theme. Defaults match the
+    // original hardcoded values so the very first run (before any config
+    // exists) looks the same as before this became configurable.
+    wxColour s_groupBoxTintColourLight(0, 85, 255);
+    int s_groupBoxTintPercentLight = 20;
+    wxColour s_groupBoxTintColourDark(0, 85, 255);
+    int s_groupBoxTintPercentDark = 20;
+
+    // Every currently-live TintedGroupBox, so a tint change from Options can
+    // be re-applied immediately rather than only on next restart.
+    std::vector<TintedGroupBox*> s_tintedGroupBoxes;
+}
+
+wxColour GetGroupBoxBaseColour()
+{
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // wx's own colour caching -- wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW),
+    // and (confirmed by testing) even a real live widget's own
+    // GetBackgroundColour() -- doesn't reliably track theme changes under
+    // XWayland: switching produces a value that's a full theme-switch
+    // behind reality, not just briefly stale. Confirmed via direct
+    // instrumentation of ~/.config/gtk-3.0/settings.ini that the
+    // underlying desktop state itself (GTK's own
+    // gtk-application-prefer-dark-theme setting) updates correctly and
+    // promptly on every switch, both directions -- the bug is entirely in
+    // wx's GTK colour-cache invalidation, not upstream of it.
+    //
+    // Reading gtk_settings_get_default()'s own in-process property directly
+    // (bypassing wx's colour APIs) fixes that, but isn't itself fully
+    // reliable either -- confirmed by testing that under wx 3.2 specifically,
+    // it can start wrong at launch and never correct itself for the rest of
+    // the session (unlike wx 3.3, where it's correct from the first read).
+    // So use it only as a fallback; prefer parsing the same settings.ini
+    // file directly, since that's the one thing confirmed accurate and
+    // prompt in every test done today, independent of wx version.
+    //
+    // Trade-off either way: two representative light/dark tones (close to
+    // common themes' actual window colour, e.g. Breeze) rather than the
+    // exact live wxSYS_COLOUR_WINDOW shade, since that exact value isn't
+    // reliably obtainable at all right now under this combination --
+    // correct light/dark direction, promptly, beats exact colour-matching
+    // that's proven unreliable to read live.
+    bool preferDark = false;
+    bool foundInSettingsFile = false;
+
+    // GTK_THEME (e.g. "Adwaita:dark") forces GTK to use that theme/variant
+    // outright, overriding whatever settings.ini/xsettings would otherwise
+    // select -- some launch setups (e.g. a launcher script pinning GTK to
+    // Adwaita because the desktop's own custom theme renders badly with
+    // this GTK3/wxWidgets build) rely on this rather than the desktop's
+    // usual settings.ini. When present, it's a more authoritative signal
+    // than either check below, and it sidesteps a real problem on wx 3.2:
+    // a machine using this launch style may have no settings.ini at all
+    // (falling through to the gtk_settings_get_default() read below), and
+    // that read is confirmed unreliable specifically on wx 3.2 -- it can
+    // start wrong at launch and never self-correct for the rest of the
+    // session. So check GTK_THEME first and skip both fallbacks if set.
+    wxString gtkThemeEnv;
+    if (wxGetEnv(wxT("GTK_THEME"), &gtkThemeEnv) && gtkThemeEnv.Lower().Contains(wxT(":dark")))
+    {
+        return wxColour(20, 22, 24);
+    }
+    else if (!gtkThemeEnv.IsEmpty() && gtkThemeEnv.Lower().Contains(wxT(":light")))
+    {
+        return wxColour(255, 255, 255);
+    }
+
+    // Deliberately not wxStandardPaths::GetUserConfigDir() -- on Unix that
+    // returns plain $HOME (a wx compatibility quirk), not ~/.config.
+    wxString settingsPath = wxGetHomeDir() + wxT("/.config/gtk-3.0/settings.ini");
+    // A fresh user profile may not have this file at all (nothing has ever
+    // written GTK settings for them) -- that's not an error, just fall
+    // through to the gtk_settings_get_default() fallback below. Checking
+    // existence up front also avoids wxTextFile::Open() logging a failure
+    // on every poll (see m_groupBoxTintPollTimer, every 500ms).
+    wxTextFile settingsFile;
+    if (wxFileExists(settingsPath) && settingsFile.Open(settingsPath))
+    {
+        for (wxString line = settingsFile.GetFirstLine(); !settingsFile.Eof(); line = settingsFile.GetNextLine())
+        {
+            wxString trimmed = line;
+            trimmed.Trim(false).Trim(true);
+            if (trimmed.StartsWith(wxT("gtk-application-prefer-dark-theme")))
+            {
+                preferDark = trimmed.Lower().Contains(wxT("true")) || trimmed.Contains(wxT("=1"));
+                foundInSettingsFile = true;
+                break;
+            }
+        }
+        settingsFile.Close();
+    }
+    if (!foundInSettingsFile)
+    {
+        gboolean gtkPreferDark = FALSE;
+        g_object_get(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", &gtkPreferDark, NULL);
+        preferDark = gtkPreferDark;
+    }
+    return preferDark ? wxColour(20, 22, 24) : wxColour(255, 255, 255);
+#else
+    return wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+#endif
+}
+
+wxColour GetGroupBoxForegroundColour()
+{
+    wxColour base = GetGroupBoxBaseColour();
+    bool isDark = base.GetLuminance() < 0.5;
+    return isDark ? wxColour(255, 255, 255) : wxColour(0, 0, 0);
+}
+
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+namespace {
+    // Created lazily on first use and kept around for the whole app
+    // lifetime (re-loading new CSS into it on every live theme change is
+    // how the colour actually updates -- see ApplyMeterGaugeColours()).
+    GtkCssProvider* s_meterCssProvider = nullptr;
+}
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
+void ApplyMeterGaugeColours()
+{
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // wxGTK's wxGauge has no SetBarColour()-equivalent API -- it's a plain
+    // GtkProgressBar, entirely theme-drawn. Most dark GTK themes' default
+    // progress-bar fill colour sits close enough in luminance to the
+    // (also theme-drawn) trough behind it that the SNR/Level meters read as
+    // almost solid background, with no visible moving bar at all. Left
+    // alone on light themes, where the default fill already reads fine
+    // against the trough.
+    if (s_meterCssProvider == nullptr)
+    {
+        s_meterCssProvider = gtk_css_provider_new();
+        gtk_style_context_add_provider_for_screen(
+            gdk_screen_get_default(),
+            GTK_STYLE_PROVIDER(s_meterCssProvider),
+            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+
+    bool isDark = GetGroupBoxBaseColour().GetLuminance() < 0.5;
+    const char* css = isDark
+        ? ".freedv-meter progress { background-color: #E0E0E0; background-image: none; }"
+        : "";
+    gtk_css_provider_load_from_data(s_meterCssProvider, css, -1, nullptr);
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+}
+
+// Returns a background colour offset from the system window colour so that
+// grouped control boxes read as a distinct "card" instead of blending into
+// the surrounding panel. Works out from the live system colour rather than
+// a hardcoded value so it tracks whatever light/dark theme is active.
+wxColour GroupBoxBackgroundColour()
+{
+    wxColour base = GetGroupBoxBaseColour();
+    bool isDark = base.GetLuminance() < 0.5;
+    wxColour shaded = base.ChangeLightness(isDark ? 115 : 93);
+
+    // Nudge the shaded card colour towards blue (by default). Purely a
+    // lightness shift is invisible on themes (e.g. Breeze Light) whose
+    // window colour has no saturation to begin with, so blend in a small
+    // amount of hue directly. Light and dark themes keep independent
+    // colour/strength pairs (see SetGroupBoxTint()), since a blend judged
+    // right on one theme is rarely right on the other.
+    const wxColour& tint = isDark ? s_groupBoxTintColourDark : s_groupBoxTintColourLight;
+    int tintPct = isDark ? s_groupBoxTintPercentDark : s_groupBoxTintPercentLight;
+
+    unsigned char r = (unsigned char)((shaded.Red()   * (100 - tintPct) + tint.Red()   * tintPct) / 100);
+    unsigned char g = (unsigned char)((shaded.Green() * (100 - tintPct) + tint.Green() * tintPct) / 100);
+    unsigned char b = (unsigned char)((shaded.Blue()  * (100 - tintPct) + tint.Blue()  * tintPct) / 100);
+    return wxColour(r, g, b);
+}
+
+void SetGroupBoxTint(const wxColour& lightColour, int lightPercent, const wxColour& darkColour, int darkPercent)
+{
+    s_groupBoxTintColourLight = lightColour;
+    s_groupBoxTintPercentLight = lightPercent;
+    s_groupBoxTintColourDark = darkColour;
+    s_groupBoxTintPercentDark = darkPercent;
+}
+
+void RefreshGroupBoxTints()
+{
+    wxColour newColour = GroupBoxBackgroundColour();
+    for (auto box : s_tintedGroupBoxes)
+    {
+        box->SetBackgroundColour(newColour);
+        box->Refresh();
+    }
+}
+
+TintedGroupBox::TintedGroupBox(wxWindow* parent, const wxString& title, wxOrientation orientation, int contextMenuBoxIndex)
+    : wxPanel(parent, wxID_ANY)
+{
+    SetBackgroundColour(GroupBoxBackgroundColour());
+
+    wxBoxSizer* outerSizer = new wxBoxSizer(wxVERTICAL);
+
+    // An empty title omits the label entirely (and the space it would
+    // reserve), for boxes that don't need one.
+    m_title = new wxStaticText(this, wxID_ANY, title);
+    if (title.IsEmpty())
+    {
+        m_title->Hide();
+    }
+    else
+    {
+        wxFont titleFont = m_title->GetFont();
+        titleFont.SetWeight(wxFONTWEIGHT_BOLD);
+        m_title->SetFont(titleFont);
+        outerSizer->Add(m_title, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxLEFT | wxRIGHT, 6);
+    }
+
+    m_contentSizer = new wxBoxSizer(orientation);
+    outerSizer->Add(m_contentSizer, 1, wxEXPAND | wxALL, 6);
+
+    SetSizer(outerSizer);
+
+    s_tintedGroupBoxes.push_back(this);
+
+    // Only the movable "Show menu" boxes are constructed with a real
+    // contextMenuBoxIndex -- wire those up so right-clicking the title or
+    // background pops up the Hide/Move menu (Stage 10). Forwards straight to
+    // TopFrame::OnGroupBoxRightClick() rather than through the wx event
+    // system, since there's nothing else that needs to intercept it.
+    if (contextMenuBoxIndex >= 0)
+    {
+        auto forward = [this, contextMenuBoxIndex]()
+        {
+            static_cast<TopFrame*>(wxGetTopLevelParent(this))->OnGroupBoxRightClick(contextMenuBoxIndex);
+        };
+
+#if wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__)
+        // See the equivalent comment by m_txLevelBox's own context menu
+        // wiring further down this file: wxGTK 3.3+ fires wxEVT_CONTEXT_MENU
+        // on button-press for these widget types, causing GTK to dismiss
+        // PopupMenu on button release; use RIGHT_UP instead. MSW/OSX are
+        // unaffected, so this is GTK-specific.
+        this->Bind(wxEVT_RIGHT_UP, [forward](wxMouseEvent&) { forward(); });
+        m_title->Bind(wxEVT_RIGHT_UP, [forward](wxMouseEvent&) { forward(); });
+#else
+        // wxGTK < 3.3 does not generate RIGHT_UP for windowless widget types;
+        // CONTEXT_MENU works without the dismiss issue. (Also used as-is on
+        // MSW/OSX regardless of wx version -- see above.)
+        this->Bind(wxEVT_CONTEXT_MENU, [forward](wxContextMenuEvent&) { forward(); });
+        m_title->Bind(wxEVT_CONTEXT_MENU, [forward](wxContextMenuEvent&) { forward(); });
+#endif
+    }
+}
+
+TintedGroupBox::~TintedGroupBox()
+{
+    s_tintedGroupBoxes.erase(
+        std::remove(s_tintedGroupBoxes.begin(), s_tintedGroupBoxes.end(), this),
+        s_tintedGroupBoxes.end());
+}
+
+void TintedGroupBox::SetLabel(const wxString& label)
+{
+    m_title->SetLabel(label);
+}
+
+wxString TintedGroupBox::GetLabel() const
+{
+    return m_title->GetLabel();
+}
+
+void TintedGroupBox::SetToolTip(const wxString& tip)
+{
+    wxPanel::SetToolTip(tip);
+    m_title->SetToolTip(tip);
+}
+
 //=========================================================================
 // Code that lays out the main application window
 //=========================================================================
@@ -418,7 +697,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
-    
+
+
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic
     SetAccessible(new NameOverrideAccessible([&]() {
@@ -503,6 +783,34 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_menubarMain->Append(tools, _("&Tools"));
 
+    // "Show" menu: lets the user hide optional group boxes to build a
+    // leaner display, independent of the feature-driven visibility already
+    // used for Squelch/Mode/Radio Freq/Stats. Order here is index order for
+    // OnShowGroupBox's event ID offset (ID_SHOW_GROUPBOX_BASE + index) --
+    // keep the two in sync if adding/removing an entry. Checked state here
+    // is just the default (visible); TopFrame has no access to
+    // wxGetApp()/appConfiguration (that's MainFrame's job), so the real
+    // persisted state is applied to both the boxes and these checkmarks in
+    // MainFrame::loadConfiguration_(), same as statsBox/modeBox/etc.
+    showMenu_ = new wxMenu();
+    std::vector<wxString> showMenuItems {
+        _("SNR"),
+        _("Level"),
+        _("Sync"),
+        _("Audio Recording"),
+        _("Logging"),
+        _("FDV Reporting"),
+        _("TX Attenuation"),
+        _("Speaker Level"),
+    };
+    for (size_t index = 0; index < showMenuItems.size(); index++)
+    {
+        auto menuItem = showMenu_->Append(ID_SHOW_GROUPBOX_BASE + index, showMenuItems[index], wxEmptyString, wxITEM_CHECK);
+        menuItem->Check(true);
+        this->Connect(ID_SHOW_GROUPBOX_BASE + index, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnShowGroupBox));
+    }
+    m_menubarMain->Append(showMenu_, _("&Show"));
+
     help = new wxMenu();
     wxMenuItem* m_menuItemHelpUpdates;
     m_menuItemHelpUpdates = new wxMenuItem(help, wxID_ANY, wxString(_("&Check for Updates")) , _("Checks for updates to FreeDV"), wxITEM_NORMAL);
@@ -534,135 +842,127 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Left side
     //=====================================================
     wxSizer* leftOuterSizer = new wxBoxSizer(wxVERTICAL);
-    wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
+    leftSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
-    wxStaticBoxSizer* snrSizer;
-    wxStaticBox* snrBox = new wxStaticBox(m_panel, wxID_ANY, _("SNR"), wxDefaultPosition, wxSize(100,-1));
-    snrSizer = new wxStaticBoxSizer(snrBox, wxVERTICAL);
+    snrBox = new TintedGroupBox(m_panel, _("SNR"), wxVERTICAL, 0);
 
     //------------------------------
     // S/N ratio Gauge (vert. bargraph)
     //------------------------------
     m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 45, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
-    snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|static_cast<int>(wxALL), 10);
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // See ApplyMeterGaugeColours() -- tags this gauge so its CSS rule can
+    // target it specifically, without affecting any other progress bar.
+    gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(m_gaugeSNR->GetHandle())), "freedv-meter");
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+    snrBox->GetContentSizer()->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|static_cast<int>(wxALL), 10);
 
     //------------------------------
     // Box for S/N ratio (Numeric)
     //------------------------------
     m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT("--"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textSNR->SetMinSize(wxSize(70,-1));
-    snrSizer->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
+    snrBox->GetContentSizer()->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
     //------------------------------
     // S/N ratio slow Checkbox
     //------------------------------
     m_ckboxSNR = new wxCheckBox(snrBox, wxID_ANY, _("Slow"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ckboxSNR->SetToolTip(_("Smooth but slow SNR estimation"));
-    snrSizer->Add(m_ckboxSNR, 0, wxALIGN_CENTER_HORIZONTAL, 5);
+    snrBox->GetContentSizer()->Add(m_ckboxSNR, 0, wxALIGN_CENTER_HORIZONTAL, 5);
 
-    leftSizer->Add(snrSizer, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 2);
+    leftSizer->Add(snrBox, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 2);
 
     //------------------------------
     // Signal Level(vert. bargraph)
     //------------------------------
-    wxStaticBoxSizer* levelSizer;
-    wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
-    levelSizer = new wxStaticBoxSizer(levelBox, wxHORIZONTAL);
+    levelBox = new TintedGroupBox(m_panel, _("Level"), wxHORIZONTAL, 1);
 
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode."));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
-    
-    leftSizer->Add(levelSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
-    
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(m_gaugeLevel->GetHandle())), "freedv-meter");
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+    levelBox->GetContentSizer()->Add(m_gaugeLevel, 1, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 10);
+
+    leftSizer->Add(levelBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
     //------------------------------
     // Sync  Indicator box
     //------------------------------
-    wxStaticBoxSizer* sbSizer3_33;
-    wxStaticBox* syncBox = new wxStaticBox(m_panel, wxID_ANY, _("Sync"), wxDefaultPosition, wxSize(100,-1));
-    sbSizer3_33 = new wxStaticBoxSizer(syncBox, wxVERTICAL);
+    syncBox = new TintedGroupBox(m_panel, _("Sync"), wxVERTICAL, 2);
+    wxString syncBoxToolTip = _("Shows the current FreeDV mode. Green indicates the modem is synchronised with the received signal; red indicates no sync.");
+    syncBox->SetToolTip(syncBoxToolTip);
 
-    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
+    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    syncBox->GetContentSizer()->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
+    m_textSync->SetToolTip(syncBoxToolTip);
 
-    m_textCurrentDecodeMode = new wxStaticText(syncBox, wxID_ANY, wxT("Mode: unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer3_33->Add(m_textCurrentDecodeMode, 0, wxALIGN_CENTER_HORIZONTAL, 1);
-    m_textCurrentDecodeMode->Disable();
-    
-    m_btnCenterRx = new wxButton(syncBox, wxID_ANY, _("C&enter RX"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer3_33->Add(m_btnCenterRx, 0, static_cast<int>(wxALL) | wxALIGN_CENTRE, 5);
-    
-    leftSizer->Add(sbSizer3_33,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND)|wxFIXED_MINSIZE, 2);
+    leftSizer->Add(syncBox,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
     //------------------------------
     // Audio Recording/Playback
     //------------------------------
-    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio Recording"), wxDefaultPosition, wxSize(100,-1));
-    wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
-    
+    audioBox = new TintedGroupBox(m_panel, _("Audio Recording"), wxVERTICAL, 3);
+
     m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
     m_audioRecord->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
-    sbSizerAudioRecordPlay->Add(m_audioRecord, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
-   
-    leftSizer->Add(sbSizerAudioRecordPlay, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+    audioBox->GetContentSizer()->Add(m_audioRecord, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
+
+    leftSizer->Add(audioBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
     //------------------------------
     // QSO logging
     //------------------------------
-    wxStaticBox* logBox = new wxStaticBox(m_panel, wxID_ANY, _("Logging"), wxDefaultPosition, wxSize(100,-1));
-    wxStaticBoxSizer* sbSizerLogging = new wxStaticBoxSizer(logBox, wxVERTICAL);
-    
+    logBox = new TintedGroupBox(m_panel, _("Logging"), wxVERTICAL, 4);
+
     m_logQSO = new wxButton(logBox, wxID_ANY, _("Log QSO"), wxDefaultPosition, wxDefaultSize, 0);
     m_logQSO->SetToolTip(_("Logs most recent QSO."));
     m_logQSO->Disable();
-    sbSizerLogging->Add(m_logQSO, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
-    
-    leftSizer->Add(sbSizerLogging, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+    logBox->GetContentSizer()->Add(m_logQSO, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
+
+    leftSizer->Add(logBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
     //------------------------------
     // FreeDV Reporter quick options
     //------------------------------
-    wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FDV Reporting"), wxDefaultPosition, wxSize(100,-1));
-    wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
+    reporterBox = new TintedGroupBox(m_panel, _("FDV Reporting"), wxVERTICAL, 5);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
     m_reporterHidden->SetToolTip(_("Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings->Reporting."));
-    sbSizerReporterBox->Add(m_reporterHidden, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
+    reporterBox->GetContentSizer()->Add(m_reporterHidden, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_HORIZONTAL, 5);
 
-    leftSizer->Add(sbSizerReporterBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
-    
+    leftSizer->Add(reporterBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+
     //------------------------------
     // BER Frames box
     //------------------------------
 
-    wxStaticBoxSizer* sbSizer_ber;
-    statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(100,-1));
-    sbSizer_ber = new wxStaticBoxSizer(statsBox, wxVERTICAL);
+    statsBox = new TintedGroupBox(m_panel, _("Stats"), wxVERTICAL);
 
     m_BtnBerReset = new wxButton(statsBox, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 5);
+    statsBox->GetContentSizer()->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 5);
 
     m_textBits = new wxStaticText(statsBox, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textBits, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textBits, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textErrors = new wxStaticText(statsBox, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textErrors, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textErrors, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textBER = new wxStaticText(statsBox, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textBER, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textBER, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textResyncs = new wxStaticText(statsBox, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textResyncs, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textResyncs, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textClockOffset = new wxStaticText(statsBox, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_textClockOffset->SetMinSize(wxSize(125,-1));
-    sbSizer_ber->Add(m_textClockOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textClockOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textFreqOffset = new wxStaticText(statsBox, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textFreqOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textFreqOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textSyncMetric = new wxStaticText(statsBox, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textSyncMetric, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textSyncMetric, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textCodec2Var, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsBox->GetContentSizer()->Add(m_textCodec2Var, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
 
-    leftSizer->Add(sbSizer_ber,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND)|wxFIXED_MINSIZE, 2);
+    leftSizer->Add(statsBox,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
     leftSizer->SetMinSize(wxSize(-1, 375));
     
@@ -694,43 +994,103 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     // lower middle used for user ID
 
-    wxBoxSizer* lowerSizer;
-    lowerSizer = new wxBoxSizer(wxHORIZONTAL);
+    // Mode/sideband indicator ("USB" etc.) gets its own box now, separate
+    // from the station box below -- see its placement (left of the status
+    // box) further down, alongside statusBox's construction.
+    TintedGroupBox* modeBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
 
-    wxBoxSizer* modeStatusSizer;
-    modeStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtModeStatus = new wxStaticText(m_panel, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    // Bold "Mode:" label, matching statusBox's "Status:" and stationBox's
+    // "Heard:" labels.
+    wxStaticText* modeBoxLabel = new wxStaticText(modeBox, wxID_ANY, _("Mode:"));
+    wxFont modeBoxLabelFont = modeBoxLabel->GetFont();
+    modeBoxLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    modeBoxLabel->SetFont(modeBoxLabelFont);
+    modeBox->GetContentSizer()->Add(modeBoxLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
+
+    // No centring here (see the "Mode:" label above, which does that job
+    // instead) -- but it still needs a min width reserving room for the
+    // longest value ("USB-D"/"LSB-D"), measured from the actual current
+    // font rather than a guessed constant. Without it, a session that
+    // starts with the modem stopped (label empty) sizes this box to zero
+    // content width, and it never grows once real text appears later --
+    // wxStaticText doesn't widen its own container on SetLabel() -- so
+    // e.g. "USB" would render truncated to "U".
+    wxBoxSizer* modeStatusSizer = new wxBoxSizer(wxVERTICAL);
+    m_txtModeStatus = new wxStaticText(modeBox, wxID_ANY, wxT("USB-D"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtModeStatus->SetMinSize(m_txtModeStatus->GetBestSize());
+    m_txtModeStatus->SetLabel(wxEmptyString);
+    // Same reasoning as m_txtCtrlCallSign's SetForegroundColour() further
+    // down -- re-applied on every live theme change too, see
+    // applyGroupBoxTint_() in main.cpp.
+    m_txtModeStatus->SetForegroundColour(GetGroupBoxForegroundColour());
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_txtModeStatus->SetMinSize(wxSize(80,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
-    lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
+    modeBox->GetContentSizer()->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
 
-    m_BtnCallSignReset = new wxButton(m_panel, wxID_ANY, _("&Clear"), wxDefaultPosition, wxDefaultSize, 0);
-    lowerSizer->Add(m_BtnCallSignReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 1);
+    TintedGroupBox* stationBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+
+    // Bold "Heard:" label, matching statusBox's "Status:" label further down.
+    wxStaticText* stationBoxLabel = new wxStaticText(stationBox, wxID_ANY, _("Heard:"));
+    wxFont stationBoxLabelFont = stationBoxLabel->GetFont();
+    stationBoxLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    stationBoxLabel->SetFont(stationBoxLabelFont);
+    stationBox->GetContentSizer()->Add(stationBoxLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
 
     wxBoxSizer* bSizer15;
     bSizer15 = new wxBoxSizer(wxVERTICAL);
-    m_txtCtrlCallSign = new wxTextCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    m_txtCtrlCallSign = new wxTextCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
-    m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
+    // Wide enough for a callsign plus a suffix (e.g. "VK3ABC/QRP", "M7XYZ/MM"),
+    // not just a bare callsign.
+    m_txtCtrlCallSign->SetSizeHints(wxSize(150,-1));
+    // Explicit foreground, re-applied on every live theme change too (see
+    // applyGroupBoxTint_() in main.cpp) -- left to its native default, this
+    // control's text colour doesn't reliably follow a live light/dark
+    // switch the way its background does (same class of wx/GTK colour-cache
+    // staleness already worked around for GetGroupBoxBaseColour()), leaving
+    // dark text unreadable against a freshly-dark background or vice versa.
+    m_txtCtrlCallSign->SetForegroundColour(GetGroupBoxForegroundColour());
 
-    m_cboLastReportedCallsigns = new wxComboCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
-    m_lastReportedCallsignListView = new wxListViewComboPopup(m_BtnCallSignReset);
+    m_cboLastReportedCallsigns = new wxComboCtrl(stationBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
+    m_lastReportedCallsignListView = new wxListViewComboPopup(m_cboLastReportedCallsigns);
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
-    m_cboLastReportedCallsigns->SetSizeHints(wxSize(400,-1));
+    // Same reasoning as m_txtCtrlCallSign's SetForegroundColour() above.
+    m_cboLastReportedCallsigns->SetForegroundColour(GetGroupBoxForegroundColour());
+    // Same reasoning as m_txtCtrlCallSign's SetSizeHints() above -- this is
+    // the *collapsed* control's own width (it only ever shows one selected
+    // callsign), separate from the dropdown's own width set below.
+    m_cboLastReportedCallsigns->SetSizeHints(wxSize(150,-1));
     m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
-    
+    // The dropdown's four columns (100+75+175+50 = 400px) need far more
+    // room than the collapsed control itself ever does -- it only ever
+    // displays a single selected callsign. SetPopupMinWidth() sizes the
+    // *popup* independently of the anchor control's own width (extending
+    // left of it if needed) rather than forcing the whole combo, and with
+    // it the station box and this whole row, to stay artificially wide
+    // just so a dropdown that's rarely open has room.
+    m_cboLastReportedCallsigns->SetPopupMinWidth(420);
+
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 100);
     m_lastReportedCallsignListView->InsertColumn(1, wxT("Frequency"), wxLIST_FORMAT_RIGHT, 75);
     m_lastReportedCallsignListView->InsertColumn(2, wxT("Date/Time"), wxLIST_FORMAT_LEFT, 175);
     m_lastReportedCallsignListView->InsertColumn(3, wxT("SNR"), wxLIST_FORMAT_RIGHT, 50);
 
-    bSizer15->Add(m_txtCtrlCallSign, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
-    bSizer15->Add(m_cboLastReportedCallsigns, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
+    bSizer15->Add(m_txtCtrlCallSign, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
+    bSizer15->Add(m_cboLastReportedCallsigns, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
 
-    lowerSizer->Add(bSizer15, 1, static_cast<int>(wxEXPAND), 5);
-    lowerSizer->SetMinSize(wxSize(375,-1));
-    centerSizer->Add(lowerSizer, 0, static_cast<int>(wxEXPAND), 2);
+    stationBox->GetContentSizer()->Add(bSizer15, 1, static_cast<int>(wxEXPAND), 5);
+    // No explicit SetMinSize() here (there used to be one pinning this to
+    // 375px) -- an explicit width overrides GetBestSize() entirely rather
+    // than acting as a floor under it, and 375 is narrower than what the
+    // last-reported-callsigns combo actually needs (SetSizeHints(400,-1)
+    // below, plus its own padding), which cropped the combo's dropdown once
+    // stationBox stopped always being stretched wider than its minimum (see
+    // its new placement below). Let it size from its content instead.
+
+    // stationBox itself is added below, alongside the playback/recording
+    // info bar, in a full-width row below the left/center/right columns
+    // (see near the end of this constructor) rather than here in the
+    // center column.
     centerSizer->SetMinSize(wxSize(375,375));
     bSizer1->Add(centerSizer, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 1);
     
@@ -740,9 +1100,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
     // Transmit Level slider
-    m_txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
-    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(m_txLevelBox, wxVERTICAL);
-    
+    m_txLevelBox = new TintedGroupBox(m_panel, _("TX &Attenuation"), wxVERTICAL, 6);
+
     wxBoxSizer* txBtnSizer = new wxBoxSizer(wxHORIZONTAL);
     m_btnTxLevelMM = new wxButton(m_txLevelBox, wxID_ANY, _("<<"), wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnTxLevelM  = new wxButton(m_txLevelBox, wxID_ANY, _("<"),  wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
@@ -761,84 +1120,81 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtTxLevelNum = new wxStaticText(m_txLevelBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER | wxST_NO_AUTORESIZE);
     m_txtTxLevelNum->SetToolTip(_("Use mouse scroll wheel to adjust up or down\nRight click for more options"));
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
-    txLevelSizer->Add(m_txtTxLevelNum, 0, static_cast<int>(wxEXPAND), 0);
+    m_txLevelBox->GetContentSizer()->Add(m_txtTxLevelNum, 0, wxEXPAND, 0);
 
-    txLevelSizer->Add(txBtnSizer, 0, static_cast<int>(wxEXPAND), 0);
+    m_txLevelBox->GetContentSizer()->Add(txBtnSizer, 0, wxEXPAND, 0);
 
-    rightSizer->Add(txLevelSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
-    
+    rightSizer->Add(m_txLevelBox, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
     // Mic/Speaker Level slider
-    micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Speaker &Level"), wxDefaultPosition, wxSize(100,-1));
-    wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
-    
+    micSpeakerBox = new TintedGroupBox(m_panel, _("Speaker &Level"), wxVERTICAL, 7);
+
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
     m_sliderMicSpkrLevel = new wxSlider(micSpeakerBox, wxID_ANY, 0, -200, 200, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderMicSpkrLevel->SetMinSize(wxSize(150,-1));
-    micSpeakerLevelSizer->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    micSpeakerBox->GetContentSizer()->Add(m_sliderMicSpkrLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
     m_sliderMicSpkrLevel->Enable(false);
 
-#if wxUSE_ACCESSIBILITY 
+#if wxUSE_ACCESSIBILITY
     // Add accessibility class so that the values are read back correctly.
     auto micSpkrSliderAccessibility = new LabelOverrideAccessible([&]() {
         return m_txtMicSpkrLevelNum->GetLabel();
     });
     m_sliderMicSpkrLevel->SetAccessible(micSpkrSliderAccessibility);
 #endif // wxUSE_ACCESSIBILITY
-    
+
     fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)0, 1), DECIBEL_STR);
- 
+
     m_txtMicSpkrLevelNum = new wxStaticText(micSpeakerBox, wxID_ANY, fmtString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtMicSpkrLevelNum->SetMinSize(wxSize(100,-1));
-    micSpeakerLevelSizer->Add(m_txtMicSpkrLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
-    
-    rightSizer->Add(micSpeakerLevelSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
-    
-    // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
+    micSpeakerBox->GetContentSizer()->Add(m_txtMicSpkrLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
 
-    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
-    
+    rightSizer->Add(micSpeakerBox, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
+    // Frequency text field (PSK Reporter)
+    m_freqBox = new TintedGroupBox(m_panel, _("Radio Freq. (MHz)"), wxHORIZONTAL);
+
     //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    
+
     m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
     m_cboReportFrequency->SetMinSize(wxSize(150,-1));
     txtReportFreqSizer->Add(m_cboReportFrequency, 1, static_cast<int>(wxALL), 5);
-    
-    reportFrequencySizer->Add(txtReportFreqSizer, 1, static_cast<int>(wxEXPAND), 1);
-    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
-    
-    rightSizer->Add(reportFrequencySizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
+    m_freqBox->GetContentSizer()->Add(txtReportFreqSizer, 1, static_cast<int>(wxEXPAND), 1);
+    //m_freqBox->GetContentSizer()->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
+
+    rightSizer->Add(m_freqBox, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
     
     /* new --- */
 
     //=====================================================
     // Control Toggles box
     //=====================================================
-    wxStaticBoxSizer* sbSizer5;
-    wxStaticBox* controlBox = new wxStaticBox(m_panel, wxID_ANY, _("Control"), wxDefaultPosition, wxSize(100,-1));
-    sbSizer5 = new wxStaticBoxSizer(controlBox, wxVERTICAL);
+    controlBox = new TintedGroupBox(m_panel, _("Control"), wxVERTICAL);
 
     //-------------------------------
     // Stop/Stop signal processing (rx and tx)
     //-------------------------------
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start Modem"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
-    sbSizer5->Add(m_togBtnOnOff, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_togBtnOnOff, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxTOP) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->AddSpacer(4);
 
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
     m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("Switch to A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
-    sbSizer5->Add(m_togBtnAnalog, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_togBtnAnalog, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->AddSpacer(4);
 
     //------------------------------
     // Tune Toggle
     //------------------------------
     m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("&Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
-    sbSizer5->Add(m_btnTogTune, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_btnTogTune, 0, static_cast<int>(wxLEFT) | static_cast<int>(wxRIGHT) | static_cast<int>(wxBOTTOM) | static_cast<int>(wxEXPAND), 5);
     m_btnTogTune->Enable(false);
 
     //------------------------------
@@ -846,23 +1202,99 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Start Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
-    sbSizer5->Add(m_togBtnVoiceKeyer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_togBtnVoiceKeyer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
     //------------------------------
     // PTT button: Toggle Transmit/Receive mode
     //------------------------------
     m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&XMIT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Switch between Receive and Transmit. Right-click for additional options."));
-    sbSizer5->Add(m_btnTogPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+    controlBox->GetContentSizer()->Add(m_btnTogPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
-    rightSizer->Add(sbSizer5, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+    rightSizer->Add(controlBox, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
+
+    // Radio Freq.'s only content is a 150px-min combo box, so it's the
+    // narrowest natural width of this column's boxes -- wxWrapSizer's
+    // per-item wxEXPAND is meant to stretch it to match its widest sibling,
+    // but that's not reliable on all platforms/widget styles (seen narrower
+    // than the rest of the column on MSW, where the native combo box is more
+    // compact than GTK/Cocoa's). Pin it explicitly instead of relying on the
+    // sizer to stretch it.
+    int freqColumnWidth = std::max({m_txLevelBox->GetBestSize().x,
+                                     micSpeakerBox->GetBestSize().x,
+                                     controlBox->GetBestSize().x});
+    m_freqBox->SetMinSize(wxSize(freqColumnWidth, -1));
 
     bSizer1->Add(rightSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
-    
-    m_panel->SetSizerAndFit(bSizer1);
+
+    // Playback/recording status, sharing one permanent full-width row (below
+    // the left/center/right columns) with the station box (mode/callsign)
+    // rather than its own full-width row that used to grow/shrink the whole
+    // frame on every show/dismiss -- that dynamic resize (see
+    // ShowPlaybackStatus()) proved fragile, tipping the left column's
+    // wrap-sizer into an extra column or corrupting the AUI side-by-side
+    // plot panes' proportions, neither of which reliably reverted
+    // afterwards. Never resizes the frame at all now, at any point -- only
+    // the sizer proportions below change.
+    // TintedGroupBox (empty title, like stationBox below) rather than plain
+    // widgets parented directly to m_panel -- a TintedGroupBox's tinted
+    // background fills its whole allocated rectangle, whereas individually
+    // tinting bare child widgets only colours tightly around their own text,
+    // leaving the untinted panel background showing through the padding
+    // around them and making the row look broken up rather than one
+    // continuous "box" like every other group box in the window.
+    TintedGroupBox* statusBox = new TintedGroupBox(m_panel, wxEmptyString, wxHORIZONTAL);
+
+    // Bold "Status:" label, styled like a TintedGroupBox's own title, so
+    // this row's left portion reads as a labelled field rather than
+    // unexplained blank space while it's empty (which is most of the time).
+    wxStaticText* infoBarLabel = new wxStaticText(statusBox, wxID_ANY, _("Status:"));
+    wxFont infoBarLabelFont = infoBarLabel->GetFont();
+    infoBarLabelFont.SetWeight(wxFONTWEIGHT_BOLD);
+    infoBarLabel->SetFont(infoBarLabelFont);
+    statusBox->GetContentSizer()->Add(infoBarLabel, 0, wxALIGN_CENTER_VERTICAL|static_cast<int>(wxRIGHT), 5);
+
+    m_infoBar = new wxStaticText(statusBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    // No wxEXPAND here -- in a horizontal sizer, proportion alone already
+    // grows the item to fill the available *width* (the main axis);
+    // wxEXPAND additionally stretches it to the row's full *height* (the
+    // cross axis), which is what pinned the text to the top of the row
+    // instead of it sitting at its natural line height, centred like the
+    // "Status:" label next to it.
+    statusBox->GetContentSizer()->Add(m_infoBar, 1, wxALIGN_CENTER_VERTICAL, 0);
+
+    // The info bar always claims whatever space the station box doesn't
+    // need, rather than the two splitting the row evenly -- the station box
+    // has real content (the last-reported-callsigns combo and its dropdown
+    // need a comfortable minimum width to display their columns), so it
+    // keeps its natural size and sits on the right; the info bar effectively
+    // pads it away from the left edge. wxWrapSizer rather than a plain
+    // wxBoxSizer so the two boxes stack (info bar above station box) instead
+    // of being squeezed illegibly narrow, on windows too narrow to fit both
+    // side by side.
+    // All three boxes get wxEXPAND here, so they're all stretched to match
+    // the row's height -- inevitably set by stationBox, whose native
+    // combo/textctrl are taller than a plain line of text and can't shrink
+    // below that without clipping. Trying to keep the other two boxes at
+    // their own shorter natural height (no wxEXPAND) instead just left
+    // three different box heights in the same row, which looked worse than
+    // all three sharing one. Each box's own content is already added with
+    // wxALIGN_CENTER_VERTICAL (no wxEXPAND) inside its own content sizer,
+    // so it stays centred within the extra height rather than stretching
+    // itself.
+    wxWrapSizer* bottomRowSizer = new wxWrapSizer(wxHORIZONTAL, wxREMOVE_LEADING_SPACES);
+    bottomRowSizer->Add(modeBox, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+    bottomRowSizer->Add(statusBox, 1, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+    bottomRowSizer->Add(stationBox, 0, static_cast<int>(wxEXPAND)|static_cast<int>(wxALL), 1);
+
+    wxBoxSizer* outerSizer = new wxBoxSizer(wxVERTICAL);
+    outerSizer->Add(bSizer1, 1, static_cast<int>(wxEXPAND), 0);
+    outerSizer->Add(bottomRowSizer, 0, static_cast<int>(wxEXPAND), 2);
+
+    m_panel->SetSizerAndFit(outerSizer);
     this->Layout();
 
-    m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
+    ApplyMeterGaugeColours();
 
     //=====================================================
     // End of layout
@@ -871,7 +1303,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------
     // Tab ordering for accessibility
     //-------------------
-    m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
+    m_auiNbookCtrl->MoveBeforeInTabOrder(stationBox);
     
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_btnTogTune);
@@ -939,9 +1371,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
 #endif
 
-    m_BtnCallSignReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCallSignReset), NULL, this);
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
-    m_btnCenterRx->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
 
         
     m_btnTxLevelMM->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTxLevelDecrBig), NULL, this);
@@ -1043,8 +1473,6 @@ TopFrame::~TopFrame()
     m_togBtnVoiceKeyer->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnVoiceKeyerRightClick), NULL, this);
     m_btnTogPTT->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(TopFrame::OnTogBtnPTTRightClick), NULL, this);
 #endif
-    
-    m_btnCenterRx->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
 
     m_audioRecord->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecord), NULL, this);
     

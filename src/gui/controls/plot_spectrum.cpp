@@ -108,7 +108,7 @@ PlotSpectrum::~PlotSpectrum()
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
-void PlotSpectrum::OnSize(wxSizeEvent&) {
+void PlotSpectrum::OnSize(wxSizeEvent& event) {
     // Determine correct left offset based on font size
     int text_w = 0;
     int text_h = 0;
@@ -122,6 +122,7 @@ void PlotSpectrum::OnSize(wxSizeEvent&) {
         bottomOffset_ = std::max(bottomOffset_, text_h);
     }
     bottomOffset_ = std::max(bottomOffset_, (int)YBOTTOM_OFFSET);
+    event.Skip();
 }
 
 //----------------------------------------------------------------
@@ -232,7 +233,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     float    f, mag, freq_hz_to_px, mag_dB_to_py;
 
     wxBrush ltGraphBkgBrush;
-    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    wxColour foregroundColor = GetGroupBoxForegroundColour();
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(foregroundColor);
     ctx->SetBrush(ltGraphBkgBrush);
@@ -240,7 +241,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     
     if (!repaintDataOnly)
     { 
-        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+        wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetGroupBoxForegroundColour());
         ctx->SetFont(tmpFont);
     }
 

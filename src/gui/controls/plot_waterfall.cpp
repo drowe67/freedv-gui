@@ -289,13 +289,13 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     float    f, time, freq_hz_to_px;
 
     wxBrush ltGraphBkgBrush;
-    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    wxColour foregroundColor = GetGroupBoxForegroundColour();
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(foregroundColor);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(foregroundColor, 1));
     
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetGroupBoxForegroundColour());
     ctx->SetFont(tmpFont);
     
     freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);

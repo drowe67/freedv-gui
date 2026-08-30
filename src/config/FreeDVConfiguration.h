@@ -113,8 +113,46 @@ public:
     ConfigurationDataElement<int> reportingUserMsgColWidth;
     
     ConfigurationDataElement<bool> showDecodeStats;
-    
+
     ConfigurationDataElement<bool> autoStartOnLaunch;
+
+    // Independent user-toggleable visibility for the main window's optional
+    // group boxes (Show menu), separate from the feature-driven visibility
+    // of e.g. Radio Freq/Stats.
+    ConfigurationDataElement<bool> showSnrBox;
+    ConfigurationDataElement<bool> showLevelBox;
+    ConfigurationDataElement<bool> showSyncBox;
+    ConfigurationDataElement<bool> showAudioRecordingBox;
+    ConfigurationDataElement<bool> showLoggingBox;
+    ConfigurationDataElement<bool> showReportingBox;
+    ConfigurationDataElement<bool> showTxAttenuationBox;
+    ConfigurationDataElement<bool> showSpeakerLevelBox;
+
+    // Group box tint colour/strength (Display options tab), replacing the
+    // old FREEDV_GROUPBOX_TINT testing-only environment variable.
+    //
+    // groupBoxTintColor/groupBoxTintPercent are the original, pre-light/dark
+    // single pair. They're no longer written, only read once at startup to
+    // migrate existing values into both of the pairs below on first run
+    // after upgrading (see FreeDVConfiguration::load()).
+    ConfigurationDataElement<wxString> groupBoxTintColor;
+    ConfigurationDataElement<int> groupBoxTintPercent;
+
+    ConfigurationDataElement<wxString> groupBoxTintColorLight;
+    ConfigurationDataElement<int> groupBoxTintPercentLight;
+    ConfigurationDataElement<wxString> groupBoxTintColorDark;
+    ConfigurationDataElement<int> groupBoxTintPercentDark;
+
+    // Ordered lists of the movable "Show menu" group boxes currently on each
+    // side of the main window (right-click a box's title to move it), using
+    // the same box index enumeration as ID_SHOW_GROUPBOX_BASE/OnShowGroupBox:
+    // 0=SNR, 1=Level, 2=Sync, 3=AudioRecording, 4=Logging, 5=FDVReporting,
+    // 6=TXAttenuation, 7=SpeakerLevel. Defaults match the original hardcoded
+    // layout. A box's presence in a list is independent of its show/hide
+    // state -- hiding a box leaves it in place in whichever list already
+    // has it, so it reappears in the same position when shown again.
+    ConfigurationDataElement<std::vector<int>> groupBoxLeftOrder;
+    ConfigurationDataElement<std::vector<int>> groupBoxRightOrder;
 
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

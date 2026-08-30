@@ -112,6 +112,23 @@ bool MainApp::CanAccessSerialPort(std::string const& portName)
 }
 
 //----------------------------------------------------------------
+// ShowPlaybackStatus()
+//----------------------------------------------------------------
+
+void MainFrame::ShowPlaybackStatus(const wxString& msg)
+{
+    // The info bar shares a single permanent row with the station box
+    // (mode/callsign) -- see its construction in topFrame.cpp -- rather
+    // than occupying its own full-width row that used to grow/shrink the
+    // whole frame on every show/dismiss. Its own slot in that row is a fixed
+    // proportion (it always fills whatever space the station box isn't
+    // using), so only the text changes here -- nothing about the frame's or
+    // the row's size is touched.
+    m_infoBar->SetLabel(msg);
+    m_panel->Layout();
+}
+
+//----------------------------------------------------------------
 // isReceiveOnly()
 //----------------------------------------------------------------
 

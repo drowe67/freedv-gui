@@ -41,6 +41,10 @@
 #include <wx/headerctrl.h>
 #endif // defined(WIN32)
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 #include "freedv_reporter.h"
 #include "freedv_interface.h"
 
@@ -806,6 +810,41 @@ void FreeDVReporterDialog::refreshLayout()
     // Update status controls.
     wxCommandEvent tmpEvent;
     OnStatusTextChange(tmpEvent);
+
+    RefreshTint();
+}
+
+void FreeDVReporterDialog::RefreshTint()
+{
+    wxColour bg = GroupBoxBackgroundColour();
+    SetBackgroundColour(bg);
+    Refresh();
+
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // The spots list's native GTK column header buttons are entirely
+    // theme-drawn -- like wxGauge's bar (see ApplyMeterGaugeColours() in
+    // topFrame.cpp), wx has no colour API for them -- so without this
+    // they'd stay plain/native while the list body and the rest of the
+    // window pick up the tint. Same CSS-provider approach, scoped to just
+    // this control by widget name so it can't affect any other treeview.
+    static GtkCssProvider* s_reporterHeaderCssProvider = nullptr;
+    if (s_reporterHeaderCssProvider == nullptr)
+    {
+        s_reporterHeaderCssProvider = gtk_css_provider_new();
+        gtk_style_context_add_provider_for_screen(
+            gdk_screen_get_default(),
+            GTK_STYLE_PROVIDER(s_reporterHeaderCssProvider),
+            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        gtk_widget_set_name(m_listSpots->GtkGetTreeView(), "freedv-reporter-list");
+    }
+
+    wxColour fg = GetGroupBoxForegroundColour();
+    wxString css = wxString::Format(
+        "#freedv-reporter-list header button { "
+        "background-color: %s; background-image: none; color: %s; }",
+        bg.GetAsString(wxC2S_HTML_SYNTAX), fg.GetAsString(wxC2S_HTML_SYNTAX));
+    gtk_css_provider_load_from_data(s_reporterHeaderCssProvider, css.utf8_str(), -1, nullptr);
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
 }
 
 void FreeDVReporterDialog::updateFilterStatus_()
@@ -1277,10 +1316,18 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         auto curDate = wxDateTime::Now().ToUTC();
 
         wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
-        
+
         wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
         wxDataViewItemArray itemsDeleted;
+
+        // Computed once per tick rather than once per row -- on GTK3 these
+        // can involve reading GTK settings (occasionally disk I/O), and this
+        // loop runs on m_highlightClearTimer (every 250ms) across every spot
+        // currently held, not just visible ones.
+        wxColour defaultBackgroundColor = GroupBoxBackgroundColour();
+        wxColour defaultForegroundColor = GetGroupBoxForegroundColour();
+
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
@@ -1316,9 +1363,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 reportData->lastUpdateUserMessage.IsValid() && 
                 reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
 
-            // Messaging notifications take highest priority.
-            wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-            wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+            // Messaging notifications take highest priority. Normal (non-
+            // highlighted) rows use the same tinted "card" colour as the
+            // main window's group boxes, so the list reads as part of the
+            // same UI rather than a plain system-themed grid -- picks up a
+            // live tint/theme change on the next tick with no extra refresh
+            // call needed, same as before, just computed once above instead
+            // of once per row.
+            wxColour backgroundColor = defaultBackgroundColor;
+            wxColour foregroundColor = defaultForegroundColor;
 
             if (isMessaging)
             {
@@ -3472,9 +3525,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         // Needed mainly for macOS.
         temp->backgroundColor = wxColour(wxTransparentColour);
 #else
-        temp->backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+        temp->backgroundColor = GroupBoxBackgroundColour();
 #endif // defined(__APPLE__)
-        temp->foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+        temp->foregroundColor = GetGroupBoxForegroundColour();
 
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
