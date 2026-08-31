@@ -178,6 +178,28 @@ function Test-RadeLoss {
     $conf_tmpl | Set-Content -Path $tmp_file.FullName
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
 
+    # A second config, identical except that soundCard1Out (FreeDV's own TX/radio-out device)
+    # points at the otherwise-idle microphone VAC cable instead of the VB-Cable "Speakers"
+    # endpoint. Used only for the RX-only decode passes below.
+    #
+    # Even in "-ut rx" (decode-only) mode, FreeDV still opens a live render stream on
+    # soundCard1Out -- it's just fed from an empty FIFO, since PTT is never fired. If that
+    # stream is left pointed at $ComputerToRadioDevice, it becomes a second concurrent WASAPI
+    # render client on the exact same shared-mode endpoint that sox.exe writes the recorded
+    # test signal into a few lines below, in Invoke-RadeLossAttempt. Two independently-clocked
+    # render clients contending for one shared-mode audio session is a plausible source of the
+    # intermittent feature-loss/sync-loss failures seen in this test. Redirecting FreeDV's idle
+    # stream to the unused mic cable removes that contention without installing a second virtual
+    # cable in CI.
+    $conf_tmpl_rx = Get-Content "$current_loc\freedv-ctest-loss.conf.tmpl"
+    $conf_tmpl_rx = $conf_tmpl_rx.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $RadioToComputerDevice)
+    $conf_tmpl_rx = $conf_tmpl_rx.Replace("@FREEDV_COMPUTER_TO_RADIO_DEVICE@", $MicrophoneToComputerDevice)
+    $conf_tmpl_rx = $conf_tmpl_rx.Replace("@FREEDV_MICROPHONE_TO_COMPUTER_DEVICE@", $MicrophoneToComputerDevice)
+    $conf_tmpl_rx = $conf_tmpl_rx.Replace("@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@", $ComputerToSpeakerDevice)
+    $tmp_file_rx = New-TemporaryFile
+    $conf_tmpl_rx | Set-Content -Path $tmp_file_rx.FullName
+    $quoted_tmp_filename_rx = "`"" + $tmp_file_rx.FullName + "`""
+
     # Start recording FreeDV's TX output
     $recordPsi = New-Object System.Diagnostics.ProcessStartInfo
     $recordPsi.CreateNoWindow = $true
@@ -253,7 +275,7 @@ function Test-RadeLoss {
 
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename_rx /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
 
     $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
 
@@ -269,7 +291,7 @@ function Test-RadeLoss {
         & sox.exe -n -r 48000 -c 1 -b 16 -e signed-integer "$current_loc\silence_pad.wav" trim 0 0.010
         & sox.exe "$current_loc\silence_pad.wav" "$current_loc\test.wav" "$current_loc\test_shifted.wav"
 
-        $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
+        $psi.Arguments = @("/f $quoted_tmp_filename_rx /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
         $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test_shifted.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
     }
 
