@@ -107,17 +107,13 @@
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
 
-// Decay rate for the Level meter.
-// Calculated based on desired 12dB/sec decay:
-// -40 = 20 log(x/INT16_MAX)
-// -2 = log(x/INT16_MAX)
-// 10^-2 = x/INT16_MAX
-// 0.01 * INT16_MAX = 327 = x
-//
-// 40/12 = 3.33s to fully decay = 33 timer fires @ DT sec
-// 327 = 32767 * y^33
-// 33rd root of 0.01 = 0.86
-#define LEVEL_BETA           0.86
+// Decay rate for the Level meter, applied once per GUI update (every DT sec).
+// Target: -12 dB/sec.
+//   20*log10(LEVEL_BETA) = -12 * DT
+//   LEVEL_BETA = 10^(-12*DT/20) = 10^(-0.06) ≈ 0.871   (for DT = 0.10)
+// => -1.20 dB per timer fire; the 30 dB gauge range fully decays in 2.5 s.
+#define LEVEL_DECAY_DB_PER_SEC 12.0
+#define LEVEL_BETA (std::pow(10.0, -LEVEL_DECAY_DB_PER_SEC * DT / 20.0))
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */
