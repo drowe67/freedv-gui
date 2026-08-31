@@ -3795,14 +3795,35 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* audioData = static_cast<short*>(data);
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
+    // Tracks consecutive underrun callbacks so we log once per underrun
+    // event (start + duration) rather than once per audio callback, which
+    // would flood the log during a sustained underrun.
+    static int consecutiveUnderruns = 0;
+
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
     if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+
+        if (consecutiveUnderruns == 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("TX outfifo1 underrun starting: needed %zu samples, only %zu available", size, toRead);
+            FREEDV_END_VERIFIED_SAFE
+        }
+        consecutiveUnderruns++;
     }
     else
     {
+        if (consecutiveUnderruns > 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("TX outfifo1 underrun ended after %d buffer period(s)", consecutiveUnderruns);
+            FREEDV_END_VERIFIED_SAFE
+            consecutiveUnderruns = 0;
+        }
+
         if (toRead >= size)
         {
             cbData->outfifo1->read(tmpOutput, size);
