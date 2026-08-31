@@ -3368,10 +3368,31 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
+                // Tracks consecutive underrun callbacks so we log once per
+                // underrun event (start + duration) rather than once per
+                // audio callback, which would flood the log during a
+                // sustained underrun.
+                static int consecutiveRxUnderruns = 0;
+
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
                     g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+
+                    if (consecutiveRxUnderruns == 0)
+                    {
+                        FREEDV_BEGIN_VERIFIED_SAFE
+                        log_warn("RX outfifo1 underrun starting: needed %zu samples, only %zu available", size, toRead);
+                        FREEDV_END_VERIFIED_SAFE
+                    }
+                    consecutiveRxUnderruns++;
+                }
+                else if (consecutiveRxUnderruns > 0)
+                {
+                    FREEDV_BEGIN_VERIFIED_SAFE
+                    log_warn("RX outfifo1 underrun ended after %d buffer period(s)", consecutiveRxUnderruns);
+                    FREEDV_END_VERIFIED_SAFE
+                    consecutiveRxUnderruns = 0;
                 }
 
                 cbData->outfifo1->read(tmpOutput, toRead);
@@ -3906,13 +3927,34 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* audioData = static_cast<short*>(data);
     short* tmpOutput = cbData->tmpWriteRxBuffer_.get();
 
+    // Tracks consecutive underrun callbacks so we log once per underrun
+    // event (start + duration) rather than once per audio callback, which
+    // would flood the log during a sustained underrun.
+    static int consecutiveRxUnderruns = 0;
+
     auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
     if (toRead < size)
     {
         g_outfifo2_empty.fetch_add(1, std::memory_order_release);
+
+        if (consecutiveRxUnderruns == 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("RX outfifo2 underrun starting: needed %zu samples, only %zu available", size, toRead);
+            FREEDV_END_VERIFIED_SAFE
+        }
+        consecutiveRxUnderruns++;
     }
     else
     {
+        if (consecutiveRxUnderruns > 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("RX outfifo2 underrun ended after %d buffer period(s)", consecutiveRxUnderruns);
+            FREEDV_END_VERIFIED_SAFE
+            consecutiveRxUnderruns = 0;
+        }
+
         cbData->outfifo2->read(tmpOutput, toRead);
         auto numChannels = dev.getNumChannels();
         for (size_t count = 0; count < size; count++)
