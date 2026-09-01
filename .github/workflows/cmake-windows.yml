@@ -565,6 +565,10 @@ jobs:
 
     # Raw audio immediately before the RADE encoder/decoder from the rade_loss test, so a
     # decode-quality issue seen here can be reproduced offline against the RADE tools directly.
+    # Also includes the tx/rx RADE feature files that loss.py itself compares, so a failure can
+    # be inspected at the feature level (e.g. with loss.py --plot) rather than only the audio
+    # level -- the audio recordings alone can look completely clean while the feature-level
+    # comparison still shows where and why the loss score was high.
     - name: Upload RADE encoder/decoder input recordings
       uses: actions/upload-artifact@v7
       if: always()
@@ -576,5 +580,7 @@ jobs:
           ${{github.workspace}}\FreeDV-Install-Location\bin\fullduplex_rade_encoder_input.wav
           ${{github.workspace}}\FreeDV-Install-Location\bin\fullduplex_rade_decoder_input.wav
           ${{github.workspace}}\FreeDV-Install-Location\bin\rade_loss_test.wav
+          ${{github.workspace}}\FreeDV-Install-Location\bin\txfeatures.f32
+          ${{github.workspace}}\FreeDV-Install-Location\bin\rxfeatures.f32
         if-no-files-found: ignore
 
