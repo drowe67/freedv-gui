@@ -33,6 +33,7 @@
 //=========================================================================
 
 #include <chrono>
+#include <cstring>
 using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
@@ -806,6 +807,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             deferReset_ = false;
             pipeline_->reset();
             clearFifos_();
+            pendingEooCount_ = 0;
 
             // return out and begin processing on the next loop
             return;
@@ -868,19 +870,41 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                     hasEooBeenSent_ = true;
                 }
 
-                auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                if (nout > 0 && outputSamples != nullptr)
+                // Only pull a fresh batch of EOO samples out of the pipeline if we don't
+                // already have an unwritten batch left over from a previous callback --
+                // the pipeline hands back (and discards from its own internal queue) the
+                // entire EOO block in one shot, so if we asked again here, any samples that
+                // failed to make it into outfifo1 last time would be lost for good.
+                if (pendingEooCount_ == 0)
                 {
-                    if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
+                    if (nout > 0 && outputSamples != nullptr)
                     {
-                        FREEDV_BEGIN_VERIFIED_SAFE
-                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
-                        FREEDV_END_VERIFIED_SAFE
+                        assert(nout <= outputSampleRate_);
+                        memcpy(pendingEooSamples_.get(), outputSamples, nout * sizeof(short));
+                        pendingEooCount_ = nout;
+                    }
+                    else
+                    {
+                        // Nothing left buffered upstream and nothing pending here --
+                        // the EOO has been fully handed off to outfifo1.
+                        g_eoo_enqueued.store(true, std::memory_order_release);
                     }
                 }
-                else
+
+                if (pendingEooCount_ > 0)
                 {
-                    g_eoo_enqueued.store(true, std::memory_order_release);
+                    if (cbData->outfifo1->write(pendingEooSamples_.get(), pendingEooCount_) == 0)
+                    {
+                        pendingEooCount_ = 0;
+                        g_eoo_enqueued.store(true, std::memory_order_release);
+                    }
+                    else
+                    {
+                        FREEDV_BEGIN_VERIFIED_SAFE
+                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d), will retry", cbData->outfifo1->numFree());
+                        FREEDV_END_VERIFIED_SAFE
+                    }
                 }
                 break;
             }
@@ -888,6 +912,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             {
                 g_eoo_enqueued.store(false, std::memory_order_release);
                 hasEooBeenSent_ = false;
+                pendingEooCount_ = 0;
             }
             
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
