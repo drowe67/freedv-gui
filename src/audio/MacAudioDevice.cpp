@@ -201,14 +201,15 @@ void MacAudioDevice::start()
         // Calculate next power of two above desiredFrameSize if not already power of two
         desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
         
-        GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
+        OSStatus rangeError = GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
+        log_info("Device %d: GetIOBufferFrameSizeRange returned err %d, range [%d, %d]", coreAudioId_, (int)rangeError, minFrameSize, maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
             desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
             desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
             log_info("Device %d: calculated frame size of %d", coreAudioId_, desiredFrameSize);
-            
+
             // Detect whether this is a Bluetooth device. If so, automatically use the maxFrameSize
             // to avoid dropouts.
             bool isWireless = false;
@@ -218,18 +219,31 @@ void MacAudioDevice::start()
                 desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
                 desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
                 desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
-                
+
                 log_info("Device %d: detected wireless device, using frame size of %d instead", coreAudioId_, desiredFrameSize);
             }
-            
-            log_info("Set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
-            if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
+
+            log_info("Attempting to set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
+            OSStatus setError = SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize);
+            if (setError != noErr)
             {
-                log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
+                log_warn("Could not set IO frame size to %d for audio device ID %d (err %d); device will use its own default buffer size", desiredFrameSize, coreAudioId_, (int)setError);
+            }
+            else
+            {
+                log_info("Device %d: successfully set IO frame size to %d", coreAudioId_, desiredFrameSize);
             }
         }
         else
         {
+            // The device didn't report a usable [min, max] range (either the property query
+            // failed outright, i.e. rangeError != noErr, or it succeeded but returned 0 for
+            // both -- seen with some virtual/loopback drivers), so we have no way to know what
+            // sizes it will accept and skip calling SetCurrentIOBufferFrameSize entirely. The
+            // device is then left running at whatever buffer size its driver defaults to on its
+            // own, which we don't control and isn't reflected in chosenFrameSize_ below.
+            log_warn("Device %d does not support querying/setting IO buffer frame size (err %d); will use the driver's own default buffer size instead of the requested %d", coreAudioId_, (int)rangeError, desiredFrameSize);
+
             // Set maxFrameSize to something reasonable for further down.
             maxFrameSize = 4096;
         }
