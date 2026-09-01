@@ -223,6 +223,7 @@ if(APPLE)
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
         COMMAND DYLD_LIBRARY_PATH=${portaudio_BINARY_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib ${PORTAUDIO_BUNDLE_ARG} -s ${rade_BINARY_DIR}/src -s `dirname ${CLANG_SANITIZER_FILE}` -ns
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/clean-duplicate-rpaths.sh FreeDV.app/Contents/MacOS/FreeDV
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
