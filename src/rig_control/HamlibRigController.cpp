@@ -462,7 +462,13 @@ void HamlibRigController::connectImpl_()
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
-        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && (HAMLIB_STATE(tmpRig)->vfo_list & RIG_VFO_B))
+        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && 
+#if HAMLIB_CONST_WORKAROUND 
+            /* 4.6+ */
+            (HAMLIB_STATE(tmpRig)->vfo_list & RIG_VFO_B))
+#else
+            (tmpRig->state.vfo_list & RIG_VFO_B))
+#endif // HAMLIB_CONST_WORKAROUND
         {
             multipleVfos_ = true;
         }
