@@ -34,6 +34,10 @@
 
 #include "util/logging/ulog.h"
 
+#if defined(HAMLIB_USE_SEPARATE_RIG_STATE_H)
+#include <hamlib/rig_state.h>
+#endif // defined(HAMLIB_USE_SEPARATE_RIG_STATE_H)
+
 #if defined(HAMLIB_USE_FRIENDLY_ERRORS)
 #define HAMLIB_FRIENDLY_ERROR_FN rigerror2
 #else
