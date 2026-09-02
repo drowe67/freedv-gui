@@ -952,6 +952,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Add logic to prevent FIFO sizes that are too small to allow TX thread to function. (PR #1474)
     * Fix RX/TX level-meter gauge contamination. (PR #1475) - thanks @barjac!
+    * Fix Hamlib-related build failure with Hamlib 5.0~git. (PR #1477)
 
 ## V2.4.0 August 2026
 
