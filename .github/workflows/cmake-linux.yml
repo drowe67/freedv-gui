@@ -22,7 +22,7 @@ env:
 
 jobs:
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v6
 
@@ -241,7 +241,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04]
+        os: [ubuntu-26.04]
         fedora-version: [42, 43]
 
     runs-on: ${{ matrix.os }}
@@ -311,7 +311,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04-arm]
+        os: [ubuntu-26.04, ubuntu-24.04, ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04-arm, ubuntu-26.04-arm]
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage]
@@ -350,7 +350,7 @@ jobs:
 
     - name: Install required packages for audio/display
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
+      if: ${{ matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm' }}
       run: |
            sudo apt-get install pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
 
@@ -409,7 +409,7 @@ jobs:
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
+      if: ${{ matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm' }}
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
@@ -434,7 +434,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04, ubuntu-24.04-arm, ubuntu-22.04-arm]
+        os: [ubuntu-26.04, ubuntu-24.04, ubuntu-22.04, ubuntu-26.04-arm, ubuntu-24.04-arm, ubuntu-22.04-arm]
         sanitizer: [WITH_ASAN=0, WITH_RTSAN=1, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
         native-audio: [USE_NATIVE_AUDIO=0, USE_NATIVE_AUDIO=1]
         exclude:
@@ -446,6 +446,22 @@ jobs:
           native-audio: USE_NATIVE_AUDIO=0
         - sanitizer: WITH_UBSAN=1
           native-audio: USE_NATIVE_AUDIO=0
+        - os: ubuntu-24.04
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-24.04
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-24.04
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-24.04
+          sanitizer: WITH_UBSAN=1
+        - os: ubuntu-24.04-arm
+          sanitizer: WITH_RTSAN=1
+        - os: ubuntu-24.04-arm
+          sanitizer: WITH_TSAN=1
+        - os: ubuntu-24.04-arm
+          sanitizer: WITH_ASAN=1
+        - os: ubuntu-24.04-arm
+          sanitizer: WITH_UBSAN=1
         - os: ubuntu-22.04
           sanitizer: WITH_RTSAN=1
         - os: ubuntu-22.04
@@ -467,7 +483,7 @@ jobs:
     needs: lint
 
     env:
-      LLVM_ARCH: ${{ matrix.os == 'ubuntu-22.04-arm' && 'arm64' || 'amd64' }}
+      LLVM_ARCH: ${{ (matrix.os == 'ubuntu-22.04-arm' || matrix.os == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
 
     steps:
     - uses: actions/checkout@v6
@@ -553,7 +569,7 @@ jobs:
            systemctl --user --now enable pulseaudio.service pulseaudio.socket
 
     - name: Install version-specific packages
-      if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
+      if: ${{ matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm' }}
       shell: bash
       run: |
            sudo apt-get install libwxgtk3.2-dev pipewire pipewire-pulse wireplumber
@@ -616,7 +632,7 @@ jobs:
 
     - name: Execute unit tests
       shell: bash
-      if: ${{ (matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm') && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      if: ${{ (matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm') && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
           sudo systemctl enable rtkit-daemon
