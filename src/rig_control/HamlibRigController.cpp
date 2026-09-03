@@ -34,6 +34,10 @@
 
 #include "util/logging/ulog.h"
 
+#if defined(HAMLIB_USE_SEPARATE_RIG_STATE_H)
+#include <hamlib/rig_state.h>
+#endif // defined(HAMLIB_USE_SEPARATE_RIG_STATE_H)
+
 #if defined(HAMLIB_USE_FRIENDLY_ERRORS)
 #define HAMLIB_FRIENDLY_ERROR_FN rigerror2
 #else
@@ -462,7 +466,13 @@ void HamlibRigController::connectImpl_()
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
-        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && (tmpRig->state.vfo_list & RIG_VFO_B))
+        if (rig_get_vfo (tmpRig, &vfo) == RIG_OK && 
+#if HAMLIB_CONST_WORKAROUND 
+            /* 4.6+ */
+            (HAMLIB_STATE(tmpRig)->vfo_list & RIG_VFO_B))
+#else
+            (tmpRig->state.vfo_list & RIG_VFO_B))
+#endif // HAMLIB_CONST_WORKAROUND
         {
             multipleVfos_ = true;
         }

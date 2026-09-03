@@ -737,7 +737,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
 
-    // Buffers re-used by tx and rx processing.  We take samples from
+    // Buffers reused by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz
@@ -878,7 +878,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 {
     paCallBackData  *cbData = g_rxUserdata;
 
-    // Buffers re-used by tx and rx processing.  We take samples from
+    // Buffers reused by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz.
