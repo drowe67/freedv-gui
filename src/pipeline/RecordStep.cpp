@@ -121,6 +121,19 @@ void RecordStep::fileIoThreadEntry_()
         
         fileIoThreadSem_.wait();
     }
-    
+
+    // Record whatever's left in the FIFO, if anything.
+    g_mutexProtectingCallbackData.Lock();
+    auto recordFile = getSndFileFn_();
+    if (recordFile != nullptr)
+    {
+        int numInputSamples = inputFifo_.numUsed();
+        inputFifo_.read(buf, numInputSamples);
+            
+        sf_write_short(recordFile, buf, numInputSamples);
+        isFileCompleteFn_(numInputSamples);
+    }
+    g_mutexProtectingCallbackData.Unlock();
+
     delete[] buf;
 }
