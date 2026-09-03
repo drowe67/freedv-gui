@@ -219,10 +219,10 @@ generate 0.2dB steps whilst hovering anywhere over the TX Attenuation
 control area. Values below 0 dB attenuate the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
-main window tabs (From Radio, From Mic, To Speaker).
+main window tabs (From Radio, From Mic, To Mod, To Speaker).
 
 1. On receive, FreeDV is not very sensitive to the **From Radio**
-level, adjust so it is mid-range and not clipping.  FreeDV uses phase
+level, adjust so that the Level meter is around 75% scale and not clipping.  FreeDV uses phase
 shift keying (PSK) so is not sensitive to amplitude.
 
 1. The transmit level from your computer to your radio is important.
@@ -253,8 +253,16 @@ a poor SNR at the receiver.  This is a very common problem.
    frequency entry) and load any saved attenuation value for the new band.
    When a band is left the current values for that band are saved immediately.
    
-1. Adjust the microphone audio so the peaks are not clipping, and the
-average is about half the maximum.
+ 1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+
+1. Adjust the microphone audio using your operating system's volume settings so the peaks are not clipping, 
+and the average is about 75% of max scale on the Level meter. If additional adjustments are needed, the "Mic Level"
+slider on the right hand side of the main window will allow you to adjust audio levels +/- 20 dB. The "From Mic" tab 
+will show audio after Mic Level adjustments, but before AGC (if enabled). If additional adjustments are performed,
+the peaks in this plot should not exceed approximately +/- 0.5.  
+
+1. AGC is enabled by default and is recommended that it remain on. If desired, it can be disabled by going to Tools->Filters.
+The "To Mod" plot shows the audio that will ultimately be transmitted out over the air, after AGC (if enabled) processing.
 
 ## Audio Processing
 
@@ -854,6 +862,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Add logic to prevent FIFO sizes that are too small to allow TX thread to function. (PR #1474)
     * Fix RX/TX level-meter gauge contamination. (PR #1475) - thanks @barjac!
+    * Fix Hamlib-related build failure with Hamlib 5.0~git. (PR #1477)
+    * macOS: Fix dyld error on startup when enabling sanitizers in build. (PR #1478)
 
 ## V2.4.0 August 2026
 
@@ -897,6 +907,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Voice Keyer/PTT context menu positioning under native Wayland. (PR #1438) - thanks @barjac!
     * Automatically start decoding on FreeDV startup. (PR #1436)
     * Remove "Clip" indicator from main window to reduce confusion. (PR #1461)
+    * Use log scale for Level meter and take mic level before AGC. (PR #1464)
 3. Build system:
     * Clear CMake deprecation warnings in FreeDV. (PR #1383, #1386)
     * Upgrade Hamlib to 4.7.2. (PR #1413)

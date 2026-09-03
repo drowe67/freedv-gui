@@ -521,6 +521,17 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
             endif (NOT HAMLIB_VERSION STRLESS "Hamlib 4.5")
         endif (NOT HAMLIB_COMPILE_RESULT OR NOT HAMLIB_RUN_RESULT OR NOT HAMLIB_VERSION)
     endif (NOT CMAKE_CROSSCOMPILING)
+
+    # Hamlib 4.7+ moves rig_state to hamlib/rig_state.h. Look for this file.
+    find_file(
+        HAMLIB_RIG_STATE_H
+	"rig_state.h"
+	PATHS "${HAMLIB_INCLUDE_DIR}/hamlib"
+	NO_DEFAULT_PATH)
+    if (NOT HAMLIB_RIG_STATE_H STREQUAL "HAMLIB_RIG_STATE_H-NOTFOUND")
+        message(STATUS "Hamlib: rig state is in rig_state.h, not rig.h.")
+        add_definitions(-DHAMLIB_USE_SEPARATE_RIG_STATE_H)
+    endif (NOT HAMLIB_RIG_STATE_H STREQUAL "HAMLIB_RIG_STATE_H-NOTFOUND")
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
