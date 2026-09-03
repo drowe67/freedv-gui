@@ -41,7 +41,7 @@ jobs:
 
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=numer,caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
+      run: codespell --ignore-words-list=floatIn,numer,caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
 
     - name: Install LLVM/Clang >=20.0 (Required for clang-tidy)
       run: |
