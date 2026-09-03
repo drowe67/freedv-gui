@@ -728,7 +728,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 20; // 20ms, 1/2 of a RADEV2 block and confirmed to be sufficient with Instruments analysis.
+    const double kTimeQuantum = 60; // 60ms, calculated by AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC / kGuaranteedAudioDutyCycle + a bit extra.
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
