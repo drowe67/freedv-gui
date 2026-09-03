@@ -2988,9 +2988,9 @@ void MainFrame::startRxStream()
         // all. Without a very large FIFO size (or a way to dynamically change
         // FIFO sizes, which isn't recommended for real-time operation), we will
         // definitely lose audio.
-        constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
 #if defined(__linux__)
+		constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
 #else
 		int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
