@@ -2982,7 +2982,7 @@ void MainFrame::startRxStream()
         // in the tx/rxProcessing loop.
         //
         // Note that soundCard[12]InFifoSizeSamples are significantly larger than
-        // the other FIFO sizes. This is to better handle PulseAudio/pipewire
+        // the other FIFO sizes on Linux. This is to better handle PulseAudio/pipewire
         // behavior on some devices, where the system sends multiple *seconds*
         // of audio samples at once followed by long periods with no samples at
         // all. Without a very large FIFO size (or a way to dynamically change
@@ -2990,8 +2990,12 @@ void MainFrame::startRxStream()
         // definitely lose audio.
         constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
+#if defined(__linux__)
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
-
+#else
+		int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
+#endif // defined(__linux__)
+		
         // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
         // Theoretically allows up to three TX packets to be queued at a time at minimum
         // (depending on mode).
@@ -3001,7 +3005,11 @@ void MainFrame::startRxStream()
 
         if (g_nSoundCards == 2)
         {
+#if defined(__linux__)
             int soundCard2InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+#else
+			int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
+#endif // defined(__linux__)
 
             // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
             // Theoretically allows up to three RX packets to be queued at a time at minimum
