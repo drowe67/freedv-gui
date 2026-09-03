@@ -3005,12 +3005,14 @@ void MainFrame::startRxStream()
         // definitely lose audio.
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
 #if defined(__linux__)
-		constexpr int MAX_INCOMING_AUDIO_SEC = 75;
+        constexpr int MAX_INCOMING_AUDIO_SEC = 75;
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
 #else
-		int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
+        int soundCard1InFifoSizeSamples = std::max(
+            m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000,
+            3 * (freedvInterface.getRxNumModemSamples() * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate) / freedvInterface.getRxModemSampleRate());
 #endif // defined(__linux__)
-		
+                
         // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
         // Theoretically allows up to three TX packets to be queued at a time at minimum
         // (depending on mode).
@@ -3023,7 +3025,9 @@ void MainFrame::startRxStream()
 #if defined(__linux__)
             int soundCard2InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
 #else
-			int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
+            int soundCard2InFifoSizeSamples = std::max(
+                m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000,
+                3 * (freedvInterface.getTxNumSpeechSamples() * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate) / freedvInterface.getTxSpeechSampleRate());
 #endif // defined(__linux__)
 
             // Guards against FIFO sizes accidentally being too small to fit an entier TX block.
