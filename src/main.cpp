@@ -149,10 +149,16 @@ std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
-// RX capture delivery accounting. Counts what the sound layer actually handed us, so a
-// summary can compare it against what the elapsed time says it should have handed us.
-// A shortfall means the capture device dropped input buffers; a match means the capture
-// stream was continuous, and any audio missing from the recording was never played.
+// RX capture delivery accounting: a coarse sanity check on how much audio the sound layer
+// handed us versus how much the elapsed time implies.
+//
+// Coarse is the operative word. The comparison is swamped by virtual-device clock offset
+// (observed at 140-540 ppm between runners, i.e. hundreds of ms over a long pass) and by
+// the slack between the last callback and the summary, both of which are the same order as
+// the dropouts worth chasing. A run with a provably intact capture still showed -214 ms
+// here, so do not read a shortfall as lost audio. To actually establish whether content
+// went missing, cross-correlate the capture against the file that was played -- that
+// measures lost content directly and is immune to clock offset.
 std::atomic<unsigned long long> g_rxInSamplesDelivered;
 std::atomic<int>                g_rxInSampleRate;
 std::atomic<long long>          g_rxInFirstCallbackNsec;
@@ -357,10 +363,10 @@ static void logAudioCounterSummary_(const char* phase)
         g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
         g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
 
-    // How much audio the capture device actually delivered, against how much the elapsed
-    // time says it owed us. A negative delta of more than a buffer period or two means
-    // the device dropped input; a delta near zero means the capture stream was continuous
-    // and any audio missing downstream was never played to begin with.
+    // Coarse sanity check only -- see the note where these counters are declared. The
+    // delta carries clock offset and end-of-pass slack as well as any real shortfall, so
+    // it is useful for spotting something wildly wrong, not for judging whether audio was
+    // lost.
     auto delivered = g_rxInSamplesDelivered.load(std::memory_order_acquire);
     auto sampleRate = g_rxInSampleRate.load(std::memory_order_acquire);
     auto firstNsec = g_rxInFirstCallbackNsec.load(std::memory_order_acquire);
