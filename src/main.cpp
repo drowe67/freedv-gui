@@ -325,17 +325,26 @@ static void pollAndLogSyncChange_(int& sync, float& lastInSyncSnr, float& lastIn
     }
 }
 
-// Reports the audio device over/underflow counters whenever any of them moves. These are
-// maintained by the device callbacks but are otherwise only rendered in the Options
-// dialog, so a headless run (i.e. CI) has no way to see that the sound layer lost audio.
-// Polled from here rather than logged in the callbacks themselves because those run on
-// the audio thread on some platforms. Labels match the Options dialog's.
-static void logAudioErrorCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4])
+// Reports the audio device over/underflow counters and the FIFO over/underrun counters
+// whenever any of them moves. All of these are maintained by the audio callbacks but are
+// otherwise only rendered in the Options dialog, so a headless run (i.e. CI) has no way
+// to see that the sound layer lost audio. In particular an outfifo1 underrun means the
+// TX output callback had nothing to send, which puts a silent stretch on the air.
+// Polled from here rather than logged in the device callbacks themselves because those
+// run on the audio thread on some platforms. Labels match the Options dialog's.
+static void logAudioCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4], int (&lastFifo)[4])
 {
+    const int fifo[4] = {
+        g_infifo1_full.load(std::memory_order_acquire),
+        g_outfifo1_empty.load(std::memory_order_acquire),
+        g_infifo2_full.load(std::memory_order_acquire),
+        g_outfifo2_empty.load(std::memory_order_acquire),
+    };
+
     bool changed = false;
     for (int i = 0; i < 4; i++)
     {
-        if (g_AEstatus1[i] != lastAE1[i] || g_AEstatus2[i] != lastAE2[i])
+        if (g_AEstatus1[i] != lastAE1[i] || g_AEstatus2[i] != lastAE2[i] || fifo[i] != lastFifo[i])
         {
             changed = true;
         }
@@ -347,8 +356,10 @@ static void logAudioErrorCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4]
     }
 
     log_warn(
-        "Audio device errors changed -- Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
+        "Audio counters changed -- Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d; "
+        "Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
         "Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d",
+        fifo[0], fifo[1], fifo[2], fifo[3],
         g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
         g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
 
@@ -356,6 +367,7 @@ static void logAudioErrorCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4]
     {
         lastAE1[i] = g_AEstatus1[i];
         lastAE2[i] = g_AEstatus2[i];
+        lastFifo[i] = fifo[i];
     }
 }
 
@@ -447,6 +459,13 @@ void MainApp::UnitTest_()
             g_recFileFromModulator = true;
         }
 
+        // Watched while transmitting so that an outfifo1 underrun -- which leaves the TX
+        // output callback with nothing to send, putting a silent stretch on the air --
+        // shows up in the log rather than only in the Options dialog.
+        int lastAE1[4] = {0, 0, 0, 0};
+        int lastAE2[4] = {0, 0, 0, 0};
+        int lastFifo[4] = {0, 0, 0, 0};
+
         log_info("Transmitting %d times", utTxAttempts);
         for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
@@ -480,7 +499,8 @@ void MainApp::UnitTest_()
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(20ms);
-                } 
+                    logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
+                }
             }
             else
             {
@@ -496,7 +516,11 @@ void MainApp::UnitTest_()
 
                 // Transmit for user given time period (default 60 seconds)
                 log_info("Sleeping for %d seconds", utTxTimeSeconds);
-                std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
+                for (int i = 0; i < utTxTimeSeconds*50; i++)
+                {
+                    std::this_thread::sleep_for(20ms);
+                    logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
+                }
             }
             
             // Stop transmitting
@@ -556,12 +580,13 @@ void MainApp::UnitTest_()
             float lastInSyncOffset = 0.0f;
             int lastAE1[4] = {0, 0, 0, 0};
             int lastAE2[4] = {0, 0, 0, 0};
+            int lastFifo[4] = {0, 0, 0, 0};
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
-                logAudioErrorCountersIfChanged_(lastAE1, lastAE2);
+                logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
             }
         }
         else
@@ -572,11 +597,12 @@ void MainApp::UnitTest_()
             float lastInSyncOffset = 0.0f;
             int lastAE1[4] = {0, 0, 0, 0};
             int lastAE2[4] = {0, 0, 0, 0};
+            int lastFifo[4] = {0, 0, 0, 0};
             for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
-                logAudioErrorCountersIfChanged_(lastAE1, lastAE2);
+                logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
             }
         }
 
@@ -3888,14 +3914,37 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* audioData = static_cast<short*>(data);
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
+    // Tracks consecutive underrun callbacks so we log once per underrun event
+    // (start + duration) rather than once per audio callback.
+    static int consecutiveTxUnderruns = 0;
+
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
     if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+
+        // Nothing is written to the output buffer in this case, so whatever the driver
+        // had there is what goes on the air -- silence on macOS. A run of these is a
+        // silent stretch in the transmitted signal.
+        if (consecutiveTxUnderruns == 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("TX outfifo1 underrun starting: needed %zu samples, only %zu available", size, toRead);
+            FREEDV_END_VERIFIED_SAFE
+        }
+        consecutiveTxUnderruns++;
     }
     else
     {
+        if (consecutiveTxUnderruns > 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("TX outfifo1 underrun ended after %d buffer period(s)", consecutiveTxUnderruns);
+            FREEDV_END_VERIFIED_SAFE
+            consecutiveTxUnderruns = 0;
+        }
+
         if (toRead >= size)
         {
             cbData->outfifo1->read(tmpOutput, size);
