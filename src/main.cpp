@@ -149,6 +149,14 @@ std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
+// RX capture delivery accounting. Counts what the sound layer actually handed us, so a
+// summary can compare it against what the elapsed time says it should have handed us.
+// A shortfall means the capture device dropped input buffers; a match means the capture
+// stream was continuous, and any audio missing from the recording was never played.
+std::atomic<unsigned long long> g_rxInSamplesDelivered;
+std::atomic<int>                g_rxInSampleRate;
+std::atomic<long long>          g_rxInFirstCallbackNsec;
+
 // playing and recording from sound files
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
@@ -348,6 +356,27 @@ static void logAudioCounterSummary_(const char* phase)
         g_outfifo2_empty.load(std::memory_order_acquire),
         g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
         g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+
+    // How much audio the capture device actually delivered, against how much the elapsed
+    // time says it owed us. A negative delta of more than a buffer period or two means
+    // the device dropped input; a delta near zero means the capture stream was continuous
+    // and any audio missing downstream was never played to begin with.
+    auto delivered = g_rxInSamplesDelivered.load(std::memory_order_acquire);
+    auto sampleRate = g_rxInSampleRate.load(std::memory_order_acquire);
+    auto firstNsec = g_rxInFirstCallbackNsec.load(std::memory_order_acquire);
+    if (delivered > 0 && sampleRate > 0 && firstNsec > 0)
+    {
+        auto nowNsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        double elapsedSec = (nowNsec - firstNsec) / 1e9;
+        long long expected = (long long)(elapsedSec * sampleRate);
+        long long delta = (long long)delivered - expected;
+
+        log_info(
+            "RX capture delivery at end of %s -- delivered: %llu samples over %.3f s, "
+            "expected ~%lld, delta %+lld samples (%+.1f ms)",
+            phase, delivered, elapsedSec, expected, delta, (double)delta * 1000.0 / sampleRate);
+    }
 }
 
 void MainApp::UnitTest_()
@@ -3343,6 +3372,10 @@ void MainFrame::startRxStream()
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
 
+        g_rxInSamplesDelivered.store(0, std::memory_order_release);
+        g_rxInSampleRate.store(0, std::memory_order_release);
+        g_rxInFirstCallbackNsec.store(0, std::memory_order_release);
+
         // These FIFOs interface between the 20ms tx/rxProcessing()
         // loop and the demodulator, which requires a variable number
         // of input samples to adjust for timing clock differences
@@ -3978,6 +4011,22 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     // Tracks consecutive dropped callbacks so we log once per drop event
     // (start + duration) rather than once per audio callback.
     static int consecutiveRxInDrops = 0;
+
+    // Count what the device handed us, before any FIFO decision -- this has to reflect
+    // what the sound layer delivered, not what we managed to keep.
+    if (g_rxInSamplesDelivered.fetch_add(size, std::memory_order_acq_rel) == 0)
+    {
+        // Timestamp the first callback rather than stream start, so the comparison isn't
+        // skewed by however long the device took to start producing. clock_gettime() is
+        // a vDSO call with no locks or allocation, and this runs once per RX session.
+        FREEDV_BEGIN_VERIFIED_SAFE
+        g_rxInFirstCallbackNsec.store(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count(),
+            std::memory_order_release);
+        FREEDV_END_VERIFIED_SAFE
+        g_rxInSampleRate.store(dev.getSampleRate(), std::memory_order_release);
+    }
 
     auto numChannels = dev.getNumChannels();
     for (size_t i = 0; i < size; i++, audioData += numChannels)
