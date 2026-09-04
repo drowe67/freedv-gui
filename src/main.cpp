@@ -325,6 +325,40 @@ static void pollAndLogSyncChange_(int& sync, float& lastInSyncSnr, float& lastIn
     }
 }
 
+// Reports the audio device over/underflow counters whenever any of them moves. These are
+// maintained by the device callbacks but are otherwise only rendered in the Options
+// dialog, so a headless run (i.e. CI) has no way to see that the sound layer lost audio.
+// Polled from here rather than logged in the callbacks themselves because those run on
+// the audio thread on some platforms. Labels match the Options dialog's.
+static void logAudioErrorCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4])
+{
+    bool changed = false;
+    for (int i = 0; i < 4; i++)
+    {
+        if (g_AEstatus1[i] != lastAE1[i] || g_AEstatus2[i] != lastAE2[i])
+        {
+            changed = true;
+        }
+    }
+
+    if (!changed)
+    {
+        return;
+    }
+
+    log_warn(
+        "Audio device errors changed -- Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
+        "Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d",
+        g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
+        g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+
+    for (int i = 0; i < 4; i++)
+    {
+        lastAE1[i] = g_AEstatus1[i];
+        lastAE2[i] = g_AEstatus2[i];
+    }
+}
+
 void MainApp::UnitTest_()
 {
     SetThreadName("UnitTest");
@@ -520,11 +554,14 @@ void MainApp::UnitTest_()
             auto sync = 0;
             float lastInSyncSnr = 0.0f;
             float lastInSyncOffset = 0.0f;
+            int lastAE1[4] = {0, 0, 0, 0};
+            int lastAE2[4] = {0, 0, 0, 0};
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
+                logAudioErrorCountersIfChanged_(lastAE1, lastAE2);
             }
         }
         else
@@ -533,10 +570,13 @@ void MainApp::UnitTest_()
             auto sync = 0;
             float lastInSyncSnr = 0.0f;
             float lastInSyncOffset = 0.0f;
+            int lastAE1[4] = {0, 0, 0, 0};
+            int lastAE2[4] = {0, 0, 0, 0};
             for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
+                logAudioErrorCountersIfChanged_(lastAE1, lastAE2);
             }
         }
 
@@ -3811,14 +3851,33 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
 
     if (!endingTx.load(std::memory_order_acquire)) 
     {
+        // Tracks consecutive dropped callbacks so we log once per drop event
+        // (start + duration) rather than once per audio callback.
+        static int consecutiveTxInDrops = 0;
+
         auto numChannels = dev.getNumChannels();
         for(size_t i = 0; i < size; i++, audioData += numChannels)
         {
             tmpInput[i] = audioData[0];
         }
-        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
+        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size))
         {
             g_infifo2_full.fetch_add(1, std::memory_order_release);
+
+            if (consecutiveTxInDrops == 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("TX infifo2 full, dropping %zu mic samples (free=%d)", size, cbData->infifo2->numFree());
+                FREEDV_END_VERIFIED_SAFE
+            }
+            consecutiveTxInDrops++;
+        }
+        else if (consecutiveTxInDrops > 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("TX infifo2 drops ended after %d buffer period(s); transmitted audio is missing input", consecutiveTxInDrops);
+            FREEDV_END_VERIFIED_SAFE
+            consecutiveTxInDrops = 0;
         }
     }
 }
@@ -3902,14 +3961,35 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     short* audioData = static_cast<short*>(data);
     short* tmpInput = cbData->tmpReadRxBuffer_.get();
 
+    // Tracks consecutive dropped callbacks so we log once per drop event
+    // (start + duration) rather than once per audio callback.
+    static int consecutiveRxInDrops = 0;
+
     auto numChannels = dev.getNumChannels();
     for (size_t i = 0; i < size; i++, audioData += numChannels)
     {
         tmpInput[i] = audioData[0];
     }
-    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
+    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size))
     {
         g_infifo1_full.fetch_add(1, std::memory_order_release);
+
+        // write() is all-or-nothing, so this whole buffer is gone from the received
+        // signal -- the demodulator sees a splice, not a gap, which reliably costs sync.
+        if (consecutiveRxInDrops == 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("RX infifo1 full, dropping %zu received samples (free=%d)", size, cbData->infifo1->numFree());
+            FREEDV_END_VERIFIED_SAFE
+        }
+        consecutiveRxInDrops++;
+    }
+    else if (consecutiveRxInDrops > 0)
+    {
+        FREEDV_BEGIN_VERIFIED_SAFE
+        log_warn("RX infifo1 drops ended after %d buffer period(s); received signal is missing audio", consecutiveRxInDrops);
+        FREEDV_END_VERIFIED_SAFE
+        consecutiveRxInDrops = 0;
     }
 }
 
