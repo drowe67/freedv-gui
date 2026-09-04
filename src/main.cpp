@@ -326,49 +326,28 @@ static void pollAndLogSyncChange_(int& sync, float& lastInSyncSnr, float& lastIn
 }
 
 // Reports the audio device over/underflow counters and the FIFO over/underrun counters
-// whenever any of them moves. All of these are maintained by the audio callbacks but are
-// otherwise only rendered in the Options dialog, so a headless run (i.e. CI) has no way
-// to see that the sound layer lost audio. In particular an outfifo1 underrun means the
-// TX output callback had nothing to send, which puts a silent stretch on the air.
-// Polled from here rather than logged in the device callbacks themselves because those
-// run on the audio thread on some platforms. Labels match the Options dialog's.
-static void logAudioCountersIfChanged_(int (&lastAE1)[4], int (&lastAE2)[4], int (&lastFifo)[4])
+// once, at the end of a test pass. All of these are maintained by the audio callbacks but
+// are otherwise only rendered in the Options dialog, so a headless run (i.e. CI) has no
+// way to see that the sound layer lost audio.
+//
+// Deliberately a single summary rather than a per-change report: outfifo1/infifo2 tick on
+// every callback whenever the TX side is idle (which is the whole RX pass), so watching
+// for changes produced thousands of lines per run and buried the signal. The interesting
+// per-event case -- an underrun *during* a transmission -- is covered by the rate-limited
+// warnings in the audio callbacks themselves. Labels match the Options dialog's.
+static void logAudioCounterSummary_(const char* phase)
 {
-    const int fifo[4] = {
+    log_info(
+        "Audio counters at end of %s -- Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d; "
+        "Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
+        "Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d",
+        phase,
         g_infifo1_full.load(std::memory_order_acquire),
         g_outfifo1_empty.load(std::memory_order_acquire),
         g_infifo2_full.load(std::memory_order_acquire),
         g_outfifo2_empty.load(std::memory_order_acquire),
-    };
-
-    bool changed = false;
-    for (int i = 0; i < 4; i++)
-    {
-        if (g_AEstatus1[i] != lastAE1[i] || g_AEstatus2[i] != lastAE2[i] || fifo[i] != lastFifo[i])
-        {
-            changed = true;
-        }
-    }
-
-    if (!changed)
-    {
-        return;
-    }
-
-    log_warn(
-        "Audio counters changed -- Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d; "
-        "Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
-        "Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d",
-        fifo[0], fifo[1], fifo[2], fifo[3],
         g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
         g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
-
-    for (int i = 0; i < 4; i++)
-    {
-        lastAE1[i] = g_AEstatus1[i];
-        lastAE2[i] = g_AEstatus2[i];
-        lastFifo[i] = fifo[i];
-    }
 }
 
 void MainApp::UnitTest_()
@@ -459,13 +438,6 @@ void MainApp::UnitTest_()
             g_recFileFromModulator = true;
         }
 
-        // Watched while transmitting so that an outfifo1 underrun -- which leaves the TX
-        // output callback with nothing to send, putting a silent stretch on the air --
-        // shows up in the log rather than only in the Options dialog.
-        int lastAE1[4] = {0, 0, 0, 0};
-        int lastAE2[4] = {0, 0, 0, 0};
-        int lastFifo[4] = {0, 0, 0, 0};
-
         log_info("Transmitting %d times", utTxAttempts);
         for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
@@ -499,7 +471,6 @@ void MainApp::UnitTest_()
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(20ms);
-                    logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
                 }
             }
             else
@@ -516,11 +487,7 @@ void MainApp::UnitTest_()
 
                 // Transmit for user given time period (default 60 seconds)
                 log_info("Sleeping for %d seconds", utTxTimeSeconds);
-                for (int i = 0; i < utTxTimeSeconds*50; i++)
-                {
-                    std::this_thread::sleep_for(20ms);
-                    logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
-                }
+                std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
             }
             
             // Stop transmitting
@@ -545,6 +512,8 @@ void MainApp::UnitTest_()
             std::uniform_int_distribution<> distrib(0, 500);
             std::this_thread::sleep_for(5s + std::chrono::milliseconds(distrib(gen)));
         }
+
+        logAudioCounterSummary_("TX pass");
 
         if (g_sfRecFileFromModulator)
         {
@@ -578,16 +547,14 @@ void MainApp::UnitTest_()
             auto sync = 0;
             float lastInSyncSnr = 0.0f;
             float lastInSyncOffset = 0.0f;
-            int lastAE1[4] = {0, 0, 0, 0};
-            int lastAE2[4] = {0, 0, 0, 0};
-            int lastFifo[4] = {0, 0, 0, 0};
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
-                logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
             }
+
+            logAudioCounterSummary_("RX pass");
         }
         else
         {
@@ -595,15 +562,13 @@ void MainApp::UnitTest_()
             auto sync = 0;
             float lastInSyncSnr = 0.0f;
             float lastInSyncOffset = 0.0f;
-            int lastAE1[4] = {0, 0, 0, 0};
-            int lastAE2[4] = {0, 0, 0, 0};
-            int lastFifo[4] = {0, 0, 0, 0};
             for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
                 pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
-                logAudioCountersIfChanged_(lastAE1, lastAE2, lastFifo);
             }
+
+            logAudioCounterSummary_("RX pass");
         }
 
         if (g_recFileFromDecoder)
