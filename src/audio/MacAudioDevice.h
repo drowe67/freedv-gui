@@ -83,6 +83,12 @@ private:
     MacAudioEngine* parent_;
     AudioComponentInstance auHAL_;
     AudioBufferList* bufferList_;
+    // Capacity each bufferList_ buffer was allocated with. AudioUnitRender overwrites
+    // mDataByteSize with the amount it actually rendered, so the capacity has to be
+    // restored before every render -- see InputProc_().
+    UInt32 bufferListBytesPerBuffer_;
+    // Tracks consecutive short renders so they're logged once per episode.
+    int consecutiveShortRenders_;
     bool running_;
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;

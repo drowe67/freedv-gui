@@ -123,6 +123,8 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , inputFrames_(nullptr)
     , isDefaultDevice_(false)
     , parent_(parent)
+    , bufferListBytesPerBuffer_(0)
+    , consecutiveShortRenders_(0)
     , running_(false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
@@ -383,12 +385,15 @@ void MacAudioDevice::start()
             bufferList_ = (AudioBufferList *)malloc(propsize);
             bufferList_->mNumberBuffers = numChannels_;
                                    
-            //pre-malloc buffers for AudioBufferLists          
-            for(UInt32 i =0; i< bufferList_->mNumberBuffers ; i++) 
+            //pre-malloc buffers for AudioBufferLists
+            bufferListBytesPerBuffer_ = (maxFrameSize + 1) * sizeof(Float32);
+            for(UInt32 i =0; i< bufferList_->mNumberBuffers ; i++)
             {
-                bufferList_->mBuffers[i].mNumberChannels = 1;                   
-                bufferList_->mBuffers[i].mDataByteSize = (maxFrameSize + 1)  * sizeof(Float32);
-                bufferList_->mBuffers[i].mData = malloc((maxFrameSize + 1) * sizeof(Float32));
+                bufferList_->mBuffers[i].mNumberChannels = 1;
+                bufferList_->mBuffers[i].mDataByteSize = bufferListBytesPerBuffer_;
+                // calloc rather than malloc so that a render which fills less than the
+                // full buffer can't surface whatever happened to be on the heap.
+                bufferList_->mBuffers[i].mData = calloc(1, bufferListBytesPerBuffer_);
             }
         }
         else
@@ -773,7 +778,18 @@ OSStatus MacAudioDevice::InputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
- 
+
+    // AudioUnitRender writes the number of bytes it actually rendered back into
+    // mDataByteSize, so the allocated capacity has to be restored before every call.
+    // Left shrunken by an earlier short render, later renders fill only part of the
+    // buffer while the copy below still reads inNumberFrames worth -- so the untouched
+    // tail comes through as stale data, with nothing reporting an error.
+    for (UInt32 i = 0; i < thisObj->bufferList_->mNumberBuffers; i++)
+    {
+        thisObj->bufferList_->mBuffers[i].mNumberChannels = 1;
+        thisObj->bufferList_->mBuffers[i].mDataByteSize = thisObj->bufferListBytesPerBuffer_;
+    }
+
     err = AudioUnitRender(thisObj->auHAL_,
                     ioActionFlags,
                     inTimeStamp,
@@ -783,17 +799,48 @@ OSStatus MacAudioDevice::InputProc_(
 
     if (err == noErr)
     {
+        // Only trust as many frames as were actually rendered. Reading the full request
+        // regardless is what let a short render surface as silence in the captured audio,
+        // with no error reported anywhere.
+        UInt32 framesRendered = inNumberFrames;
+        for (UInt32 chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
+        {
+            UInt32 chanFrames = thisObj->bufferList_->mBuffers[chan].mDataByteSize / sizeof(Float32);
+            if (chanFrames < framesRendered)
+            {
+                framesRendered = chanFrames;
+            }
+        }
+
+        if (framesRendered < inNumberFrames)
+        {
+            if (thisObj->consecutiveShortRenders_ == 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("Device %d: input render returned %u of %u frames requested", thisObj->coreAudioId_, framesRendered, inNumberFrames);
+                FREEDV_END_VERIFIED_SAFE
+            }
+            thisObj->consecutiveShortRenders_++;
+        }
+        else if (thisObj->consecutiveShortRenders_ > 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("Device %d: short input renders ended after %d callback(s)", thisObj->coreAudioId_, thisObj->consecutiveShortRenders_);
+            FREEDV_END_VERIFIED_SAFE
+            thisObj->consecutiveShortRenders_ = 0;
+        }
+
         if (thisObj->onAudioDataFunction)
         {
-            for (UInt32 index = 0; index < inNumberFrames; index++)
+            for (UInt32 index = 0; index < framesRendered; index++)
             {
                 for (UInt32 chan = 0; chan < thisObj->bufferList_->mNumberBuffers; chan++)
                 {
                     thisObj->inputFrames_[thisObj->numChannels_ * index + chan] = ((float*)thisObj->bufferList_->mBuffers[chan].mData)[index] * 32767;
                 }
             }
-            
-            thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
+
+            thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, framesRendered, thisObj->onAudioDataState);
         }
           
         auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);

@@ -132,19 +132,6 @@ run_rade_loss_attempt () {
     ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 -rxradeinfile $(pwd)/rade_decoder_input.wav 2>&1 | tee tmp.log) &
     FDV_PID=$!
 
-    # Independent witness of what actually arrived on the cable, recorded in parallel with
-    # FreeDV's own capture of the same device. Dropouts have shown up in
-    # rade_decoder_input.wav with every FreeDV-side counter reading zero, so this
-    # distinguishes where they come from: a dropout present in both recordings was
-    # introduced by the playback side or the virtual cable, whereas one present only in
-    # FreeDV's capture was introduced by its own capture path.
-    if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        parecord --channels=1 --file-format=wav --device "$PLAY_DEVICE.monitor" --rate 48000 --format s16le rade_loopback_witness.wav &
-    else
-        sox --buffer 128000 -t $SOX_DRIVER "$PLAY_DEVICE" -c 1 -t wav -r 48000 -b 16 -e signed-integer rade_loopback_witness.wav >/dev/null 2>&1 &
-    fi
-    WITNESS_PID=$!
-
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
     #    xctrace record --template "Audio System Trace" --instrument "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
     #fi
@@ -160,9 +147,6 @@ run_rade_loss_attempt () {
     wait $FDV_PID
     FREEDV_EXIT_CODE=$?
     #cat tmp.log
-
-    # Diagnostic only -- never let the witness recording affect the test result.
-    kill $WITNESS_PID 2>/dev/null || true
 
     # Run feature files through loss tool
     LOSS_OUTPUT=$($PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test $LOSS_THRESHOLD --clip_start 100 --clip_end 300)
