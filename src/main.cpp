@@ -300,6 +300,31 @@ void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
     wxGetApp().appConfiguration.save(pConfig);
 }
 
+// Polls sync once and logs any transition along with the SNR and frequency offset that
+// preceded it. getSNREstimate() reports 0 as soon as sync is lost, so the last in-sync
+// values are carried forward; those are what distinguish a flap caused by marginal SNR
+// from one caused by a discontinuity in the demodulator's input (where the SNR stays
+// healthy right up until sync disappears).
+static void pollAndLogSyncChange_(int& sync, float& lastInSyncSnr, float& lastInSyncOffset)
+{
+    auto newSync = freedvInterface.getSync();
+    auto offset = freedvInterface.getCurrentRxModemOffset();
+
+    if (newSync)
+    {
+        lastInSyncSnr = freedvInterface.getSNREstimate();
+        lastInSyncOffset = offset;
+    }
+
+    if (newSync != sync)
+    {
+        log_info(
+            "Sync changed from %d to %d (freq offset %.1f Hz; last in-sync SNR %.1f dB @ offset %.1f Hz)",
+            sync, newSync, offset, lastInSyncSnr, lastInSyncOffset);
+        sync = newSync;
+    }
+}
+
 void MainApp::UnitTest_()
 {
     SetThreadName("UnitTest");
@@ -493,32 +518,26 @@ void MainApp::UnitTest_()
             g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
+            float lastInSyncSnr = 0.0f;
+            float lastInSyncOffset = 0.0f;
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(20ms);
-                auto newSync = freedvInterface.getSync();
-                if (newSync != sync)
-                {
-                    log_info("Sync changed from %d to %d", sync, newSync);
-                    sync = newSync;
-                }
+                pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
             }
         }
         else
         {
             // Receive for txtime seconds
             auto sync = 0;
+            float lastInSyncSnr = 0.0f;
+            float lastInSyncOffset = 0.0f;
             for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
-                auto newSync = freedvInterface.getSync();
-                if (newSync != sync)
-                {
-                    log_info("Sync changed from %d to %d", sync, newSync);
-                    sync = newSync;
-                }
-            } 
+                pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
+            }
         }
 
         if (g_recFileFromDecoder)
