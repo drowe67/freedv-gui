@@ -42,6 +42,7 @@
 #endif // defined(__APPLE__)
 
 #include "../os/os_interface.h"
+#include "../util/logging/ulog.h"
 
 extern wxMutex g_mutexProtectingCallbackData;
 
@@ -55,6 +56,7 @@ RecordStep::RecordStep(
     , isFileCompleteFn_(std::move(isFileCompleteFn))
     , inputFifo_(inputSampleRate_)
     , fileIoThreadEnding_(false)
+    , consecutiveWriteDrops_(0)
 {
     fileIoThread_ = std::thread(std::bind(&RecordStep::fileIoThreadEntry_, this));
 }
@@ -80,10 +82,32 @@ int RecordStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 }
 
 short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
-{    
-    inputFifo_.write(inputSamples, numInputSamples);
+{
+    // write() is all-or-nothing, so a full FIFO means this entire chunk is missing from
+    // the resulting file. That silently makes the recording an unfaithful record of what
+    // actually flowed through the pipeline, so say so rather than dropping it quietly.
+    // The FIFO is drained by a Utility-QoS thread, which is exactly what gets starved
+    // first when the machine is loaded.
+    if (inputFifo_.write(inputSamples, numInputSamples) != 0)
+    {
+        if (consecutiveWriteDrops_ == 0)
+        {
+            FREEDV_BEGIN_VERIFIED_SAFE
+            log_warn("Record FIFO full, dropping %d samples from recording (free=%d)", numInputSamples, inputFifo_.numFree());
+            FREEDV_END_VERIFIED_SAFE
+        }
+        consecutiveWriteDrops_++;
+    }
+    else if (consecutiveWriteDrops_ > 0)
+    {
+        FREEDV_BEGIN_VERIFIED_SAFE
+        log_warn("Record FIFO drops ended after %d call(s); recording is missing audio", consecutiveWriteDrops_);
+        FREEDV_END_VERIFIED_SAFE
+        consecutiveWriteDrops_ = 0;
+    }
+
     fileIoThreadSem_.signal();
-    
+
     *numOutputSamples = 0;
     return nullptr;
 }
@@ -93,13 +117,43 @@ void RecordStep::reset() FREEDV_NONBLOCKING
     inputFifo_.reset();
 }
 
+void RecordStep::drainFifoToFile_(short* buf)
+{
+    g_mutexProtectingCallbackData.Lock();
+    auto recordFile = getSndFileFn_();
+    if (recordFile != nullptr)
+    {
+        int numInputSamples = inputFifo_.numUsed();
+        if (numInputSamples > 0)
+        {
+            // read() is all-or-nothing and leaves buf untouched when it fails (e.g. if a
+            // concurrent reset() lands between numUsed() and here). Writing regardless
+            // would splice uninitialized or stale audio into the file, which is worse
+            // than a short recording -- it fabricates content that never went through
+            // the pipeline.
+            if (inputFifo_.read(buf, numInputSamples) == 0)
+            {
+                sf_write_short(recordFile, buf, numInputSamples);
+                isFileCompleteFn_(numInputSamples);
+            }
+            else
+            {
+                log_warn("Could not read %d samples from record FIFO; recording is missing audio", numInputSamples);
+            }
+        }
+    }
+    g_mutexProtectingCallbackData.Unlock();
+}
+
 void RecordStep::fileIoThreadEntry_()
 {
-    short* buf = new short[inputSampleRate_];
+    // Zero-initialized so that a partially filled buffer can never leak heap contents
+    // into a recording, even if the guards in drainFifoToFile_() are ever bypassed.
+    short* buf = new short[inputSampleRate_]();
     assert(buf != nullptr);
 
 #if defined(__APPLE__)
-    // Downgrade thread QoS to Utility to avoid thread contention issues.        
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
 
@@ -107,33 +161,12 @@ void RecordStep::fileIoThreadEntry_()
 
     while (!fileIoThreadEnding_.load(std::memory_order_acquire))
     {
-        g_mutexProtectingCallbackData.Lock();
-        auto recordFile = getSndFileFn_();
-        if (recordFile != nullptr)
-        {
-            int numInputSamples = inputFifo_.numUsed();
-            inputFifo_.read(buf, numInputSamples);
-            
-            sf_write_short(recordFile, buf, numInputSamples);
-            isFileCompleteFn_(numInputSamples);
-        }
-        g_mutexProtectingCallbackData.Unlock();
-        
+        drainFifoToFile_(buf);
         fileIoThreadSem_.wait();
     }
 
     // Record whatever's left in the FIFO, if anything.
-    g_mutexProtectingCallbackData.Lock();
-    auto recordFile = getSndFileFn_();
-    if (recordFile != nullptr)
-    {
-        int numInputSamples = inputFifo_.numUsed();
-        inputFifo_.read(buf, numInputSamples);
-            
-        sf_write_short(recordFile, buf, numInputSamples);
-        isFileCompleteFn_(numInputSamples);
-    }
-    g_mutexProtectingCallbackData.Unlock();
+    drainFifoToFile_(buf);
 
     delete[] buf;
 }
