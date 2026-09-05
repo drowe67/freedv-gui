@@ -527,9 +527,11 @@ void MacAudioDevice::stopImpl_()
         {
             // Reported unconditionally so a clean run is positive evidence that the HAL
             // delivered every input frame, not just an absence of warnings.
+            // Device name included so a test harness can tell which stream lost audio --
+            // only skips on the device carrying the signal under test affect a decode.
             log_info(
-                "Device %d: input timestamp jumps: %d, total frames skipped by the HAL: %lld",
-                coreAudioId_, inputTimestampJumps_, totalSkippedInputFrames_);
+                "Device %d (%s): input timestamp jumps: %d, total frames skipped by the HAL: %lld",
+                coreAudioId_, deviceName_.c_str(), inputTimestampJumps_, totalSkippedInputFrames_);
         }
 
         log_info("Device %d: removing listeners", coreAudioId_);

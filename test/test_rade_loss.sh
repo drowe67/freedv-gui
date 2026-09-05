@@ -126,6 +126,22 @@ cp test.wav rade_loss_test.wav
 
 LOSS_THRESHOLD=0.0891
 
+# Retrying only makes sense where a skip means the machine misbehaved rather than the code,
+# so it is opt-in and defaults off: run locally, a failure stays a failure. Detection below
+# is unconditional either way, so a local failure still reports whether it was environmental.
+RETRY_ON_HAL_SKIP=${RETRY_ON_HAL_SKIP:-0}
+MAX_RX_ATTEMPTS=3
+
+# Frames CoreAudio skipped on the device carrying the signal being decoded -- audio that
+# never reached FreeDV at all, so the attempt measured the machine rather than the code.
+# Skips on the other inputs (the mic cable) cannot affect the decode and are not counted.
+# The detection is macOS-only, so this reports 0 elsewhere.
+hal_skips_on_rx_device () {
+    grep -aF "($FREEDV_RADIO_TO_COMPUTER_DEVICE): input timestamp jumps" tmp.log 2>/dev/null \
+        | sed -E 's/.*skipped by the HAL: ([0-9]+).*/\1/' \
+        | awk '{ total += $1 } END { print total+0 }'
+}
+
 run_rade_loss_attempt () {
     local playback_file="$1"
 
@@ -148,13 +164,31 @@ run_rade_loss_attempt () {
     FREEDV_EXIT_CODE=$?
     #cat tmp.log
 
-    # Run feature files through loss tool
+    # Run feature files through loss tool. Deliberately not echoed here: with retries in
+    # play, only the accepted attempt's verdict may reach stdout, since CI decides pass/fail
+    # by grepping the output for PASS and a discarded attempt would otherwise satisfy it.
     LOSS_OUTPUT=$($PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test $LOSS_THRESHOLD --clip_start 100 --clip_end 300)
-    echo "$LOSS_OUTPUT"
 }
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    run_rade_loss_attempt test.wav
+    attempt=1
+    while true; do
+        run_rade_loss_attempt test.wav
+
+        HAL_SKIPPED=$(hal_skips_on_rx_device)
+        if [ "$HAL_SKIPPED" -gt 0 ]; then
+            echo "Attempt $attempt: CoreAudio skipped $HAL_SKIPPED input frames on $FREEDV_RADIO_TO_COMPUTER_DEVICE; that audio never reached FreeDV."
+        fi
+
+        if [ "$RETRY_ON_HAL_SKIP" != "1" ] || [ "$HAL_SKIPPED" -eq 0 ] || [ $attempt -ge $MAX_RX_ATTEMPTS ]; then
+            break
+        fi
+
+        attempt=$((attempt + 1))
+        echo "Retrying RX pass (attempt $attempt of $MAX_RX_ATTEMPTS)."
+    done
+
+    echo "$LOSS_OUTPUT"
 fi
 
 # Clean up PulseAudio virtual devices

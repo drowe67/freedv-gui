@@ -389,7 +389,10 @@ jobs:
           python3 -m venv rade_venv
           . ./rade_venv/bin/activate
           pip3 install torch matplotlib
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
+          # RETRY_ON_HAL_SKIP: a CoreAudio input skip means the runner dropped audio before
+          # FreeDV ever saw it, so that attempt measured the machine. Retry rather than report
+          # it against the code. Off by default, so a local run still fails on the first try.
+          RETRY_ON_HAL_SKIP=1 FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           grep "PASS" temp-test.txt
 
     # Raw audio immediately before the RADE encoder/decoder from the rade_loss test, so a
