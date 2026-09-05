@@ -125,6 +125,10 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , parent_(parent)
     , bufferListBytesPerBuffer_(0)
     , consecutiveShortRenders_(0)
+    , expectedNextInputSampleTime_(0.0)
+    , haveInputSampleTime_(false)
+    , inputTimestampJumps_(0)
+    , totalSkippedInputFrames_(0)
     , running_(false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
@@ -519,6 +523,15 @@ void MacAudioDevice::stopImpl_()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
+        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
+        {
+            // Reported unconditionally so a clean run is positive evidence that the HAL
+            // delivered every input frame, not just an absence of warnings.
+            log_info(
+                "Device %d: input timestamp jumps: %d, total frames skipped by the HAL: %lld",
+                coreAudioId_, inputTimestampJumps_, totalSkippedInputFrames_);
+        }
+
         log_info("Device %d: removing listeners", coreAudioId_);
         
         const AudioObjectPropertyAddress aliveAddress =
@@ -778,6 +791,41 @@ OSStatus MacAudioDevice::InputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
+
+    // Consecutive input callbacks should advance mSampleTime by exactly the number of
+    // frames delivered. A forward jump means the HAL skipped input entirely -- audio that
+    // never reaches us at all, as opposed to a buffer delivered full of silence. Those two
+    // look identical once the audio has been recorded, so distinguish them here at the
+    // point where the difference is still visible.
+    if ((inTimeStamp->mFlags & kAudioTimeStampSampleTimeValid) != 0)
+    {
+        if (thisObj->haveInputSampleTime_)
+        {
+            Float64 skew = inTimeStamp->mSampleTime - thisObj->expectedNextInputSampleTime_;
+
+            // Tolerate sub-frame rounding only; anything else is a real discontinuity.
+            if (skew > 0.5 || skew < -0.5)
+            {
+                thisObj->totalSkippedInputFrames_ += (long long)skew;
+
+                // Jumps are isolated events rather than sustained runs, so log each one,
+                // capped so a pathological stream can't flood the log.
+                if (thisObj->inputTimestampJumps_ < 20)
+                {
+                    FREEDV_BEGIN_VERIFIED_SAFE
+                    log_warn(
+                        "Device %d: input timestamp jumped %+.0f frames (expected %.0f, got %.0f) -- HAL skipped input",
+                        thisObj->coreAudioId_, skew,
+                        thisObj->expectedNextInputSampleTime_, inTimeStamp->mSampleTime);
+                    FREEDV_END_VERIFIED_SAFE
+                }
+                thisObj->inputTimestampJumps_++;
+            }
+        }
+
+        thisObj->expectedNextInputSampleTime_ = inTimeStamp->mSampleTime + inNumberFrames;
+        thisObj->haveInputSampleTime_ = true;
+    }
 
     // AudioUnitRender writes the number of bytes it actually rendered back into
     // mDataByteSize, so the allocated capacity has to be restored before every call.

@@ -89,6 +89,16 @@ private:
     UInt32 bufferListBytesPerBuffer_;
     // Tracks consecutive short renders so they're logged once per episode.
     int consecutiveShortRenders_;
+
+    // Input timestamp continuity. CoreAudio stamps each input callback with the device
+    // sample time it corresponds to; consecutive callbacks should advance by exactly the
+    // frame count delivered. A jump means the HAL skipped input we will never see, which
+    // downstream is indistinguishable from audio that was never sent in the first place.
+    Float64 expectedNextInputSampleTime_;
+    bool haveInputSampleTime_;
+    int inputTimestampJumps_;
+    long long totalSkippedInputFrames_;
+
     bool running_;
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
