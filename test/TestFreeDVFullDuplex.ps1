@@ -88,9 +88,7 @@ function Test-FreeDV {
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    # Note: uses filenames distinct from RADE Loss's own recordings, since Test RADE runs
-    # first and shares a working directory with the later RADE Loss/Reporting steps.
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest /txtime 60 /txradeinfile `"$current_loc\fullduplex_rade_encoder_input.wav`" /rxradeinfile `"$current_loc\fullduplex_rade_decoder_input.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest /txtime 60")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi

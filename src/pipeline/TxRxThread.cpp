@@ -145,11 +145,6 @@ extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
 extern bool g_recFileFromDecoder;
 
-extern std::atomic<SNDFILE*> g_sfRecRadeEncoderInputFile;
-extern std::atomic<bool> g_recRadeEncoderInput;
-extern std::atomic<SNDFILE*> g_sfRecRadeDecoderInputFile;
-extern std::atomic<bool> g_recRadeDecoderInput;
-
 #include "sox_biquad.h"
 
 void TxRxThread::initializePipeline_()
@@ -281,34 +276,9 @@ void TxRxThread::initializePipeline_()
         analogTxPipeline->appendPipelineStep(doubleLevelStep);
         
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
-            inputSampleRate_,
+            inputSampleRate_, 
             outputSampleRate_);
-        auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-
-        // Record raw audio going into the RADE (or other digital mode) encoder (optional).
-        // Lets a decode-quality issue seen in CI be reproduced offline against the exact
-        // same audio using the RADE tools directly.
-        auto recordRadeEncoderInputStep = new RecordStep(
-            RECORD_FILE_SAMPLE_RATE,
-            []() { return g_sfRecRadeEncoderInputFile.load(std::memory_order_acquire); },
-            [](int) {
-                // empty
-            });
-        auto recordRadeEncoderInputPipeline = new AudioPipeline(inputSampleRate_, recordRadeEncoderInputStep->getOutputSampleRate());
-        recordRadeEncoderInputPipeline->appendPipelineStep(recordRadeEncoderInputStep);
-
-        auto recordRadeEncoderInputTap = new TapStep(inputSampleRate_, recordRadeEncoderInputPipeline);
-        auto recordRadeEncoderInputTapPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        recordRadeEncoderInputTapPipeline->appendPipelineStep(recordRadeEncoderInputTap);
-
-        auto bypassRecordRadeEncoderInput = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-
-        auto eitherOrRecordRadeEncoderInput = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_recRadeEncoderInput && (g_sfRecRadeEncoderInputFile != NULL); },
-            recordRadeEncoderInputTapPipeline,
-            bypassRecordRadeEncoderInput);
-        digitalTxPipeline->appendPipelineStep(eitherOrRecordRadeEncoderInput);
-
+        auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
         auto eitherOrDigitalAnalog = new EitherOrStep(
@@ -450,31 +420,6 @@ void TxRxThread::initializePipeline_()
         // RX demodulation step
         auto bypassRfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         auto rfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-
-        // Record raw audio going into the RADE (or other digital mode) decoder (optional).
-        // Lets a decode-quality issue seen in CI be reproduced offline against the exact
-        // same audio using the RADE tools directly.
-        auto recordRadeDecoderInputStep = new RecordStep(
-            RECORD_FILE_SAMPLE_RATE,
-            []() { return g_sfRecRadeDecoderInputFile.load(std::memory_order_acquire); },
-            [](int) {
-                // empty
-            });
-        auto recordRadeDecoderInputPipeline = new AudioPipeline(inputSampleRate_, recordRadeDecoderInputStep->getOutputSampleRate());
-        recordRadeDecoderInputPipeline->appendPipelineStep(recordRadeDecoderInputStep);
-
-        auto recordRadeDecoderInputTap = new TapStep(inputSampleRate_, recordRadeDecoderInputPipeline);
-        auto recordRadeDecoderInputTapPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        recordRadeDecoderInputTapPipeline->appendPipelineStep(recordRadeDecoderInputTap);
-
-        auto bypassRecordRadeDecoderInput = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-
-        auto eitherOrRecordRadeDecoderInput = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_recRadeDecoderInput && (g_sfRecRadeDecoderInputFile != NULL); },
-            recordRadeDecoderInputTapPipeline,
-            bypassRecordRadeDecoderInput);
-        rfDemodulationPipeline->appendPipelineStep(eitherOrRecordRadeDecoderInput);
-
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },

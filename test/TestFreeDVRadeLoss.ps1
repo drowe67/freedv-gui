@@ -201,7 +201,7 @@ function Test-RadeLoss {
     $psi.RedirectStandardOutput = $true
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`" /txradeinfile `"$current_loc\rade_encoder_input.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -245,15 +245,9 @@ function Test-RadeLoss {
     [void]$stripProcess.Start()
     $stripProcess.WaitForExit()
 
-    # Snapshot under a name distinct from TestFreeDVReporting.ps1's own test.wav, since it
-    # runs later in the same workflow job and would otherwise overwrite it before CI can
-    # upload it -- this is the raw modulated waveform actually played back for RX, for
-    # offline reproduction with the RADE tools.
-    Copy-Item "$current_loc\test.wav" "$current_loc\rade_loss_test.wav"
-
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
     $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
 

@@ -125,10 +125,6 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , parent_(parent)
     , bufferListBytesPerBuffer_(0)
     , consecutiveShortRenders_(0)
-    , expectedNextInputSampleTime_(0.0)
-    , haveInputSampleTime_(false)
-    , inputTimestampJumps_(0)
-    , totalSkippedInputFrames_(0)
     , running_(false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
@@ -207,15 +203,14 @@ void MacAudioDevice::start()
         // Calculate next power of two above desiredFrameSize if not already power of two
         desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
         
-        OSStatus rangeError = GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
-        log_info("Device %d: GetIOBufferFrameSizeRange returned err %d, range [%d, %d]", coreAudioId_, (int)rangeError, minFrameSize, maxFrameSize);
+        GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
             desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
             desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
             log_info("Device %d: calculated frame size of %d", coreAudioId_, desiredFrameSize);
-
+            
             // Detect whether this is a Bluetooth device. If so, automatically use the maxFrameSize
             // to avoid dropouts.
             bool isWireless = false;
@@ -225,31 +220,18 @@ void MacAudioDevice::start()
                 desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
                 desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
                 desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
-
+                
                 log_info("Device %d: detected wireless device, using frame size of %d instead", coreAudioId_, desiredFrameSize);
             }
-
-            log_info("Attempting to set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
-            OSStatus setError = SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize);
-            if (setError != noErr)
+            
+            log_info("Set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
+            if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
-                log_warn("Could not set IO frame size to %d for audio device ID %d (err %d); device will use its own default buffer size", desiredFrameSize, coreAudioId_, (int)setError);
-            }
-            else
-            {
-                log_info("Device %d: successfully set IO frame size to %d", coreAudioId_, desiredFrameSize);
+                log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
             }
         }
         else
         {
-            // The device didn't report a usable [min, max] range (either the property query
-            // failed outright, i.e. rangeError != noErr, or it succeeded but returned 0 for
-            // both -- seen with some virtual/loopback drivers), so we have no way to know what
-            // sizes it will accept and skip calling SetCurrentIOBufferFrameSize entirely. The
-            // device is then left running at whatever buffer size its driver defaults to on its
-            // own, which we don't control and isn't reflected in chosenFrameSize_ below.
-            log_warn("Device %d does not support querying/setting IO buffer frame size (err %d); will use the driver's own default buffer size instead of the requested %d", coreAudioId_, (int)rangeError, desiredFrameSize);
-
             // Set maxFrameSize to something reasonable for further down.
             maxFrameSize = 4096;
         }
@@ -523,17 +505,6 @@ void MacAudioDevice::stopImpl_()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
-        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
-        {
-            // Reported unconditionally so a clean run is positive evidence that the HAL
-            // delivered every input frame, not just an absence of warnings.
-            // Device name included so a test harness can tell which stream lost audio --
-            // only skips on the device carrying the signal under test affect a decode.
-            log_info(
-                "Device %d (%s): input timestamp jumps: %d, total frames skipped by the HAL: %lld",
-                coreAudioId_, deviceName_.c_str(), inputTimestampJumps_, totalSkippedInputFrames_);
-        }
-
         log_info("Device %d: removing listeners", coreAudioId_);
         
         const AudioObjectPropertyAddress aliveAddress =
@@ -793,41 +764,6 @@ OSStatus MacAudioDevice::InputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
-
-    // Consecutive input callbacks should advance mSampleTime by exactly the number of
-    // frames delivered. A forward jump means the HAL skipped input entirely -- audio that
-    // never reaches us at all, as opposed to a buffer delivered full of silence. Those two
-    // look identical once the audio has been recorded, so distinguish them here at the
-    // point where the difference is still visible.
-    if ((inTimeStamp->mFlags & kAudioTimeStampSampleTimeValid) != 0)
-    {
-        if (thisObj->haveInputSampleTime_)
-        {
-            Float64 skew = inTimeStamp->mSampleTime - thisObj->expectedNextInputSampleTime_;
-
-            // Tolerate sub-frame rounding only; anything else is a real discontinuity.
-            if (skew > 0.5 || skew < -0.5)
-            {
-                thisObj->totalSkippedInputFrames_ += (long long)skew;
-
-                // Jumps are isolated events rather than sustained runs, so log each one,
-                // capped so a pathological stream can't flood the log.
-                if (thisObj->inputTimestampJumps_ < 20)
-                {
-                    FREEDV_BEGIN_VERIFIED_SAFE
-                    log_warn(
-                        "Device %d: input timestamp jumped %+.0f frames (expected %.0f, got %.0f) -- HAL skipped input",
-                        thisObj->coreAudioId_, skew,
-                        thisObj->expectedNextInputSampleTime_, inTimeStamp->mSampleTime);
-                    FREEDV_END_VERIFIED_SAFE
-                }
-                thisObj->inputTimestampJumps_++;
-            }
-        }
-
-        thisObj->expectedNextInputSampleTime_ = inTimeStamp->mSampleTime + inNumberFrames;
-        thisObj->haveInputSampleTime_ = true;
-    }
 
     // AudioUnitRender writes the number of bytes it actually rendered back into
     // mDataByteSize, so the allocated capacity has to be restored before every call.

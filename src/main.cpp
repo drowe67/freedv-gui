@@ -149,20 +149,6 @@ std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
-// RX capture delivery accounting: a coarse sanity check on how much audio the sound layer
-// handed us versus how much the elapsed time implies.
-//
-// Coarse is the operative word. The comparison is swamped by virtual-device clock offset
-// (observed at 140-540 ppm between runners, i.e. hundreds of ms over a long pass) and by
-// the slack between the last callback and the summary, both of which are the same order as
-// the dropouts worth chasing. A run with a provably intact capture still showed -214 ms
-// here, so do not read a shortfall as lost audio. To actually establish whether content
-// went missing, cross-correlate the capture against the file that was played -- that
-// measures lost content directly and is immune to clock offset.
-std::atomic<unsigned long long> g_rxInSamplesDelivered;
-std::atomic<int>                g_rxInSampleRate;
-std::atomic<long long>          g_rxInFirstCallbackNsec;
-
 // playing and recording from sound files
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
@@ -193,11 +179,6 @@ extern bool                g_recVoiceKeyerFile;
 
 extern SNDFILE* g_sfRecDecoderFile;
 extern bool g_recFileFromDecoder;
-
-extern std::atomic<SNDFILE*> g_sfRecRadeEncoderInputFile;
-extern std::atomic<bool> g_recRadeEncoderInput;
-extern std::atomic<SNDFILE*> g_sfRecRadeDecoderInputFile;
-extern std::atomic<bool> g_recRadeDecoderInput;
 
 wxWindow           *g_parent;
 
@@ -259,10 +240,8 @@ wxString testName;
 wxString utFreeDVMode;
 wxString utTxFile;
 wxString utTxOutFile;
-wxString utTxRadeInFile;
 wxString utRxFile;
 wxString utRxOutFile;
-wxString utRxRadeInFile;
 std::string utTxFeatureFile;
 std::string utRxFeatureFile;
 long utTxTimeSeconds;
@@ -314,77 +293,6 @@ void MainFrame::handleAudioDeviceChange_(std::string const& newDeviceName)
     wxGetApp().appConfiguration.save(pConfig);
 }
 
-// Polls sync once and logs any transition along with the SNR and frequency offset that
-// preceded it. getSNREstimate() reports 0 as soon as sync is lost, so the last in-sync
-// values are carried forward; those are what distinguish a flap caused by marginal SNR
-// from one caused by a discontinuity in the demodulator's input (where the SNR stays
-// healthy right up until sync disappears).
-static void pollAndLogSyncChange_(int& sync, float& lastInSyncSnr, float& lastInSyncOffset)
-{
-    auto newSync = freedvInterface.getSync();
-    auto offset = freedvInterface.getCurrentRxModemOffset();
-
-    if (newSync)
-    {
-        lastInSyncSnr = freedvInterface.getSNREstimate();
-        lastInSyncOffset = offset;
-    }
-
-    if (newSync != sync)
-    {
-        log_info(
-            "Sync changed from %d to %d (freq offset %.1f Hz; last in-sync SNR %.1f dB @ offset %.1f Hz)",
-            sync, newSync, offset, lastInSyncSnr, lastInSyncOffset);
-        sync = newSync;
-    }
-}
-
-// Reports the audio device over/underflow counters and the FIFO over/underrun counters
-// once, at the end of a test pass. All of these are maintained by the audio callbacks but
-// are otherwise only rendered in the Options dialog, so a headless run (i.e. CI) has no
-// way to see that the sound layer lost audio.
-//
-// Deliberately a single summary rather than a per-change report: outfifo1/infifo2 tick on
-// every callback whenever the TX side is idle (which is the whole RX pass), so watching
-// for changes produced thousands of lines per run and buried the signal. The interesting
-// per-event case -- an underrun *during* a transmission -- is covered by the rate-limited
-// warnings in the audio callbacks themselves. Labels match the Options dialog's.
-static void logAudioCounterSummary_(const char* phase)
-{
-    log_info(
-        "Audio counters at end of %s -- Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d; "
-        "Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d; "
-        "Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d",
-        phase,
-        g_infifo1_full.load(std::memory_order_acquire),
-        g_outfifo1_empty.load(std::memory_order_acquire),
-        g_infifo2_full.load(std::memory_order_acquire),
-        g_outfifo2_empty.load(std::memory_order_acquire),
-        g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3],
-        g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
-
-    // Coarse sanity check only -- see the note where these counters are declared. The
-    // delta carries clock offset and end-of-pass slack as well as any real shortfall, so
-    // it is useful for spotting something wildly wrong, not for judging whether audio was
-    // lost.
-    auto delivered = g_rxInSamplesDelivered.load(std::memory_order_acquire);
-    auto sampleRate = g_rxInSampleRate.load(std::memory_order_acquire);
-    auto firstNsec = g_rxInFirstCallbackNsec.load(std::memory_order_acquire);
-    if (delivered > 0 && sampleRate > 0 && firstNsec > 0)
-    {
-        auto nowNsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-        double elapsedSec = (nowNsec - firstNsec) / 1e9;
-        long long expected = (long long)(elapsedSec * sampleRate);
-        long long delta = (long long)delivered - expected;
-
-        log_info(
-            "RX capture delivery at end of %s -- delivered: %llu samples over %.3f s, "
-            "expected ~%lld, delta %+lld samples (%+.1f ms)",
-            phase, delivered, elapsedSec, expected, delta, (double)delta * 1000.0 / sampleRate);
-    }
-}
-
 void MainApp::UnitTest_()
 {
     SetThreadName("UnitTest");
@@ -434,32 +342,6 @@ void MainApp::UnitTest_()
     std::this_thread::sleep_for(2s);
     
     constexpr int MAX_TIME_AS_COUNTER = 60000; // 20 minutes
-
-    // Opened unconditionally (not scoped to the tx/rx branch below) because a full-duplex
-    // test runs both TX and RX simultaneously under a single -ut rx invocation -- the
-    // encoder-input recording needs to be active then too, not just during a "tx" test.
-    if (utTxRadeInFile != "")
-    {
-        SF_INFO recSf;
-        recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-        recSf.channels   = 1;
-        recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
-
-        g_sfRecRadeEncoderInputFile = sf_open((const char*)utTxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
-        g_recRadeEncoderInput = true;
-    }
-
-    if (utRxRadeInFile != "")
-    {
-        SF_INFO recSf;
-        recSf.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-        recSf.channels   = 1;
-        recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
-
-        g_sfRecRadeDecoderInputFile = sf_open((const char*)utRxRadeInFile.ToUTF8(), SFM_WRITE, &recSf);
-        g_recRadeDecoderInput = true;
-    }
-
     if (testName == "tx")
     {
         if (utTxOutFile != "")
@@ -506,7 +388,7 @@ void MainApp::UnitTest_()
                 while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
                 {
                     std::this_thread::sleep_for(20ms);
-                }
+                } 
             }
             else
             {
@@ -548,8 +430,6 @@ void MainApp::UnitTest_()
             std::this_thread::sleep_for(5s + std::chrono::milliseconds(distrib(gen)));
         }
 
-        logAudioCounterSummary_("TX pass");
-
         if (g_sfRecFileFromModulator)
         {
             g_recFileFromModulator = false;
@@ -580,30 +460,32 @@ void MainApp::UnitTest_()
             g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
-            float lastInSyncSnr = 0.0f;
-            float lastInSyncOffset = 0.0f;
             int counter = 0;
             while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
             {
                 std::this_thread::sleep_for(20ms);
-                pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
             }
-
-            logAudioCounterSummary_("RX pass");
         }
         else
         {
             // Receive for txtime seconds
             auto sync = 0;
-            float lastInSyncSnr = 0.0f;
-            float lastInSyncOffset = 0.0f;
             for (int i = 0; i < utTxTimeSeconds*50; i++)
             {
                 std::this_thread::sleep_for(20ms);
-                pollAndLogSyncChange_(sync, lastInSyncSnr, lastInSyncOffset);
-            }
-
-            logAudioCounterSummary_("RX pass");
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
+            } 
         }
 
         if (g_recFileFromDecoder)
@@ -612,23 +494,7 @@ void MainApp::UnitTest_()
             sf_close(g_sfRecDecoderFile);
         }
     }
-
-    // Closed unconditionally to match the unconditional open above -- see comment there
-    // on why these can't be scoped to just the tx or rx branch.
-    if (g_sfRecRadeEncoderInputFile)
-    {
-        g_recRadeEncoderInput = false;
-        sf_close(g_sfRecRadeEncoderInputFile);
-        g_sfRecRadeEncoderInputFile = nullptr;
-    }
-
-    if (g_sfRecRadeDecoderInputFile)
-    {
-        g_recRadeDecoderInput = false;
-        sf_close(g_sfRecRadeDecoderInputFile);
-        g_sfRecRadeDecoderInputFile = nullptr;
-    }
-
+    
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
  
@@ -673,10 +539,8 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
     parser.AddOption("rxoutfile", wxEmptyString, "In UT mode, records RX output to the given WAV file.");
-    parser.AddOption("rxradeinfile", wxEmptyString, "In UT mode, records the raw audio fed into the RADE decoder to the given WAV file.");
     parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
     parser.AddOption("txoutfile", wxEmptyString, "In UT mode, records TX output to the given WAV file.");
-    parser.AddOption("txradeinfile", wxEmptyString, "In UT mode, records the raw audio fed into the RADE encoder to the given WAV file.");
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
@@ -813,11 +677,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             log_info("Recording RX output to %s", (const char*)utRxOutFile.ToUTF8());
         }
 
-        if (parser.Found("rxradeinfile", &utRxRadeInFile))
-        {
-            log_info("Recording RADE decoder input to %s", (const char*)utRxRadeInFile.ToUTF8());
-        }
-
         if (parser.Found("txfile", &utTxFile))
         {
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
@@ -826,11 +685,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("txoutfile", &utTxOutFile))
         {
             log_info("Recording TX output to %s", (const char*)utTxOutFile.ToUTF8());
-        }
-
-        if (parser.Found("txradeinfile", &utTxRadeInFile))
-        {
-            log_info("Recording RADE encoder input to %s", (const char*)utTxRadeInFile.ToUTF8());
         }
 
         if (parser.Found("txtime", &utTxTimeSeconds))
@@ -3378,10 +3232,6 @@ void MainFrame::startRxStream()
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
 
-        g_rxInSamplesDelivered.store(0, std::memory_order_release);
-        g_rxInSampleRate.store(0, std::memory_order_release);
-        g_rxInFirstCallbackNsec.store(0, std::memory_order_release);
-
         // These FIFOs interface between the 20ms tx/rxProcessing()
         // loop and the demodulator, which requires a variable number
         // of input samples to adjust for timing clock differences
@@ -3881,33 +3731,14 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
 
     if (!endingTx.load(std::memory_order_acquire)) 
     {
-        // Tracks consecutive dropped callbacks so we log once per drop event
-        // (start + duration) rather than once per audio callback.
-        static int consecutiveTxInDrops = 0;
-
         auto numChannels = dev.getNumChannels();
         for(size_t i = 0; i < size; i++, audioData += numChannels)
         {
             tmpInput[i] = audioData[0];
         }
-        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size))
+        if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
         {
             g_infifo2_full.fetch_add(1, std::memory_order_release);
-
-            if (consecutiveTxInDrops == 0)
-            {
-                FREEDV_BEGIN_VERIFIED_SAFE
-                log_warn("TX infifo2 full, dropping %zu mic samples (free=%d)", size, cbData->infifo2->numFree());
-                FREEDV_END_VERIFIED_SAFE
-            }
-            consecutiveTxInDrops++;
-        }
-        else if (consecutiveTxInDrops > 0)
-        {
-            FREEDV_BEGIN_VERIFIED_SAFE
-            log_warn("TX infifo2 drops ended after %d buffer period(s); transmitted audio is missing input", consecutiveTxInDrops);
-            FREEDV_END_VERIFIED_SAFE
-            consecutiveTxInDrops = 0;
         }
     }
 }
@@ -3918,37 +3749,14 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* audioData = static_cast<short*>(data);
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
-    // Tracks consecutive underrun callbacks so we log once per underrun event
-    // (start + duration) rather than once per audio callback.
-    static int consecutiveTxUnderruns = 0;
-
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
     if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_release);
-
-        // Nothing is written to the output buffer in this case, so whatever the driver
-        // had there is what goes on the air -- silence on macOS. A run of these is a
-        // silent stretch in the transmitted signal.
-        if (consecutiveTxUnderruns == 0)
-        {
-            FREEDV_BEGIN_VERIFIED_SAFE
-            log_warn("TX outfifo1 underrun starting: needed %zu samples, only %zu available", size, toRead);
-            FREEDV_END_VERIFIED_SAFE
-        }
-        consecutiveTxUnderruns++;
     }
     else
     {
-        if (consecutiveTxUnderruns > 0)
-        {
-            FREEDV_BEGIN_VERIFIED_SAFE
-            log_warn("TX outfifo1 underrun ended after %d buffer period(s)", consecutiveTxUnderruns);
-            FREEDV_END_VERIFIED_SAFE
-            consecutiveTxUnderruns = 0;
-        }
-
         if (toRead >= size)
         {
             cbData->outfifo1->read(tmpOutput, size);
@@ -4014,51 +3822,14 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     short* audioData = static_cast<short*>(data);
     short* tmpInput = cbData->tmpReadRxBuffer_.get();
 
-    // Tracks consecutive dropped callbacks so we log once per drop event
-    // (start + duration) rather than once per audio callback.
-    static int consecutiveRxInDrops = 0;
-
-    // Count what the device handed us, before any FIFO decision -- this has to reflect
-    // what the sound layer delivered, not what we managed to keep.
-    if (g_rxInSamplesDelivered.fetch_add(size, std::memory_order_acq_rel) == 0)
-    {
-        // Timestamp the first callback rather than stream start, so the comparison isn't
-        // skewed by however long the device took to start producing. clock_gettime() is
-        // a vDSO call with no locks or allocation, and this runs once per RX session.
-        FREEDV_BEGIN_VERIFIED_SAFE
-        g_rxInFirstCallbackNsec.store(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count(),
-            std::memory_order_release);
-        FREEDV_END_VERIFIED_SAFE
-        g_rxInSampleRate.store(dev.getSampleRate(), std::memory_order_release);
-    }
-
     auto numChannels = dev.getNumChannels();
     for (size_t i = 0; i < size; i++, audioData += numChannels)
     {
         tmpInput[i] = audioData[0];
     }
-    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size))
+    if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
     {
         g_infifo1_full.fetch_add(1, std::memory_order_release);
-
-        // write() is all-or-nothing, so this whole buffer is gone from the received
-        // signal -- the demodulator sees a splice, not a gap, which reliably costs sync.
-        if (consecutiveRxInDrops == 0)
-        {
-            FREEDV_BEGIN_VERIFIED_SAFE
-            log_warn("RX infifo1 full, dropping %zu received samples (free=%d)", size, cbData->infifo1->numFree());
-            FREEDV_END_VERIFIED_SAFE
-        }
-        consecutiveRxInDrops++;
-    }
-    else if (consecutiveRxInDrops > 0)
-    {
-        FREEDV_BEGIN_VERIFIED_SAFE
-        log_warn("RX infifo1 drops ended after %d buffer period(s); received signal is missing audio", consecutiveRxInDrops);
-        FREEDV_END_VERIFIED_SAFE
-        consecutiveRxInDrops = 0;
     }
 }
 
