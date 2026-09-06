@@ -257,22 +257,6 @@ function Test-RadeLoss {
 
     $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
 
-    if (-not $passed) {
-        # RADEV2 has a known upstream bug (https://github.com/freedv/rade_c/issues/8): feature loss is
-        # periodic with RADE's ~20ms frame period, and there's a narrow (~4ms) window within that period
-        # where loss lands well above baseline purely because of *when* sync happens to be acquired, not
-        # because of an actual quality regression. If the first attempt lands in that window, shift the
-        # played-back recording by half a period (10ms -- as far from the bad window as possible) and
-        # retry once before concluding this is a real failure.
-        Write-Host "Loss test failed on first attempt; retrying with a 10ms phase-shifted recording in case this is the known RADEV2 sync-timing artifact (https://github.com/freedv/rade_c/issues/8)..."
-
-        & sox.exe -n -r 48000 -c 1 -b 16 -e signed-integer "$current_loc\silence_pad.wav" trim 0 0.010
-        & sox.exe "$current_loc\silence_pad.wav" "$current_loc\test.wav" "$current_loc\test_shifted.wav"
-
-        $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`" /rxradeinfile `"$current_loc\rade_decoder_input.wav`"")
-        $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test_shifted.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
-    }
-
     return $passed
 }
 
