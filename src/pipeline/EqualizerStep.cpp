@@ -71,6 +71,7 @@ int EqualizerStep::getOutputSampleRate() const FREEDV_NONBLOCKING
 short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
 {
     bool copiedToOutput = false;
+    *numOutputSamples = numInputSamples;
 
     // Note: if we can't lock, an update is in progress. Just assume no filters enabled
     // until update completes.
@@ -80,7 +81,6 @@ short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* num
         {
             memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
             copiedToOutput = true;
-            *numOutputSamples = numInputSamples;
             sox_biquad_filter(*volFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
     
@@ -115,7 +115,6 @@ short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* num
     }
     else
     {
-        *numOutputSamples = numInputSamples;
         return inputSamples;
     }
 }
