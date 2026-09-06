@@ -289,8 +289,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         lineMap_[index].y2 = INT_MIN;
     }
 
-    ctx->BeginLayer(1.0);
-
     int x, y;
 
     for(i = 0; i < m_samples; i++) {
@@ -403,8 +401,15 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     }
 
     plotAreaDC_->SelectObject(wxNullBitmap);
-    ctx->DrawBitmap(*plotArea_, plotX, plotY, plotWidth, plotHeight); 
-    ctx->EndLayer();
+
+    // Composite through a wxGraphicsBitmap rather than handing the wxBitmap straight to
+    // DrawBitmap. On macOS the wxBitmap overload allocates a fresh NSImage per call and
+    // draws via -[NSImage drawInRect:]; the wxGraphicsBitmap one uses CGContextDrawImage.
+    // The conversion has to happen every frame here since plotArea_ is redrawn above, but
+    // it is still far cheaper than the NSImage round trip. Same idea as plotLinesBMP_ in
+    // drawGraticuleFast(), which has always taken this path.
+    wxGraphicsBitmap plotAreaBMP = ctx->CreateBitmap(*plotArea_);
+    ctx->DrawBitmap(plotAreaBMP, plotX, plotY, plotWidth, plotHeight);
 
     addedPoints_ = 0;
     drawGraticuleFast(ctx, repaintDataOnly);
