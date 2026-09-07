@@ -172,7 +172,6 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     auto freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
 
-    ctx->BeginLayer(1.0);
     wxGraphicsPath path = ctx->CreatePath();
     for(index = 0; index < m_n_magdB; index++)
     {
@@ -216,7 +215,6 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         prev_x = x;
     }
     ctx->StrokePath(path);
-    ctx->EndLayer();
 
     // and finally draw Graticule
     drawGraticuleFast(ctx, repaintDataOnly);

@@ -1966,10 +1966,10 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent&) {
 
 void OptionsDlg::OnFifoReset(wxCommandEvent&)
 {
-    g_infifo1_full.store(0, std::memory_order_release);
-    g_outfifo1_empty.store(0, std::memory_order_release);
-    g_infifo2_full.store(0, std::memory_order_release);
-    g_outfifo2_empty.store(0, std::memory_order_release);
+    g_infifo1_full.store(0, std::memory_order_relaxed);
+    g_outfifo1_empty.store(0, std::memory_order_relaxed);
+    g_infifo2_full.store(0, std::memory_order_relaxed);
+    g_outfifo2_empty.store(0, std::memory_order_relaxed);
     for (int i=0; i<4; i++) {
         g_AEstatus1[i] = g_AEstatus2[i] = 0;
     }
@@ -2190,7 +2190,7 @@ void OptionsDlg::exitPTTCaptureMode_(bool accept, int keyCode)
 void OptionsDlg::DisplayFifoPACounters() {
     if (IsShownOnScreen())
     {
-        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full.load(std::memory_order_acquire), g_outfifo1_empty.load(std::memory_order_acquire), g_infifo2_full.load(std::memory_order_acquire), g_outfifo2_empty.load(std::memory_order_acquire));
+        wxString fifo_counters = wxString::Format(wxT("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d"), g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed), g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
         m_textFifos->SetLabel(fifo_counters);
 
         // input: underflow overflow output: underflow overflow
