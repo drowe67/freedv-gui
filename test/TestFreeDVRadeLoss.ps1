@@ -132,10 +132,11 @@ function Get-RadeLossThreshold {
     $oldPath = $env:PATH
     $env:PATH = "$toolsDir;$env:PATH"
     try {
-        # RADEV1 to match the mode this test exercises (rade_tx_wav defaults to V1).
-        $toolOut = & (Join-Path $toolsDir "rade_tx_wav.exe") -f $baseTxF $baseIn $baseTxWav 2>&1
+        # --v2 to match the mode FreeDV runs: src/freedv_interface.cpp opens RADE
+        # with RADE_MODE_V2 unconditionally on this branch, whatever the -utmode label.
+        $toolOut = & (Join-Path $toolsDir "rade_tx_wav.exe") --v2 -f $baseTxF $baseIn $baseTxWav 2>&1
         if ($LASTEXITCODE -ne 0) { Write-Host "$toolOut"; return $null }
-        $toolOut = & (Join-Path $toolsDir "rade_rx_wav.exe") -f $baseRxF $baseTxWav $baseDecoded 2>&1
+        $toolOut = & (Join-Path $toolsDir "rade_rx_wav.exe") --v2 -f $baseRxF $baseTxWav $baseDecoded 2>&1
         if ($LASTEXITCODE -ne 0) { Write-Host "$toolOut"; return $null }
     }
     finally {

@@ -170,10 +170,11 @@ compute_loss_threshold () (
     export LD_LIBRARY_PATH="$RADE_C_TOOLS_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export DYLD_LIBRARY_PATH="$RADE_C_TOOLS_DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 
-    # RADEV1 to match the mode this test exercises (rade_tx_wav defaults to V1).
-    "$tx_wav" -f "$(pwd)/baseline_txfeatures.f32" "$(pwd)/baseline_in.wav" "$(pwd)/baseline_tx.wav" >baseline_tx.log 2>&1 \
+    # --v2 to match the mode FreeDV runs: src/freedv_interface.cpp opens RADE with
+    # RADE_MODE_V2 unconditionally on this branch, regardless of the -utmode label.
+    "$tx_wav" --v2 -f "$(pwd)/baseline_txfeatures.f32" "$(pwd)/baseline_in.wav" "$(pwd)/baseline_tx.wav" >baseline_tx.log 2>&1 \
         || { cat baseline_tx.log >&2; return 1; }
-    "$rx_wav" -f "$(pwd)/baseline_rxfeatures.f32" "$(pwd)/baseline_tx.wav" "$(pwd)/baseline_decoded.wav" >baseline_rx.log 2>&1 \
+    "$rx_wav" --v2 -f "$(pwd)/baseline_rxfeatures.f32" "$(pwd)/baseline_tx.wav" "$(pwd)/baseline_decoded.wav" >baseline_rx.log 2>&1 \
         || { cat baseline_rx.log >&2; return 1; }
 
     baseline_output=$($PYTHON_BINARY "$(pwd)/rade_src/loss.py" \

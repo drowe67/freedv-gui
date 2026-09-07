@@ -124,9 +124,10 @@ jobs:
 
           TOOLS="$PWD/rade_c/build/src"
           # rade_tx_wav requires 16 kHz mono 16-bit PCM (all.wav already is).
+          # --v2: FreeDV opens RADE with RADE_MODE_V2 unconditionally on this branch.
           sox rade_src/wav/all.wav -r 16000 -c 1 -b 16 -e signed-integer baseline_in.wav
-          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_tx_wav" -f baseline_txfeatures.f32 baseline_in.wav baseline_tx.wav
-          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_rx_wav" -f baseline_rxfeatures.f32 baseline_tx.wav baseline_decoded.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_tx_wav" --v2 -f baseline_txfeatures.f32 baseline_in.wav baseline_tx.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_rx_wav" --v2 -f baseline_rxfeatures.f32 baseline_tx.wav baseline_decoded.wav
 
           BASELINE_OUTPUT=$(PYTHONPATH="$PWD/rade_src" python3 rade_src/loss.py \
               baseline_txfeatures.f32 baseline_rxfeatures.f32 --clip_start 100 --clip_end 300)
