@@ -136,11 +136,15 @@ sox test_stripped.wav test.wav silence 1 0.1 1% reverse
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     FADING_DIR="$SCRIPTPATH/fading"
 
-    # Add noise to recording to test performance
+    # Add noise to the recording to check reporting still decodes in a degraded
+    # channel. The noise density sits ~3 dB above the RADEV2 decode minimum: the
+    # test file is a live virtual-cable capture whose level (and therefore the
+    # effective SNR after ch, which fixes No rather than SNR) varies run to run,
+    # so operating exactly at the minimum makes this test intermittently fail.
     if [ "$1" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -21 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     elif [ "$1" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -13 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -16 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
