@@ -956,6 +956,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * macOS: Fix dyld error on startup when enabling sanitizers in build. (PR #1478)
     * Fix potential equalizer bug that could introduce corrupted audio. (PR #1480)
     * Fix uninitialized value read during waterfall plot render. (PR #1481)
+    * Match std::atomic memory ordering to what each atomic actually synchronises. (PR #1482)
 2. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
 
