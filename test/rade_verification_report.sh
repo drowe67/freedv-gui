@@ -40,13 +40,18 @@
 #   PYTHON_BINARY                          python with torch + matplotlib (default python3)
 #   RADE_C_TOOLS_DIR                       dir containing rade_tx_wav / rade_rx_wav
 #   RADE_BASELINE_LOSS                     use this baseline instead of running the wav tools
+#   RADE_LEVEL1_LOG                        parse Level 1 from this existing test_rade_loss.sh
+#                                          log instead of running the loopback again
+#   RADE_REPO_ROOT                         FreeDV source tree (for the version / git hash);
+#                                          defaults to the parent of this script's directory
+#   RADE_C_COMMIT / RADE_RADAE_COMMIT      override the rade_c / radae commit hash fields
 #   RADE_TESTER                            tester name / callsign for the report
 #   RADE_SKIP_LEVEL1=1                     fill software info + baseline only
 
 set -u
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-REPO_ROOT="$( cd -- "$SCRIPTPATH/.." >/dev/null 2>&1 ; pwd -P )"
+REPO_ROOT="${RADE_REPO_ROOT:-$( cd -- "$SCRIPTPATH/.." >/dev/null 2>&1 ; pwd -P )}"
 
 OUTPUT="./rade_verification_report.md"
 WORKDIR="$(pwd)"
@@ -73,6 +78,7 @@ esac
 PYTHON_BINARY="${PYTHON_BINARY:-python3}"
 RADE_TESTER="${RADE_TESTER:-}"
 RADE_BASELINE_LOSS="${RADE_BASELINE_LOSS:-}"
+RADE_LEVEL1_LOG="${RADE_LEVEL1_LOG:-}"
 RADE_SKIP_LEVEL1="${RADE_SKIP_LEVEL1:-0}"
 OPERATING_SYSTEM="$(uname -s)"
 
@@ -81,36 +87,37 @@ echo "Working directory: $WORKDIR"
 
 # ---------------------------------------------------------------------------
 # Locate rade_tx_wav / rade_rx_wav and the rade_c source (same discovery as
-# test/test_rade_loss.sh).
+# test/test_rade_loss.sh). Skipped when RADE_BASELINE_LOSS is supplied.
 # ---------------------------------------------------------------------------
-if [ -z "${RADE_C_TOOLS_DIR:-}" ]; then
-    RADE_C_TOOLS_DIR=""
-    for candidate in \
-        "$WORKDIR/_deps/freedv_backend-build/rade_build/src" \
-        "$WORKDIR"/build*/_deps/freedv_backend-build/rade_build/src \
-        "$REPO_ROOT"/build*/_deps/freedv_backend-build/rade_build/src; do
-        if [ -x "$candidate/rade_tx_wav" ] && [ -x "$candidate/rade_rx_wav" ]; then
-            RADE_C_TOOLS_DIR="$candidate"
-            break
-        fi
-    done
-fi
-if [ -z "$RADE_C_TOOLS_DIR" ] || [ ! -x "$RADE_C_TOOLS_DIR/rade_tx_wav" ]; then
-    found=$(find "$WORKDIR" "$REPO_ROOT" -name rade_tx_wav -type f 2>/dev/null | head -1)
-    [ -n "$found" ] && RADE_C_TOOLS_DIR="$(dirname "$found")"
-fi
-
+RADE_C_TOOLS_DIR="${RADE_C_TOOLS_DIR:-}"
 RADE_C_SRC_DIR=""
-if [ -n "$RADE_C_TOOLS_DIR" ]; then
-    guess="$( cd -- "$RADE_C_TOOLS_DIR/../.." >/dev/null 2>&1 && pwd -P )/rade_src"
-    [ -d "$guess" ] && RADE_C_SRC_DIR="$guess"
+if [ -z "$RADE_BASELINE_LOSS" ]; then
+    if [ -z "$RADE_C_TOOLS_DIR" ]; then
+        for candidate in \
+            "$WORKDIR/_deps/freedv_backend-build/rade_build/src" \
+            "$WORKDIR"/build*/_deps/freedv_backend-build/rade_build/src \
+            "$REPO_ROOT"/build*/_deps/freedv_backend-build/rade_build/src; do
+            if [ -x "$candidate/rade_tx_wav" ] && [ -x "$candidate/rade_rx_wav" ]; then
+                RADE_C_TOOLS_DIR="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$RADE_C_TOOLS_DIR" ] || [ ! -x "$RADE_C_TOOLS_DIR/rade_tx_wav" ]; then
+        found=$(find "$WORKDIR" "$REPO_ROOT" -name rade_tx_wav -type f 2>/dev/null | head -1)
+        [ -n "$found" ] && RADE_C_TOOLS_DIR="$(dirname "$found")"
+    fi
+    if [ -n "$RADE_C_TOOLS_DIR" ]; then
+        guess="$( cd -- "$RADE_C_TOOLS_DIR/../.." >/dev/null 2>&1 && pwd -P )/rade_src"
+        [ -d "$guess" ] && RADE_C_SRC_DIR="$guess"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# radae repo (all.wav + loss.py). Cloned the same way test/test_rade_loss.sh
-# clones it.
+# radae repo (all.wav + loss.py), needed only to compute the baseline here.
+# Cloned the same way test/test_rade_loss.sh clones it.
 # ---------------------------------------------------------------------------
-if [ ! -d "$WORKDIR/rade_src" ]; then
+if [ -z "$RADE_BASELINE_LOSS" ] && [ ! -d "$WORKDIR/rade_src" ]; then
     echo "Cloning radae repo into $WORKDIR/rade_src ..."
     git clone -b main https://github.com/drowe67/radae.git "$WORKDIR/rade_src" || {
         echo "failed to clone radae repo" >&2; exit 1; }
@@ -147,11 +154,17 @@ case "$OPERATING_SYSTEM" in
 esac
 
 REPORT_DATE="$(date -u '+%Y-%m-%d')"
-RADAE_COMMIT="unknown"
-[ -d "$WORKDIR/rade_src/.git" ] && RADAE_COMMIT=$(git -C "$WORKDIR/rade_src" rev-parse HEAD 2>/dev/null || echo "unknown")
-RADE_C_COMMIT="unknown"
-[ -n "$RADE_C_SRC_DIR" ] && [ -d "$RADE_C_SRC_DIR/.git" ] && \
-    RADE_C_COMMIT=$(git -C "$RADE_C_SRC_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")
+RADAE_COMMIT="${RADE_RADAE_COMMIT:-}"
+if [ -z "$RADAE_COMMIT" ]; then
+    RADAE_COMMIT="unknown"
+    [ -d "$WORKDIR/rade_src/.git" ] && RADAE_COMMIT=$(git -C "$WORKDIR/rade_src" rev-parse HEAD 2>/dev/null || echo "unknown")
+fi
+RADE_C_COMMIT="${RADE_C_COMMIT:-}"
+if [ -z "$RADE_C_COMMIT" ]; then
+    RADE_C_COMMIT="unknown"
+    [ -n "$RADE_C_SRC_DIR" ] && [ -d "$RADE_C_SRC_DIR/.git" ] && \
+        RADE_C_COMMIT=$(git -C "$RADE_C_SRC_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")
+fi
 
 echo "  Application : $APP_NAME $APP_VERSION"
 echo "  Platform    : $PLATFORM"
@@ -231,24 +244,37 @@ if [ -n "$BASELINE_LOSS" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Level 1 - Software Loopback: run test/test_rade_loss.sh and harvest its loss.
+# Level 1 - Software Loopback: harvest the loss from test/test_rade_loss.sh
+# (the same test CI runs). Either parse an existing run (RADE_LEVEL1_LOG) or
+# run it here.
 # ---------------------------------------------------------------------------
 LEVEL1_LOSS_FIELD="_not run_"
 LEVEL1_CHECK="- [ ] Pass (loss within ±10% of baseline)"
 LEVEL1_SUMMARY="PASS / FAIL / N/A"
 LEVEL1_REPRO="Not run by rade_verification_report.sh (RADE_SKIP_LEVEL1 was set)."
 LEVEL1_LOG="$WORKDIR/rade_verification_level1.log"
+LEVEL1_SOURCE=""
 
 if [ "$RADE_SKIP_LEVEL1" != "1" ]; then
-    echo "Running Level 1 software loopback via test/test_rade_loss.sh ..."
-    if [ -n "$THRESHOLD" ]; then
-        RADE_LOSS_THRESHOLD="$THRESHOLD" PYTHON_BINARY="$PYTHON_BINARY" \
-            bash "$SCRIPTPATH/test_rade_loss.sh" >"$LEVEL1_LOG" 2>&1
+    if [ -n "$RADE_LEVEL1_LOG" ] && [ ! -f "$RADE_LEVEL1_LOG" ]; then
+        echo "WARNING: RADE_LEVEL1_LOG=$RADE_LEVEL1_LOG does not exist" >&2
+        printf 'RADE_LEVEL1_LOG not found: %s\n' "$RADE_LEVEL1_LOG" > "$LEVEL1_LOG"
+        LEVEL1_SOURCE="missing"
+    elif [ -n "$RADE_LEVEL1_LOG" ]; then
+        echo "Reading Level 1 result from existing log: $RADE_LEVEL1_LOG"
+        LEVEL1_LOG="$RADE_LEVEL1_LOG"
+        LEVEL1_SOURCE="existing"
     else
-        PYTHON_BINARY="$PYTHON_BINARY" \
-            bash "$SCRIPTPATH/test_rade_loss.sh" >"$LEVEL1_LOG" 2>&1
+        echo "Running Level 1 software loopback via test/test_rade_loss.sh ..."
+        if [ -n "$THRESHOLD" ]; then
+            RADE_LOSS_THRESHOLD="$THRESHOLD" PYTHON_BINARY="$PYTHON_BINARY" \
+                bash "$SCRIPTPATH/test_rade_loss.sh" >"$LEVEL1_LOG" 2>&1
+        else
+            PYTHON_BINARY="$PYTHON_BINARY" \
+                bash "$SCRIPTPATH/test_rade_loss.sh" >"$LEVEL1_LOG" 2>&1
+        fi
+        echo "  test_rade_loss.sh exit: $?"
     fi
-    L1_RC=$?
 
     L1_LOSS=$(sed -n 's/.*loss: *\([0-9][0-9.]*\).*/\1/p' "$LEVEL1_LOG" | tail -1)
     if grep -qx 'PASS' "$LEVEL1_LOG"; then
@@ -259,8 +285,8 @@ if [ "$RADE_SKIP_LEVEL1" != "1" ]; then
         L1_RESULT="ERROR"
     fi
 
-    echo "  Level 1 result: $L1_RESULT (loss ${L1_LOSS:-unknown}, exit $L1_RC)"
-    echo "  Full log: $LEVEL1_LOG"
+    echo "  Level 1 result: $L1_RESULT (loss ${L1_LOSS:-unknown})"
+    echo "  Log: $LEVEL1_LOG"
 
     if [ -n "$L1_LOSS" ]; then
         LEVEL1_LOSS_FIELD="$L1_LOSS  ($L1_RESULT)"
@@ -273,7 +299,10 @@ if [ "$RADE_SKIP_LEVEL1" != "1" ]; then
         *)    LEVEL1_SUMMARY="FAIL" ;;
     esac
 
-    LEVEL1_REPRO="# From the FreeDV build directory (see .github/workflows/cmake-linux.yml /
+    LEVEL1_PREFIX="# "
+    [ "$LEVEL1_SOURCE" = "existing" ] && LEVEL1_PREFIX="# Result parsed from an existing run of the command below.
+# "
+    LEVEL1_REPRO="${LEVEL1_PREFIX}From the FreeDV build directory (see .github/workflows/cmake-linux.yml /
 # .github/workflows/cmake-macos.yml for the per-platform virtual audio setup):
 FREEDV_BINARY=<freedv binary> \\
 FREEDV_RADIO_TO_COMPUTER_DEVICE=<device> \\

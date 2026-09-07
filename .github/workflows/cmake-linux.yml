@@ -237,6 +237,64 @@ jobs:
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         archive: false
 
+  # Software-only RADE feature-loss baseline for the verification report, per the
+  # RADE integration verification procedure. The figure is model-driven and
+  # deterministic, so one Linux computation serves the report on every platform.
+  rade-loss-baseline:
+    runs-on: ubuntu-22.04
+    outputs:
+      baseline: ${{ steps.baseline.outputs.baseline }}
+      threshold: ${{ steps.baseline.outputs.threshold }}
+      rade_c_commit: ${{ steps.baseline.outputs.rade_c_commit }}
+      radae_commit: ${{ steps.baseline.outputs.radae_commit }}
+
+    steps:
+    - name: Install required packages
+      shell: bash
+      run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake autoconf automake libtool libltdl-dev pkg-config sox
+
+    - name: Build rade_c wav tools
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          set -eux
+          git clone -b dr-tx-bpf --depth 1 https://github.com/freedv/rade_c rade_c
+          cmake -S rade_c -B rade_c/build -DCMAKE_BUILD_TYPE=Release \
+              -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip
+          cmake --build rade_c/build -j$(nproc)
+
+    - name: Compute RADE loss baseline
+      id: baseline
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          set -eux
+          git clone -b main --depth 1 https://github.com/drowe67/radae.git rade_src
+          python3 -m venv rade-venv
+          . ./rade-venv/bin/activate
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install matplotlib
+
+          TOOLS="$PWD/rade_c/build/src"
+          # rade_tx_wav requires 16 kHz mono 16-bit PCM (all.wav already is).
+          # --v2: FreeDV opens RADE with RADE_MODE_V2 unconditionally on this branch.
+          sox rade_src/wav/all.wav -r 16000 -c 1 -b 16 -e signed-integer baseline_in.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_tx_wav" --v2 -f baseline_txfeatures.f32 baseline_in.wav baseline_tx.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_rx_wav" --v2 -f baseline_rxfeatures.f32 baseline_tx.wav baseline_decoded.wav
+
+          BASELINE_OUTPUT=$(PYTHONPATH="$PWD/rade_src" python3 rade_src/loss.py \
+              baseline_txfeatures.f32 baseline_rxfeatures.f32 --clip_start 100 --clip_end 300)
+          echo "$BASELINE_OUTPUT"
+          BASELINE_LOSS=$(printf '%s\n' "$BASELINE_OUTPUT" | sed -n 's/.*loss: *\([0-9][0-9.]*\).*/\1/p' | head -1)
+          THRESHOLD=$(awk -v b="$BASELINE_LOSS" 'BEGIN { if (b + 0 <= 0) exit 1; printf "%.4f\n", b * 1.10 }')
+          echo "Software-only baseline loss: $BASELINE_LOSS -> threshold (x1.10): $THRESHOLD"
+          echo "baseline=$BASELINE_LOSS" >> "$GITHUB_OUTPUT"
+          echo "threshold=$THRESHOLD" >> "$GITHUB_OUTPUT"
+          echo "rade_c_commit=$(git -C rade_c rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "radae_commit=$(git -C rade_src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   test-appimage-fedora:
     strategy:
       fail-fast: false
@@ -314,7 +372,7 @@ jobs:
         os: [ubuntu-26.04, ubuntu-24.04, ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04-arm, ubuntu-26.04-arm]
 
     runs-on: ${{ matrix.os }}
-    needs: [build-appimage]
+    needs: [build-appimage, rade-loss-baseline]
     steps:
     - uses: actions/checkout@v6
 
@@ -426,9 +484,33 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           . ./rade-venv/bin/activate
-          chmod +x *.AppImage 
+          chmod +x *.AppImage
           FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
+
+    # Assemble the RADE integration verification report from the run above. Once
+    # per OS (ubuntu-24.04 x86_64 leg only); baseline from the rade-loss-baseline job.
+    - name: Generate RADE verification report
+      shell: bash
+      working-directory: ${{github.workspace}}
+      if: ${{ !cancelled() && matrix.os == 'ubuntu-24.04' }}
+      continue-on-error: true
+      run: |
+          RADE_BASELINE_LOSS="${{ needs.rade-loss-baseline.outputs.baseline }}" \
+          RADE_LEVEL1_LOG="$(pwd)/tmp.log" \
+          RADE_C_COMMIT="${{ needs.rade-loss-baseline.outputs.rade_c_commit }}" \
+          RADE_RADAE_COMMIT="${{ needs.rade-loss-baseline.outputs.radae_commit }}" \
+          RADE_TESTER="FreeDV CI" \
+          FREEDV_BINARY=./$(echo -n *.AppImage) \
+          ./test/rade_verification_report.sh -o rade_verification_report.md
+
+    - name: Upload RADE verification report
+      uses: actions/upload-artifact@v7
+      if: ${{ !cancelled() && matrix.os == 'ubuntu-24.04' }}
+      with:
+        name: rade-verification-report-linux
+        path: ${{github.workspace}}/rade_verification_report.md
+        if-no-files-found: warn
 
   test-application:
     strategy:

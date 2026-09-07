@@ -89,7 +89,10 @@ jobs:
   rade-loss-baseline:
     runs-on: ubuntu-22.04
     outputs:
+      baseline: ${{ steps.baseline.outputs.baseline }}
       threshold: ${{ steps.baseline.outputs.threshold }}
+      rade_c_commit: ${{ steps.baseline.outputs.rade_c_commit }}
+      radae_commit: ${{ steps.baseline.outputs.radae_commit }}
 
     steps:
     - uses: actions/checkout@v6
@@ -136,7 +139,10 @@ jobs:
           # Verification procedure: allow the round trip to be within +10% of baseline.
           THRESHOLD=$(awk -v b="$BASELINE_LOSS" 'BEGIN { if (b + 0 <= 0) exit 1; printf "%.4f\n", b * 1.10 }')
           echo "Software-only baseline loss: $BASELINE_LOSS -> threshold (x1.10): $THRESHOLD"
+          echo "baseline=$BASELINE_LOSS" >> "$GITHUB_OUTPUT"
           echo "threshold=$THRESHOLD" >> "$GITHUB_OUTPUT"
+          echo "rade_c_commit=$(git -C rade_c rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "radae_commit=$(git -C rade_src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   collect-pgo-profile:
     strategy:
@@ -495,6 +501,7 @@ jobs:
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/RadeVerificationReport.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
  
     - name: Install SoX
@@ -586,8 +593,37 @@ jobs:
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       if: ${{ !cancelled() }}
       run: |
-          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }}
+          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
       timeout-minutes: 10
+
+    # Assemble the RADE integration verification report from the run above. Once
+    # per OS (x86_64 leg only); the baseline comes from the rade-loss-baseline job.
+    - name: Generate RADE verification report
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
+      continue-on-error: true
+      run: |
+          .\RadeVerificationReport.ps1 `
+            -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" `
+            -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" `
+            -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" `
+            -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" `
+            -Level1Log rade_loss.log `
+            -BaselineLoss ${{ needs.rade-loss-baseline.outputs.baseline }} `
+            -RepoRoot ${{github.workspace}} `
+            -RadeCCommit ${{ needs.rade-loss-baseline.outputs.rade_c_commit }} `
+            -RadaeCommit ${{ needs.rade-loss-baseline.outputs.radae_commit }} `
+            -Tester "FreeDV CI" `
+            -OutputFile ${{github.workspace}}\rade_verification_report.md
+
+    - name: Upload RADE verification report
+      uses: actions/upload-artifact@v7
+      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
+      with:
+        name: rade-verification-report-windows
+        path: ${{github.workspace}}/rade_verification_report.md
+        if-no-files-found: warn
 
     - name: Test RADE Reporting
       shell: pwsh

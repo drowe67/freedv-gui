@@ -67,6 +67,24 @@ param (
     $SkipLevel1,
 
     [string]
+    # Parse Level 1 from this existing TestFreeDVRadeLoss.ps1 log instead of
+    # running the loopback again.
+    $Level1Log = "",
+
+    [string]
+    # FreeDV source tree, used for the version / git hash. Defaults to the parent
+    # of this script's directory.
+    $RepoRoot = "",
+
+    [string]
+    # Override the "rade_c repo commit hash" field.
+    $RadeCCommit = "",
+
+    [string]
+    # Override the "radae repo commit hash" field.
+    $RadaeCommit = "",
+
+    [string]
     # Path or filename of the Python interpreter used to run loss.py.
     $PythonBinary = "python.exe")
 
@@ -84,7 +102,7 @@ $PM    = [string][char]0x00B1   # plus-minus
 $MDASH = [string][char]0x2014   # em dash
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot  = Split-Path -Parent $scriptDir
+$repoRoot  = if ($RepoRoot) { $RepoRoot } else { Split-Path -Parent $scriptDir }
 $current   = (Get-Location).Path
 
 # Resolve output path before anything else changes directories.
@@ -107,11 +125,11 @@ function Get-GitOutput {
 }
 
 # ---------------------------------------------------------------------------
-# radae repo (all.wav + loss.py), cloned the same way TestFreeDVRadeLoss.ps1
-# clones it.
+# radae repo (all.wav + loss.py), needed only to compute the baseline here.
+# Cloned the same way TestFreeDVRadeLoss.ps1 clones it.
 # ---------------------------------------------------------------------------
 $radeSrc = Join-Path $current "rade_src"
-if (-not (Test-Path $radeSrc)) {
+if (($BaselineLoss -le 0) -and -not (Test-Path $radeSrc)) {
     Write-Host "Cloning radae repo into $radeSrc ..."
     & git.exe clone -b main https://github.com/drowe67/radae.git $radeSrc
 }
@@ -143,8 +161,8 @@ try {
 
 $reportDate = (Get-Date -Format "yyyy-MM-dd")
 
-$radaeCommit = "unknown"
-if (Test-Path (Join-Path $radeSrc ".git")) {
+$radaeCommit = if ($RadaeCommit) { $RadaeCommit } else { "unknown" }
+if (-not $RadaeCommit -and (Test-Path (Join-Path $radeSrc ".git"))) {
     $radaeCommit = Get-GitOutput $radeSrc @('rev-parse', 'HEAD')
 }
 
@@ -155,10 +173,7 @@ foreach ($d in @(
         (Join-Path $repoRoot "build_windows\_deps\freedv_backend-build\rade_src"))) {
     if (Test-Path (Join-Path $d ".git")) { $radeCSrcDir = $d; break }
 }
-$radeCCommit = "unknown"
-if ($radeCSrcDir) {
-    $radeCCommit = Get-GitOutput $radeCSrcDir @('rev-parse', 'HEAD')
-}
+$radeCCommit = if ($RadeCCommit) { $RadeCCommit } elseif ($radeCSrcDir) { Get-GitOutput $radeCSrcDir @('rev-parse', 'HEAD') } else { "unknown" }
 
 Write-Host "  Application  : $appName $appVersion"
 Write-Host "  Platform     : $platform"
@@ -260,25 +275,36 @@ $level1Summary = "PASS / FAIL / N/A"
 $level1Repro   = "Not run by RadeVerificationReport.ps1 (-SkipLevel1 was set)."
 $level1Log     = Join-Path $current "rade_verification_level1.log"
 
+$level1FromExisting = $false
 if (-not $SkipLevel1) {
-    Write-Host "Running Level 1 software loopback via test/TestFreeDVRadeLoss.ps1 ..."
-    $lossScript = Join-Path $scriptDir "TestFreeDVRadeLoss.ps1"
-    $psArgs = @{
-        RadioToComputerDevice      = $RadioToComputerDevice
-        ComputerToSpeakerDevice    = $ComputerToSpeakerDevice
-        MicrophoneToComputerDevice = $MicrophoneToComputerDevice
-        ComputerToRadioDevice      = $ComputerToRadioDevice
-        PythonBinary               = $PythonBinary
-    }
-    if ($threshold -gt 0) { $psArgs["LossThreshold"] = $threshold }
+    if ($Level1Log -and -not (Test-Path $Level1Log)) {
+        Write-Host "WARNING: -Level1Log $Level1Log does not exist"
+        "Level1Log not found: $Level1Log" | Set-Content -Path $level1Log
+        $level1FromExisting = $true
+    } elseif ($Level1Log) {
+        Write-Host "Reading Level 1 result from existing log: $Level1Log"
+        $level1Log = (Resolve-Path $Level1Log).Path
+        $level1FromExisting = $true
+    } else {
+        Write-Host "Running Level 1 software loopback via test/TestFreeDVRadeLoss.ps1 ..."
+        $lossScript = Join-Path $scriptDir "TestFreeDVRadeLoss.ps1"
+        $psArgs = @{
+            RadioToComputerDevice      = $RadioToComputerDevice
+            ComputerToSpeakerDevice    = $ComputerToSpeakerDevice
+            MicrophoneToComputerDevice = $MicrophoneToComputerDevice
+            ComputerToRadioDevice      = $ComputerToRadioDevice
+            PythonBinary               = $PythonBinary
+        }
+        if ($threshold -gt 0) { $psArgs["LossThreshold"] = $threshold }
 
-    # Tee every stream to the log as it flows, so a terminating "Test failed"
-    # thrown by TestFreeDVRadeLoss.ps1 at the end still leaves the loss line on disk.
-    if (Test-Path $level1Log) { Remove-Item $level1Log }
-    try {
-        & $lossScript @psArgs *>&1 | Tee-Object -FilePath $level1Log | Out-Null
-    } catch {
-        ($_ | Out-String) | Add-Content -Path $level1Log
+        # Tee every stream to the log as it flows, so a terminating "Test failed"
+        # thrown by TestFreeDVRadeLoss.ps1 at the end still leaves the loss line on disk.
+        if (Test-Path $level1Log) { Remove-Item $level1Log }
+        try {
+            & $lossScript @psArgs *>&1 | Tee-Object -FilePath $level1Log | Out-Null
+        } catch {
+            ($_ | Out-String) | Add-Content -Path $level1Log
+        }
     }
     $level1Text = if (Test-Path $level1Log) { Get-Content -Raw $level1Log } else { "" }
     if (-not $level1Text) { $level1Text = "" }
@@ -304,7 +330,7 @@ if (-not $SkipLevel1) {
     $thrPart = if ($threshold -gt 0) { " -LossThreshold $threshold" } else { "" }
     # Single-quoted here-string: backticks and other characters are literal.
     $level1Repro = @'
-# From the FreeDV install / build directory (see
+{{PARSED}}# From the FreeDV install / build directory (see
 # .github/workflows/cmake-windows.yml for the virtual audio setup):
 .\TestFreeDVRadeLoss.ps1 `
     -RadioToComputerDevice "<device>" -ComputerToRadioDevice "<device>" `
@@ -314,7 +340,8 @@ if (-not $SkipLevel1) {
 python loss.py txfeatures.f32 rxfeatures.f32 `
     --loss_test <baseline x 1.10> --clip_start 100 --clip_end 300
 '@
-    $level1Repro = $level1Repro.Replace('{{THR}}', $thrPart)
+    $parsedNote = if ($level1FromExisting) { "# Result parsed from an existing run of the command below.`n" } else { "" }
+    $level1Repro = $level1Repro.Replace('{{PARSED}}', $parsedNote).Replace('{{THR}}', $thrPart)
 }
 
 # ---------------------------------------------------------------------------
