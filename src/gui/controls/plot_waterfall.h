@@ -22,6 +22,7 @@
 #define __FDMDV2_PLOT_WATERFALL__
 
 #include <deque>
+#include <vector>
 #include <wx/graphics.h>
 
 #include "plot.h"
@@ -71,7 +72,7 @@ class PlotWaterfall : public PlotPanel
         void        OnShow(wxShowEvent& event) override;
         void        drawGraticule(wxGraphicsContext* ctx) override;
         void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false) override;
-        void        plotPixelData();
+        void        plotPixelData(wxGraphicsContext* gc);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseMiddleDown(wxMouseEvent& event);
@@ -98,12 +99,42 @@ class PlotWaterfall : public PlotPanel
         
         int      leftOffset_;
 
-        std::deque<wxBitmap*> waterfallSlices_;
-        
+        // One "block" of the waterfall: dy pixel rows of spectrum.
+        //
+        // bitmap is the render target plotPixelData() blits into; gfxBitmap is the
+        // renderer-native copy that draw() actually composites. Compositing the wxBitmap
+        // directly is what we're avoiding here: on macOS
+        // wxGraphicsContext::DrawBitmap(wxBitmap) wraps it in a freshly allocated NSImage
+        // every call (wxBitmapRefData::GetImage() caches nothing) and draws through
+        // -[NSImage drawInRect:], whereas the wxGraphicsBitmap overload goes straight to
+        // CGContextDrawImage. At one call per block and m_imgHeight/dy blocks on screen,
+        // that wrapper was the bulk of the paint.
+        struct WaterfallSlice
+        {
+            wxBitmap* bitmap;
+            wxGraphicsBitmap gfxBitmap;
+        };
+        std::deque<WaterfallSlice> waterfallSlices_;
+
+        // Graticule labels only move when the control is resized, but drawGraticule() runs
+        // on every frame. Measuring them there is not cheap -- wxWindowMac::DoGetTextExtent
+        // builds and destroys a whole wxGraphicsContext per call -- so the laid out text is
+        // cached and rebuilt only when the geometry changes.
+        struct GraticuleLabel
+        {
+            wxString text;
+            int x;
+            int y;
+        };
+        std::vector<GraticuleLabel> freqLabels_;
+        std::vector<GraticuleLabel> timeLabels_;
+        bool graticuleLabelsValid_;
+
         void        OnDoubleClickCommon(wxMouseEvent& event);
 
         void cleanupSlices_();
-        
+        void rebuildGraticuleLabels_();
+
         DECLARE_EVENT_TABLE()
 };
 

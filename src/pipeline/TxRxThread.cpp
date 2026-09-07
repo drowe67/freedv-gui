@@ -303,7 +303,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordModulated = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_recFileFromModulator.load(std::memory_order_acquire) && (g_sfRecFileFromModulator.load(std::memory_order_acquire) != NULL); },
             recordModulatedTapPipeline,
             bypassRecordModulated);
         pipeline_->appendPipelineStep(eitherOrRecordModulated);
@@ -621,9 +621,9 @@ void* TxRxThread::Entry() noexcept
     startSem_.wait();
     clearFifos_();
 
-    while (m_run)
+    while (m_run.load(std::memory_order_acquire))
     {
-        if (!m_run) break;
+        if (!m_run.load(std::memory_order_acquire)) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper->startRealTimeWork();
