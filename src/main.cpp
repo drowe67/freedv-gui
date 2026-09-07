@@ -2936,14 +2936,14 @@ void MainFrame::startRxStream()
         // in the tx/rxProcessing loop.
         //
         // Note that soundCard[12]InFifoSizeSamples are significantly larger than
-        // the other FIFO sizes on Linux. This is to better handle PulseAudio/pipewire
+        // the other FIFO sizes. This is to better handle PulseAudio/pipewire
         // behavior on some devices, where the system sends multiple *seconds*
         // of audio samples at once followed by long periods with no samples at
         // all. Without a very large FIFO size (or a way to dynamically change
         // FIFO sizes, which isn't recommended for real-time operation), we will
         // definitely lose audio.
-        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         constexpr int MAX_INCOMING_AUDIO_SEC = 75;
+        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         int soundCard1InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
                 
         // Guards against FIFO sizes accidentally being too small to fit an entier TX block.

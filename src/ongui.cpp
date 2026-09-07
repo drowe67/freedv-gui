@@ -1275,13 +1275,6 @@ void MainFrame::togglePTT(void) {
     // the drain loops below, which would corrupt newTx at the end if not checked.
     const bool wasInTx = g_tx.load(std::memory_order_acquire);
 
-    // Diagnostic: measure how long this function keeps the main thread busy.
-    // togglePTT() runs synchronously here (UI updates, Yield() polling loops,
-    // reporter/rig-control calls) right at the PTT transition, which is
-    // exactly where the real-time TX/RX thread has been observed to stall
-    // under load -- this timing lets us check whether the two are correlated.
-    auto togglePTTStart_ = highResClock.now();
-
     // Change tabbed page in centre panel depending on PTT state
 
     if (wasInTx)
@@ -1595,11 +1588,6 @@ void MainFrame::togglePTT(void) {
     // Additionally, tuning during normal TX is verboten.
     m_cboReportFrequency->Enable(!newTx);
     m_btnTogTune->Enable(!newTx);
-
-    {
-        auto togglePTTElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(highResClock.now() - togglePTTStart_).count();
-        log_info("togglePTT: %s transition kept main thread busy for %lld ms", wasInTx ? "TX->RX" : "RX->TX", (long long)togglePTTElapsedMs);
-    }
 
     CallAfter([&]() {
         txChangeoverOccurring_ = false;
