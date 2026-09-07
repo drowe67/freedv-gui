@@ -3569,10 +3569,10 @@ void MainFrame::startRxStream()
 
         // reset debug stats for FIFOs
 
-        g_infifo1_full.store(0, std::memory_order_release);
-        g_outfifo1_empty.store(0, std::memory_order_release);
-        g_infifo2_full.store(0, std::memory_order_release);
-        g_outfifo2_empty.store(0, std::memory_order_release);
+        g_infifo1_full.store(0, std::memory_order_relaxed);
+        g_outfifo1_empty.store(0, std::memory_order_relaxed);
+        g_infifo2_full.store(0, std::memory_order_relaxed);
+        g_outfifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
@@ -3670,7 +3670,7 @@ void MainFrame::startRxStream()
                 auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
                 if (toRead < size)
                 {
-                    g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+                    g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
                 }
 
                 cbData->outfifo1->read(tmpOutput, toRead);
@@ -4102,7 +4102,7 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         }
         if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo2->write(tmpInput, size)) 
         {
-            g_infifo2_full.fetch_add(1, std::memory_order_release);
+            g_infifo2_full.fetch_add(1, std::memory_order_relaxed);
         }
     }
 }
@@ -4117,7 +4117,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
     if (toRead < size && !isTuning)
     {
-        g_outfifo1_empty.fetch_add(1, std::memory_order_release);
+        g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
     }
     else
     {
@@ -4193,7 +4193,7 @@ void MainFrame::OnRxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
     }
     if (isModemRunning.load(std::memory_order_acquire) && cbData->infifo1->write(tmpInput, size)) 
     {
-        g_infifo1_full.fetch_add(1, std::memory_order_release);
+        g_infifo1_full.fetch_add(1, std::memory_order_relaxed);
     }
 }
 
@@ -4206,7 +4206,7 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
     if (toRead < size)
     {
-        g_outfifo2_empty.fetch_add(1, std::memory_order_release);
+        g_outfifo2_empty.fetch_add(1, std::memory_order_relaxed);
     }
     else
     {

@@ -1505,12 +1505,12 @@ void MainFrame::togglePTT(void) {
             }
         }
 
-        int sample = g_outfifo1_empty;
+        int sample = g_outfifo1_empty.load(std::memory_order_relaxed);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            auto tmp = g_outfifo1_empty.load(std::memory_order_acquire);
+            auto tmp = g_outfifo1_empty.load(std::memory_order_relaxed);
             if (diff >= std::chrono::milliseconds(1000) || (tmp != sample))
             {
                 log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), tmp, sample);

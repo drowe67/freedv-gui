@@ -95,7 +95,7 @@ public:
 
     void stop()
     {
-        m_run = false;
+        m_run.store(false, std::memory_order_release);
         if (thread_.joinable())
         {
             thread_.join();
