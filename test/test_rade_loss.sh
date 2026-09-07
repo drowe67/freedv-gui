@@ -118,7 +118,88 @@ kill $RECORD_PID
 sox test.wav test_stripped.wav silence 1 0.1 1% reverse
 sox test_stripped.wav test.wav silence 1 0.1 1% reverse
 
-LOSS_THRESHOLD=0.0891
+# Maximum RADE feature loss we allow for the round trip through real audio hardware.
+#
+# Instead of hard-coding a magic number, derive it from a software-only baseline as
+# described in the RADE integration verification procedure:
+#   https://github.com/drowe67/radae/blob/dr-tx-bpf/doc/verification/verification_procedure.md
+# We push the same test file (all.wav) through rade_tx_wav + rade_rx_wav from the
+# rade_c build under test, measure the feature loss with loss.py, and require the
+# hardware round trip to stay within +10% of that baseline. This keeps the test
+# tracking the model/build actually being exercised rather than a stale constant.
+FALLBACK_LOSS_THRESHOLD=0.0891
+LOSS_TOLERANCE=1.10
+
+# Locate rade_tx_wav / rade_rx_wav from the rade_c build. Overridable via
+# RADE_C_TOOLS_DIR for unusual layouts.
+if [ -z "$RADE_C_TOOLS_DIR" ]; then
+    for candidate in \
+        "$(pwd)/_deps/freedv_backend-build/rade_build/src" \
+        "$(pwd)"/build*/_deps/freedv_backend-build/rade_build/src; do
+        if [ -x "$candidate/rade_tx_wav" ] && [ -x "$candidate/rade_rx_wav" ]; then
+            RADE_C_TOOLS_DIR="$candidate"
+            break
+        fi
+    done
+fi
+if [ -z "$RADE_C_TOOLS_DIR" ] || [ ! -x "$RADE_C_TOOLS_DIR/rade_tx_wav" ]; then
+    RADE_TX_WAV_FOUND=$(find "$(pwd)" -name rade_tx_wav -type f 2>/dev/null | head -1)
+    if [ -n "$RADE_TX_WAV_FOUND" ]; then
+        RADE_C_TOOLS_DIR="$(dirname "$RADE_TX_WAV_FOUND")"
+    fi
+fi
+
+# Run all.wav through the rade_c software-only TX/RX path and print baseline * tolerance.
+# Runs in a subshell so the library-path exports don't leak into the FreeDV runs below.
+compute_loss_threshold () (
+    all_wav="$(pwd)/rade_src/wav/all.wav"
+    tx_wav="$RADE_C_TOOLS_DIR/rade_tx_wav"
+    rx_wav="$RADE_C_TOOLS_DIR/rade_rx_wav"
+
+    [ -f "$all_wav" ] || { echo "baseline: $all_wav not found" >&2; return 1; }
+    if [ ! -x "$tx_wav" ] || [ ! -x "$rx_wav" ]; then
+        echo "baseline: rade_tx_wav/rade_rx_wav not found (set RADE_C_TOOLS_DIR)" >&2
+        return 1
+    fi
+
+    # rade_tx_wav requires 16 kHz mono 16-bit PCM; all.wav already is, but
+    # normalise defensively in case the test corpus changes.
+    sox "$all_wav" -r 16000 -c 1 -b 16 -e signed-integer "$(pwd)/baseline_in.wav" || return 1
+
+    # librade sits next to the tools; make sure the loader can find it.
+    export LD_LIBRARY_PATH="$RADE_C_TOOLS_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export DYLD_LIBRARY_PATH="$RADE_C_TOOLS_DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+
+    # RADEV1 to match the mode this test exercises (rade_tx_wav defaults to V1).
+    "$tx_wav" -f "$(pwd)/baseline_txfeatures.f32" "$(pwd)/baseline_in.wav" "$(pwd)/baseline_tx.wav" >baseline_tx.log 2>&1 \
+        || { cat baseline_tx.log >&2; return 1; }
+    "$rx_wav" -f "$(pwd)/baseline_rxfeatures.f32" "$(pwd)/baseline_tx.wav" "$(pwd)/baseline_decoded.wav" >baseline_rx.log 2>&1 \
+        || { cat baseline_rx.log >&2; return 1; }
+
+    baseline_output=$($PYTHON_BINARY "$(pwd)/rade_src/loss.py" \
+        "$(pwd)/baseline_txfeatures.f32" "$(pwd)/baseline_rxfeatures.f32" \
+        --clip_start 100 --clip_end 300 2>&1)
+    echo "software-only baseline: $baseline_output" >&2
+
+    baseline_loss=$(printf '%s\n' "$baseline_output" | sed -n 's/.*loss: *\([0-9][0-9.]*\).*/\1/p' | head -1)
+    [ -n "$baseline_loss" ] || return 1
+
+    awk -v b="$baseline_loss" -v t="$LOSS_TOLERANCE" \
+        'BEGIN { if (b + 0 <= 0) exit 1; printf "%.4f\n", b * t }'
+)
+
+if [ -n "$RADE_LOSS_THRESHOLD" ]; then
+    # Precomputed by the caller (e.g. CI runners that can't build the wav tools).
+    LOSS_THRESHOLD=$RADE_LOSS_THRESHOLD
+    echo "RADE loss threshold: $LOSS_THRESHOLD (supplied via RADE_LOSS_THRESHOLD)"
+else
+    LOSS_THRESHOLD=$(compute_loss_threshold)
+    if [ -z "$LOSS_THRESHOLD" ]; then
+        echo "WARNING: could not compute RADE loss baseline from rade_tx_wav/rade_rx_wav; using fallback threshold $FALLBACK_LOSS_THRESHOLD" >&2
+        LOSS_THRESHOLD=$FALLBACK_LOSS_THRESHOLD
+    fi
+    echo "RADE loss threshold: $LOSS_THRESHOLD (software-only baseline x $LOSS_TOLERANCE)"
+fi
 
 run_rade_loss_attempt () {
     local playback_file="$1"

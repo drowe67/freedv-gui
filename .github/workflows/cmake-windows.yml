@@ -81,6 +81,62 @@ jobs:
         path: ${{github.workspace}}/build_windows/instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
+  # rade_tx_wav / rade_rx_wav are excluded from the Windows build in the rade_c
+  # fork (if(NOT WIN32) in src/CMakeLists.txt), so the RADE loss threshold can't be
+  # derived on the Windows runners. Compute the software-only baseline here on Linux
+  # and hand the resulting threshold to the Windows RADE loss test. See
+  # https://github.com/drowe67/radae/blob/dr-tx-bpf/doc/verification/verification_procedure.md
+  rade-loss-baseline:
+    runs-on: ubuntu-22.04
+    outputs:
+      threshold: ${{ steps.baseline.outputs.threshold }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install required packages
+      shell: bash
+      run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake autoconf automake libtool libltdl-dev pkg-config sox
+
+    - name: Build rade_c wav tools
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          set -eux
+          git clone -b dr-tx-bpf --depth 1 https://github.com/freedv/rade_c rade_c
+          cmake -S rade_c -B rade_c/build -DCMAKE_BUILD_TYPE=Release \
+              -DOPUS_URL=https://github.com/xiph/opus/archive/940d4e5af64351ca8ba8390df3f555484c567fbb.zip
+          cmake --build rade_c/build -j$(nproc)
+
+    - name: Compute RADE loss threshold
+      id: baseline
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          set -eux
+          git clone -b main --depth 1 https://github.com/drowe67/radae.git rade_src
+          python3 -m venv rade-venv
+          . ./rade-venv/bin/activate
+          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install matplotlib
+
+          TOOLS="$PWD/rade_c/build/src"
+          # rade_tx_wav requires 16 kHz mono 16-bit PCM (all.wav already is).
+          sox rade_src/wav/all.wav -r 16000 -c 1 -b 16 -e signed-integer baseline_in.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_tx_wav" -f baseline_txfeatures.f32 baseline_in.wav baseline_tx.wav
+          LD_LIBRARY_PATH="$TOOLS" "$TOOLS/rade_rx_wav" -f baseline_rxfeatures.f32 baseline_tx.wav baseline_decoded.wav
+
+          BASELINE_OUTPUT=$(PYTHONPATH="$PWD/rade_src" python3 rade_src/loss.py \
+              baseline_txfeatures.f32 baseline_rxfeatures.f32 --clip_start 100 --clip_end 300)
+          echo "$BASELINE_OUTPUT"
+          BASELINE_LOSS=$(printf '%s\n' "$BASELINE_OUTPUT" | sed -n 's/.*loss: *\([0-9][0-9.]*\).*/\1/p' | head -1)
+          # Verification procedure: allow the round trip to be within +10% of baseline.
+          THRESHOLD=$(awk -v b="$BASELINE_LOSS" 'BEGIN { if (b + 0 <= 0) exit 1; printf "%.4f\n", b * 1.10 }')
+          echo "Software-only baseline loss: $BASELINE_LOSS -> threshold (x1.10): $THRESHOLD"
+          echo "threshold=$THRESHOLD" >> "$GITHUB_OUTPUT"
+
   collect-pgo-profile:
     strategy:
       fail-fast: false
@@ -379,7 +435,7 @@ jobs:
           arch: x86_64
 
     runs-on: ${{ matrix.runner }}
-    needs: build-pgo-use-profile
+    needs: [build-pgo-use-profile, rade-loss-baseline]
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
@@ -529,7 +585,7 @@ jobs:
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       if: ${{ !cancelled() }}
       run: |
-          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
+          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }}
       timeout-minutes: 10
 
     - name: Test RADE Reporting

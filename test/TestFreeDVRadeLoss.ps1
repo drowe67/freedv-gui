@@ -9,6 +9,14 @@
   PASS or FAIL depending on whether the feature loss introduced by the round trip through real audio hardware
   is below the given threshold. This is the PowerShell equivalent of test/test_rade_loss.sh.
 
+  When -LossThreshold is not supplied, the threshold is derived from a software-only baseline as described in
+  the RADE integration verification procedure
+  (https://github.com/drowe67/radae/blob/dr-tx-bpf/doc/verification/verification_procedure.md): all.wav is run
+  through rade_tx_wav + rade_rx_wav and loss.py, and the hardware round trip must stay within +10% of that
+  baseline loss. rade_tx_wav / rade_rx_wav are not built for Windows in the rade_c fork, so Windows CI computes
+  the baseline on a Linux runner and passes the value in via -LossThreshold; -RadeCToolsDir lets a local run
+  point at a rade_c build that does have the tools.
+
   .INPUTS
   None. You can't pipe objects to this script.
 
@@ -49,11 +57,102 @@ param (
 
     [double]
     # The maximum acceptable RADE feature loss fraction before the test is considered failed.
-    $LossThreshold = 0.0891,
+    # When left at 0 (the default) it is computed from a software-only baseline (see .DESCRIPTION):
+    # baseline loss from rade_tx_wav/rade_rx_wav on all.wav, times 1.10.
+    $LossThreshold = 0,
+
+    [string]
+    # Directory containing rade_tx_wav.exe / rade_rx_wav.exe (from a rade_c build), used to compute
+    # the baseline when -LossThreshold is not supplied. Auto-detected when possible.
+    $RadeCToolsDir = "",
 
     [string]
     # Path or filename of the Python interpreter used to run loss.py.
     $PythonBinary = "python.exe")
+
+# Fallback threshold used only when -LossThreshold is not supplied and the software-only
+# baseline cannot be computed (e.g. rade_tx_wav / rade_rx_wav unavailable).
+$FallbackLossThreshold = 0.0891
+$LossTolerance = 1.10
+
+<#
+    .Description
+    Runs all.wav through the rade_c software-only path (rade_tx_wav -> rade_rx_wav -> loss.py) and returns
+    the baseline feature loss multiplied by $LossTolerance, i.e. the maximum loss the hardware round trip is
+    allowed to introduce. Returns $null if the tools, test corpus or loss figure can't be found, in which
+    case the caller should fall back to $FallbackLossThreshold. Mirrors compute_loss_threshold() in
+    test/test_rade_loss.sh.
+#>
+function Get-RadeLossThreshold {
+    param (
+        $current_loc,
+        $RadeCToolsDir,
+        $PythonBinary,
+        $Tolerance
+    )
+
+    # Locate rade_tx_wav.exe / rade_rx_wav.exe from a rade_c build.
+    $candidates = New-Object System.Collections.Generic.List[string]
+    if ($RadeCToolsDir) { $candidates.Add($RadeCToolsDir) }
+    $candidates.Add("$current_loc")
+    $candidates.Add((Join-Path $current_loc "_deps\freedv_backend-build\rade_build\src"))
+    $found = Get-ChildItem -Path $current_loc -Recurse -Filter "rade_tx_wav.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) { $candidates.Add($found.DirectoryName) }
+
+    $toolsDir = $null
+    foreach ($c in $candidates) {
+        if ($c -and (Test-Path (Join-Path $c "rade_tx_wav.exe")) -and (Test-Path (Join-Path $c "rade_rx_wav.exe"))) {
+            $toolsDir = $c
+            break
+        }
+    }
+    if (-not $toolsDir) {
+        Write-Host "Could not find rade_tx_wav.exe / rade_rx_wav.exe; pass -RadeCToolsDir or -LossThreshold."
+        return $null
+    }
+
+    $allWav = Join-Path $current_loc "rade_src\wav\all.wav"
+    if (-not (Test-Path $allWav)) {
+        Write-Host "Could not find $allWav for baseline computation."
+        return $null
+    }
+
+    $baseIn      = Join-Path $current_loc "baseline_in.wav"
+    $baseTxWav   = Join-Path $current_loc "baseline_tx.wav"
+    $baseDecoded = Join-Path $current_loc "baseline_decoded.wav"
+    $baseTxF     = Join-Path $current_loc "baseline_txfeatures.f32"
+    $baseRxF     = Join-Path $current_loc "baseline_rxfeatures.f32"
+
+    # rade_tx_wav requires 16 kHz mono 16-bit PCM (all.wav already is); normalise defensively.
+    # Output of the native tools is captured (not left on the pipeline) so it can't corrupt the return value.
+    $toolOut = & sox.exe $allWav -r 16000 -c 1 -b 16 -e signed-integer $baseIn 2>&1
+    if ($LASTEXITCODE -ne 0) { Write-Host "$toolOut"; return $null }
+
+    # Prepend the tools directory to PATH so librade.dll resolves next to the executables.
+    $oldPath = $env:PATH
+    $env:PATH = "$toolsDir;$env:PATH"
+    try {
+        # RADEV1 to match the mode this test exercises (rade_tx_wav defaults to V1).
+        $toolOut = & (Join-Path $toolsDir "rade_tx_wav.exe") -f $baseTxF $baseIn $baseTxWav 2>&1
+        if ($LASTEXITCODE -ne 0) { Write-Host "$toolOut"; return $null }
+        $toolOut = & (Join-Path $toolsDir "rade_rx_wav.exe") -f $baseRxF $baseTxWav $baseDecoded 2>&1
+        if ($LASTEXITCODE -ne 0) { Write-Host "$toolOut"; return $null }
+    }
+    finally {
+        $env:PATH = $oldPath
+    }
+
+    $baselineOutput = & $PythonBinary (Join-Path $current_loc "rade_src\loss.py") $baseTxF $baseRxF --clip_start 100 --clip_end 300 2>&1
+    Write-Host "software-only baseline: $baselineOutput"
+
+    $m = [regex]::Match(($baselineOutput -join "`n"), 'loss:\s*([0-9]+\.?[0-9]*)')
+    if (-not $m.Success) { return $null }
+
+    $baselineLoss = [double]$m.Groups[1].Value
+    if ($baselineLoss -le 0) { return $null }
+
+    return [math]::Round($baselineLoss * $Tolerance, 4)
+}
 
 <#
     .Description
@@ -155,6 +254,7 @@ function Test-RadeLoss {
         $MicrophoneToComputerDevice,
         $ComputerToRadioDevice,
         $LossThreshold,
+        $RadeCToolsDir,
         $PythonBinary
     )
 
@@ -167,6 +267,21 @@ function Test-RadeLoss {
 
     # Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
     & sox.exe "$current_loc\rade_src\wav\all.wav" -r 48000 "$current_loc\tx_in.wav"
+
+    # Resolve the loss threshold: use -LossThreshold when supplied, otherwise derive it from the
+    # software-only baseline (see .DESCRIPTION), falling back to a fixed value if that can't be done.
+    if ($LossThreshold -le 0) {
+        $computed = Get-RadeLossThreshold -current_loc $current_loc -RadeCToolsDir $RadeCToolsDir -PythonBinary $PythonBinary -Tolerance $LossTolerance
+        if ($null -ne $computed) {
+            $LossThreshold = $computed
+            Write-Host "RADE loss threshold: $LossThreshold (software-only baseline x $LossTolerance)"
+        } else {
+            $LossThreshold = $FallbackLossThreshold
+            Write-Host "WARNING: could not compute RADE loss baseline; using fallback threshold $LossThreshold"
+        }
+    } else {
+        Write-Host "RADE loss threshold: $LossThreshold (supplied via -LossThreshold)"
+    }
 
     # Generate new conf
     $conf_tmpl = Get-Content "$current_loc\freedv-ctest-loss.conf.tmpl"
@@ -263,6 +378,7 @@ $result = Test-RadeLoss `
     -MicrophoneToComputerDevice $MicrophoneToComputerDevice `
     -ComputerToRadioDevice $ComputerToRadioDevice `
     -LossThreshold $LossThreshold `
+    -RadeCToolsDir $RadeCToolsDir `
     -PythonBinary $PythonBinary
 if ($result -eq $true)
 {
