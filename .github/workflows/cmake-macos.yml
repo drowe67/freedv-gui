@@ -436,10 +436,10 @@ jobs:
           grep "PASS" temp-test.txt
 
     # Assemble the RADE integration verification report from the run above. Once
-    # per OS (macos-15 only); baseline from the rade-loss-baseline job.
+    # per OS (macos-26 only); baseline from the rade-loss-baseline job.
     - name: Generate RADE verification report
       shell: bash
-      if: ${{ !cancelled() && matrix.os == 'macos-15' }}
+      if: ${{ !cancelled() && matrix.os == 'macos-26' }}
       continue-on-error: true
       run: |
           RADE_BASELINE_LOSS="${{ needs.rade-loss-baseline.outputs.baseline }}" \
@@ -452,7 +452,7 @@ jobs:
 
     - name: Upload RADE verification report
       uses: actions/upload-artifact@v7
-      if: ${{ !cancelled() && matrix.os == 'macos-15' }}
+      if: ${{ !cancelled() && matrix.os == 'macos-26' }}
       with:
         name: rade-verification-report-macos
         path: ${{github.workspace}}/rade_verification_report.md

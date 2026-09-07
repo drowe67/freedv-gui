@@ -102,7 +102,7 @@ $PM    = [string][char]0x00B1   # plus-minus
 $MDASH = [string][char]0x2014   # em dash
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot  = if ($RepoRoot) { $RepoRoot } else { Split-Path -Parent $scriptDir }
+$repoDir  = if ($RepoRoot) { $RepoRoot } else { Split-Path -Parent $scriptDir }
 $current   = (Get-Location).Path
 
 # Resolve output path before anything else changes directories.
@@ -140,12 +140,12 @@ if (($BaselineLoss -le 0) -and -not (Test-Path $radeSrc)) {
 $appName = "FreeDV"
 
 $projectVersion = ""
-$cmakeLists = Join-Path $repoRoot "CMakeLists.txt"
+$cmakeLists = Join-Path $repoDir "CMakeLists.txt"
 if (Test-Path $cmakeLists) {
     $m = [regex]::Match((Get-Content -Raw $cmakeLists), 'set\(PROJECT_VERSION ([0-9.]+)\)')
     if ($m.Success) { $projectVersion = $m.Groups[1].Value }
 }
-$freedvGit = Get-GitOutput $repoRoot @('describe', '--tags', '--always', '--dirty')
+$freedvGit = Get-GitOutput $repoDir @('describe', '--tags', '--always', '--dirty')
 if ($projectVersion) {
     $appVersion = "$projectVersion-dev (git $freedvGit)"
 } else {
@@ -161,24 +161,35 @@ try {
 
 $reportDate = (Get-Date -Format "yyyy-MM-dd")
 
-$radaeCommit = if ($RadaeCommit) { $RadaeCommit } else { "unknown" }
-if (-not $RadaeCommit -and (Test-Path (Join-Path $radeSrc ".git"))) {
-    $radaeCommit = Get-GitOutput $radeSrc @('rev-parse', 'HEAD')
+# Note: PowerShell variable names are case-insensitive, so these locals must not
+# collide with the $RadaeCommit / $RadeCCommit parameters.
+if ($RadaeCommit) {
+    $radaeHash = $RadaeCommit
+} elseif (Test-Path (Join-Path $radeSrc ".git")) {
+    $radaeHash = Get-GitOutput $radeSrc @('rev-parse', 'HEAD')
+} else {
+    $radaeHash = "unknown"
 }
 
 # rade_c source (only present when a local build tree exists).
 $radeCSrcDir = ""
 foreach ($d in @(
         (Join-Path $current "_deps\freedv_backend-build\rade_src"),
-        (Join-Path $repoRoot "build_windows\_deps\freedv_backend-build\rade_src"))) {
+        (Join-Path $repoDir "build_windows\_deps\freedv_backend-build\rade_src"))) {
     if (Test-Path (Join-Path $d ".git")) { $radeCSrcDir = $d; break }
 }
-$radeCCommit = if ($RadeCCommit) { $RadeCCommit } elseif ($radeCSrcDir) { Get-GitOutput $radeCSrcDir @('rev-parse', 'HEAD') } else { "unknown" }
+if ($RadeCCommit) {
+    $radeCHash = $RadeCCommit
+} elseif ($radeCSrcDir) {
+    $radeCHash = Get-GitOutput $radeCSrcDir @('rev-parse', 'HEAD')
+} else {
+    $radeCHash = "unknown"
+}
 
 Write-Host "  Application  : $appName $appVersion"
 Write-Host "  Platform     : $platform"
-Write-Host "  radae commit : $radaeCommit"
-Write-Host "  rade_c commit: $radeCCommit"
+Write-Host "  radae commit : $radaeHash"
+Write-Host "  rade_c commit: $radeCHash"
 
 # ---------------------------------------------------------------------------
 # Baseline Loss (Step 1).
@@ -196,8 +207,8 @@ function Measure-BaselineLoss {
     if ($RadeCToolsDir) { $candidates.Add($RadeCToolsDir) }
     $candidates.Add($current)
     $candidates.Add((Join-Path $current "_deps\freedv_backend-build\rade_build\src"))
-    $candidates.Add((Join-Path $repoRoot "build_windows\_deps\freedv_backend-build\rade_build\src"))
-    $hit = Get-ChildItem -Path $repoRoot -Recurse -Filter "rade_tx_wav.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $candidates.Add((Join-Path $repoDir "build_windows\_deps\freedv_backend-build\rade_build\src"))
+    $hit = Get-ChildItem -Path $repoDir -Recurse -Filter "rade_tx_wav.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($hit) { $candidates.Add($hit.DirectoryName) }
 
     $toolsDir = $null
@@ -273,17 +284,17 @@ $level1Check   = "- [ ] Pass (loss within ${PM}10% of baseline)"
 $level1Loss    = "_not run_"
 $level1Summary = "PASS / FAIL / N/A"
 $level1Repro   = "Not run by RadeVerificationReport.ps1 (-SkipLevel1 was set)."
-$level1Log     = Join-Path $current "rade_verification_level1.log"
+$level1LogFile = Join-Path $current "rade_verification_level1.log"
 
 $level1FromExisting = $false
 if (-not $SkipLevel1) {
     if ($Level1Log -and -not (Test-Path $Level1Log)) {
         Write-Host "WARNING: -Level1Log $Level1Log does not exist"
-        "Level1Log not found: $Level1Log" | Set-Content -Path $level1Log
+        "Level1Log not found: $Level1Log" | Set-Content -Path $level1LogFile
         $level1FromExisting = $true
     } elseif ($Level1Log) {
         Write-Host "Reading Level 1 result from existing log: $Level1Log"
-        $level1Log = (Resolve-Path $Level1Log).Path
+        $level1LogFile = (Resolve-Path $Level1Log).Path
         $level1FromExisting = $true
     } else {
         Write-Host "Running Level 1 software loopback via test/TestFreeDVRadeLoss.ps1 ..."
@@ -299,14 +310,14 @@ if (-not $SkipLevel1) {
 
         # Tee every stream to the log as it flows, so a terminating "Test failed"
         # thrown by TestFreeDVRadeLoss.ps1 at the end still leaves the loss line on disk.
-        if (Test-Path $level1Log) { Remove-Item $level1Log }
+        if (Test-Path $level1LogFile) { Remove-Item $level1LogFile }
         try {
-            & $lossScript @psArgs *>&1 | Tee-Object -FilePath $level1Log | Out-Null
+            & $lossScript @psArgs *>&1 | Tee-Object -FilePath $level1LogFile | Out-Null
         } catch {
-            ($_ | Out-String) | Add-Content -Path $level1Log
+            ($_ | Out-String) | Add-Content -Path $level1LogFile
         }
     }
-    $level1Text = if (Test-Path $level1Log) { Get-Content -Raw $level1Log } else { "" }
+    $level1Text = if (Test-Path $level1LogFile) { Get-Content -Raw $level1LogFile } else { "" }
     if (-not $level1Text) { $level1Text = "" }
 
     $lm = [regex]::Matches($level1Text, 'loss:\s*([0-9]+\.?[0-9]*)')
@@ -316,7 +327,7 @@ if (-not $SkipLevel1) {
                     else { "ERROR" }
 
     Write-Host "  Level 1 result: $level1Result (loss $lossValue)"
-    Write-Host "  Full log: $level1Log"
+    Write-Host "  Full log: $level1LogFile"
 
     if ($lossValue) { $level1Loss = "$lossValue  ($level1Result)" }
     else            { $level1Loss = "$level1Result (see log)" }
@@ -459,8 +470,8 @@ $report = $template.
     Replace('{{PLATFORM}}',      $platform).
     Replace('{{TESTER}}',        $Tester).
     Replace('{{DATE}}',          $reportDate).
-    Replace('{{RADAE_COMMIT}}',  $radaeCommit).
-    Replace('{{RADE_C_COMMIT}}', $radeCCommit).
+    Replace('{{RADAE_COMMIT}}',  $radaeHash).
+    Replace('{{RADE_C_COMMIT}}', $radeCHash).
     Replace('{{BASELINE}}',      $baselineField).
     Replace('{{TOLERANCE}}',     $toleranceField).
     Replace('{{BASELINE_CMD}}',  $baselineCmd.Trim()).
