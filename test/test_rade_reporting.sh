@@ -138,11 +138,21 @@ kill $RECORD_PID
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     FADING_DIR="$SCRIPTPATH/fading"
 
-    # Add noise to recording to test performance
-    if [ "$1" == "mpp" ]; then
+    # Add noise to the recording to check reporting still decodes in a
+    # degraded channel.
+    #
+    # ch fixes the noise density (--No), not the SNR, and its input
+    # (test.wav) is a live virtual-cable capture whose level varies run to
+    # run; the AWGN realisation ch adds is random each run too. At --No -18
+    # the RADE decode landed at ~5-6 dB SNR -- right on the decode cliff --
+    # so rade_reporting_awgn failed intermittently on the non-sanitizer
+    # Linux legs (masked, but not always, by ctest --repeat until-pass:2).
+    # --No -19 gives ~1 dB of headroom while still being a genuinely noisy
+    # channel.
+    if [ "$2" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    elif [ "$1" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    elif [ "$2" == "awgn" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -19 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
