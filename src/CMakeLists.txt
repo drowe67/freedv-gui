@@ -19,9 +19,6 @@ set(FREEDV_LINK_LIBS_OSX
 # Configure logging
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
-# Real-time-safe async ulog front end. Must match freedv-backend, which also
-# defines this (it changes ulog_Event's layout).
-add_definitions(-DULOG_ASYNC)
 
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
