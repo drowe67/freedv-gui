@@ -51,6 +51,36 @@ param (
 
 $current_loc = Get-Location
 
+# Best-effort: wait for the configured audio endpoints to be enumerable before
+# starting FreeDV, so a virtual cable that has briefly dropped out of the
+# MMDevice list doesn't make the UT abort with a fatal "device cannot be found"
+# message box. The CI workflow does a stricter, failing check up front; this is
+# just a short guard against a mid-script drop between the TX and RX passes.
+function Wait-ForAudioDevices {
+    param (
+        [string[]] $Names,
+        [int] $TimeoutSeconds = 90
+    )
+
+    if (-not (Get-Module -ListAvailable -Name AudioDeviceCmdlets)) { return }
+    Import-Module AudioDeviceCmdlets -ErrorAction SilentlyContinue
+
+    $wanted = @($Names | Where-Object { $_ } | Select-Object -Unique)
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ($true) {
+        try { $have = @((Get-AudioDevice -List).Name) } catch { $have = @() }
+        $missing = @($wanted | Where-Object { $have -notcontains $_ })
+        if ($missing.Count -eq 0) { return }
+        if ((Get-Date) -ge $deadline) {
+            Write-Host "WARNING: audio device(s) still missing after ${TimeoutSeconds}s: $($missing -join ', ')"
+            return
+        }
+        Start-Sleep -Seconds 3
+    }
+}
+
+$allDevices = @($RadioToComputerDevice, $ComputerToRadioDevice, $MicrophoneToComputerDevice, $ComputerToSpeakerDevice)
+
 # Clone the RADE test corpus if not already present, then resample the TX test file to 48 kHz
 # to reduce CPU usage during the run.
 if (-not (Test-Path "$current_loc\rade_src")) {
@@ -91,6 +121,8 @@ $soxProcess.StartInfo = $soxPsi
 [void]$soxProcess.Start()
 
 # Start FreeDV in test mode to record TX
+Wait-ForAudioDevices -Names $allDevices
+
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.CreateNoWindow = $true
 $psi.UseShellExecute = $false
@@ -120,6 +152,10 @@ try {
     # Ignore failure as SoX may have already exited on its own
 }
 $soxProcess.WaitForExit()
+
+# Killing SoX above can briefly disturb the shared audio engine; make sure the
+# endpoints are back before the RX pass starts.
+Wait-ForAudioDevices -Names $allDevices
 
 $psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
