@@ -168,29 +168,26 @@ jobs:
           New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
 
-    - name: Start Windows Audio Service
+    - name: Wait for virtual audio endpoints
+      shell: pwsh
       run: |
-          Restart-Service -Name audiosrv -Force
-          $deadline = (Get-Date).AddSeconds(60)
-          do {
-              Start-Sleep -Seconds 2
-              $deviceNames = (Get-CimInstance win32_sounddevice).Name
-          } until (
-              ($deviceNames -match "VB-Audio Virtual Cable") -and
-              ($deviceNames -match "Virtual Audio Cable") -or
-              ((Get-Date) -gt $deadline)
-          )
+          # Restart the audio stack and poll until every endpoint FreeDV needs is
+          # actually enumerable, instead of starting a test and letting it abort
+          # with a fatal "device cannot be found" message box when a virtual
+          # cable endpoint hasn't come up (or has briefly dropped) yet.
+          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
+            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
+            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
+            -TimeoutSeconds 180
 
     - name: List audio devices
       shell: pwsh
       run: |
-          Get-CimInstance win32_sounddevice
+          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
 
     - name: Set Windows default audio devices
       shell: pwsh
       run: |
-          Invoke-WebRequest https://github.com/frgnca/AudioDeviceCmdlets/releases/download/v3.1/AudioDeviceCmdlets.dll -OutFile AudioDeviceCmdlets.dll
-          Install-Module -Name AudioDeviceCmdlets -Force -Confirm:$false
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
 
@@ -209,9 +206,13 @@ jobs:
     - name: Generate PGO data
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      timeout-minutes: 25
       run: |
-          .\GeneratePGOProfiles.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" 
-      timeout-minutes: 10
+          & "${{github.workspace}}\ci\Invoke-PgoProfileCollection.ps1" `
+            -RadioToComputerDevice      "${{env.RADIO_TO_COMPUTER_DEVICE}}" `
+            -ComputerToRadioDevice      "${{env.COMPUTER_TO_RADIO_DEVICE}}" `
+            -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" `
+            -ComputerToSpeakerDevice    "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
 
     - name: Stash profile data
       uses: actions/upload-artifact@v7
