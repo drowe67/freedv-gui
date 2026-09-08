@@ -89,9 +89,11 @@ else
 fi
 RECORD_PID=$!
 
-# Start FreeDV in test mode to record TX
+# Start FreeDV in test mode to record TX.
+# Tee via process substitution (not a plain pipe) so the FreeDV log shows up in
+# CI output while $! stays FreeDV's PID -> FREEDV_EXIT_CODE below is FreeDV's, not tee's.
 TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS > >(tee tmp.log) 2>&1 &
 
 FDV_PID=$!
 
@@ -205,7 +207,8 @@ fi
 run_rade_loss_attempt () {
     local playback_file="$1"
 
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+    # Tee via process substitution: FreeDV log visible in CI, $! still FreeDV's PID.
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -txtime 70 -rxfeaturefile $(pwd)/rxfeatures.f32 > >(tee tmp.log) 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
