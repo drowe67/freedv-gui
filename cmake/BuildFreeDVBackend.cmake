@@ -4,8 +4,9 @@ FetchContent_Declare(
     freedv_backend
     GIT_REPOSITORY https://github.com/tmiw/freedv-backend
     # TODO: revert to radev2-dev once tmiw/freedv-backend#48 (real-time-safe
-    # async ulog front end) is merged.
-    GIT_TAG ms-rt-safe-logging
+    # async ulog front end) is merged. Pinned to a SHA so CI picks up the
+    # exact branch state regardless of FetchContent caching.
+    GIT_TAG 61ed161bc34515e867b24bb7692ed0d426052ab6
 )
 
 FetchContent_MakeAvailable(freedv_backend)
