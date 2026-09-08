@@ -61,6 +61,7 @@
 #include "gui/util/TabLayoutSerializer.h"
 
 #include "util/logging/ulog.h"
+#include "util/logging/ulog_async.h"
 #include "util/audio_spin_mutex.h"
 
 #if defined(__WXGTK__) && defined(HAS_GTK3)
@@ -554,7 +555,12 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         static unsigned int counter = 0;
         snprintf(prefix, prefix_size, " [%u]", ++counter);
     });
-        
+
+    // Start the real-time-safe async log consumer. From here on, log_*() calls
+    // made from threads marked via ulog_set_thread_realtime(true) are captured
+    // without locking/allocating and emitted from a background thread.
+    ulog_async_start();
+
     log_info("FreeDV version %s starting", GetFreeDVVersion().c_str());
 
     if (!wxApp::OnCmdLineParsed(parser))
@@ -849,6 +855,9 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    // Drain and stop the async log consumer started in OnCmdLineParsed().
+    ulog_async_flush();
+    ulog_async_stop();
     return 0;
 }
 

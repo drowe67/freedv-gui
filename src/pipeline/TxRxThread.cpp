@@ -66,6 +66,7 @@ using namespace std::chrono_literals;
 #include "MixStep.h"
 
 #include "util/logging/ulog.h"
+#include "util/logging/ulog_async.h"
 #include "os/os_interface.h"
 
 // Experimental options for potential future release:
@@ -606,6 +607,9 @@ void* TxRxThread::Entry() noexcept
     // Request real-time scheduling from the operating system.
     helper->setHelperRealTime();
 
+    // Route this thread's log_*() calls through the real-time-safe async path.
+    ulog_set_thread_realtime(true);
+
 #if defined(ENABLE_PROCESSING_STATS)
     resetStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -653,8 +657,9 @@ void* TxRxThread::Entry() noexcept
     pipeline_ = nullptr;
     
     // Return to normal scheduling
+    ulog_set_thread_realtime(false);
     helper->clearHelperRealTime();
-    
+
     return NULL;
 }
 

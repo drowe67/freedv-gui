@@ -3,7 +3,9 @@ include(FetchContent)
 FetchContent_Declare(
     freedv_backend
     GIT_REPOSITORY https://github.com/tmiw/freedv-backend
-    GIT_TAG radev2-dev
+    # TODO: revert to radev2-dev once tmiw/freedv-backend#48 (real-time-safe
+    # async ulog front end) is merged.
+    GIT_TAG ms-rt-safe-logging
 )
 
 FetchContent_MakeAvailable(freedv_backend)
