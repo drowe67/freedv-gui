@@ -867,6 +867,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix potential equalizer bug that could introduce corrupted audio. (PR #1480)
     * Fix uninitialized value read during waterfall plot render. (PR #1481)
     * Match std::atomic memory ordering to what each atomic actually synchronises. (PR #1482)
+    * Remove use of mutexes in audio path during callsign decode. (PR #1486)
 2. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
 
