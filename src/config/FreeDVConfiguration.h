@@ -65,9 +65,6 @@ public:
     
     ConfigurationDataElement<long> currentNotebookTab;
     
-    ConfigurationDataElement<long> squelchActive;
-    ConfigurationDataElement<long> squelchLevel;
-    
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
     ConfigurationDataElement<int> tuneLevel;
@@ -87,16 +84,9 @@ public:
     ConfigurationDataElement<int> voiceKeyerRepeats;
     
     ConfigurationDataElement<bool> halfDuplexMode;
-    ConfigurationDataElement<bool> multipleReceiveEnabled;
-    ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
     
     ConfigurationDataElement<wxString> quickRecordRawPath;
     ConfigurationDataElement<wxString> quickRecordDecodedPath;
-    
-    ConfigurationDataElement<bool> freedv700Clip;
-    ConfigurationDataElement<bool> freedv700TxBPF;
-    
-    ConfigurationDataElement<int> noiseSNR;
     
     ConfigurationDataElement<bool> debugConsoleEnabled; // note: Windows only
     
@@ -107,9 +97,7 @@ public:
     
     ConfigurationDataElement<int> waterfallColor;
     ConfigurationDataElement<unsigned int> statsResetTimeSecs;
-    
-    ConfigurationDataElement<int> currentFreeDVMode;
-    
+        
     ConfigurationDataElement<int> currentSpectrumAveraging;
     
     ConfigurationDataElement<bool> experimentalFeatures;
@@ -126,8 +114,6 @@ public:
     
     ConfigurationDataElement<bool> showDecodeStats;
     
-    ConfigurationDataElement<bool> enableLegacyModes;
-
     ConfigurationDataElement<bool> autoStartOnLaunch;
 
     virtual void load(wxConfigBase* config) override;

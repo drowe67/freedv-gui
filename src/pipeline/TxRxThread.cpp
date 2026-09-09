@@ -56,11 +56,9 @@ using namespace std::chrono_literals;
 #include "ResampleStep.h"
 #include "TapStep.h"
 #include "LevelAdjustStep.h"
-#include "FreeDVTransmitStep.h"
 #include "RecordStep.h"
 #include "ToneInterfererStep.h"
 #include "ComputeRfSpectrumStep.h"
-#include "FreeDVReceiveStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
 #include "BeepStep.h"
@@ -68,8 +66,6 @@ using namespace std::chrono_literals;
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
-
-#include "codec2_alloc.h"
 
 // Experimental options for potential future release:
 //
@@ -94,14 +90,13 @@ extern std::atomic<bool> g_playFileToMicIn;
 extern int g_sfTxFs;
 extern bool g_loopPlayFileToMicIn;
 extern std::atomic<float> g_TxFreqOffsetHz;
-extern GenericFIFO<short> g_plotSpeechInFifo;
+extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
+extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
-extern int g_mode;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
-extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
 extern unsigned int g_recFromRadioSamples;
@@ -114,7 +109,6 @@ extern float g_SquelchLevel;
 extern float g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
-extern std::atomic<int> g_channel_noise;
 extern std::atomic<float> g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
@@ -204,6 +198,18 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
         
+        // Resample for plot step (before equalization)
+        auto resampleForPlotStepBeforeEQ = new ResampleForPlotStep(&g_plotSpeechInFifoBeforeEQ);
+        auto resampleForPlotPipelineBeforeEQ = new AudioPipeline(inputSampleRate_, resampleForPlotStepBeforeEQ->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotResamplerBeforeEQ = new ResampleStep(inputSampleRate_, resampleForPlotStepBeforeEQ->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotResamplerBeforeEQ);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotStepBeforeEQ);
+
+        auto resampleForPlotTapBeforeEQ = new TapStep(inputSampleRate_, resampleForPlotPipelineBeforeEQ);
+        pipeline_->appendPipelineStep(resampleForPlotTapBeforeEQ);
+
         // RNNoise step (optional)
         auto eitherOrProcessRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -216,6 +222,17 @@ void TxRxThread::initializePipeline_()
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
+
+        // Equalizer step (optional based on filter state)
+        auto equalizerStep = new EqualizerStep(
+            inputSampleRate_, 
+            &g_rxUserdata->micInEQEnable,
+            &g_rxUserdata->sbqMicInBass,
+            &g_rxUserdata->sbqMicInMid,
+            &g_rxUserdata->sbqMicInTreble,
+            &g_rxUserdata->sbqMicInVol,
+            g_rxUserdata->micEqLock);
+        pipeline_->appendPipelineStep(equalizerStep);
 
         // AGC step (optional)
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -230,17 +247,18 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassAgc);
         pipeline_->appendPipelineStep(eitherOrAgcStep); 
 
-        // Equalizer step (optional based on filter state)
-        auto equalizerStep = new EqualizerStep(
-            inputSampleRate_, 
-            &g_rxUserdata->micInEQEnable,
-            &g_rxUserdata->sbqMicInBass,
-            &g_rxUserdata->sbqMicInMid,
-            &g_rxUserdata->sbqMicInTreble,
-            &g_rxUserdata->sbqMicInVol,
-            g_rxUserdata->micEqLock);
-        pipeline_->appendPipelineStep(equalizerStep);
-        
+        // Resample for plot step (after AGC)
+        auto resampleForPlotStepAfterAGC = new ResampleForPlotStep(&g_plotSpeechInFifoAfterAGC);
+        auto resampleForPlotPipelineAfterAGC = new AudioPipeline(inputSampleRate_, resampleForPlotStepAfterAGC->getOutputSampleRate());
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotResamplerAfterAGC = new ResampleStep(inputSampleRate_, resampleForPlotStepAfterAGC->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipelineAfterAGC->appendPipelineStep(resampleForPlotResamplerAfterAGC);
+#endif // defined(ENABLE_FASTER_PLOTS)
+        resampleForPlotPipelineAfterAGC->appendPipelineStep(resampleForPlotStepAfterAGC);
+
+        auto resampleForPlotTapAfterAGC = new TapStep(inputSampleRate_, resampleForPlotPipelineAfterAGC);
+        pipeline_->appendPipelineStep(resampleForPlotTapAfterAGC);
+
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
         {
@@ -250,18 +268,6 @@ void TxRxThread::initializePipeline_()
             auto micAudioTap = new TapStep(inputSampleRate_, micAudioPipeline);
             pipeline_->appendPipelineStep(micAudioTap);
         }
-                
-        // Resample for plot step
-        auto resampleForPlotStep = new ResampleForPlotStep(&g_plotSpeechInFifo);
-        auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(resampleForPlotResampler);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
-
-        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
-        pipeline_->appendPipelineStep(resampleForPlotTap);
       
         // FreeDV TX step (analog leg)
         auto doubleLevelStep = new LevelAdjustStep(inputSampleRate_, +[]() FREEDV_NONBLOCKING { return (float)2.0; });
@@ -270,9 +276,7 @@ void TxRxThread::initializePipeline_()
         
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
             inputSampleRate_, 
-            outputSampleRate_, 
-            +[]() FREEDV_NONBLOCKING { return g_TxFreqOffsetHz.load(std::memory_order_relaxed); },
-            helper_);
+            outputSampleRate_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
@@ -418,11 +422,8 @@ void TxRxThread::initializePipeline_()
         auto rfDemodulationStep = freedvInterface.createReceivePipeline(
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },
-            +[]() FREEDV_NONBLOCKING { return g_channel_noise.load(std::memory_order_acquire); },
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
             +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
-            +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
-            helper_
+            +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; }
         );
         rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
 
@@ -599,10 +600,6 @@ void* TxRxThread::Entry() noexcept
     // and thus constantly increment/decrement refcounts.
     IRealtimeHelper* helper = helper_.get();
 
-    // Ensure that O(1) memory allocator is used for Codec2
-    // instead of standard malloc().
-    codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
-    
     initializePipeline_();
     
     // Request real-time scheduling from the operating system.
@@ -656,8 +653,6 @@ void* TxRxThread::Entry() noexcept
     
     // Return to normal scheduling
     helper->clearHelperRealTime();
-    
-    codec2_disable_realtime();
     
     return NULL;
 }
@@ -815,29 +810,26 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             }
             if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
-                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
+                if (!hasEooBeenSent_)
                 {
-                    if (!hasEooBeenSent_)
-                    {
-                        // Special case for handling RADE EOT
-                        freedvInterface.restartTxVocoder();
-                        hasEooBeenSent_ = true;
-                    }
+                    // Special case for handling RADE EOT
+                    freedvInterface.restartTxVocoder();
+                    hasEooBeenSent_ = true;
+                }
 
-                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                    if (nout > 0 && outputSamples != nullptr)
+                auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
+                if (nout > 0 && outputSamples != nullptr)
+                {
+                    if (cbData->outfifo1->write(outputSamples, nout) != 0)
                     {
-                        if (cbData->outfifo1->write(outputSamples, nout) != 0)
-                        {
-                            FREEDV_BEGIN_VERIFIED_SAFE
-                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
-                            FREEDV_END_VERIFIED_SAFE
-                        }
+                        FREEDV_BEGIN_VERIFIED_SAFE
+                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
+                        FREEDV_END_VERIFIED_SAFE
                     }
-                    else
-                    {
-                        g_eoo_enqueued.store(true, std::memory_order_release);
-                    }
+                }
+                else
+                {
+                    g_eoo_enqueued.store(true, std::memory_order_release);
                 }
                 break;
             }
@@ -894,13 +886,6 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
     //  RX side processing --------------------------------------------
     //
-    
-    if (g_queueResync.load(std::memory_order_acquire))
-    {
-        g_queueResync.store(false, std::memory_order_release);
-        freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
-        g_resyncs++;
-    }
 
     // Make sure we reset 
     if (!g_totBeepActive.load(std::memory_order_acquire))
@@ -924,9 +909,6 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
-        
-        // send latest squelch level to FreeDV API, as it handles squelch internally
-        freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
         auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam, &nout);
         

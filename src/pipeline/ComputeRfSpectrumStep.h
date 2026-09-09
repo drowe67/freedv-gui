@@ -61,7 +61,7 @@ private:
     realtime_fp<struct MODEM_STATS*()> modemStatsFn_;
     realtime_fp<GenericFIFO<float>*()> getAvMagFn_;
     float* rxSpectrum_;
-    COMP* rxFdm_;
+    RADE_COMP* rxFdm_;
 };
 
 #endif // AUDIO_PIPELINE__COMPUTE_RF_SPECTRUM_STEP_H

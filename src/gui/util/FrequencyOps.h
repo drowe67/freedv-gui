@@ -24,15 +24,21 @@
 
 #include "../../rig_control/HamlibRigController.h"
 
-inline HamlibRigController::Mode GetModeForFrequency(uint64_t frequency, bool useAnalog)
+inline HamlibRigController::Mode GetModeForFrequency(uint64_t frequency, bool useAnalogModes, bool inAnalog)
 {
+    if (!inAnalog)
+    {
+        // Always DIGU or USB if Analog decode isn't active.
+        return (useAnalogModes) ? HamlibRigController::USB : HamlibRigController::DIGU;
+    }
+
     // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
     bool is60MeterBand = 
         frequency >= 5250000 && 
         frequency <= 5450000;
     
-    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
-    HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
+    HamlibRigController::Mode lsbMode = HamlibRigController::LSB;
+    HamlibRigController::Mode usbMode = HamlibRigController::USB;
     
     HamlibRigController::Mode newMode;
     if (frequency < 10000000 &&

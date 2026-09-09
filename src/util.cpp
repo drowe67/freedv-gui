@@ -5,7 +5,6 @@
 */
 
 #include "main.h"
-#include "codec2_fdmdv.h"
 
 #ifdef _WIN32
 #include <strsafe.h>
@@ -206,22 +205,6 @@ void MainFrame::ClosePTTInPort(void)
         wxGetApp().m_pttInSerialPort->disconnect();
         wxGetApp().m_pttInSerialPort = nullptr;
     }
-}
-
-extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
-struct FIFO extern *g_rxDataOutFifo;
-
-char my_get_next_tx_char(void *) {
-    short ch = 0;
-
-    auto tmpFifo = g_txDataInFifo.load(std::memory_order_acquire);
-    tmpFifo->read(&ch, 1);
-    return (char)ch;
-}
-
-void my_put_next_rx_char(void *, char c) {
-    short ch = (short)((unsigned char)c);
-    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING

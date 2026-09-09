@@ -31,9 +31,6 @@ public:
     ReportingConfiguration();
     virtual ~ReportingConfiguration() = default;
     
-    // Old format reporting (FEC-free text field)
-    ConfigurationDataElement<wxString> reportingFreeTextString;
-    
     ConfigurationDataElement<bool> reportingEnabled;
     ConfigurationDataElement<wxString> reportingCallsign;
     ConfigurationDataElement<wxString> reportingGridSquare;

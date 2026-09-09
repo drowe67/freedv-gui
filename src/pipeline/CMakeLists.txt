@@ -2,14 +2,16 @@ add_library(fdv_audio_pipeline_extra STATIC
     BeepStep.cpp
     ComputeRfSpectrumStep.cpp
     EqualizerStep.cpp
-    FreeDVReceiveStep.cpp
-    FreeDVTransmitStep.cpp
     MixStep.cpp
-    ParallelStep.cpp
     PlaybackStep.cpp
     RecordStep.cpp
     ResamplePlotStep.cpp
     TxRxThread.cpp
+
+    # For waterfall view
+    modem_stats.c
+    kiss_fft.c
+    kiss_fftr.c
 )
 
 target_compile_options(fdv_audio_pipeline_extra PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
