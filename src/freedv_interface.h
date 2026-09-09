@@ -59,6 +59,7 @@ extern "C"
 #include "util/IRealtimeHelper.h"
 #include "freedv_sanitizers.h"
 #include "util/realtime_fp.h"
+#include "util/GenericFIFO.h"
 
 class IPipelineStep;
 class ParallelStep;
@@ -213,6 +214,9 @@ private:
     std::atomic<int> sync_;
     std::atomic<int> radeSnr_;
     rade_text_t radeTextPtr_;
+    
+    static constexpr int RELIABLE_TEXT_FIFO_SIZE = 64;
+    GenericFIFO<char> reliableTextFifo_;
     
     int preProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;
     int postProcessRxFn_(ParallelStep* ps) FREEDV_NONBLOCKING;

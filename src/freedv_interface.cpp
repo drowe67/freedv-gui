@@ -81,7 +81,8 @@ FreeDVInterface::FreeDVInterface() :
     lpcnetEncState_(nullptr),
     radeTxStep_(nullptr),
     sync_(0),
-    radeTextPtr_(nullptr)
+    radeTextPtr_(nullptr),
+    reliableTextFifo_(RELIABLE_TEXT_FIFO_SIZE + 1)
 {
     // empty
 }
@@ -104,10 +105,11 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     FreeDVInterface* obj = (FreeDVInterface*)state;
     assert(obj != nullptr);
     
-    {
-        std::unique_lock<std::mutex> lock(obj->reliableTextMutex_);
-        obj->receivedReliableText_ = txt_ptr;
-    }
+    char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
+    memset(tmpBuf, 0, RELIABLE_TEXT_FIFO_SIZE);
+    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE);
+    obj->reliableTextFifo_.write(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
+
     reliable_text_reset(rt);
 }
 
@@ -118,10 +120,10 @@ void FreeDVInterface::OnRadeTextRx_(rade_text_t, const char* txt_ptr, int, void*
     FreeDVInterface* obj = (FreeDVInterface*)state;
     assert(obj != nullptr);
     
-    {
-        std::unique_lock<std::mutex> lock(obj->reliableTextMutex_);
-        obj->receivedReliableText_ = txt_ptr;
-    }
+    char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
+    memset(tmpBuf, 0, RELIABLE_TEXT_FIFO_SIZE);
+    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE);
+    obj->reliableTextFifo_.write(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
 }
 
 float FreeDVInterface::GetMinimumSNR_(int mode)
@@ -677,12 +679,21 @@ void FreeDVInterface::resetReliableText()
     {
         std::unique_lock<std::mutex> lock(reliableTextMutex_);
         receivedReliableText_ = "";
+        reliableTextFifo_.reset();
     }
 }
 
 const char* FreeDVInterface::getReliableText()
-{
+{    
     std::unique_lock<std::mutex> lock(reliableTextMutex_);
+    
+    if (reliableTextFifo_.numUsed() > 0)
+    {
+        char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
+        reliableTextFifo_.read(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
+        receivedReliableText_ = tmpBuf;
+    }
+    
     char* ret = new char[receivedReliableText_.size() + 1];
     assert(ret != nullptr);
     
