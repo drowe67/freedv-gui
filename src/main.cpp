@@ -186,10 +186,7 @@ wxWindow           *g_parent;
 std::atomic<float>  g_RxFreqOffsetHz;
 std::atomic<float>  g_TxFreqOffsetHz;
 
-// experimental mutex to make sound card callbacks mutually exclusive
-// TODO: review code and see if we need this any more, as fifos should
-// now be thread safe
-
+// Mutex to protect data shared between non-RT audio processing threads and GUI.
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // End of TX state control
