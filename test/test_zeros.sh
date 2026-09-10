@@ -128,7 +128,7 @@ FDV_PID=$!
 #pw-top -b -n 5
 wait $FDV_PID
 FREEDV_EXIT_STATUS=$?
-#cat tmp.log
+cat tmp.log
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then
