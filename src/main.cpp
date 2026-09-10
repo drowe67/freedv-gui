@@ -247,6 +247,9 @@ std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
 
+long agcLeveler;
+long agcLimiter;
+
 // WxWidgets - initialize the application
 
 IMPLEMENT_APP(MainApp);
@@ -545,6 +548,8 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
     parser.AddOption("txattempts", "1", "In UT mode, the number of times to transmit (default 1)", wxCMD_LINE_VAL_NUMBER);
+    parser.AddOption("agcleveler", "1", "Enables AGC leveler", wxCMD_LINE_VAL_NUMBER);
+    parser.AddOption("agclimiter", "1", "Enables AGC limiter", wxCMD_LINE_VAL_NUMBER);
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -694,6 +699,24 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         else
         {
             utTxTimeSeconds = 60;
+        }
+
+        if (parser.Found("agcleveler", &agcLeveler) && agcLeveler != 0)
+        {
+            log_info("Enabling AGC leveler.");
+        }
+        else if (agcLeveler == 0)
+        {
+            log_info("Disabling AGC leveler.");
+        }
+
+        if (parser.Found("agclimiter", &agcLimiter) && agcLimiter != 0)
+        {
+            log_info("Enabling AGC limiter.");
+        }
+        else if (agcLimiter == 0)
+        {
+            log_info("Disabling AGC limiter.");
         }
 
         if (parser.Found("txattempts", &utTxAttempts))
