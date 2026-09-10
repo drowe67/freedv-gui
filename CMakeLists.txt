@@ -766,7 +766,6 @@ endmacro()
 
 DefineAudioTest(RADEV1)
 
-if(NOT ENABLE_RTSAN)
 # Note: loading/saving feature files is currently not RT-safe
 add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
@@ -775,7 +774,6 @@ add_test(NAME rade_loss
 if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
 endif(NOT SANITIZERS_ENABLED)
-endif(NOT ENABLE_RTSAN)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
 if(NOT SANITIZERS_ENABLED)
