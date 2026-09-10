@@ -701,24 +701,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             utTxTimeSeconds = 60;
         }
 
-        if (parser.Found("agcleveler", &agcLeveler) && agcLeveler != 0)
-        {
-            log_info("Enabling AGC leveler.");
-        }
-        else if (agcLeveler == 0)
-        {
-            log_info("Disabling AGC leveler.");
-        }
-
-        if (parser.Found("agclimiter", &agcLimiter) && agcLimiter != 0)
-        {
-            log_info("Enabling AGC limiter.");
-        }
-        else if (agcLimiter == 0)
-        {
-            log_info("Disabling AGC limiter.");
-        }
-
         if (parser.Found("txattempts", &utTxAttempts))
         {
             log_info("Will transmit %d time(s)", utTxAttempts);
@@ -729,6 +711,28 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
+    agcLeveler = 1;
+    bool agcLevelerFound = parser.Found("agcleveler", &agcLeveler);
+    if (!agcLevelerFound || agcLeveler != 0)
+    {
+        log_info("Enabling AGC leveler.");
+    }
+    else
+    {
+        log_info("Disabling AGC leveler.");
+    }
+
+    agcLimiter = 1;
+    bool agcLimiterFound = parser.Found("agclimiter", &agcLimiter);
+    if (!agcLimiterFound && agcLimiter != 0)
+    {
+        log_info("Enabling AGC limiter.");
+    }
+    else
+    {
+        log_info("Disabling AGC limiter.");
+    }
+
     wxString utRxFeatureFileTmp; 
     if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
