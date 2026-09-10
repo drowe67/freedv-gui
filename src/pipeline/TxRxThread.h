@@ -51,7 +51,7 @@
 class LinkStep;
 class BeepStep;
 
-//#define ENABLE_PROCESSING_STATS
+#define ENABLE_PROCESSING_STATS
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - tx/rx processing thread
