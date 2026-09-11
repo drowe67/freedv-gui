@@ -895,7 +895,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             endTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-            if (nread != 0)
+            if (nread != 0 && cbData->outfifo1->numUsed() > (cbData->outfifo1->capacity() / 4))
             {
                 break;
             }
