@@ -495,6 +495,14 @@ void MainApp::UnitTest_()
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
  
+    // Report CoreAudio/PortAudio-detected under/overflow counts before we
+    // tear anything down -- these reflect the audio subsystem's own view of
+    // whether our real-time threads got samples to it on time, as opposed to
+    // our internal FIFO-empty counters which only see the symptom.
+    log_info("Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
+    log_info("Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+    log_info("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed), g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
+
     // Fire event to stop FreeDV
     log_info("Firing stop");
     CallAfter([this]() {
