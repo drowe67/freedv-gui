@@ -872,6 +872,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 hasEooBeenSent_ = false;
                 pendingEooCount_ = 0;
             }
+
+            if (nread != 0)
+            {
+                break;
+            }
             
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
@@ -894,11 +899,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             endTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
-
-            if (nread != 0 && cbData->outfifo1->numUsed() > (cbData->outfifo1->capacity() / 4))
-            {
-                break;
-            }
         }
     }
     else
