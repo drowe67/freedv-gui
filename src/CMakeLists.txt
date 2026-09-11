@@ -204,9 +204,21 @@ if(APPLE)
         set(PORTAUDIO_BUNDLE_ARG -s ${portaudio_BINARY_DIR})
     endif(NOT USE_NATIVE_AUDIO)
     
-    # Get folder containing libasan so we don't need to enter it to macdylibbundler.
+    # Get folder containing lib*san so we don't need to enter it to macdylibbundler.
+    if(ENABLE_ASAN)
+        set(SANITIZER_LIB_NAME libclang_rt.asan_osx_dynamic.dylib)
+    elseif(ENABLE_RTSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.rtsan_osx_dynamic.dylib)
+    elseif(ENABLE_TSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.tsan_osx_dynamic.dylib)
+    elseif(ENABLE_UBSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.ubsan_osx_dynamic.dylib)
+    else()
+        set(SANITIZER_LIB_NAME libclang_rt.asan_osx_dynamic.dylib)
+    endif()
+
     execute_process(
-        COMMAND ${CMAKE_C_COMPILER} -print-file-name=libclang_rt.asan_osx_dynamic.dylib
+        COMMAND ${CMAKE_C_COMPILER} -print-file-name=${SANITIZER_LIB_NAME}
         OUTPUT_VARIABLE CLANG_SANITIZER_FILE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     
