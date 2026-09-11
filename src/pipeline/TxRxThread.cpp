@@ -875,9 +875,30 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
             if (nread != 0)
             {
-                break;
+                // No mic audio available in infifo2 yet. It's fed by a
+                // separate sound card thread that may momentarily lag behind
+                // this one (see comment above), so treat a single miss as a
+                // transient underrun rather than giving up on this pass right
+                // away: spin -- no sleeping, this runs on the real-time TX
+                // thread -- re-attempting the read for up to 1ms before
+                // conceding there's genuinely nothing to encode yet.
+                auto spinDeadline = std::chrono::steady_clock::now() + 1ms;
+                while (nread != 0 && !helper->mustStopWork() &&
+                       std::chrono::steady_clock::now() < spinDeadline)
+                {
+                    nread = cbData->infifo2->read(inputSamples_.get(), nsam_in_48);
+                }
+
+                if (nread != 0)
+                {
+                    break;
+                }
+
+                // Retry succeeded -- point back at the real samples buffer
+                // (inputPtr was redirected to the zero-filled buffer above).
+                inputPtr = inputSamples_.get();
             }
-            
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
