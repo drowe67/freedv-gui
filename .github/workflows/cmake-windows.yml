@@ -764,8 +764,15 @@ jobs:
       MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
       COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
       # LSan has no Windows runtime, so it's intentionally not configured here.
-      ASAN_OPTIONS: suppressions=${{github.workspace}}\test\asan_suppressions.txt
-      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}\test\ubsan_suppressions.txt
+      # Options are colon-separated key=value pairs, so an absolute Windows
+      # path (drive-letter colon, e.g. D:\...) breaks the parser -- it reads
+      # "suppressions=D" as one pair and "\...\asan_suppressions.txt" (no
+      # '=') as the next, and aborts with "expected '=' in ASAN_OPTIONS"
+      # before FreeDV even starts. Use bare relative filenames instead,
+      # resolved against each test step's working directory (see the
+      # "Copy test scripts to install folder" step below).
+      ASAN_OPTIONS: suppressions=asan_suppressions.txt
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=ubsan_suppressions.txt
 
     steps:
     - uses: actions/checkout@v6
@@ -820,6 +827,11 @@ jobs:
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          # Sanitizer options need bare relative filenames (see ASAN_OPTIONS/
+          # UBSAN_OPTIONS above), so the suppression files need to live next
+          # to freedv.exe rather than being referenced by absolute path.
+          Copy-Item -Path ${{github.workspace}}/test/asan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/ubsan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
 
     - name: Install SoX
       shell: pwsh
