@@ -24,6 +24,7 @@
 #define MAC_AUDIO_DEVICE_H
 
 #include <thread>
+#include <chrono>
 #include <dispatch/dispatch.h>
 #include <CoreAudio/CoreAudio.h>
 #include <AudioUnit/AudioUnit.h>
@@ -86,6 +87,14 @@ private:
     bool running_;
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
+
+    // For handling additional wakeup time after semaphore timeout, matching
+    // WASAPIAudioDevice/PulseAudioDevice: if last cycle's total (processing
+    // + wait) ran long, shave that overrun off this cycle's wait so the
+    // average loop period stays locked to the nominal rate instead of
+    // drifting later every cycle that processing takes nonzero time.
+    int64_t extraTimeMs_ = 0;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();
     void joinWorkgroup_();

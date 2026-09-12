@@ -899,6 +899,8 @@ void MacAudioDevice::joinWorkgroup_()
 
 void MacAudioDevice::startRealTimeWork()
 {
+    startTime_ = std::chrono::steady_clock::now();
+
     // If the audio ID changes on us, join the new workgroup
     if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
@@ -909,8 +911,27 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
+    int64_t timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
+
+    // If last cycle's total (processing + wait, measured from
+    // startRealTimeWork() above) ran longer than its nominal period, shave
+    // that overrun off this cycle's wait -- otherwise every cycle where
+    // processing takes nonzero time makes the loop's average period longer
+    // than intended, drifting later relative to real time instead of
+    // self-correcting. Matches WASAPIAudioDevice/PulseAudioDevice, which
+    // had this already; this device previously didn't.
+    timeToWaitMilliseconds -= extraTimeMs_;
+    if (timeToWaitMilliseconds <= 0)
+    {
+        extraTimeMs_ = 0;
+        return;
+    }
+
     dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto durationUs = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime_).count() - (1000 * timeToWaitMilliseconds);
+    extraTimeMs_ = std::max((int64_t)0, (durationUs + 500) / 1000); // round to nearest ms, floor at 0.
 }
 
 void MacAudioDevice::clearHelperRealTime()

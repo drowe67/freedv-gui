@@ -571,8 +571,12 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         return;
     }
 
-    // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
-    DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
+    // Wait for the debt-compensated duration (msec above), not the raw
+    // nominal period again -- using the nominal period here silently
+    // discarded the extraTimeMs_ compensation for every case except a full
+    // skip (msec <= 0 above), since it recomputed the same uncompensated
+    // value from scratch instead of using the one just calculated.
+    DWORD result = WaitForSingleObject(semaphore_, (DWORD)msec);
 
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::ceil<std::chrono::microseconds>(endTime - startTime_).count() - (1000 * msec);
