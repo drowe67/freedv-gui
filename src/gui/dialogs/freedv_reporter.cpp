@@ -1281,6 +1281,18 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
         wxDataViewItemArray itemsDeleted;
+
+        // setColumnAutosize_() forces a full column relayout (SetWidth() on
+        // every column -- see the macOS branch below), which is only ever
+        // needed when a row's visibility or highlight color actually
+        // changes. A plain data refresh (isPendingUpdate, e.g. an updated
+        // SNR/frequency from a busy reporter network) still needs its cell
+        // repainted via ItemsChanged() below, but doesn't need the column
+        // widths touched. On a busy network isPendingUpdate can be true on
+        // effectively every 250ms tick, so without this the relayout dance
+        // was running continuously instead of only when actually needed.
+        bool needsColumnAutosize = false;
+
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
@@ -1391,18 +1403,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
                         wxDataViewItem dvi(reportData);
                         itemsChanged.Add(dvi);
+
+                        if (isHighlightUpdated)
+                        {
+                            needsColumnAutosize = true;
+                        }
                     }
                 }
             }
         }
-            
+
         if (itemsChanged.size() > 0)
         {
-            setColumnAutosize_(false);
+            if (needsColumnAutosize)
+            {
+                setColumnAutosize_(false);
+            }
             ItemsChanged(itemsChanged);
         }
-        
-        if (itemsAdded.size() > 0 || itemsDeleted.size() > 0 || itemsChanged.size() > 0)
+
+        if (itemsAdded.size() > 0 || itemsDeleted.size() > 0 || needsColumnAutosize)
         {
             setColumnAutosize_(true);
         }
