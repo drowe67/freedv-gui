@@ -81,6 +81,85 @@ jobs:
         path: ${{github.workspace}}/build_windows/instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
+  # Sanitizer coverage for the Windows builds. llvm-mingw supports UBSan on
+  # every architecture it targets and ASan on x86 only (no aarch64 ASan
+  # runtime is shipped) -- see https://github.com/mstorsjo/llvm-mingw#readme.
+  # Not PGO-optimized: these exist purely to catch memory-safety/UB bugs
+  # that a plain Release build's counters can't see, not to represent
+  # production performance.
+  build-sanitizer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - sanitizer_name: UBSAN
+          sanitizer_flag: -DENABLE_UBSAN=1
+          arch: x86_64
+        - sanitizer_name: UBSAN
+          sanitizer_flag: -DENABLE_UBSAN=1
+          arch: aarch64
+        - sanitizer_name: ASAN
+          sanitizer_flag: -DENABLE_ASAN=1
+          arch: x86_64
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
+        max-size: "5G"
+        verbose: 2
+
+    - name: Install required packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
+
+    - name: Download MinGW LLVM
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+        tar xvf llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64.tar.xz
+
+    - name: Configure freedv-gui (unsigned, ${{ matrix.sanitizer_name }})
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake ${{ matrix.sanitizer_flag }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build freedv-gui (unsigned, ${{ matrix.sanitizer_name }})
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20251216-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        make -j$(nproc) package
+
+    - name: Calculate installer filename
+      shell: bash
+      id: installer-filename
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+          export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
+          echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
+          mv ${FREEDV_INSTALLER_FILE} sanitizer-${{ matrix.sanitizer_name }}-${FREEDV_INSTALLER_FILE}
+
+    - name: Stash for test-sanitizer job
+      uses: actions/upload-artifact@v7
+      with:
+        name: sanitizer-${{ matrix.sanitizer_name }}-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        path: ${{github.workspace}}/build_windows/sanitizer-${{ matrix.sanitizer_name }}-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
+
   # rade_tx_wav / rade_rx_wav are excluded from the Windows build in the rade_c
   # fork (if(NOT WIN32) in src/CMakeLists.txt), so the RADE loss threshold can't be
   # derived on the Windows runners. Compute the software-only baseline here on Linux
@@ -654,3 +733,215 @@ jobs:
         path: ${{github.workspace}}\CrashDumps\*.dmp
         if-no-files-found: ignore
 
+  # Runs the same test suite as `test`, but against the sanitizer-instrumented
+  # builds from `build-sanitizer`. These builds are slower and less reliable
+  # for real-time audio than a plain Release build (the same reason macOS/Linux
+  # CI treat sanitizer runs as observational rather than pass/fail-gating --
+  # see SANITIZERS_ENABLED in CMakeLists.txt), so the test-execution steps are
+  # continue-on-error: what we actually care about here is whether a sanitizer
+  # catches a real memory-safety/UB bug (an abort with a diagnostic in the
+  # log), not whether a loss threshold was met under instrumentation overhead.
+  test-sanitizer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - sanitizer_name: UBSAN
+          arch: x86_64
+          runner: windows-2022
+        - sanitizer_name: UBSAN
+          arch: aarch64
+          runner: windows-11-arm
+        - sanitizer_name: ASAN
+          arch: x86_64
+          runner: windows-2022
+
+    runs-on: ${{ matrix.runner }}
+    needs: [build-sanitizer, rade-loss-baseline]
+    env:
+      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      # LSan has no Windows runtime, so it's intentionally not configured here.
+      ASAN_OPTIONS: suppressions=${{github.workspace}}\test\asan_suppressions.txt
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}\test\ubsan_suppressions.txt
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/download-artifact@v8
+      with:
+        merge-multiple: true
+        pattern: sanitizer-${{ matrix.sanitizer_name }}-FreeDV-*-${{ matrix.arch }}.exe
+        path: ${{github.workspace}}
+
+    - uses: TheMrMilchmann/setup-msvc-dev@v4
+      with:
+        arch: x64
+
+    - name: Install VAC ("analog" sound device)
+      run: |
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
+          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
+          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
+          $outputFile = '${{github.workspace}}\vac.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+
+    - name: Install VB-Cable ("Radio" sound device)
+      run: |
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{github.workspace}}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
+
+    - name: Install FreeDV on hard drive
+      shell: pwsh
+      run: |
+          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
+
+    - name: Copy test scripts to install folder
+      shell: pwsh
+      run: |
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+
+    - name: Install SoX
+      shell: pwsh
+      run: |
+           choco install sox.portable
+
+    - name: Install Python dependencies
+      shell: pwsh
+      run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install matplotlib
+
+    - name: Grant FreeDV access to the microphone
+      run: |
+          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
+          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
+
+    - name: Wait for virtual audio endpoints
+      shell: pwsh
+      run: |
+          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
+            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
+            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
+            -TimeoutSeconds 180
+
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
+
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
+
+    - name: Set High Performance power plan to prevent CPU frequency scaling
+      if: ${{ matrix.runner == 'windows-11-arm' }}
+      shell: pwsh
+      run: |
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
+          powercfg /setactive SCHEME_CURRENT
+
+    - name: Configure crash dump collection for FreeDV
+      shell: pwsh
+      run: |
+          $dumpFolder = "${{github.workspace}}\CrashDumps"
+          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
+
+          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
+          New-Item -Path $werKey -Force | Out-Null
+          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
+          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
+          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord
+
+    - name: Test RADE
+      id: test-rade
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      continue-on-error: true
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1
+      timeout-minutes: 15
+
+    - name: Test RADE Loss
+      id: test-rade-loss
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      continue-on-error: true
+      run: |
+          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
+      timeout-minutes: 15
+
+    - name: Test RADE Reporting
+      id: test-rade-reporting
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      continue-on-error: true
+      run: |
+          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
+      timeout-minutes: 15
+
+    # The three test steps above are continue-on-error, so the job's overall
+    # failure() is never true here (continue-on-error suppresses conclusion,
+    # not just outcome) -- check each step's own outcome instead.
+    - name: Screenshot if failed
+      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' }}
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
+          & .\screenCapture.bat screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
+
+    - name: Upload screenshot
+      uses: actions/upload-artifact@v7
+      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' }}
+      with:
+        name: screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
+        path: ${{github.workspace}}/screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
+        archive: false
+
+    - name: Upload crash dumps
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: crashdumps-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
+        path: ${{github.workspace}}\CrashDumps\*.dmp
+        if-no-files-found: ignore
+
+    - name: Upload test logs
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: sanitizer-logs-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
+        path: ${{github.workspace}}\FreeDV-Install-Location\bin\*.log
+        if-no-files-found: ignore
