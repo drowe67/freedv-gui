@@ -81,6 +81,8 @@ using namespace std::chrono_literals;
 // External globals
 // TBD -- work on fully removing the need for these.
 extern paCallBackData* g_rxUserdata;
+extern std::atomic<int> g_infifo1_empty;
+extern std::atomic<int> g_infifo2_empty;
 extern int g_analog;
 extern int g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
@@ -797,10 +799,18 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         int             nout;
 
-        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
+        // Tracks whether this wake cycle managed to read *any* real mic
+        // audio at all. Running dry after successfully draining what was
+        // buffered is the loop's normal, designed exit condition (it happens
+        // on effectively every wake cycle) -- that's not starvation. Getting
+        // zero frames of new mic data for the *entire* wake cycle is the
+        // actual anomaly worth counting.
+        bool gotAnyMicData = false;
+
+        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
-            
+
 #if defined(ENABLE_PROCESSING_STATS)
             startTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -818,6 +828,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             if (nread != 0)
             {
                 inputPtr = inputSamplesZeros_.get();
+            }
+            else
+            {
+                gotAnyMicData = true;
             }
             if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
@@ -900,6 +914,14 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 break;
             }
         }
+
+        // A quiet mic during the deliberate end-of-transmission tail is
+        // expected, not starvation -- only count it when we were otherwise
+        // expecting a steady stream of mic audio.
+        if (!gotAnyMicData && !endingTx.load(std::memory_order_acquire))
+        {
+            g_infifo2_empty.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     else
     {
@@ -937,9 +959,24 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
-    // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
-        
+    // Tracks whether this wake cycle managed to read *any* new receive
+    // samples at all. Running dry after successfully draining what was
+    // buffered is the loop's normal, designed exit condition (it happens on
+    // effectively every wake cycle) -- that's not starvation. Getting zero
+    // frames of new RF-in audio for the *entire* wake cycle is the actual
+    // anomaly worth counting, since it means the demodulator went hungry
+    // long enough to potentially cost it sync.
+    bool gotAnyRxData = false;
+
+    // while we have enough space in the output FIFO ...
+    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame) {
+        // ... and enough input samples are available.
+        if (cbData->infifo1->read(inputSamples_.get(), nsam) != 0)
+        {
+            break;
+        }
+        gotAnyRxData = true;
+
 #if defined(ENABLE_PROCESSING_STATS)
         startTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -959,5 +996,10 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
         endTimer_();
 #endif // defined(ENABLE_PROCESSING_STATS)
+    }
+
+    if (!gotAnyRxData)
+    {
+        g_infifo1_empty.fetch_add(1, std::memory_order_relaxed);
     }
 }

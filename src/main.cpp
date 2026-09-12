@@ -146,6 +146,12 @@ std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
+// Input-side starvation: incremented when TxRxThread couldn't read a full
+// frame from infifo1/infifo2 because too few samples had arrived yet, i.e.
+// the demodulator/mic-encode path -- not just the speaker/radio output --
+// went hungry for real-time data.
+std::atomic<int>    g_infifo1_empty;
+std::atomic<int>    g_infifo2_empty;
 int                 g_AEstatus1[4];
 int                 g_AEstatus2[4];
 
@@ -501,7 +507,7 @@ void MainApp::UnitTest_()
     // our internal FIFO-empty counters which only see the symptom.
     log_info("Audio1: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
     log_info("Audio2: inUnderflow: %d inOverflow: %d outUnderflow: %d outOverflow: %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
-    log_info("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed), g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
+    log_info("Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d inempty1: %d inempty2: %d", g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed), g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed), g_infifo1_empty.load(std::memory_order_relaxed), g_infifo2_empty.load(std::memory_order_relaxed));
 
     // Fire event to stop FreeDV
     log_info("Firing stop");
@@ -3233,6 +3239,8 @@ void MainFrame::startRxStream()
         g_outfifo1_empty.store(0, std::memory_order_relaxed);
         g_infifo2_full.store(0, std::memory_order_relaxed);
         g_outfifo2_empty.store(0, std::memory_order_relaxed);
+        g_infifo1_empty.store(0, std::memory_order_relaxed);
+        g_infifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
             g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
