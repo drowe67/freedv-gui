@@ -147,11 +147,23 @@ private:
     double sumDuration_;
     double sumDoubleDuration_;
     std::chrono::time_point<std::chrono::high_resolution_clock> timeStart_;
-    
+
+    // Upper bound (in ms) of each histogram bucket except the last, which
+    // catches everything at or above the final bound. min/max/mean/stdev
+    // alone can't distinguish "one freak outlier" from "a real cluster of
+    // slow frames" -- a rare but non-negligible tail gets averaged away by
+    // mean/stdev over a large sample count, and only the single worst frame
+    // shows up in max. The histogram makes that distribution visible.
+    static constexpr double HISTOGRAM_BUCKET_BOUNDS_MS[] =
+        { 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000 };
+    static constexpr int NUM_HISTOGRAM_BUCKETS =
+        sizeof(HISTOGRAM_BUCKET_BOUNDS_MS) / sizeof(HISTOGRAM_BUCKET_BOUNDS_MS[0]) + 1;
+    int histogramCounts_[NUM_HISTOGRAM_BUCKETS];
+
     void resetStats_();
     void startTimer_();
     void endTimer_();
-    void reportStats_();    
+    void reportStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();

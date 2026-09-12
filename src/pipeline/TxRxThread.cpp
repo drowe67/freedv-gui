@@ -34,6 +34,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <sstream>
 using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
@@ -667,7 +668,8 @@ void TxRxThread::resetStats_()
     minDuration_ = 1e9;
     maxDuration_ = 0;
     sumDuration_ = 0;
-    sumDoubleDuration_ = 0; 
+    sumDoubleDuration_ = 0;
+    memset(histogramCounts_, 0, sizeof(histogramCounts_));
 }
 
 void TxRxThread::startTimer_()
@@ -691,6 +693,14 @@ void TxRxThread::endTimer_()
         maxTime_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
     sumDuration_ += d; sumDoubleDuration_ += pow(d, 2);
+
+    double dMs = d / 1.0e6;
+    int bucket = 0;
+    while (bucket < NUM_HISTOGRAM_BUCKETS - 1 && dMs >= HISTOGRAM_BUCKET_BOUNDS_MS[bucket])
+    {
+        bucket++;
+    }
+    histogramCounts_[bucket]++;
 }
 
 void TxRxThread::reportStats_()
@@ -714,6 +724,26 @@ void TxRxThread::reportStats_()
         std::strftime(bufMax, 32, "%H:%M:%S", &maxTm);
         
         log_info("m_tx = %d, min = %f ns [%s], max = %f ns [%s], mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, bufMin, maxDuration_, bufMax, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
+
+        // Histogram of per-frame processing time, bucketed by upper bound in
+        // ms. Distinguishes "one freak outlier" (a lone hit in a high
+        // bucket) from "a real cluster of slow frames" (many hits spread
+        // across the middle/high buckets) -- neither is visible in the
+        // min/max/mean/stdev line above once averaged over a large n.
+        std::stringstream histSs;
+        for (int i = 0; i < NUM_HISTOGRAM_BUCKETS; i++)
+        {
+            if (i > 0) histSs << " ";
+            if (i < NUM_HISTOGRAM_BUCKETS - 1)
+            {
+                histSs << "<" << HISTOGRAM_BUCKET_BOUNDS_MS[i] << "ms:" << histogramCounts_[i];
+            }
+            else
+            {
+                histSs << ">=" << HISTOGRAM_BUCKET_BOUNDS_MS[i - 1] << "ms:" << histogramCounts_[i];
+            }
+        }
+        log_info("m_tx = %d, histogram: %s", m_tx, histSs.str().c_str());
     }
 }
 #endif // defined(ENABLE_PROCESSING_STATS)
