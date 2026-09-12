@@ -4,3 +4,4 @@ vptr:src/osx/core/colour.cpp
 vptr:src/osx/window_osx.cpp
 vptr:src/common/containr.cpp
 null:src/msw/tooltip.cpp
+function:crypto/stack/stack.c

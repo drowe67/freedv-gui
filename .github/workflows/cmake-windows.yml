@@ -901,7 +901,7 @@ jobs:
       if: ${{ !cancelled() }}
       continue-on-error: true
       run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1 *>&1 | Tee-Object -FilePath fullduplex.log
       timeout-minutes: 15
 
     - name: Test RADE Loss
@@ -921,14 +921,34 @@ jobs:
       if: ${{ !cancelled() }}
       continue-on-error: true
       run: |
-          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
+          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" *>&1 | Tee-Object -FilePath reporting.log
       timeout-minutes: 15
 
-    # The three test steps above are continue-on-error, so the job's overall
-    # failure() is never true here (continue-on-error suppresses conclusion,
-    # not just outcome) -- check each step's own outcome instead.
+    # The three test steps above are continue-on-error so an ordinary loss-
+    # threshold miss (expected under instrumentation overhead, same leniency
+    # ctest gives sanitizer builds on macOS/Linux via SANITIZERS_ENABLED)
+    # doesn't stop the other tests from running or fail the job by itself.
+    # But that also means a *real* sanitizer abort would otherwise pass
+    # silently, since continue-on-error suppresses the job's conclusion, not
+    # just the step's outcome -- so explicitly scan every test's captured
+    # output for a sanitizer report and fail for real if one is found.
+    - name: Check for sanitizer errors
+      id: check-sanitizer-errors
+      if: ${{ !cancelled() }}
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          $pattern = 'AddressSanitizer|UndefinedBehaviorSanitizer|LeakSanitizer'
+          $hits = Get-ChildItem -Path . -Filter *.log | ForEach-Object { Select-String -Path $_.FullName -Pattern $pattern }
+          if ($hits) {
+              Write-Host "::error::Sanitizer violation(s) found in test output:"
+              $hits | ForEach-Object { Write-Host "$($_.Filename):$($_.LineNumber): $($_.Line)" }
+              exit 1
+          }
+          Write-Host "No sanitizer violations found in test output."
+
     - name: Screenshot if failed
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' }}
+      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
       shell: pwsh
       run: |
           Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
@@ -936,7 +956,7 @@ jobs:
 
     - name: Upload screenshot
       uses: actions/upload-artifact@v7
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' }}
+      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
       with:
         name: screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
         path: ${{github.workspace}}/screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
