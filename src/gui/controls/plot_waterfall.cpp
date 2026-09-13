@@ -20,6 +20,7 @@
 //==========================================================================
 #include <string.h>
 #include <algorithm>
+#include <atomic>
 
 #include <wx/wx.h>
 #include "os/os_interface.h"
