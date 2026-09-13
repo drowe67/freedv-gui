@@ -94,11 +94,11 @@ private:
     bool isFloatingPoint_;
     short* tmpBuf_;
 
-    // For handling additional wakeup time after semaphore timeout, tracked in
-    // 100ns units (i.e. Windows FILETIME/timer resolution) rather than whole
-    // milliseconds so debt compensation isn't limited to WaitForSingleObject's
-    // millisecond-granular timeout -- see stopRealTimeWork().
-    int64_t extraTimeHns_;
+    // Tracks only how long the *wait itself* overshot its requested duration
+    // last cycle (100ns units), separate from processing time -- which
+    // stopRealTimeWork() measures directly each cycle against startTime_
+    // rather than inferring it from this. See stopRealTimeWork() for why.
+    int64_t waitOvershootHns_;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void renderAudio_(ComPtr<IAudioRenderClient> renderClient);
