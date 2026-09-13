@@ -724,9 +724,9 @@ VIAddVersionKey \\\"GitHash\\\" \\\"${GIT_HASH}\\\"
     string(REPLACE "." "," VERSION_AS_RC ${CPACK_WIN_VERSION})
     configure_file(${CMAKE_SOURCE_DIR}/contrib/freedv.rc.in ${CMAKE_BINARY_DIR}/freedv.rc)
 
-    if (FREEDV_USING_LLVM_MINGW)
-        set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
-    endif (FREEDV_USING_LLVM_MINGW)
+    # Already inside the if(WIN32) packaging block above, so this applies
+    # to any MinGW flavor cross-compiling for Windows, not just llvm-mingw.
+    set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
 
     if(SIGN_WINDOWS_BINARIES)
         # Add finalize command for NSIS so the installer/uninstaller can be

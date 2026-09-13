@@ -8,22 +8,32 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
   cancel-in-progress: true
-    
+
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
 
 jobs:
-  build-pgo-inst:
-    outputs: 
+  # NOTE: this workflow builds with Ubuntu's packaged gcc-mingw-w64 instead of
+  # llvm-mingw. Ubuntu's mingw-w64 packages have no aarch64 (Windows ARM)
+  # cross-compiler, so that target is disabled here, and PGO instrumentation
+  # (llvm-mingw's -ftemporal-profile + llvm-profdata) and the ASan/UBSan
+  # sanitizer coverage (no mingw sanitizer runtimes ship with Ubuntu's GCC)
+  # are dropped -- neither has a GCC/binutils equivalent for this toolchain.
+  build:
+    outputs:
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64, aarch64]
+        arch: [x86_64]
 
     runs-on: ubuntu-22.04
+
+    env:
+      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
+      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
 
     steps:
     - uses: actions/checkout@v6
@@ -40,30 +50,94 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           sudo apt-get update
-          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+          # Ubuntu ships both posix- and win32-threading variants of the
+          # mingw-w64 cross-compiler. The win32 one doesn't implement C++11
+          # <thread>/<mutex>/<condition_variable>, which FreeDV relies on
+          # throughout its real-time audio pipeline, so force posix.
+          sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
 
-    - name: Download MinGW LLVM
-      shell: bash
+    - name: Configure code signing tunnel
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+          FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+      run: |
+          cat <<EOF >code-sign.sshkey
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
+          EOF
+          chmod 600 code-sign.sshkey
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
+
+    - name: Configure code signing keys
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      working-directory: ${{github.workspace}}
+      env:
+        FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+      run: |
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_CERT}}" >freedv.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_KEY}}" >freedv.key
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_CERT}}" >freedv-secondary.cert
+          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_KEY}}" >freedv-secondary.key
+          cat <<EOF >freedv.intermediatecerts
+          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
+          EOF
+
+    - name: Configure code signing packages
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
       working-directory: ${{github.workspace}}
       run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
+          sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin
+          git clone https://github.com/mtrojnar/osslsigncode.git
+          cd osslsigncode
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+          cd ${{github.workspace}}
+          git clone https://github.com/iksaif/pkcs11-proxy.git
+          cd pkcs11-proxy
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
 
     - name: Configure freedv-gui (unsigned)
       shell: bash
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       working-directory: ${{github.workspace}}
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DENABLE_LTO=1 -DPGO_INSTRUMENT=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-gcc-${{ matrix.arch }}.cmake ..
+
+    - name: Configure freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        mkdir build_windows
+        cd build_windows
+        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-gcc-${{ matrix.arch }}.cmake ..
 
     - name: Build freedv-gui (unsigned)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
         make -j$(nproc) package
+
+    - name: Build freedv-gui (signed)
+      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/osslsigncode/build:$PATH
+        ssh -fN -o "ServerAliveInterval 60" -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L localhost:2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }}
+        make -j$(nproc) package
+        killall ssh
 
     - name: Calculate installer filename
       shell: bash
@@ -72,92 +146,12 @@ jobs:
       run: |
           export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
           echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
-          mv ${FREEDV_INSTALLER_FILE} instrumented-${FREEDV_INSTALLER_FILE}
 
     - name: Stash for next step
       uses: actions/upload-artifact@v7
       with:
-        name: instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        path: ${{github.workspace}}/build_windows/instrumented-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        archive: false
-
-  # Sanitizer coverage for the Windows builds. llvm-mingw supports UBSan on
-  # every architecture it targets and ASan on x86 only (no aarch64 ASan
-  # runtime is shipped) -- see https://github.com/mstorsjo/llvm-mingw#readme.
-  # Not PGO-optimized: these exist purely to catch memory-safety/UB bugs
-  # that a plain Release build's counters can't see, not to represent
-  # production performance.
-  build-sanitizer:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - sanitizer_name: UBSAN
-          sanitizer_flag: -DENABLE_UBSAN=1
-          arch: x86_64
-        - sanitizer_name: UBSAN
-          sanitizer_flag: -DENABLE_UBSAN=1
-          arch: aarch64
-        - sanitizer_name: ASAN
-          sanitizer_flag: -DENABLE_ASAN=1
-          arch: x86_64
-
-    runs-on: ubuntu-22.04
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        max-size: "5G"
-        verbose: 2
-
-    - name: Install required packages
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          sudo apt-get update
-          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
-
-    - name: Download MinGW LLVM
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-
-    - name: Configure freedv-gui (unsigned, ${{ matrix.sanitizer_name }})
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
-        mkdir build_windows
-        cd build_windows
-        cmake ${{ matrix.sanitizer_flag }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
-
-    - name: Build freedv-gui (unsigned, ${{ matrix.sanitizer_name }})
-      shell: bash
-      working-directory: ${{github.workspace}}/build_windows
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
-        make -j$(nproc) package
-
-    - name: Calculate installer filename
-      shell: bash
-      id: installer-filename
-      working-directory: ${{github.workspace}}/build_windows
-      run: |
-          export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
-          echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
-          mv ${FREEDV_INSTALLER_FILE} sanitizer-${{ matrix.sanitizer_name }}-${FREEDV_INSTALLER_FILE}
-
-    - name: Stash for test-sanitizer job
-      uses: actions/upload-artifact@v7
-      with:
-        name: sanitizer-${{ matrix.sanitizer_name }}-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        path: ${{github.workspace}}/build_windows/sanitizer-${{ matrix.sanitizer_name }}-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
   # rade_tx_wav / rade_rx_wav are excluded from the Windows build in the rade_c
@@ -223,320 +217,28 @@ jobs:
           echo "rade_c_commit=$(git -C rade_c rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "radae_commit=$(git -C rade_src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  collect-pgo-profile:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [windows-2022, windows-11-arm]
-        arch: [x86_64, aarch64]
-        exclude:
-        - runner: windows-2022
-          arch: aarch64
-        - runner: windows-11-arm 
-          arch: x86_64
-
-    runs-on: ${{ matrix.runner }}
-    needs: build-pgo-inst
-    env:
-      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
-      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-      LLVM_PROFILE_FILE: "code-%p.profraw"
-      
-    steps: 
-    - uses: actions/checkout@v6
-    - uses: actions/download-artifact@v8
-      with:
-        merge-multiple: true
-        pattern: instrumented-FreeDV-*-${{ matrix.arch }}.exe
-        path: ${{github.workspace}}
-  
-    - uses: TheMrMilchmann/setup-msvc-dev@v4
-      with:
-        arch: x64
-
-    - name: Install VAC ("analog" sound device)
-      run: |
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
-          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
-          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
-          $outputFile = '${{github.workspace}}\vac.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
-    - name: Install FreeDV on hard drive
-      shell: pwsh
-      run: |
-          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
-  
-    - name: Copy test scripts to install folder
-      shell: pwsh
-      run: |
-          Copy-Item -Path ${{github.workspace}}/test/GeneratePGOProfiles.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-pgo.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
- 
-    - name: Install SoX
-      shell: pwsh
-      run: |
-           choco install sox.portable
- 
-    - name: Grant FreeDV access to the microphone 
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
-
-    - name: Wait for virtual audio endpoints
-      shell: pwsh
-      run: |
-          # Restart the audio stack and poll until every endpoint FreeDV needs is
-          # actually enumerable, instead of starting a test and letting it abort
-          # with a fatal "device cannot be found" message box when a virtual
-          # cable endpoint hasn't come up (or has briefly dropped) yet.
-          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
-            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
-            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
-            -TimeoutSeconds 180
-
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
-
-    - name: Set Windows default audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          # Prevent ARM CPU boost->base frequency transitions during audio tests.
-          # This is the Windows equivalent of the Linux "performance" CPU governor.
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # Explicitly pin minimum processor performance to 100% so the ARM CPU
-          # does not scale down after exhausting its boost budget.
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
-
-    - name: Generate PGO data
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      timeout-minutes: 25
-      run: |
-          & "${{github.workspace}}\ci\Invoke-PgoProfileCollection.ps1" `
-            -RadioToComputerDevice      "${{env.RADIO_TO_COMPUTER_DEVICE}}" `
-            -ComputerToRadioDevice      "${{env.COMPUTER_TO_RADIO_DEVICE}}" `
-            -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" `
-            -ComputerToSpeakerDevice    "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
-
-    - name: Stash profile data
-      uses: actions/upload-artifact@v7
-      with:
-        name: profile-${{ matrix.arch }}
-        path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.profraw
-
-  build-pgo-use-profile:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    outputs: 
-      INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86_64, aarch64]
-
-    runs-on: ubuntu-22.04
-    needs: collect-pgo-profile
-
-    env:
-      PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
-      FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Download profile data
-      uses: actions/download-artifact@v8
-      with:
-        pattern: profile-${{ matrix.arch }}
-        path: ${{github.workspace}}
-  
-    - name: Install required packages
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          sudo apt-get update
-          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
-
-    - name: Download MinGW LLVM
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-
-    - name: Merge profile data
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
-        llvm-profdata merge -output ${{ github.workspace }}/code.profdata ${{ github.workspace }}/*.profraw
-
-    - name: Configure code signing tunnel
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
-      working-directory: ${{github.workspace}}
-      env:
-          FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
-      run: |
-          cat <<EOF >code-sign.sshkey
-          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY }}
-          EOF
-          chmod 600 code-sign.sshkey
-          mkdir -p ~/.ssh
-          ssh-keyscan -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT}} ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST}} >> ~/.ssh/known_hosts
-
-    - name: Configure code signing keys
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
-      working-directory: ${{github.workspace}}
-      env:
-        FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS: ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
-      run: |
-          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_CERT}}" >freedv.cert
-          echo -n "${{secrets.FREEDV_WINDOWS_CODE_SIGNING_KEY}}" >freedv.key
-          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_CERT}}" >freedv-secondary.cert
-          echo -n "${{secrets.FREEDV_WINDOWS_SECONDARY_CODE_SIGNING_KEY}}" >freedv-secondary.key
-          cat <<EOF >freedv.intermediatecerts
-          ${{ env.FREEDV_WINDOWS_CODE_SIGNING_INTERMEDIATE_CERTS }}
-          EOF
-          
-    - name: Configure code signing packages
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
-      working-directory: ${{github.workspace}}
-      run: |
-          sudo apt-get install pcsc-tools pcscd libfuse2 opensc opensc-pkcs11 libengine-pkcs11-openssl gnutls-bin 
-          git clone https://github.com/mtrojnar/osslsigncode.git
-          cd osslsigncode
-          mkdir build
-          cd build
-          cmake ..
-          make -j$(nproc)
-          cd ${{github.workspace}}
-          git clone https://github.com/iksaif/pkcs11-proxy.git
-          cd pkcs11-proxy
-          mkdir build
-          cd build
-          cmake ..
-          make -j$(nproc)
-
-    - name: Configure freedv-gui (unsigned)
-      shell: bash
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
-      working-directory: ${{github.workspace}}
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
-        mkdir build_windows
-        cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPGO_USE_PROFILE=${{github.workspace}}/code.profdata -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
-
-    - name: Configure freedv-gui (signed)
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
-        mkdir build_windows
-        cd build_windows
-        cmake -DENABLE_LTO=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPGO_USE_PROFILE=${{github.workspace}}/code.profdata -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_MODULE=${{github.workspace}}/pkcs11-proxy/build/libpkcs11-proxy.so -DPKCS11_CERTIFICATE_FILE=${{github.workspace}}/freedv.cert -DPKCS11_KEY_FILE=${{github.workspace}}/freedv.key  -DPKCS11_SECONDARY_CERTIFICATE_FILE=${{github.workspace}}/freedv-secondary.cert -DPKCS11_SECONDARY_KEY_FILE=${{github.workspace}}/freedv-secondary.key -DINTERMEDIATE_CERT_FILE=${{github.workspace}}/freedv.intermediatecerts -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
-
-    - name: Build freedv-gui (unsigned)
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY == '' }}
-      shell: bash
-      working-directory: ${{github.workspace}}/build_windows
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
-        make -j$(nproc) package
-
-    - name: Build freedv-gui (signed)
-      if: ${{ env.FREEDV_WINDOWS_CODE_SIGNING_SSH_KEY != '' }}
-      shell: bash
-      working-directory: ${{github.workspace}}/build_windows
-      run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:${{github.workspace}}/osslsigncode/build:$PATH
-        ssh -fN -o "ServerAliveInterval 60" -p ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_PORT }} -i ${{github.workspace}}/code-sign.sshkey -L localhost:2222:127.0.0.1:2222 ${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_USER }}@${{ secrets.FREEDV_WINDOWS_CODE_SIGNING_SSH_HOST }}
-        make -j$(nproc) package
-        killall ssh
-
-    - name: Calculate installer filename
-      shell: bash
-      id: installer-filename
-      working-directory: ${{github.workspace}}/build_windows
-      run: |
-          export FREEDV_INSTALLER_FILE=`ls FreeDV*.exe`
-          echo "INSTALLER_FILENAME=${FREEDV_INSTALLER_FILE}" >> "$GITHUB_OUTPUT"
-
-    - name: Stash for next step
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
-        archive: false
-
   test:
     strategy:
       fail-fast: false
       matrix:
-        runner: [windows-2022, windows-11-arm]
-        arch: [x86_64, aarch64]
-        exclude:
-        - runner: windows-2022
-          arch: aarch64
-        - runner: windows-11-arm 
-          arch: x86_64
+        arch: [x86_64]
 
-    runs-on: ${{ matrix.runner }}
-    needs: [build-pgo-use-profile, rade-loss-baseline]
+    runs-on: windows-2022
+    needs: [build, rade-loss-baseline]
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
 
-    steps: 
+    steps:
     - uses: actions/checkout@v6
     - uses: actions/download-artifact@v8
       with:
         merge-multiple: true
         pattern: FreeDV-*-${{ matrix.arch }}.exe
         path: ${{github.workspace}}
-  
+
     - uses: TheMrMilchmann/setup-msvc-dev@v4
       with:
         arch: x64
@@ -564,7 +266,7 @@ jobs:
 
           $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
+
           .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install FreeDV on hard drive
@@ -572,7 +274,7 @@ jobs:
       run: |
           Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
           .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
-  
+
     - name: Copy test scripts to install folder
       shell: pwsh
       run: |
@@ -583,7 +285,7 @@ jobs:
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/RadeVerificationReport.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
- 
+
     - name: Install SoX
       shell: pwsh
       run: |
@@ -594,8 +296,8 @@ jobs:
       run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install matplotlib
- 
-    - name: Grant FreeDV access to the microphone 
+
+    - name: Grant FreeDV access to the microphone
       run: |
           New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
@@ -628,18 +330,6 @@ jobs:
       run: |
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
           Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          # Prevent ARM CPU boost->base frequency transitions during audio tests.
-          # This is the Windows equivalent of the Linux "performance" CPU governor.
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # Explicitly pin minimum processor performance to 100% so the ARM CPU
-          # does not scale down after exhausting its boost budget.
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
 
     - name: Configure crash dump collection for FreeDV
       shell: pwsh
@@ -673,12 +363,12 @@ jobs:
           .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
       timeout-minutes: 10
 
-    # Assemble the RADE integration verification report from the run above. Once
-    # per OS (x86_64 leg only); the baseline comes from the rade-loss-baseline job.
+    # Assemble the RADE integration verification report from the run above.
+    # The baseline comes from the rade-loss-baseline job.
     - name: Generate RADE verification report
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
+      if: ${{ !cancelled() }}
       continue-on-error: true
       run: |
           .\RadeVerificationReport.ps1 `
@@ -696,7 +386,7 @@ jobs:
 
     - name: Upload RADE verification report
       uses: actions/upload-artifact@v7
-      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
+      if: ${{ !cancelled() }}
       with:
         name: rade-verification-report-windows
         path: ${{github.workspace}}/rade_verification_report.md
@@ -731,249 +421,4 @@ jobs:
       with:
         name: crashdumps-${{ matrix.arch }}
         path: ${{github.workspace}}\CrashDumps\*.dmp
-        if-no-files-found: ignore
-
-  # Runs the same test suite as `test`, but against the sanitizer-instrumented
-  # builds from `build-sanitizer`. These builds are slower and less reliable
-  # for real-time audio than a plain Release build (the same reason macOS/Linux
-  # CI treat sanitizer runs as observational rather than pass/fail-gating --
-  # see SANITIZERS_ENABLED in CMakeLists.txt), so the test-execution steps are
-  # continue-on-error: what we actually care about here is whether a sanitizer
-  # catches a real memory-safety/UB bug (an abort with a diagnostic in the
-  # log), not whether a loss threshold was met under instrumentation overhead.
-  test-sanitizer:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - sanitizer_name: UBSAN
-          arch: x86_64
-          runner: windows-2022
-        - sanitizer_name: UBSAN
-          arch: aarch64
-          runner: windows-11-arm
-        - sanitizer_name: ASAN
-          arch: x86_64
-          runner: windows-2022
-
-    runs-on: ${{ matrix.runner }}
-    needs: [build-sanitizer, rade-loss-baseline]
-    env:
-      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
-      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
-      # LSan has no Windows runtime, so it's intentionally not configured here.
-      # Options are colon-separated key=value pairs, so an absolute Windows
-      # path (drive-letter colon, e.g. D:\...) breaks the parser -- it reads
-      # "suppressions=D" as one pair and "\...\asan_suppressions.txt" (no
-      # '=') as the next, and aborts with "expected '=' in ASAN_OPTIONS"
-      # before FreeDV even starts. Use bare relative filenames instead,
-      # resolved against each test step's working directory (see the
-      # "Copy test scripts to install folder" step below).
-      ASAN_OPTIONS: suppressions=asan_suppressions.txt
-      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=ubsan_suppressions.txt
-
-    steps:
-    - uses: actions/checkout@v6
-    - uses: actions/download-artifact@v8
-      with:
-        merge-multiple: true
-        pattern: sanitizer-${{ matrix.sanitizer_name }}-FreeDV-*-${{ matrix.arch }}.exe
-        path: ${{github.workspace}}
-
-    - uses: TheMrMilchmann/setup-msvc-dev@v4
-      with:
-        arch: x64
-
-    - name: Install VAC ("analog" sound device)
-      run: |
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
-          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
-          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
-          $outputFile = '${{github.workspace}}\vac.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
-    - name: Install FreeDV on hard drive
-      shell: pwsh
-      run: |
-          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
-
-    - name: Copy test scripts to install folder
-      shell: pwsh
-      run: |
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          # Sanitizer options need bare relative filenames (see ASAN_OPTIONS/
-          # UBSAN_OPTIONS above), so the suppression files need to live next
-          # to freedv.exe rather than being referenced by absolute path.
-          Copy-Item -Path ${{github.workspace}}/test/asan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/ubsan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-
-    - name: Install SoX
-      shell: pwsh
-      run: |
-           choco install sox.portable
-
-    - name: Install Python dependencies
-      shell: pwsh
-      run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install matplotlib
-
-    - name: Grant FreeDV access to the microphone
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
-
-    - name: Wait for virtual audio endpoints
-      shell: pwsh
-      run: |
-          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
-            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
-            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
-            -TimeoutSeconds 180
-
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
-
-    - name: Set Windows default audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
-
-    - name: Configure crash dump collection for FreeDV
-      shell: pwsh
-      run: |
-          $dumpFolder = "${{github.workspace}}\CrashDumps"
-          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
-
-          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
-          New-Item -Path $werKey -Force | Out-Null
-          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
-          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
-          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord
-
-    - name: Test RADE
-      id: test-rade
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1 *>&1 | Tee-Object -FilePath fullduplex.log
-      timeout-minutes: 15
-
-    - name: Test RADE Loss
-      id: test-rade-loss
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
-      timeout-minutes: 15
-
-    - name: Test RADE Reporting
-      id: test-rade-reporting
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" *>&1 | Tee-Object -FilePath reporting.log
-      timeout-minutes: 15
-
-    # The three test steps above are continue-on-error so an ordinary loss-
-    # threshold miss (expected under instrumentation overhead, same leniency
-    # ctest gives sanitizer builds on macOS/Linux via SANITIZERS_ENABLED)
-    # doesn't stop the other tests from running or fail the job by itself.
-    # But that also means a *real* sanitizer abort would otherwise pass
-    # silently, since continue-on-error suppresses the job's conclusion, not
-    # just the step's outcome -- so explicitly scan every test's captured
-    # output for a sanitizer report and fail for real if one is found.
-    - name: Check for sanitizer errors
-      id: check-sanitizer-errors
-      if: ${{ !cancelled() }}
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      run: |
-          $pattern = 'AddressSanitizer|UndefinedBehaviorSanitizer|LeakSanitizer'
-          $hits = Get-ChildItem -Path . -Filter *.log | ForEach-Object { Select-String -Path $_.FullName -Pattern $pattern }
-          if ($hits) {
-              Write-Host "::error::Sanitizer violation(s) found in test output:"
-              $hits | ForEach-Object { Write-Host "$($_.Filename):$($_.LineNumber): $($_.Line)" }
-              exit 1
-          }
-          Write-Host "No sanitizer violations found in test output."
-
-    - name: Screenshot if failed
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
-      shell: pwsh
-      run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
-      with:
-        name: screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-        path: ${{github.workspace}}/screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-        archive: false
-
-    - name: Upload crash dumps
-      uses: actions/upload-artifact@v7
-      if: always()
-      with:
-        name: crashdumps-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        path: ${{github.workspace}}\CrashDumps\*.dmp
-        if-no-files-found: ignore
-
-    - name: Upload test logs
-      uses: actions/upload-artifact@v7
-      if: always()
-      with:
-        name: sanitizer-logs-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        path: ${{github.workspace}}\FreeDV-Install-Location\bin\*.log
         if-no-files-found: ignore
