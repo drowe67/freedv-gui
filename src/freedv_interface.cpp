@@ -131,17 +131,31 @@ void FreeDVInterface::start(int, bool usingReliableText)
     // only points internal structs at that memory, it doesn't touch it. On a loaded
     // machine those pages can still need to be faulted in from scratch, which has been
     // observed to stall the real-time TX/RX thread by hundreds of ms on its very first
-    // live frame (right after PTT, or right after initial sync). Run one dummy inference
-    // of each here, off the real-time thread, so that cost is paid now instead.
+    // live frame (right after PTT, or right after initial sync).
+    //
+    // Run the dummy inference on a throwaway instance, NOT rade_ itself: rade_rx()'s
+    // sync detector keeps IIR-smoothed state (Ry_smooth, frame_sync_odd/even, etc.)
+    // inside struct rade that rade_open() zeroes but a live call does not -- feeding
+    // it one warmup frame nudges that state off its pristine zeroed start and was
+    // confirmed via CI to cause intermittent loss of sync during real acquisition.
+    // The weight tables a throwaway instance touches are the same static, read-only
+    // memory the real rade_ instance reads, so paging them in this way still avoids
+    // the first-frame stall without perturbing any state rade_ will actually use.
     {
-        std::vector<float> warmupFeatures(rade_n_features_in_out(rade_), 0.0f);
-        std::vector<RADE_COMP> warmupTxOut(rade_n_tx_out(rade_));
-        rade_tx(rade_, warmupTxOut.data(), warmupFeatures.data());
+        struct rade* warmupRade = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_MODE_V2 | RADE_VERBOSE_0);
+        if (warmupRade != nullptr)
+        {
+            std::vector<float> warmupFeatures(rade_n_features_in_out(warmupRade), 0.0f);
+            std::vector<RADE_COMP> warmupTxOut(rade_n_tx_out(warmupRade));
+            rade_tx(warmupRade, warmupTxOut.data(), warmupFeatures.data());
 
-        std::vector<RADE_COMP> warmupRxIn(rade_nin_max(rade_));
-        std::vector<float> warmupRxFeatures(rade_n_features_in_out(rade_), 0.0f);
-        int warmupHasEoo = 0;
-        rade_rx(rade_, warmupRxFeatures.data(), &warmupHasEoo, nullptr, warmupRxIn.data());
+            std::vector<RADE_COMP> warmupRxIn(rade_nin_max(warmupRade));
+            std::vector<float> warmupRxFeatures(rade_n_features_in_out(warmupRade), 0.0f);
+            int warmupHasEoo = 0;
+            rade_rx(warmupRade, warmupRxFeatures.data(), &warmupHasEoo, nullptr, warmupRxIn.data());
+
+            rade_close(warmupRade);
+        }
     }
 
     if (usingReliableText)
