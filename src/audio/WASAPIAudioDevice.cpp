@@ -55,7 +55,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDev
     , semaphore_(nullptr)
     , highResTimer_(nullptr)
     , tmpBuf_(nullptr)
-    , extraTimeHns_(0)
+    , waitOvershootHns_(0)
 {
     // empty
 }
@@ -593,17 +593,29 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     }
 
     // Nominal period in 100ns units -- matches what SetWaitableTimer expects,
-    // and lets the debt compensation below track sub-millisecond amounts
-    // instead of being rounded down to whole milliseconds.
-    int64_t hns = ((10000000LL * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
-    hns -= extraTimeHns_;
+    // and lets the compensation below track sub-millisecond amounts instead
+    // of being rounded down to whole milliseconds.
+    int64_t nominalHns = ((10000000LL * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+
+    // Compensate for how much of the period THIS cycle's own processing
+    // already used, measured directly against startTime_ (set by
+    // startRealTimeWork() right before processing began) rather than against
+    // a debt figure copied from the *previous* cycle. The previous approach
+    // lagged by one cycle: it corrected this wait for last cycle's overrun
+    // instead of this cycle's own, which overcorrects/undercorrects whenever
+    // processing time varies cycle to cycle instead of holding steady.
+    // waitOvershootHns_ separately tracks only the wait itself running long
+    // (the one thing that genuinely can't be known until after it happens),
+    // so a systematic scheduling overshoot still can't accumulate into drift.
+    auto elapsedHns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime_).count() / 100;
+    int64_t hns = nominalHns - elapsedHns - waitOvershootHns_;
     if (hns <= 0)
     {
-        extraTimeHns_ = 0;
+        waitOvershootHns_ = 0;
         return;
     }
 
-    // Arm a high-resolution one-shot timer for the debt-compensated duration
+    // Arm a high-resolution one-shot timer for the compensated duration
     // (negative = relative time, in 100ns units) and wait on it alongside the
     // semaphore -- this is what lets the wait itself use a precision finer
     // than WaitForSingleObject's millisecond-granular timeout would allow.
@@ -611,12 +623,12 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     dueTime.QuadPart = -hns;
     SetWaitableTimer(highResTimer_, &dueTime, 0, nullptr, nullptr, FALSE);
 
+    auto waitStartTime = std::chrono::steady_clock::now();
     HANDLE waitHandles[2] = { semaphore_, highResTimer_ };
     DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
 
-    auto endTime = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime_).count() / 100 - hns; // in 100ns units
-    extraTimeHns_ = std::max((int64_t)0, duration); // cap extra time to >= 0.
+    auto actualWaitHns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - waitStartTime).count() / 100;
+    waitOvershootHns_ = std::max((int64_t)0, actualWaitHns - hns); // cap at >= 0; an early (semaphore) wake isn't overshoot.
 
     if (result != WAIT_OBJECT_0 && result != WAIT_OBJECT_0 + 1)
     {
