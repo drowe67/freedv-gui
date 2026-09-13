@@ -54,8 +54,9 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDev
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
+    , highResTimer_(nullptr)
     , tmpBuf_(nullptr)
-    , extraTimeMs_(0)
+    , extraTimeHns_(0)
 {
     // empty
 }
@@ -393,6 +394,23 @@ void WASAPIAudioDevice::start()
             log_warn(ss.str().c_str());
         }
 
+        // Create a high-resolution waitable timer for the debt-compensated
+        // wait in stopRealTimeWork(), so that wait isn't limited to
+        // WaitForSingleObject's millisecond-granular timeout. The high-res
+        // flag requires Windows 10 1803+; fall back to a regular (still
+        // usable, just lower-resolution) waitable timer if unavailable.
+        highResTimer_ = CreateWaitableTimerEx(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        if (highResTimer_ == nullptr)
+        {
+            highResTimer_ = CreateWaitableTimerEx(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
+        }
+        if (highResTimer_ == nullptr)
+        {
+            std::stringstream ss;
+            ss << "Could not create waitable timer (err = " << GetLastError() << ")";
+            log_warn(ss.str().c_str());
+        }
+
         // Reduce Windows timer resolution to 1ms to improve WaitForSingleObject
         // precision in the audio loop.
         timeBeginPeriod(1);
@@ -516,6 +534,18 @@ void WASAPIAudioDevice::stop()
             CloseHandle(tmpSem);
         }
 
+        if (highResTimer_ != nullptr)
+        {
+            // Same ordering rationale as semaphore_ above: null out, signal
+            // any waiter unstuck, then close.
+            auto tmpTimer = highResTimer_;
+            highResTimer_ = nullptr;
+            LARGE_INTEGER dueTime;
+            dueTime.QuadPart = 0;
+            SetWaitableTimer(tmpTimer, &dueTime, 0, nullptr, nullptr, FALSE);
+            CloseHandle(tmpTimer);
+        }
+
         if (tmpBuf_ != nullptr)
         {
             delete[] tmpBuf_;
@@ -554,35 +584,42 @@ void WASAPIAudioDevice::startRealTimeWork()
     startTime_ = std::chrono::steady_clock::now();
 }
 
-void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
+void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    if (semaphore_ == nullptr)
+    if (semaphore_ == nullptr || highResTimer_ == nullptr)
     {
         // Fallback to base class behavior
         IAudioDevice::stopRealTimeWork();
         return;
     }
 
-    int64_t msec = ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
-    msec -= extraTimeMs_;
-    if (msec <= 0)
+    // Nominal period in 100ns units -- matches what SetWaitableTimer expects,
+    // and lets the debt compensation below track sub-millisecond amounts
+    // instead of being rounded down to whole milliseconds.
+    int64_t hns = ((10000000LL * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+    hns -= extraTimeHns_;
+    if (hns <= 0)
     {
-        extraTimeMs_ = 0;
+        extraTimeHns_ = 0;
         return;
     }
 
-    // Wait for the debt-compensated duration (msec above), not the raw
-    // nominal period again -- using the nominal period here silently
-    // discarded the extraTimeMs_ compensation for every case except a full
-    // skip (msec <= 0 above), since it recomputed the same uncompensated
-    // value from scratch instead of using the one just calculated.
-    DWORD result = WaitForSingleObject(semaphore_, (DWORD)msec);
+    // Arm a high-resolution one-shot timer for the debt-compensated duration
+    // (negative = relative time, in 100ns units) and wait on it alongside the
+    // semaphore -- this is what lets the wait itself use a precision finer
+    // than WaitForSingleObject's millisecond-granular timeout would allow.
+    LARGE_INTEGER dueTime;
+    dueTime.QuadPart = -hns;
+    SetWaitableTimer(highResTimer_, &dueTime, 0, nullptr, nullptr, FALSE);
+
+    HANDLE waitHandles[2] = { semaphore_, highResTimer_ };
+    DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
 
     auto endTime = std::chrono::steady_clock::now();
-    auto duration = std::chrono::ceil<std::chrono::microseconds>(endTime - startTime_).count() - (1000 * msec);
-    extraTimeMs_ = std::max((int64_t)0, (int64_t)round(duration / 1000.0)); // cap extra time to >= 0.
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime_).count() / 100 - hns; // in 100ns units
+    extraTimeHns_ = std::max((int64_t)0, duration); // cap extra time to >= 0.
 
-    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    if (result != WAIT_OBJECT_0 && result != WAIT_OBJECT_0 + 1)
     {
         // Fallback to a simple sleep.
         IAudioDevice::stopRealTimeWork(fastMode);
