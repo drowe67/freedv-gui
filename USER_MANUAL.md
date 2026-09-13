@@ -870,6 +870,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Remove use of mutexes in audio path during callsign decode. (PR #1486)
 2. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
+    * Windows audio thread timing improvements. (PR #1488)
 
 ## V2.4.0 August 2026
 
