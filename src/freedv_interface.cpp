@@ -27,6 +27,7 @@
 
 #include <future>
 #include <atomic>
+#include <vector>
 
 #include "main.h"
 #include "lpcnet.h"
@@ -124,6 +125,24 @@ void FreeDVInterface::start(int, bool usingReliableText)
     modelFile[0] = 0;
     rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_MODE_V2 | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
     assert(rade_ != nullptr);
+
+    // rade_tx()/rade_rx() are the first code paths to actually read every byte of
+    // RADE's large statically-compiled neural net weight tables -- rade_open() above
+    // only points internal structs at that memory, it doesn't touch it. On a loaded
+    // machine those pages can still need to be faulted in from scratch, which has been
+    // observed to stall the real-time TX/RX thread by hundreds of ms on its very first
+    // live frame (right after PTT, or right after initial sync). Run one dummy inference
+    // of each here, off the real-time thread, so that cost is paid now instead.
+    {
+        std::vector<float> warmupFeatures(rade_n_features_in_out(rade_), 0.0f);
+        std::vector<RADE_COMP> warmupTxOut(rade_n_tx_out(rade_));
+        rade_tx(rade_, warmupTxOut.data(), warmupFeatures.data());
+
+        std::vector<RADE_COMP> warmupRxIn(rade_nin_max(rade_));
+        std::vector<float> warmupRxFeatures(rade_n_features_in_out(rade_), 0.0f);
+        int warmupHasEoo = 0;
+        rade_rx(rade_, warmupRxFeatures.data(), &warmupHasEoo, nullptr, warmupRxIn.data());
+    }
 
     if (usingReliableText)
     {
