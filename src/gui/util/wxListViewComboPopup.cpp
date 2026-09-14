@@ -1,4 +1,5 @@
 #include "wxListViewComboPopup.h"
+#include "DipCompat.h"
 
 #include <wx/combo.h>
 #include <wx/listctrl.h>
@@ -110,7 +111,8 @@ wxSize wxListViewComboPopup::GetAdjustedSize(
         int	prefHeight,
         int	)
 {
-    return wxSize(400 < minWidth ? minWidth : 400, prefHeight);
+    int minDefaultWidth = FromDIP(400);
+    return wxSize(minDefaultWidth < minWidth ? minWidth : minDefaultWidth, prefHeight);
 }
 
 wxBEGIN_EVENT_TABLE(wxListViewComboPopup, wxListView)

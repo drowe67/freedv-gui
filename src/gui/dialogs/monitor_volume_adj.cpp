@@ -25,6 +25,7 @@
 #include <wx/statbox.h>
 
 #include "monitor_volume_adj.h"
+#include "gui/util/DipCompat.h"
 
 MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
     : wxPopupTransientWindow(parent)
@@ -36,7 +37,7 @@ MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     
     wxStaticBoxSizer* mainSizer = new wxStaticBoxSizer(wxVERTICAL, this, _("Monitor volume (dB)"));
     
-    volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxSize(250, -1), wxSL_AUTOTICKS | wxSL_LABELS);
+    volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, FromDIP(wxSize(250, -1)), wxSL_AUTOTICKS | wxSL_LABELS);
     mainSizer->Add(volumeSlider_, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
         
     SetSizerAndFit(mainSizer);
