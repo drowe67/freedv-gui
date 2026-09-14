@@ -958,7 +958,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix uninitialized value read during waterfall plot render. (PR #1481)
     * Match std::atomic memory ordering to what each atomic actually synchronises. (PR #1482)
     * Remove use of mutexes in audio path during callsign decode. (PR #1486)
-2. Other:
+2. Build system:
+    * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
+3. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
     * Windows audio thread timing improvements. (PR #1488)
 
