@@ -36,6 +36,7 @@
 #include <wx/spinctrl.h>
 #include <wx/propgrid/property.h>
 #include <wx/propgrid/props.h>
+#include "../util/DipCompat.h"
 
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -44,7 +45,7 @@
 class ComPortsDlg : public wxDialog
 {
      public:
-        ComPortsDlg(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("CAT and PTT Config"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxWindow::FromDIP(wxSize(450,300), nullptr), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
+        ComPortsDlg(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("CAT and PTT Config"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = WX_STATIC_FROM_DIP(wxSize(450,300), nullptr), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
         virtual ~ComPortsDlg();
         void    ExchangeData(int inout);
 

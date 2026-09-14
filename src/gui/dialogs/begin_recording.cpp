@@ -21,6 +21,7 @@
 
 #include <wx/wx.h>
 #include "begin_recording.h"
+#include "../util/DipCompat.h"
 
 namespace
 {
@@ -52,7 +53,7 @@ namespace
 }
 
 BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& defaultRecordingSuffix) 
-    : wxDialog(parent, wxID_ANY, _("Start Recording"), wxDefaultPosition, wxWindow::FromDIP(wxSize(250,-1), parent), wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL)
+    : wxDialog(parent, wxID_ANY, _("Start Recording"), wxDefaultPosition, WX_STATIC_FROM_DIP(wxSize(250,-1), parent), wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL)
 {    
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.

@@ -23,6 +23,7 @@
 #define __TOPFRAME_H__
 
 #include "git_version.h"
+#include "gui/util/DipCompat.h"
 #include <wx/version.h>
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
@@ -273,7 +274,7 @@ class TopFrame : public wxFrame
         wxStaticBox*  m_txLevelBox;
         wxStaticBox* micSpeakerBox;
 
-        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxWindow::FromDIP(wxSize(561,300), nullptr), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
+        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = WX_STATIC_FROM_DIP(wxSize(561,300), nullptr), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 
         ~TopFrame();
 };

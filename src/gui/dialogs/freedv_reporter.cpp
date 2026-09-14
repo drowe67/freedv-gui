@@ -24,6 +24,7 @@
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
+#include "gui/util/DipCompat.h"
 #include <wx/clipbrd.h>
 #include <wx/wrapsizer.h>
 #include <wx/menuitem.h>

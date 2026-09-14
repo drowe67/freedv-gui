@@ -22,6 +22,7 @@
 #include <wx/gbsizer.h>
 #include <wx/numformatter.h>
 #include "dlg_options.h"
+#include "gui/util/DipCompat.h"
 
 extern FreeDVInterface freedvInterface;
 

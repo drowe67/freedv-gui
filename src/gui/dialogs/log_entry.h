@@ -25,6 +25,7 @@
 #include "../../main.h"
 #include "defines.h"
 #include "../../logging/ILogger.h"
+#include "../util/DipCompat.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class LogEntryDialog
@@ -35,7 +36,7 @@ class LogEntryDialog : public wxDialog
         LogEntryDialog( wxWindow* parent,
                 wxWindowID id = wxID_ANY, const wxString& title = _("Confirm Log Entry"), 
                 const wxPoint& pos = wxDefaultPosition, 
-                const wxSize& size = wxWindow::FromDIP(wxSize(250,-1), nullptr),
+                const wxSize& size = WX_STATIC_FROM_DIP(wxSize(250,-1), nullptr),
                 long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
         virtual ~LogEntryDialog();
 

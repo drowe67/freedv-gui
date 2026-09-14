@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include "MsgListPopup.h"
+#include "gui/util/DipCompat.h"
 #include <algorithm>
 #include <wx/textctrl.h>
 

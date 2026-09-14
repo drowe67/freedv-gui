@@ -25,6 +25,7 @@
 #include <wx/statbox.h>
 
 #include "monitor_volume_adj.h"
+#include "gui/util/DipCompat.h"
 
 MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
     : wxPopupTransientWindow(parent)

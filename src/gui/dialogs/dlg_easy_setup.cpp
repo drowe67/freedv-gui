@@ -28,6 +28,7 @@
 #include <wx/valnum.h>
 
 #include "../../main.h"
+#include "gui/util/DipCompat.h"
 #include "dlg_easy_setup.h"
 #include "dlg_audiooptions.h"
 #include "dlg_ptt.h"

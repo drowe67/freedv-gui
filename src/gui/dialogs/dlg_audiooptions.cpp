@@ -26,6 +26,7 @@
 #include <wx/confbase.h>
 
 #include "dlg_audiooptions.h"
+#include "gui/util/DipCompat.h"
 
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"

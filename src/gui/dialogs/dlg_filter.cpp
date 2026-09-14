@@ -23,6 +23,7 @@
 
 #include "dlg_filter.h"
 #include "gui/util/LabelOverrideAccessible.h"
+#include "gui/util/DipCompat.h"
 
 #define SLIDER_MAX_FREQ_BASS 600
 #define SLIDER_MAX_FREQ 3900

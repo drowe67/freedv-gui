@@ -1,4 +1,5 @@
 #include "wxListViewComboPopup.h"
+#include "DipCompat.h"
 
 #include <wx/combo.h>
 #include <wx/listctrl.h>
