@@ -4,6 +4,11 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    # This branch is a Windows-toolchain-only experiment (Ubuntu's
+    # gcc-mingw-w64 instead of llvm-mingw); skip the unrelated
+    # Linux/macOS builds to avoid competing for runner capacity while
+    # it's under active iteration. Remove this exclusion before merging.
+    - 'ms-mingw-gcc-windows'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
