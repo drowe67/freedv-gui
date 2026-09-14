@@ -15,46 +15,38 @@ set(CMAKE_RC_COMPILER ${triple}-windres)
 # For make package use.
 set(CMAKE_OBJDUMP ${triple}-objdump)
 
-# Opt into UCRT-only CRT additions (e.g. C11 timespec_get(), used by
-# freedv-backend's logging code) -- without this, mingw-w64's headers
-# don't even declare them, regardless of what's linked.
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_UCRT")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_UCRT")
-
-# The extra runtime libraries needed to satisfy the above (-lssp for
-# _FORTIFY_SOURCE's __memcpy_chk & co, -lucrt/-lucrtbase for UCRT-only
-# additions like _timespec64_get) can't be set here as CMAKE_<LANG>_
-# STANDARD_LIBRARIES: CMake's Windows-GNU platform file unconditionally
-# (re)populates that variable (e.g. with "-lkernel32 -luser32 ...")
-# during language enablement, which runs *after* the toolchain file and
-# clobbers whatever it set here. They're set instead in the top-level
-# CMakeLists.txt (after project()) and forwarded explicitly to the
-# nested build_rade ExternalProject in freedv-backend's BuildRADE.cmake.
+# Deliberately NOT defining -D_UCRT here (see below for why).
+#
+# -lssp (for _FORTIFY_SOURCE's __memcpy_chk & co) can't be set here as
+# CMAKE_<LANG>_STANDARD_LIBRARIES: CMake's Windows-GNU platform file
+# unconditionally (re)populates that variable (e.g. with "-lkernel32
+# -luser32 ...") during language enablement, which runs *after* the
+# toolchain file and clobbers whatever it set here. It's set instead in
+# the top-level CMakeLists.txt (after project()) and forwarded
+# explicitly to the nested build_rade ExternalProject in
+# freedv-backend's BuildRADE.cmake.
 
 # Ubuntu's mingw-w64-x86-64 toolchain targets the classic msvcrt-default
-# triple: it ships libucrt.a/libucrtbase.a as *additional* opt-in import
-# libraries, but g++'s own driver spec still unconditionally appends
-# -lmsvcrt at the very end regardless (there's no UCRT-native triple
-# here the way MSYS2 packages one separately). msvcrt.a and ucrt.a both
-# provide a handful of overlapping legacy wide-char functions (seen so
-# far: wcsrtombs, mbsrtowcs), so linking both -- unavoidable without a
-# UCRT-native toolchain -- trips ld's multiple-definition check even
-# though the two implementations are functionally interchangeable for
-# these. This is a global linker policy, not a library reference, so
-# unlike the -l flags above it doesn't need CMAKE_*_STANDARD_LIBRARIES
-# positioning; CMAKE_EXE_LINKER_FLAGS (processed early, but that's fine
-# for a policy flag) is fine.
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+# triple, and with -D_UCRT no longer defined above, msvcrt.a is now the
+# *only* CRT linked in -- no more overlapping-symbol situation with
+# ucrt.a/ucrtbase.a to paper over with -Wl,--allow-multiple-definition.
+# (That overlap used to trip ld's multiple-definition check on a
+# handful of wide-char functions like wcsrtombs/mbsrtowcs when both
+# were linked; it can no longer happen now that only one CRT is
+# involved, so the flag was removed rather than left in place unused.)
 
 # Statically link the C++ runtime (libstdc++, libgcc, libwinpthread).
-# By default these are separate DLLs, which caused a real, reproducible
-# crash: freedv.exe segfaulted (STATUS_ACCESS_VIOLATION writing to
-# address 0x8 -- a null-pointer member write) *inside libstdc++-6.dll
-# itself*, confirmed from a Windows crash dump captured by CI. This is
-# a known class of bug with mingw-w64's threaded C++ runtime split
-# across DLLs (cross-DLL static-initialization-order/TLS issues); the
-# standard fix is to statically link it into the executable instead.
+# By default these are separate DLLs. This was originally added to fix
+# what looked like a cross-DLL static-initialization-order/TLS bug
+# (freedv.exe segfaulted, STATUS_ACCESS_VIOLATION writing to address
+# 0x8, inside libstdc++-6.dll itself, per a CI crash dump) -- but that
+# turned out to be a symptom, not the cause: the real bug was mixing
+# UCRT and classic-msvcrt CRT internals (see the removed -D_UCRT above
+# and freedv-backend's clock_gettime() fix), which corrupted an
+# indirect call and crashed at whatever code happened to be next,
+# statically linked or not. Kept anyway since it's still a real class
+# of risk to avoid for a threaded C++ runtime split across DLLs, even
+# though it wasn't the actual fix for the crash that motivated it.
 # librade.dll/libhamlib-4.dll are pure C and don't use libstdc++, so
 # this doesn't risk two coexisting C++ runtime instances -- it's
 # limited to CMAKE_EXE_LINKER_FLAGS for that reason (not

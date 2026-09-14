@@ -65,8 +65,8 @@ if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # invocations like ExternalProject_Add(build_rade ...) in
     # freedv-backend's BuildRADE.cmake -- that one explicitly forwards
     # these same two variables via its own CMAKE_ARGS instead.
-    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
-    set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
+    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp")
+    set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp")
 endif()
 
 if(NOT DEFINED LINUX)
