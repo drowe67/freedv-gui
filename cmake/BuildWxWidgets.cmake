@@ -9,6 +9,24 @@ set(wxBUILD_MONOLITHIC OFF CACHE BOOL "Build a single library" FORCE)
 set(wxUSE_STL OFF CACHE STRING "use C++ STL classes" FORCE)
 set(wxUSE_REGEX "builtin" CACHE STRING "enable support for wxRegEx class" FORCE)
 
+if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Ubuntu's gcc-mingw-w64 13.2.0 package ships a prebuilt libstdc++.a
+    # whose explicit instantiation of std::basic_streambuf<char>::seekpos
+    # (and friends) uses std::fpos<int>, while the currently-installed
+    # mingw-w64 headers (this is what wxWidgets itself compiles against)
+    # define std::fpos<_Mbstatet> with _Mbstatet as a struct, not int --
+    # a real ABI/version skew between the gcc-mingw-w64 and
+    # mingw-w64-x86-64-dev packages, not anything specific to this
+    # project. It surfaces as "undefined reference to
+    # std::basic_streambuf<char, ...>::seekpos(std::fpos<_Mbstatet>, ...)"
+    # when linking, because wxTextCtrlBase/wxComboCtrlTextCtrl/
+    # wxPrintPageTextCtrl (see wxUSE_STD_IOSTREAM in <wx/textctrl.h>)
+    # inherit from std::streambuf to redirect C++ iostreams through a
+    # text control -- a feature FreeDV doesn't use. Disabling it avoids
+    # the mismatched vtable reference entirely.
+    set(wxUSE_STD_IOSTREAM OFF CACHE BOOL "redirect iostreams through wxTextCtrl" FORCE)
+endif()
+
 if (NOT LINUX)
 # Clang will not build the built-in zlib on Linux, so use the system one
 # instead on that platform.
