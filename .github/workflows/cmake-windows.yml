@@ -29,7 +29,15 @@ jobs:
       matrix:
         arch: [x86_64]
 
-    runs-on: ubuntu-22.04
+    # ubuntu-22.04 (a leftover from the llvm-mingw workflow, where the host
+    # Ubuntu version didn't matter since llvm-mingw was a self-contained,
+    # version-pinned download) ships gcc-mingw-w64-x86-64 10.3.0 /
+    # mingw-w64-x86-64-dev 8.0.0 -- old enough that some networking headers
+    # (e.g. AI_V4MAPPED in <ws2tcpip.h>, used by freedv-backend's
+    # pskreporter.cpp) aren't declared at all. All of the gcc-mingw-w64
+    # fixes in this branch were verified against Ubuntu 24.04's versions
+    # (13.2.0 / 11.0.1), so use that here too.
+    runs-on: ubuntu-24.04
 
     env:
       PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
