@@ -686,13 +686,15 @@ install(
     DESTINATION share/freedv-gui
 )    
 
-if(WIN32)
-    # Install pdb files.
+if(WIN32 AND FREEDV_USING_LLVM_MINGW)
+    # Install pdb files. Only llvm-mingw's lld produces one (via
+    # -Wl,--pdb= in the toolchain file); gcc-mingw-w64 emits DWARF debug
+    # info embedded in the binary instead, so there's nothing to install.
     install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/src/freedv.pdb 
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/src/freedv.pdb
         DESTINATION bin
     )
-endif(WIN32)
+endif(WIN32 AND FREEDV_USING_LLVM_MINGW)
 
 if(WIN32)
     #

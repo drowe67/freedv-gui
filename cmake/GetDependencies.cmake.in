@@ -12,6 +12,8 @@ set(CMAKE_SYSTEM_LIBRARY_PATH @CMAKE_SYSTEM_LIBRARY_PATH@)
 set(CMAKE_FIND_ROOT_PATH @CMAKE_FIND_ROOT_PATH@)
 
 set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
+set(CMAKE_CXX_COMPILER @CMAKE_CXX_COMPILER@)
+set(CMAKE_CXX_COMPILER_ID @CMAKE_CXX_COMPILER_ID@)
 set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@;@rade_BINARY_DIR@/src)
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/external/dist/bin)
 
@@ -138,7 +140,30 @@ if(FREEDV_USING_LLVM_MINGW)
     cmake_path(NORMAL_PATH LLVM_ADDITIONAL_LIB_PATH)
     message("Using ${LLVM_ADDITIONAL_LIB_PATH} for dependency searches.")
     list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${LLVM_ADDITIONAL_LIB_PATH})
-endif(FREEDV_USING_LLVM_MINGW)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Ubuntu's gcc-mingw-w64 splits its Windows runtime DLLs across two
+    # directories: libstdc++-6.dll/libssp-0.dll/libgcc_s_seh-1.dll live
+    # next to the compiler itself (under a GCC-version- and threading-
+    # variant-specific path, e.g. .../gcc/x86_64-w64-mingw32/13-posix/),
+    # while libwinpthread-1.dll lives in the target sysroot's lib/. Ask
+    # the compiler where each actually is instead of hardcoding either
+    # path, since both vary by GCC version/threading model/distro.
+    execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++-6.dll
+        OUTPUT_VARIABLE GCC_MINGW_RUNTIME_DLL
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    get_filename_component(GCC_MINGW_RUNTIME_DIR ${GCC_MINGW_RUNTIME_DLL} DIRECTORY)
+    message("Using ${GCC_MINGW_RUNTIME_DIR} for dependency searches.")
+    list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${GCC_MINGW_RUNTIME_DIR})
+
+    execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libwinpthread-1.dll
+        OUTPUT_VARIABLE GCC_MINGW_WINPTHREAD_DLL
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    get_filename_component(GCC_MINGW_WINPTHREAD_DIR ${GCC_MINGW_WINPTHREAD_DLL} DIRECTORY)
+    message("Using ${GCC_MINGW_WINPTHREAD_DIR} for dependency searches.")
+    list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${GCC_MINGW_WINPTHREAD_DIR})
+endif()
 
 message("dependency search paths: ${FREEDV_PACKAGE_SEARCH_PATHS}")
 
