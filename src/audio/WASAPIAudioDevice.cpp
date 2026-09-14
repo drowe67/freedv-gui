@@ -576,6 +576,21 @@ void WASAPIAudioDevice::setHelperRealTime()
     if (HelperTask_ == nullptr)
     {
         log_warn("Could not increase thread priority");
+        return;
+    }
+
+    // AvSetMmThreadCharacteristics() alone only enrolls the thread in the
+    // "Pro Audio" MMCSS class at that class's default (Normal) priority
+    // band. This thread's wait in stopRealTimeWork() is on the critical
+    // path for audio timing (it's what TxRxThread's wait/TX/RX stats
+    // measure), so bump it to the top of the band to cut down on how long
+    // it sits ready-but-not-running behind other MMCSS-scheduled threads
+    // after the semaphore/timer wakes it -- that scheduling delay is what
+    // shows up as wait jitter (stdev/max) rather than the wait target
+    // itself being wrong.
+    if (!AvSetMmThreadPriority(HelperTask_, AVRT_PRIORITY_CRITICAL))
+    {
+        log_warn("Could not raise MMCSS thread priority to critical (err = %lu)", GetLastError());
     }
 }
 
