@@ -47,6 +47,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_UCRT")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--allow-multiple-definition")
 
+# Statically link the C++ runtime (libstdc++, libgcc, libwinpthread).
+# By default these are separate DLLs, which caused a real, reproducible
+# crash: freedv.exe segfaulted (STATUS_ACCESS_VIOLATION writing to
+# address 0x8 -- a null-pointer member write) *inside libstdc++-6.dll
+# itself*, confirmed from a Windows crash dump captured by CI. This is
+# a known class of bug with mingw-w64's threaded C++ runtime split
+# across DLLs (cross-DLL static-initialization-order/TLS issues); the
+# standard fix is to statically link it into the executable instead.
+# librade.dll/libhamlib-4.dll are pure C and don't use libstdc++, so
+# this doesn't risk two coexisting C++ runtime instances -- it's
+# limited to CMAKE_EXE_LINKER_FLAGS for that reason (not
+# CMAKE_SHARED_LINKER_FLAGS, which would affect building those DLLs
+# too, if freedv-gui's own build ever produced a shared library of its
+# own via this same toolchain).
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+
 # Unlike the llvm-mingw toolchain files (which rely solely on PATH), point
 # FIND_ROOT_PATH at Ubuntu's mingw-w64 sysroot so that find_library()/
 # find_path() calls in CMakeLists.txt can't accidentally pick up a
