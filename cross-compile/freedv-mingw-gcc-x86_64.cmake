@@ -42,6 +42,22 @@ set(CMAKE_OBJDUMP ${triple}-objdump)
 set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
 set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
 
+# Ubuntu's mingw-w64-x86-64 toolchain targets the classic msvcrt-default
+# triple: it ships libucrt.a/libucrtbase.a as *additional* opt-in import
+# libraries, but g++'s own driver spec still unconditionally appends
+# -lmsvcrt at the very end regardless (there's no UCRT-native triple
+# here the way MSYS2 packages one separately). msvcrt.a and ucrt.a both
+# provide a handful of overlapping legacy wide-char functions (seen so
+# far: wcsrtombs, mbsrtowcs), so linking both -- unavoidable without a
+# UCRT-native toolchain -- trips ld's multiple-definition check even
+# though the two implementations are functionally interchangeable for
+# these. This is a global linker policy, not a library reference, so
+# unlike the -l flags above it doesn't need CMAKE_*_STANDARD_LIBRARIES
+# positioning; CMAKE_EXE_LINKER_FLAGS (processed early, but that's fine
+# for a policy flag) is fine.
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+
 # Unlike the llvm-mingw toolchain files (which rely solely on PATH), point
 # FIND_ROOT_PATH at Ubuntu's mingw-w64 sysroot so that find_library()/
 # find_path() calls in CMakeLists.txt can't accidentally pick up a
