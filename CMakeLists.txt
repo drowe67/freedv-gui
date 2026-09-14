@@ -47,6 +47,28 @@ if(APPLE)
     endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0.0.0)
 endif(APPLE)
 
+if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Extra runtime libraries Ubuntu's gcc-mingw-w64 toolchain needs (see
+    # cross-compile/freedv-mingw-gcc-x86_64.cmake for why each is there)
+    # must be appended here, in CMakeLists.txt after project(), rather
+    # than in the toolchain file itself: CMake's Windows-GNU platform
+    # file unconditionally (re)populates CMAKE_C_STANDARD_LIBRARIES /
+    # CMAKE_CXX_STANDARD_LIBRARIES (e.g. with "-lkernel32 -luser32 ...")
+    # during language enablement, which happens *after* the toolchain
+    # file runs and clobbers whatever it set there. Setting it here
+    # instead appends to the now-already-populated platform default.
+    #
+    # This also propagates correctly to plain add_subdirectory()/
+    # FetchContent-based subprojects (a nested project() call for an
+    # already-enabled language doesn't re-trigger platform-default
+    # population), but NOT to genuinely separate nested `cmake`
+    # invocations like ExternalProject_Add(build_rade ...) in
+    # freedv-backend's BuildRADE.cmake -- that one explicitly forwards
+    # these same two variables via its own CMAKE_ARGS instead.
+    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
+    set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
+endif()
+
 if(NOT DEFINED LINUX)
     string(FIND ${CMAKE_SYSTEM_NAME} "Linux" LINUX_LOC)
     if((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))

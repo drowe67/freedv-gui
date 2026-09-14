@@ -15,32 +15,21 @@ set(CMAKE_RC_COMPILER ${triple}-windres)
 # For make package use.
 set(CMAKE_OBJDUMP ${triple}-objdump)
 
-# Extra runtime libraries needed with Ubuntu's gcc-mingw-w64:
-#  - libssp.a: Ubuntu's gcc bakes in _FORTIFY_SOURCE hardening by default
-#    (even when cross-compiling), so calls like memcpy() with a
-#    compile-time-known destination size get rewritten to __memcpy_chk()
-#    etc. On Linux those come from glibc; mingw-w64 has no libc of its
-#    own providing them, so without this they fail to link. libssp.a
-#    (shipped by gcc-mingw-w64-x86-64) provides the fortify-source
-#    runtime for mingw targets.
-#  - libucrt.a/libucrtbase.a: needed for newer CRT additions like C11's
-#    timespec_get(), which msvcrt.dll (mingw-w64's other, older default
-#    CRT choice) doesn't have.
-#
-# These must be appended via CMAKE_<LANG>_STANDARD_LIBRARIES, not
-# CMAKE_EXE_LINKER_FLAGS/CMAKE_SHARED_LINKER_FLAGS: CMake's Makefile
-# generator places CMAKE_*_LINKER_FLAGS content *before* the target's
-# own object files and libraries on the link line, but ld only pulls a
-# static archive's symbols in to satisfy references it already knows
-# are outstanding at that point in a left-to-right scan -- it never
-# backtracks. Put before objects.a/linkLibs.rsp, these three archives
-# were being scanned before anything had asked for their symbols and so
-# were silently contributing nothing, regardless of being present on
-# the command line at all.
-# CMAKE_<LANG>_STANDARD_LIBRARIES, by contrast, is appended after
-# everything else (it's what -lkernel32 -luser32 etc. already use below).
-set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
-set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp -lucrt -lucrtbase")
+# Opt into UCRT-only CRT additions (e.g. C11 timespec_get(), used by
+# freedv-backend's logging code) -- without this, mingw-w64's headers
+# don't even declare them, regardless of what's linked.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_UCRT")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_UCRT")
+
+# The extra runtime libraries needed to satisfy the above (-lssp for
+# _FORTIFY_SOURCE's __memcpy_chk & co, -lucrt/-lucrtbase for UCRT-only
+# additions like _timespec64_get) can't be set here as CMAKE_<LANG>_
+# STANDARD_LIBRARIES: CMake's Windows-GNU platform file unconditionally
+# (re)populates that variable (e.g. with "-lkernel32 -luser32 ...")
+# during language enablement, which runs *after* the toolchain file and
+# clobbers whatever it set here. They're set instead in the top-level
+# CMakeLists.txt (after project()) and forwarded explicitly to the
+# nested build_rade ExternalProject in freedv-backend's BuildRADE.cmake.
 
 # Ubuntu's mingw-w64-x86-64 toolchain targets the classic msvcrt-default
 # triple: it ships libucrt.a/libucrtbase.a as *additional* opt-in import
