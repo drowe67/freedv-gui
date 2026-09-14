@@ -26,14 +26,25 @@ set(CMAKE_OBJDUMP ${triple}-objdump)
 # explicitly to the nested build_rade ExternalProject in
 # freedv-backend's BuildRADE.cmake.
 
-# Ubuntu's mingw-w64-x86-64 toolchain targets the classic msvcrt-default
-# triple, and with -D_UCRT no longer defined above, msvcrt.a is now the
-# *only* CRT linked in -- no more overlapping-symbol situation with
-# ucrt.a/ucrtbase.a to paper over with -Wl,--allow-multiple-definition.
-# (That overlap used to trip ld's multiple-definition check on a
-# handful of wide-char functions like wcsrtombs/mbsrtowcs when both
-# were linked; it can no longer happen now that only one CRT is
-# involved, so the flag was removed rather than left in place unused.)
+# This has two independent justifications, both confirmed by removing
+# it and seeing exactly these failures come back:
+#
+# 1. With LTO enabled (-DENABLE_LTO=1, used by CI), ld sees multiple
+#    ".gnu.linkonce.t." COMDAT-foldable virtual-thunk definitions for
+#    the same wx virtual method (e.g. wxTextCtrlBase::SetValue/
+#    GetValue) coming from different LTO-plugin objects with different
+#    "Thn" vtable-offset adjustments, and refuses to fold them as
+#    "multiple definition" instead of silently picking one. This is
+#    unrelated to CRT choice; it reproduced identically even after
+#    -D_UCRT/-lucrt/-lucrtbase were removed below.
+# 2. When -D_UCRT *was* defined (no longer the case -- see below),
+#    linking libucrt.a/libucrtbase.a alongside msvcrt.a (g++'s driver
+#    unconditionally appends -lmsvcrt) also tripped this on a handful
+#    of overlapping legacy wide-char functions like wcsrtombs/
+#    mbsrtowcs. That specific overlap can no longer happen now that
+#    only one CRT is linked, but reason 1 above still needs the flag.
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--allow-multiple-definition")
 
 # Statically link the C++ runtime (libstdc++, libgcc, libwinpthread).
 # By default these are separate DLLs. This was originally added to fix
