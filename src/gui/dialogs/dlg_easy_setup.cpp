@@ -79,7 +79,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerSoundDevice->Add(labelRadioDevice, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 2);
 
     m_radioDevice = new wxComboBox(selectSoundDeviceBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-    m_radioDevice->SetMinSize(wxSize(250, -1));
+    m_radioDevice->SetMinSize(FromDIP(wxSize(250, -1)));
     gridSizerSoundDevice->Add(m_radioDevice, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
     
     wxStaticText* labelAnalogPlayDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Decoded audio plays back through:"), wxDefaultPosition, wxDefaultSize, 0);
@@ -112,18 +112,18 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
     /* No CAT Control radio button */
 
-    m_ckNoPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("No PTT/CAT Control"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckNoPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("No PTT/CAT Control"), wxDefaultPosition, FromDIP(wxSize(-1, -1)), 0);
     m_ckNoPTT->SetValue(true);
     catTypeSizer->Add(m_ckNoPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
         
     /* Use Hamlib for PTT radio button. */
 
-    m_ckUseHamlibPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseHamlibPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"), wxDefaultPosition, FromDIP(wxSize(-1, -1)), 0);
     m_ckUseHamlibPTT->SetValue(false);
     catTypeSizer->Add(m_ckUseHamlibPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
     /* Use serial port for PTT radio button. */
-    m_ckUseSerialPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("Serial PTT"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseSerialPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("Serial PTT"), wxDefaultPosition, FromDIP(wxSize(-1, -1)), 0);
     m_ckUseSerialPTT->SetValue(false);
     catTypeSizer->Add(m_ckUseSerialPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
@@ -138,7 +138,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
     gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 20);
-    m_cbRigName = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbRigName = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(250, -1)), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     gridSizerhl->Add(m_cbRigName, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
 
     /* Hamlib Serial Port combobox. */
@@ -146,14 +146,14 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Serial Device (or hostname:port):"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, static_cast<int>(wxALIGN_CENTER_VERTICAL) |  wxALIGN_RIGHT, 20);
     m_cbSerialPort = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
-    m_cbSerialPort->SetMinSize(wxSize(140, -1));
+    m_cbSerialPort->SetMinSize(FromDIP(wxSize(140, -1)));
     gridSizerhl->Add(m_cbSerialPort, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
 
     /* Hamlib Icom CI-V address text box. */
     m_stIcomCIVHex = new wxStaticText(m_hamlibBox, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerhl->Add(m_stIcomCIVHex, 
                       0, static_cast<int>(wxALIGN_CENTER_VERTICAL) |  wxALIGN_RIGHT, 5);
-    m_tcIcomCIVHex = new wxTextCtrl(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
+    m_tcIcomCIVHex = new wxTextCtrl(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(35, -1)), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
     m_tcIcomCIVHex->SetMaxLength(2);
     gridSizerhl->Add(m_tcIcomCIVHex, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
@@ -161,7 +161,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
     gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 20);
-    m_cbSerialRate = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSerialRate = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(140, -1)), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialRate, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
     /* Hamlib PTT Method combobox. */
@@ -169,7 +169,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("PTT uses:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, static_cast<int>(wxALIGN_CENTER_VERTICAL) |  wxALIGN_RIGHT, 20);
     m_cbPttMethod = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-    m_cbPttMethod->SetSize(wxSize(140, -1));
+    m_cbPttMethod->SetSize(FromDIP(wxSize(140, -1)));
     gridSizerhl->Add(m_cbPttMethod, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
     // Add valid PTT options to combo box.
@@ -182,7 +182,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
     /* Force RTS / Force DTR checkboxes on one row */
     wxBoxSizer* forceRtsSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_ckForceRTSOn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceRTSOn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(-1, -1)), 0);
     m_ckForceRTSOn->SetToolTip(_("Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"));
     forceRtsSizer->Add(m_ckForceRTSOn, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL), 0);
     forceRtsSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force RTS"), wxDefaultPosition, wxDefaultSize, 0),
@@ -190,7 +190,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerhl->Add(forceRtsSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT, 2);
 
     wxBoxSizer* forceDtrSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_ckForceDTROn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckForceDTROn = new wxCheckBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(-1, -1)), 0);
     m_ckForceDTROn->SetToolTip(_("Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"));
     forceDtrSizer->Add(m_ckForceDTROn, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxLEFT, 10);
     forceDtrSizer->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Force DTR"), wxDefaultPosition, wxDefaultSize, 0),
@@ -211,27 +211,27 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerSerial->Add(serialDeviceLabel, 0, static_cast<int>(wxALL) | wxALIGN_RIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
     m_cbCtlDevicePath = new wxComboBox(m_serialBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
-    m_cbCtlDevicePath->SetMinSize(wxSize(140, -1));
+    m_cbCtlDevicePath->SetMinSize(FromDIP(wxSize(140, -1)));
     gridSizerSerial->Add(m_cbCtlDevicePath, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
 
     /* DTR/RTS options */
    
-    m_rbUseDTR = new wxRadioButton(m_serialBox, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), wxRB_GROUP);
+    m_rbUseDTR = new wxRadioButton(m_serialBox, wxID_ANY, _("Use DTR"), wxDefaultPosition, FromDIP(wxSize(-1,-1)), wxRB_GROUP);
     m_rbUseDTR->SetToolTip(_("Toggle DTR line for PTT"));
     m_rbUseDTR->SetValue(1);
     gridSizerSerial->Add(m_rbUseDTR, 0, static_cast<int>(wxALL) | wxALIGN_CENTER|static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
-    m_rbUseRTS = new wxRadioButton(m_serialBox, wxID_ANY, _("Use RTS"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_rbUseRTS = new wxRadioButton(m_serialBox, wxID_ANY, _("Use RTS"), wxDefaultPosition, FromDIP(wxSize(-1,-1)), 0);
     m_rbUseRTS->SetToolTip(_("Toggle the RTS pin for PTT"));
     m_rbUseRTS->SetValue(1);
     gridSizerSerial->Add(m_rbUseRTS, 0, static_cast<int>(wxALL) | wxALIGN_CENTER, 2);
     
-    m_ckDTRPos = new wxCheckBox(m_serialBox, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckDTRPos = new wxCheckBox(m_serialBox, wxID_ANY, _("DTR = +V"), wxDefaultPosition, FromDIP(wxSize(-1,-1)), 0);
     m_ckDTRPos->SetToolTip(_("Set Polarity of the DTR line"));
     m_ckDTRPos->SetValue(false);
     gridSizerSerial->Add(m_ckDTRPos, 0, static_cast<int>(wxALL) | wxALIGN_CENTER, 2);
 
-    m_ckRTSPos = new wxCheckBox(m_serialBox, wxID_ANY, _("RTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckRTSPos = new wxCheckBox(m_serialBox, wxID_ANY, _("RTS = +V"), wxDefaultPosition, FromDIP(wxSize(-1,-1)), 0);
     m_ckRTSPos->SetValue(false);
     m_ckRTSPos->SetToolTip(_("Set Polarity of the RTS line"));
     gridSizerSerial->Add(m_ckRTSPos, 0, static_cast<int>(wxALL) | wxALIGN_CENTER, 2);
@@ -270,13 +270,13 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticText* labelPskCallsign = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskCallsign, 0,  static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
-    m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, FromDIP(wxSize(180,-1)), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_callsign, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
     wxStaticText* labelPskGridSquare = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Grid Square/Locator: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskGridSquare, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
-    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, FromDIP(wxSize(180,-1)), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_grid_square, 0,  static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     
     sectionSizer->Add(sbSizer_psk, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);

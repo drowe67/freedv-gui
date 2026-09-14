@@ -74,8 +74,8 @@ void MsgListPopup::OnPopup()
 wxSize MsgListPopup::GetAdjustedSize(int minWidth, int /*prefHeight*/, int maxHeight)
 {
     int count = std::max(1, (int)GetCount());
-    int rowH = GetCharHeight() + 8;
-    return wxSize(minWidth, std::min(count * rowH + 4, maxHeight));
+    int rowH = GetCharHeight() + FromDIP(8);
+    return wxSize(minWidth, std::min(count * rowH + FromDIP(4), maxHeight));
 }
 
 void MsgListPopup::OnLeftDown(wxMouseEvent& event)

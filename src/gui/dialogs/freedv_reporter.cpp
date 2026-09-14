@@ -392,7 +392,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Message:"), wxDefaultPosition, wxDefaultSize);
     statusMessageSizer->Add(statusMessageLabel, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 5);
 
-    m_statusMessage = new wxComboCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), wxTE_PROCESS_ENTER);
+    m_statusMessage = new wxComboCtrl(this, wxID_ANY, _(""), wxDefaultPosition, FromDIP(wxSize(180, -1)), wxTE_PROCESS_ENTER);
     m_statusMessage->SetPopupControl(new MsgListPopup([this](int idx){ ShowMsgItemContextMenu(idx); }));
     statusMessageSizer->Add(m_statusMessage, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 5);
 

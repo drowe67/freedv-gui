@@ -82,8 +82,8 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
     //wxPanel *panel = new wxPanel(parentPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
     *plotScalar = new PlotScalar(parentPanel, TEST_WAVEFORM_PLOT_TIME, 1.0/TEST_WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "", 1, "Test audio plot");
     (*plotScalar)->SetToolTip("Shows test audio waveform");
-    (*plotScalar)->SetClientSize(wxSize(TEST_WAVEFORM_X,TEST_WAVEFORM_Y));
-    (*plotScalar)->SetMinSize(wxSize(150,150));
+    (*plotScalar)->SetClientSize(FromDIP(wxSize(TEST_WAVEFORM_X,TEST_WAVEFORM_Y)));
+    (*plotScalar)->SetMinSize(FromDIP(wxSize(150,150)));
     bSizer1->Add(*plotScalar, 0, wxALIGN_CENTER_HORIZONTAL|static_cast<int>(wxALL), 8);
 
     *btnTest = new wxButton(parentPanel, wxID_ANY, buttonLabel, wxDefaultPosition, wxDefaultSize);
@@ -111,7 +111,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 
     wxBoxSizer* mainSizer;
     mainSizer = new wxBoxSizer(wxVERTICAL);
-    mainSizer->SetMinSize(wxSize( 800, 650 ));
+    mainSizer->SetMinSize(FromDIP(wxSize(800,650)));
     
     m_panel1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     wxBoxSizer* bSizer4;
@@ -144,7 +144,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     m_staticText6 = new wxStaticText(panelRxInBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText6->Wrap(-1);
     bSizer811->Add(m_staticText6, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 5);
-    m_cbSampleRateRxIn = new wxComboBox(panelRxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateRxIn = new wxComboBox(panelRxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100,-1)), 0, NULL, wxCB_DROPDOWN);
     bSizer811->Add(m_cbSampleRateRxIn, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 1);
 
     bSizer811a->Add(bSizer811, 0, static_cast<int>(wxEXPAND), 5);
@@ -175,7 +175,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     m_staticText10 = new wxStaticText(panelRxOutBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText10->Wrap(-1);
     bSizer81->Add(m_staticText10, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 5);
-    m_cbSampleRateRxOut = new wxComboBox(panelRxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateRxOut = new wxComboBox(panelRxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100,-1)), 0, NULL, wxCB_DROPDOWN);
     bSizer81->Add(m_cbSampleRateRxOut, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 1);
 
     bSizer81a->Add(bSizer81, 0, static_cast<int>(wxEXPAND), 5);
@@ -218,7 +218,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     m_staticText11 = new wxStaticText(panelTxInBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText11->Wrap(-1);
     bSizer83->Add(m_staticText11, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 5);
-    m_cbSampleRateTxIn = new wxComboBox(panelTxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateTxIn = new wxComboBox(panelTxInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100,-1)), 0, NULL, wxCB_DROPDOWN);
     bSizer83->Add(m_cbSampleRateTxIn, 0, static_cast<int>(wxALL), 1);
 
     bSizer83a->Add(bSizer83, 0, static_cast<int>(wxEXPAND), 5);
@@ -248,7 +248,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     m_staticText71 = new wxStaticText(panelTxOutBox, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText71->Wrap(-1);
     bSizer82->Add(m_staticText71, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 5);
-    m_cbSampleRateTxOut = new wxComboBox(panelTxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(100,-1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSampleRateTxOut = new wxComboBox(panelTxOutBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100,-1)), 0, NULL, wxCB_DROPDOWN);
     bSizer82->Add(m_cbSampleRateTxOut, 0, static_cast<int>(wxALL), 1);
 
     bSizer82a->Add(bSizer82, 0, static_cast<int>(wxEXPAND), 5);

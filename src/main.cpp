@@ -911,8 +911,8 @@ void MainFrame::loadConfiguration_()
 
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
-    if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 780;
+    if (w < 0 || w > 2048) w = FromDIP(800);
+    if (h < 0 || h > 2048) h = FromDIP(780);
 
     g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
     g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;

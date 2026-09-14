@@ -213,13 +213,13 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     // Spectrum Plots -----------------------------------------------------------
 
     m_MicInFreqRespPlot = new PlotSpectrum(panelMicInEqualizer, m_MicInMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_MicInFreqRespPlot->SetMinSize(wxSize(600, 200));
+    m_MicInFreqRespPlot->SetMinSize(FromDIP(wxSize(600, 200)));
     eqMicInSizer->Add(m_MicInFreqRespPlot, 1, static_cast<int>(wxEXPAND), 0);
     panelMicInEqualizer->SetSizer(eqMicInSizer);
     m_auiNotebook->AddPage(panelMicInEqualizer, _("Microphone In Equaliser"));
 
     m_SpkOutFreqRespPlot = new PlotSpectrum(panelSpkOutEqualizer, m_SpkOutMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_SpkOutFreqRespPlot->SetMinSize(wxSize(600, 200));
+    m_SpkOutFreqRespPlot->SetMinSize(FromDIP(wxSize(600, 200)));
     eqSpkOutSizer->Add(m_SpkOutFreqRespPlot, 1, static_cast<int>(wxEXPAND), 0);
     panelSpkOutEqualizer->SetSizer(eqSpkOutSizer);
     m_auiNotebook->AddPage(panelSpkOutEqualizer, _("Speaker Out Equaliser"));
@@ -374,11 +374,11 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
 {
     wxBoxSizer *bs = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
+    wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, FromDIP(wxSize(70,-1)), wxALIGN_RIGHT);
     bs->Add(st, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL)|static_cast<int>(wxALL), 2);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX_BETA_GAMMA, wxDefaultPosition); 
-    (*slider)->SetMinSize(wxSize(SLIDER_LENGTH,wxDefaultCoord));
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX_BETA_GAMMA, wxDefaultPosition);
+    (*slider)->SetMinSize(FromDIP(wxSize(SLIDER_LENGTH,wxDefaultCoord)));
 
     bs->Add(*slider, 1, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
@@ -400,10 +400,10 @@ void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText**
     wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     sizer->Add(label, 0, wxALIGN_CENTER|static_cast<int>(wxALL), 0);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, max, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, max, wxDefaultPosition, FromDIP(wxSize(wxDefaultCoord,SLIDER_LENGTH)), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
     sizer->Add(*slider, 1, wxALIGN_CENTER|static_cast<int>(wxALL), 0);
 
-    *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_CENTER);
+    *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, FromDIP(wxSize(40,-1)), wxALIGN_CENTER);
     sizer->Add(*value, 0, wxALIGN_CENTER, 5);
 }
 
