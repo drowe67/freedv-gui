@@ -45,7 +45,6 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
-constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
 constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
@@ -714,7 +713,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 60; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
+    const double kTimeQuantum = 60; // 60ms, calculated by AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC / kGuaranteedAudioDutyCycle + a bit extra.
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -899,6 +898,8 @@ void MacAudioDevice::joinWorkgroup_()
 
 void MacAudioDevice::startRealTimeWork()
 {
+    startTime_ = std::chrono::steady_clock::now();
+
     // If the audio ID changes on us, join the new workgroup
     if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
@@ -909,8 +910,32 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
+    int64_t nominalUs = ((1000000LL * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
+
+    // Compensate for how much of the period THIS cycle's own processing
+    // already used, measured directly against startTime_ (set by
+    // startRealTimeWork() right before processing began) rather than a debt
+    // figure copied from the *previous* cycle. The previous approach lagged
+    // by one cycle: it corrected this wait for last cycle's overrun instead
+    // of this cycle's own, which overcorrects/undercorrects whenever
+    // processing time varies cycle to cycle instead of holding steady.
+    // waitOvershootUs_ separately tracks only the wait itself running long
+    // (the one thing that genuinely can't be known until after it happens),
+    // so a systematic scheduling overshoot still can't accumulate into
+    // drift. Matches WASAPIAudioDevice's stopRealTimeWork() fix (36db96e5).
+    auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - startTime_).count();
+    int64_t waitUs = nominalUs - elapsedUs - waitOvershootUs_;
+    if (waitUs <= 0)
+    {
+        waitOvershootUs_ = 0;
+        return;
+    }
+
+    auto waitStartTime = std::chrono::steady_clock::now();
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, 1000 * waitUs));
+
+    auto actualWaitUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - waitStartTime).count();
+    waitOvershootUs_ = std::max((int64_t)0, actualWaitUs - waitUs); // cap at >= 0; an early (semaphore) wake isn't overshoot.
 }
 
 void MacAudioDevice::clearHelperRealTime()

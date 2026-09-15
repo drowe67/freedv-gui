@@ -26,6 +26,7 @@
 #include <chrono>
 #include <thread>
 #include <future>
+#include <cmath>
 #include <avrt.h>
 #include <timeapi.h>
 #include <inttypes.h>
@@ -53,8 +54,9 @@ WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDev
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
+    , highResTimer_(nullptr)
     , tmpBuf_(nullptr)
-    , extraTimeMs_(0)
+    , waitOvershootHns_(0)
 {
     // empty
 }
@@ -331,7 +333,7 @@ void WASAPIAudioDevice::start()
         // Allocate temporary buffer
         tmpBuf_ = new short[sampleRate_];
         assert(tmpBuf_ != nullptr);
-        memset(tmpBuf_, 0, bufferFrameCount_ * numChannels_ * sizeof(short));
+        memset(tmpBuf_, 0, sizeof(short) * sampleRate_);
 
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
@@ -389,6 +391,23 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not create semaphore (err = " << GetLastError() << ")";
+            log_warn(ss.str().c_str());
+        }
+
+        // Create a high-resolution waitable timer for the debt-compensated
+        // wait in stopRealTimeWork(), so that wait isn't limited to
+        // WaitForSingleObject's millisecond-granular timeout. The high-res
+        // flag requires Windows 10 1803+; fall back to a regular (still
+        // usable, just lower-resolution) waitable timer if unavailable.
+        highResTimer_ = CreateWaitableTimerEx(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        if (highResTimer_ == nullptr)
+        {
+            highResTimer_ = CreateWaitableTimerEx(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
+        }
+        if (highResTimer_ == nullptr)
+        {
+            std::stringstream ss;
+            ss << "Could not create waitable timer (err = " << GetLastError() << ")";
             log_warn(ss.str().c_str());
         }
 
@@ -515,6 +534,18 @@ void WASAPIAudioDevice::stop()
             CloseHandle(tmpSem);
         }
 
+        if (highResTimer_ != nullptr)
+        {
+            // Same ordering rationale as semaphore_ above: null out, signal
+            // any waiter unstuck, then close.
+            auto tmpTimer = highResTimer_;
+            highResTimer_ = nullptr;
+            LARGE_INTEGER dueTime;
+            dueTime.QuadPart = 0;
+            SetWaitableTimer(tmpTimer, &dueTime, 0, nullptr, nullptr, FALSE);
+            CloseHandle(tmpTimer);
+        }
+
         if (tmpBuf_ != nullptr)
         {
             delete[] tmpBuf_;
@@ -545,6 +576,21 @@ void WASAPIAudioDevice::setHelperRealTime()
     if (HelperTask_ == nullptr)
     {
         log_warn("Could not increase thread priority");
+        return;
+    }
+
+    // AvSetMmThreadCharacteristics() alone only enrolls the thread in the
+    // "Pro Audio" MMCSS class at that class's default (Normal) priority
+    // band. This thread's wait in stopRealTimeWork() is on the critical
+    // path for audio timing (it's what TxRxThread's wait/TX/RX stats
+    // measure), so bump it to the top of the band to cut down on how long
+    // it sits ready-but-not-running behind other MMCSS-scheduled threads
+    // after the semaphore/timer wakes it -- that scheduling delay is what
+    // shows up as wait jitter (stdev/max) rather than the wait target
+    // itself being wrong.
+    if (!AvSetMmThreadPriority(HelperTask_, AVRT_PRIORITY_CRITICAL))
+    {
+        log_warn("Could not raise MMCSS thread priority to critical (err = %lu)", GetLastError());
     }
 }
 
@@ -553,31 +599,54 @@ void WASAPIAudioDevice::startRealTimeWork()
     startTime_ = std::chrono::steady_clock::now();
 }
 
-void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
+void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    if (semaphore_ == nullptr)
+    if (semaphore_ == nullptr || highResTimer_ == nullptr)
     {
         // Fallback to base class behavior
         IAudioDevice::stopRealTimeWork();
         return;
     }
 
-    int64_t msec = ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
-    msec -= extraTimeMs_;
-    if (msec <= 0)
+    // Nominal period in 100ns units -- matches what SetWaitableTimer expects,
+    // and lets the compensation below track sub-millisecond amounts instead
+    // of being rounded down to whole milliseconds.
+    int64_t nominalHns = ((10000000LL * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+
+    // Compensate for how much of the period THIS cycle's own processing
+    // already used, measured directly against startTime_ (set by
+    // startRealTimeWork() right before processing began) rather than against
+    // a debt figure copied from the *previous* cycle. The previous approach
+    // lagged by one cycle: it corrected this wait for last cycle's overrun
+    // instead of this cycle's own, which overcorrects/undercorrects whenever
+    // processing time varies cycle to cycle instead of holding steady.
+    // waitOvershootHns_ separately tracks only the wait itself running long
+    // (the one thing that genuinely can't be known until after it happens),
+    // so a systematic scheduling overshoot still can't accumulate into drift.
+    auto elapsedHns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime_).count() / 100;
+    int64_t hns = nominalHns - elapsedHns - waitOvershootHns_;
+    if (hns <= 0)
     {
-        extraTimeMs_ = 0;
+        waitOvershootHns_ = 0;
         return;
     }
 
-    // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
-    DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
+    // Arm a high-resolution one-shot timer for the compensated duration
+    // (negative = relative time, in 100ns units) and wait on it alongside the
+    // semaphore -- this is what lets the wait itself use a precision finer
+    // than WaitForSingleObject's millisecond-granular timeout would allow.
+    LARGE_INTEGER dueTime;
+    dueTime.QuadPart = -hns;
+    SetWaitableTimer(highResTimer_, &dueTime, 0, nullptr, nullptr, FALSE);
 
-    auto endTime = std::chrono::steady_clock::now();
-    auto duration = std::chrono::ceil<std::chrono::milliseconds>(endTime - startTime_).count() - msec;
-    extraTimeMs_ = std::max((int64_t)0, (int64_t)duration); // cap extra time to >= 0.
+    auto waitStartTime = std::chrono::steady_clock::now();
+    HANDLE waitHandles[2] = { semaphore_, highResTimer_ };
+    DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
 
-    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    auto actualWaitHns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - waitStartTime).count() / 100;
+    waitOvershootHns_ = std::max((int64_t)0, actualWaitHns - hns); // cap at >= 0; an early (semaphore) wake isn't overshoot.
+
+    if (result != WAIT_OBJECT_0 && result != WAIT_OBJECT_0 + 1)
     {
         // Fallback to a simple sleep.
         IAudioDevice::stopRealTimeWork(fastMode);

@@ -33,6 +33,8 @@
 //=========================================================================
 
 #include <chrono>
+#include <cstring>
+#include <sstream>
 using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
@@ -609,7 +611,8 @@ void* TxRxThread::Entry() noexcept
     helper->setHelperRealTime();
 
 #if defined(ENABLE_PROCESSING_STATS)
-    resetStats_();
+    processingStats_.reset();
+    waitStats_.reset();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
     // Set thread name for debugging
@@ -627,7 +630,16 @@ void* TxRxThread::Entry() noexcept
     while (m_run.load(std::memory_order_acquire))
     {
         if (!m_run.load(std::memory_order_acquire)) break;
-        
+
+#if defined(ENABLE_PROCESSING_STATS)
+        // Closes out the interval opened by waitStats_.start() below, at
+        // the end of the *previous* iteration -- i.e. how long this thread
+        // actually spent inside stopRealTimeWork()'s semaphore wait (a
+        // scheduling delay would show up here even if processing itself,
+        // measured separately in txProcessing_/rxProcessing_, looks fine).
+        waitStats_.end();
+#endif // defined(ENABLE_PROCESSING_STATS)
+
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper->startRealTimeWork();
 
@@ -644,11 +656,16 @@ void* TxRxThread::Entry() noexcept
         }
         auto totalFifoCapacity = outFifo->capacity();
         auto fifoUsed = outFifo->numUsed();
+
+#if defined(ENABLE_PROCESSING_STATS)
+        waitStats_.start();
+#endif // defined(ENABLE_PROCESSING_STATS)
         helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
 
 #if defined(ENABLE_PROCESSING_STATS)
-    reportStats_();
+    processingStats_.report(m_tx, "processing");
+    waitStats_.report(m_tx, "wait");
 #endif // defined(ENABLE_PROCESSING_STATS)
 
     // Force pipeline to delete itself when we're done with the thread.
@@ -661,50 +678,93 @@ void* TxRxThread::Entry() noexcept
 }
 
 #if defined(ENABLE_PROCESSING_STATS)
-void TxRxThread::resetStats_()
+void TxRxThread::TimingStats::reset()
 {
-    numTimeSamples_ = 0;
-    minDuration_ = 1e9;
-    maxDuration_ = 0;
-    sumDuration_ = 0;
-    sumDoubleDuration_ = 0; 
+    started = false;
+    numSamples = 0;
+    minDuration = 1e9;
+    maxDuration = 0;
+    sumDuration = 0;
+    sumDoubleDuration = 0;
+    memset(histogramCounts, 0, sizeof(histogramCounts));
 }
 
-void TxRxThread::startTimer_()
+void TxRxThread::TimingStats::start()
 {
-    timeStart_ = std::chrono::high_resolution_clock::now();
+    started = true;
+    timeStart = std::chrono::high_resolution_clock::now();
 }
 
-void TxRxThread::endTimer_()
+void TxRxThread::TimingStats::end()
 {
+    if (!started) return;
+    started = false;
+
     auto e = std::chrono::high_resolution_clock::now();
-    auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - timeStart_).count();
-    numTimeSamples_++; 
-    if (d < minDuration_)
+    auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - timeStart).count();
+    numSamples++;
+    if (d < minDuration)
     {
-        minDuration_ = d;
-        minTime_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        minDuration = d;
+        minTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
-    if (d > maxDuration_)
+    if (d > maxDuration)
     {
-        maxDuration_ = d;
-        maxTime_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        maxDuration = d;
+        maxTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
-    sumDuration_ += d; sumDoubleDuration_ += pow(d, 2);
+    sumDuration += d; sumDoubleDuration += pow(d, 2);
+
+    double dMs = d / 1.0e6;
+    int bucket = 0;
+    while (bucket < NUM_HISTOGRAM_BUCKETS - 1 && dMs >= HISTOGRAM_BUCKET_BOUNDS_MS[bucket])
+    {
+        bucket++;
+    }
+    histogramCounts[bucket]++;
 }
 
-void TxRxThread::reportStats_()
+void TxRxThread::TimingStats::report(bool m_tx, const char* label) const
 {
-    if (numTimeSamples_ > 0)
+    if (numSamples > 0)
     {
-        std::tm * minTm = std::localtime(&minTime_);
-        std::tm * maxTm = std::localtime(&maxTime_);
+        // localtime() isn't thread-safe (shared static buffer); use the
+        // reentrant variant since TX and RX threads can call this concurrently.
+        std::tm minTm{};
+        std::tm maxTm{};
+#if defined(_WIN32)
+        localtime_s(&minTm, &minTime);
+        localtime_s(&maxTm, &maxTime);
+#else
+        localtime_r(&minTime, &minTm);
+        localtime_r(&maxTime, &maxTm);
+#endif // defined(_WIN32)
         char bufMin[32];
         char bufMax[32];
-        std::strftime(bufMin, 32, "%H:%M:%S", minTm);
-        std::strftime(bufMax, 32, "%H:%M:%S", maxTm);
-        
-        log_info("m_tx = %d, min = %f ns [%s], max = %f ns [%s], mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, bufMin, maxDuration_, bufMax, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
+        std::strftime(bufMin, 32, "%H:%M:%S", &minTm);
+        std::strftime(bufMax, 32, "%H:%M:%S", &maxTm);
+
+        log_info("m_tx = %d, %s: min = %f ns [%s], max = %f ns [%s], mean = %f ns, stdev = %f ns (n = %d)", m_tx, label, minDuration, bufMin, maxDuration, bufMax, sumDuration / numSamples, sqrt((sumDoubleDuration - pow(sumDuration, 2)/numSamples) / (numSamples - 1)), numSamples);
+
+        // Histogram bucketed by upper bound in ms. Distinguishes "one freak
+        // outlier" (a lone hit in a high bucket) from "a real cluster of
+        // slow samples" (many hits spread across the middle/high buckets)
+        // -- neither is visible in the min/max/mean/stdev line above once
+        // averaged over a large n.
+        std::stringstream histSs;
+        for (int i = 0; i < NUM_HISTOGRAM_BUCKETS; i++)
+        {
+            if (i > 0) histSs << " ";
+            if (i < NUM_HISTOGRAM_BUCKETS - 1)
+            {
+                histSs << "<" << HISTOGRAM_BUCKET_BOUNDS_MS[i] << "ms:" << histogramCounts[i];
+            }
+            else
+            {
+                histSs << ">=" << HISTOGRAM_BUCKET_BOUNDS_MS[i - 1] << "ms:" << histogramCounts[i];
+            }
+        }
+        log_info("m_tx = %d, %s histogram: %s", m_tx, label, histSs.str().c_str());
     }
 }
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -794,7 +854,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             // an input frame of speech samples from the microphone.
             
 #if defined(ENABLE_PROCESSING_STATS)
-            startTimer_();
+            processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
             // infifo2 is written to by another sound card so it may
@@ -861,7 +921,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             }
             
 #if defined(ENABLE_PROCESSING_STATS)
-            endTimer_();
+            processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
             if (nread != 0)
@@ -910,11 +970,11 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
         
 #if defined(ENABLE_PROCESSING_STATS)
-        startTimer_();
+        processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
         auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam, &nout);
-        
+
         if (nout > 0 && outputSamples != nullptr)
         {
             if (outFifo->write(outputSamples, nout) != 0)
@@ -924,9 +984,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 FREEDV_END_VERIFIED_SAFE
             }
         }
-               
+
 #if defined(ENABLE_PROCESSING_STATS)
-        endTimer_();
+        processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
     }
 }

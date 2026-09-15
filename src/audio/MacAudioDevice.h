@@ -24,6 +24,7 @@
 #define MAC_AUDIO_DEVICE_H
 
 #include <thread>
+#include <chrono>
 #include <dispatch/dispatch.h>
 #include <CoreAudio/CoreAudio.h>
 #include <AudioUnit/AudioUnit.h>
@@ -86,6 +87,14 @@ private:
     bool running_;
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
+
+    // Tracks only how long the *wait itself* overshot its requested duration
+    // last cycle (microseconds), separate from processing time -- which
+    // stopRealTimeWork() measures directly each cycle against startTime_
+    // rather than inferring it from this. See stopRealTimeWork() for why;
+    // matches WASAPIAudioDevice's equivalent fields/fix (36db96e5).
+    int64_t waitOvershootUs_ = 0;
+    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();
     void joinWorkgroup_();
