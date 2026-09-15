@@ -88,12 +88,12 @@ private:
     int chosenFrameSize_;
     std::atomic<int> numRealTimeWorkers_;
 
-    // For handling additional wakeup time after semaphore timeout, matching
-    // WASAPIAudioDevice/PulseAudioDevice: if last cycle's total (processing
-    // + wait) ran long, shave that overrun off this cycle's wait so the
-    // average loop period stays locked to the nominal rate instead of
-    // drifting later every cycle that processing takes nonzero time.
-    int64_t extraTimeMs_ = 0;
+    // Tracks only how long the *wait itself* overshot its requested duration
+    // last cycle (microseconds), separate from processing time -- which
+    // stopRealTimeWork() measures directly each cycle against startTime_
+    // rather than inferring it from this. See stopRealTimeWork() for why;
+    // matches WASAPIAudioDevice's equivalent fields/fix (36db96e5).
+    int64_t waitOvershootUs_ = 0;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();

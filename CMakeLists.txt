@@ -22,28 +22,29 @@ set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 # Makes FreeDV overridden CMake platform available for ARM MinGW builds.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
+# NOTE: APPLE/WIN32/UNIX aren't reliably set until after the first
+# project()/enable_language() call, so the platform-specific language
+# list can't be chosen via if(APPLE) beforehand -- when cross-compiling
+# for Windows from a macOS host, APPLE would (incorrectly) reflect the
+# host platform at that point rather than the CMAKE_SYSTEM_NAME from the
+# toolchain file. Always declare C/CXX first, then add OBJCXX afterward
+# once APPLE reflects the actual target.
+project(
+    ${PROJECT_NAME}
+    VERSION ${PROJECT_VERSION}
+    DESCRIPTION ${PROJECT_DESCRIPTION}
+    HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
+    LANGUAGES C CXX
+)
+
 if(APPLE)
-    project(
-        ${PROJECT_NAME}
-        VERSION ${PROJECT_VERSION}
-        DESCRIPTION ${PROJECT_DESCRIPTION}
-        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
-        LANGUAGES C CXX OBJCXX
-    )
+    enable_language(OBJCXX)
 
     # Workaround for Xcode 15 bug preventing FreeDV binaries from starting
     # on older versions of macOS. See https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes#Linking.
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0.0.0)
         add_link_options("-Wl,-ld_classic")
     endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0.0.0)
-else(APPLE)
-    project(
-        ${PROJECT_NAME}
-        VERSION ${PROJECT_VERSION}
-        DESCRIPTION ${PROJECT_DESCRIPTION}
-        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
-        LANGUAGES C CXX
-    )
 endif(APPLE)
 
 if(NOT DEFINED LINUX)
