@@ -109,7 +109,7 @@ else
 fi
 # Tee via process substitution (not a plain pipe) so the FreeDV log shows up in
 # CI output while $! stays FreeDV's PID -> FREEDV_EXIT_CODE below is FreeDV's, not tee's.
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS > >(tee tmp.log) 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV2 -txfile $(pwd)/rade_src/wav/all.wav $TX_ARGS > >(tee tmp.log) 2>&1 &
 
 FDV_PID=$!
 
@@ -157,7 +157,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
     # Tee via process substitution: FreeDV log visible in CI, $! still FreeDV's PID.
-    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav > >(tee tmp.log) 2>&1 &
+    $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV2 -rxfile $(pwd)/test.wav > >(tee tmp.log) 2>&1 &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then

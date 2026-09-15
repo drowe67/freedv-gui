@@ -317,7 +317,7 @@ function Test-RadeLoss {
     $psi.RedirectStandardOutput = $true
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV2 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -363,7 +363,7 @@ function Test-RadeLoss {
 
     # Restart FreeDV in RX mode, reading live from the sound card so that any dropouts introduced by the
     # real audio path get captured in the RX feature file (mirrors test/test_rade_loss.sh).
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV2 /txtime 70 /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
     $passed = Invoke-RadeLossAttempt -current_loc $current_loc -psi $psi -ComputerToRadioDevice $ComputerToRadioDevice -PlaybackFile "$current_loc\test.wav" -PythonBinary $PythonBinary -LossThreshold $LossThreshold
 
@@ -390,7 +390,7 @@ else
     $fails++
 }
 
-Write-Host "Mode: RADEV1, Passed: $passes, Failures: $fails"
+Write-Host "Mode: RADEV2, Passed: $passes, Failures: $fails"
 
 if ($fails -gt 0) {
     throw "Test failed"

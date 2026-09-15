@@ -789,7 +789,7 @@ macro(DefineAudioTest utName)
     endif(NOT SANITIZERS_ENABLED)
 endmacro()
 
-DefineAudioTest(RADEV1)
+DefineAudioTest(RADEV2)
 
 # Note: loading/saving feature files is currently not RT-safe
 add_test(NAME rade_loss

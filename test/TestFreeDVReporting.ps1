@@ -97,7 +97,7 @@ function Test-FreeDV {
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV1 /txtime 30 /txattempts 1 /txfile `"$current_loc\rade_src\wav\all.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut tx /utmode RADEV2 /txtime 30 /txattempts 1 /txfile `"$current_loc\rade_src\wav\all.wav`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -137,7 +137,7 @@ function Test-FreeDV {
     $stripProcess.WaitForExit()
 
     # Restart FreeDV in RX mode
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`"")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV2 /rxfile `"$current_loc\test.wav`"")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -179,7 +179,7 @@ else
     $fails++
 }
 
-Write-Host "Mode: RADEV1, Passed: $passes, Failures: $fails"
+Write-Host "Mode: RADEV2, Passed: $passes, Failures: $fails"
 
 if ($fails -gt 0) {
     throw "Test failed"

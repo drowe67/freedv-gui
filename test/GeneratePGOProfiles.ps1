@@ -130,7 +130,7 @@ $psi.RedirectStandardError = $true
 $psi.RedirectStandardOutput = $true
 $psi.FileName = "$current_loc\freedv.exe"
 $psi.WorkingDirectory = $current_loc
-$psi.Arguments = @("/f $quoted_conf_filename /ut tx /utmode RADEV1 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
+$psi.Arguments = @("/f $quoted_conf_filename /ut tx /utmode RADEV2 /txfile `"$current_loc\tx_in.wav`" /txfeaturefile `"$current_loc\txfeatures.f32`"")
 
 $process = New-Object System.Diagnostics.Process
 $process.StartInfo = $psi
@@ -157,7 +157,7 @@ $soxProcess.WaitForExit()
 # endpoints are back before the RX pass starts.
 Wait-ForAudioDevices -Names $allDevices
 
-$psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
+$psi.Arguments = @("/f $quoted_conf_filename /ut rx /utmode RADEV2 /rxfile `"$current_loc\test.wav`" /rxfeaturefile `"$current_loc\rxfeatures.f32`"")
 
 $conf_tmpl = Get-Content "$current_loc\freedv-pgo.conf.tmpl"
 $conf_tmpl = $conf_tmpl.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $RadioToComputerDevice)
