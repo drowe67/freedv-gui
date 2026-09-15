@@ -122,7 +122,7 @@ void FreeDVInterface::OnRadeTextRx_(rade_text_t, const char* txt_ptr, int, void*
     
     char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
     memset(tmpBuf, 0, RELIABLE_TEXT_FIFO_SIZE);
-    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE);
+    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE - 1);
     obj->reliableTextFifo_.write(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
 }
 
