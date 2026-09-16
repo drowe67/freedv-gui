@@ -37,6 +37,26 @@
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
 
+namespace {
+    // NtQueryTimerResolution is an undocumented native API (declared in the
+    // WDK's wdm.h, not the Win32 SDK) that reports -- but does not set -- the
+    // OS's current timer resolution in 100ns units. Used by stopRealTimeWork()
+    // to decide how much margin a millisecond-granular wait needs before
+    // switching to a spin loop for the remainder, per
+    // https://www.siliceum.com/en/blog/post/windows-high-resolution-timers/.
+    // Loaded dynamically since it isn't exported by any import library;
+    // ntdll.dll is already mapped into every process, so this can't fail to
+    // resolve the module, only (in principle) the export.
+    typedef LONG (__stdcall *NtQueryTimerResolutionFn)(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution);
+
+    NtQueryTimerResolutionFn GetNtQueryTimerResolution_()
+    {
+        static NtQueryTimerResolutionFn fn = reinterpret_cast<NtQueryTimerResolutionFn>(
+            GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtQueryTimerResolution"));
+        return fn;
+    }
+}
+
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient3> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -631,26 +651,73 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         return;
     }
 
-    // Arm a high-resolution one-shot timer for the compensated duration
-    // (negative = relative time, in 100ns units) and wait on it alongside the
-    // semaphore -- this is what lets the wait itself use a precision finer
-    // than WaitForSingleObject's millisecond-granular timeout would allow.
-    LARGE_INTEGER dueTime;
-    dueTime.QuadPart = -hns;
-    SetWaitableTimer(highResTimer_, &dueTime, 0, nullptr, nullptr, FALSE);
-
     auto waitStartTime = std::chrono::steady_clock::now();
-    HANDLE waitHandles[2] = { semaphore_, highResTimer_ };
-    DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+
+    // Sleep for everything except the last tick of the OS's current timer
+    // resolution, then spin-wait the remainder in userspace. A blocking wait
+    // (WaitForSingleObject/WaitForMultipleObjects) can only wake up on a
+    // scheduler tick, and once woken still has to wait to actually be
+    // scheduled -- both add jitter on top of the wait target itself. Spinning
+    // through the last tick avoids that second trip through the scheduler.
+    // We still poll semaphore_ throughout (both during the sleep and the
+    // spin) so a stop() request still aborts the wait immediately rather than
+    // running it to completion. See
+    // https://www.siliceum.com/en/blog/post/windows-high-resolution-timers/.
+    ULONG minResHns = 0, maxResHns = 0, curResHns = 0;
+    auto ntQueryTimerResolution = GetNtQueryTimerResolution_();
+    bool signaledEarly = false;
+
+    if (ntQueryTimerResolution != nullptr &&
+        ntQueryTimerResolution(&minResHns, &maxResHns, &curResHns) >= 0 &&
+        curResHns > 0)
+    {
+        int64_t sleepHns = hns - (int64_t)curResHns;
+        if (sleepHns > 0)
+        {
+            DWORD sleepMs = (DWORD)(sleepHns / 10000); // 100ns units -> ms, rounded down
+            if (sleepMs > 0 && WaitForSingleObject(semaphore_, sleepMs) == WAIT_OBJECT_0)
+            {
+                signaledEarly = true;
+            }
+        }
+
+        if (!signaledEarly)
+        {
+            auto dueTime = waitStartTime + std::chrono::nanoseconds(hns * 100);
+            while (std::chrono::steady_clock::now() < dueTime)
+            {
+                if (WaitForSingleObject(semaphore_, 0) == WAIT_OBJECT_0)
+                {
+                    signaledEarly = true;
+                    break;
+                }
+                YieldProcessor();
+            }
+        }
+    }
+    else
+    {
+        // NtQueryTimerResolution unavailable for some reason -- fall back to
+        // the high-resolution waitable timer instead of a spin loop with no
+        // idea how fine the OS's scheduling granularity actually is.
+        LARGE_INTEGER dueTime;
+        dueTime.QuadPart = -hns;
+        SetWaitableTimer(highResTimer_, &dueTime, 0, nullptr, nullptr, FALSE);
+
+        HANDLE waitHandles[2] = { semaphore_, highResTimer_ };
+        DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+        signaledEarly = (result == WAIT_OBJECT_0);
+
+        if (result != WAIT_OBJECT_0 && result != WAIT_OBJECT_0 + 1)
+        {
+            // Fallback to a simple sleep.
+            IAudioDevice::stopRealTimeWork(fastMode);
+            return;
+        }
+    }
 
     auto actualWaitHns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - waitStartTime).count() / 100;
     waitOvershootHns_ = std::max((int64_t)0, actualWaitHns - hns); // cap at >= 0; an early (semaphore) wake isn't overshoot.
-
-    if (result != WAIT_OBJECT_0 && result != WAIT_OBJECT_0 + 1)
-    {
-        // Fallback to a simple sleep.
-        IAudioDevice::stopRealTimeWork(fastMode);
-    }
 }
 
 void WASAPIAudioDevice::clearHelperRealTime()
