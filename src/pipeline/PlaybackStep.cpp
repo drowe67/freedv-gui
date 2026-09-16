@@ -97,9 +97,13 @@ short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples)
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);
     
-    if (*numOutputSamples > 0)
+    if (*numOutputSamples > 0 && outputFifo_.read(outputSamples_.get(), *numOutputSamples) != 0)
     {
-        outputFifo_.read(outputSamples_.get(), *numOutputSamples);
+        // Raced with a concurrent reset() (e.g. the resampler being rebuilt
+        // on a sample-rate change); nothing was actually copied into
+        // outputSamples_, so report no output instead of replaying stale
+        // samples from the previous call.
+        *numOutputSamples = 0;
     }
    
     fileIoThreadSem_.signal();
