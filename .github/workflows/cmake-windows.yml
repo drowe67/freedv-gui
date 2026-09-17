@@ -268,6 +268,13 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
+    - name: Set VB-Cable Registry settings
+      run: |
+          New-Item -Path "HKLM:\SOFTWARE" -Name "VB-Audio" -Force
+          New-Item -Path "HKLM:\SOFTWARE\VB-Audio" -Name "Cable" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM -Value 8192
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM_Latency -Value 8192
+
     - name: Install VB-Cable ("Radio" sound device)
       run: |
           Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
@@ -325,6 +332,7 @@ jobs:
       shell: pwsh
       run: |
           Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
+          Get-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable"
 
     - name: Set Windows default audio devices
       shell: pwsh
@@ -838,6 +846,7 @@ jobs:
       shell: pwsh
       run: |
           Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
+          Get-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable"
 
     - name: Set Windows default audio devices
       shell: pwsh
