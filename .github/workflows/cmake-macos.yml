@@ -92,6 +92,25 @@ jobs:
       run: |
           brew install vb-cable
 
+    - name: Override VB-Cable latency settings
+      shell: bash
+      run: |
+          cat <<EOF com.vbaudio.vbcable.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InternalSR</key>
+	<integer>48000</integer>
+	<key>Latency</key>
+	<integer>8192</integer>
+	<key>NewLatency</key>
+	<integer>8192</integer>
+</dict>
+</plist>
+EOF
+          sudo mv com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
+
     - name: Install other virtual audio devices
       shell: bash
       working-directory: ${{github.workspace}}
@@ -186,6 +205,25 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           brew install vb-cable
+
+    - name: Override VB-Cable latency settings
+      shell: bash
+      run: |
+          cat <<EOF com.vbaudio.vbcable.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InternalSR</key>
+	<integer>48000</integer>
+	<key>Latency</key>
+	<integer>8192</integer>
+	<key>NewLatency</key>
+	<integer>8192</integer>
+</dict>
+</plist>
+EOF
+          sudo mv com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
 
     - name: Install other virtual audio devices
       shell: bash
@@ -352,6 +390,25 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           brew install vb-cable
+
+    - name: Override VB-Cable latency settings
+      shell: bash
+      run: |
+          cat <<EOF com.vbaudio.vbcable.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InternalSR</key>
+	<integer>48000</integer>
+	<key>Latency</key>
+	<integer>8192</integer>
+	<key>NewLatency</key>
+	<integer>8192</integer>
+</dict>
+</plist>
+EOF
+          sudo mv com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
 
     - name: Install other virtual audio devices
       shell: bash
