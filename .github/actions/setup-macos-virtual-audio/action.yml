@@ -1,0 +1,28 @@
+name: 'Set up macOS virtual audio devices'
+description: >
+  Installs VB-Cable and the project's other virtual audio devices needed
+  for macOS CI audio tests, applies the microphone-permission workaround,
+  and makes sure no leftover resource-hog processes are running from a
+  previous job.
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: ./build_macos_sound_drivers.sh
+
+    - name: Workaround macOS permission issues
+      shell: bash
+      timeout-minutes: 1
+      run: ${{ github.workspace }}/ci/macos-set-mic-permissions.sh
+
+    - name: Make sure resource hogs aren't running
+      shell: bash
+      run: ${{ github.workspace }}/ci/macos-kill-resource-hogs.sh
