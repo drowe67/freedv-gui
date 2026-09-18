@@ -87,6 +87,7 @@ jobs:
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128
 
     - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
     - name: Build freedv-gui
       shell: bash
@@ -166,6 +167,7 @@ jobs:
         brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
     - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
     - name: Build instrumented freedv-gui
       shell: bash
@@ -313,6 +315,7 @@ jobs:
         brew install automake libtool sox 
 
     - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
     - uses: ./.github/actions/setup-rade-python-env
       with:

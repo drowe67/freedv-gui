@@ -20,7 +20,6 @@ runs:
 
     - name: Workaround macOS permission issues
       shell: bash
-      timeout-minutes: 1
       run: ${{ github.workspace }}/ci/macos-set-mic-permissions.sh
 
     - name: Make sure resource hogs aren't running
