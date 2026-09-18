@@ -745,11 +745,19 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
 
 void EasySetupDialog::OnCancel(wxCommandEvent&)
 {
+    if (m_buttonTest->GetLabel() == "Stop Test")
+    {
+        stopTest_();
+    }
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnClose(wxCloseEvent&)
 {
+    if (m_buttonTest->GetLabel() == "Stop Test")
+    {
+        stopTest_();
+    }
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
@@ -806,55 +814,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
     {
         if (m_buttonTest->GetLabel() == "Stop Test")
         {
-            // Stop the currently running test
-            if (txTestAudioDevice_ != nullptr || analogPlaybackTestAudioDevice_ != nullptr)
-            {
-                if (txTestAudioDevice_ != nullptr)
-                {
-                    txTestAudioDevice_->stop();
-                    txTestAudioDevice_ = nullptr;
-                }
-
-                if (analogPlaybackTestAudioDevice_ != nullptr)
-                {
-                    analogPlaybackTestAudioDevice_->stop();
-                    analogPlaybackTestAudioDevice_ = nullptr;
-                }
-
-                auto audioEngine = AudioEngineFactory::GetAudioEngine();
-                audioEngine->stop();
-            }
-        
-            if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
-            {
-                hamlibTestObject_->ptt(false);
-                hamlibTestObject_->disconnect();
-            }
-            else if (serialPortTestObject_ != nullptr && serialPortTestObject_->isConnected())
-            {
-                serialPortTestObject_->ptt(false);
-                serialPortTestObject_->disconnect();
-            }
-
-            hamlibTestObject_ = nullptr;
-            serialPortTestObject_ = nullptr;
-        
-            m_radioDevice->Enable(true);
-            m_advancedSoundSetup->Enable(true);
-            m_ckUseHamlibPTT->Enable(true);
-            m_cbRigName->Enable(true);
-            m_cbSerialPort->Enable(true);
-            m_cbSerialRate->Enable(true);
-            m_tcIcomCIVHex->Enable(true);
-            m_advancedPTTSetup->Enable(true);
-            m_ckbox_psk_enable->Enable(true);
-            m_txt_callsign->Enable(true);
-            m_txt_grid_square->Enable(true);
-            m_buttonOK->Enable(true);
-            m_buttonCancel->Enable(true);
-            m_buttonApply->Enable(true);
-        
-            m_buttonTest->SetLabel("Test");
+            stopTest_();
         }
         else
         {
@@ -1037,6 +997,12 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
 
                         analogPlaybackTestAudioDevice_->start();
                     }
+                    else
+                    {
+                        wxMessageBox(
+                            "Error opening analog playback sound device. Please double-check configuration and try again.",
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
+                    }
                 }
             }
         
@@ -1062,9 +1028,62 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
     else
     {
         wxMessageBox(
-            "Some settings have not been configured. Please check your radio and audio device settings and try again.", 
+            "Some settings have not been configured. Please check your radio and audio device settings and try again.",
             wxT("Error"), wxOK, this);
     }
+}
+
+void EasySetupDialog::stopTest_()
+{
+    // Stop the currently running test
+    if (txTestAudioDevice_ != nullptr || analogPlaybackTestAudioDevice_ != nullptr)
+    {
+        if (txTestAudioDevice_ != nullptr)
+        {
+            txTestAudioDevice_->stop();
+            txTestAudioDevice_ = nullptr;
+        }
+
+        if (analogPlaybackTestAudioDevice_ != nullptr)
+        {
+            analogPlaybackTestAudioDevice_->stop();
+            analogPlaybackTestAudioDevice_ = nullptr;
+        }
+
+        auto audioEngine = AudioEngineFactory::GetAudioEngine();
+        audioEngine->stop();
+    }
+
+    if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
+    {
+        hamlibTestObject_->ptt(false);
+        hamlibTestObject_->disconnect();
+    }
+    else if (serialPortTestObject_ != nullptr && serialPortTestObject_->isConnected())
+    {
+        serialPortTestObject_->ptt(false);
+        serialPortTestObject_->disconnect();
+    }
+
+    hamlibTestObject_ = nullptr;
+    serialPortTestObject_ = nullptr;
+
+    m_radioDevice->Enable(true);
+    m_advancedSoundSetup->Enable(true);
+    m_ckUseHamlibPTT->Enable(true);
+    m_cbRigName->Enable(true);
+    m_cbSerialPort->Enable(true);
+    m_cbSerialRate->Enable(true);
+    m_tcIcomCIVHex->Enable(true);
+    m_advancedPTTSetup->Enable(true);
+    m_ckbox_psk_enable->Enable(true);
+    m_txt_callsign->Enable(true);
+    m_txt_grid_square->Enable(true);
+    m_buttonOK->Enable(true);
+    m_buttonCancel->Enable(true);
+    m_buttonApply->Enable(true);
+
+    m_buttonTest->SetLabel("Test");
 }
 
 void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent&)
