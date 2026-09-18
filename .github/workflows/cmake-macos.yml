@@ -31,9 +31,9 @@ jobs:
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
 
     - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v2
-      with:
-        version: "20.1"
+      run: |
+        brew install llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
+        echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
 
     - name: Build macdylibbundler
       run: |
@@ -55,7 +55,15 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
-        run-clang-tidy -p .
+        # Homebrew's llvm@20 clang-tidy (unlike Apple's own clang or
+        # install-llvm-action's redistributable) doesn't auto-detect the
+        # active Xcode SDK, so without an explicit sysroot it can't find
+        # basic libc/Apple-framework declarations (ldiv, wcschr,
+        # TargetConditionals.h, ...) even though the real build above
+        # -- which gets its sysroot from CMake's own xcrun-based
+        # detection, independent of which clang compiled it -- succeeds
+        # fine with the same compiler.
+        run-clang-tidy -p . -extra-arg=-isysroot -extra-arg="$(xcrun --show-sdk-path)"
 
   test:
     strategy:
@@ -86,16 +94,8 @@ jobs:
       run: |
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128
 
-    - name: Install VB-Cable
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          brew install vb-cable
-
-    - name: Install other virtual audio devices
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_macos_sound_drivers.sh
+    - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
     - name: Build freedv-gui
       shell: bash
@@ -108,25 +108,18 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       if: ${{ matrix.sanitizer == 'WITH_RTSAN=1' }}
-      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 CC=$(brew --prefix llvm@20)/bin/clang CXX=$(brew --prefix llvm@20)/bin/clang++ UNIV_BUILD=0 BUILD_DEPS=0 ${{matrix.sanitizer}} ./build_osx.sh
 
-    - name: Workaround macOS permission issues
-      timeout-minutes: 1
-      run: |
-          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
-
-    - name: Make sure resource hogs aren't running
-      shell: bash
-      run: |
-          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        venv-path: rade_venv
+        working-directory: ${{github.workspace}}/build_osx
 
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
-          python3 -m venv rade_venv
           . ./rade_venv/bin/activate
-          pip3 install torch matplotlib
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
               export MAX_EXECUTION_TIMES=2
           else
@@ -189,26 +182,8 @@ jobs:
       run: |
         brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
-    - name: Install VB-Cable
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          brew install vb-cable
-
-    - name: Install other virtual audio devices
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_macos_sound_drivers.sh
-
-    - name: Workaround macOS permission issues
-      timeout-minutes: 1
-      run: |
-          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
-
-    - name: Make sure resource hogs aren't running
-      shell: bash
-      run: |
-          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
+    - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
     - name: Build instrumented freedv-gui
       shell: bash
@@ -413,33 +388,17 @@ jobs:
       run: |
         brew install automake libtool sox 
 
-    - name: Install VB-Cable
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          brew install vb-cable
+    - uses: ./.github/actions/setup-macos-virtual-audio
+      timeout-minutes: 3
 
-    - name: Install other virtual audio devices
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_macos_sound_drivers.sh
-
-    - name: Workaround macOS permission issues
-      timeout-minutes: 1
-      run: |
-          ${{github.workspace}}/ci/macos-set-mic-permissions.sh
-
-    - name: Make sure resource hogs aren't running
-      shell: bash
-      run: |
-          ${{github.workspace}}/ci/macos-kill-resource-hogs.sh
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        venv-path: rade_venv
 
     - name: Sanity check RADE
       shell: bash
       run: |
-          python3 -m venv rade_venv
           . ./rade_venv/bin/activate
-          pip3 install torch matplotlib
           FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV PYTHONPATH=$(pwd)/build_osx/rade_src ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           grep "PASS" temp-test.txt
 

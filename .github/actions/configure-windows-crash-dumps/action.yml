@@ -1,0 +1,21 @@
+name: 'Configure Windows crash dump collection for FreeDV'
+description: >
+  Configures Windows Error Reporting to write a local crash dump any time
+  freedv.exe crashes (unhandled exception/access violation), even if the
+  test script itself doesn't notice anything went wrong (e.g. a crash
+  mid-run that a subsequent step just sees as a hang or empty output).
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure crash dump collection for FreeDV
+      shell: pwsh
+      run: |
+          $dumpFolder = "${{ github.workspace }}\CrashDumps"
+          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
+
+          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
+          New-Item -Path $werKey -Force | Out-Null
+          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
+          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
+          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord

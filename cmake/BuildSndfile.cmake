@@ -11,6 +11,19 @@ if(APPLE)
     set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_AR=${CMAKE_AR} -DCMAKE_RANLIB=${CMAKE_RANLIB})
 endif(APPLE)
 
+# libsndfile is itself a CMake project, built here as a nested
+# ExternalProject configure/build rather than via add_subdirectory(). That
+# nested cmake invocation gets its own fresh CMakeCache.txt and doesn't
+# inherit the parent project's CMAKE_C_COMPILER_LAUNCHER/
+# CMAKE_CXX_COMPILER_LAUNCHER (e.g. ccache) automatically, so forward it
+# explicitly.
+if(CMAKE_C_COMPILER_LAUNCHER)
+    set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER})
+endif()
+if(CMAKE_CXX_COMPILER_LAUNCHER)
+    set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER})
+endif()
+
 include(ExternalProject)
 ExternalProject_Add(sndfile
     URL https://github.com/libsndfile/libsndfile/archive/refs/tags/1.2.2.tar.gz

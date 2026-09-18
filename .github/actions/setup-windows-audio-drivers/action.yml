@@ -1,0 +1,66 @@
+name: 'Install Windows virtual audio drivers'
+description: >
+  Sets up the MSVC dev environment, installs the VAC and VB-Cable virtual
+  audio drivers used to loop FreeDV's audio back on itself, installs the
+  freshly-built FreeDV installer found in the workspace root, and installs
+  SoX. Used by every FreeDV Windows CI job that exercises real audio I/O.
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: TheMrMilchmann/setup-msvc-dev@v4
+      with:
+        arch: x64
+
+    - name: Install VAC ("analog" sound device)
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
+          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
+          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
+          $outputFile = '${{ github.workspace }}\vac.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
+
+    # Note: This normally requires a reboot, but since we're doing this prior to installing the VB-Cable driver,
+    # I *think* this will actually take effect. I don't know what VB-Cable defaults to if these Registry keys don't exist so
+    # this could very well still do nothing.
+    - name: Set VB-Cable Registry settings
+      shell: pwsh
+      run: |
+          New-Item -Path "HKLM:\SOFTWARE" -Name "VB-Audio" -Force
+          New-Item -Path "HKLM:\SOFTWARE\CurrentControlSet\Services" -Name "VB-Cable" -Force
+          New-Item -Path "HKLM:\SOFTWARE\VB-Audio" -Name "Cable" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
+
+    - name: Install VB-Cable ("Radio" sound device)
+      shell: pwsh
+      run: |
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
+          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
+          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
+          $outputFile = '${{ github.workspace }}\vbcable.cer';
+          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
+
+          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
+          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
+
+          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
+
+    - name: Install FreeDV on hard drive
+      shell: pwsh
+      run: |
+          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
+          .\FreeDV.exe /S /D=${{ github.workspace }}\FreeDV-Install-Location | Out-Null
+
+    - name: Install SoX
+      shell: pwsh
+      run: |
+           choco install sox.portable

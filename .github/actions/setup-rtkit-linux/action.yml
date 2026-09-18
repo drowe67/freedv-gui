@@ -1,0 +1,27 @@
+name: 'Set up rtkit for RT threading (Ubuntu)'
+description: >
+  Installs rtkit/dbus/polkit on an apt-based Ubuntu runner and relaxes the
+  RealtimeKit1 polkit policy so the test/build process can request
+  real-time scheduling for audio threads.
+
+inputs:
+  fix-ports-mirror:
+    description: >
+      Whether to redirect ports.ubuntu.com to a faster mirror before apt-get
+      update. Set to 'false' to skip (matches call sites that don't need it).
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install rtkit for RT threading
+      shell: bash
+      run: |
+           if [ "${{ inputs['fix-ports-mirror'] }}" = "true" ]; then
+               sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
+           fi
+           sudo apt-get update
+           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
+           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
+           sudo systemctl restart polkit

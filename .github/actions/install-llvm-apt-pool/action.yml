@@ -1,0 +1,53 @@
+name: 'Install LLVM/Clang from apt.llvm.org pool'
+description: >
+  Installs LLVM/Clang 21 packages by downloading the latest matching .deb
+  files directly from the apt.llvm.org pool. Used on ubuntu-22.04 runners,
+  where the llvm.sh bootstrap script doesn't reliably resolve a working set
+  of packages.
+
+inputs:
+  arch:
+    description: 'Debian architecture suffix used in the pool filenames (amd64 or arm64)'
+    required: true
+  llvm-pool:
+    description: 'Base URL of the apt.llvm.org pool to fetch packages from'
+    required: false
+    default: 'https://apt.llvm.org/jammy/pool/main/l/llvm-toolchain-21/'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install LLVM/Clang >=20.0
+      shell: bash
+      run: |
+        set -euxo pipefail
+
+        LLVM_POOL="${{ inputs['llvm-pool'] }}"
+        LLVM_ARCH="${{ inputs.arch }}"
+
+        # Install the newest version that actually exists in the pool.
+        # We derive the exact version string from one known package filename.
+        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
+        PATTERN="libllvm21_[0-9][^\"]+_${LLVM_ARCH}\.deb"
+        VER="$(grep -oE "$PATTERN" <<<"$HTML" | head -n1 \
+          | sed -E "s/^libllvm21_//; s/_${LLVM_ARCH}\.deb\$//")"
+        echo "Using pool version: $VER"
+
+        mkdir -p /tmp/llvm21 && cd /tmp/llvm21
+
+        fetch() {
+          local pkg="$1"
+          local file="${pkg}_${VER}_${LLVM_ARCH}.deb"
+          curl -fsSLO "${LLVM_POOL}${file}"
+        }
+
+        for pkg in \
+          clang-21 clang-tools-21 lld-21 \
+          libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
+          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
+        do
+          fetch "$pkg"
+        done
+
+        # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
+        sudo apt-get install -y --no-install-recommends ./*.deb

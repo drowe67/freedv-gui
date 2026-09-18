@@ -42,12 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
-    - name: Download MinGW LLVM
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
+    - uses: ./.github/actions/download-mingw-llvm
 
     - name: Configure freedv-gui (unsigned)
       shell: bash
@@ -121,12 +116,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
-    - name: Download MinGW LLVM
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
+    - uses: ./.github/actions/download-mingw-llvm
 
     - name: Configure freedv-gui (unsigned, ${{ matrix.sanitizer_name }})
       shell: bash
@@ -252,98 +242,15 @@ jobs:
         pattern: instrumented-FreeDV-*-${{ matrix.arch }}.exe
         path: ${{github.workspace}}
   
-    - uses: TheMrMilchmann/setup-msvc-dev@v4
-      with:
-        arch: x64
-
-    - name: Install VAC ("analog" sound device)
-      run: |
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
-          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
-          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
-          $outputFile = '${{github.workspace}}\vac.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
-    - name: Install FreeDV on hard drive
-      shell: pwsh
-      run: |
-          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
+    - uses: ./.github/actions/setup-windows-audio-drivers
   
     - name: Copy test scripts to install folder
       shell: pwsh
       run: |
           Copy-Item -Path ${{github.workspace}}/test/GeneratePGOProfiles.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-pgo.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
- 
-    - name: Install SoX
-      shell: pwsh
-      run: |
-           choco install sox.portable
- 
-    - name: Grant FreeDV access to the microphone 
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
 
-    - name: Wait for virtual audio endpoints
-      shell: pwsh
-      run: |
-          # Restart the audio stack and poll until every endpoint FreeDV needs is
-          # actually enumerable, instead of starting a test and letting it abort
-          # with a fatal "device cannot be found" message box when a virtual
-          # cable endpoint hasn't come up (or has briefly dropped) yet.
-          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
-            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
-            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
-            -TimeoutSeconds 180
-
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
-
-    - name: Set Windows default audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          # Prevent ARM CPU boost->base frequency transitions during audio tests.
-          # This is the Windows equivalent of the Linux "performance" CPU governor.
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # Explicitly pin minimum processor performance to 100% so the ARM CPU
-          # does not scale down after exhausting its boost budget.
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
+    - uses: ./.github/actions/configure-windows-audio-devices
 
     - name: Generate PGO data
       shell: pwsh
@@ -398,12 +305,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
 
-    - name: Download MinGW LLVM
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
-        tar xvf llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz
+    - uses: ./.github/actions/download-mingw-llvm
 
     - name: Merge profile data
       run: |
@@ -510,228 +412,19 @@ jobs:
         archive: false
 
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [windows-2022, windows-11-arm]
-        arch: [x86_64, aarch64]
-        exclude:
-        - runner: windows-2022
-          arch: aarch64
-        - runner: windows-11-arm 
-          arch: x86_64
-
-    runs-on: ${{ matrix.runner }}
     needs: [build-pgo-use-profile, rade-loss-baseline]
-    env:
-      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
-      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
-
-    steps: 
-    - uses: actions/checkout@v6
-    - uses: actions/download-artifact@v8
-      with:
-        merge-multiple: true
-        pattern: FreeDV-*-${{ matrix.arch }}.exe
-        path: ${{github.workspace}}
-  
-    - uses: TheMrMilchmann/setup-msvc-dev@v4
-      with:
-        arch: x64
-
-    - name: Install VAC ("analog" sound device)
-      run: |
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
-          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
-          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
-          $outputFile = '${{github.workspace}}\vac.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-          
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
-    - name: Install FreeDV on hard drive
-      shell: pwsh
-      run: |
-          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
-  
-    - name: Copy test scripts to install folder
-      shell: pwsh
-      run: |
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/RadeVerificationReport.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
- 
-    - name: Install SoX
-      shell: pwsh
-      run: |
-           choco install sox.portable
-
-    - name: Install Python dependencies
-      shell: pwsh
-      run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install matplotlib
- 
-    - name: Grant FreeDV access to the microphone 
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
-
-    - name: Wait for virtual audio endpoints
-      shell: pwsh
-      run: |
-          # Restart the audio stack and poll until every endpoint FreeDV needs is
-          # actually enumerable, instead of starting a test and letting it abort
-          # with a fatal "device cannot be found" message box when a virtual
-          # cable endpoint hasn't come up (or has briefly dropped) yet.
-          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
-            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
-            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
-            -TimeoutSeconds 180
-
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
-
-    - name: Set Windows default audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          # Prevent ARM CPU boost->base frequency transitions during audio tests.
-          # This is the Windows equivalent of the Linux "performance" CPU governor.
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # Explicitly pin minimum processor performance to 100% so the ARM CPU
-          # does not scale down after exhausting its boost budget.
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
-
-    - name: Configure crash dump collection for FreeDV
-      shell: pwsh
-      run: |
-          # Windows Error Reporting will write a dump here any time freedv.exe
-          # crashes (unhandled exception/access violation), even if the test
-          # script itself doesn't notice anything went wrong (e.g. a crash
-          # mid-run that a subsequent step just sees as a hang or empty output).
-          $dumpFolder = "${{github.workspace}}\CrashDumps"
-          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
-
-          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
-          New-Item -Path $werKey -Force | Out-Null
-          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
-          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
-          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord
-
-    - name: Test RADE
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV2 -NumberOfRuns 1
-      timeout-minutes: 10
-
-    - name: Test RADE Loss
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      run: |
-          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
-      timeout-minutes: 10
-
-    # Assemble the RADE integration verification report from the run above. Once
-    # per OS (x86_64 leg only); the baseline comes from the rade-loss-baseline job.
-    - name: Generate RADE verification report
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
-      continue-on-error: true
-      run: |
-          .\RadeVerificationReport.ps1 `
-            -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" `
-            -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" `
-            -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" `
-            -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" `
-            -Level1Log rade_loss.log `
-            -BaselineLoss ${{ needs.rade-loss-baseline.outputs.baseline }} `
-            -RepoRoot ${{github.workspace}} `
-            -RadeCCommit ${{ needs.rade-loss-baseline.outputs.rade_c_commit }} `
-            -RadaeCommit ${{ needs.rade-loss-baseline.outputs.radae_commit }} `
-            -Tester "FreeDV CI" `
-            -OutputFile ${{github.workspace}}\rade_verification_report.md
-
-    - name: Upload RADE verification report
-      uses: actions/upload-artifact@v7
-      if: ${{ !cancelled() && matrix.arch == 'x86_64' }}
-      with:
-        name: rade-verification-report-windows
-        path: ${{github.workspace}}/rade_verification_report.md
-        if-no-files-found: warn
-
-    - name: Test RADE Reporting
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      run: |
-          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
-      timeout-minutes: 10
-
-    - name: Screenshot if failed
-      if: failure()
-      shell: pwsh
-      run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot-${{ matrix.arch }}.png
-
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: failure()
-      with:
-        name: screenshot-${{ matrix.arch }}.png
-        path: ${{github.workspace}}/screenshot-${{ matrix.arch }}.png
-        archive: false
-
-    - name: Upload crash dumps
-      uses: actions/upload-artifact@v7
-      if: always()
-      with:
-        name: crashdumps-${{ matrix.arch }}
-        path: ${{github.workspace}}\CrashDumps\*.dmp
-        if-no-files-found: ignore
+    uses: ./.github/workflows/windows-audio-test.yml
+    with:
+      matrix-json: |
+        [
+          {"runner": "windows-2022", "arch": "x86_64"},
+          {"runner": "windows-11-arm", "arch": "aarch64"}
+        ]
+      mode-to-test: RADEV2
+      loss-threshold: ${{ needs.rade-loss-baseline.outputs.threshold }}
+      loss-baseline: ${{ needs.rade-loss-baseline.outputs.baseline }}
+      rade-c-commit: ${{ needs.rade-loss-baseline.outputs.rade_c_commit }}
+      radae-commit: ${{ needs.rade-loss-baseline.outputs.radae_commit }}
 
   # Runs the same test suite as `test`, but against the sanitizer-instrumented
   # builds from `build-sanitizer`. These builds are slower and less reliable
@@ -742,238 +435,15 @@ jobs:
   # catches a real memory-safety/UB bug (an abort with a diagnostic in the
   # log), not whether a loss threshold was met under instrumentation overhead.
   test-sanitizer:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - sanitizer_name: UBSAN
-          arch: x86_64
-          runner: windows-2022
-        - sanitizer_name: UBSAN
-          arch: aarch64
-          runner: windows-11-arm
-        - sanitizer_name: ASAN
-          arch: x86_64
-          runner: windows-2022
-
-    runs-on: ${{ matrix.runner }}
     needs: [build-sanitizer, rade-loss-baseline]
-    env:
-      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
-      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
-      # LSan has no Windows runtime, so it's intentionally not configured here.
-      # Options are colon-separated key=value pairs, so an absolute Windows
-      # path (drive-letter colon, e.g. D:\...) breaks the parser -- it reads
-      # "suppressions=D" as one pair and "\...\asan_suppressions.txt" (no
-      # '=') as the next, and aborts with "expected '=' in ASAN_OPTIONS"
-      # before FreeDV even starts. Use bare relative filenames instead,
-      # resolved against each test step's working directory (see the
-      # "Copy test scripts to install folder" step below).
-      ASAN_OPTIONS: suppressions=asan_suppressions.txt
-      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=ubsan_suppressions.txt
-
-    steps:
-    - uses: actions/checkout@v6
-    - uses: actions/download-artifact@v8
-      with:
-        merge-multiple: true
-        pattern: sanitizer-${{ matrix.sanitizer_name }}-FreeDV-*-${{ matrix.arch }}.exe
-        path: ${{github.workspace}}
-
-    - uses: TheMrMilchmann/setup-msvc-dev@v4
-      with:
-        arch: x64
-
-    - name: Install VAC ("analog" sound device)
-      run: |
-          Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip
-          Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite
-          $driverFile = 'vac470lite\${{ env.Platform }}\vrtaucbl.sys';
-          $outputFile = '${{github.workspace}}\vac.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    - name: Install VB-Cable ("Radio" sound device)
-      run: |
-          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
-          Expand-Archive -Path VBCABLE_Driver_Pack45.zip -DestinationPath VBCABLE_Driver_Pack45
-          $driverFile = 'VBCable_Driver_Pack45\vbaudio_cable64_win10.sys';
-          $outputFile = '${{github.workspace}}\vbcable.cer';
-          $exportType = [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert;
-
-          $cert = (Get-AuthenticodeSignature $driverFile).SignerCertificate;
-          [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
-
-          .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
-
-    - name: Install FreeDV on hard drive
-      shell: pwsh
-      run: |
-          Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
-
-    - name: Copy test scripts to install folder
-      shell: pwsh
-      run: |
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          # Sanitizer options need bare relative filenames (see ASAN_OPTIONS/
-          # UBSAN_OPTIONS above), so the suppression files need to live next
-          # to freedv.exe rather than being referenced by absolute path.
-          Copy-Item -Path ${{github.workspace}}/test/asan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/ubsan_suppressions.txt -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-
-    - name: Install SoX
-      shell: pwsh
-      run: |
-           choco install sox.portable
-
-    - name: Install Python dependencies
-      shell: pwsh
-      run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install matplotlib
-
-    - name: Grant FreeDV access to the microphone
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
-          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
-          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
-
-    - name: Wait for virtual audio endpoints
-      shell: pwsh
-      run: |
-          & "${{github.workspace}}\ci\Wait-AudioDevices.ps1" `
-            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
-            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
-            -TimeoutSeconds 180
-
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
-
-    - name: Set Windows default audio devices
-      shell: pwsh
-      run: |
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
-          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
-
-    - name: Set High Performance power plan to prevent CPU frequency scaling
-      if: ${{ matrix.runner == 'windows-11-arm' }}
-      shell: pwsh
-      run: |
-          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
-          powercfg /setactive SCHEME_CURRENT
-
-    - name: Configure crash dump collection for FreeDV
-      shell: pwsh
-      run: |
-          $dumpFolder = "${{github.workspace}}\CrashDumps"
-          New-Item -Path $dumpFolder -ItemType Directory -Force | Out-Null
-
-          $werKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\freedv.exe"
-          New-Item -Path $werKey -Force | Out-Null
-          Set-ItemProperty -Path $werKey -Name DumpFolder -Value $dumpFolder -Type ExpandString
-          Set-ItemProperty -Path $werKey -Name DumpCount -Value 10 -Type DWord
-          Set-ItemProperty -Path $werKey -Name DumpType -Value 2 -Type DWord
-
-    - name: Test RADE
-      id: test-rade
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV2 -NumberOfRuns 1 *>&1 | Tee-Object -FilePath fullduplex.log
-      timeout-minutes: 15
-
-    - name: Test RADE Loss
-      id: test-rade-loss
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVRadeLoss.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -LossThreshold ${{ needs.rade-loss-baseline.outputs.threshold }} *>&1 | Tee-Object -FilePath rade_loss.log
-      timeout-minutes: 15
-
-    - name: Test RADE Reporting
-      id: test-rade-reporting
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      if: ${{ !cancelled() }}
-      continue-on-error: true
-      run: |
-          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" *>&1 | Tee-Object -FilePath reporting.log
-      timeout-minutes: 15
-
-    # The three test steps above are continue-on-error so an ordinary loss-
-    # threshold miss (expected under instrumentation overhead, same leniency
-    # ctest gives sanitizer builds on macOS/Linux via SANITIZERS_ENABLED)
-    # doesn't stop the other tests from running or fail the job by itself.
-    # But that also means a *real* sanitizer abort would otherwise pass
-    # silently, since continue-on-error suppresses the job's conclusion, not
-    # just the step's outcome -- so explicitly scan every test's captured
-    # output for a sanitizer report and fail for real if one is found.
-    - name: Check for sanitizer errors
-      id: check-sanitizer-errors
-      if: ${{ !cancelled() }}
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      run: |
-          $pattern = 'AddressSanitizer|UndefinedBehaviorSanitizer|LeakSanitizer'
-          $hits = Get-ChildItem -Path . -Filter *.log | ForEach-Object { Select-String -Path $_.FullName -Pattern $pattern }
-          if ($hits) {
-              Write-Host "::error::Sanitizer violation(s) found in test output:"
-              $hits | ForEach-Object { Write-Host "$($_.Filename):$($_.LineNumber): $($_.Line)" }
-              exit 1
-          }
-          Write-Host "No sanitizer violations found in test output."
-
-    - name: Screenshot if failed
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
-      shell: pwsh
-      run: |
-          Invoke-WebRequest https://raw.githubusercontent.com/npocmaka/batch.scripts/refs/heads/master/hybrids/.net/c/screenCapture.bat -OutFile screenCapture.bat
-          & .\screenCapture.bat screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-
-    - name: Upload screenshot
-      uses: actions/upload-artifact@v7
-      if: ${{ steps.test-rade.outcome == 'failure' || steps.test-rade-loss.outcome == 'failure' || steps.test-rade-reporting.outcome == 'failure' || steps.check-sanitizer-errors.outcome == 'failure' }}
-      with:
-        name: screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-        path: ${{github.workspace}}/screenshot-${{ matrix.sanitizer_name }}-${{ matrix.arch }}.png
-        archive: false
-
-    - name: Upload crash dumps
-      uses: actions/upload-artifact@v7
-      if: always()
-      with:
-        name: crashdumps-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        path: ${{github.workspace}}\CrashDumps\*.dmp
-        if-no-files-found: ignore
-
-    - name: Upload test logs
-      uses: actions/upload-artifact@v7
-      if: always()
-      with:
-        name: sanitizer-logs-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        path: ${{github.workspace}}\FreeDV-Install-Location\bin\*.log
-        if-no-files-found: ignore
+    uses: ./.github/workflows/windows-audio-test.yml
+    with:
+      matrix-json: |
+        [
+          {"sanitizer_name": "UBSAN", "arch": "x86_64", "runner": "windows-2022"},
+          {"sanitizer_name": "UBSAN", "arch": "aarch64", "runner": "windows-11-arm"},
+          {"sanitizer_name": "ASAN", "arch": "x86_64", "runner": "windows-2022"}
+        ]
+      sanitizer-mode: true
+      mode-to-test: RADEV2
+      loss-threshold: ${{ needs.rade-loss-baseline.outputs.threshold }}
