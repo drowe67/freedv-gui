@@ -1,0 +1,26 @@
+name: 'Download llvm-mingw toolchain'
+description: >
+  Downloads and extracts the pinned llvm-mingw release used to
+  cross-compile FreeDV for Windows from Linux runners. The release tag
+  and archive name are pinned together upstream, so bump both inputs
+  together when upgrading.
+
+inputs:
+  release:
+    description: 'llvm-mingw release tag to download'
+    required: false
+    default: '20260908'
+  archive:
+    description: 'Archive filename (published under the release tag) to download and extract'
+    required: false
+    default: 'llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download MinGW LLVM
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/${{ inputs.release }}/${{ inputs.archive }}
+        tar xvf ${{ inputs.archive }}

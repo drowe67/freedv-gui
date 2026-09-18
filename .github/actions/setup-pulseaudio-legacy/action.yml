@@ -1,0 +1,39 @@
+name: 'Configure legacy PulseAudio (Ubuntu 22.04)'
+description: >
+  Configures PulseAudio for CI audio tests on Ubuntu 22.04 runners, which
+  predate the pipewire-pulse stack used on newer Ubuntu images: sets a
+  fixed 48kHz sample rate, disables the socket-activated service's idle
+  timeout (so it doesn't respawn mid-test and lose virtual devices), and
+  disables module-suspend-on-idle.
+
+inputs:
+  packages:
+    description: >
+      Space-separated apt packages to install before configuring PulseAudio
+      (e.g. "pulseaudio pulseaudio-utils metacity"). Leave empty if the
+      caller already installed everything needed.
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install PulseAudio packages
+      if: ${{ inputs.packages != '' }}
+      shell: bash
+      run: sudo apt-get install ${{ inputs.packages }}
+
+    - name: Configure legacy PulseAudio
+      shell: bash
+      run: |
+           mkdir -p ~/.config/pulse
+           echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+
+           # Prevent the socket-activated PulseAudio user service from exiting after its
+           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
+           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
+           # and the test fails with "device cannot be found" instead of a real failure.
+           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+
+           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
+           systemctl --user --now enable pulseaudio.service pulseaudio.socket

@@ -1,4 +1,6 @@
-set(CONFIGURE_COMMAND autoreconf -i && ./configure --disable-shared --disable-components --enable-libmpg123 --prefix=${CMAKE_BINARY_DIR}/external/dist)
+include(cmake/ExternalProjectCCache.cmake)
+
+set(CONFIGURE_COMMAND autoreconf -i && ./configure --disable-shared --disable-components --enable-libmpg123 --prefix=${CMAKE_BINARY_DIR}/external/dist CC=${EXTERNAL_PROJECT_CC} CXX=${EXTERNAL_PROJECT_CXX})
 
 if (CMAKE_CROSSCOMPILING)
 set(CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=${CMAKE_C_COMPILER_TARGET} --target=${CMAKE_C_COMPILER_TARGET})

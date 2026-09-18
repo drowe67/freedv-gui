@@ -95,69 +95,22 @@ jobs:
         key: ${{ github.job }}-x86_64
         max-size: "5G"
 
-    - name: Install LLVM/Clang >=20.0 
-      run: |
-        set -euxo pipefail
-
-        # Install the newest version that actually exists in the pool.
-        # We derive the exact version string from one known package filename.
-        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
-        VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
-          | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
-        echo "Using pool version: $VER"
-
-        mkdir -p /tmp/llvm21 && cd /tmp/llvm21
-
-        fetch() {
-          local pkg="$1"
-          local file="${pkg}_${VER}_${{ env.LLVM_ARCH }}.deb"
-          curl -fsSLO "${LLVM_POOL}${file}"
-        }
-
-        for pkg in \
-          clang-21 clang-tools-21 lld-21 \
-          libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
-          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools 
-        do
-          fetch "$pkg"
-        done
-
-        # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
-        sudo apt-get install -y --no-install-recommends ./*.deb
+    - uses: ./.github/actions/install-llvm-apt-pool
+      with:
+        arch: ${{ env.LLVM_ARCH }}
         
-    - name: Install rtkit for RT threading
-      shell: bash
-      run: |
-           sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
-           sudo apt-get update
-           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
-           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
-           sudo systemctl restart polkit
+    - uses: ./.github/actions/setup-rtkit-linux
            
     - name: Install required packages
       shell: bash
       run: |
            sudo apt-get install libpulse-dev sox git libasound2-dev libao-dev libgsm1-dev xvfb pulseaudio pulseaudio-utils metacity at-spi2-core libdbus-1-dev libgtk-3-dev python3 python3-dev python3-venv libebur128-dev pkg-config
-           mkdir -p ~/.config/pulse
-           echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
 
-           # Prevent the socket-activated PulseAudio user service from exiting after its
-           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
-           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
-           # and the test fails with "device cannot be found" instead of a real failure.
-           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+    - uses: ./.github/actions/setup-pulseaudio-legacy
 
-           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
-           systemctl --user --now enable pulseaudio.service pulseaudio.socket
-
-    - name: Install Python required modules
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          python3 -m venv rade-venv
-          . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
-          pip3 install matplotlib
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        torch-index-url: https://download.pytorch.org/whl/cpu
 
     - name: Build instrumented freedv-gui 
       shell: bash
@@ -334,14 +287,7 @@ jobs:
         pattern: FreeDV-2*-${{ steps.save-arch.outputs.APPIMAGE_ARCH }}.AppImage
         path: ${{github.workspace}}
         
-    - name: Install rtkit for RT threading
-      shell: bash
-      run: |
-           sudo sed -i 's@http://ports.ubuntu.com/ubuntu-ports@http://mirrors.mit.edu/ubuntu-ports@g' /etc/apt/sources.list
-           sudo apt-get update
-           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
-           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
-           sudo systemctl restart polkit
+    - uses: ./.github/actions/setup-rtkit-linux
 
     - name: Install common packages
       shell: bash
@@ -354,79 +300,25 @@ jobs:
       run: |
            sudo apt-get install pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
 
-    - name: Install required packages for audio/display
-      shell: bash
+    - uses: ./.github/actions/setup-pulseaudio-legacy
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
-      run: |
-           mkdir -p ~/.config/pulse
-           echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
+      with:
+        packages: pulseaudio pulseaudio-utils metacity
 
-           # Prevent the socket-activated PulseAudio user service from exiting after its
-           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
-           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
-           # and the test fails with "device cannot be found" instead of a real failure.
-           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        torch-index-url: https://download.pytorch.org/whl/cpu
 
-           sudo apt-get install pulseaudio pulseaudio-utils metacity
-           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
-           systemctl --user --now enable pulseaudio.service pulseaudio.socket
-
-    - name: Create Python venv
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          python3 -m venv rade-venv 
-
-    - name: Install Python required modules
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
-          pip3 install matplotlib
+    - uses: ./.github/actions/run-linux-gui-test
+      with:
+        audio-backend: ${{ (matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm') && 'pulseaudio' || 'pipewire' }}
 
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
-      if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
       run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          metacity --sm-disable --replace &
-          sleep 5
           . ./rade-venv/bin/activate
-          chmod +x *.AppImage 
-          FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
-          grep "PASS" tmp.log
-
-    - name: Sanity check RADE
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: ${{ matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm' }}
-      run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          systemctl --user enable --now pipewire-pulse.socket
-          systemctl --user enable --now pipewire.service
-          systemctl --user enable --now wireplumber.service
-          metacity --sm-disable --replace &
-          sleep 5
-          . ./rade-venv/bin/activate
-          chmod +x *.AppImage 
+          chmod +x *.AppImage
           FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
 
@@ -507,66 +399,24 @@ jobs:
         chmod +x llvm.sh
         sudo ./llvm.sh 21
 
-    - name: Install LLVM/Clang >=20.0
+    - uses: ./.github/actions/install-llvm-apt-pool
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
-      run: |
-        set -euxo pipefail
+      with:
+        arch: ${{ env.LLVM_ARCH }}
 
-        # Install the newest version that actually exists in the pool.
-        # We derive the exact version string from one known package filename.
-        HTML="$(curl -fsSL --compressed "$LLVM_POOL")"
-        VER="$(grep -oE 'libllvm21_[0-9][^"]+_${{ env.LLVM_ARCH }}\.deb' <<<"$HTML" | head -n1 \
-          | sed -E 's/^libllvm21_//; s/_${{ env.LLVM_ARCH }}\.deb$//')"
-        echo "Using pool version: $VER"
-
-        mkdir -p /tmp/llvm21 && cd /tmp/llvm21
-
-        fetch() {
-          local pkg="$1"
-          local file="${pkg}_${VER}_${{ env.LLVM_ARCH }}.deb"
-          curl -fsSLO "${LLVM_POOL}${file}"
-        }
-
-        for pkg in \
-          clang-21 clang-tools-21 lld-21 \
-          libllvm21 libclang-cpp21 libclang-common-21-dev libclang1-21 libclang-rt-21-dev \
-          llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
-        do
-          fetch "$pkg"
-        done
-
-        # Install the downloaded LLVM debs. apt will resolve any non-LLVM deps from Ubuntu repos.
-        sudo apt-get install -y --no-install-recommends ./*.deb
-
-    - name: Install rtkit for RT threading
-      shell: bash
-      run: |
-           sudo apt-get update
-           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
-           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
-           sudo systemctl restart polkit
+    - uses: ./.github/actions/setup-rtkit-linux
+      with:
+        fix-ports-mirror: 'false'
 
     - name: Install common packages
       shell: bash
       run: |
            sudo apt-get install libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio-utils metacity at-spi2-core libebur128-dev python3 python3-dev python3-venv
 
-    - name: Install version-specific packages
+    - uses: ./.github/actions/setup-pulseaudio-legacy
       if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm' }}
-      shell: bash
-      run: |
-           mkdir -p ~/.config/pulse
-           echo "default-sample-rate = 48000" >~/.config/pulse/daemon.conf
-
-           # Prevent the socket-activated PulseAudio user service from exiting after its
-           # default 20s idle timeout -- if it exits between the TX and RX phases of a test,
-           # systemd respawns a fresh daemon with none of the pactl-loaded virtual devices,
-           # and the test fails with "device cannot be found" instead of a real failure.
-           echo "exit-idle-time = -1" >>~/.config/pulse/daemon.conf
-
-           sudo apt-get install libwxgtk3.0-gtk3-dev pulseaudio 
-           sudo sed 's/load-module module-suspend-on-idle/#load-module module-suspend-on-idle/' /etc/pulse/default.pa -i
-           systemctl --user --now enable pulseaudio.service pulseaudio.socket
+      with:
+        packages: libwxgtk3.0-gtk3-dev pulseaudio
 
     - name: Install version-specific packages
       if: ${{ matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm' }}
@@ -574,19 +424,9 @@ jobs:
       run: |
            sudo apt-get install libwxgtk3.2-dev pipewire pipewire-pulse wireplumber
 
-    - name: Create Python venv
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          python3 -m venv rade-venv 
-
-    - name: Install Python required modules
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          . ./rade-venv/bin/activate
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
-          pip3 install matplotlib
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        torch-index-url: https://download.pytorch.org/whl/cpu
 
     - name: Build freedv-gui 
       shell: bash
@@ -604,51 +444,16 @@ jobs:
           . ./rade-venv/bin/activate
           UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
-    - name: Execute unit tests
-      shell: bash
-      if: ${{ (matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm') && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
-      working-directory: ${{github.workspace}}/build_linux
-      run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          metacity --sm-disable --replace &
-          sleep 5
-          if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
-              export MAX_EXECUTION_TIMES=2
-          else
-              export MAX_EXECUTION_TIMES=1
-          fi
-          ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
-          . ../rade-venv/bin/activate
-          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
-          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
+    - uses: ./.github/actions/run-linux-gui-test
+      if: ${{ matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      with:
+        audio-backend: ${{ (matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm') && 'pulseaudio' || 'pipewire' }}
 
     - name: Execute unit tests
       shell: bash
-      if: ${{ (matrix.os != 'ubuntu-22.04' && matrix.os != 'ubuntu-22.04-arm') && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      if: ${{ matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          systemctl --user enable --now pipewire-pulse.socket
-          systemctl --user enable --now pipewire.service
-          systemctl --user enable --now wireplumber.service
-          metacity --sm-disable --replace &
-          sleep 5
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
               export MAX_EXECUTION_TIMES=2
           else
