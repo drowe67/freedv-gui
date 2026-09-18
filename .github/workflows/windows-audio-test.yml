@@ -105,7 +105,6 @@ jobs:
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
-          Copy-Item -Path ${{github.workspace}}/test/hamlibserver.py -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/TestFreeDVRadeLoss.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
           Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-loss.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
 
