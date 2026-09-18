@@ -70,6 +70,13 @@ private:
     ResampleStep* playbackResampler_;
     GenericFIFO<short> outputFifo_;
 
+    // playbackResampler_ is created/destroyed/executed only by nonRtThreadEntry_()
+    // (the file I/O thread). reset() runs on the real-time pipeline thread, which
+    // must not block on a lock or touch a pointer that thread doesn't own -- so it
+    // just raises this flag, and nonRtThreadEntry_() performs the actual
+    // playbackResampler_->reset() on its own thread the next time it wakes up.
+    std::atomic<bool> resamplerResetRequested_;
+
     void nonRtThreadEntry_();
 };
 

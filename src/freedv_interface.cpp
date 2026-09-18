@@ -689,9 +689,11 @@ const char* FreeDVInterface::getReliableText()
     
     if (reliableTextFifo_.numUsed() > 0)
     {
-        char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
-        reliableTextFifo_.read(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
-        receivedReliableText_ = tmpBuf;
+        char tmpBuf[RELIABLE_TEXT_FIFO_SIZE] = { 0 };
+        if (reliableTextFifo_.read(tmpBuf, RELIABLE_TEXT_FIFO_SIZE) == 0)
+        {
+            receivedReliableText_ = tmpBuf;
+        }
     }
     
     char* ret = new char[receivedReliableText_.size() + 1];
