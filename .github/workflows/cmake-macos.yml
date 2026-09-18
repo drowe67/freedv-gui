@@ -55,7 +55,15 @@ jobs:
     - name: Run clang-tidy on codebase
       working-directory: ${{github.workspace}}/build_osx
       run: |
-        run-clang-tidy -p .
+        # Homebrew's llvm@20 clang-tidy (unlike Apple's own clang or
+        # install-llvm-action's redistributable) doesn't auto-detect the
+        # active Xcode SDK, so without an explicit sysroot it can't find
+        # basic libc/Apple-framework declarations (ldiv, wcschr,
+        # TargetConditionals.h, ...) even though the real build above
+        # -- which gets its sysroot from CMake's own xcrun-based
+        # detection, independent of which clang compiled it -- succeeds
+        # fine with the same compiler.
+        run-clang-tidy -p . --extra-arg=-isysroot --extra-arg="$(xcrun --show-sdk-path)"
 
   test:
     strategy:
