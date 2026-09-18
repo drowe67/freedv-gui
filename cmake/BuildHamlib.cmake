@@ -1,36 +1,18 @@
-# If a CMake compiler launcher (e.g. ccache) is configured, prefix Hamlib's
-# CC/CXX with it too. Hamlib is built via its own autotools ./configure &&
-# make invocation below, which is a separate build system CMake just shells
-# out to -- it never sees CMAKE_C_COMPILER_LAUNCHER/CMAKE_CXX_COMPILER_LAUNCHER,
-# since those only apply to CMake's own compile rules. Baking the launcher
-# into CC/CXX here gets Hamlib's build cached the same way as the rest of
-# the project, without relying on ccache's PATH-symlink workaround
-# (create-symlink) being enabled on every CI runner that builds it.
-if(CMAKE_C_COMPILER_LAUNCHER)
-    set(HAMLIB_CC "${CMAKE_C_COMPILER_LAUNCHER}\ ${CMAKE_C_COMPILER}")
-else()
-    set(HAMLIB_CC "${CMAKE_C_COMPILER}")
-endif()
-
-if(CMAKE_CXX_COMPILER_LAUNCHER)
-    set(HAMLIB_CXX "${CMAKE_CXX_COMPILER_LAUNCHER}\ ${CMAKE_CXX_COMPILER}")
-else()
-    set(HAMLIB_CXX "${CMAKE_CXX_COMPILER}")
-endif()
+include(cmake/ExternalProjectCCache.cmake)
 
 if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --without-cxx-binding --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CC=${HAMLIB_CC} CXX=${HAMLIB_CXX} CFLAGS=-g\ -O3\ -fstack-protector CXXFLAGS=-g\ -O3\ -fstack-protector)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --without-cxx-binding --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CC=${EXTERNAL_PROJECT_CC} CXX=${EXTERNAL_PROJECT_CXX} CFLAGS=-g\ -O3\ -fstack-protector CXXFLAGS=-g\ -O3\ -fstack-protector)
     set(HAMLIB_PATCH_CMD patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/hamlib-windows.patch)
 else(MINGW AND CMAKE_CROSSCOMPILING)
     set(HAMLIB_PATCH_CMD "")
 if(APPLE)
 if(BUILD_OSX_UNIVERSAL)
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${HAMLIB_CC} CXX=${HAMLIB_CXX} CFLAGS=-g\ -O3\ -mmacosx-version-min=11.0\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O3\ -mmacosx-version-min=11.0\ -arch\ x86_64\ -arch\ arm64)
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${EXTERNAL_PROJECT_CC} CXX=${EXTERNAL_PROJECT_CXX} CFLAGS=-g\ -O3\ -mmacosx-version-min=11.0\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O3\ -mmacosx-version-min=11.0\ -arch\ x86_64\ -arch\ arm64)
 else()
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${HAMLIB_CC} CXX=${HAMLIB_CXX} CFLAGS=-g\ -O3\ -mmacosx-version-min=11.0 CXXFLAGS=-g\ -O3\ -mmacosx-version-min=11.0)
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${EXTERNAL_PROJECT_CC} CXX=${EXTERNAL_PROJECT_CXX} CFLAGS=-g\ -O3\ -mmacosx-version-min=11.0 CXXFLAGS=-g\ -O3\ -mmacosx-version-min=11.0)
 endif(BUILD_OSX_UNIVERSAL)
 else()
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${HAMLIB_CC} CXX=${HAMLIB_CXX})
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${EXTERNAL_PROJECT_CC} CXX=${EXTERNAL_PROJECT_CXX})
 endif()
 endif(MINGW AND CMAKE_CROSSCOMPILING)
 
