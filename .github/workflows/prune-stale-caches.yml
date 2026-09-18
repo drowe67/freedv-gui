@@ -1,0 +1,77 @@
+name: Prune stale Actions caches across all branches
+
+# Complements cleanup-caches.yml, which removes a branch's caches when its
+# PR closes. That leaves a gap: branches with no PR to close -- most
+# notably the default branch, whose own successful runs keep writing a
+# brand-new timestamped ccache blob per job (see ccache-action's
+# append-timestamp default) that nothing else ever prunes. More generally,
+# any branch's *older* cache generations become unreachable the moment a
+# newer one is saved for the same job (ccache-action's restore step only
+# ever fetches the newest match for a given key), but they still count
+# against the repo-wide 10GB Actions cache quota until GitHub's own
+# eviction gets around to them.
+#
+# This runs on a schedule across every ref in the repo (not just master),
+# groups cache entries by (ref, key with its trailing timestamp stripped),
+# and deletes every entry in a group except the most recently created one.
+# It never removes the newest cache for any (branch, job) pair, so nothing
+# still reachable/useful is touched -- active branches just stop
+# accumulating dead duplicates from their own history.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete superseded caches repo-wide
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+
+          gh cache list --limit 1000 --json id,key,ref,createdAt,sizeInBytes > caches.json
+          echo "Fetched $(jq 'length' caches.json) cache entries repo-wide"
+
+          # Group by (ref, key-without-its-trailing-timestamp), then within
+          # each group with more than one entry, keep only the newest
+          # (largest createdAt) and mark the rest for deletion.
+          jq -r '
+            def bucket_key: (.key | sub("-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z?$"; ""));
+            group_by([.ref, bucket_key])
+            | map(select(length > 1) | sort_by(.createdAt) | .[0:-1])
+            | flatten
+            | .[].id
+          ' caches.json > to_delete.txt
+
+          to_delete_count=$(wc -l < to_delete.txt | tr -d ' ')
+          freed_bytes=$(jq '
+            def bucket_key: (.key | sub("-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z?$"; ""));
+            group_by([.ref, bucket_key])
+            | map(select(length > 1) | sort_by(.createdAt) | .[0:-1])
+            | flatten
+            | map(.sizeInBytes)
+            | add // 0
+          ' caches.json)
+          echo "Found $to_delete_count superseded cache(s) to delete (~$(( freed_bytes / 1024 / 1024 )) MiB)"
+
+          total_deleted=0
+          while read -r cacheId; do
+            [ -z "$cacheId" ] && continue
+            # Don't let one already-gone/failed delete stop the rest.
+            if gh cache delete "$cacheId"; then
+              total_deleted=$((total_deleted + 1))
+            fi
+          done < to_delete.txt
+
+          echo "Deleted $total_deleted superseded cache(s)"
