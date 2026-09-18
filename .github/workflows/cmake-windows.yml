@@ -268,19 +268,6 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
-    # Note: This normally requires a reboot, but since we're doing this prior to installing the VB-Cable driver,
-    # I *think* this will actually take effect. I don't know what VB-Cable defaults to if these Registry keys don't exist so
-    # this could very well still do nothing.
-    - name: Set VB-Cable Registry settings
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE" -Name "VB-Audio" -Force
-          New-Item -Path "HKLM:\SOFTWARE\CurrentControlSet\Services" -Name "VB-Cable" -Force
-          New-Item -Path "HKLM:\SOFTWARE\VB-Audio" -Name "Cable" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
-
     - name: Install VB-Cable ("Radio" sound device)
       run: |
           Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
@@ -566,19 +553,6 @@ jobs:
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
 
-    # Note: This normally requires a reboot, but since we're doing this prior to installing the VB-Cable driver,
-    # I *think* this will actually take effect. I don't know what VB-Cable defaults to if these Registry keys don't exist so
-    # this could very well still do nothing.
-    - name: Set VB-Cable Registry settings
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE" -Name "VB-Audio" -Force
-          New-Item -Path "HKLM:\SOFTWARE\CurrentControlSet\Services" -Name "VB-Cable" -Force
-          New-Item -Path "HKLM:\SOFTWARE\VB-Audio" -Name "Cable" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
-
     - name: Install VB-Cable ("Radio" sound device)
       run: |
           Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile VBCABLE_Driver_Pack45.zip
@@ -794,19 +768,6 @@ jobs:
           [System.IO.File]::WriteAllBytes($outputFile, $cert.Export($exportType));
 
           .\ci\Install-Driver.ps1 $outputFile "vac470lite/vrtaucbl.inf" VirtualAudioCable_83ed7f0e-2028-4956-b0b4-39c76fdaef1d
-
-    # Note: This normally requires a reboot, but since we're doing this prior to installing the VB-Cable driver,
-    # I *think* this will actually take effect. I don't know what VB-Cable defaults to if these Registry keys don't exist so
-    # this could very well still do nothing.
-    - name: Set VB-Cable Registry settings
-      run: |
-          New-Item -Path "HKLM:\SOFTWARE" -Name "VB-Audio" -Force
-          New-Item -Path "HKLM:\SOFTWARE\CurrentControlSet\Services" -Name "VB-Cable" -Force
-          New-Item -Path "HKLM:\SOFTWARE\VB-Audio" -Name "Cable" -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\VB-Audio\Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM -Value 8192 -Type DWord
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\CurrentControlSet\Services\VB-Cable" -Name VBAudioCableWDM_Latency -Value 8192 -Type DWord
 
     - name: Install VB-Cable ("Radio" sound device)
       run: |

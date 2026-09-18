@@ -92,11 +92,6 @@ jobs:
       run: |
           brew install vb-cable
 
-    - name: Override VB-Cable latency settings
-      shell: bash
-      run: |
-          sudo cp ${{github.workspace}}/ci/com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
-
     - name: Install other virtual audio devices
       shell: bash
       working-directory: ${{github.workspace}}
@@ -191,11 +186,6 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           brew install vb-cable
-
-    - name: Override VB-Cable latency settings
-      shell: bash
-      run: |
-          sudo cp ${{github.workspace}}/ci/com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
 
     - name: Install other virtual audio devices
       shell: bash
@@ -362,11 +352,6 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           brew install vb-cable
-
-    - name: Override VB-Cable latency settings
-      shell: bash
-      run: |
-          sudo cp ${{github.workspace}}/ci/com.vbaudio.vbcable.plist /Library/Preferences/com.vbaudio.vbcable.plist
 
     - name: Install other virtual audio devices
       shell: bash
