@@ -133,7 +133,12 @@ class EasySetupDialog : public wxDialog
          bool canSaveSettings_();
          void updateHamlibSerialRates_(int min = 0, int max = 0);
          void stopTest_();
-         
+
+         // Callback used to detect IAudioDevice::start() failures on the test
+         // devices below. Must be a plain function (not a capturing lambda)
+         // as required by IAudioDevice::AudioErrorCallbackFn.
+         static void audioTestErrorCallback_(IAudioDevice& dev, std::string const& error, void* state);
+
          std::shared_ptr<HamlibRigController> hamlibTestObject_;
          std::shared_ptr<SerialPortOutRigController> serialPortTestObject_;
          int sineWaveSampleNumber_;
@@ -142,6 +147,13 @@ class EasySetupDialog : public wxDialog
 
          std::shared_ptr<IAudioDevice> txTestAudioDevice_;
          std::shared_ptr<IAudioDevice> analogPlaybackTestAudioDevice_;
+
+         // Set by audioTestErrorCallback_() when the most recent test device
+         // start() call failed. Reset before each start() call and checked
+         // immediately after it returns -- safe without extra synchronization
+         // since start() blocks (via std::future::wait()) until any error
+         // callback triggered by that same call has already run.
+         bool testAudioDeviceStartFailed_;
 };
 
 #endif // __EASY_SETUP_DIALOG__
