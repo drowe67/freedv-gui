@@ -169,10 +169,20 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             return;
         }
         
-        ComPtr<IMMDeviceCollection> coll = 
+        ComPtr<IMMDeviceCollection> coll =
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
             outputDeviceList_;
+
+        if (!coll)
+        {
+            // The engine hasn't been started successfully (e.g. start() failed
+            // to enumerate endpoints), so there's nothing to list yet. Return
+            // an empty list rather than dereferencing a null collection.
+            log_warn("Device collection unavailable; audio engine may not be started");
+            prom->set_value(result);
+            return;
+        }
 
         UINT deviceCount = 0;
         HRESULT hr = coll->GetCount(&deviceCount);
@@ -223,6 +233,15 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
     auto prom = std::make_shared<std::promise<AudioDeviceSpecification> >();
     auto fut = prom->get_future();
     enqueue_([&, specList, direction]() {
+        if (!devEnumerator_)
+        {
+            // The engine hasn't been started successfully, so there's no
+            // enumerator to query yet.
+            log_warn("Device enumerator unavailable; audio engine may not be started");
+            prom->set_value(AudioDeviceSpecification::GetInvalidDevice());
+            return;
+        }
+
         ComPtr<IMMDevice> defaultDevice = nullptr;
         HRESULT hr = devEnumerator_->GetDefaultAudioEndpoint(
             (direction == AudioDirection::AUDIO_ENGINE_IN) ? eCapture : eRender,

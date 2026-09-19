@@ -54,7 +54,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     , hamlibTestObject_(nullptr)
     , serialPortTestObject_(nullptr)
     , hasAppliedChanges_(false)
-{    
+    , testAudioDeviceStartFailed_(false)
+{
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
     SetLayoutDirection(wxLayout_LeftToRight);
@@ -745,11 +746,19 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
 
 void EasySetupDialog::OnCancel(wxCommandEvent&)
 {
+    if (m_buttonTest->GetLabel() == "Stop Test")
+    {
+        stopTest_();
+    }
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnClose(wxCloseEvent&)
 {
+    if (m_buttonTest->GetLabel() == "Stop Test")
+    {
+        stopTest_();
+    }
     this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
@@ -806,55 +815,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
     {
         if (m_buttonTest->GetLabel() == "Stop Test")
         {
-            // Stop the currently running test
-            if (txTestAudioDevice_ != nullptr || analogPlaybackTestAudioDevice_ != nullptr)
-            {
-                if (txTestAudioDevice_ != nullptr)
-                {
-                    txTestAudioDevice_->stop();
-                    txTestAudioDevice_ = nullptr;
-                }
-
-                if (analogPlaybackTestAudioDevice_ != nullptr)
-                {
-                    analogPlaybackTestAudioDevice_->stop();
-                    analogPlaybackTestAudioDevice_ = nullptr;
-                }
-
-                auto audioEngine = AudioEngineFactory::GetAudioEngine();
-                audioEngine->stop();
-            }
-        
-            if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
-            {
-                hamlibTestObject_->ptt(false);
-                hamlibTestObject_->disconnect();
-            }
-            else if (serialPortTestObject_ != nullptr && serialPortTestObject_->isConnected())
-            {
-                serialPortTestObject_->ptt(false);
-                serialPortTestObject_->disconnect();
-            }
-
-            hamlibTestObject_ = nullptr;
-            serialPortTestObject_ = nullptr;
-        
-            m_radioDevice->Enable(true);
-            m_advancedSoundSetup->Enable(true);
-            m_ckUseHamlibPTT->Enable(true);
-            m_cbRigName->Enable(true);
-            m_cbSerialPort->Enable(true);
-            m_cbSerialRate->Enable(true);
-            m_tcIcomCIVHex->Enable(true);
-            m_advancedPTTSetup->Enable(true);
-            m_ckbox_psk_enable->Enable(true);
-            m_txt_callsign->Enable(true);
-            m_txt_grid_square->Enable(true);
-            m_buttonOK->Enable(true);
-            m_buttonCancel->Enable(true);
-            m_buttonApply->Enable(true);
-        
-            m_buttonTest->SetLabel("Test");
+            stopTest_();
         }
         else
         {
@@ -979,20 +940,7 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                             "Error opening radio sound device. Please double-check configuration and try again.",
                             wxT("Error"), wxOK | wxICON_ERROR, this);
 
-                        if (hamlibTestObject_ != nullptr)
-                        {
-                            hamlibTestObject_->ptt(false);
-                            hamlibTestObject_->disconnect();
-                            hamlibTestObject_ = nullptr;
-                        }
-                        else if (serialPortTestObject_ != nullptr)
-                        {
-                            serialPortTestObject_->ptt(false);
-                            serialPortTestObject_->disconnect();
-                            serialPortTestObject_ = nullptr;
-                        }
-
-                        audioEngine->stop();
+                        stopTest_();
                         return;
                     }
 
@@ -1010,8 +958,21 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                         }
 
                     }, this);
+                    txTestAudioDevice_->setOnAudioError(&EasySetupDialog::audioTestErrorCallback_, this);
 
+                    // start() blocks until the device has either fully started or
+                    // failed, so testAudioDeviceStartFailed_ is safe to check
+                    // immediately afterwards -- see its declaration for why.
+                    testAudioDeviceStartFailed_ = false;
                     txTestAudioDevice_->start();
+
+                    if (testAudioDeviceStartFailed_)
+                    {
+                        // audioTestErrorCallback_() already queued an error message;
+                        // just tear the (non-functional) test back down.
+                        stopTest_();
+                        return;
+                    }
                 }
 
                 if (analogOutDeviceName != "none")
@@ -1034,8 +995,25 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
                             }
 
                         }, this);
+                        analogPlaybackTestAudioDevice_->setOnAudioError(&EasySetupDialog::audioTestErrorCallback_, this);
 
+                        testAudioDeviceStartFailed_ = false;
                         analogPlaybackTestAudioDevice_->start();
+
+                        if (testAudioDeviceStartFailed_)
+                        {
+                            // Non-fatal -- radio/TX audio may still be fine. Just tear
+                            // this device back down; audioTestErrorCallback_() already
+                            // queued an error message.
+                            analogPlaybackTestAudioDevice_->stop();
+                            analogPlaybackTestAudioDevice_ = nullptr;
+                        }
+                    }
+                    else
+                    {
+                        wxMessageBox(
+                            "Error opening analog playback sound device. Please double-check configuration and try again.",
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
                     }
                 }
             }
@@ -1062,9 +1040,75 @@ void EasySetupDialog::OnTest(wxCommandEvent&)
     else
     {
         wxMessageBox(
-            "Some settings have not been configured. Please check your radio and audio device settings and try again.", 
+            "Some settings have not been configured. Please check your radio and audio device settings and try again.",
             wxT("Error"), wxOK, this);
     }
+}
+
+void EasySetupDialog::audioTestErrorCallback_(IAudioDevice&, std::string const& error, void* state)
+{
+    auto castedThis = (EasySetupDialog*)state;
+    castedThis->testAudioDeviceStartFailed_ = true;
+    castedThis->CallAfter([castedThis, error]() {
+        wxMessageBox(
+            wxString::Format("Error opening sound device (%s). Please double-check configuration and try again.", error),
+            wxT("Error"), wxOK | wxICON_ERROR, castedThis);
+    });
+}
+
+void EasySetupDialog::stopTest_()
+{
+    // Stop the currently running test.
+    if (txTestAudioDevice_ != nullptr)
+    {
+        txTestAudioDevice_->stop();
+        txTestAudioDevice_ = nullptr;
+    }
+
+    if (analogPlaybackTestAudioDevice_ != nullptr)
+    {
+        analogPlaybackTestAudioDevice_->stop();
+        analogPlaybackTestAudioDevice_ = nullptr;
+    }
+
+    // Always stop the (shared) audio engine here too, even if neither test
+    // device object above was non-null -- OnTest() may have already called
+    // audioEngine->start() before failing to open/start a device, and this
+    // is the only place left to balance that call in such cases. Safe to
+    // call even if start() was never actually called.
+    auto audioEngine = AudioEngineFactory::GetAudioEngine();
+    audioEngine->stop();
+
+    if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
+    {
+        hamlibTestObject_->ptt(false);
+        hamlibTestObject_->disconnect();
+    }
+    else if (serialPortTestObject_ != nullptr && serialPortTestObject_->isConnected())
+    {
+        serialPortTestObject_->ptt(false);
+        serialPortTestObject_->disconnect();
+    }
+
+    hamlibTestObject_ = nullptr;
+    serialPortTestObject_ = nullptr;
+
+    m_radioDevice->Enable(true);
+    m_advancedSoundSetup->Enable(true);
+    m_ckUseHamlibPTT->Enable(true);
+    m_cbRigName->Enable(true);
+    m_cbSerialPort->Enable(true);
+    m_cbSerialRate->Enable(true);
+    m_tcIcomCIVHex->Enable(true);
+    m_advancedPTTSetup->Enable(true);
+    m_ckbox_psk_enable->Enable(true);
+    m_txt_callsign->Enable(true);
+    m_txt_grid_square->Enable(true);
+    m_buttonOK->Enable(true);
+    m_buttonCancel->Enable(true);
+    m_buttonApply->Enable(true);
+
+    m_buttonTest->SetLabel("Test");
 }
 
 void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent&)
