@@ -84,6 +84,8 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     typeSizer->Add(rawRecording_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     decodedRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Decoded"));
     typeSizer->Add(decodedRecording_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
+    bothRecording_ = new wxRadioButton(recordingSettingsBox, wxID_ANY, _("Both"));
+    typeSizer->Add(bothRecording_, 0, static_cast<int>(wxALL) | static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
     gridSizerRecordingSettings->Add(typeSizer, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL), 2);
 
     wxStaticText* labelRecordingFormat = new wxStaticText(recordingSettingsBox, wxID_ANY, wxT("Recording format:"), wxDefaultPosition, wxSize(125,-1), 0);
@@ -130,6 +132,7 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     
     rawRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
+    bothRecording_->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
 
     recordingSuffix_->Connect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
 
@@ -144,6 +147,7 @@ BeginRecordingDialog::~BeginRecordingDialog()
     
     rawRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
     decodedRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
+    bothRecording_->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(BeginRecordingDialog::OnRecordingTypeChange), NULL, this);
 
     recordingSuffix_->Disconnect(wxEVT_CHAR, wxKeyEventHandler(BeginRecordingDialog::OnRecordingSuffixChar), NULL, this);
 
@@ -199,14 +203,15 @@ void BeginRecordingDialog::OnRecordingSuffixChar(wxKeyEvent& event)
 void BeginRecordingDialog::OnRecordingTypeChange(wxCommandEvent&)
 {
 #if !defined(SNDFILE_NO_MP3_SUPPORT)
-    if (rawRecording_->GetValue())
+    if (decodedRecording_->GetValue())
     {
-        formatMp3_->Enable(false);
-        formatWav_->SetValue(true);
+        formatMp3_->Enable(true);
     }
     else
     {
-        formatMp3_->Enable(true);
+        // Off air and both recordings are WAV only.
+        formatMp3_->Enable(false);
+        formatWav_->SetValue(true);
     }
 #endif // !defined(SNDFILE_NO_MP3_SUPPORT)
 }
