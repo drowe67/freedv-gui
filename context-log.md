@@ -49,3 +49,16 @@ device; they are the first real check that the logic works.
 4. Payload sizes are asserted against codec2 at open time; if that check fires
    the constants in `TextMessagingTypes.h` need to follow codec2, and the
    pinned vectors in `FrameCodecTest.cpp` explain the wire format.
+
+## Prompt to start the next session
+
+> Read context-log.md, then get this fork building. Configure with
+> `cmake -B build -DCMAKE_BUILD_TYPE=Debug -DUNITTEST=ON`, build, and work
+> through the compile errors — they are in the new text messaging code, not
+> upstream, so fix that code rather than weakening -Werror or dropping files
+> from CMake. Ask before changing any design decision listed above. Then run
+> `ctest --test-dir build -R text_messaging` (three tests, no radio or audio
+> device needed); a failure there is a real bug, so fix the code unless the
+> test's expectation is provably wrong. Report what built, what passed, and
+> anything the compiler made look wrong. Commit build fixes separately from
+> behaviour changes, and don't push.
