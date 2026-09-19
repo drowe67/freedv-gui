@@ -1,0 +1,728 @@
+//=========================================================================
+// Name:            TextMessagingProtocol.cpp
+// Purpose:         Message, acknowledgement and ping state machine.
+//
+// Authors:         FreeDV text messaging contributors
+// License:
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+// - Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//
+// - Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
+// documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+// OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+//=========================================================================
+
+#include "TextMessagingProtocol.h"
+
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+
+#include "HeardStationList.h"
+#include "MessageStore.h"
+
+namespace TextMessaging
+{
+
+namespace
+{
+
+// A message that completed within this window and arrives again is a
+// retransmission whose acknowledgement we lost, not a new message.
+constexpr uint64_t DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
+// Every fragment of a message arrives in one transmission, so a set that is
+// still incomplete after this long is missing frames that will never come.
+constexpr uint64_t REASSEMBLY_TIMEOUT_MS = 120 * 1000;
+
+std::string trim(const std::string& text)
+{
+    size_t begin = text.find_first_not_of(" \t\r\n");
+    if (begin == std::string::npos) return "";
+    size_t end = text.find_last_not_of(" \t\r\n");
+    return text.substr(begin, end - begin + 1);
+}
+
+// SNR travels in one byte in half dB steps, which covers every SNR the modem
+// can report with room to spare.
+uint8_t encodeSnr(float snr)
+{
+    float scaled = snr * 2.0f;
+    if (scaled > 127.0f) scaled = 127.0f;
+    if (scaled < -128.0f) scaled = -128.0f;
+    return (uint8_t)(int8_t)std::lround(scaled);
+}
+
+float decodeSnr(uint8_t encoded)
+{
+    return (float)(int8_t)encoded / 2.0f;
+}
+
+std::string formatSnr(float snr)
+{
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%.1f", (double)snr);
+    return buffer;
+}
+
+} // namespace
+
+TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationList& stations)
+    : store_(store)
+    , stations_(stations)
+    , transport_(nullptr)
+    , observer_(nullptr)
+    , myCallsignCrc_(0)
+    , autoReplyEnabled_(true)
+    , nextAirId_(1)
+    , monotonicMs_([]() {
+        return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    })
+    , wallClock_([]() { return std::time(nullptr); })
+{
+    // empty
+}
+
+TextMessagingProtocol::~TextMessagingProtocol()
+{
+    // empty
+}
+
+void TextMessagingProtocol::setTransport(ITextMessagingTransport* transport)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    transport_ = transport;
+}
+
+void TextMessagingProtocol::setObserver(ITextMessagingObserver* observer)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    observer_ = observer;
+}
+
+void TextMessagingProtocol::setMyCallsign(const std::string& callsign)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    myCallsign_ = FrameCodec::normalizeCallsign(callsign);
+    myCallsignCrc_ = FrameCodec::callsignCrc24(myCallsign_);
+}
+
+std::string TextMessagingProtocol::myCallsign() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return myCallsign_;
+}
+
+void TextMessagingProtocol::setAutoReplyEnabled(bool enabled)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    autoReplyEnabled_ = enabled;
+}
+
+bool TextMessagingProtocol::autoReplyEnabled() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return autoReplyEnabled_;
+}
+
+void TextMessagingProtocol::setClocks(std::function<uint64_t()> monotonicMs,
+                                      std::function<std::time_t()> wallClock)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (monotonicMs) monotonicMs_ = monotonicMs;
+    if (wallClock) wallClock_ = wallClock;
+}
+
+size_t TextMessagingProtocol::pendingCount() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return outbox_.size();
+}
+
+uint16_t TextMessagingProtocol::nextAirIdLocked()
+{
+    // Zero is reserved so that an all zero header cannot look like a valid ID.
+    if (nextAirId_ == 0) nextAirId_ = 1;
+    return nextAirId_++;
+}
+
+Frame TextMessagingProtocol::makeFrameLocked(FrameType type, const std::string& destination,
+                                             uint16_t airId, uint8_t fragmentIndex,
+                                             uint8_t fragmentCount,
+                                             const std::vector<uint8_t>& payload) const
+{
+    Frame frame;
+    frame.type = type;
+    frame.destinationCrc = destination.empty() ? 0 : FrameCodec::callsignCrc24(destination);
+    frame.originCrc = myCallsignCrc_;
+    frame.originCallsign = myCallsign_;
+    frame.airId = airId;
+    frame.fragmentIndex = fragmentIndex;
+    frame.fragmentCount = fragmentCount;
+    frame.payload = payload;
+    return frame;
+}
+
+bool TextMessagingProtocol::isAddressedToMeLocked(const Frame& frame) const
+{
+    // Addressing is by CRC, so a collision could in principle hand us somebody
+    // else's frame; the origin callsign in the frame is what gets displayed,
+    // so the worst case is a stray line in the chat window.
+    return !myCallsign_.empty() && frame.destinationCrc == myCallsignCrc_;
+}
+
+bool TextMessagingProtocol::sendMessage(const std::string& text, const std::string& destination,
+                                        std::string& errorOut)
+{
+    std::vector<PendingEvent> events;
+    bool ok = false;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ok = queueMessageLocked(text, destination, errorOut, events);
+    }
+
+    deliver(events);
+    return ok;
+}
+
+bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
+                                               const std::string& destination,
+                                               std::string& errorOut,
+                                               std::vector<PendingEvent>& events)
+{
+    if (myCallsign_.empty())
+    {
+        errorOut = "Set your callsign in Tools/Options before sending messages.";
+        return false;
+    }
+
+    if (transport_ == nullptr)
+    {
+        errorOut = "FreeDV is not running, so there is nothing to transmit with.";
+        return false;
+    }
+
+    std::string body = trim(text);
+    if (body.empty())
+    {
+        errorOut = "There is nothing to send.";
+        return false;
+    }
+
+    if ((int)body.size() > MAX_MESSAGE_TEXT_BYTES)
+    {
+        errorOut = "Message is too long; the limit is " +
+                   std::to_string(MAX_MESSAGE_TEXT_BYTES) + " characters.";
+        return false;
+    }
+
+    std::string normalizedDestination = FrameCodec::normalizeCallsign(destination);
+    bool broadcast = normalizedDestination.empty();
+    uint16_t airId = nextAirIdLocked();
+
+    // Encode before storing, so a message that cannot go on the air never
+    // appears in the chat window as something that was sent.
+    PendingTransmission pending;
+    pending.signalling = false;
+    pending.expectsAck = !broadcast;
+    pending.isPing = false;
+    pending.destination = normalizedDestination;
+    pending.state = TransmissionState::Queued;
+
+    size_t fragmentCount = (body.size() + TEXT_BYTES_PER_FRAGMENT - 1) / TEXT_BYTES_PER_FRAGMENT;
+    for (size_t index = 0; index < fragmentCount; index++)
+    {
+        std::string chunk = body.substr(index * TEXT_BYTES_PER_FRAGMENT, TEXT_BYTES_PER_FRAGMENT);
+        std::vector<uint8_t> payload(chunk.begin(), chunk.end());
+
+        Frame frame = makeFrameLocked(broadcast ? FrameType::Broadcast : FrameType::Message,
+                                      normalizedDestination, airId, (uint8_t)index,
+                                      (uint8_t)fragmentCount, payload);
+        std::vector<uint8_t> encoded = FrameCodec::encode(frame, TEXT_FRAME_BYTES);
+        if (encoded.empty())
+        {
+            errorOut = "Could not encode the message for transmission.";
+            return false;
+        }
+
+        pending.frames.push_back(encoded);
+    }
+
+    TextMessage message;
+    message.kind = MessageKind::Chat;
+    message.airId = airId;
+    message.originCallsign = myCallsign_;
+    message.destCallsign = normalizedDestination;
+    message.broadcast = broadcast;
+    message.text = body;
+    message.timestamp = wallClock_();
+    message.direction = MessageDirection::Sent;
+    message.status = MessageStatus::Queued;
+
+    if (!store_.addMessage(message))
+    {
+        errorOut = "Could not save the message: " + store_.lastError();
+        return false;
+    }
+
+    pending.message = message;
+    outbox_.push_back(pending);
+
+    PendingEvent event;
+    event.type = PendingEvent::Type::MessageAdded;
+    event.message = message;
+    events.push_back(event);
+
+    return true;
+}
+
+bool TextMessagingProtocol::sendPing(const std::string& destination, std::string& errorOut)
+{
+    std::vector<PendingEvent> events;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (myCallsign_.empty())
+        {
+            errorOut = "Set your callsign in Tools/Options before pinging.";
+            return false;
+        }
+
+        if (transport_ == nullptr)
+        {
+            errorOut = "FreeDV is not running, so there is nothing to transmit with.";
+            return false;
+        }
+
+        std::string normalizedDestination = FrameCodec::normalizeCallsign(destination);
+        if (normalizedDestination.empty())
+        {
+            errorOut = "Select a station to ping.";
+            return false;
+        }
+
+        uint16_t airId = nextAirIdLocked();
+        Frame frame = makeFrameLocked(FrameType::Ping, normalizedDestination, airId, 0, 1, {});
+        std::vector<uint8_t> encoded = FrameCodec::encode(frame, SIGNALLING_FRAME_BYTES);
+        if (encoded.empty())
+        {
+            errorOut = "Could not encode the ping for transmission.";
+            return false;
+        }
+
+        TextMessage message;
+        message.kind = MessageKind::System;
+        message.airId = airId;
+        message.originCallsign = myCallsign_;
+        message.destCallsign = normalizedDestination;
+        message.text = myCallsign_ + " >> " + normalizedDestination + " : PING!";
+        message.timestamp = wallClock_();
+        message.direction = MessageDirection::Sent;
+        message.status = MessageStatus::Queued;
+
+        if (!store_.addMessage(message))
+        {
+            errorOut = "Could not save the ping: " + store_.lastError();
+            return false;
+        }
+
+        PendingTransmission pending;
+        pending.message = message;
+        pending.frames.push_back(encoded);
+        pending.signalling = true;
+        pending.expectsAck = true;
+        pending.isPing = true;
+        pending.destination = normalizedDestination;
+        pending.state = TransmissionState::Queued;
+        outbox_.push_back(pending);
+
+        PendingEvent event;
+        event.type = PendingEvent::Type::MessageAdded;
+        event.message = message;
+        events.push_back(event);
+    }
+
+    deliver(events);
+    return true;
+}
+
+void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint16_t airId)
+{
+    Frame frame = makeFrameLocked(FrameType::MessageAck, destination, airId, 0, 1, {});
+    std::vector<uint8_t> encoded = FrameCodec::encode(frame, SIGNALLING_FRAME_BYTES);
+    if (encoded.empty()) return;
+
+    PendingTransmission pending;
+    pending.frames.push_back(encoded);
+    pending.signalling = true;
+    pending.expectsAck = false;
+    pending.destination = destination;
+    pending.state = TransmissionState::Queued;
+
+    // Acknowledgements go to the front: the sender is sitting on a timer.
+    outbox_.push_front(pending);
+}
+
+void TextMessagingProtocol::queuePongLocked(const std::string& destination, float snr)
+{
+    std::vector<uint8_t> payload{encodeSnr(snr)};
+    Frame frame = makeFrameLocked(FrameType::PingAck, destination, nextAirIdLocked(), 0, 1, payload);
+    std::vector<uint8_t> encoded = FrameCodec::encode(frame, SIGNALLING_FRAME_BYTES);
+    if (encoded.empty()) return;
+
+    PendingTransmission pending;
+    pending.frames.push_back(encoded);
+    pending.signalling = true;
+    pending.expectsAck = false;
+    pending.destination = destination;
+    pending.state = TransmissionState::Queued;
+    outbox_.push_front(pending);
+}
+
+void TextMessagingProtocol::addSystemMessageLocked(const std::string& text,
+                                                   const std::string& destination,
+                                                   std::vector<PendingEvent>& events)
+{
+    TextMessage message;
+    message.kind = MessageKind::System;
+    message.originCallsign = myCallsign_;
+    message.destCallsign = destination;
+    message.text = text;
+    message.timestamp = wallClock_();
+    message.direction = MessageDirection::Received;
+    message.status = MessageStatus::Received;
+
+    if (!store_.addMessage(message)) return;
+
+    PendingEvent event;
+    event.type = PendingEvent::Type::MessageAdded;
+    event.message = message;
+    events.push_back(event);
+}
+
+void TextMessagingProtocol::updateStatusLocked(PendingTransmission& pending, MessageStatus status,
+                                               std::vector<PendingEvent>& events)
+{
+    // Acknowledgements and pongs have no chat line of their own.
+    if (pending.message.id == 0) return;
+
+    pending.message.status = status;
+    pending.message.retryCount = pending.retries;
+    store_.updateMessageStatus(pending.message.id, status, pending.retries);
+
+    PendingEvent event;
+    event.type = PendingEvent::Type::MessageUpdated;
+    event.message = pending.message;
+    events.push_back(event);
+}
+
+void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
+{
+    std::vector<PendingEvent> events;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // Our own transmission looped back through the radio's monitor path.
+        if (!myCallsign_.empty() && frame.originCallsign == myCallsign_) return;
+
+        std::time_t now = wallClock_();
+        stations_.heard(frame.originCallsign, snr, now);
+
+        HeardStation station;
+        station.callsign = frame.originCallsign;
+        station.snr = snr;
+        station.lastHeard = now;
+        store_.upsertHeardStation(station);
+
+        PendingEvent stationsChanged;
+        stationsChanged.type = PendingEvent::Type::StationsChanged;
+        events.push_back(stationsChanged);
+
+        switch (frame.type)
+        {
+            case FrameType::Broadcast:
+                handleIncomingFragmentLocked(frame, snr, events);
+                break;
+            case FrameType::Message:
+                if (isAddressedToMeLocked(frame)) handleIncomingFragmentLocked(frame, snr, events);
+                break;
+            case FrameType::MessageAck:
+                if (isAddressedToMeLocked(frame)) handleAckLocked(frame, events);
+                break;
+            case FrameType::Ping:
+                if (isAddressedToMeLocked(frame)) handlePingLocked(frame, snr, events);
+                break;
+            case FrameType::PingAck:
+                if (isAddressedToMeLocked(frame)) handlePongLocked(frame, snr, events);
+                break;
+        }
+    }
+
+    deliver(events);
+}
+
+void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, float snr,
+                                                         std::vector<PendingEvent>& events)
+{
+    bool broadcast = frame.type == FrameType::Broadcast;
+    ReassemblyKey key(frame.originCallsign, frame.airId);
+    uint64_t nowMs = monotonicMs_();
+
+    // The sender is retransmitting a message we already have, which means our
+    // acknowledgement did not reach them. Send it again rather than showing
+    // the message twice.
+    auto completed = recentlyCompleted_.find(key);
+    if (completed != recentlyCompleted_.end())
+    {
+        if (!broadcast && autoReplyEnabled_) queueAckLocked(frame.originCallsign, frame.airId);
+        return;
+    }
+
+    Reassembly& reassembly = inbox_[key];
+    if (reassembly.fragmentCount != frame.fragmentCount)
+    {
+        reassembly.fragments.assign(frame.fragmentCount, "");
+        reassembly.fragmentCount = frame.fragmentCount;
+        reassembly.receivedMask = 0;
+        reassembly.firstSeenMs = nowMs;
+        reassembly.snr = snr;
+        reassembly.broadcast = broadcast;
+    }
+
+    reassembly.fragments[frame.fragmentIndex].assign(frame.payload.begin(), frame.payload.end());
+    reassembly.receivedMask |= (1u << frame.fragmentIndex);
+    reassembly.snr = (reassembly.snr + snr) / 2.0f;
+
+    uint32_t completeMask = (1u << frame.fragmentCount) - 1u;
+    if (reassembly.receivedMask != completeMask) return;
+
+    TextMessage message;
+    message.kind = MessageKind::Chat;
+    message.airId = frame.airId;
+    message.originCallsign = frame.originCallsign;
+    message.destCallsign = broadcast ? "" : myCallsign_;
+    message.broadcast = broadcast;
+    for (const std::string& fragment : reassembly.fragments) message.text += fragment;
+    message.timestamp = wallClock_();
+    message.direction = MessageDirection::Received;
+    message.status = MessageStatus::Received;
+    message.snr = reassembly.snr;
+
+    inbox_.erase(key);
+    recentlyCompleted_[key] = nowMs;
+
+    if (store_.addMessage(message))
+    {
+        PendingEvent event;
+        event.type = PendingEvent::Type::MessageAdded;
+        event.message = message;
+        events.push_back(event);
+    }
+
+    if (!broadcast && autoReplyEnabled_) queueAckLocked(frame.originCallsign, frame.airId);
+}
+
+void TextMessagingProtocol::handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events)
+{
+    // The acknowledged message is not necessarily at the head: an incoming
+    // message's own acknowledgement jumps the queue ahead of it.
+    for (auto it = outbox_.begin(); it != outbox_.end(); ++it)
+    {
+        if (it->isPing || !it->expectsAck) continue;
+        if (it->message.airId != frame.airId) continue;
+        if (it->destination != frame.originCallsign) continue;
+
+        updateStatusLocked(*it, MessageStatus::Acknowledged, events);
+        outbox_.erase(it);
+        return;
+    }
+}
+
+void TextMessagingProtocol::handlePingLocked(const Frame& frame, float snr,
+                                             std::vector<PendingEvent>& events)
+{
+    addSystemMessageLocked(frame.originCallsign + " >> " + myCallsign_ + " : PING!",
+                           frame.originCallsign, events);
+
+    if (autoReplyEnabled_) queuePongLocked(frame.originCallsign, snr);
+}
+
+void TextMessagingProtocol::handlePongLocked(const Frame& frame, float snr,
+                                             std::vector<PendingEvent>& events)
+{
+    std::string heardBy;
+    if (!frame.payload.empty())
+    {
+        heardBy = ", heard you at " + formatSnr(decodeSnr(frame.payload[0])) + " dB";
+    }
+
+    addSystemMessageLocked(frame.originCallsign + " >> " + myCallsign_ + " : PONG! (" +
+                               formatSnr(snr) + " dB" + heardBy + ")",
+                           frame.originCallsign, events);
+
+    for (auto it = outbox_.begin(); it != outbox_.end(); ++it)
+    {
+        if (!it->isPing) continue;
+        if (it->destination != frame.originCallsign) continue;
+
+        updateStatusLocked(*it, MessageStatus::Acknowledged, events);
+        outbox_.erase(it);
+        return;
+    }
+}
+
+void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
+{
+    for (auto it = inbox_.begin(); it != inbox_.end();)
+    {
+        if (nowMs - it->second.firstSeenMs > REASSEMBLY_TIMEOUT_MS)
+        {
+            it = inbox_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    for (auto it = recentlyCompleted_.begin(); it != recentlyCompleted_.end();)
+    {
+        if (nowMs - it->second > DUPLICATE_WINDOW_MS)
+        {
+            it = recentlyCompleted_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void TextMessagingProtocol::tick()
+{
+    std::vector<PendingEvent> events;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        uint64_t nowMs = monotonicMs_();
+        purgeStaleReassembliesLocked(nowMs);
+
+        if (!outbox_.empty() && transport_ != nullptr)
+        {
+            PendingTransmission& head = outbox_.front();
+            bool transmitting = transport_->isTransmitting();
+
+            switch (head.state)
+            {
+                case TransmissionState::Queued:
+                    // Voice always wins the transmitter; the message waits.
+                    if (!transmitting && transport_->transmit(head.frames, head.signalling))
+                    {
+                        head.state = TransmissionState::Transmitting;
+                        updateStatusLocked(head, MessageStatus::Transmitting, events);
+                    }
+                    break;
+
+                case TransmissionState::Transmitting:
+                    if (transmitting) break;
+
+                    if (head.expectsAck)
+                    {
+                        head.state = TransmissionState::AwaitingAck;
+                        head.deadlineMs = nowMs + (uint64_t)(head.isPing
+                                                                 ? PING_TIMEOUT_MILLISECONDS
+                                                                 : ACK_TIMEOUT_MILLISECONDS);
+                        updateStatusLocked(head, MessageStatus::AwaitingAck, events);
+                    }
+                    else
+                    {
+                        updateStatusLocked(head, MessageStatus::Sent, events);
+                        outbox_.pop_front();
+                    }
+                    break;
+
+                case TransmissionState::AwaitingAck:
+                    if (nowMs < head.deadlineMs) break;
+
+                    // A ping gets one chance; a message gets the retries the
+                    // operator can see counting up in the chat window.
+                    if (!head.isPing && head.retries < MAX_MESSAGE_RETRIES)
+                    {
+                        head.retries++;
+                        head.state = TransmissionState::Queued;
+                        updateStatusLocked(head, MessageStatus::Retrying, events);
+                    }
+                    else
+                    {
+                        if (head.isPing)
+                        {
+                            addSystemMessageLocked(
+                                head.destination + " : no response to PING", head.destination,
+                                events);
+                        }
+
+                        updateStatusLocked(head, MessageStatus::Failed, events);
+                        outbox_.pop_front();
+                    }
+                    break;
+            }
+        }
+    }
+
+    deliver(events);
+}
+
+void TextMessagingProtocol::deliver(const std::vector<PendingEvent>& events)
+{
+    ITextMessagingObserver* observer = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        observer = observer_;
+    }
+
+    if (observer == nullptr) return;
+
+    for (const PendingEvent& event : events)
+    {
+        switch (event.type)
+        {
+            case PendingEvent::Type::MessageAdded:
+                observer->onMessageAdded(event.message);
+                break;
+            case PendingEvent::Type::MessageUpdated:
+                observer->onMessageUpdated(event.message);
+                break;
+            case PendingEvent::Type::StationsChanged:
+                observer->onStationsChanged();
+                break;
+        }
+    }
+}
+
+} // namespace TextMessaging

@@ -41,8 +41,6 @@
 namespace TextMessaging
 {
 
-constexpr std::time_t HeardStationList::DEFAULT_MAX_AGE_SECONDS;
-
 HeardStationList::HeardStationList(std::time_t maxAgeSeconds)
     : maxAgeSeconds_(maxAgeSeconds)
 {

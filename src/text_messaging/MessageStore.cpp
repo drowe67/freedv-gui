@@ -60,6 +60,7 @@ const char* const SCHEMA_SQL =
     "  direction INTEGER NOT NULL,"
     "  status INTEGER NOT NULL,"
     "  retry_count INTEGER NOT NULL,"
+    "  kind INTEGER NOT NULL,"
     "  snr REAL NOT NULL);"
     "CREATE INDEX IF NOT EXISTS messages_timestamp ON messages(timestamp);"
     "CREATE TABLE IF NOT EXISTS heard_stations ("
@@ -233,7 +234,7 @@ bool MessageStore::addMessage(TextMessage& message)
 
     const char* sql =
         "INSERT INTO messages (air_id, origin, destination, broadcast, body, timestamp,"
-        " direction, status, retry_count, snr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        " direction, status, retry_count, snr, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     sqlite3_stmt* statement = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &statement, nullptr) != SQLITE_OK)
@@ -252,6 +253,7 @@ bool MessageStore::addMessage(TextMessage& message)
     sqlite3_bind_int(statement, 8, statusToInt(message.status));
     sqlite3_bind_int(statement, 9, message.retryCount);
     sqlite3_bind_double(statement, 10, message.snr);
+    sqlite3_bind_int(statement, 11, message.kind == MessageKind::Chat ? 0 : 1);
 
     bool ok = sqlite3_step(statement) == SQLITE_DONE;
     if (!ok) setError("inserting message");
@@ -305,7 +307,7 @@ std::vector<TextMessage> MessageStore::recentMessages(int limit)
 
     const char* sql =
         "SELECT id, air_id, origin, destination, broadcast, body, timestamp, direction,"
-        " status, retry_count, snr FROM messages ORDER BY id DESC LIMIT ?;";
+        " status, retry_count, snr, kind FROM messages ORDER BY id DESC LIMIT ?;";
 
     sqlite3_stmt* statement = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &statement, nullptr) != SQLITE_OK)
@@ -332,6 +334,7 @@ std::vector<TextMessage> MessageStore::recentMessages(int limit)
         message.status = intToStatus(sqlite3_column_int(statement, 8));
         message.retryCount = sqlite3_column_int(statement, 9);
         message.snr = (float)sqlite3_column_double(statement, 10);
+        message.kind = sqlite3_column_int(statement, 11) == 0 ? MessageKind::Chat : MessageKind::System;
         messages.push_back(message);
     }
 

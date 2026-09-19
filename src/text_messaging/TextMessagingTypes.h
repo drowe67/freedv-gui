@@ -109,9 +109,18 @@ enum class MessageStatus
     Received,
 };
 
+// Chat lines are what the operator typed; system lines are the small PING and
+// PONG notices the protocol writes into the same window.
+enum class MessageKind
+{
+    Chat,
+    System,
+};
+
 // One line in the chat window, and one row in the message store.
 struct TextMessage
 {
+    MessageKind kind = MessageKind::Chat;
     int64_t id = 0;                 // message store row ID, 0 until stored
     uint16_t airId = 0;             // ID carried on air, used to match ACKs
     std::string originCallsign;     // who sent it (us, for Sent messages)
