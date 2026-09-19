@@ -3,6 +3,7 @@ add_library(fdv_text_messaging STATIC
     HeardStationList.cpp
     MessageStore.cpp
     TextMessagingProtocol.cpp
+    TextMessagingSession.cpp
 )
 
 target_include_directories(fdv_text_messaging PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

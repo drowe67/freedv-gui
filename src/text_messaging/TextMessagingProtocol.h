@@ -66,6 +66,10 @@ public:
 
     virtual bool transmit(const std::vector<std::vector<uint8_t>>& frames, bool signalling) = 0;
     virtual bool isTransmitting() const = 0;
+
+    // Called from the same loop that drives tick(), so a transport can finish
+    // a burst (unkey the transmitter) without a timer of its own.
+    virtual void poll() { /* nothing to do by default */ }
 };
 
 // Implemented by the dialog. Callbacks arrive on whichever thread drove the
