@@ -62,6 +62,11 @@ public:
     void setPttFunction(PttFunction pttFunction);
     void setVoiceTransmitCheck(VoiceTransmitCheck voiceTransmitCheck);
 
+    // Must return true for a burst to be sent at all: there is no point
+    // keying the radio when the audio threads that would play the burst are
+    // not running.
+    void setTransmitAllowedCheck(VoiceTransmitCheck transmitAllowedCheck);
+
     virtual bool transmit(const std::vector<std::vector<uint8_t>>& frames,
                           bool signalling) override;
     virtual bool isTransmitting() const override;
@@ -76,6 +81,7 @@ private:
     TextMessagingModem* modem_;
     PttFunction pttFunction_;
     VoiceTransmitCheck voiceTransmitCheck_;
+    VoiceTransmitCheck transmitAllowedCheck_;
 
     mutable std::mutex mutex_;
     std::vector<short> samples_;    // scratch for modulation, reused per burst

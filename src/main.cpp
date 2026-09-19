@@ -1723,6 +1723,12 @@ void MainFrame::startTextMessaging_()
                g_voice_keyer_tx.load(std::memory_order_acquire);
     });
 
+    m_textMessagingTransport->setTransmitAllowedCheck([]() {
+        // Sending needs the transmit thread, which only exists when FreeDV is
+        // running with a transmit sound device.
+        return m_txThread != nullptr;
+    });
+
     textMessagingModem().setFrameCallback([](const TextMessaging::Frame& frame, float snr) {
         TextMessaging::TextMessagingSession::instance().protocol().onFrameReceived(frame, snr);
     });
@@ -3294,6 +3300,9 @@ void MainFrame::stopRxStream()
         StopLowLatencyActivity();
 
         m_RxRunning = false;
+
+        // Nothing can play a burst once the audio threads are gone.
+        if (m_textMessagingTransport != nullptr) m_textMessagingTransport->abort();
 
         if (m_txThread)
         {

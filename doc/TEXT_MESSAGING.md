@@ -47,7 +47,9 @@ Every frame is sent as a complete burst (preamble, frame, postamble) with a
 100 ms gap after it, so the receiving modem acquires each frame on its own
 rather than having to hold sync across a whole message. A message longer than
 one frame is split into up to eight fragments, all sent in one keying; 864
-characters is the limit.
+characters is the limit. DATAC4 is slow on purpose, so a full length message
+holds the transmitter for roughly half a minute: if you use FreeDV's transmit
+time-out timer, set it longer than that or it will cut a long message off.
 
 Each frame carries an 18 byte header: frame type, destination callsign CRC-24,
 origin callsign CRC-24, the origin callsign packed into six bytes (base 40,

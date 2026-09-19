@@ -829,6 +829,11 @@ bool TxRxThread::transmitTextMessagingAudio_(IRealtimeHelper* helper) FREEDV_NON
 
     if (!queue.ownsTransmitter() && !dataTxInProgress_) return false;
 
+    // PTT takes a moment to engage; pushing samples at the radio before it
+    // does would clip the front of the burst. Returning true meanwhile keeps
+    // microphone audio out of the transmitter that is about to be ours.
+    if (!g_tx.load(std::memory_order_acquire)) return true;
+
     if (!dataTxInProgress_ && !queue.isEmpty())
     {
         dataTxInProgress_ = true;

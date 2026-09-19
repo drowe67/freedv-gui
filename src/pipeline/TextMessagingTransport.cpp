@@ -80,6 +80,12 @@ void TextMessagingTransport::setVoiceTransmitCheck(VoiceTransmitCheck voiceTrans
     voiceTransmitCheck_ = std::move(voiceTransmitCheck);
 }
 
+void TextMessagingTransport::setTransmitAllowedCheck(VoiceTransmitCheck transmitAllowedCheck)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    transmitAllowedCheck_ = std::move(transmitAllowedCheck);
+}
+
 bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& frames,
                                       bool signalling)
 {
@@ -91,6 +97,8 @@ bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& f
 
     // Voice always wins the transmitter.
     if (voiceTransmitCheck_ != nullptr && voiceTransmitCheck_()) return false;
+
+    if (transmitAllowedCheck_ != nullptr && !transmitAllowedCheck_()) return false;
 
     if (!modem_->modulate(frames, signalling, samples_)) return false;
 
