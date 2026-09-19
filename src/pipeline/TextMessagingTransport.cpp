@@ -101,6 +101,8 @@ bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& f
         return false;
     }
 
+    queue.setOwnsTransmitter(true);
+
     uint64_t burstMs = (uint64_t)samples_.size() * 1000 / MODEM_SAMPLE_RATE;
     keyedAtMs_ = monotonicMs();
     keyDeadlineMs_ = keyedAtMs_ + burstMs + KEY_TIMEOUT_MARGIN_MS;
@@ -173,5 +175,9 @@ void TextMessagingTransport::unkey()
     }
 
     keyed_.store(false, std::memory_order_release);
+
+    // Ownership of the transmitter is released by whoever performs the PTT
+    // change, once the changeover has actually finished: the transmit thread
+    // must keep microphone audio off the air until then.
     if (pttFunction != nullptr) pttFunction(false);
 }

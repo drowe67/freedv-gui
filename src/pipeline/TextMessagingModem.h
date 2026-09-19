@@ -98,6 +98,7 @@ private:
         int payloadBytes = 0;
     };
 
+    void closeLocked();
     void demodulateOne(Demodulator& demodulator, const short* samples, int numSamples);
     bool modulateFrame(struct freedv* modem, const std::vector<uint8_t>& frame,
                        std::vector<short>& samplesOut);
@@ -108,6 +109,9 @@ private:
     struct freedv* textTx_;
     std::atomic<bool> open_;
 
+    // Held by demodulate() and by open()/close(), so the receive tap can never
+    // be inside the modem while it is being torn down at shutdown.
+    std::mutex rxMutex_;
     std::mutex callbackMutex_;
     FrameCallback frameCallback_;
 };

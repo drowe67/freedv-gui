@@ -73,6 +73,8 @@ TextMessagingModem::~TextMessagingModem()
 
 bool TextMessagingModem::open()
 {
+    std::lock_guard<std::mutex> lock(rxMutex_);
+
     if (open_) return true;
 
     signallingRx_.modem = freedv_open(FREEDV_MODE_DATAC13);
@@ -84,7 +86,7 @@ bool TextMessagingModem::open()
         signallingTx_ == nullptr || textTx_ == nullptr)
     {
         log_warn("Could not open the text messaging data modems");
-        close();
+        closeLocked();
         return false;
     }
 
@@ -113,7 +115,7 @@ bool TextMessagingModem::open()
         log_warn("Unexpected codec2 data mode payload sizes (%d/%d, expected %d/%d)",
                  signallingRx_.payloadBytes, textRx_.payloadBytes, SIGNALLING_FRAME_BYTES,
                  TEXT_FRAME_BYTES);
-        close();
+        closeLocked();
         return false;
     }
 
@@ -125,6 +127,12 @@ bool TextMessagingModem::open()
 }
 
 void TextMessagingModem::close()
+{
+    std::lock_guard<std::mutex> lock(rxMutex_);
+    closeLocked();
+}
+
+void TextMessagingModem::closeLocked()
 {
     open_ = false;
 
@@ -253,7 +261,10 @@ void TextMessagingModem::demodulateOne(Demodulator& demodulator, const short* sa
 
 void TextMessagingModem::demodulate(const short* samples, int numSamples)
 {
-    if (!open_ || samples == nullptr || numSamples <= 0) return;
+    if (samples == nullptr || numSamples <= 0) return;
+
+    std::lock_guard<std::mutex> lock(rxMutex_);
+    if (!open_) return;
 
     demodulateOne(signallingRx_, samples, numSamples);
     demodulateOne(textRx_, samples, numSamples);

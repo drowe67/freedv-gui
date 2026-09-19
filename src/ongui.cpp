@@ -12,6 +12,8 @@
 #include <vector>
 
 #include "main.h"
+#include "gui/dialogs/dlg_text_messaging.h"
+#include "text_messaging/TextMessagingSession.h"
 
 #include "git_version.h"
 #include "gui/dialogs/dlg_easy_setup.h"
@@ -158,6 +160,34 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
 void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 {
     event.Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "");
+}
+
+//-------------------------------------------------------------------------
+// OnToolsTextMessaging()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsTextMessaging(wxCommandEvent&)
+{
+    if (m_textMessagingDialog == nullptr)
+    {
+        m_textMessagingDialog = new TextMessagingDialog(this);
+    }
+
+    // Picks up history, the current callsign and anything heard while the
+    // window was closed.
+    m_textMessagingDialog->refreshFromSession();
+    m_textMessagingDialog->Show();
+    m_textMessagingDialog->Iconize(false);
+    m_textMessagingDialog->Raise();
+}
+
+//-------------------------------------------------------------------------
+// OnToolsTextMessagingUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsTextMessagingUI(wxUpdateUIEvent& event)
+{
+    // Chat needs the data modems; without them the window would have nothing
+    // to say.
+    event.Enable(TextMessaging::TextMessagingSession::instance().isStarted());
 }
 
 //-------------------------------------------------------------------------

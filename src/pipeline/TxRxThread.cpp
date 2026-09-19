@@ -827,12 +827,19 @@ bool TxRxThread::transmitTextMessagingAudio_(IRealtimeHelper* helper) FREEDV_NON
     const int nsamIn = (FS * FRAME_DURATION_MS) / MS_TO_SEC;
     const int nsamOut = (nsamIn * outputSampleRate_) / FS;
 
-    if (!dataTxInProgress_)
-    {
-        if (queue.isEmpty()) return false;
+    if (!queue.ownsTransmitter() && !dataTxInProgress_) return false;
 
+    if (!dataTxInProgress_ && !queue.isEmpty())
+    {
         dataTxInProgress_ = true;
         queue.setTransmitting(true);
+    }
+
+    // RADE's end of over frame belongs to voice transmissions; tell the PTT
+    // changeover not to wait for one that will never be generated.
+    if (endingTx.load(std::memory_order_acquire))
+    {
+        g_eoo_enqueued.store(true, std::memory_order_release);
     }
 
     int nout = 0;

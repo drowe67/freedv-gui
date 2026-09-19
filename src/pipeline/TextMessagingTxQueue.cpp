@@ -37,6 +37,7 @@
 TextMessagingTxQueue::TextMessagingTxQueue()
     : fifo_(CAPACITY_SAMPLES)
     , transmitting_(false)
+    , ownsTransmitter_(false)
 {
     // empty
 }
@@ -80,6 +81,16 @@ bool TextMessagingTxQueue::isTransmitting() const FREEDV_NONBLOCKING
 void TextMessagingTxQueue::setTransmitting(bool transmitting) FREEDV_NONBLOCKING
 {
     transmitting_.store(transmitting, std::memory_order_release);
+}
+
+bool TextMessagingTxQueue::ownsTransmitter() const FREEDV_NONBLOCKING
+{
+    return ownsTransmitter_.load(std::memory_order_acquire);
+}
+
+void TextMessagingTxQueue::setOwnsTransmitter(bool owns) FREEDV_NONBLOCKING
+{
+    ownsTransmitter_.store(owns, std::memory_order_release);
 }
 
 void TextMessagingTxQueue::clear()

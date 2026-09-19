@@ -67,12 +67,20 @@ public:
     // this to know when it can unkey the transmitter.
     bool isTransmitting() const FREEDV_NONBLOCKING;
     void setTransmitting(bool transmitting) FREEDV_NONBLOCKING;
+
+    // True from the moment the session keys the radio for a burst until the
+    // transmitter has been released again. While it is set the transmit
+    // thread must not modulate microphone audio, or the tail of the keying
+    // would go out as voice.
+    bool ownsTransmitter() const FREEDV_NONBLOCKING;
+    void setOwnsTransmitter(bool owns) FREEDV_NONBLOCKING;
     bool isEmpty() const FREEDV_NONBLOCKING;
     void clear();
 
 private:
     GenericFIFO<short> fifo_;
     std::atomic<bool> transmitting_;
+    std::atomic<bool> ownsTransmitter_;
 };
 
 TextMessagingTxQueue& textMessagingTxQueue();
