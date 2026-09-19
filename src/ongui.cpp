@@ -46,8 +46,8 @@ extern paCallBackData* g_rxUserdata;
 
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<bool> g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;
 
@@ -1511,7 +1511,7 @@ void MainFrame::togglePTT(void) {
     }
     
     // If we're recording, switch to/from modulator and radio.
-    if (g_sfRecFile != nullptr)
+    if (g_sfRecFile.load(std::memory_order_acquire) != nullptr)
     {
         if (!newTx)
         {
