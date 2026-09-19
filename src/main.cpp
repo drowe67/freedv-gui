@@ -3312,7 +3312,14 @@ void MainFrame::startRxStream()
                     g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
                 }
 
-                cbData->outfifo1->read(tmpOutput, toRead);
+                if (toRead > 0 && cbData->outfifo1->read(tmpOutput, toRead) != 0)
+                {
+                    // A concurrent reset() (e.g. on a TX/RX transition) can make a
+                    // read that numUsed() just reported as available fail. Treat
+                    // that as silence rather than replaying whatever was left over
+                    // in tmpOutput from the previous callback.
+                    toRead = 0;
+                }
                 auto numChannels = dev.getNumChannels();
                 for (size_t count = 0; count < size; count++)
                 {
@@ -3741,9 +3748,12 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
     else
     {
-        if (toRead >= size)
+        if (toRead >= size && cbData->outfifo1->read(tmpOutput, size) != 0)
         {
-            cbData->outfifo1->read(tmpOutput, size);
+            // Raced with a concurrent reset(); nothing was actually copied
+            // into tmpOutput, so fall back to silence below instead of
+            // replaying stale samples from the previous callback.
+            toRead = 0;
         }
 
         auto numChannels = dev.getNumChannels();
@@ -3828,16 +3838,21 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     {
         g_outfifo2_empty.fetch_add(1, std::memory_order_relaxed);
     }
-    else
+
+    if (toRead > 0 && cbData->outfifo2->read(tmpOutput, toRead) != 0)
     {
-        cbData->outfifo2->read(tmpOutput, toRead);
-        auto numChannels = dev.getNumChannels();
-        for (size_t count = 0; count < size; count++)
+        // Raced with a concurrent reset(); nothing was actually copied
+        // into tmpOutput, so fall back to silence below instead of
+        // replaying stale samples from the previous callback.
+        toRead = 0;
+    }
+
+    auto numChannels = dev.getNumChannels();
+    for (size_t count = 0; count < size; count++)
+    {
+        for (int j = 0; j < numChannels; j++)
         {
-            for (int j = 0; j < numChannels; j++)
-            {
-                *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
-            }
+            *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
         }
     }
 }
