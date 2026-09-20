@@ -1,3 +1,4 @@
+/build/
 /build_linux/
 /build_osx/
 /codec2/
@@ -5,6 +6,7 @@
 /hamlib-code/
 /LPCNet/
 /macdylibbundler/
+/text_chat_loopback/
 
 a.out
 *.o
@@ -13,4 +15,3 @@ a.out
 *.marks
 *.AppDir
 *.AppImage
-/text_chat_loopback/
