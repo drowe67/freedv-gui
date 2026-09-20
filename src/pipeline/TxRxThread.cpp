@@ -110,11 +110,9 @@ extern std::atomic<bool> g_recFileFromDecoder;
 extern std::atomic<bool> g_recFileFromMic;
 extern std::atomic<bool> g_recVoiceKeyerFile;
 
-extern unsigned int g_recFromRadioSamples;
 extern std::atomic<bool> g_playFileFromRadio;
-extern int g_sfFs;
+extern std::atomic<int> g_sfFs;
 extern std::atomic<bool>     g_totBeepActive;
-extern bool g_loopPlayFileFromRadio;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<float> g_RxFreqOffsetHz;
