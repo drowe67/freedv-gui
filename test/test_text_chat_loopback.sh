@@ -24,10 +24,12 @@ WORKDIR="${FREEDV_TEXT_CHAT_WORKDIR:-$(pwd)/text_chat_loopback}"
 # CPU starved dropout does not get mistaken for a protocol bug.
 FREEDV_TEST_MODE="${FREEDV_TEST_MODE:-257}"
 
-# Portable suffixes on purpose: they exercise the base 40 callsign packing that
-# carries "/" as well as giving the two stations distinct addresses.
-STATION_A_CALLSIGN="${STATION_A_CALLSIGN:-AG7EW/A}"
-STATION_B_CALLSIGN="${STATION_B_CALLSIGN:-AG7EW/B}"
+# Deliberately not anybody's callsign: this never reaches the air, and a real
+# one has no business being a default in a public repository. The portable
+# suffix is on purpose, since it exercises the base 40 packing that carries "/"
+# while keeping the two stations distinct. Override for your own station.
+STATION_A_CALLSIGN="${STATION_A_CALLSIGN:-TEST1/P}"
+STATION_B_CALLSIGN="${STATION_B_CALLSIGN:-TEST2/P}"
 
 # A's transmit audio lands in the sink that B listens to, and the other way
 # round. The monitor of a null sink already carries whatever was played to it,
