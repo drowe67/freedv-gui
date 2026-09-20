@@ -396,6 +396,10 @@ void TextMessagingDialog::setStatus(const wxString& status, StatusKind kind)
 // use than saying what the station is doing now.
 void TextMessagingDialog::updateAckWaitStatus()
 {
+    // The transmitter being keyed is the more immediate news; the wait is
+    // reported once the burst ends.
+    if (m_statusKind == StatusKind::Activity) return;
+
     AckWait wait = TextMessagingSession::instance().protocol().ackWait();
     if (wait == m_lastAckWait) return;
 
@@ -650,7 +654,14 @@ void TextMessagingDialog::updateTransmitControls()
 
     // Whatever was queued is on the air now, so a notice saying it is waiting
     // has become a lie. The chat pane's delivery chip carries on from here.
-    if (transmitting && m_statusKind == StatusKind::Queued) setStatus(wxEmptyString);
+    if (transmitting)
+    {
+        setStatus(_("Transmitting..."), StatusKind::Activity);
+    }
+    else if (m_statusKind == StatusKind::Activity)
+    {
+        setStatus(wxEmptyString);
+    }
 
     if (uiLogEnabled())
     {
@@ -694,6 +705,13 @@ void TextMessagingDialog::onMessageUpdated(const TextMessage& message)
 
             existing = copy;
             renderChat();
+
+            // A broadcast has no acknowledgement coming, so its own completion
+            // is the last thing the status line can usefully report.
+            if (copy.broadcast && copy.status == MessageStatus::Sent)
+            {
+                setStatus(_("Broadcast sent."));
+            }
 
             if (uiLogEnabled())
             {

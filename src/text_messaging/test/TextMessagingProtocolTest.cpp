@@ -501,8 +501,9 @@ void testAckWaitCoversTheWholeCycle()
     CHECK(sender.protocol.ackWait() == AckWait::Nothing);
 
     std::string error;
+    // Queued but never sent: waiting its turn, not waiting on a reply.
     CHECK(sender.protocol.sendMessage("Anybody there", "VK3ABC", error));
-    CHECK(sender.protocol.ackWait() == AckWait::Message);
+    CHECK(sender.protocol.ackWait() == AckWait::Nothing);
 
     sender.completeOneTransmission();
     CHECK(sender.protocol.ackWait() == AckWait::Message);
@@ -524,11 +525,13 @@ void testAckWaitCoversTheWholeCycle()
 
     // A ping is distinguishable, because the window names it separately.
     CHECK(sender.protocol.sendPing("VK3ABC", error));
+    sender.completeOneTransmission();
     CHECK(sender.protocol.ackWait() == AckWait::Ping);
 
     // A broadcast expects nothing back and must not claim otherwise.
     Station broadcaster("W1AW");
     CHECK(broadcaster.protocol.sendMessage("CQ", "", error));
+    broadcaster.completeOneTransmission();
     CHECK(broadcaster.protocol.ackWait() == AckWait::Nothing);
 }
 

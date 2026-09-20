@@ -639,6 +639,12 @@ AckWait TextMessagingProtocol::ackWait() const
     for (const PendingTransmission& pending : outbox_)
     {
         if (!pending.expectsAck) continue;
+
+        // Nothing is outstanding until it has actually been sent once. A
+        // message still waiting its turn is queued, not awaited, and saying
+        // otherwise would overwrite the notice that says so.
+        if (pending.state != TransmissionState::AwaitingAck && pending.retries == 0) continue;
+
         return pending.isPing ? AckWait::Ping : AckWait::Message;
     }
 

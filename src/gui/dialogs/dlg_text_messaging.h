@@ -96,9 +96,10 @@ private:
     // true at a different moment.
     enum class StatusKind
     {
-        Sticky,  // errors and standing notices: stay until something replaces them
-        Queued,  // "... queued": stops being true once the transmitter keys
-        AckWait, // "Awaiting ...": stops being true when the cycle ends
+        Sticky,   // errors and standing notices: stay until something replaces them
+        Queued,   // "... queued": stops being true once the transmitter keys
+        Activity, // "Transmitting": stops being true when the burst ends
+        AckWait,  // "Awaiting ...": stops being true when the cycle ends
     };
 
     void setStatus(const wxString& status, StatusKind kind = StatusKind::Sticky);
