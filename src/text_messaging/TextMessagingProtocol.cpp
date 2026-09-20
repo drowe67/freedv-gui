@@ -176,7 +176,6 @@ Frame TextMessagingProtocol::makeFrameLocked(FrameType type, const std::string& 
     Frame frame;
     frame.type = type;
     frame.destinationCrc = destination.empty() ? 0 : FrameCodec::callsignCrc24(destination);
-    frame.originCrc = myCallsignCrc_;
     frame.originCallsign = myCallsign_;
     frame.airId = airId;
     frame.fragmentIndex = fragmentIndex;

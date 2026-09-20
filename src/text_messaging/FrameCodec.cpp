@@ -62,20 +62,34 @@ int base40Index(char c)
 }
 
 // Offsets of each header field, in the order documented in
-// TextMessagingTypes.h.
+// TextMessagingTypes.h. Everything up to and including the message ID is
+// common to both frame layouts; the fragment fields exist only in text frames,
+// and the payload length byte is the last header byte either way.
 constexpr int OFFSET_TYPE = 0;
 constexpr int OFFSET_DEST_CRC = 1;
-constexpr int OFFSET_ORIGIN_CRC = 4;
-constexpr int OFFSET_ORIGIN_CALLSIGN = 7;
-constexpr int OFFSET_AIR_ID = 13;
-constexpr int OFFSET_FRAGMENT_INDEX = 15;
-constexpr int OFFSET_FRAGMENT_COUNT = 16;
-constexpr int OFFSET_PAYLOAD_LENGTH = 17;
+constexpr int OFFSET_ORIGIN_CALLSIGN = 4;
+constexpr int OFFSET_AIR_ID = 10;
+constexpr int OFFSET_FRAGMENT_INDEX = 12;  // text frames only
+constexpr int OFFSET_FRAGMENT_COUNT = 13;  // text frames only
+constexpr int OFFSET_SIGNALLING_PAYLOAD_LENGTH = 12;
+constexpr int OFFSET_TEXT_PAYLOAD_LENGTH = 14;
 
-static_assert(OFFSET_PAYLOAD_LENGTH + 1 == FRAME_HEADER_BYTES,
-              "header field offsets and FRAME_HEADER_BYTES disagree");
 static_assert(OFFSET_AIR_ID == OFFSET_ORIGIN_CALLSIGN + PACKED_CALLSIGN_BYTES,
               "packed callsign does not fit its header field");
+static_assert(OFFSET_SIGNALLING_PAYLOAD_LENGTH + 1 == SIGNALLING_HEADER_BYTES,
+              "signalling header field offsets and SIGNALLING_HEADER_BYTES disagree");
+static_assert(OFFSET_TEXT_PAYLOAD_LENGTH + 1 == TEXT_HEADER_BYTES,
+              "text header field offsets and TEXT_HEADER_BYTES disagree");
+static_assert(OFFSET_FRAGMENT_COUNT + 1 == OFFSET_TEXT_PAYLOAD_LENGTH,
+              "fragment fields must sit between the message ID and the length byte");
+
+// The offset of the payload length byte, which is the only header field whose
+// position depends on the layout.
+int payloadLengthOffset(FrameType type)
+{
+    return FrameCodec::isSignallingFrameType(type) ? OFFSET_SIGNALLING_PAYLOAD_LENGTH
+                                                   : OFFSET_TEXT_PAYLOAD_LENGTH;
+}
 
 } // namespace
 
@@ -186,14 +200,48 @@ bool FrameCodec::isKnownFrameType(uint8_t type)
     }
 }
 
+bool FrameCodec::isSignallingFrameType(FrameType type)
+{
+    switch (type)
+    {
+        case FrameType::Ping:
+        case FrameType::PingAck:
+        case FrameType::MessageAck:
+            return true;
+        case FrameType::Message:
+        case FrameType::Broadcast:
+            return false;
+    }
+
+    return false;
+}
+
+int FrameCodec::headerBytes(FrameType type)
+{
+    return isSignallingFrameType(type) ? SIGNALLING_HEADER_BYTES : TEXT_HEADER_BYTES;
+}
+
 std::vector<uint8_t> FrameCodec::encode(const Frame& frame, int frameBytes)
 {
-    if (frameBytes < FRAME_HEADER_BYTES) return {};
+    const int header = headerBytes(frame.type);
+    const bool signalling = isSignallingFrameType(frame.type);
+
+    if (frameBytes < header) return {};
     if (frame.payload.size() > 255) return {};
-    if ((int)frame.payload.size() > frameBytes - FRAME_HEADER_BYTES) return {};
-    if (frame.fragmentCount == 0) return {};
-    if (frame.fragmentIndex >= frame.fragmentCount) return {};
+    if ((int)frame.payload.size() > frameBytes - header) return {};
     if (normalizeCallsign(frame.originCallsign).empty()) return {};
+
+    // A signalling frame has nowhere to put the fragment fields, so it may
+    // only ever describe a single fragment.
+    if (signalling)
+    {
+        if (frame.fragmentCount != 1 || frame.fragmentIndex != 0) return {};
+    }
+    else
+    {
+        if (frame.fragmentCount == 0) return {};
+        if (frame.fragmentIndex >= frame.fragmentCount) return {};
+    }
 
     std::vector<uint8_t> out(frameBytes, 0);
 
@@ -201,19 +249,21 @@ std::vector<uint8_t> FrameCodec::encode(const Frame& frame, int frameBytes)
     out[OFFSET_DEST_CRC] = (uint8_t)(frame.destinationCrc >> 16);
     out[OFFSET_DEST_CRC + 1] = (uint8_t)(frame.destinationCrc >> 8);
     out[OFFSET_DEST_CRC + 2] = (uint8_t)frame.destinationCrc;
-    out[OFFSET_ORIGIN_CRC] = (uint8_t)(frame.originCrc >> 16);
-    out[OFFSET_ORIGIN_CRC + 1] = (uint8_t)(frame.originCrc >> 8);
-    out[OFFSET_ORIGIN_CRC + 2] = (uint8_t)frame.originCrc;
     packCallsign(frame.originCallsign, &out[OFFSET_ORIGIN_CALLSIGN]);
     out[OFFSET_AIR_ID] = (uint8_t)(frame.airId >> 8);
     out[OFFSET_AIR_ID + 1] = (uint8_t)frame.airId;
-    out[OFFSET_FRAGMENT_INDEX] = frame.fragmentIndex;
-    out[OFFSET_FRAGMENT_COUNT] = frame.fragmentCount;
-    out[OFFSET_PAYLOAD_LENGTH] = (uint8_t)frame.payload.size();
+
+    if (!signalling)
+    {
+        out[OFFSET_FRAGMENT_INDEX] = frame.fragmentIndex;
+        out[OFFSET_FRAGMENT_COUNT] = frame.fragmentCount;
+    }
+
+    out[payloadLengthOffset(frame.type)] = (uint8_t)frame.payload.size();
 
     if (!frame.payload.empty())
     {
-        std::memcpy(&out[FRAME_HEADER_BYTES], frame.payload.data(), frame.payload.size());
+        std::memcpy(&out[header], frame.payload.data(), frame.payload.size());
     }
 
     return out;
@@ -221,34 +271,42 @@ std::vector<uint8_t> FrameCodec::encode(const Frame& frame, int frameBytes)
 
 bool FrameCodec::decode(const uint8_t* data, int length, Frame& frameOut)
 {
-    if (data == nullptr || length < FRAME_HEADER_BYTES) return false;
+    // The type byte decides which layout the rest of the frame is in, so it
+    // has to be checked before anything is read at a layout dependent offset.
+    if (data == nullptr || length < 1) return false;
     if (!isKnownFrameType(data[OFFSET_TYPE])) return false;
 
-    int payloadLength = data[OFFSET_PAYLOAD_LENGTH];
-    if (payloadLength > length - FRAME_HEADER_BYTES) return false;
+    FrameType type = (FrameType)data[OFFSET_TYPE];
+    const int header = headerBytes(type);
+    const bool signalling = isSignallingFrameType(type);
+    if (length < header) return false;
 
-    uint8_t fragmentIndex = data[OFFSET_FRAGMENT_INDEX];
-    uint8_t fragmentCount = data[OFFSET_FRAGMENT_COUNT];
-    if (fragmentCount == 0 || fragmentIndex >= fragmentCount) return false;
-    if (fragmentCount > MAX_FRAGMENTS_PER_MESSAGE) return false;
+    int payloadLength = data[payloadLengthOffset(type)];
+    if (payloadLength > length - header) return false;
+
+    uint8_t fragmentIndex = 0;
+    uint8_t fragmentCount = 1;
+    if (!signalling)
+    {
+        fragmentIndex = data[OFFSET_FRAGMENT_INDEX];
+        fragmentCount = data[OFFSET_FRAGMENT_COUNT];
+        if (fragmentCount == 0 || fragmentIndex >= fragmentCount) return false;
+        if (fragmentCount > MAX_FRAGMENTS_PER_MESSAGE) return false;
+    }
 
     std::string originCallsign = unpackCallsign(&data[OFFSET_ORIGIN_CALLSIGN]);
     if (originCallsign.empty()) return false;
 
-    frameOut.type = (FrameType)data[OFFSET_TYPE];
+    frameOut.type = type;
     frameOut.destinationCrc =
         ((uint32_t)data[OFFSET_DEST_CRC] << 16) |
         ((uint32_t)data[OFFSET_DEST_CRC + 1] << 8) |
         (uint32_t)data[OFFSET_DEST_CRC + 2];
-    frameOut.originCrc =
-        ((uint32_t)data[OFFSET_ORIGIN_CRC] << 16) |
-        ((uint32_t)data[OFFSET_ORIGIN_CRC + 1] << 8) |
-        (uint32_t)data[OFFSET_ORIGIN_CRC + 2];
     frameOut.originCallsign = originCallsign;
     frameOut.airId = (uint16_t)(((uint16_t)data[OFFSET_AIR_ID] << 8) | data[OFFSET_AIR_ID + 1]);
     frameOut.fragmentIndex = fragmentIndex;
     frameOut.fragmentCount = fragmentCount;
-    frameOut.payload.assign(&data[FRAME_HEADER_BYTES], &data[FRAME_HEADER_BYTES] + payloadLength);
+    frameOut.payload.assign(&data[header], &data[header] + payloadLength);
 
     return true;
 }

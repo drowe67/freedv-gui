@@ -410,7 +410,6 @@ void testAckWaitDoesNotBlockTheQueue()
     Frame ack;
     ack.type = FrameType::MessageAck;
     ack.originCallsign = "VK3ABC";
-    ack.originCrc = FrameCodec::callsignCrc24("VK3ABC");
     ack.destinationCrc = FrameCodec::callsignCrc24("W1AW");
     ack.airId = secondAirId;
     sender.protocol.onFrameReceived(ack, 5.0f);

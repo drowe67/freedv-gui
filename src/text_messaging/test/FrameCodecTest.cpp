@@ -61,13 +61,22 @@ Frame makeMessageFrame()
     Frame frame;
     frame.type = FrameType::Message;
     frame.destinationCrc = FrameCodec::callsignCrc24("VK3ABC");
-    frame.originCrc = FrameCodec::callsignCrc24("W1AW");
     frame.originCallsign = "W1AW";
     frame.airId = 0xBEEF;
     frame.fragmentIndex = 1;
     frame.fragmentCount = 3;
     const std::string text = "Hello from the chat window";
     frame.payload.assign(text.begin(), text.end());
+    return frame;
+}
+
+Frame makePingFrame()
+{
+    Frame frame;
+    frame.type = FrameType::Ping;
+    frame.destinationCrc = FrameCodec::callsignCrc24("VK3ABC");
+    frame.originCallsign = "W1AW";
+    frame.airId = 0x1234;
     return frame;
 }
 
@@ -117,7 +126,6 @@ void testRoundTrip()
     CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
     CHECK(decoded.type == original.type);
     CHECK(decoded.destinationCrc == original.destinationCrc);
-    CHECK(decoded.originCrc == original.originCrc);
     CHECK(decoded.originCallsign == "W1AW");
     CHECK(decoded.airId == 0xBEEF);
     CHECK(decoded.fragmentIndex == 1);
@@ -129,7 +137,6 @@ void testRoundTrip()
     Frame ping;
     ping.type = FrameType::Ping;
     ping.destinationCrc = FrameCodec::callsignCrc24("VK3ABC");
-    ping.originCrc = FrameCodec::callsignCrc24("W1AW");
     ping.originCallsign = "W1AW";
 
     encoded = FrameCodec::encode(ping, SIGNALLING_FRAME_BYTES);
@@ -138,6 +145,23 @@ void testRoundTrip()
     CHECK(decoded.type == FrameType::Ping);
     CHECK(decoded.payload.empty());
     CHECK(decoded.fragmentCount == 1);
+
+    // The SNR byte is the whole of a signalling frame's payload budget, so it
+    // has to survive a frame that is otherwise full of header.
+    Frame pong;
+    pong.type = FrameType::PingAck;
+    pong.destinationCrc = FrameCodec::callsignCrc24("VK3ABC");
+    pong.originCallsign = "W1AW";
+    pong.airId = 0x1234;
+    pong.payload.assign(1, 0x2A);
+
+    encoded = FrameCodec::encode(pong, SIGNALLING_FRAME_BYTES);
+    CHECK((int)encoded.size() == SIGNALLING_FRAME_BYTES);
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.type == FrameType::PingAck);
+    CHECK(decoded.airId == 0x1234);
+    CHECK(decoded.originCallsign == "W1AW");
+    CHECK(decoded.payload.size() == 1 && decoded.payload[0] == 0x2A);
 
     // A full fragment has to fit the modem frame exactly.
     Frame full = makeMessageFrame();
@@ -161,8 +185,20 @@ void testEncodeRejections()
     oversized.payload.assign(TEXT_BYTES_PER_FRAGMENT + 1, 'X');
     CHECK(FrameCodec::encode(oversized, TEXT_FRAME_BYTES).empty());
 
-    // A text sized frame will not fit in a signalling frame.
+    // A text frame's header alone is larger than a DATAC13 frame.
     CHECK(FrameCodec::encode(makeMessageFrame(), SIGNALLING_FRAME_BYTES).empty());
+
+    // One byte is all a signalling frame has left after its header.
+    Frame fatSignalling = makePingFrame();
+    fatSignalling.payload.assign(SIGNALLING_PAYLOAD_BYTES + 1, 0x11);
+    CHECK(FrameCodec::encode(fatSignalling, SIGNALLING_FRAME_BYTES).empty());
+
+    // There is nowhere to record a fragment number in a signalling frame, so
+    // one that claims to be fragmented must be refused rather than silently
+    // sent as a single fragment.
+    Frame fragmentedSignalling = makePingFrame();
+    fragmentedSignalling.fragmentCount = 2;
+    CHECK(FrameCodec::encode(fragmentedSignalling, SIGNALLING_FRAME_BYTES).empty());
 
     Frame noCallsign = makeMessageFrame();
     noCallsign.originCallsign = "";
@@ -184,31 +220,47 @@ void testDecodeRejections()
     Frame decoded;
 
     CHECK(!FrameCodec::decode(nullptr, TEXT_FRAME_BYTES, decoded));
-    CHECK(!FrameCodec::decode(encoded.data(), FRAME_HEADER_BYTES - 1, decoded));
+    CHECK(!FrameCodec::decode(encoded.data(), TEXT_HEADER_BYTES - 1, decoded));
 
     std::vector<uint8_t> corrupted = encoded;
     corrupted[0] = 0x99; // not one of our frame types
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
 
     corrupted = encoded;
-    corrupted[FRAME_HEADER_BYTES - 1] = 0xFF; // payload length past the frame
+    corrupted[TEXT_HEADER_BYTES - 1] = 0xFF; // payload length past the frame
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
 
     corrupted = encoded;
-    corrupted[16] = 0; // zero fragment count
+    corrupted[13] = 0; // zero fragment count
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
 
     corrupted = encoded;
-    corrupted[15] = 9; // fragment index past the count
+    corrupted[12] = 9; // fragment index past the count
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
 
     corrupted = encoded;
-    corrupted[16] = MAX_FRAGMENTS_PER_MESSAGE + 1; // more fragments than we send
+    corrupted[13] = MAX_FRAGMENTS_PER_MESSAGE + 1; // more fragments than we send
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
 
     corrupted = encoded;
-    for (int i = 0; i < PACKED_CALLSIGN_BYTES; i++) corrupted[7 + i] = 0xFF; // unpackable callsign
+    for (int i = 0; i < PACKED_CALLSIGN_BYTES; i++) corrupted[4 + i] = 0xFF; // unpackable callsign
     CHECK(!FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
+
+    // A signalling frame is a byte shorter than its own header, so a DATAC13
+    // frame truncated by one must not be read as if the length byte were there.
+    std::vector<uint8_t> ping = FrameCodec::encode(makePingFrame(), SIGNALLING_FRAME_BYTES);
+    CHECK(!ping.empty());
+    CHECK(!FrameCodec::decode(ping.data(), SIGNALLING_HEADER_BYTES - 1, decoded));
+
+    // Byte 13 is a text frame's fragment count, where zero is a reject, but in
+    // a signalling frame it is payload. Reading the two layouts with the same
+    // offsets would throw this ping away.
+    corrupted = ping;
+    corrupted[13] = 0;
+    CHECK(FrameCodec::decode(corrupted.data(), (int)corrupted.size(), decoded));
+    CHECK(decoded.type == FrameType::Ping);
+    CHECK(decoded.fragmentCount == 1);
+    CHECK(decoded.fragmentIndex == 0);
 }
 
 } // namespace

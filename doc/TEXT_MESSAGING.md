@@ -38,24 +38,42 @@ user data directory, and history older than 30 days is dropped at startup.
 Text messaging does not travel inside RADE. It uses the codec2 raw data
 modes, sent as short bursts in their own keying of the transmitter:
 
-| Traffic | Mode | Payload |
+| Traffic | Mode | Payload after the modem's CRC |
 | --- | --- | --- |
-| Ping, pong, acknowledgement | DATAC13 | 30 bytes |
-| Message text | DATAC4 | 126 bytes |
+| Ping, pong, acknowledgement | DATAC13 | 14 bytes |
+| Message text | DATAC4 | 54 bytes |
+
+These are what codec2 actually hands us per modem frame, less the two byte CRC
+the raw data API appends. `TextMessagingModem` checks them against the modem
+when it opens and refuses to start if they have drifted, rather than
+truncating frames on the air; text messaging then reports itself unavailable
+and the Tools menu entry stays greyed out.
 
 Every frame is sent as a complete burst (preamble, frame, postamble) with a
 100 ms gap after it, so the receiving modem acquires each frame on its own
 rather than having to hold sync across a whole message. A message longer than
-one frame is split into up to eight fragments, all sent in one keying; 864
+one frame is split into up to eight fragments, all sent in one keying; 312
 characters is the limit. DATAC4 is slow on purpose, so a full length message
 holds the transmitter for roughly half a minute: if you use FreeDV's transmit
 time-out timer, set it longer than that or it will cut a long message off.
 
-Each frame carries an 18 byte header: frame type, destination callsign CRC-24,
-origin callsign CRC-24, the origin callsign packed into six bytes (base 40,
-up to nine characters, so `VK3ABC/P` fits), a message ID used to match
-acknowledgements, the fragment index and count, and the payload length. The
-modem's own CRC-16 protects each frame, so nothing is added for that.
+A DATAC13 frame is only 14 bytes, so the two traffic classes do not share one
+header layout. Both start with the same 12 bytes: frame type, destination
+callsign CRC-24, the origin callsign packed into six bytes (base 40, up to
+nine characters, so `VK3ABC/P` fits), and a message ID used to match
+acknowledgements. Text frames then add a fragment index and count; signalling
+frames are always a single fragment and spend those two bytes on payload
+instead, which is what lets a ping fit in DATAC13 at all. Both end with a
+payload length byte, which tells the decoder where the payload stops and the
+zero padding out to the modem frame size begins.
+
+That leaves a 13 byte header and one payload byte in a signalling frame --
+exactly enough for the SNR a pong reports -- and a 15 byte header with 39
+bytes of text in a DATAC4 frame.
+
+The origin callsign CRC-24 is not sent. It is the CRC of the callsign already
+in the frame, and three bytes is a fifth of a DATAC13 frame. The modem's own
+CRC-16 protects each frame, so nothing is added for that.
 
 Receiving runs continuously: the DATAC13 and DATAC4 demodulators sit on a tap
 off the receive audio, on their own thread, and do not touch voice decoding.

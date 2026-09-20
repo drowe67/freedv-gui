@@ -55,23 +55,37 @@ enum class FrameType : uint8_t
     Broadcast = 0x22,  // unaddressed message fragment, no acknowledgement
 };
 
-// Modem frame payload sizes (codec2 1.2.0, data bits per modem frame divided
-// by 8, less the two byte CRC that the raw data API appends). DATAC13 carries
-// signalling, DATAC4 carries message text; both are the most robust option in
-// their size class, which matters more than throughput for chat.
-constexpr int SIGNALLING_FRAME_BYTES = 30; // DATAC13: 256 data bits - CRC16
-constexpr int TEXT_FRAME_BYTES = 126;      // DATAC4: 1024 data bits - CRC16
+// Modem frame payload sizes: what codec2 hands us per modem frame, less the
+// two byte CRC the raw data API appends. DATAC13 carries signalling, DATAC4
+// carries message text; both are the most robust option in their size class,
+// which matters more than throughput for chat. TextMessagingModem checks these
+// against the modem at open time and refuses to run if they have drifted.
+constexpr int SIGNALLING_FRAME_BYTES = 14; // DATAC13: 128 bits - CRC16
+constexpr int TEXT_FRAME_BYTES = 54;       // DATAC4: 448 bits - CRC16
 
-// On air header: type (1) + destination CRC (3) + origin CRC (3) +
-// packed origin callsign (6) + message ID (2) + fragment index (1) +
-// fragment count (1) + payload length (1). The length byte is what lets the
-// decoder tell payload from the zero padding out to the modem frame size.
-constexpr int FRAME_HEADER_BYTES = 18;
-constexpr int TEXT_BYTES_PER_FRAGMENT = TEXT_FRAME_BYTES - FRAME_HEADER_BYTES;
+// On air header. Every frame starts with type (1) + destination CRC (3) +
+// packed origin callsign (6) + message ID (2). The origin CRC is not sent: it
+// is the CRC of the callsign already in the frame, and three bytes is a tenth
+// of a DATAC13 frame.
+//
+// Text frames then add fragment index (1) + fragment count (1); signalling
+// frames are always a single fragment and spend those two bytes on payload
+// instead, which is what lets a ping fit in DATAC13 at all. Both end with a
+// payload length byte, which is how the decoder tells payload from the zero
+// padding out to the modem frame size.
+constexpr int SIGNALLING_HEADER_BYTES = 13;
+constexpr int TEXT_HEADER_BYTES = 15;
+constexpr int TEXT_BYTES_PER_FRAGMENT = TEXT_FRAME_BYTES - TEXT_HEADER_BYTES;
+constexpr int SIGNALLING_PAYLOAD_BYTES = SIGNALLING_FRAME_BYTES - SIGNALLING_HEADER_BYTES;
+
+static_assert(SIGNALLING_HEADER_BYTES < SIGNALLING_FRAME_BYTES,
+              "a signalling frame must have room for its header and a payload byte");
+static_assert(TEXT_HEADER_BYTES < TEXT_FRAME_BYTES,
+              "a text frame must have room for its header and some text");
 
 // A message is sent as one keying of the transmitter, so its length is bounded
-// by how long we are willing to hold the channel: eight fragments is roughly
-// 860 characters and around 30 seconds of DATAC4.
+// by how long we are willing to hold the channel: eight DATAC4 fragments is
+// around 30 seconds.
 constexpr int MAX_FRAGMENTS_PER_MESSAGE = 8;
 constexpr int MAX_MESSAGE_TEXT_BYTES = TEXT_BYTES_PER_FRAGMENT * MAX_FRAGMENTS_PER_MESSAGE;
 

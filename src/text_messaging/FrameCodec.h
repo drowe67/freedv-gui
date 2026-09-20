@@ -52,7 +52,6 @@ struct Frame
 {
     FrameType type = FrameType::Ping;
     uint32_t destinationCrc = 0;    // 24 bits; zero means "broadcast"
-    uint32_t originCrc = 0;         // 24 bits
     std::string originCallsign;     // as decoded, may be truncated to 9 chars
     uint16_t airId = 0;             // matches a message to its acknowledgement
     uint8_t fragmentIndex = 0;      // zero based
@@ -79,7 +78,8 @@ public:
 
     // Serializes a frame, zero padded out to frameBytes (SIGNALLING_FRAME_BYTES
     // or TEXT_FRAME_BYTES). Returns an empty vector if the frame does not fit
-    // or carries a callsign that cannot be packed.
+    // the header its type requires, if the payload does not fit behind that
+    // header, or if it carries a callsign that cannot be packed.
     static std::vector<uint8_t> encode(const Frame& frame, int frameBytes);
 
     // Parses a frame received from the modem. Returns false when the frame is
@@ -90,6 +90,12 @@ public:
     // True for the frame types this build knows how to handle. Kept separate
     // so the receive path can drop unknown types without parsing them.
     static bool isKnownFrameType(uint8_t type);
+
+    // Pings and acknowledgements ride DATAC13, which is too small for the
+    // fragment fields, so they carry a shorter header and are always a single
+    // fragment. Message text rides DATAC4 and carries the full header.
+    static bool isSignallingFrameType(FrameType type);
+    static int headerBytes(FrameType type);
 };
 
 } // namespace TextMessaging
