@@ -86,15 +86,15 @@ using namespace std::chrono_literals;
 // External globals
 // TBD -- work on fully removing the need for these.
 extern paCallBackData* g_rxUserdata;
-extern int g_analog;
+extern std::atomic<int> g_analog;
 extern int g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
 extern std::atomic<bool> g_tx;
 extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
-extern int g_sfTxFs;
-extern bool g_loopPlayFileToMicIn;
+extern std::atomic<int> g_sfTxFs;
+extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifo;
 extern GenericFIFO<short> g_plotDemodInFifo;
@@ -106,14 +106,14 @@ extern int g_dump_timing;
 extern std::atomic<bool> g_queueResync;
 extern int g_resyncs;
 extern bool g_recFileFromRadio;
-extern unsigned int g_recFromRadioSamples;
+extern std::atomic<unsigned int> g_recFromRadioSamples;
 extern std::atomic<bool> g_playFileFromRadio;
-extern int g_sfFs;
+extern std::atomic<int> g_sfFs;
 extern std::atomic<bool>     g_totBeepActive;
-extern bool g_loopPlayFileFromRadio;
+extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern int g_SquelchActive;
 extern float g_SquelchLevel;
-extern float g_tone_phase;
+extern std::atomic<float> g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<int> g_channel_noise;
@@ -144,12 +144,12 @@ extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE* g_sfRecFile;
-extern SNDFILE* g_sfRecMicFile;
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
 extern SNDFILE* g_sfRecDecoderFile;
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 
-extern bool g_recFileFromMic;
-extern bool g_recVoiceKeyerFile;
+extern std::atomic<bool> g_recFileFromMic;
+extern std::atomic<bool> g_recVoiceKeyerFile;
 extern bool g_recFileFromDecoder;
 
 #include "sox_biquad.h"
@@ -163,7 +163,7 @@ void TxRxThread::initializePipeline_()
         // Record from mic step (optional)
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
-            []() { return g_sfRecMicFile; }, 
+            []() { return g_sfRecMicFile.load(std::memory_order_acquire); }, 
             [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
@@ -176,7 +176,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return (g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)) && (g_sfRecMicFile.load(std::memory_order_acquire) != NULL); },
             recordMicTap,
             bypassRecordMic
         );
@@ -187,10 +187,10 @@ void TxRxThread::initializePipeline_()
         auto eitherOrPlayMicIn = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
-            []() { return g_sfTxFs; },
+            []() { return g_sfTxFs.load(std::memory_order_acquire); },
             []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile.load(std::memory_order_acquire) : nullptr; },
             []() {
-                if (g_loopPlayFileToMicIn)
+                if (g_loopPlayFileToMicIn.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
@@ -279,7 +279,7 @@ void TxRxThread::initializePipeline_()
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
         auto eitherOrDigitalAnalog = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+            +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) != 0; },
             analogTxPipeline,
             digitalTxPipeline);
         pipeline_->appendPipelineStep(eitherOrDigitalAnalog);
@@ -323,8 +323,8 @@ void TxRxThread::initializePipeline_()
             RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile; }, 
             [](int numSamples) {
-                g_recFromRadioSamples -= numSamples;
-                if (g_recFromRadioSamples <= 0)
+                g_recFromRadioSamples.fetch_sub(numSamples, std::memory_order_relaxed);
+                if (g_recFromRadioSamples.load(std::memory_order_relaxed) <= 0)
                 {
                     // call stop record menu item, should be thread safe
                     g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
@@ -349,10 +349,10 @@ void TxRxThread::initializePipeline_()
         auto eitherOrPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto playRadio = new PlaybackStep(
             inputSampleRate_, 
-            []() { return g_sfFs; },
+            []() { return g_sfFs.load(std::memory_order_acquire); },
             []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
             []() {
-                if (g_loopPlayFileFromRadio)
+                if (g_loopPlayFileFromRadio.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
@@ -389,7 +389,7 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz; },
             +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude; },
-            +[]() FREEDV_NONBLOCKING { return (float*)&g_tone_phase; }
+            +[]() FREEDV_NONBLOCKING { return &g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone; },
@@ -469,7 +469,7 @@ void TxRxThread::initializePipeline_()
             mutePipeline->appendPipelineStep(muteStep);
             
             auto eitherOrMuteStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_recVoiceKeyerFile; },
+                +[]() FREEDV_NONBLOCKING { return g_recVoiceKeyerFile.load(std::memory_order_relaxed); },
                 mutePipeline,
                 bypassMonitorAudio
             );
@@ -488,9 +488,9 @@ void TxRxThread::initializePipeline_()
         if (equalizedMicAudioLink_ != nullptr)
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog ||
+                +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) ||
                     (
-                        (g_recVoiceKeyerFile) ||
+                        (g_recVoiceKeyerFile.load(std::memory_order_relaxed)) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
                         (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
                     ); 
@@ -501,7 +501,7 @@ void TxRxThread::initializePipeline_()
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+                +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) != 0; },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
@@ -812,7 +812,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
 
     bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile || g_recFileFromMic))) {        
+    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)))) {        
         if (deferReset_)
         {
             // We just entered TX from RX.
