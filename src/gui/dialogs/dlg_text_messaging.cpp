@@ -237,26 +237,29 @@ void TextMessagingDialog::buildControls()
     // Heard stations on the left, conversation on the right.
     wxBoxSizer* topSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticBoxSizer* stationSizer =
-        new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Heard Stations")), wxVERTICAL);
+    // Controls inside a wxStaticBoxSizer are children of the box, not of the
+    // dialog: on GTK3 the wrong parent leaves them mispositioned for hit
+    // testing even though they draw in the right place.
+    wxStaticBox* stationBox = new wxStaticBox(this, wxID_ANY, _("Heard Stations"));
+    wxStaticBoxSizer* stationSizer = new wxStaticBoxSizer(stationBox, wxVERTICAL);
 
-    m_stationList = new wxListCtrl(this, ID_STATION_LIST, wxDefaultPosition, wxSize(260, -1),
+    m_stationList = new wxListCtrl(stationBox, ID_STATION_LIST, wxDefaultPosition, wxSize(260, -1),
                                    wxLC_REPORT | wxLC_SINGLE_SEL);
     m_stationList->InsertColumn(0, _("Callsign"), wxLIST_FORMAT_LEFT, 100);
     m_stationList->InsertColumn(1, _("SNR"), wxLIST_FORMAT_RIGHT, 70);
     m_stationList->InsertColumn(2, _("Heard"), wxLIST_FORMAT_LEFT, 90);
     stationSizer->Add(m_stationList, 1, wxEXPAND | wxALL, 2);
 
-    m_btnPing = new wxButton(this, ID_PING, _("Ping"));
+    m_btnPing = new wxButton(stationBox, ID_PING, _("Ping"));
     m_btnPing->SetToolTip(_("Ask the selected station to answer, to see whether you are being heard."));
     m_btnPing->Enable(false);
     stationSizer->Add(m_btnPing, 0, wxEXPAND | wxALL, 2);
 
     topSizer->Add(stationSizer, 0, wxEXPAND | wxALL, 4);
 
-    wxStaticBoxSizer* chatSizer =
-        new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Chat")), wxVERTICAL);
-    m_chatWindow = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+    wxStaticBox* chatBox = new wxStaticBox(this, wxID_ANY, _("Chat"));
+    wxStaticBoxSizer* chatSizer = new wxStaticBoxSizer(chatBox, wxVERTICAL);
+    m_chatWindow = new wxHtmlWindow(chatBox, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                                     wxHW_SCROLLBAR_AUTO | wxBORDER_SUNKEN);
     chatSizer->Add(m_chatWindow, 1, wxEXPAND | wxALL, 2);
     topSizer->Add(chatSizer, 1, wxEXPAND | wxALL, 4);
