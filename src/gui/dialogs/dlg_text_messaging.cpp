@@ -125,11 +125,23 @@ wxString statusChip(const TextMessage& message)
             background = "#2980B9";
             break;
         case MessageStatus::AwaitingAck:
-            label = _("SENT");
-            background = "#7F8C8D";
+            // A retried message goes back to awaiting an acknowledgement, so
+            // without this the chip drops to a bare SENT and the operator
+            // cannot tell the third attempt from the first.
+            if (message.retryCount > 0)
+            {
+                label = wxString::Format(_("RETRY #%d"), message.retryCount);
+                background = "#F1C40F";
+                foreground = "#000000";
+            }
+            else
+            {
+                label = _("SENT");
+                background = "#7F8C8D";
+            }
             break;
         case MessageStatus::Retrying:
-            label = wxString::Format(_("RETRY %d"), message.retryCount);
+            label = wxString::Format(_("RETRY #%d"), message.retryCount);
             background = "#F1C40F";
             foreground = "#000000";
             break;
@@ -138,7 +150,7 @@ wxString statusChip(const TextMessage& message)
             background = "#27AE60";
             break;
         case MessageStatus::Failed:
-            label = _("FAILED");
+            label = _("NO ACK");
             background = "#E74C3C";
             break;
         case MessageStatus::Sent:
@@ -370,13 +382,6 @@ void TextMessagingDialog::renderChat()
             tag = " <font size=\"-2\" color=\"" + colors.subdued + "\">[BCAST]</font>";
         }
 
-        html += "<table width=\"100%\" cellpadding=\"2\" cellspacing=\"0\"><tr><td align=\"" +
-                align + "\">";
-        html += "<table cellpadding=\"6\" cellspacing=\"0\" bgcolor=\"" + bubble +
-                "\"><tr><td><font color=\"" + colors.text + "\">" + body + tag +
-                "</font></td></tr></table>";
-        html += "</td></tr>";
-
         // Timestamp on the left, delivery status on the right.
         wxString right;
         if (sent)
@@ -389,9 +394,23 @@ void TextMessagingDialog::renderChat()
                     formatSnr(message.snr) + "</font>";
         }
 
-        html += "<tr><td><table width=\"100%\"><tr><td align=\"left\"><font size=\"-2\" color=\"" +
-                colors.subdued + "\">" + formatTime(message.timestamp) +
-                "</font></td><td align=\"right\">" + right + "</td></tr></table></td></tr>";
+        // One coloured block per message. The text and the line describing it
+        // share a single padded cell, so they sit tight against each other and
+        // the background encloses both rather than the status floating below.
+        html += "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"" +
+                align + "\">";
+        html += "<table cellpadding=\"6\" cellspacing=\"0\" bgcolor=\"" + bubble +
+                "\"><tr><td>";
+        html += "<font color=\"" + colors.text + "\">" + body + tag + "</font>";
+        html += "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>"
+                "<td align=\"left\"><font size=\"-2\" color=\"" + colors.subdued + "\">" +
+                formatTime(message.timestamp) + "</font></td>"
+                "<td align=\"right\">" + right + "</td></tr></table>";
+        html += "</td></tr></table>";
+        html += "</td></tr>";
+
+        // Air between messages, none inside one.
+        html += "<tr><td height=\"10\"></td></tr>";
         html += "</table>";
     }
 

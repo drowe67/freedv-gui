@@ -23,8 +23,9 @@ says chat.
 * **Chat** shows the conversation. Messages you sent are on the right with a
   light blue background; messages received are on the left, prefixed with the
   sender's callsign. Under each message is the time on the left and, for your
-  own messages, a delivery chip on the right: `SENDING`, `SENT`, `RETRY n`
-  (yellow), `OK` (green) or `FAILED` (red).
+  own messages, a delivery chip on the right: `SENDING`, `SENT`, `RETRY #n`
+  (yellow, and it keeps showing which attempt is outstanding while the
+  acknowledgement timer runs), `OK` (green) or `NO ACK` (red).
 * **Send** transmits to the highlighted station and asks for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
   three times, and then marked failed.
