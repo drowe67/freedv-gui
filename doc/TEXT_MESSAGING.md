@@ -1,8 +1,15 @@
-# Text Messaging
+# Text Chat
 
 This fork adds a keyboard chat mode to FreeDV, reachable from **Tools → Text
-Messaging...**. It is inspired by FreeDATA's chat feature but does not share
-its protocol: two stations both need this build to talk to each other.
+Chat...**. It is inspired by FreeDATA's chat feature but does not share its
+protocol: two stations both need this build to talk to each other.
+
+The name matters: **Tools → Options → Reporting** has a separate "Txt Msg"
+field, which is upstream's low rate text sent alongside your voice inside the
+FreeDV signal. That is a different feature with different limits, and nothing
+here touches it. The source tree still calls this one text messaging
+(`src/text_messaging/`, `TextMessagingDialog`), only what the operator sees
+says chat.
 
 ## What the window does
 

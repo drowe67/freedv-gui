@@ -57,7 +57,7 @@ class TextMessagingDialog : public wxDialog, public TextMessaging::ITextMessagin
 {
 public:
     TextMessagingDialog(wxWindow* parent, wxWindowID id = wxID_ANY,
-                        const wxString& title = _("FreeDV Text Messaging"),
+                        const wxString& title = _("FreeDV Text Chat"),
                         const wxPoint& pos = wxDefaultPosition,
                         const wxSize& size = wxSize(900, 620),
                         long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);

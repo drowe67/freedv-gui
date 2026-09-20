@@ -465,7 +465,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     tools->Append(m_menuItemFreeDVReporter);
     
     wxMenuItem* m_menuItemTextMessaging;
-    m_menuItemTextMessaging = new wxMenuItem(tools, wxID_ANY, wxString(_("&Text Messaging...")) , _("Opens the text messaging chat window."), wxITEM_NORMAL);
+    m_menuItemTextMessaging = new wxMenuItem(tools, wxID_ANY, wxString(_("&Text Chat...")) , _("Opens the text chat window."), wxITEM_NORMAL);
     tools->Append(m_menuItemTextMessaging);
     
     wxMenuItem* toolsSeparator1 = new wxMenuItem(tools, wxID_SEPARATOR);
