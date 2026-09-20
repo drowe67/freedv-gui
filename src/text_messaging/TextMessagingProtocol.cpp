@@ -95,6 +95,8 @@ TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationLi
     , myCallsignCrc_(0)
     , autoReplyEnabled_(true)
     , nextAirId_(1)
+    , quietUntilMs_(0)
+    , jitterState_(1)
     , monotonicMs_([]() {
         return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::steady_clock::now().time_since_epoch())
@@ -127,6 +129,10 @@ void TextMessagingProtocol::setMyCallsign(const std::string& callsign)
     std::lock_guard<std::mutex> lock(mutex_);
     myCallsign_ = FrameCodec::normalizeCallsign(callsign);
     myCallsignCrc_ = FrameCodec::callsignCrc24(myCallsign_);
+
+    // Seeding the backoff from our own callsign keeps it reproducible for a
+    // given station while making any two stations back off differently.
+    jitterState_ = myCallsignCrc_ | 1u;
 }
 
 std::string TextMessagingProtocol::myCallsign() const
@@ -449,6 +455,10 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
         // Our own transmission looped back through the radio's monitor path.
         if (!myCallsign_.empty() && frame.originCallsign == myCallsign_) return;
 
+        // The station we just heard is turning its receiver back on; keying
+        // straight away talks over it.
+        deferTransmissionLocked(monotonicMs_(), TURNAROUND_AFTER_RX_MILLISECONDS, 0);
+
         std::time_t now = wallClock_();
         stations_.heard(frame.originCallsign, snr, now);
 
@@ -622,6 +632,20 @@ void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
     }
 }
 
+void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
+{
+    uint64_t until = nowMs + (uint64_t)baseMs + turnaroundJitterLocked(jitterMs);
+    if (until > quietUntilMs_) quietUntilMs_ = until;
+}
+
+uint32_t TextMessagingProtocol::turnaroundJitterLocked(int jitterMs)
+{
+    if (jitterMs <= 0) return 0;
+
+    jitterState_ = jitterState_ * 1103515245u + 12345u;
+    return (jitterState_ >> 16) % (uint32_t)(jitterMs + 1);
+}
+
 void TextMessagingProtocol::tick()
 {
     std::vector<PendingEvent> events;
@@ -655,6 +679,10 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
             PendingTransmission& sent = outbox_[i];
             if (sent.state != TransmissionState::Transmitting) continue;
 
+            // Whatever we just sent, the far end may be about to answer it.
+            deferTransmissionLocked(nowMs, TURNAROUND_AFTER_TX_MILLISECONDS,
+                                    TURNAROUND_JITTER_MILLISECONDS);
+
             if (sent.expectsAck)
             {
                 sent.state = TransmissionState::AwaitingAck;
@@ -670,17 +698,23 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
             break;
         }
 
-        for (size_t i = 0; i < outbox_.size(); i++)
+        // The turnaround is the far end's turn; anything queued waits it out.
+        // Only the start of a burst is held back -- the acknowledgement timers
+        // below keep running, so a retry is never late because of it.
+        if (nowMs >= quietUntilMs_)
         {
-            PendingTransmission& next = outbox_[i];
-            if (next.state != TransmissionState::Queued) continue;
-
-            if (transport_->transmit(next.frames, next.signalling))
+            for (size_t i = 0; i < outbox_.size(); i++)
             {
-                next.state = TransmissionState::Transmitting;
-                updateStatusLocked(next, MessageStatus::Transmitting, events);
+                PendingTransmission& next = outbox_[i];
+                if (next.state != TransmissionState::Queued) continue;
+
+                if (transport_->transmit(next.frames, next.signalling))
+                {
+                    next.state = TransmissionState::Transmitting;
+                    updateStatusLocked(next, MessageStatus::Transmitting, events);
+                }
+                break;
             }
-            break;
         }
     }
 

@@ -95,6 +95,26 @@ constexpr int MAX_MESSAGE_TEXT_BYTES = TEXT_BYTES_PER_FRAGMENT * MAX_FRAGMENTS_P
 constexpr int MAX_PACKED_CALLSIGN_CHARS = 9;
 constexpr int PACKED_CALLSIGN_BYTES = 6;
 
+// A half duplex station hears nothing while it is keyed, and its receiver
+// needs a moment to settle after it unkeys. So replying the instant a burst
+// decodes talks over a station that is still turning around, and starting the
+// next queued burst straight after our own talks over the reply we just asked
+// for. The loopback bench caught both: two stations keyed at the same instant
+// and each missed what the other sent.
+//
+// Every transmission therefore waits out a turnaround, measured from the last
+// thing we heard and from the end of our own last burst.
+constexpr int TURNAROUND_AFTER_RX_MILLISECONDS = 500;
+constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
+
+// Two stations that back off by exactly the same amount collide again on the
+// retry, so the wait after our own burst carries jitter. It is drawn from the
+// station's own callsign, which keeps it reproducible per station while
+// decorrelating any two of them.
+constexpr int TURNAROUND_JITTER_MILLISECONDS = 1000;
+constexpr int MAX_TURNAROUND_MILLISECONDS =
+    TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS;
+
 // Retry policy for addressed messages. Timeout is measured from the end of our
 // transmission to the arrival of the acknowledgement.
 constexpr int MAX_MESSAGE_RETRIES = 3;

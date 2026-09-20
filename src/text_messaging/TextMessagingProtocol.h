@@ -191,6 +191,11 @@ private:
     void updateStatusLocked(PendingTransmission& pending, MessageStatus status,
                             std::vector<PendingEvent>& events);
     void purgeStaleReassembliesLocked(uint64_t nowMs);
+
+    // Holds the transmitter off until the far end has had its turn. Never
+    // shortens a wait that is already running.
+    void deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs);
+    uint32_t turnaroundJitterLocked(int jitterMs);
     void serviceOutboxLocked(uint64_t nowMs, std::vector<PendingEvent>& events);
     uint16_t nextAirIdLocked();
     Frame makeFrameLocked(FrameType type, const std::string& destination, uint16_t airId,
@@ -210,6 +215,9 @@ private:
     uint32_t myCallsignCrc_;
     bool autoReplyEnabled_;
     uint16_t nextAirId_;
+
+    uint64_t quietUntilMs_;
+    uint32_t jitterState_;
 
     std::deque<PendingTransmission> outbox_;
     std::map<ReassemblyKey, Reassembly> inbox_;

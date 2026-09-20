@@ -76,15 +76,6 @@ public:
 
     bool isTransmitting() const override { return transmitting || voiceActive; }
 
-    // Runs the protocol far enough to put a queued transmission on the air and
-    // see it through to the end of the over.
-    void completeOneTransmission(TextMessagingProtocol& protocol)
-    {
-        protocol.tick(); // hands the burst to the transport
-        transmitting = false;
-        protocol.tick(); // the over has finished
-    }
-
     std::vector<std::vector<std::vector<uint8_t>>> transmissions;
     std::vector<bool> signallingFlags;
     bool transmitting = false;
@@ -126,6 +117,17 @@ struct Station
         protocol.setClocks([this]() { return nowMs; }, [this]() { return (std::time_t)1750000000; });
     }
 
+    // Runs the protocol far enough to put a queued transmission on the air and
+    // see it through to the end of the over. The clock skips past any
+    // turnaround first, since a real station would simply have waited.
+    void completeOneTransmission()
+    {
+        nowMs += MAX_TURNAROUND_MILLISECONDS + 1;
+        protocol.tick(); // hands the burst to the transport
+        transport.transmitting = false;
+        protocol.tick(); // the over has finished
+    }
+
     // Decodes every frame of the most recent transmission into this station.
     void receiveFrom(FakeTransport& other, float snr = 5.0f)
     {
@@ -159,7 +161,7 @@ void testAddressedMessageIsAcknowledged()
     CHECK(sender.observer.added[0].destCallsign == "VK3ABC");
     CHECK(!sender.observer.added[0].broadcast);
 
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     CHECK(sender.transport.transmissions.size() == 1);
     CHECK(sender.transport.transmissions[0].size() == 1); // short message, one fragment
     CHECK(!sender.transport.signallingFlags[0]);          // text goes in the wider mode
@@ -178,7 +180,7 @@ void testAddressedMessageIsAcknowledged()
     CHECK(receiver.stations.contains("W1AW"));
     CHECK(receiver.protocol.pendingCount() == 1);
 
-    receiver.transport.completeOneTransmission(receiver.protocol);
+    receiver.completeOneTransmission();
     CHECK(receiver.transport.signallingFlags[0]); // acknowledgements are signalling
     CHECK(receiver.protocol.pendingCount() == 0);
 
@@ -198,7 +200,7 @@ void testRetriesThenFails()
 
     for (int attempt = 0; attempt <= MAX_MESSAGE_RETRIES; attempt++)
     {
-        sender.transport.completeOneTransmission(sender.protocol);
+        sender.completeOneTransmission();
         CHECK((int)sender.transport.transmissions.size() == attempt + 1);
 
         // Nothing comes back before the timer expires.
@@ -231,7 +233,7 @@ void testBroadcastIsNotAcknowledged()
     CHECK(sender.protocol.sendMessage("CQ CQ from the chat window", "", error));
     CHECK(sender.observer.added[0].broadcast);
 
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     int64_t messageId = sender.observer.added[0].id;
     const TextMessage* update = sender.observer.lastUpdateFor(messageId);
@@ -252,7 +254,7 @@ void testMessageNotForUsIsIgnored()
 
     std::string error;
     CHECK(sender.protocol.sendMessage("Private note", "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     bystander.receiveFrom(sender.transport);
 
@@ -270,7 +272,7 @@ void testLongMessageIsFragmentedAndReassembled()
     std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A');
     std::string error;
     CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     CHECK(sender.transport.transmissions[0].size() == 3);
 
     receiver.receiveFrom(sender.transport);
@@ -289,17 +291,17 @@ void testRetransmissionIsNotShownTwice()
 
     std::string error;
     CHECK(sender.protocol.sendMessage("Say again", "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     receiver.receiveFrom(sender.transport);
     CHECK(receiver.observer.added.size() == 1);
-    receiver.transport.completeOneTransmission(receiver.protocol); // first acknowledgement
+    receiver.completeOneTransmission(); // first acknowledgement
 
     // The acknowledgement was lost, so the sender transmits the same message
     // again: the receiver must re-acknowledge without duplicating the line.
     sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
     sender.protocol.tick();
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     receiver.receiveFrom(sender.transport);
     CHECK(receiver.observer.added.size() == 1);
@@ -317,7 +319,7 @@ void testPingAndPong()
     CHECK(sender.observer.added[0].kind == MessageKind::System);
     CHECK(sender.observer.added[0].text == "W1AW >> VK3ABC : PING!");
 
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     CHECK(sender.transport.signallingFlags[0]);
 
     receiver.receiveFrom(sender.transport, 8.0f);
@@ -325,7 +327,7 @@ void testPingAndPong()
     CHECK(receiver.observer.added[0].text == "W1AW >> VK3ABC : PING!");
     CHECK(receiver.protocol.pendingCount() == 1); // the pong
 
-    receiver.transport.completeOneTransmission(receiver.protocol);
+    receiver.completeOneTransmission();
     sender.receiveFrom(receiver.transport, 4.0f);
 
     CHECK(sender.observer.added.size() == 2);
@@ -342,7 +344,7 @@ void testPingTimesOut()
 
     std::string error;
     CHECK(sender.protocol.sendPing("VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     sender.nowMs += PING_TIMEOUT_MILLISECONDS + 1;
     sender.protocol.tick();
@@ -364,14 +366,14 @@ void testAutoReplyCanBeDisabled()
 
     std::string error;
     CHECK(sender.protocol.sendMessage("Are you listening", "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     receiver.receiveFrom(sender.transport);
     CHECK(receiver.observer.added.size() == 1); // the message still shows
     CHECK(receiver.protocol.pendingCount() == 0); // but nothing is transmitted
 
     CHECK(sender.protocol.sendPing("VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     receiver.receiveFrom(sender.transport);
     CHECK(receiver.observer.added.size() == 2);
     CHECK(receiver.protocol.pendingCount() == 0);
@@ -387,7 +389,7 @@ void testAckWaitDoesNotBlockTheQueue()
 
     std::string error;
     CHECK(sender.protocol.sendMessage("First", "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
 
     int64_t firstId = sender.observer.added[0].id;
     const TextMessage* update = sender.observer.lastUpdateFor(firstId);
@@ -395,7 +397,7 @@ void testAckWaitDoesNotBlockTheQueue()
 
     // Queued while the first message is still waiting to be acknowledged.
     CHECK(sender.protocol.sendMessage("Second", "VK3ABC", error));
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     CHECK(sender.transport.transmissions.size() == 2);
     CHECK(sender.protocol.pendingCount() == 2);
 
@@ -440,8 +442,54 @@ void testVoiceTransmissionDefersChat()
     CHECK(sender.transport.transmissions.empty());
 
     sender.transport.voiceActive = false;
-    sender.transport.completeOneTransmission(sender.protocol);
+    sender.completeOneTransmission();
     CHECK(sender.transport.transmissions.size() == 1);
+}
+
+// Two half duplex stations that key the moment the other stops cannot hear
+// each other. On the loopback bench both stations keyed within the same second
+// and each missed the other's reply, so a reply waits for the sender's receiver
+// to come back, and the next burst waits for the far end to have its turn.
+void testTurnaroundKeepsStationsOffEachOther()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("Hello", "VK3ABC", error));
+    sender.completeOneTransmission();
+
+    // The acknowledgement is queued, but keying now would land on top of a
+    // sender that is still turning its receiver back on.
+    receiver.receiveFrom(sender.transport);
+    CHECK(receiver.protocol.pendingCount() == 1);
+    receiver.protocol.tick();
+    CHECK(receiver.transport.transmissions.empty());
+
+    receiver.nowMs += TURNAROUND_AFTER_RX_MILLISECONDS + 1;
+    receiver.protocol.tick();
+    CHECK(receiver.transport.transmissions.size() == 1);
+}
+
+// The other half of the same problem: having just transmitted, we owe the far
+// end room to answer before starting whatever else is queued.
+void testNextBurstWaitsForTheFarEndToAnswer()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    // Queued while the far end is presumably composing its acknowledgement.
+    CHECK(sender.protocol.sendMessage("second", "VK3ABC", error));
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    sender.nowMs += MAX_TURNAROUND_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 2);
 }
 
 void testSendRequiresCallsign()
@@ -478,6 +526,8 @@ int main()
     testPingTimesOut();
     testAutoReplyCanBeDisabled();
     testAckWaitDoesNotBlockTheQueue();
+    testTurnaroundKeepsStationsOffEachOther();
+    testNextBurstWaitsForTheFarEndToAnswer();
     testVoiceTransmissionDefersChat();
     testSendRequiresCallsign();
 
