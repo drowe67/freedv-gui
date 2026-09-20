@@ -41,6 +41,13 @@ reporting callsign in **Tools → Options**.
 Chat history and heard stations are kept in `text_messaging.db` in FreeDV's
 user data directory, and history older than 30 days is dropped at startup.
 
+Setting `FREEDV_TEXT_CHAT_UI_LOG` in the environment makes the window log what
+it is showing: when it was created and became able to receive updates, every
+message it adds, the delivery chip text after each change, and any status
+change that arrived for a message not currently in the view. That last one is
+the silent failure behind a chip that never updates. `test/test_text_chat_loopback.sh`
+sets it for both stations.
+
 ## How it works on the air
 
 Text messaging does not travel inside RADE. It uses the codec2 raw data

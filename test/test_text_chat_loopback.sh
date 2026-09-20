@@ -91,9 +91,12 @@ writeStationConfig () {
         "$SCRIPTPATH/freedv-text-chat-station.conf.tmpl" > "$dir/freedv.conf"
 }
 
+# FREEDV_TEXT_CHAT_UI_LOG makes the chat window report what it is showing, so
+# a refresh bug can be found in the log rather than over someone's shoulder.
 startStation () {
     local name=$1 dir=$2
-    ( HOME="$dir" exec "$BINARY" -f "$dir/freedv.conf" > "$dir/freedv.log" 2>&1 ) &
+    ( HOME="$dir" FREEDV_TEXT_CHAT_UI_LOG=1 \
+      exec "$BINARY" -f "$dir/freedv.conf" > "$dir/freedv.log" 2>&1 ) &
     echo $! > "$dir/freedv.pid"
     echo "  station $name: pid $(cat "$dir/freedv.pid"), log $dir/freedv.log"
 }

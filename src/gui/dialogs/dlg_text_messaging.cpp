@@ -35,6 +35,7 @@
 #include "dlg_text_messaging.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include <wx/datetime.h>
 #include <wx/settings.h>
@@ -107,8 +108,24 @@ wxString formatAge(std::time_t lastHeard, std::time_t now)
     return wxString::Format(_("%d hr ago"), (int)(age / 3600));
 }
 
-// The colored chip on the right of a sent message.
-wxString statusChip(const TextMessage& message)
+// Set FREEDV_TEXT_CHAT_UI_LOG to have the window report what it is showing.
+// Watching a chat window over someone's shoulder is a poor way to find a
+// refresh bug; this puts the same information in the log.
+bool uiLogEnabled()
+{
+    static const bool enabled = std::getenv("FREEDV_TEXT_CHAT_UI_LOG") != nullptr;
+    return enabled;
+}
+
+// The delivery chip on the right of a sent message: its text and its colours.
+struct DeliveryChip
+{
+    wxString label;
+    wxString background;
+    wxString foreground = "#FFFFFF";
+};
+
+DeliveryChip deliveryChip(const TextMessage& message)
 {
     wxString label;
     wxString background;
@@ -158,11 +175,23 @@ wxString statusChip(const TextMessage& message)
             background = "#7F8C8D";
             break;
         case MessageStatus::Received:
-            return "";
+            break;
     }
 
-    return "<table cellpadding=\"2\" cellspacing=\"0\" bgcolor=\"" + background +
-           "\"><tr><td><font size=\"-2\" color=\"" + foreground + "\">" + label +
+    DeliveryChip chip;
+    chip.label = label;
+    chip.background = background;
+    chip.foreground = foreground;
+    return chip;
+}
+
+wxString statusChip(const TextMessage& message)
+{
+    DeliveryChip chip = deliveryChip(message);
+    if (chip.label.empty()) return "";
+
+    return "<table cellpadding=\"2\" cellspacing=\"0\" bgcolor=\"" + chip.background +
+           "\"><tr><td><font size=\"-2\" color=\"" + chip.foreground + "\">" + chip.label +
            "</font></td></tr></table>";
 }
 
@@ -203,6 +232,8 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
 
     TextMessagingSession::instance().protocol().setObserver(this);
     m_refreshTimer.Start(REFRESH_INTERVAL_MS);
+
+    if (uiLogEnabled()) log_info("UI: chat window created, observer registered");
 }
 
 TextMessagingDialog::~TextMessagingDialog()
@@ -560,6 +591,7 @@ void TextMessagingDialog::OnTimer(wxTimerEvent&)
 void TextMessagingDialog::OnClose(wxCloseEvent&)
 {
     // Chat keeps running with the window closed, so this only hides it.
+    if (uiLogEnabled()) log_info("UI: chat window hidden, observer still registered");
     Hide();
 }
 
@@ -570,6 +602,13 @@ void TextMessagingDialog::onMessageAdded(const TextMessage& message)
     {
         appendMessage(copy);
         renderChat();
+
+        if (uiLogEnabled())
+        {
+            log_info("UI: added id=%d %s %s", (int)copy.id,
+                     copy.direction == MessageDirection::Sent ? "TX" : "RX",
+                     (const char*)wxString(copy.text).Left(40).ToUTF8());
+        }
     });
 }
 
@@ -584,7 +623,22 @@ void TextMessagingDialog::onMessageUpdated(const TextMessage& message)
 
             existing = copy;
             renderChat();
+
+            if (uiLogEnabled())
+            {
+                log_info("UI: chip id=%d now \"%s\"", (int)copy.id,
+                         (const char*)deliveryChip(copy).label.ToUTF8());
+            }
             return;
+        }
+
+        // The message is not on screen, so the chip the operator sees is now
+        // stale. This is the silent failure to look for when a status change
+        // never appears in the window.
+        if (uiLogEnabled())
+        {
+            log_warn("UI: update for id=%d dropped, message is not in the view",
+                     (int)copy.id);
         }
     });
 }
