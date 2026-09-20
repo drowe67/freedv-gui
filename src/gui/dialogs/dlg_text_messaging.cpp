@@ -494,24 +494,55 @@ void TextMessagingDialog::renderChat()
 
     html += "</body></html>";
 
+    // Setting the page and then scrolling it are two repaints; frozen, the
+    // window shows the result rather than the intermediate state.
+    m_chatWindow->Freeze();
     m_chatWindow->SetPage(html);
 
     // Keep the newest message in view, the way a chat window should.
     m_chatWindow->Scroll(0, m_chatWindow->GetScrollRange(wxVERTICAL));
+    m_chatWindow->Thaw();
 }
 
 void TextMessagingDialog::refreshStations()
 {
-    std::string previousSelection = selectedCallsign();
-
     auto& session = TextMessagingSession::instance();
     std::time_t now = std::time(nullptr);
     session.stations().prune(now);
 
     std::vector<HeardStation> stations = session.stations().stations();
 
-    m_stationList->DeleteAllItems();
+    // This runs on a one second timer. Rebuilding the list every time made the
+    // window flicker and, worse, dropped and restored the selection underneath
+    // whoever was trying to click it. Rows are updated in place, and the list
+    // is only rebuilt when the stations themselves change.
+    bool sameRows = (long)stations.size() == m_stationList->GetItemCount();
+    for (size_t index = 0; sameRows && index < stations.size(); index++)
+    {
+        sameRows = m_stationList->GetItemText((long)index, 0).ToStdString() ==
+                   stations[index].callsign;
+    }
+
+    if (sameRows)
+    {
+        for (size_t index = 0; index < stations.size(); index++)
+        {
+            setColumnIfChanged((long)index, 1, formatSnr(stations[index].snr));
+            setColumnIfChanged((long)index, 2, formatAge(stations[index].lastHeard, now));
+        }
+        return;
+    }
+
+    if (uiLogEnabled())
+    {
+        log_info("UI: heard station list rebuilt (%d rows)", (int)stations.size());
+    }
+
+    std::string previousSelection = selectedCallsign();
     long selectedIndex = -1;
+
+    m_stationList->Freeze();
+    m_stationList->DeleteAllItems();
 
     for (size_t index = 0; index < stations.size(); index++)
     {
@@ -523,12 +554,22 @@ void TextMessagingDialog::refreshStations()
         if (station.callsign == previousSelection) selectedIndex = item;
     }
 
+    m_stationList->Thaw();
+
     if (selectedIndex >= 0)
     {
         m_stationList->SetItemState(selectedIndex, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
     }
 
-    m_btnPing->Enable(selectedIndex >= 0);
+    if (m_btnPing->IsEnabled() != (selectedIndex >= 0)) m_btnPing->Enable(selectedIndex >= 0);
+}
+
+// A wxListCtrl repaints a cell whenever it is set, so the text is compared
+// first: on a quiet minute nothing changes and nothing is redrawn.
+void TextMessagingDialog::setColumnIfChanged(long item, int column, const wxString& text)
+{
+    if (m_stationList->GetItemText(item, column) == text) return;
+    m_stationList->SetItem(item, column, text);
 }
 
 std::string TextMessagingDialog::selectedCallsign() const

@@ -91,6 +91,7 @@ private:
     void send(const std::string& destination);
     void appendMessage(const TextMessaging::TextMessage& message);
     void updateTransmitControls();
+    void setColumnIfChanged(long item, int column, const wxString& text);
 
     // The status line says one of three kinds of thing, and each stops being
     // true at a different moment.
