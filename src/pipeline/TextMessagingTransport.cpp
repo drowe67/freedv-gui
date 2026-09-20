@@ -51,6 +51,11 @@ constexpr int MODEM_SAMPLE_RATE = 8000;
 // length plus this margin is the longest we will hold PTT.
 constexpr uint64_t KEY_TIMEOUT_MARGIN_MS = 10000;
 
+// How long after a burst's audio should have finished we are willing to wait
+// for the transmit thread to confirm it. Covers the output FIFO's depth, which
+// is where the samples sit once our own queue has drained.
+constexpr uint64_t PLAYOUT_MARGIN_MS = 1000;
+
 uint64_t monotonicMs()
 {
     return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -171,28 +176,37 @@ void TextMessagingTransport::poll()
     // and clears it once the sound card has played the last sample out.
     bool transmitting = queue.isTransmitting();
     bool empty = queue.isEmpty();
-    bool burstFinished = empty && !transmitting;
+
+    bool startedNow = transmitting && !sawTransmitting_;
+    bool emptyNow = empty && !sawEmpty_;
+    if (startedNow) sawTransmitting_ = true;
+    if (emptyNow) sawEmpty_ = true;
 
     if (txLogEnabled())
     {
-        if (transmitting && !sawTransmitting_)
+        if (startedNow)
         {
-            sawTransmitting_ = true;
             log_info("TX: +%llu ms transmit thread picked the burst up",
                      (unsigned long long)(now - keyedAtMs_));
         }
-        if (empty && !sawEmpty_)
+        if (emptyNow)
         {
-            sawEmpty_ = true;
             log_info("TX: +%llu ms queue drained", (unsigned long long)(now - keyedAtMs_));
         }
     }
 
-    // Give the transmit thread a moment to pick the burst up before deciding
-    // that an empty queue means the burst is over.
-    bool startedYet = queue.isTransmitting() || now - keyedAtMs_ > 500;
+    // The transmit thread clearing the transmitting flag means the sound card
+    // has played the burst out, which is the accurate signal and the normal
+    // path. But it has been seen to miss the flag in both directions: never
+    // setting it, in which case an empty queue is no proof the audio has been
+    // played and unkeying here clips the end of the burst off the air; and
+    // never clearing it, in which case we sat on the transmitter until the
+    // watchdog fired ten seconds later and the far end could not answer.
+    // Neither is trusted on its own.
+    bool playedOut = now - keyedAtMs_ >= burstMs_ + PLAYOUT_MARGIN_MS;
+    bool burstFinished = empty && ((sawTransmitting_ && !transmitting) || playedOut);
 
-    if (burstFinished && startedYet)
+    if (burstFinished)
     {
         unkey();
         return;

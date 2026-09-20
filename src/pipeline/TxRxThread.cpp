@@ -829,6 +829,15 @@ bool TxRxThread::transmitTextMessagingAudio_(IRealtimeHelper* helper) FREEDV_NON
 
     if (!queue.ownsTransmitter() && !dataTxInProgress_) return false;
 
+    // The transport can conclude a burst without us: its watchdog clears the
+    // queue and the transmitting flag itself. Follow it, because otherwise
+    // this latch stays set, the next burst never gets its transmitting flag
+    // raised, and the transport unkeys it early and clips it off the air.
+    if (dataTxInProgress_ && !queue.isTransmitting() && queue.isEmpty())
+    {
+        dataTxInProgress_ = false;
+    }
+
     // PTT takes a moment to engage; pushing samples at the radio before it
     // does would clip the front of the burst. Returning true meanwhile keeps
     // microphone audio out of the transmitter that is about to be ours.
