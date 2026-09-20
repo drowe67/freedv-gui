@@ -91,6 +91,7 @@ extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
+extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
@@ -120,6 +121,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<float> g_tone_phase;
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
