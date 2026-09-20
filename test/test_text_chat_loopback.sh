@@ -123,6 +123,7 @@ doUp () {
             continue
         fi
         createVirtualAudioCable "$cable" >> "$WORKDIR/modules" || exit 1
+        # The id is recorded for reference only; "down" finds cables by name.
         waitForCableUp "$cable" || exit 1
         echo "  $cable"
     done
@@ -174,12 +175,24 @@ doDown () {
         fi
     done
 
-    if [ -f "$WORKDIR/modules" ]; then
-        while read -r module; do
-            [ -n "$module" ] && pactl unload-module "$module" 2>/dev/null
-        done < "$WORKDIR/modules"
-        rm -f "$WORKDIR/modules"
-        echo "Virtual audio cables removed."
+    # Unload by name rather than by the ids recorded at "up" time. A second
+    # "up" leaves existing cables alone and so records no id for them, which
+    # used to leave them loaded for ever with "down" reporting success.
+    local removed=0
+    for cable in $ALL_CABLES; do
+        local ids
+        ids=$(pactl list short modules 2>/dev/null \
+              | awk -v c="sink_name=$cable" '$0 ~ "module-null-sink" && $0 ~ c {print $1}')
+        for id in $ids; do
+            pactl unload-module "$id" 2>/dev/null && removed=$((removed + 1))
+        done
+    done
+    rm -f "$WORKDIR/modules"
+
+    if [ "$removed" -gt 0 ]; then
+        echo "Removed $removed virtual audio cable(s)."
+    else
+        echo "No virtual audio cables to remove."
     fi
 
     echo "Logs and chat databases are kept under $WORKDIR."
