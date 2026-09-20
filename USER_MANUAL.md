@@ -888,6 +888,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Tighten audio thread timings on macOS and Windows. (PR #1494)
     * Harden audio FIFO handling and WASAPI stop timing. (PR #1496)
     * Fix crash when testing Easy Setup with an invalid audio configuration. (PR #1500)
+    * Various data race cleanups. (PR #1502)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498)

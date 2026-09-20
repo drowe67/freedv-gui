@@ -13,16 +13,16 @@
 extern wxMutex g_mutexProtectingCallbackData;
 std::atomic<SNDFILE*> g_sfPlayFile;
 std::atomic<bool>                g_playFileToMicIn;
-bool                g_loopPlayFileToMicIn;
+std::atomic<bool>   g_loopPlayFileToMicIn;
 int                 g_playFileToMicInEventId;
 
 std::atomic<SNDFILE*> g_sfRecFile{nullptr};
 std::atomic<bool>     g_recFileFromRadio{false};
-unsigned int        g_recFromRadioSamples;
+std::atomic<unsigned int> g_recFromRadioSamples;
 int                 g_recFileFromRadioEventId;
 
-SNDFILE            *g_sfRecMicFile;
-bool                g_recFileFromMic;
+std::atomic<SNDFILE*> g_sfRecMicFile;
+std::atomic<bool>   g_recFileFromMic;
 
 std::atomic<SNDFILE*> g_sfRecDecoderFile{nullptr};
 std::atomic<bool>     g_recFileFromDecoder{false};
@@ -30,9 +30,9 @@ int                 g_recFileFromDecoderEventId;
 
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 std::atomic<bool>                g_playFileFromRadio;
-int                 g_sfFs;
-int                 g_sfTxFs;
-bool                g_loopPlayFileFromRadio;
+std::atomic<int>    g_sfFs;
+std::atomic<int>    g_sfTxFs;
+std::atomic<bool>   g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 
 std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
@@ -52,7 +52,7 @@ MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
 {
     m_cb = new wxCheckBox(this, -1, wxT("Loop"));
     m_cb->SetToolTip(_("When checked file will repeat forever"));
-    m_cb->SetValue(g_loopPlayFileToMicIn);
+    m_cb->SetValue(g_loopPlayFileToMicIn.load(std::memory_order_relaxed));
 
     // bug: I can't this to align right.....
     wxBoxSizer *sizerTop = new wxBoxSizer(wxHORIZONTAL);
@@ -146,7 +146,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             }
         }
         g_sfPlayFileFromRadio.store(sf_open(soundFile.c_str(), SFM_READ, &sfInfo), std::memory_order_release);
-        g_sfFs = sfInfo.samplerate;
+        g_sfFs.store(sfInfo.samplerate, std::memory_order_release);
         if(g_sfPlayFileFromRadio.load(std::memory_order_acquire) == NULL)
         {
             wxString strErr = sf_strerror(NULL);
@@ -160,7 +160,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         wxWindow * const ctrl = openFileDialog.GetExtraControl();
 
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
-        g_loopPlayFileFromRadio = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
+        g_loopPlayFileFromRadio.store(static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn(), std::memory_order_relaxed);
 
         wxString statusText = "";
         if(extension == wxT("raw")) {
@@ -309,7 +309,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             sfInfo.channels   = 1;
             sfInfo.samplerate = RECORD_FILE_SAMPLE_RATE;
 
-            g_recFromRadioSamples = UINT32_MAX; // record until stopped
+            g_recFromRadioSamples.store(UINT32_MAX, std::memory_order_release); // record until stopped
 
             if (recordDialog.isRawRecording())
             {
