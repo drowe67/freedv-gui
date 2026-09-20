@@ -208,6 +208,20 @@ void TextMessagingTransport::poll()
 
     if (burstFinished)
     {
+        // The transmit thread confirms a burst by clearing this flag. Having
+        // concluded without it, it is not going to, and the flag is what
+        // isTransmitting() reports to the protocol: leaving it set strands the
+        // station silent for ever, unable to acknowledge anything.
+        if (transmitting)
+        {
+            log_warn("Text messaging burst was never confirmed by the transmit thread "
+                     "(%llu ms of audio, held %llu ms); releasing the transmitter",
+                     (unsigned long long)burstMs_,
+                     (unsigned long long)(now - keyedAtMs_));
+            queue.clear();
+            queue.setTransmitting(false);
+        }
+
         unkey();
         return;
     }
