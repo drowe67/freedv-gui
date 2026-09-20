@@ -13,3 +13,4 @@ a.out
 *.marks
 *.AppDir
 *.AppImage
+/text_chat_loopback/
