@@ -632,6 +632,19 @@ void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
     }
 }
 
+AckWait TextMessagingProtocol::ackWait() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    for (const PendingTransmission& pending : outbox_)
+    {
+        if (!pending.expectsAck) continue;
+        return pending.isPing ? AckWait::Ping : AckWait::Message;
+    }
+
+    return AckWait::Nothing;
+}
+
 bool TextMessagingProtocol::isTransmitting() const
 {
     ITextMessagingTransport* transport = nullptr;

@@ -222,7 +222,8 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
     , m_txtStatus(nullptr)
     , m_refreshTimer(this, ID_REFRESH_TIMER)
     , m_transmitControlsDisabled(false)
-    , m_statusIsTransient(false)
+    , m_statusKind(StatusKind::Sticky)
+    , m_lastAckWait(AckWait::Nothing)
 {
     buildControls();
 
@@ -382,15 +383,36 @@ void TextMessagingDialog::refreshFromSession()
     refreshStations();
 }
 
-void TextMessagingDialog::setStatus(const wxString& status, bool transient)
+void TextMessagingDialog::setStatus(const wxString& status, StatusKind kind)
 {
-    m_statusIsTransient = transient && !status.empty();
+    m_statusKind = status.empty() ? StatusKind::Sticky : kind;
     m_txtStatus->SetLabel(status);
 
-    if (uiLogEnabled())
+    if (uiLogEnabled()) log_info("UI: status \"%s\"", (const char*)status.ToUTF8());
+}
+
+// The status line follows the acknowledgement cycle while one is running. It
+// takes precedence over whatever was there: an error from a minute ago is less
+// use than saying what the station is doing now.
+void TextMessagingDialog::updateAckWaitStatus()
+{
+    AckWait wait = TextMessagingSession::instance().protocol().ackWait();
+    if (wait == m_lastAckWait) return;
+
+    m_lastAckWait = wait;
+
+    switch (wait)
     {
-        log_info("UI: status \"%s\"%s", (const char*)status.ToUTF8(),
-                 m_statusIsTransient ? " (clears when the transmitter keys)" : "");
+        case AckWait::Message:
+            setStatus(_("Awaiting message ACK."), StatusKind::AckWait);
+            break;
+        case AckWait::Ping:
+            setStatus(_("Awaiting ping ACK."), StatusKind::AckWait);
+            break;
+        case AckWait::Nothing:
+            // Only our own notice is cleared; anything newer stands.
+            if (m_statusKind == StatusKind::AckWait) setStatus(wxEmptyString);
+            break;
     }
 }
 
@@ -525,7 +547,7 @@ void TextMessagingDialog::send(const std::string& destination)
                       ? _("Broadcast queued.")
                       : wxString::Format(_("Message to %s queued."),
                                          wxString::FromUTF8(destination)),
-                  true);
+                  StatusKind::Queued);
     }
     else
     {
@@ -564,7 +586,7 @@ void TextMessagingDialog::OnPing(wxCommandEvent&)
     else
     {
         setStatus(wxString::Format(_("Ping to %s queued."), wxString::FromUTF8(destination)),
-                  true);
+                  StatusKind::Queued);
     }
 }
 
@@ -612,6 +634,7 @@ void TextMessagingDialog::OnTimer(wxTimerEvent&)
 {
     refreshStations();
     updateTransmitControls();
+    updateAckWaitStatus();
 }
 
 // Nothing may be queued while a burst is on the air: the operator gets the
@@ -627,7 +650,7 @@ void TextMessagingDialog::updateTransmitControls()
 
     // Whatever was queued is on the air now, so a notice saying it is waiting
     // has become a lie. The chat pane's delivery chip carries on from here.
-    if (transmitting && m_statusIsTransient) setStatus(wxEmptyString);
+    if (transmitting && m_statusKind == StatusKind::Queued) setStatus(wxEmptyString);
 
     if (uiLogEnabled())
     {

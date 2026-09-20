@@ -135,6 +135,11 @@ public:
     // the dialog to show that something is still queued.
     size_t pendingCount() const;
 
+    // What we are waiting to hear back, if anything. Reported for the whole
+    // acknowledgement cycle including the retries, so the status line does not
+    // flicker as the message goes back on the air.
+    AckWait ackWait() const;
+
     // True while a burst is actually on the air, ours or the voice keyer's.
     // The chat window disables sending on it, so nothing is queued behind a
     // keyed transmitter.

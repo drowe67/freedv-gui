@@ -121,6 +121,15 @@ constexpr int MAX_MESSAGE_RETRIES = 3;
 constexpr int ACK_TIMEOUT_MILLISECONDS = 15000;
 constexpr int PING_TIMEOUT_MILLISECONDS = 15000;
 
+// What the station is currently waiting to hear back, which is what the chat
+// window's status line reports while an acknowledgement cycle is running.
+enum class AckWait
+{
+    Nothing,
+    Message,
+    Ping,
+};
+
 enum class MessageDirection
 {
     Sent,

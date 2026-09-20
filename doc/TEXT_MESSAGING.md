@@ -30,10 +30,13 @@ says chat.
   acknowledgement timer runs, so progress never appears to go backwards.
 * **Send** and **Send as Broadcast** are disabled while a burst is on the air,
   so nothing is queued behind a keyed transmitter.
-* The status line along the bottom reports what just happened. A notice that
-  something is queued clears itself once the transmitter keys, because from
-  then on the message's own delivery chip says where it is. Errors stay until
-  something replaces them.
+* The status line along the bottom says what the station is doing. A notice
+  that something is queued clears itself once the transmitter keys. While an
+  acknowledgement is outstanding it reads `Awaiting message ACK.` or
+  `Awaiting ping ACK.`, and it keeps saying so across the retries rather than
+  blinking off each time the message goes back on the air. Errors stay until
+  something replaces them, which includes the station having something newer
+  to say about what it is doing.
 * **Send** transmits to the highlighted station and asks for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
   three times, and then marked failed.

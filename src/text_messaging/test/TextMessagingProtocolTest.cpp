@@ -492,6 +492,46 @@ void testNextBurstWaitsForTheFarEndToAnswer()
     CHECK(sender.transport.transmissions.size() == 2);
 }
 
+// The status line asks what we are waiting for, and it has to keep saying so
+// for the whole acknowledgement cycle. Reporting only while the timer runs
+// would blink the notice off every time the message went back on the air.
+void testAckWaitCoversTheWholeCycle()
+{
+    Station sender("W1AW");
+    CHECK(sender.protocol.ackWait() == AckWait::Nothing);
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("Anybody there", "VK3ABC", error));
+    CHECK(sender.protocol.ackWait() == AckWait::Message);
+
+    sender.completeOneTransmission();
+    CHECK(sender.protocol.ackWait() == AckWait::Message);
+
+    // Still a message we are waiting on, part way through the retries.
+    sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.protocol.ackWait() == AckWait::Message);
+
+    for (int attempt = 1; attempt <= MAX_MESSAGE_RETRIES; attempt++)
+    {
+        sender.completeOneTransmission();
+        sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+        sender.protocol.tick();
+    }
+
+    // Given up on: nothing is outstanding, so the status line goes quiet.
+    CHECK(sender.protocol.ackWait() == AckWait::Nothing);
+
+    // A ping is distinguishable, because the window names it separately.
+    CHECK(sender.protocol.sendPing("VK3ABC", error));
+    CHECK(sender.protocol.ackWait() == AckWait::Ping);
+
+    // A broadcast expects nothing back and must not claim otherwise.
+    Station broadcaster("W1AW");
+    CHECK(broadcaster.protocol.sendMessage("CQ", "", error));
+    CHECK(broadcaster.protocol.ackWait() == AckWait::Nothing);
+}
+
 void testSendRequiresCallsign()
 {
     MessageStore store;
@@ -528,6 +568,7 @@ int main()
     testAckWaitDoesNotBlockTheQueue();
     testTurnaroundKeepsStationsOffEachOther();
     testNextBurstWaitsForTheFarEndToAnswer();
+    testAckWaitCoversTheWholeCycle();
     testVoiceTransmissionDefersChat();
     testSendRequiresCallsign();
 
