@@ -107,7 +107,11 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     
     char tmpBuf[RELIABLE_TEXT_FIFO_SIZE];
     memset(tmpBuf, 0, RELIABLE_TEXT_FIFO_SIZE);
-    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE);
+
+    // Copying the full size leaves no room for the terminator, so a callsign
+    // that filled the buffer came out unterminated. OnRadeTextRx_ below has
+    // always reserved the last byte; this does the same.
+    strncpy(tmpBuf, txt_ptr, RELIABLE_TEXT_FIFO_SIZE - 1);
     obj->reliableTextFifo_.write(tmpBuf, RELIABLE_TEXT_FIFO_SIZE);
 
     reliable_text_reset(rt);
