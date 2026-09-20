@@ -35,6 +35,7 @@
 #include "TextMessagingTransport.h"
 
 #include <chrono>
+#include <cstdlib>
 
 #include "TextMessagingModem.h"
 #include "TextMessagingTxQueue.h"
@@ -57,6 +58,16 @@ uint64_t monotonicMs()
         .count();
 }
 
+// Set FREEDV_TEXT_CHAT_TX_LOG to have each burst report how long its audio
+// was and how long the transmitter was actually held, with the milestones in
+// between. A burst that keys for far longer than its audio is the thing to
+// look for: the far end has to wait all of it out before it may answer.
+bool txLogEnabled()
+{
+    static const bool enabled = std::getenv("FREEDV_TEXT_CHAT_TX_LOG") != nullptr;
+    return enabled;
+}
+
 } // namespace
 
 TextMessagingTransport::TextMessagingTransport(TextMessagingModem* modem)
@@ -64,6 +75,9 @@ TextMessagingTransport::TextMessagingTransport(TextMessagingModem* modem)
     , keyed_(false)
     , keyedAtMs_(0)
     , keyDeadlineMs_(0)
+    , burstMs_(0)
+    , sawTransmitting_(false)
+    , sawEmpty_(false)
 {
     // empty
 }
@@ -116,6 +130,17 @@ bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& f
     keyDeadlineMs_ = keyedAtMs_ + burstMs + KEY_TIMEOUT_MARGIN_MS;
     keyed_.store(true, std::memory_order_release);
 
+    burstMs_ = burstMs;
+    sawTransmitting_ = false;
+    sawEmpty_ = false;
+
+    if (txLogEnabled())
+    {
+        log_info("TX: keying for %d %s frame(s), %d samples, %llu ms of audio",
+                 (int)frames.size(), signalling ? "signalling" : "text",
+                 (int)samples_.size(), (unsigned long long)burstMs);
+    }
+
     pttFunction_(true);
 
     return true;
@@ -144,7 +169,24 @@ void TextMessagingTransport::poll()
 
     // The transmit thread sets the transmitting flag when it starts sending
     // and clears it once the sound card has played the last sample out.
-    bool burstFinished = queue.isEmpty() && !queue.isTransmitting();
+    bool transmitting = queue.isTransmitting();
+    bool empty = queue.isEmpty();
+    bool burstFinished = empty && !transmitting;
+
+    if (txLogEnabled())
+    {
+        if (transmitting && !sawTransmitting_)
+        {
+            sawTransmitting_ = true;
+            log_info("TX: +%llu ms transmit thread picked the burst up",
+                     (unsigned long long)(now - keyedAtMs_));
+        }
+        if (empty && !sawEmpty_)
+        {
+            sawEmpty_ = true;
+            log_info("TX: +%llu ms queue drained", (unsigned long long)(now - keyedAtMs_));
+        }
+    }
 
     // Give the transmit thread a moment to pick the burst up before deciding
     // that an empty queue means the burst is over.
@@ -183,6 +225,14 @@ void TextMessagingTransport::unkey()
     }
 
     keyed_.store(false, std::memory_order_release);
+
+    if (txLogEnabled())
+    {
+        uint64_t held = monotonicMs() - keyedAtMs_;
+        log_info("TX: +%llu ms unkey requested (audio was %llu ms, %lld ms of it silence)",
+                 (unsigned long long)held, (unsigned long long)burstMs_,
+                 (long long)held - (long long)burstMs_);
+    }
 
     // Ownership of the transmitter is released by whoever performs the PTT
     // change, once the changeover has actually finished: the transmit thread

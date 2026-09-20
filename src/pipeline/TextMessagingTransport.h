@@ -88,6 +88,14 @@ private:
     std::atomic<bool> keyed_;
     uint64_t keyedAtMs_;
     uint64_t keyDeadlineMs_;
+
+    // Timing of the burst currently on the air, for FREEDV_TEXT_CHAT_TX_LOG.
+    // The transmit queue's flags are read from the realtime thread and must
+    // not be logged there, so poll() watches them from the session thread and
+    // reports the transitions it sees.
+    uint64_t burstMs_;
+    bool sawTransmitting_;
+    bool sawEmpty_;
 };
 
 #endif // AUDIO_PIPELINE__TEXT_MESSAGING_TRANSPORT_H
