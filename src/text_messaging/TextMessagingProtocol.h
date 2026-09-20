@@ -163,6 +163,7 @@ private:
         std::string destination;
         int retries = 0;
         uint64_t deadlineMs = 0;
+        uint64_t sentAtMs = 0;   // end of our burst, for the reply window
         TransmissionState state = TransmissionState::Queued;
     };
 
@@ -205,6 +206,7 @@ private:
     // Holds the transmitter off until the far end has had its turn. Never
     // shortens a wait that is already running.
     void deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs);
+    uint64_t quietUntilLocked() const;
     uint32_t turnaroundJitterLocked(int jitterMs);
     void serviceOutboxLocked(uint64_t nowMs, std::vector<PendingEvent>& events);
     uint16_t nextAirIdLocked();

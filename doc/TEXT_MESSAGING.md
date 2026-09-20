@@ -61,6 +61,14 @@ change that arrived for a message not currently in the view. That last one is
 the silent failure behind a chip that never updates. `test/test_text_chat_loopback.sh`
 sets it for both stations.
 
+Transmissions are spaced out rather than sent the moment they are ready. A
+half duplex station hears nothing while it is keyed, so replying the instant a
+burst decodes, or starting the next burst the instant our own ends, talks over
+the other station. Every transmission therefore waits out a turnaround, and a
+message that asked for an acknowledgement waits longer still: the far end has
+its own turnaround to serve before it can even begin the reply. That longer
+wait ends as soon as the acknowledgement arrives.
+
 ## How it works on the air
 
 Text messaging does not travel inside RADE. It uses the codec2 raw data

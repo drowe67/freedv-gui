@@ -535,6 +535,61 @@ void testAckWaitCoversTheWholeCycle()
     CHECK(broadcaster.protocol.ackWait() == AckWait::Nothing);
 }
 
+// The collision the bench caught: a station finished a message at 14:29:23,
+// the far end began acknowledging it at 14:29:24, and the station keyed again
+// at 14:29:25 and never heard the reply. A burst that asked for an
+// acknowledgement has to leave room for a whole burst coming back, not just
+// for our own changeover.
+void testAWaitedReplyOutlastsThePlainTurnaround()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("needs an ack", "VK3ABC", error));
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    // Something else the operator queued while the reply is outstanding.
+    CHECK(sender.protocol.sendPing("VK3ABC", error));
+
+    // Past the wait a reply-free burst would have earned, and this is exactly
+    // where the far end is mid-acknowledgement.
+    sender.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    // Once the reply has had its chance, the queue moves again.
+    sender.nowMs += REPLY_WINDOW_MILLISECONDS;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 2);
+}
+
+// The window is room for a reply, not a fixed delay: once the acknowledgement
+// is in, the transmitter is free as soon as the ordinary turnaround is up.
+void testTheWindowEndsWhenTheReplyArrives()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("needs an ack", "VK3ABC", error));
+    sender.completeOneTransmission();
+
+    receiver.receiveFrom(sender.transport);
+    receiver.completeOneTransmission();
+    sender.receiveFrom(receiver.transport);
+
+    CHECK(sender.protocol.pendingCount() == 0);
+
+    // Nothing is outstanding now, so the ordinary turnaround is all that
+    // stands between us and the next burst. Were the window still running it
+    // would take REPLY_WINDOW_MILLISECONDS, which is far longer than this.
+    CHECK(sender.protocol.sendPing("VK3ABC", error));
+    sender.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 2);
+}
+
 void testSendRequiresCallsign()
 {
     MessageStore store;
@@ -571,6 +626,8 @@ int main()
     testAckWaitDoesNotBlockTheQueue();
     testTurnaroundKeepsStationsOffEachOther();
     testNextBurstWaitsForTheFarEndToAnswer();
+    testAWaitedReplyOutlastsThePlainTurnaround();
+    testTheWindowEndsWhenTheReplyArrives();
     testAckWaitCoversTheWholeCycle();
     testVoiceTransmissionDefersChat();
     testSendRequiresCallsign();

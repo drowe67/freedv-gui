@@ -104,8 +104,22 @@ constexpr int PACKED_CALLSIGN_BYTES = 6;
 //
 // Every transmission therefore waits out a turnaround, measured from the last
 // thing we heard and from the end of our own last burst.
-constexpr int TURNAROUND_AFTER_RX_MILLISECONDS = 500;
+// Measured from the last frame we decoded, which is not the same as the far
+// end going quiet: its postamble, end of over and audio drain all follow the
+// last frame we could read. This has to outlast that tail.
+constexpr int TURNAROUND_AFTER_RX_MILLISECONDS = 1500;
+
+// For a burst nobody is expected to answer.
 constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
+
+// For a burst that asked for an acknowledgement. The far end waits out its own
+// turnaround and then sends a burst of its own, so a wait sized for our
+// changeover alone is far too short: on the bench a station finished a message
+// at 14:29:23, the far end began acknowledging it at 14:29:24, and we keyed
+// over the top of it at 14:29:25 and lost the reply. The window ends early
+// anyway when the acknowledgement arrives, because the entry waiting on it is
+// removed from the outbox.
+constexpr int REPLY_WINDOW_MILLISECONDS = 5000;
 
 // Two stations that back off by exactly the same amount collide again on the
 // retry, so the wait after our own burst carries jitter. It is drawn from the
@@ -113,7 +127,7 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
 // decorrelating any two of them.
 constexpr int TURNAROUND_JITTER_MILLISECONDS = 1000;
 constexpr int MAX_TURNAROUND_MILLISECONDS =
-    TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS;
+    REPLY_WINDOW_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS;
 
 // Retry policy for addressed messages. Timeout is measured from the end of our
 // transmission to the arrival of the acknowledgement.

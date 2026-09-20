@@ -664,6 +664,26 @@ bool TextMessagingProtocol::isTransmitting() const
     return transport != nullptr && transport->isTransmitting();
 }
 
+// When the transmitter may next be used. Beyond the plain turnaround, a
+// message we have sent and not yet had answered buys the far end room to
+// answer it: it waits out its own turnaround first and then sends a whole
+// burst, none of which we can hear while keyed. The window disappears by
+// itself when the acknowledgement arrives, because the entry goes with it.
+uint64_t TextMessagingProtocol::quietUntilLocked() const
+{
+    uint64_t quietUntil = quietUntilMs_;
+
+    for (const PendingTransmission& pending : outbox_)
+    {
+        if (pending.state != TransmissionState::AwaitingAck) continue;
+
+        uint64_t replyBy = pending.sentAtMs + (uint64_t)REPLY_WINDOW_MILLISECONDS;
+        if (replyBy > quietUntil) quietUntil = replyBy;
+    }
+
+    return quietUntil;
+}
+
 void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
 {
     uint64_t until = nowMs + (uint64_t)baseMs + turnaroundJitterLocked(jitterMs);
@@ -711,9 +731,10 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
             PendingTransmission& sent = outbox_[i];
             if (sent.state != TransmissionState::Transmitting) continue;
 
-            // Whatever we just sent, the far end may be about to answer it.
             deferTransmissionLocked(nowMs, TURNAROUND_AFTER_TX_MILLISECONDS,
                                     TURNAROUND_JITTER_MILLISECONDS);
+
+            sent.sentAtMs = nowMs;
 
             if (sent.expectsAck)
             {
@@ -733,7 +754,7 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
         // The turnaround is the far end's turn; anything queued waits it out.
         // Only the start of a burst is held back -- the acknowledgement timers
         // below keep running, so a retry is never late because of it.
-        if (nowMs >= quietUntilMs_)
+        if (nowMs >= quietUntilLocked())
         {
             for (size_t i = 0; i < outbox_.size(); i++)
             {
