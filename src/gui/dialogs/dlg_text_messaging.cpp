@@ -222,6 +222,7 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
     , m_txtStatus(nullptr)
     , m_refreshTimer(this, ID_REFRESH_TIMER)
     , m_transmitControlsDisabled(false)
+    , m_statusIsTransient(false)
 {
     buildControls();
 
@@ -381,9 +382,16 @@ void TextMessagingDialog::refreshFromSession()
     refreshStations();
 }
 
-void TextMessagingDialog::setStatus(const wxString& status)
+void TextMessagingDialog::setStatus(const wxString& status, bool transient)
 {
+    m_statusIsTransient = transient && !status.empty();
     m_txtStatus->SetLabel(status);
+
+    if (uiLogEnabled())
+    {
+        log_info("UI: status \"%s\"%s", (const char*)status.ToUTF8(),
+                 m_statusIsTransient ? " (clears when the transmitter keys)" : "");
+    }
 }
 
 void TextMessagingDialog::appendMessage(const TextMessage& message)
@@ -516,7 +524,8 @@ void TextMessagingDialog::send(const std::string& destination)
         setStatus(destination.empty()
                       ? _("Broadcast queued.")
                       : wxString::Format(_("Message to %s queued."),
-                                         wxString::FromUTF8(destination)));
+                                         wxString::FromUTF8(destination)),
+                  true);
     }
     else
     {
@@ -554,7 +563,8 @@ void TextMessagingDialog::OnPing(wxCommandEvent&)
     }
     else
     {
-        setStatus(wxString::Format(_("Ping to %s queued."), wxString::FromUTF8(destination)));
+        setStatus(wxString::Format(_("Ping to %s queued."), wxString::FromUTF8(destination)),
+                  true);
     }
 }
 
@@ -614,6 +624,10 @@ void TextMessagingDialog::updateTransmitControls()
     m_transmitControlsDisabled = transmitting;
     m_btnSend->Enable(!transmitting);
     m_btnBroadcast->Enable(!transmitting);
+
+    // Whatever was queued is on the air now, so a notice saying it is waiting
+    // has become a lie. The chat pane's delivery chip carries on from here.
+    if (transmitting && m_statusIsTransient) setStatus(wxEmptyString);
 
     if (uiLogEnabled())
     {

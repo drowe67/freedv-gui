@@ -30,6 +30,10 @@ says chat.
   acknowledgement timer runs, so progress never appears to go backwards.
 * **Send** and **Send as Broadcast** are disabled while a burst is on the air,
   so nothing is queued behind a keyed transmitter.
+* The status line along the bottom reports what just happened. A notice that
+  something is queued clears itself once the transmitter keys, because from
+  then on the message's own delivery chip says where it is. Errors stay until
+  something replaces them.
 * **Send** transmits to the highlighted station and asks for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
   three times, and then marked failed.

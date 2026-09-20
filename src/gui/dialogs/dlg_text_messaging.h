@@ -87,11 +87,16 @@ private:
     Palette palette() const;
     void renderChat();
     void refreshStations();
-    void setStatus(const wxString& status);
     std::string selectedCallsign() const;
     void send(const std::string& destination);
     void appendMessage(const TextMessaging::TextMessage& message);
     void updateTransmitControls();
+
+    // A transient notice describes something that is only true for a moment,
+    // such as traffic sitting in the queue. It is cleared once the
+    // transmitter keys, because by then it is describing the past. Errors and
+    // standing notices are not transient and stay until replaced.
+    void setStatus(const wxString& status, bool transient = false);
 
     void OnSend(wxCommandEvent& event);
     void OnBroadcast(wxCommandEvent& event);
@@ -116,6 +121,7 @@ private:
     // Remembered so the one second timer only touches the buttons when the
     // transmitter's state actually changes, rather than on every tick.
     bool m_transmitControlsDisabled;
+    bool m_statusIsTransient;
 
     std::vector<TextMessaging::TextMessage> m_messages;
 };
