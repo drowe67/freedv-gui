@@ -91,6 +91,7 @@ private:
     std::string selectedCallsign() const;
     void send(const std::string& destination);
     void appendMessage(const TextMessaging::TextMessage& message);
+    void updateTransmitControls();
 
     void OnSend(wxCommandEvent& event);
     void OnBroadcast(wxCommandEvent& event);
@@ -111,6 +112,10 @@ private:
     wxCheckBox* m_chkAutoReply;
     wxStaticText* m_txtStatus;
     wxTimer m_refreshTimer;
+
+    // Remembered so the one second timer only touches the buttons when the
+    // transmitter's state actually changes, rather than on every tick.
+    bool m_transmitControlsDisabled;
 
     std::vector<TextMessaging::TextMessage> m_messages;
 };

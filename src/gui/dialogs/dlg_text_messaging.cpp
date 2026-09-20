@@ -138,8 +138,20 @@ DeliveryChip deliveryChip(const TextMessage& message)
             background = "#7F8C8D";
             break;
         case MessageStatus::Transmitting:
-            label = _("SENDING");
-            background = "#2980B9";
+            // Only the first attempt is plain SENDING. A retransmission keeps
+            // its retry number, or the chip appears to go backwards every time
+            // the message returns to the air.
+            if (message.retryCount > 0)
+            {
+                label = wxString::Format(_("RETRY #%d"), message.retryCount);
+                background = "#F1C40F";
+                foreground = "#000000";
+            }
+            else
+            {
+                label = _("SENDING");
+                background = "#2980B9";
+            }
             break;
         case MessageStatus::AwaitingAck:
             // A retried message goes back to awaiting an acknowledgement, so
@@ -209,6 +221,7 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
     , m_chkAutoReply(nullptr)
     , m_txtStatus(nullptr)
     , m_refreshTimer(this, ID_REFRESH_TIMER)
+    , m_transmitControlsDisabled(false)
 {
     buildControls();
 
@@ -514,6 +527,7 @@ void TextMessagingDialog::send(const std::string& destination)
 void TextMessagingDialog::OnSend(wxCommandEvent&)
 {
     send(selectedCallsign());
+    updateTransmitControls();
 }
 
 void TextMessagingDialog::OnBroadcast(wxCommandEvent&)
@@ -525,6 +539,7 @@ void TextMessagingDialog::OnBroadcast(wxCommandEvent&)
     m_btnPing->Enable(false);
 
     send("");
+    updateTransmitControls();
 }
 
 void TextMessagingDialog::OnPing(wxCommandEvent&)
@@ -586,6 +601,25 @@ void TextMessagingDialog::OnEntryKeyDown(wxKeyEvent& event)
 void TextMessagingDialog::OnTimer(wxTimerEvent&)
 {
     refreshStations();
+    updateTransmitControls();
+}
+
+// Nothing may be queued while a burst is on the air: the operator gets the
+// transmitter back when it is actually free.
+void TextMessagingDialog::updateTransmitControls()
+{
+    bool transmitting = TextMessagingSession::instance().protocol().isTransmitting();
+    if (transmitting == m_transmitControlsDisabled) return;
+
+    m_transmitControlsDisabled = transmitting;
+    m_btnSend->Enable(!transmitting);
+    m_btnBroadcast->Enable(!transmitting);
+
+    if (uiLogEnabled())
+    {
+        log_info("UI: send buttons %s", transmitting ? "disabled, transmitter keyed"
+                                                     : "enabled, transmitter free");
+    }
 }
 
 void TextMessagingDialog::OnClose(wxCloseEvent&)

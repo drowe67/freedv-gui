@@ -632,6 +632,19 @@ void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
     }
 }
 
+bool TextMessagingProtocol::isTransmitting() const
+{
+    ITextMessagingTransport* transport = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        transport = transport_;
+    }
+
+    // Asked outside the lock: the transport reaches into the audio pipeline,
+    // which has no business waiting on the protocol's mutex.
+    return transport != nullptr && transport->isTransmitting();
+}
+
 void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
 {
     uint64_t until = nowMs + (uint64_t)baseMs + turnaroundJitterLocked(jitterMs);

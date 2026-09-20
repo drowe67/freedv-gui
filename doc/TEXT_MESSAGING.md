@@ -24,8 +24,12 @@ says chat.
   light blue background; messages received are on the left, prefixed with the
   sender's callsign. Under each message is the time on the left and, for your
   own messages, a delivery chip on the right: `SENDING`, `SENT`, `RETRY #n`
-  (yellow, and it keeps showing which attempt is outstanding while the
-  acknowledgement timer runs), `OK` (green) or `NO ACK` (red).
+  (yellow), `OK` (green) or `NO ACK` (red). `SENDING` belongs to the first
+  attempt alone; once a message has been retried the chip keeps its retry
+  number for the whole of that attempt, on the air and while the
+  acknowledgement timer runs, so progress never appears to go backwards.
+* **Send** and **Send as Broadcast** are disabled while a burst is on the air,
+  so nothing is queued behind a keyed transmitter.
 * **Send** transmits to the highlighted station and asks for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
   three times, and then marked failed.

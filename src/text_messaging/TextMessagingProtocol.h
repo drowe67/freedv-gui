@@ -135,6 +135,11 @@ public:
     // the dialog to show that something is still queued.
     size_t pendingCount() const;
 
+    // True while a burst is actually on the air, ours or the voice keyer's.
+    // The chat window disables sending on it, so nothing is queued behind a
+    // keyed transmitter.
+    bool isTransmitting() const;
+
 private:
     enum class TransmissionState
     {
