@@ -110,6 +110,40 @@ extern std::atomic<bool> g_recFileFromDecoder;
 extern std::atomic<bool> g_recFileFromMic;
 extern std::atomic<bool> g_recVoiceKeyerFile;
 
+extern unsigned int g_recFromRadioSamples;
+extern std::atomic<bool> g_playFileFromRadio;
+extern int g_sfFs;
+extern std::atomic<bool>     g_totBeepActive;
+extern bool g_loopPlayFileFromRadio;
+extern GenericFIFO<float> g_avmag;
+extern std::atomic<int> g_State;
+extern std::atomic<float> g_RxFreqOffsetHz;
+extern float g_sig_pwr_av;
+extern std::atomic<bool> g_voice_keyer_tx;
+extern std::atomic<bool> g_eoo_enqueued;
+extern std::atomic<bool> g_agcEnabled;
+
+#include "../freedv_interface.h"
+extern FreeDVInterface freedvInterface;
+
+#include <wx/wx.h>
+#include "../main.h"
+extern wxWindow* g_parent;
+
+static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
+{
+    // Note: wxWidgets implementation of wxGetApp() only returns the App object
+    // and performs no other tasks. Verified RT safe as of wxWidgets version 3.3.1.
+    FREEDV_BEGIN_VERIFIED_SAFE
+    return wxGetApp();
+    FREEDV_END_VERIFIED_SAFE
+}
+
+#include <sndfile.h>
+extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
+extern std::atomic<bool>                g_recFileFromModulator;
+
 #include "sox_biquad.h"
 
 void TxRxThread::initializePipeline_()
