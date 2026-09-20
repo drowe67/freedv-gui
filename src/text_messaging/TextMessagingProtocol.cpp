@@ -633,69 +633,90 @@ void TextMessagingProtocol::tick()
         uint64_t nowMs = monotonicMs_();
         purgeStaleReassembliesLocked(nowMs);
 
-        if (!outbox_.empty() && transport_ != nullptr)
-        {
-            PendingTransmission& head = outbox_.front();
-            bool transmitting = transport_->isTransmitting();
-
-            switch (head.state)
-            {
-                case TransmissionState::Queued:
-                    // Voice always wins the transmitter; the message waits.
-                    if (!transmitting && transport_->transmit(head.frames, head.signalling))
-                    {
-                        head.state = TransmissionState::Transmitting;
-                        updateStatusLocked(head, MessageStatus::Transmitting, events);
-                    }
-                    break;
-
-                case TransmissionState::Transmitting:
-                    if (transmitting) break;
-
-                    if (head.expectsAck)
-                    {
-                        head.state = TransmissionState::AwaitingAck;
-                        head.deadlineMs = nowMs + (uint64_t)(head.isPing
-                                                                 ? PING_TIMEOUT_MILLISECONDS
-                                                                 : ACK_TIMEOUT_MILLISECONDS);
-                        updateStatusLocked(head, MessageStatus::AwaitingAck, events);
-                    }
-                    else
-                    {
-                        updateStatusLocked(head, MessageStatus::Sent, events);
-                        outbox_.pop_front();
-                    }
-                    break;
-
-                case TransmissionState::AwaitingAck:
-                    if (nowMs < head.deadlineMs) break;
-
-                    // A ping gets one chance; a message gets the retries the
-                    // operator can see counting up in the chat window.
-                    if (!head.isPing && head.retries < MAX_MESSAGE_RETRIES)
-                    {
-                        head.retries++;
-                        head.state = TransmissionState::Queued;
-                        updateStatusLocked(head, MessageStatus::Retrying, events);
-                    }
-                    else
-                    {
-                        if (head.isPing)
-                        {
-                            addSystemMessageLocked(
-                                head.destination + " : no response to PING", head.destination,
-                                events);
-                        }
-
-                        updateStatusLocked(head, MessageStatus::Failed, events);
-                        outbox_.pop_front();
-                    }
-                    break;
-            }
-        }
+        if (transport_ != nullptr && !outbox_.empty()) serviceOutboxLocked(nowMs, events);
     }
 
     deliver(events);
+}
+
+void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
+                                                std::vector<PendingEvent>& events)
+{
+    // Voice always wins the transmitter, and only one burst is on the air at a
+    // time. A transmission parked on its acknowledgement timer does not count:
+    // the transmitter is idle for the whole of that wait, so the traffic queued
+    // behind it keeps moving, and handleAckLocked matches an acknowledgement to
+    // any entry rather than just the first.
+    if (!transport_->isTransmitting())
+    {
+        // The burst we handed to the transport has finished. Acknowledgements
+        // push to the front, so it is not necessarily the first entry.
+        for (size_t i = 0; i < outbox_.size(); i++)
+        {
+            PendingTransmission& sent = outbox_[i];
+            if (sent.state != TransmissionState::Transmitting) continue;
+
+            if (sent.expectsAck)
+            {
+                sent.state = TransmissionState::AwaitingAck;
+                sent.deadlineMs = nowMs + (uint64_t)(sent.isPing ? PING_TIMEOUT_MILLISECONDS
+                                                                 : ACK_TIMEOUT_MILLISECONDS);
+                updateStatusLocked(sent, MessageStatus::AwaitingAck, events);
+            }
+            else
+            {
+                updateStatusLocked(sent, MessageStatus::Sent, events);
+                outbox_.erase(outbox_.begin() + (std::ptrdiff_t)i);
+            }
+            break;
+        }
+
+        for (size_t i = 0; i < outbox_.size(); i++)
+        {
+            PendingTransmission& next = outbox_[i];
+            if (next.state != TransmissionState::Queued) continue;
+
+            if (transport_->transmit(next.frames, next.signalling))
+            {
+                next.state = TransmissionState::Transmitting;
+                updateStatusLocked(next, MessageStatus::Transmitting, events);
+            }
+            break;
+        }
+    }
+
+    // Expired acknowledgement timers, checked even while keying so that a
+    // message gets no extra grace just because something else is on the air.
+    // A ping gets one chance; a message gets the retries the operator can see
+    // counting up in the chat window, and goes back to the queue to wait its
+    // turn like any other transmission.
+    for (size_t i = 0; i < outbox_.size();)
+    {
+        PendingTransmission& waiting = outbox_[i];
+        if (waiting.state != TransmissionState::AwaitingAck || nowMs < waiting.deadlineMs)
+        {
+            i++;
+            continue;
+        }
+
+        if (!waiting.isPing && waiting.retries < MAX_MESSAGE_RETRIES)
+        {
+            waiting.retries++;
+            waiting.state = TransmissionState::Queued;
+            updateStatusLocked(waiting, MessageStatus::Retrying, events);
+            i++;
+            continue;
+        }
+
+        if (waiting.isPing)
+        {
+            addSystemMessageLocked(waiting.destination + " : no response to PING",
+                                   waiting.destination, events);
+        }
+
+        updateStatusLocked(waiting, MessageStatus::Failed, events);
+        outbox_.erase(outbox_.begin() + (std::ptrdiff_t)i);
+    }
 }
 
 void TextMessagingProtocol::deliver(const std::vector<PendingEvent>& events)

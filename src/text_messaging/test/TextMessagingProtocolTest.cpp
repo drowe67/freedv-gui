@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 
+#include "../FrameCodec.h"
 #include "../HeardStationList.h"
 #include "../MessageStore.h"
 #include "../TextMessagingProtocol.h"
@@ -376,6 +377,58 @@ void testAutoReplyCanBeDisabled()
     CHECK(receiver.protocol.pendingCount() == 0);
 }
 
+// A transmission parked on its acknowledgement timer leaves the transmitter
+// idle, so the traffic queued behind it has to keep moving. Before this was
+// fixed, one unanswered message stalled the whole outbox for the entire retry
+// cycle, and the operator's next message or ping simply never went out.
+void testAckWaitDoesNotBlockTheQueue()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("First", "VK3ABC", error));
+    sender.transport.completeOneTransmission(sender.protocol);
+
+    int64_t firstId = sender.observer.added[0].id;
+    const TextMessage* update = sender.observer.lastUpdateFor(firstId);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+
+    // Queued while the first message is still waiting to be acknowledged.
+    CHECK(sender.protocol.sendMessage("Second", "VK3ABC", error));
+    sender.transport.completeOneTransmission(sender.protocol);
+    CHECK(sender.transport.transmissions.size() == 2);
+    CHECK(sender.protocol.pendingCount() == 2);
+
+    int64_t secondId = sender.observer.added[1].id;
+    uint16_t secondAirId = sender.observer.added[1].airId;
+    update = sender.observer.lastUpdateFor(secondId);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+
+    // The second message is acknowledged first. It sits behind the first one
+    // in the queue, and the acknowledgement has to find it there and leave the
+    // other message's retry timer running.
+    Frame ack;
+    ack.type = FrameType::MessageAck;
+    ack.originCallsign = "VK3ABC";
+    ack.originCrc = FrameCodec::callsignCrc24("VK3ABC");
+    ack.destinationCrc = FrameCodec::callsignCrc24("W1AW");
+    ack.airId = secondAirId;
+    sender.protocol.onFrameReceived(ack, 5.0f);
+
+    update = sender.observer.lastUpdateFor(secondId);
+    CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
+    CHECK(sender.protocol.pendingCount() == 1);
+
+    update = sender.observer.lastUpdateFor(firstId);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+
+    // The unacknowledged one still retries on its own timer.
+    sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+    sender.protocol.tick();
+    update = sender.observer.lastUpdateFor(firstId);
+    CHECK(update != nullptr && update->status == MessageStatus::Retrying);
+}
+
 void testVoiceTransmissionDefersChat()
 {
     Station sender("W1AW");
@@ -425,6 +478,7 @@ int main()
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();
+    testAckWaitDoesNotBlockTheQueue();
     testVoiceTransmissionDefersChat();
     testSendRequiresCallsign();
 

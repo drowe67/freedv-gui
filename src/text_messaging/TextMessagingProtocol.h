@@ -191,6 +191,7 @@ private:
     void updateStatusLocked(PendingTransmission& pending, MessageStatus status,
                             std::vector<PendingEvent>& events);
     void purgeStaleReassembliesLocked(uint64_t nowMs);
+    void serviceOutboxLocked(uint64_t nowMs, std::vector<PendingEvent>& events);
     uint16_t nextAirIdLocked();
     Frame makeFrameLocked(FrameType type, const std::string& destination, uint16_t airId,
                           uint8_t fragmentIndex, uint8_t fragmentCount,
