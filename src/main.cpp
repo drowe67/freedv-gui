@@ -156,8 +156,8 @@ extern std::atomic<bool>                g_playFileToMicIn;
 extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
 
-extern SNDFILE            *g_sfRecFile;
-extern bool                g_recFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<bool>     g_recFileFromRadio;
 extern std::atomic<unsigned int> g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 extern int                 g_recFileFromDecoderEventId;
@@ -177,8 +177,8 @@ extern std::atomic<SNDFILE*> g_sfRecMicFile;
 extern std::atomic<bool>   g_recFileFromMic;
 extern std::atomic<bool>   g_recVoiceKeyerFile;
 
-extern SNDFILE* g_sfRecDecoderFile;
-extern bool g_recFileFromDecoder;
+extern std::atomic<SNDFILE*> g_sfRecDecoderFile;
+extern std::atomic<bool>     g_recFileFromDecoder;
 
 wxWindow           *g_parent;
 
@@ -488,10 +488,10 @@ void MainApp::UnitTest_()
             } 
         }
 
-        if (g_recFileFromDecoder)
+        if (g_recFileFromDecoder.load(std::memory_order_acquire))
         {
             g_recFileFromDecoder = false;
-            sf_close(g_sfRecDecoderFile);
+            sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
         }
     }
     
@@ -1615,15 +1615,22 @@ MainFrame::~MainFrame()
         sf_close(playFile);
         g_sfPlayFile.store(NULL, std::memory_order_release);
     }
-    if (g_sfRecFile != NULL)
+    auto recFile = g_sfRecFile.load(std::memory_order_acquire);
+    auto recFileFromModulator = g_sfRecFileFromModulator.load(std::memory_order_acquire);
+    if (recFile != NULL)
     {
-        sf_close(g_sfRecFile);
+        sf_close(recFile);
         g_sfRecFile = NULL;
     }
-    if (g_sfRecFileFromModulator != NULL)
+    if (recFileFromModulator != NULL && recFileFromModulator != recFile)
     {
-        sf_close(g_sfRecFileFromModulator);
+        sf_close(recFileFromModulator);
         g_sfRecFileFromModulator = NULL;
+    }
+    if (g_sfRecDecoderFile.load(std::memory_order_acquire) != NULL)
+    {
+        sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
+        g_sfRecDecoderFile = NULL;
     }
 #ifdef _USE_TIMER
     if(m_pskReporterTimer.IsRunning())

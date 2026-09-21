@@ -91,6 +91,7 @@ extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
+extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
@@ -100,15 +101,19 @@ extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
 extern int g_resyncs;
-extern bool g_recFileFromRadio;
+extern std::atomic<bool> g_recFileFromRadio;
 extern std::atomic<unsigned int> g_recFromRadioSamples;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
+extern std::atomic<SNDFILE*> g_sfRecDecoderFile;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
+extern std::atomic<bool> g_recFileFromDecoder;
+extern std::atomic<bool> g_recFileFromMic;
+extern std::atomic<bool> g_recVoiceKeyerFile;
+
 extern std::atomic<bool> g_playFileFromRadio;
 extern std::atomic<int> g_sfFs;
 extern std::atomic<bool>     g_totBeepActive;
-extern std::atomic<bool> g_loopPlayFileFromRadio;
-extern int g_SquelchActive;
-extern float g_SquelchLevel;
-extern std::atomic<float> g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<float> g_RxFreqOffsetHz;
@@ -116,6 +121,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<float> g_tone_phase;
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
@@ -137,14 +143,6 @@ static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
 extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE* g_sfRecFile;
-extern std::atomic<SNDFILE*> g_sfRecMicFile;
-extern SNDFILE* g_sfRecDecoderFile;
-extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
-
-extern std::atomic<bool> g_recFileFromMic;
-extern std::atomic<bool> g_recVoiceKeyerFile;
-extern bool g_recFileFromDecoder;
 
 #include "sox_biquad.h"
 
@@ -325,7 +323,7 @@ void TxRxThread::initializePipeline_()
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
-            []() { return g_sfRecFile; }, 
+            []() { return g_sfRecFile.load(std::memory_order_acquire); }, 
             [](int numSamples) {
                 g_recFromRadioSamples.fetch_sub(numSamples, std::memory_order_relaxed);
                 if (g_recFromRadioSamples.load(std::memory_order_relaxed) <= 0)
@@ -342,7 +340,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_recFileFromRadio && (g_sfRecFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_recFileFromRadio.load(std::memory_order_acquire) && (g_sfRecFile.load(std::memory_order_acquire) != NULL); },
             recordRadioTap,
             bypassRecordRadio
         );
@@ -522,21 +520,21 @@ void TxRxThread::initializePipeline_()
 
         // Record from decoder step (optional)
         auto recordDecoderStep = new RecordStep(
-            outputSampleRate_, 
-            []() { return g_sfRecDecoderFile; }, 
+            RECORD_FILE_SAMPLE_RATE, 
+            []() { return g_sfRecDecoderFile.load(std::memory_order_acquire); }, 
             [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
             }
         );
-        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, recordDecoderStep->getOutputSampleRate());
         recordDecoderPipeline->appendPipelineStep(recordDecoderStep);
         
         auto recordDecoderTap = new TapStep(outputSampleRate_, recordDecoderPipeline);
         auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordDecoder = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder) && (g_sfRecDecoderFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder.load(std::memory_order_acquire)) && (g_sfRecDecoderFile.load(std::memory_order_acquire) != NULL); },
             recordDecoderTap,
             bypassRecordDecoder
         );

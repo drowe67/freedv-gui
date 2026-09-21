@@ -147,12 +147,12 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     # the RADE decode landed at ~5-6 dB SNR -- right on the decode cliff --
     # so rade_reporting_awgn failed intermittently on the non-sanitizer
     # Linux legs (masked, but not always, by ctest --repeat until-pass:2).
-    # --No -19 gives ~1 dB of headroom while still being a genuinely noisy
+    # --No -20 gives ~2 dB of headroom while still being a genuinely noisy
     # channel.
     if [ "$2" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     elif [ "$2" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -19 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -20 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
