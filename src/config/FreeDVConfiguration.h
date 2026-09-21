@@ -23,6 +23,7 @@
 #define FREEDV_CONFIGURATION_H
 
 #include <inttypes.h>
+#include <array>
 #include <wx/string.h>
 #include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
@@ -48,6 +49,25 @@ public:
     ConfigurationDataElement<long> mainWindowTop;
     ConfigurationDataElement<long> mainWindowWidth;
     ConfigurationDataElement<long> mainWindowHeight;
+
+    ConfigurationDataElement<bool> darkMode;
+
+    ConfigurationDataElement<bool> independentWorkspace;
+    ConfigurationDataElement<bool> independentVisibilitySaved;
+    ConfigurationDataElement<long> independentWindowLeft;
+    ConfigurationDataElement<long> independentWindowTop;
+    ConfigurationDataElement<long> independentWindowWidth;
+    ConfigurationDataElement<long> independentWindowHeight;
+
+    struct IndependentDisplayConfiguration
+    {
+        ConfigurationDataElement<long> left;
+        ConfigurationDataElement<long> top;
+        ConfigurationDataElement<long> width;
+        ConfigurationDataElement<long> height;
+        ConfigurationDataElement<bool> visible;
+    };
+    std::array<IndependentDisplayConfiguration, 6> independentDisplays;
 
     ConfigurationDataElement<long> audioConfigWindowLeft;
     ConfigurationDataElement<long> audioConfigWindowTop;

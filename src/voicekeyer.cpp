@@ -32,7 +32,7 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         // Switch back to previous tab once done with recording
         if (wxGetApp().appConfiguration.currentNotebookTab >= 0)
         {
-            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+            displayWorkspace_.RestoreAfterMic(wxGetApp().appConfiguration.currentNotebookTab);
         }
     }
     else
@@ -128,21 +128,8 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     
     // Switch tab to "From Mic" during recording.
     // Save currently visible plot so we can go back to it on completion.
-    wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
-
-    // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
-    // the current page ourselves is a better bet.
-    size_t index = 0;
-    for (; index < m_auiNbookCtrl->GetPageCount(); index++)
-    {
-        auto page = m_auiNbookCtrl->GetPage(index);
-        if (page == (wxWindow *)m_panelSpeechIn)
-        {
-            m_auiNbookCtrl->ChangeSelection(index);
-            page->Refresh();
-            break;
-        }
-    }
+    wxGetApp().appConfiguration.currentNotebookTab = displayWorkspace_.CaptureMicReturnPage();
+    displayWorkspace_.ShowDisplay(DisplayId::FrmMic);
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);

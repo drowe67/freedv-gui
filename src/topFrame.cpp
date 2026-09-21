@@ -20,6 +20,8 @@
 //
 //==========================================================================
 
+#include "gui/util/DpiUtils.h"
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -27,9 +29,12 @@
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
 #include <wx/numformatter.h>
+#include <wx/datetime.h>
 
 #include "topFrame.h"
 #include "defines.h"
+#include "gui/theme/FreeDVTheme.h"
+
 
 #if !wxCHECK_VERSION(3, 3, 0)
 #include <set>
@@ -528,6 +533,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_panel = new wxPanel(this);
 
+    FreeDVTheme::ApplyWindowSurface(*this);
+    FreeDVTheme::ApplyWindowSurface(*m_panel);
+
     wxBoxSizer* bSizer1;
     bSizer1 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -539,12 +547,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     wxStaticBoxSizer* snrSizer;
     wxStaticBox* snrBox = new wxStaticBox(m_panel, wxID_ANY, _("SNR"), wxDefaultPosition, wxSize(100,-1));
+    snrBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     snrSizer = new wxStaticBoxSizer(snrBox, wxVERTICAL);
 
     //------------------------------
     // S/N ratio Gauge (vert. bargraph)
     //------------------------------
-    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 45, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
+    m_gaugeSNR = new LevelGauge(snrBox, wxID_ANY, 45, wxDefaultPosition, wxSize(135,15));
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
     snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|static_cast<int>(wxALL), 10);
 
@@ -569,6 +578,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxStaticBoxSizer* levelSizer;
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
+
+    levelBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
 
     // Thin static strip marking the acceptable range (LEVEL_METER_TARGET_LOW_PCT
@@ -602,6 +613,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, LEVEL_GAUGE_MIN_DB, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH); // log scale, -30 dB to 0 dB
     m_gaugeLevel->SetToolTip(_("RX: Peak level of radio's audio output, TX: Peak level of microphone audio as recorded by FreeDV (before AGC/level settings)."));
     levelSizer->Add(m_gaugeLevel, 1, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxALL), 10);
+
     
     leftSizer->Add(levelSizer ,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
@@ -610,6 +622,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxStaticBoxSizer* sbSizer3_33;
     wxStaticBox* syncBox = new wxStaticBox(m_panel, wxID_ANY, _("Sync"), wxDefaultPosition, wxSize(100,-1));
+    syncBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     sbSizer3_33 = new wxStaticBoxSizer(syncBox, wxVERTICAL);
 
     m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
@@ -629,6 +642,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Audio Recording/Playback
     //------------------------------
     wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio Recording"), wxDefaultPosition, wxSize(100,-1));
+    audioBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
     
     m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
@@ -641,6 +655,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // QSO logging
     //------------------------------
     wxStaticBox* logBox = new wxStaticBox(m_panel, wxID_ANY, _("Logging"), wxDefaultPosition, wxSize(100,-1));
+    logBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     wxStaticBoxSizer* sbSizerLogging = new wxStaticBoxSizer(logBox, wxVERTICAL);
     
     m_logQSO = new wxButton(logBox, wxID_ANY, _("Log QSO"), wxDefaultPosition, wxDefaultSize, 0);
@@ -654,6 +669,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // FreeDV Reporter quick options
     //------------------------------
     wxStaticBox* reporterBox = new wxStaticBox(m_panel, wxID_ANY, _("FDV Reporting"), wxDefaultPosition, wxSize(100,-1));
+    reporterBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     wxStaticBoxSizer* sbSizerReporterBox = new wxStaticBoxSizer(reporterBox, wxVERTICAL);
 
     m_reporterHidden = new wxToggleButton(reporterBox, wxID_ANY, _("Turn Off"), wxDefaultPosition, wxDefaultSize, 0);
@@ -668,28 +684,33 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     wxStaticBoxSizer* sbSizer_ber;
     statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(100,-1));
+    statsBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     sbSizer_ber = new wxStaticBoxSizer(statsBox, wxVERTICAL);
+    statsSizer_ = sbSizer_ber;
+    statsFieldsSizer_ = new wxFlexGridSizer(1);
 
     m_BtnBerReset = new wxButton(statsBox, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|static_cast<int>(wxALL), 5);
 
     m_textBits = new wxStaticText(statsBox, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textBits, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textBits, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textErrors = new wxStaticText(statsBox, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textErrors, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textErrors, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textBER = new wxStaticText(statsBox, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textBER, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textBER, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textResyncs = new wxStaticText(statsBox, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textResyncs, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textResyncs, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textClockOffset = new wxStaticText(statsBox, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_textClockOffset->SetMinSize(wxSize(125,-1));
-    sbSizer_ber->Add(m_textClockOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textClockOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textFreqOffset = new wxStaticText(statsBox, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textFreqOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textFreqOffset, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textSyncMetric = new wxStaticText(statsBox, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textSyncMetric, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textSyncMetric, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
     m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textCodec2Var, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+    statsFieldsSizer_->Add(m_textCodec2Var, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 1);
+
+    sbSizer_ber->Add(statsFieldsSizer_, 0, wxLEFT | wxRIGHT | wxBOTTOM, ::FromDIP(this, 5));
 
     leftSizer->Add(sbSizer_ber,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND)|wxFIXED_MINSIZE, 2);
 
@@ -739,6 +760,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     wxBoxSizer* bSizer15;
     bSizer15 = new wxBoxSizer(wxVERTICAL);
+    callsignSizer_ = bSizer15;
     m_txtCtrlCallSign = new wxTextCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
     m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
@@ -768,8 +790,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     rightSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
+
+
     // Transmit Level slider
     m_txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
+    m_txLevelBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(m_txLevelBox, wxVERTICAL);
     
     wxBoxSizer* txBtnSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -798,6 +823,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     // Mic/Speaker Level slider
     micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Speaker &Level"), wxDefaultPosition, wxSize(100,-1));
+    micSpeakerBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     wxBoxSizer* micSpeakerLevelSizer = new wxStaticBoxSizer(micSpeakerBox, wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
@@ -824,6 +850,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     // Frequency text field (PSK Reporter)
     m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Radio Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
+    m_freqBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
 
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     
@@ -841,11 +868,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     /* new --- */
 
+
+
     //=====================================================
     // Control Toggles box
     //=====================================================
     wxStaticBoxSizer* sbSizer5;
     wxStaticBox* controlBox = new wxStaticBox(m_panel, wxID_ANY, _("Control"), wxDefaultPosition, wxSize(100,-1));
+    controlBox->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
     sbSizer5 = new wxStaticBoxSizer(controlBox, wxVERTICAL);
 
     //-------------------------------
@@ -853,6 +883,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------------------
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start Modem"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
+    StylePrimaryControlButton(m_togBtnOnOff);
     sbSizer5->Add(m_togBtnOnOff, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
     //------------------------------
@@ -860,6 +891,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("Switch to A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
+    StylePrimaryControlButton(m_togBtnAnalog);
     sbSizer5->Add(m_togBtnAnalog, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
     //------------------------------
@@ -867,6 +899,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_btnTogTune = new wxToggleButton(controlBox, wxID_ANY, _("&Tune"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogTune->SetToolTip(_("Emits 1500 Hz carrier to enable rig/antenna tuning.\nRight click for more options"));
+    StylePrimaryControlButton(m_btnTogTune);
     sbSizer5->Add(m_btnTogTune, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
     m_btnTogTune->Enable(false);
 
@@ -875,6 +908,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Start Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
+    StylePrimaryControlButton(m_togBtnVoiceKeyer);
     sbSizer5->Add(m_togBtnVoiceKeyer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
     //------------------------------
@@ -882,13 +916,117 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&XMIT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Switch between Receive and Transmit. Right-click for additional options."));
+    StylePrimaryControlButton(m_btnTogPTT);
     sbSizer5->Add(m_btnTogPTT, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
 
     rightSizer->Add(sbSizer5, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 
-    bSizer1->Add(rightSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
+    auto* rightOuterSizer = new wxBoxSizer(wxVERTICAL);
+    rightOuterSizer->Add(rightSizer, 1, wxEXPAND);
+    auto* presentationSizer = new wxBoxSizer(wxHORIZONTAL);
+    presentationSizer->Add(CreateAppearanceSelector(0), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+    presentationSizer->Add(CreateWorkspaceSelector(0), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+    rightOuterSizer->Add(presentationSizer, 0, wxALIGN_RIGHT);
+    bSizer1->Add(rightOuterSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
     
+    notebookSizer_ = bSizer1;
+    independentSizer_ = new wxBoxSizer(wxVERTICAL);
+    controlHeading_ = new wxStaticText(m_panel, wxID_ANY, _("FreeDV Control"));
+    controlHeading_->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Heading));
+    controlHeading_->Hide();
+
+    auto* columns = new wxBoxSizer(wxHORIZONTAL);
+    auto* receive = new wxBoxSizer(wxVERTICAL);
+    auto* radioAudio = new wxBoxSizer(wxVERTICAL);
+    auto* statistics = new wxBoxSizer(wxVERTICAL);
+    auto* control = new wxBoxSizer(wxVERTICAL);
+    receive->Add(controlHeading_, 0, wxALL, 5);
+    columns->Add(receive, 5, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    columns->Add(radioAudio, 6, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    columns->Add(statistics, 5, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    columns->Add(control, 5, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    independentSizer_->Add(columns, 1, wxEXPAND);
+
+    auto* received = new wxBoxSizer(wxVERTICAL);
+    independentSizer_->Add(received, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    auto* operations = new wxBoxSizer(wxHORIZONTAL);
+    auto* supporting = new wxBoxSizer(wxHORIZONTAL);
+    supporting->Add(operations, 0, wxEXPAND);
+    displayVisibilitySizer_ = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Displays"));
+    displayVisibilitySizer_->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+    auto* displaySelectors = new wxFlexGridSizer(3, ::FromDIP(this, 2), ::FromDIP(this, 8));
+    const wxString displayNames[] = {
+        _("Waterfall"), _("Spectrum"), _("Frm Radio"), _("Frm Mic"), _("Frm Decoder"), _("SNR")
+    };
+    for (std::size_t index = 0; index < displayVisibilityChecks_.size(); ++index)
+    {
+        const auto id = static_cast<DisplayId>(index);
+        auto* checkbox = new wxCheckBox(displayVisibilitySizer_->GetStaticBox(), wxID_ANY, displayNames[index]);
+        displayVisibilityChecks_[index] = checkbox;
+        displaySelectors->Add(checkbox, 0, wxALL, 2);
+        checkbox->Bind(wxEVT_CHECKBOX, [this, id](wxCommandEvent& event) {
+            OnDisplayVisibilityRequest(id, event.IsChecked());
+        });
+    }
+    displayVisibilitySizer_->Add(displaySelectors, 0, wxALL, 3);
+    supporting->Add(displayVisibilitySizer_, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+    supporting->Add(CreateAppearanceSelector(1), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+    supporting->Add(CreateWorkspaceSelector(1), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+    appearanceSelectors_[1].sizer->ShowItems(false);
+    workspaceSelectors_[1].sizer->ShowItems(false);
+    independentSizer_->Add(supporting, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
+    displayVisibilitySizer_->ShowItems(false);
+
+    // Keep each group's windows and event connections intact. Only its owning
+    // sizer changes; the notebook's empty layout remains available for return.
+    auto shareGroup = [this](wxSizer* group, wxSizer* notebookParent, wxSizer* independentParent, int independentOrder) {
+        auto* item = notebookParent->GetItem(group);
+        controlGroups_.push_back({group, notebookParent, independentParent, independentOrder,
+                                  item->GetProportion(), item->GetFlag(), item->GetBorder()});
+    };
+    shareGroup(snrSizer, leftSizer, receive, 0);
+    shareGroup(levelSizer, leftSizer, receive, 1);
+    shareGroup(sbSizer3_33, leftSizer, receive, 2);
+    shareGroup(sbSizerAudioRecordPlay, leftSizer, operations, 0);
+    shareGroup(sbSizerLogging, leftSizer, operations, 1);
+    auto* timeSizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Time"));
+    timeSizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+
+    auto* timeFields = new wxFlexGridSizer(2, ::FromDIP(this, 4), ::FromDIP(this, 12));
+    timeFields->Add(new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, _("Local")), 0, wxALIGN_CENTER_VERTICAL);
+    localTimeText_ = new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, wxEmptyString);
+    localTimeText_->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+    timeFields->Add(localTimeText_, 0, wxALIGN_CENTER_VERTICAL);
+
+    timeFields->Add(new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, _("UTC")), 0, wxALIGN_CENTER_VERTICAL);
+    utcTimeText_ = new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, wxEmptyString);
+    utcTimeText_->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+    timeFields->Add(utcTimeText_, 0, wxALIGN_CENTER_VERTICAL);
+
+    timeSizer->Add(timeFields, 0, wxALL, 5);
+    leftSizer->Add(timeSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
+
+    shareGroup(sbSizerReporterBox, leftSizer, operations, 2);
+    shareGroup(timeSizer, leftSizer, radioAudio, 3);
+    shareGroup(sbSizer_ber, leftSizer, statistics, 0);
+    shareGroup(txLevelSizer, rightSizer, radioAudio, 0);
+    shareGroup(micSpeakerLevelSizer, rightSizer, radioAudio, 1);
+    shareGroup(reportFrequencySizer, rightSizer, radioAudio, 2);
+    shareGroup(sbSizer_mode, rightSizer, radioAudio, 4);
+    shareGroup(sbSizer3, rightSizer, radioAudio, 5);
+    shareGroup(sbSizer5, rightSizer, control, 0);
+    shareGroup(lowerSizer, centerSizer, received, 0);
+
+    UpdateTimeDisplay();
+    timeDisplayTimer_.SetOwner(this, ID_TIMER_TIME_DISPLAY);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { UpdateTimeDisplay(); }, ID_TIMER_TIME_DISPLAY);
+    timeDisplayTimer_.Start(1000, wxTIMER_CONTINUOUS);
+
     m_panel->SetSizerAndFit(bSizer1);
+    m_panel->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
+        UpdateControlMinimumSize();
+        event.Skip();
+    });
     this->Layout();
 
     m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
@@ -1034,6 +1172,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
 TopFrame::~TopFrame()
 {
+    delete (independentControls_ ? notebookSizer_ : independentSizer_);
+
     //-------------------
     // Disconnect Events
     //-------------------   
@@ -1117,6 +1257,181 @@ TopFrame::~TopFrame()
     m_reporterHidden->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnToggleReporterVisibility), NULL, this);
 
     m_btnTogTune->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTune), NULL, this);
+}
+
+void TopFrame::StylePrimaryControlButton(wxToggleButton* button)
+{
+    button->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+
+    wxSize minimumSize = button->GetMinSize();
+    minimumSize.SetHeight(::FromDIP(this, 36));
+    button->SetMinSize(minimumSize);
+}
+
+wxStaticBoxSizer* TopFrame::CreateAppearanceSelector(std::size_t index)
+{
+    auto& selector = appearanceSelectors_[index];
+    selector.sizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Appearance"));
+    selector.sizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+
+    selector.light = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
+        _("Light"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    selector.dark = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
+        _("Dark"));
+
+    selector.sizer->Add(selector.light, 0, wxALL, 2);
+    selector.sizer->Add(selector.dark, 0, wxALL, 2);
+
+    selector.light->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
+        OnAppearanceRequest(false);
+    });
+    selector.dark->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
+        OnAppearanceRequest(true);
+    });
+
+    selector.light->SetValue(true);
+    return selector.sizer;
+}
+
+wxStaticBoxSizer* TopFrame::CreateWorkspaceSelector(std::size_t index)
+{
+    auto& selector = workspaceSelectors_[index];
+    selector.sizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Workspace"));
+    selector.sizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+    for (bool independent : {false, true})
+    {
+        auto* button = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
+            independent ? _("Independent") : _("Notebook"), wxDefaultPosition,
+            wxDefaultSize, independent ? 0 : wxRB_GROUP);
+        if (independent)
+            selector.independent = button;
+        else
+            selector.notebook = button;
+        selector.sizer->Add(button, 0, wxALL, 2);
+        button->Bind(wxEVT_RADIOBUTTON, [this, independent](wxCommandEvent&) {
+            OnWorkspaceRequest(independent);
+        });
+    }
+    selector.notebook->SetValue(true);
+    return selector.sizer;
+}
+
+void TopFrame::SetDisplayVisibilityChecked(DisplayId id, bool visible)
+{
+    const auto index = static_cast<std::size_t>(id);
+    wxCHECK_RET(index < displayVisibilityChecks_.size(), "Invalid display identifier");
+    displayVisibilityChecks_[index]->SetValue(visible);
+}
+
+void TopFrame::SetAppearanceSelection(bool dark)
+{
+    for (const auto& selector : appearanceSelectors_)
+    {
+        selector.light->SetValue(!dark);
+        selector.dark->SetValue(dark);
+    }
+}
+
+void TopFrame::SetIndependentControlPresentation(bool independent)
+{
+    for (const auto& selector : workspaceSelectors_)
+    {
+        selector.notebook->SetValue(!independent);
+        selector.independent->SetValue(independent);
+    }
+    if (independentControls_ == independent)
+        return;
+
+    Freeze();
+    if (independent)
+    {
+        notebookMinimumSize_ = GetMinSize();
+        notebookPanelMinimumSize_ = m_panel->GetMinSize();
+    }
+
+    callsignSizer_->SetOrientation(independent ? wxHORIZONTAL : wxVERTICAL);
+    sbSizer_mode->SetOrientation(independent ? wxHORIZONTAL : wxVERTICAL);
+    statsFieldsSizer_->SetVGap(independent ? ::FromDIP(this, 4) : 0);
+    m_cboReportFrequency->GetContainingSizer()->GetItem(m_cboReportFrequency)->SetFlag(
+        independent ? static_cast<int>(wxALL) | static_cast<int>(wxEXPAND) : wxALL);
+    const int levelFlags = independent ? static_cast<int>(wxEXPAND) : static_cast<int>(wxALIGN_CENTER_HORIZONTAL);
+    m_gaugeSNR->GetContainingSizer()->GetItem(m_gaugeSNR)->SetFlag(
+        wxALL | levelFlags);
+    m_sliderMicSpkrLevel->GetContainingSizer()->GetItem(m_sliderMicSpkrLevel)->SetFlag(levelFlags);
+    m_sliderSQ->GetContainingSizer()->GetItem(m_sliderSQ)->SetFlag(levelFlags);
+
+    // Sort the temporary copy for the independent layout; controlGroups_ retains notebook order.
+    auto groups = controlGroups_;
+    if (independent)
+        std::sort(groups.begin(), groups.end(), [](const ControlGroup& lhs, const ControlGroup& rhs) {
+            return lhs.independentOrder < rhs.independentOrder;
+        });
+
+    for (const auto& group : groups)
+    {
+        auto* source = independent ? group.notebookParent : group.independentParent;
+        auto* destination = independent ? group.independentParent : group.notebookParent;
+        source->Detach(group.sizer);
+        if (independent)
+            destination->Add(group.sizer, group.sizer == statsSizer_ ? 1 : 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
+        else
+            destination->Add(group.sizer, group.proportion, group.flags, group.border);
+    }
+
+    controlHeading_->Show(independent);
+    workspaceSelectors_[0].sizer->ShowItems(!independent);
+    workspaceSelectors_[1].sizer->ShowItems(independent);
+    appearanceSelectors_[0].sizer->ShowItems(!independent);
+    appearanceSelectors_[1].sizer->ShowItems(independent);
+    displayVisibilitySizer_->ShowItems(independent);
+    independentControls_ = independent;
+    m_panel->SetSizer(independent ? independentSizer_ : notebookSizer_, false);
+    m_panel->SetMinSize(independent ? wxDefaultSize : notebookPanelMinimumSize_);
+    SetMinSize(independent ? wxDefaultSize : notebookMinimumSize_);
+    if (independent)
+    {
+        UpdateControlMinimumSize();
+        if (!IsMaximized())
+            SetSize(GetMinSize());
+    }
+    else
+    {
+        // A compact control window needs room for the restored notebook.
+        wxSize minimum = ClientToWindowSize(notebookSizer_->GetMinSize());
+        minimum.IncTo(GetSize());
+        SetSize(minimum);
+    }
+    Layout();
+    m_panel->Layout();
+    Thaw();
+    m_panel->Refresh();
+}
+
+void TopFrame::UpdateTimeDisplay()
+{
+    const wxDateTime local = wxDateTime::Now();
+    const wxDateTime utc = local.ToUTC();
+
+    localTimeText_->SetLabel(local.Format("%H:%M:%S"));
+    utcTimeText_->SetLabel(utc.Format("%H:%M:%S"));
+}
+
+void TopFrame::UpdateControlMinimumSize()
+{
+    if (!independentControls_)
+        return;
+
+    // Conditional groups and the Voice Keyer filename can change the minimum.
+    wxSize minimum = ClientToWindowSize(independentSizer_->GetMinSize());
+    if (minimum != GetMinSize())
+    {
+        SetMinSize(minimum);
+        wxSize size = GetSize();
+        size.IncTo(minimum);
+        if (size != GetSize())
+            SetSize(size);
+        m_panel->Layout();
+    }
 }
 
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)

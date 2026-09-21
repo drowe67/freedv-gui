@@ -33,6 +33,13 @@ class PlotScalar: public PlotPanel
 {
     public:
 
+    enum class TraceStyle
+    {
+        Solid,
+        ValueGradient,
+        MagnitudeGradient
+    };
+
     PlotScalar(wxWindow* parent,
                float t_secs, 
                float sample_period_secs,
@@ -45,7 +52,8 @@ class PlotScalar: public PlotPanel
                const char* plotName = "",
                bool halfPlot = false,
                float defaultVal = 0,
-               bool disableFirstLastLabels = false
+               bool disableFirstLastLabels = false,
+               TraceStyle traceStyle = TraceStyle::Solid
                );
         ~PlotScalar();
          void add_new_sample(float sample);
@@ -84,6 +92,7 @@ class PlotScalar: public PlotPanel
          int      bottomOffset_;
          bool halfPlot_;
          bool disableFirstLastLabels_;
+         TraceStyle traceStyle_;
 
          wxBitmap* plotArea_;
          wxImage* plotLines_;

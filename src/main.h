@@ -69,6 +69,7 @@
 #include "pipeline/modem_stats.h"
 
 #include "topFrame.h"
+#include "gui/displays/DisplayWorkspace.h"
 #include "gui/dialogs/filter_frequency.h"
 #include "gui/dialogs/tot_warning.h"
 #include "gui/controls/plot.h"
@@ -287,6 +288,8 @@ class MainFrame : public TopFrame
     public:
         MainFrame(wxWindow *parent);
         virtual ~MainFrame();
+
+        bool HasActiveDisplay() const { return displayWorkspace_.HasActiveDisplay(); }
 
         FilterDlg*              m_filterDialog;
         FreeDVReporterDialog*   m_reporterDialog;
@@ -615,6 +618,15 @@ class MainFrame : public TopFrame
         // attempt, so exit-time save uses that instead of a possibly-since-toggled live
         // value (toggling the checkbox mid-session doesn't reload/reapply a layout).
         bool tabLayoutPersistenceEnabledAtStartup_;
+
+        DisplayWorkspace displayWorkspace_{*m_auiNbookCtrl};
+        void OnDisplayVisibilityRequest(DisplayId id, bool visible) override;
+        void OnWorkspaceRequest(bool independent) override;
+        void OnAppearanceRequest(bool dark) override;
+        bool canSwitchWorkspace_() const;
+        void updateDisplayVisibilityControls_();
+        void captureWorkspace_();
+        bool switchWorkspace_(bool independent, bool captureCurrent = true);
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup(bool silent = false);
@@ -636,7 +648,6 @@ class MainFrame : public TopFrame
         
         void initializeFreeDVReporter_();
         void updateVoiceKeyerButtonLabel_();
-        int captureCurrentMicGroupTab_();
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);

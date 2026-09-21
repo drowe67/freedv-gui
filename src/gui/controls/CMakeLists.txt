@@ -5,7 +5,8 @@ add_library(fdv_gui_controls STATIC
     plot_spectrum.cpp
     plot_waterfall.cpp
     ReportMessageRenderer.cpp
-    MsgListPopup.cpp)
+    MsgListPopup.cpp
+    LevelGauge.cpp)
 
 target_include_directories(fdv_gui_controls PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 target_compile_options(fdv_gui_controls PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
