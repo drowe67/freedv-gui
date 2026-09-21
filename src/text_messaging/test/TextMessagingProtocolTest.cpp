@@ -75,11 +75,13 @@ public:
     }
 
     bool isTransmitting() const override { return transmitting || voiceActive; }
+    bool isChannelBusy() const override { return channelBusy; }
 
     std::vector<std::vector<std::vector<uint8_t>>> transmissions;
     std::vector<bool> signallingFlags;
     bool transmitting = false;
     bool voiceActive = false;
+    bool channelBusy = false;
     bool refuse = false;
 };
 
@@ -590,6 +592,113 @@ void testTheWindowEndsWhenTheReplyArrives()
     CHECK(sender.transport.transmissions.size() == 2);
 }
 
+// Carrier sense: while the receiver is locked onto somebody else's burst,
+// nothing we have queued may start, however long it has been waiting.
+void testBusyChannelFreezesTheQueue()
+{
+    Station sender("W1AW");
+    sender.transport.channelBusy = true;
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("Hold it", "VK3ABC", error));
+
+    for (int i = 0; i < 10; i++)
+    {
+        sender.nowMs += 1000;
+        sender.protocol.tick();
+    }
+    CHECK(sender.transport.transmissions.empty());
+
+    sender.transport.channelBusy = false;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 1);
+}
+
+// The far end cannot answer us through somebody else's burst, so time spent
+// frozen must not count against the acknowledgement: nothing retries during
+// it, and the timer resumes rather than expiring the moment the channel clears.
+void testBusyChannelHoldsTheAcknowledgementTimer()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("Anybody there", "VK3ABC", error));
+    sender.completeOneTransmission();
+    int64_t id = sender.observer.added[0].id;
+
+    // Busy for longer than the whole acknowledgement timeout.
+    sender.transport.channelBusy = true;
+    for (int i = 0; i < 20; i++)
+    {
+        sender.nowMs += 1000;
+        sender.protocol.tick();
+    }
+
+    const TextMessage* update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+    CHECK(update != nullptr && update->retryCount == 0);
+
+    sender.transport.channelBusy = false;
+    sender.protocol.tick();
+    update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+
+    sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+    sender.protocol.tick();
+    update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::Retrying);
+}
+
+// A third station's burst freezes both ends of our exchange, and both come
+// unfrozen at the same moment. The far end is owed its turn to answer first,
+// so the reply window has to be held through the busy spell as well; were it
+// not, it would already have lapsed and we would key over the late reply.
+void testBusyChannelHoldsTheReplyWindow()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("needs an ack", "VK3ABC", error));
+    sender.completeOneTransmission();
+
+    sender.transport.channelBusy = true;
+    for (int i = 0; i < 10; i++)
+    {
+        sender.nowMs += 1000;
+        sender.protocol.tick();
+    }
+    sender.transport.channelBusy = false;
+
+    CHECK(sender.protocol.sendPing("VK3ABC", error));
+    sender.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    sender.nowMs += REPLY_WINDOW_MILLISECONDS;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 2);
+}
+
+// A receiver that never drops sync is false triggering on noise, not hearing a
+// transmission. It must not be able to silence the station for good.
+void testChannelThatNeverClearsIsEventuallyIgnored()
+{
+    Station sender("W1AW");
+    sender.transport.channelBusy = true;
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("Still here", "VK3ABC", error));
+
+    sender.protocol.tick();
+    sender.nowMs += MAX_CHANNEL_BUSY_MILLISECONDS - 1000;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.empty());
+
+    sender.nowMs += 2000;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 1);
+}
+
 void testSendRequiresCallsign()
 {
     MessageStore store;
@@ -629,6 +738,10 @@ int main()
     testAWaitedReplyOutlastsThePlainTurnaround();
     testTheWindowEndsWhenTheReplyArrives();
     testAckWaitCoversTheWholeCycle();
+    testBusyChannelFreezesTheQueue();
+    testBusyChannelHoldsTheAcknowledgementTimer();
+    testBusyChannelHoldsTheReplyWindow();
+    testChannelThatNeverClearsIsEventuallyIgnored();
     testVoiceTransmissionDefersChat();
     testSendRequiresCallsign();
 

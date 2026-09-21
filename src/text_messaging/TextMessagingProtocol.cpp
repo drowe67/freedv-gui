@@ -97,6 +97,9 @@ TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationLi
     , nextAirId_(1)
     , quietUntilMs_(0)
     , jitterState_(1)
+    , channelBusy_(false)
+    , channelBusySinceMs_(0)
+    , lastTickMs_(0)
     , monotonicMs_([]() {
         return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::steady_clock::now().time_since_epoch())
@@ -684,6 +687,44 @@ uint64_t TextMessagingProtocol::quietUntilLocked() const
     return quietUntil;
 }
 
+// Whether the queue is frozen because somebody else has the channel. A spell
+// that outlasts any real transmission is a receiver false triggering, not
+// traffic, and is ignored until it clears so it cannot silence us for good.
+bool TextMessagingProtocol::channelFrozenLocked(uint64_t nowMs)
+{
+    bool busy = transport_ != nullptr && transport_->isChannelBusy();
+
+    if (!busy)
+    {
+        channelBusy_ = false;
+        return false;
+    }
+
+    if (!channelBusy_)
+    {
+        channelBusy_ = true;
+        channelBusySinceMs_ = nowMs;
+    }
+
+    return nowMs - channelBusySinceMs_ < (uint64_t)MAX_CHANNEL_BUSY_MILLISECONDS;
+}
+
+// Time spent frozen does not count against anything outstanding. The
+// acknowledgement deadline moves back so nothing retries or gives up while the
+// reply could not have reached us, and so does the start of the reply window:
+// when a third station's burst ends, both ends of our exchange come unfrozen
+// together, and the far end is owed its turn to answer before we key again.
+void TextMessagingProtocol::holdTimersLocked(uint64_t pausedMs)
+{
+    for (PendingTransmission& pending : outbox_)
+    {
+        if (pending.state != TransmissionState::AwaitingAck) continue;
+
+        pending.deadlineMs += pausedMs;
+        pending.sentAtMs += pausedMs;
+    }
+}
+
 void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
 {
     uint64_t until = nowMs + (uint64_t)baseMs + turnaroundJitterLocked(jitterMs);
@@ -708,13 +749,20 @@ void TextMessagingProtocol::tick()
         uint64_t nowMs = monotonicMs_();
         purgeStaleReassembliesLocked(nowMs);
 
-        if (transport_ != nullptr && !outbox_.empty()) serviceOutboxLocked(nowMs, events);
+        // While the channel is busy everything waits, timers included: the far
+        // end cannot answer us through somebody else's burst, and it may be the
+        // answer itself that is coming in.
+        bool frozen = channelFrozenLocked(nowMs);
+        if (frozen && lastTickMs_ != 0 && nowMs > lastTickMs_) holdTimersLocked(nowMs - lastTickMs_);
+        lastTickMs_ = nowMs;
+
+        if (transport_ != nullptr && !outbox_.empty()) serviceOutboxLocked(nowMs, frozen, events);
     }
 
     deliver(events);
 }
 
-void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
+void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                                                 std::vector<PendingEvent>& events)
 {
     // Voice always wins the transmitter, and only one burst is on the air at a
@@ -754,7 +802,7 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs,
         // The turnaround is the far end's turn; anything queued waits it out.
         // Only the start of a burst is held back -- the acknowledgement timers
         // below keep running, so a retry is never late because of it.
-        if (nowMs >= quietUntilLocked())
+        if (!frozen && nowMs >= quietUntilLocked())
         {
             for (size_t i = 0; i < outbox_.size(); i++)
             {

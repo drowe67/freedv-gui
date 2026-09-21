@@ -129,6 +129,20 @@ constexpr int TURNAROUND_JITTER_MILLISECONDS = 1000;
 constexpr int MAX_TURNAROUND_MILLISECONDS =
     REPLY_WINDOW_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS;
 
+// Carrier sense. While the demodulator is locked onto a burst -- from the
+// moment it correlates a preamble until the packet is in -- someone else has
+// the channel, and keying would talk over them. Every fragment of a message is
+// a burst of its own, so sync genuinely drops for the postamble, the gap and
+// the next preamble; the hold bridges that, or the channel would read as free
+// between fragments of the same message.
+constexpr int CHANNEL_BUSY_HOLD_MILLISECONDS = 1000;
+
+// A demodulator that keeps false triggering on band noise must not be able to
+// silence the station for good. The longest real traffic is eight DATAC4
+// fragments at about five and a half seconds each, so anything continuously
+// busy for longer than this is not a transmission and is ignored.
+constexpr int MAX_CHANNEL_BUSY_MILLISECONDS = 60000;
+
 // Retry policy for addressed messages. Timeout is measured from the end of our
 // transmission to the arrival of the acknowledgement.
 constexpr int MAX_MESSAGE_RETRIES = 3;

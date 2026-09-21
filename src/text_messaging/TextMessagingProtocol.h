@@ -70,6 +70,11 @@ public:
     // Called from the same loop that drives tick(), so a transport can finish
     // a burst (unkey the transmitter) without a timer of its own.
     virtual void poll() { /* nothing to do by default */ }
+
+    // True while the receiver is locked onto somebody else's burst. The
+    // protocol freezes on it: nothing starts, and no acknowledgement timer
+    // runs down, until the channel is clear again.
+    virtual bool isChannelBusy() const { return false; }
 };
 
 // Implemented by the dialog. Callbacks arrive on whichever thread drove the
@@ -207,8 +212,10 @@ private:
     // shortens a wait that is already running.
     void deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs);
     uint64_t quietUntilLocked() const;
+    bool channelFrozenLocked(uint64_t nowMs);
+    void holdTimersLocked(uint64_t pausedMs);
     uint32_t turnaroundJitterLocked(int jitterMs);
-    void serviceOutboxLocked(uint64_t nowMs, std::vector<PendingEvent>& events);
+    void serviceOutboxLocked(uint64_t nowMs, bool frozen, std::vector<PendingEvent>& events);
     uint16_t nextAirIdLocked();
     Frame makeFrameLocked(FrameType type, const std::string& destination, uint16_t airId,
                           uint8_t fragmentIndex, uint8_t fragmentCount,
@@ -230,6 +237,12 @@ private:
 
     uint64_t quietUntilMs_;
     uint32_t jitterState_;
+
+    // Carrier sense bookkeeping, updated every tick whether or not anything
+    // is queued, so a busy spell is measured from when it really began.
+    bool channelBusy_;
+    uint64_t channelBusySinceMs_;
+    uint64_t lastTickMs_;
 
     std::deque<PendingTransmission> outbox_;
     std::map<ReassemblyKey, Reassembly> inbox_;
