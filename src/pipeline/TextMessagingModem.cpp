@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 
 #include "freedv_api.h"
@@ -56,12 +57,20 @@ constexpr int MODEM_SAMPLE_RATE = 8000;
 // still decode.
 constexpr int MAX_BUFFERED_SAMPLES = MODEM_SAMPLE_RATE * 4;
 
+uint64_t steadyMs()
+{
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
 } // namespace
 
 TextMessagingModem::TextMessagingModem()
     : signallingTx_(nullptr)
     , textTx_(nullptr)
     , open_(false)
+    , lastSyncMs_(0)
 {
     // empty
 }
@@ -147,6 +156,7 @@ void TextMessagingModem::closeLocked()
 
     signallingRx_.buffer.clear();
     textRx_.buffer.clear();
+    lastSyncMs_.store(0, std::memory_order_release);
 }
 
 bool TextMessagingModem::isOpen() const
@@ -240,6 +250,15 @@ void TextMessagingModem::demodulateOne(Demodulator& demodulator, const short* sa
         buffer.erase(buffer.begin(), buffer.begin() + nin);
         nin = freedv_nin(demodulator.modem);
 
+        // FREEDV_RX_SYNC covers trial sync as well as full sync, so this holds
+        // from the moment a preamble is correlated until the packet is in:
+        // the whole time a burst is on the channel, not just the instant a
+        // frame decodes.
+        if (freedv_get_rx_status(demodulator.modem) & FREEDV_RX_SYNC)
+        {
+            lastSyncMs_.store(steadyMs(), std::memory_order_release);
+        }
+
         if (bytesOut <= 0) continue;
 
         Frame frame;
@@ -268,6 +287,14 @@ void TextMessagingModem::demodulate(const short* samples, int numSamples)
 
     demodulateOne(signallingRx_, samples, numSamples);
     demodulateOne(textRx_, samples, numSamples);
+}
+
+bool TextMessagingModem::isReceiving() const
+{
+    if (!open_) return false;
+
+    uint64_t last = lastSyncMs_.load(std::memory_order_acquire);
+    return last != 0 && steadyMs() - last < (uint64_t)CHANNEL_BUSY_HOLD_MILLISECONDS;
 }
 
 TextMessagingModem& textMessagingModem()

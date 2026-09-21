@@ -69,6 +69,15 @@ message that asked for an acknowledgement waits longer still: the far end has
 its own turnaround to serve before it can even begin the reply. That longer
 wait ends as soon as the acknowledgement arrives.
 
+The station also listens before it talks. While either demodulator is locked
+onto a burst -- from the moment it recognises a preamble until the packet is
+in -- somebody else has the channel, and everything waits: nothing starts,
+and time spent waiting does not count against acknowledgements already
+outstanding, since no reply can get through a busy channel and the burst being
+received may be the reply itself. A receiver that stays locked for more than a
+minute is treated as false triggering on noise and ignored, so it cannot
+silence the station for good.
+
 ## How it works on the air
 
 Text messaging does not travel inside RADE. It uses the codec2 raw data

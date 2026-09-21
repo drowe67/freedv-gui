@@ -70,6 +70,7 @@ public:
     virtual bool transmit(const std::vector<std::vector<uint8_t>>& frames,
                           bool signalling) override;
     virtual bool isTransmitting() const override;
+    virtual bool isChannelBusy() const override;
     virtual void poll() override;
 
     // Drops anything queued and unkeys. Used when audio stops.
@@ -96,6 +97,10 @@ private:
     uint64_t burstMs_;
     bool sawTransmitting_;
     bool sawEmpty_;
+
+    // Busy spells as last reported, for FREEDV_TEXT_CHAT_TX_LOG only.
+    bool loggedChannelBusy_;
+    uint64_t channelBusySinceMs_;
 };
 
 #endif // AUDIO_PIPELINE__TEXT_MESSAGING_TRANSPORT_H

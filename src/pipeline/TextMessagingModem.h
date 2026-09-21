@@ -89,6 +89,11 @@ public:
     // callback for every frame that passes the modem's CRC.
     void demodulate(const short* samples, int numSamples);
 
+    // True while either demodulator is locked onto a burst, or was within
+    // CHANNEL_BUSY_HOLD_MILLISECONDS: somebody else has the channel. Safe to
+    // call from any thread.
+    bool isReceiving() const;
+
 private:
     struct Demodulator
     {
@@ -108,6 +113,10 @@ private:
     struct freedv* signallingTx_;
     struct freedv* textTx_;
     std::atomic<bool> open_;
+
+    // When a demodulator last reported sync, on the steady clock; zero for
+    // never. Written by the tap thread, read by the protocol's.
+    std::atomic<uint64_t> lastSyncMs_;
 
     // Held by demodulate() and by open()/close(), so the receive tap can never
     // be inside the modem while it is being torn down at shutdown.

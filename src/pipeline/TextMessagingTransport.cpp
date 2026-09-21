@@ -83,6 +83,8 @@ TextMessagingTransport::TextMessagingTransport(TextMessagingModem* modem)
     , burstMs_(0)
     , sawTransmitting_(false)
     , sawEmpty_(false)
+    , loggedChannelBusy_(false)
+    , channelBusySinceMs_(0)
 {
     // empty
 }
@@ -165,8 +167,35 @@ bool TextMessagingTransport::isTransmitting() const
     return check != nullptr && check();
 }
 
+bool TextMessagingTransport::isChannelBusy() const
+{
+    return modem_ != nullptr && modem_->isReceiving();
+}
+
 void TextMessagingTransport::poll()
 {
+    // The protocol freezes on the channel being busy but has no logging of its
+    // own, so the spells are reported here.
+    if (txLogEnabled())
+    {
+        bool busy = isChannelBusy();
+        if (busy != loggedChannelBusy_)
+        {
+            uint64_t busyNow = monotonicMs();
+            if (busy)
+            {
+                channelBusySinceMs_ = busyNow;
+                log_info("RX: channel busy, demodulator in sync");
+            }
+            else
+            {
+                log_info("RX: channel clear after %llu ms",
+                         (unsigned long long)(busyNow - channelBusySinceMs_));
+            }
+            loggedChannelBusy_ = busy;
+        }
+    }
+
     if (!keyed_.load(std::memory_order_acquire)) return;
 
     auto& queue = textMessagingTxQueue();
