@@ -101,7 +101,7 @@ int                 g_test_frame_count;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
-float               g_tone_phase;
+std::atomic<float>    g_tone_phase;
 
 // time averaged magnitude spectrum used for waterfall and spectrum display
 GenericFIFO<float>  g_avmag(MODEM_STATS_NSPEC * 10 / DT); // 1s worth
@@ -115,7 +115,7 @@ int g_tuneLevel = 0;
 std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
-int   g_analog;
+std::atomic<int>    g_analog;
 std::atomic<bool>   g_tx;
 float g_snr;
 std::atomic<bool>  g_half_duplex;
@@ -159,32 +159,32 @@ int                 g_AEstatus2[4];
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<bool>                g_playFileToMicIn;
-extern bool                g_loopPlayFileToMicIn;
+extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
 
-extern SNDFILE            *g_sfRecFile;
-extern bool                g_recFileFromRadio;
-extern unsigned int        g_recFromRadioSamples;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<bool>     g_recFileFromRadio;
+extern std::atomic<unsigned int> g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 extern int                 g_recFileFromDecoderEventId;
 
 extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
 extern std::atomic<bool>                g_playFileFromRadio;
-extern int                 g_sfFs;
-extern int                 g_sfTxFs;
-extern bool                g_loopPlayFileFromRadio;
+extern std::atomic<int>    g_sfFs;
+extern std::atomic<int>    g_sfTxFs;
+extern std::atomic<bool>   g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
 
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
 extern int                 g_recFileFromModulatorEventId;
 
-extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
-extern bool                g_recVoiceKeyerFile;
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
+extern std::atomic<bool>   g_recFileFromMic;
+extern std::atomic<bool>   g_recVoiceKeyerFile;
 
-extern SNDFILE* g_sfRecDecoderFile;
-extern bool g_recFileFromDecoder;
+extern std::atomic<SNDFILE*> g_sfRecDecoderFile;
+extern std::atomic<bool>     g_recFileFromDecoder;
 
 wxWindow           *g_parent;
 
@@ -373,8 +373,8 @@ void MainApp::UnitTest_()
                 SF_INFO     sfInfo;
                 sfInfo.format = 0;
                 g_sfPlayFile.store(sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
-                g_sfTxFs = sfInfo.samplerate;
-                g_loopPlayFileToMicIn = false;
+                g_sfTxFs.store(sfInfo.samplerate, std::memory_order_release);
+                g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);
                 g_playFileToMicIn.store(true, std::memory_order_release);
 
                 log_info("Firing PTT");
@@ -458,8 +458,8 @@ void MainApp::UnitTest_()
             SF_INFO     sfInfo;
             sfInfo.format = 0;
             g_sfPlayFileFromRadio.store(sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo), std::memory_order_release);
-            g_sfFs = sfInfo.samplerate;
-            g_loopPlayFileFromRadio = false;
+            g_sfFs.store(sfInfo.samplerate, std::memory_order_release);
+            g_loopPlayFileFromRadio.store(false, std::memory_order_relaxed);
             g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
@@ -491,10 +491,10 @@ void MainApp::UnitTest_()
             } 
         }
 
-        if (g_recFileFromDecoder)
+        if (g_recFileFromDecoder.load(std::memory_order_acquire))
         {
             g_recFileFromDecoder = false;
-            sf_close(g_sfRecDecoderFile);
+            sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
         }
     }
     
@@ -1348,21 +1348,21 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_sfPlayFile.store(NULL, std::memory_order_release);
     g_playFileToMicIn.store(false, std::memory_order_release);
-    g_loopPlayFileToMicIn = false;
+    g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);
 
     g_sfRecFile = NULL;
     g_recFileFromRadio = false;
 
     g_sfPlayFileFromRadio.store(NULL, std::memory_order_release);
     g_playFileFromRadio.store(false, std::memory_order_release);
-    g_loopPlayFileFromRadio = false;
+    g_loopPlayFileFromRadio.store(false, std::memory_order_relaxed);
 
     g_sfRecFileFromModulator = NULL;
     g_recFileFromModulator = false;
     
-    g_sfRecMicFile = nullptr;
-    g_recFileFromMic = false;
-    g_recVoiceKeyerFile = false;
+    g_sfRecMicFile.store(nullptr, std::memory_order_release);
+    g_recFileFromMic.store(false, std::memory_order_relaxed);
+    g_recVoiceKeyerFile.store(false, std::memory_order_relaxed);
 
     // init click-tune states
 
@@ -1380,7 +1380,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
-    g_tone_phase = 0.0;
+    g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
@@ -1626,15 +1626,22 @@ MainFrame::~MainFrame()
         sf_close(playFile);
         g_sfPlayFile.store(NULL, std::memory_order_release);
     }
-    if (g_sfRecFile != NULL)
+    auto recFile = g_sfRecFile.load(std::memory_order_acquire);
+    auto recFileFromModulator = g_sfRecFileFromModulator.load(std::memory_order_acquire);
+    if (recFile != NULL)
     {
-        sf_close(g_sfRecFile);
+        sf_close(recFile);
         g_sfRecFile = NULL;
     }
-    if (g_sfRecFileFromModulator != NULL)
+    if (recFileFromModulator != NULL && recFileFromModulator != recFile)
     {
-        sf_close(g_sfRecFileFromModulator);
+        sf_close(recFileFromModulator);
         g_sfRecFileFromModulator = NULL;
+    }
+    if (g_sfRecDecoderFile.load(std::memory_order_acquire) != NULL)
+    {
+        sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
+        g_sfRecDecoderFile = NULL;
     }
 #ifdef _USE_TIMER
     if(m_pskReporterTimer.IsRunning())
@@ -2091,8 +2098,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         g_mutexProtectingCallbackData.Lock();
 
-        bool micEqEnableOld = g_rxUserdata->micInEQEnable;
-        bool spkrEqEnableOld = g_rxUserdata->spkOutEQEnable;
+        bool micEqEnableOld = g_rxUserdata->micInEQEnable.load(std::memory_order_relaxed);
+        bool spkrEqEnableOld = g_rxUserdata->spkOutEQEnable.load(std::memory_order_relaxed);
 
         if (m_newMicInFilter || m_newSpkOutFilter ||
             micEqEnableOld != wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
@@ -2100,8 +2107,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             
             deleteEQFilters(g_rxUserdata);
         
-            g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
-            g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
+            g_rxUserdata->micInEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable, std::memory_order_relaxed);
+            g_rxUserdata->spkOutEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable, std::memory_order_relaxed);
 
             if (m_newMicInFilter || m_newSpkOutFilter)
             {
@@ -2371,7 +2378,7 @@ void MainFrame::performFreeDVOn_()
         
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
-        g_sfTxFs = FS;
+        g_sfTxFs.store(FS, std::memory_order_release);
     
         freedvInterface.start(wxGetApp().appConfiguration.fifoSizeMs, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
@@ -3272,8 +3279,8 @@ void MainFrame::startRxStream()
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
 
-        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
+        g_rxUserdata->micInEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable, std::memory_order_relaxed);
+        g_rxUserdata->spkOutEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable, std::memory_order_relaxed);
 
         if (g_nSoundCards == 1)
         {

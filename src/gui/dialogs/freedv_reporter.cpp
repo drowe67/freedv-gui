@@ -46,7 +46,7 @@
 
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase* pConfig;
-extern int g_analog;
+extern std::atomic<int> g_analog;
 
 #define CALLSIGN_COL (0)
 #define GRID_SQUARE_COL (1)
@@ -1527,11 +1527,12 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
+                bool useAnalog = g_analog.load(std::memory_order_relaxed);
                 wxGetApp().rigFrequencyController->setMode(
                     GetModeForFrequency(
                         frequency, 
                         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes, 
-                        g_analog));
+                        useAnalog));
             }
         }
         DeselectItem();

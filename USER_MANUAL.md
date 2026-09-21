@@ -319,9 +319,26 @@ will appear next to this menu option when enabled.
 # Quick Record
 
 To quickly record incoming signals from the radio, a 'Record' button is provided
-in the main window. Clicking this button will create a file beginning with the
-name "FreeDV_FromRadio" and containing the current date and time. Clicking 'Record'
-again will stop recording.
+in the main window. Clicking this button opens a dialog that lets you choose what
+to record:
+
+* "Off Air": records the raw audio coming in from the radio (while transmitting,
+  the modulated audio being sent to the radio instead). Files are named
+  "FDV_FromRadio" followed by the current date and time, plus an optional suffix.
+* "Decoded": records the decoded audio coming out of the demodulator. Files are
+  named "FDV_FromDecoder" in the same way. Decoded recordings can optionally be
+  saved as MP3.
+* "Both": records both of the above at the same time to two separate files, both
+  as 16-bit 48 kHz WAV. Note that the decoded recording only starts once the
+  modem syncs, and lags the off-air recording by the modem's processing delay,
+  so the two files can be aligned in an audio editor. While transmitting in
+  half-duplex mode the decoded recording is silent (or contains the monitored
+  microphone audio if "Monitor transmitted audio" is enabled).
+
+Clicking 'Record' again will stop recording (all active files if "Both" was
+chosen).
+
+All recordings are 16-bit, 48 kHz, mono.
 
 The Audio tab inside Settings-Edit Settings allows control of where these recordings are
 saved. By default, this is inside the current user's Documents folder.
@@ -852,6 +869,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * RADEV2: Standardize mode as USB. (PR #1397, #1454) - thanks @barjac!
     * Combine all configuration into Settings->Edit Settings. (PR #1418)
     * Rework Easy Setup window into new Setup Wizard. (PR #1418, #1432)
+    * Add ability to record both the raw and decoded RX audio. (PR #1501)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
 
@@ -869,6 +887,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Match std::atomic memory ordering to what each atomic actually synchronises. (PR #1482)
     * Remove use of mutexes in audio path during callsign decode. (PR #1486, #1493)
     * Tighten audio thread timings on macOS and Windows. (PR #1494)
+    * Harden audio FIFO handling and WASAPI stop timing. (PR #1496)
+    * Fix crash when testing Easy Setup with an invalid audio configuration. (PR #1500)
+    * Various data race cleanups. (PR #1502)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498)
