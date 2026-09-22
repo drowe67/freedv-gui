@@ -1272,22 +1272,28 @@ wxStaticBoxSizer* TopFrame::CreateAppearanceSelector(std::size_t index)
     selector.sizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Appearance"));
     selector.sizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
 
+    selector.system = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
+        _("System"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     selector.light = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
-        _("Light"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+        _("Light"));
     selector.dark = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
         _("Dark"));
 
+    selector.sizer->Add(selector.system, 0, wxALL, 2);
     selector.sizer->Add(selector.light, 0, wxALL, 2);
     selector.sizer->Add(selector.dark, 0, wxALL, 2);
 
+    selector.system->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
+        OnAppearanceRequest(FreeDVTheme::AppearanceMode::System);
+    });
     selector.light->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
-        OnAppearanceRequest(false);
+        OnAppearanceRequest(FreeDVTheme::AppearanceMode::Light);
     });
     selector.dark->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
-        OnAppearanceRequest(true);
+        OnAppearanceRequest(FreeDVTheme::AppearanceMode::Dark);
     });
 
-    selector.light->SetValue(true);
+    selector.system->SetValue(true);
     return selector.sizer;
 }
 
@@ -1321,12 +1327,13 @@ void TopFrame::SetDisplayVisibilityChecked(DisplayId id, bool visible)
     displayVisibilityChecks_[index]->SetValue(visible);
 }
 
-void TopFrame::SetAppearanceSelection(bool dark)
+void TopFrame::SetAppearanceSelection(FreeDVTheme::AppearanceMode mode)
 {
     for (const auto& selector : appearanceSelectors_)
     {
-        selector.light->SetValue(!dark);
-        selector.dark->SetValue(dark);
+        selector.system->SetValue(mode == FreeDVTheme::AppearanceMode::System);
+        selector.light->SetValue(mode == FreeDVTheme::AppearanceMode::Light);
+        selector.dark->SetValue(mode == FreeDVTheme::AppearanceMode::Dark);
     }
 }
 

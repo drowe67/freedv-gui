@@ -65,6 +65,7 @@
 #include "gui/util/wxListViewComboPopup.h"
 #include "gui/displays/DisplayWorkspace.h"
 #include "gui/controls/LevelGauge.h"
+#include "gui/theme/FreeDVTheme.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -159,11 +160,11 @@ class TopFrame : public wxFrame
         wxToggleButton *m_reporterHidden;
 
         void SetIndependentControlPresentation(bool independent);
-        void SetAppearanceSelection(bool dark);
+        void SetAppearanceSelection(FreeDVTheme::AppearanceMode mode);
         void SetDisplayVisibilityChecked(DisplayId id, bool visible);
         virtual void OnDisplayVisibilityRequest(DisplayId, bool) {}
         virtual void OnWorkspaceRequest(bool) {}
-        virtual void OnAppearanceRequest(bool) {}
+        virtual void OnAppearanceRequest(FreeDVTheme::AppearanceMode) {}
 
     private:
         wxTimer timeDisplayTimer_;
@@ -187,6 +188,7 @@ class TopFrame : public wxFrame
         struct AppearanceSelector
         {
             wxStaticBoxSizer* sizer;
+            wxRadioButton* system;
             wxRadioButton* light;
             wxRadioButton* dark;
         };

@@ -31,6 +31,7 @@
 #include "FilterConfiguration.h"
 #include "RigControlConfiguration.h"
 #include "ReportingConfiguration.h"
+#include "../gui/theme/FreeDVTheme.h"
 
 class FreeDVConfiguration : public WxWidgetsConfigStore
 {
@@ -50,7 +51,7 @@ public:
     ConfigurationDataElement<long> mainWindowWidth;
     ConfigurationDataElement<long> mainWindowHeight;
 
-    ConfigurationDataElement<bool> darkMode;
+    ConfigurationDataElement<long> appearanceMode;
 
     ConfigurationDataElement<bool> independentWorkspace;
     ConfigurationDataElement<bool> independentVisibilitySaved;

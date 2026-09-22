@@ -9,6 +9,13 @@ class wxWindow;
 
 namespace FreeDVTheme
 {
+enum class AppearanceMode
+{
+    System = 0,
+    Light = 1,
+    Dark = 2
+};
+
 struct Palette
 {
     wxColour windowBackground;

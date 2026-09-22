@@ -663,11 +663,54 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     pConfig = wxConfigBase::Get();
     pConfig->SetRecordDefaults();
 
-    bool darkModeEnabled = false;
-    pConfig->Read("/Appearance/DarkMode", &darkModeEnabled, false);
-    darkModeEnabled = darkModeEnabled || darkModeOverride;
+    long appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+    if (pConfig->HasEntry("/Appearance/Mode"))
+    {
+        pConfig->Read("/Appearance/Mode", &appearanceModeValue,
+                      static_cast<long>(FreeDVTheme::AppearanceMode::System));
+        if (appearanceModeValue < static_cast<long>(FreeDVTheme::AppearanceMode::System) ||
+            appearanceModeValue > static_cast<long>(FreeDVTheme::AppearanceMode::Dark))
+        {
+            appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+        }
+    }
+    else if (pConfig->HasEntry("/Appearance/DarkMode"))
+    {
+        bool legacyDarkMode = false;
+        pConfig->Read("/Appearance/DarkMode", &legacyDarkMode, false);
+        appearanceModeValue = static_cast<long>(
+            legacyDarkMode ? FreeDVTheme::AppearanceMode::Dark
+                           : FreeDVTheme::AppearanceMode::Light);
+    }
 
-    FreeDVTheme::SetDarkModeEnabled(darkModeEnabled);
+    if (darkModeOverride)
+    {
+        appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::Dark);
+    }
+
+    const auto appearanceMode =
+        static_cast<FreeDVTheme::AppearanceMode>(appearanceModeValue);
+
+#if wxCHECK_VERSION(3, 3, 0)
+    wxApp::Appearance wxAppearance = wxApp::Appearance::System;
+    if (appearanceMode == FreeDVTheme::AppearanceMode::Light)
+    {
+        wxAppearance = wxApp::Appearance::Light;
+    }
+    else if (appearanceMode == FreeDVTheme::AppearanceMode::Dark)
+    {
+        wxAppearance = wxApp::Appearance::Dark;
+    }
+
+    SetAppearance(wxAppearance);
+    FreeDVTheme::SetDarkModeEnabled(
+        wxSystemSettings::GetAppearance().IsDark());
+#else
+    FreeDVTheme::SetDarkModeEnabled(
+        appearanceMode == FreeDVTheme::AppearanceMode::Dark ||
+        (appearanceMode == FreeDVTheme::AppearanceMode::System &&
+         wxSystemSettings::GetAppearance().IsDark()));
+#endif
 
     long signalDisplayStyle = 0;
     pConfig->Read("/Waterfall/Color", &signalDisplayStyle, 0);
@@ -678,11 +721,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     FreeDVTheme::SetSignalDisplayStyle(
         static_cast<FreeDVTheme::SignalDisplayStyle>(signalDisplayStyle));
 
-#if wxCHECK_VERSION(3, 3, 0)
-    SetAppearance(darkModeEnabled ? wxApp::Appearance::Dark
-                                  : wxApp::Appearance::Light);
-#endif
-    
     if (parser.Found("ut", &testName))
     {
         log_info("Executing test %s", (const char*)testName.ToUTF8());
@@ -1140,7 +1178,8 @@ void MainFrame::loadConfiguration_()
     if (wxGetApp().appConfiguration.independentWorkspace && !switchWorkspace_(true, false))
         wxMessageBox("Could not restore the Independent workspace.", "Displays", wxOK | wxICON_ERROR, this);
 
-    SetAppearanceSelection(wxGetApp().appConfiguration.darkMode);
+    SetAppearanceSelection(static_cast<FreeDVTheme::AppearanceMode>(
+        wxGetApp().appConfiguration.appearanceMode.get()));
 
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
@@ -1721,11 +1760,11 @@ void MainFrame::OnWorkspaceRequest(bool independent)
     updateDisplayVisibilityControls_();
 }
 
-void MainFrame::OnAppearanceRequest(bool dark)
+void MainFrame::OnAppearanceRequest(FreeDVTheme::AppearanceMode mode)
 {
     auto& config = wxGetApp().appConfiguration;
-    config.darkMode = dark;
-    SetAppearanceSelection(dark);
+    config.appearanceMode = static_cast<long>(mode);
+    SetAppearanceSelection(mode);
 
     auto* pConfig = wxConfigBase::Get();
     config.save(pConfig);

@@ -11,7 +11,7 @@ The implementation adds an Independent Windows workspace alongside the existing 
 - Added an Independent Windows workspace using the existing six FreeDV signal displays and operational controls rather than duplicated implementations.
 - Added persistent Independent Control and display geometry, visibility, workspace selection, multi-monitor recovery, and transient Frm Mic presentation during transmit and Voice Keyer operation.
 - Added window snapping for the Independent workspace while retaining normal platform window movement and resizing.
-- Added native Light and Dark appearance selection with persisted startup preference and a session-only command-line Dark override.
+- Added System, Light, and Dark appearance selection with persisted startup preference, OS appearance following in System mode, and a session-only command-line Dark override.
 - Replaced the SNR and Level indicators with platform-neutral gauges while preserving their existing operational ranges and semantics.
 - Unified Waterfall, Spectrum, waveform, SNR plot, and gauge presentation under the existing Multicolor, Black & White, and Blue Tint Signal Display Style preference.
 - Improved signal visualization with magnitude-aware waveform coloring, stronger waveform edge definition, 2-pixel Spectrum and SNR traces, translucent plot fills, and a theme-accent frame around signal plot areas.
@@ -49,8 +49,6 @@ The workspace can be selected using the checkable Tools > Independent Windows it
 
 Independent mode also uses a dedicated **FreeDV Control** presentation for the non-display controls. `TopFrame` moves the existing control-group sizers between Notebook and Independent layouts, retaining the same widgets, handlers, and state rather than creating a second operational implementation.
 
-Conditional controls such as Mode and Squelch retain their existing configuration and mode-dependent behavior. The existing `enableLegacyModes` configuration remains authoritative for the Mode group, Squelch, ReSync, and Center RX. The workspace implementation does not introduce new mode-selection behavior.
-
 ### Frm Mic behavior
 
 In Independent mode, an operational Frm Mic request temporarily shows the existing Frm Mic frame if the user has it hidden. Its visibility checkbox remains unchecked, and this temporary presentation is not saved as user-selected visibility. Frm Mic hides again when the operation ends.
@@ -84,13 +82,15 @@ Minimized or maximized windows retain their previously captured ordinary geometr
 
 ## Appearance and visual system
 
-### Light and Dark appearance
+### System, Light, and Dark appearance
 
-The application supports Light and Dark appearance through native wxWidgets appearance handling. The selected appearance is persisted through the existing FreeDV configuration store and is applied at startup.
+The application supports System, Light, and Dark appearance. System follows the operating system appearance, while Light and Dark provide explicit overrides. The selected appearance is persisted through the existing FreeDV configuration store and is applied at startup.
+
+Existing Light or Dark preferences are carried forward from the previous appearance setting. New configurations default to System.
 
 Appearance selectors are available in both Notebook and Independent Control. Appearance changes take effect on the next launch rather than attempting to restyle existing top-level windows during a session.
 
-A session-only `--dark-mode` command-line option is also available. Version guards are used where appearance APIs differ between supported wxWidgets versions.
+On wxWidgets 3.3 or newer, FreeDV requests the selected native application appearance before creating its windows. Earlier wxWidgets versions use the detected system appearance for FreeDV's own visual theme where available. A session-only `--dark-mode` command-line option remains available as an explicit Dark override.
 
 ### Signal displays
 

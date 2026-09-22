@@ -36,7 +36,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , mainWindowWidth("/MainFrame/width", 800)
     , mainWindowHeight("/MainFrame/height", 780)
 
-    , darkMode("/Appearance/DarkMode", false)
+    , appearanceMode("/Appearance/Mode", static_cast<long>(FreeDVTheme::AppearanceMode::System))
 
     , independentWorkspace("/Windows/Independent/active", false)
     , independentVisibilitySaved("/Windows/Independent/visibilitySaved", false)
@@ -165,7 +165,24 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, mainWindowWidth);
     load_(config, mainWindowHeight);
 
-    load_(config, darkMode);
+    if (config->HasEntry(appearanceMode.getElementName()))
+    {
+        load_(config, appearanceMode);
+        const long mode = appearanceMode;
+        if (mode < static_cast<long>(FreeDVTheme::AppearanceMode::System) ||
+            mode > static_cast<long>(FreeDVTheme::AppearanceMode::Dark))
+        {
+            appearanceMode = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+        }
+    }
+    else if (config->HasEntry("/Appearance/DarkMode"))
+    {
+        bool legacyDarkMode = false;
+        config->Read("/Appearance/DarkMode", &legacyDarkMode, false);
+        appearanceMode = static_cast<long>(
+            legacyDarkMode ? FreeDVTheme::AppearanceMode::Dark
+                           : FreeDVTheme::AppearanceMode::Light);
+    }
 
     load_(config, independentWorkspace);
     load_(config, independentVisibilitySaved);
@@ -303,7 +320,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, mainWindowWidth);
     save_(config, mainWindowHeight);
 
-    save_(config, darkMode);
+    save_(config, appearanceMode);
 
     save_(config, independentWorkspace);
     save_(config, independentVisibilitySaved);
