@@ -37,7 +37,7 @@ The implementation adds an Independent Windows workspace alongside the existing 
 
 The existing Notebook workspace remains the default for a fresh installation. Its six displays are Waterfall, Spectrum, Frm Radio, Frm Mic, Frm Decoder, and SNR.
 
-Notebook retains the existing responsive wxWidgets sizer behavior and tab-based presentation. Switching to Independent Windows does not create replacement plots; the existing display instances are transferred between presentations.
+Notebook retains FreeDV's existing responsive wxWidgets sizer behavior and configurable tab layout, including the ability to arrange displays into multiple resizable panes within the main window. Switching to Independent Windows does not create replacement plots; the existing display instances are transferred into separate top-level windows, allowing them to be positioned independently of the main FreeDV window and across multiple monitors.
 
 ### Independent Windows
 
