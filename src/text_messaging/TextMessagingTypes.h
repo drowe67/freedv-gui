@@ -109,8 +109,14 @@ constexpr int PACKED_CALLSIGN_BYTES = 6;
 // last frame we could read. This has to outlast that tail.
 constexpr int TURNAROUND_AFTER_RX_MILLISECONDS = 1500;
 
-// For a burst nobody is expected to answer.
-constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
+// For a burst nobody is expected to answer. A station that heard the burst
+// comes clear of it about two seconds after it ends, plus a moment's random
+// pause, and may have been waiting the whole time; at a second and a half
+// this wait had us keying again right on top of it, twice on the bench. The
+// station that just transmitted yields: it waits long enough for a listener
+// to go first with a gap carrier sense can see, and short enough, with the
+// jitter added, to stay inside the reply window below.
+constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 3500;
 
 // For a burst that asked for an acknowledgement. The far end waits out its own
 // turnaround and then sends a burst of its own, so a wait sized for our

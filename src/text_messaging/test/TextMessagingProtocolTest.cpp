@@ -750,6 +750,16 @@ void testFragmentsStillToComeReserveTheChannel()
     partial.protocol.tick();
     CHECK(partial.transport.transmissions.size() == 1);
 
+    // A message for somebody else holds the channel just the same: on the
+    // bench a third station's eight fragment message ran forty four seconds.
+    Station bystander("DJ2LS");
+    CHECK(bystander.protocol.sendMessage("waiting", "W1AW", error));
+    heardAt = bystander.nowMs;
+    decodeInto(bystander, 0);
+    bystander.nowMs = heardAt + MAX_TURNAROUND_MILLISECONDS + 1;
+    bystander.protocol.tick();
+    CHECK(bystander.transport.transmissions.empty());
+
     // The last fragment ends the sender's keying, even with one lost before it.
     Station lossy("VK3ABC");
     CHECK(lossy.protocol.sendMessage("waiting", "W1AW", error));

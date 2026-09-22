@@ -481,9 +481,12 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
         switch (frame.type)
         {
             case FrameType::Broadcast:
+                reserveChannelForFragmentsLocked(frame, monotonicMs_());
                 handleIncomingFragmentLocked(frame, snr, events);
                 break;
             case FrameType::Message:
+                // Whoever it is for, the sender holds the channel for the rest.
+                reserveChannelForFragmentsLocked(frame, monotonicMs_());
                 if (isAddressedToMeLocked(frame)) handleIncomingFragmentLocked(frame, snr, events);
                 break;
             case FrameType::MessageAck:
@@ -522,8 +525,6 @@ void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, flo
     bool broadcast = frame.type == FrameType::Broadcast;
     ReassemblyKey key(frame.originCallsign, frame.airId);
     uint64_t nowMs = monotonicMs_();
-
-    reserveChannelForFragmentsLocked(frame, nowMs);
 
     // The sender is retransmitting a message we already have, which means our
     // acknowledgement did not reach them. Send it again rather than showing
