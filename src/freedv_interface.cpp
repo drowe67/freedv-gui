@@ -186,7 +186,7 @@ void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReli
             // memory the real rade_ instance reads, so paging them in this way still avoids
             // the first-frame stall without perturbing any state rade_ will actually use.
             {
-                struct rade* warmupRade = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_MODE_V2 | RADE_VERBOSE_0);
+                struct rade* warmupRade = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | RADE_VERBOSE_0);
                 if (warmupRade != nullptr)
                 {
                     std::vector<float> warmupFeatures(rade_n_features_in_out(warmupRade), 0.0f);
