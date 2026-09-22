@@ -41,7 +41,6 @@
 #include <sndfile.h>
 #include <thread>
 #include <atomic>
-#include "codec2_fifo.h"
 #include "../util/Semaphore.h"
 #include "../util/GenericFIFO.h"
 
@@ -66,8 +65,16 @@ private:
     GenericFIFO<short> inputFifo_;
     std::atomic<bool> fileIoThreadEnding_;
     Semaphore fileIoThreadSem_;
-    
+
+    // Tracks consecutive execute() calls whose samples couldn't be queued, so we log
+    // once per drop event (start + duration) rather than once per audio callback.
+    int consecutiveWriteDrops_;
+
     void fileIoThreadEntry_();
+
+    // Writes whatever's currently queued to the record file. Must only be called from
+    // the file I/O thread; takes g_mutexProtectingCallbackData itself.
+    void drainFifoToFile_(short* buf);
 };
 
 #endif // AUDIO_PIPELINE__RECORD_STEP_H
