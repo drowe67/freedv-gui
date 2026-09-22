@@ -94,6 +94,15 @@ public:
     // call from any thread.
     bool isReceiving() const;
 
+    // Puts both demodulators back to searching for a preamble and forgets
+    // any sync they reported. Called at the end of our own transmission: the
+    // receive path is not run while we are keyed, so a demodulator that was
+    // locked onto a burst when we keyed is still "locked" when we unkey,
+    // reports the channel busy on silence, and, expecting payload rather
+    // than a preamble, misses the first burst that actually arrives. The
+    // bench lost a frame that way. Safe to call from any thread.
+    void resetReceivers();
+
 private:
     struct Demodulator
     {

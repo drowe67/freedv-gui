@@ -312,6 +312,10 @@ void TextMessagingTransport::unkey()
                  (long long)held - (long long)burstMs_);
     }
 
+    // The receivers have been frozen since we keyed; whatever they were
+    // doing then is no guide to what is on the channel now.
+    if (modem_ != nullptr) modem_->resetReceivers();
+
     // Ownership of the transmitter is released by whoever performs the PTT
     // change, once the changeover has actually finished: the transmit thread
     // must keep microphone audio off the air until then.

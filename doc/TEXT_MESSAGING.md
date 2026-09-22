@@ -113,7 +113,10 @@ arrives. When the channel clears, every station that was waiting on it pauses
 a random moment before keying, so two that heard the same burst do not key
 together. A receiver that stays locked for more than a minute is treated as
 false triggering on noise and ignored, so it cannot silence the station for
-good.
+good. The receivers are not run while the station transmits, so at the end of
+every burst of ours they are put back to searching for a preamble; left alone,
+a receiver that was locked onto a burst when we keyed would still think so
+when we unkeyed, and miss the next burst to arrive.
 
 ## How it works on the air
 

@@ -305,6 +305,23 @@ void TextMessagingModem::demodulate(const short* samples, int numSamples)
     demodulateOne(textRx_, samples, numSamples);
 }
 
+void TextMessagingModem::resetReceivers()
+{
+    std::lock_guard<std::mutex> lock(rxMutex_);
+    if (!open_) return;
+
+    for (Demodulator* demodulator : {&signallingRx_, &textRx_})
+    {
+        // FREEDV_SYNC_UNSYNC returns the state machine to search and clears
+        // the modem's own sample history; the samples we were holding for it
+        // are just as stale.
+        freedv_set_sync(demodulator->modem, FREEDV_SYNC_UNSYNC);
+        demodulator->buffer.clear();
+    }
+
+    lastSyncMs_.store(0, std::memory_order_release);
+}
+
 bool TextMessagingModem::isReceiving() const
 {
     if (!open_) return false;
