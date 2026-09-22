@@ -135,7 +135,15 @@ constexpr int MAX_TURNAROUND_MILLISECONDS =
 // a burst of its own, so sync genuinely drops for the postamble, the gap and
 // the next preamble; the hold bridges that, or the channel would read as free
 // between fragments of the same message.
-constexpr int CHANNEL_BUSY_HOLD_MILLISECONDS = 1000;
+//
+// It has to bridge more than that. A receiver that joins a burst part way
+// through, which is what happens every time we unkey while somebody else is
+// still sending, never gets a clean preamble: on the bench it flickered in and
+// out of sync three times inside one five second burst, with clear gaps of up
+// to a second and a half. One second of hold left the channel reading free in
+// those gaps. Two covers the widest gap seen with margin, at the cost of about
+// a second more before keying after every burst received.
+constexpr int CHANNEL_BUSY_HOLD_MILLISECONDS = 2000;
 
 // A demodulator that keeps false triggering on band noise must not be able to
 // silence the station for good. The longest real traffic is eight DATAC4

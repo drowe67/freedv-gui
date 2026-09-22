@@ -39,7 +39,8 @@ says chat.
   number for the whole of that attempt, on the air and while the
   acknowledgement timer runs, so progress never appears to go backwards.
 * The send button is disabled while a burst is on the air, so nothing is
-  queued behind a keyed transmitter.
+  queued behind a keyed transmitter. Enter is held off in the same way; the
+  text stays in the box until the transmitter is free.
 * The status line along the bottom says what the station is doing. A notice
   that something is queued gives way to `Transmitting...` once the transmitter
   keys. While an acknowledgement is outstanding it reads `Awaiting message ACK.` or
@@ -52,7 +53,9 @@ says chat.
 * The send button says where the message goes. With a station selected it
   reads **>> CALL** and transmits to that station asking for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
-  three times, and then marked failed.
+  three times, and then marked failed. Each retry first waits a random backoff
+  of up to 3 seconds times the attempt number, so two stations whose timers
+  ran out together do not key together again.
 * With no station selected it reads **>> Broadcast** and transmits to
   everybody. No confirmation is requested and the message is tagged `BCAST`
   in the window.
@@ -81,13 +84,22 @@ message that asked for an acknowledgement waits longer still: the far end has
 its own turnaround to serve before it can even begin the reply. That longer
 wait ends as soon as the acknowledgement arrives.
 
+A reply we owe, an acknowledgement or a pong, waits out the turnarounds but
+not that longer window. The station waiting for it is sitting on a window of
+exactly the same length, so a reply held for ours would key at the very moment
+its window expired, and the two would collide. The loopback bench showed that
+happen.
+
 The station also listens before it talks. While either demodulator is locked
 onto a burst -- from the moment it recognises a preamble until the packet is
 in -- somebody else has the channel, and everything waits: nothing starts,
 and time spent waiting does not count against acknowledgements already
 outstanding, since no reply can get through a busy channel and the burst being
-received may be the reply itself. A receiver that stays locked for more than a
-minute is treated as false triggering on noise and ignored, so it cannot
+received may be the reply itself. The channel stays busy for two seconds after
+sync was last seen: a receiver that joins a burst part way through, as it does
+whenever we unkey while somebody else is still sending, flickers in and out of
+sync, and the hold bridges the gaps. A receiver that stays locked for more than
+a minute is treated as false triggering on noise and ignored, so it cannot
 silence the station for good.
 
 ## How it works on the air

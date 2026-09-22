@@ -914,7 +914,10 @@ void TextMessagingDialog::OnEntryKeyDown(wxKeyEvent& event)
     bool isEnter = event.GetKeyCode() == WXK_RETURN || event.GetKeyCode() == WXK_NUMPAD_ENTER;
     if (isEnter && !event.ShiftDown())
     {
-        send(selectedCallsign());
+        // Enter is the send button by another route, so it is held off while
+        // the transmitter is keyed just as the button is. The text stays put;
+        // the status line already says why.
+        if (!m_transmitControlsDisabled) send(selectedCallsign());
         return;
     }
 
