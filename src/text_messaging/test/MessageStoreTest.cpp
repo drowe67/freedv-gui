@@ -242,6 +242,83 @@ void testHeardStationList()
     CHECK(list.stations().empty());
 }
 
+void testPinnedStations()
+{
+    HeardStationList list(600);
+    HeardStation station;
+
+    CHECK(!list.pin("   "));                          // nothing usable in it
+    CHECK(list.pin("dj2ls"));
+    CHECK(list.contains("DJ2LS"));
+    CHECK(list.find("DJ2LS", station));
+    CHECK(station.callsign == "DJ2LS");
+    CHECK(station.pinned);
+    CHECK(station.lastHeard == 0);                    // never heard
+
+    // Pinned by hand, so time does not remove it.
+    CHECK(list.prune(NOW + 100000) == 0);
+    CHECK(list.contains("DJ2LS"));
+
+    // Hearing it fills in the decode without unpinning it.
+    CHECK(!list.heard("DJ2LS", 4.0f, NOW));           // already listed
+    CHECK(list.find("DJ2LS", station));
+    CHECK(station.pinned);
+    CHECK(station.snr > 3.9f);
+    CHECK(station.lastHeard == NOW);
+    CHECK(list.prune(NOW + 100000) == 0);
+
+    // Pinning a station already heard keeps its decode.
+    CHECK(list.heard("W1AW", -1.0f, NOW + 20));
+    CHECK(list.pin("W1AW"));
+    CHECK(list.find("W1AW", station));
+    CHECK(station.pinned);
+    CHECK(station.lastHeard == NOW + 20);
+
+    // A never heard station sorts after everything that has been.
+    CHECK(list.pin("G0ABC"));
+    std::vector<HeardStation> stations = list.stations();
+    CHECK(stations.size() == 3);
+    CHECK(stations[0].callsign == "W1AW");
+    CHECK(stations[1].callsign == "DJ2LS");
+    CHECK(stations[2].callsign == "G0ABC");
+
+    // A restore replaces the heard entries and leaves the pinned ones, filling
+    // in the decode of a pinned station the store knew about.
+    std::vector<HeardStation> restored;
+    HeardStation heardPinned;
+    heardPinned.callsign = "W1AW";
+    heardPinned.snr = 7.0f;
+    heardPinned.lastHeard = NOW + 50;
+    restored.push_back(heardPinned);
+
+    HeardStation fresh;
+    fresh.callsign = "VK3ABC";
+    fresh.snr = 6.0f;
+    fresh.lastHeard = NOW + 40;
+    restored.push_back(fresh);
+
+    CHECK(list.heard("K1ABC", 1.0f, NOW + 30));       // heard only, so replaced
+    list.restore(restored, NOW + 60);
+    CHECK(list.stations().size() == 4);
+    CHECK(list.contains("DJ2LS"));
+    CHECK(list.contains("G0ABC"));
+    CHECK(list.contains("VK3ABC"));
+    CHECK(!list.contains("K1ABC"));
+    CHECK(list.find("W1AW", station));
+    CHECK(station.pinned);
+    CHECK(station.lastHeard == NOW + 50);
+
+    // Removal is the only way out, and works on heard entries too.
+    CHECK(list.remove("dj2ls"));
+    CHECK(!list.remove("DJ2LS"));                     // already gone
+    CHECK(!list.contains("DJ2LS"));
+    CHECK(!list.find("DJ2LS", station));
+    CHECK(list.remove("VK3ABC"));
+    CHECK(!list.contains("VK3ABC"));
+    CHECK(list.prune(NOW + 100000) == 0);             // nothing unpinned is left
+    CHECK(list.stations().size() == 2);
+}
+
 } // namespace
 
 int main()
@@ -251,6 +328,7 @@ int main()
     testHeardStationPersistence();
     testClosedStoreFails();
     testHeardStationList();
+    testPinnedStations();
 
     if (failures > 0)
     {

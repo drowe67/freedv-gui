@@ -47,7 +47,8 @@ namespace TextMessaging
 
 // Stations we have decoded a frame from, most recently heard first. Entries
 // age out so that the list shows who is on the channel now rather than who was
-// on it this morning.
+// on it this morning. A station the operator pinned by hand is the exception:
+// it stays until removed, whether or not it has ever been heard.
 class HeardStationList
 {
 public:
@@ -59,18 +60,31 @@ public:
 
     // Records a decode. Returns true if this added a station the list did not
     // already have, which is what the GUI uses to decide whether the selection
-    // it is holding can stay put.
+    // it is holding can stay put. A pinned station stays pinned.
     bool heard(const std::string& callsign, float snr, std::time_t when);
 
-    // Replaces the contents, used to restore the list from the message store
-    // at startup. Entries already older than the retention window are dropped.
+    // Adds a station the operator typed in, or pins one already listed. Pass
+    // the callsign normalized, since that is the name the row will carry.
+    // Returns false if nothing usable is left of the callsign.
+    bool pin(const std::string& callsign);
+
+    // Drops a station, heard or pinned. Returns false if it was not listed.
+    bool remove(const std::string& callsign);
+
+    // Copies a station's entry out. Returns false if it is not listed.
+    bool find(const std::string& callsign, HeardStation& stationOut) const;
+
+    // Replaces the heard entries, used to restore the list from the message
+    // store at startup. Entries already older than the retention window are
+    // dropped. Pinned entries are kept; a restored decode of one fills in its
+    // SNR and last heard time.
     void restore(const std::vector<HeardStation>& stations, std::time_t now);
 
-    // Drops entries last heard before now - maxAgeSeconds. Returns the number
-    // removed so a caller can skip a redraw when nothing changed.
+    // Drops unpinned entries last heard before now - maxAgeSeconds. Returns
+    // the number removed so a caller can skip a redraw when nothing changed.
     int prune(std::time_t now);
 
-    // Most recently heard first.
+    // Most recently heard first; pinned stations never heard come last.
     std::vector<HeardStation> stations() const;
 
     bool contains(const std::string& callsign) const;

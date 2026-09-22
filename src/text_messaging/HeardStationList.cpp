@@ -35,6 +35,7 @@
 #include "HeardStationList.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "FrameCodec.h"
 
@@ -76,16 +77,65 @@ bool HeardStationList::heard(const std::string& callsign, float snr, std::time_t
     return true;
 }
 
+bool HeardStationList::pin(const std::string& callsign)
+{
+    std::string normalized = FrameCodec::normalizeCallsign(callsign);
+    if (normalized.empty()) return false;
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // A station already heard keeps its decode; a new one starts never heard.
+    HeardStation& station = stations_[normalized];
+    station.callsign = normalized;
+    station.pinned = true;
+
+    return true;
+}
+
+bool HeardStationList::remove(const std::string& callsign)
+{
+    std::string normalized = FrameCodec::normalizeCallsign(callsign);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    return stations_.erase(normalized) > 0;
+}
+
+bool HeardStationList::find(const std::string& callsign, HeardStation& stationOut) const
+{
+    std::string normalized = FrameCodec::normalizeCallsign(callsign);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto entry = stations_.find(normalized);
+    if (entry == stations_.end()) return false;
+
+    stationOut = entry->second;
+    return true;
+}
+
 void HeardStationList::restore(const std::vector<HeardStation>& stations, std::time_t now)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    stations_.clear();
+    // Only the heard entries are replaced; what the operator pinned is theirs.
+    for (auto it = stations_.begin(); it != stations_.end();)
+    {
+        it = it->second.pinned ? std::next(it) : stations_.erase(it);
+    }
+
     for (const HeardStation& station : stations)
     {
         std::string normalized = FrameCodec::normalizeCallsign(station.callsign);
         if (normalized.empty()) continue;
         if (station.lastHeard < now - maxAgeSeconds_) continue;
+
+        auto pinned = stations_.find(normalized);
+        if (pinned != stations_.end())
+        {
+            pinned->second.snr = station.snr;
+            pinned->second.lastHeard = station.lastHeard;
+            continue;
+        }
 
         HeardStation copy = station;
         copy.callsign = normalized;
@@ -102,7 +152,7 @@ int HeardStationList::prune(std::time_t now)
 
     for (auto it = stations_.begin(); it != stations_.end();)
     {
-        if (it->second.lastHeard < cutoff)
+        if (!it->second.pinned && it->second.lastHeard < cutoff)
         {
             it = stations_.erase(it);
             removed++;

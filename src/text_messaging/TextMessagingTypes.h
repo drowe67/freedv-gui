@@ -206,11 +206,14 @@ struct TextMessage
 };
 
 // A station we have decoded something from, shown in the heard stations list.
+// One the operator typed in by hand is pinned: it may never have been heard
+// (lastHeard stays 0), it does not age out, and only the operator removes it.
 struct HeardStation
 {
     std::string callsign;
     float snr = 0.0f;
     std::time_t lastHeard = 0;
+    bool pinned = false;
 };
 
 } // namespace TextMessaging
