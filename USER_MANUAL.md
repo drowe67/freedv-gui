@@ -964,7 +964,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Various data race cleanups. (PR #1502)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
-    * Ccache support extended to third party dependencies. (PR #1498)
+    * Ccache support extended to third party dependencies. (PR #1498, #1505))
 3. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
     * Windows audio thread timing improvements. (PR #1488)
