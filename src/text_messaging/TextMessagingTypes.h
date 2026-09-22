@@ -115,8 +115,11 @@ constexpr int TURNAROUND_AFTER_RX_MILLISECONDS = 1500;
 // this wait had us keying again right on top of it, twice on the bench. The
 // station that just transmitted yields: it waits long enough for a listener
 // to go first with a gap carrier sense can see, and short enough, with the
-// jitter added, to stay inside the reply window below.
-constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 3500;
+// jitter added, to stay inside the reply window below. A listener is clear
+// by about 2.7 s after the burst and the demodulator needs up to 1.5 s of
+// preamble to notice a burst, so 3.5 s left a gap of a second and lost one
+// more burst on the bench; the extra half second is the margin.
+constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 4000;
 
 // For a burst that asked for an acknowledgement. The far end waits out its own
 // turnaround and then sends a burst of its own, so a wait sized for our
@@ -124,14 +127,16 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 3500;
 // at 14:29:23, the far end began acknowledging it at 14:29:24, and we keyed
 // over the top of it at 14:29:25 and lost the reply. The window ends early
 // anyway when the acknowledgement arrives, because the entry waiting on it is
-// removed from the outbox.
+// removed from the outbox. It has to outlast the plain turnaround above with
+// its jitter, or a message that asked for an answer would wait no longer than
+// a broadcast.
 //
 // The same window is served after we send a reply. The station we answered
 // is already turning around and usually has more to say; on the bench it
 // keyed two seconds after our acknowledgement ended, exactly when our own
 // plain turnaround let us key, four times in one run. Waiting the window
 // hands it the channel with a gap carrier sense can see.
-constexpr int REPLY_WINDOW_MILLISECONDS = 5000;
+constexpr int REPLY_WINDOW_MILLISECONDS = 6000;
 
 // Two stations that back off by exactly the same amount collide again on the
 // retry, so the wait after our own burst carries jitter. It is drawn from a
