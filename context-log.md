@@ -11,10 +11,11 @@ wire-compatible chat feature. 35 commits on top of upstream as of 2026-09-21.
 - Two-instance loopback bench exists: `test/test_text_chat_loopback.sh up|down|status`.
   It has caught and confirmed fixes for PTT handoff, burst timing, the missed
   transmit flag, turnaround windows, and the status line (commits of 2026-09-20).
-- HEAD (`826d49ff`, carrier sense from the demodulator's FREEDV_RX_SYNC) was
-  written last and **no bench log survives showing it exercised**. Treat it as
-  unit-tested only until a loopback run shows a `busy` spell in
-  `FREEDV_TEXT_CHAT_TX_LOG` output while the other station is mid-burst.
+- Carrier sense (`826d49ff`) was proven on the bench on 2026-09-21: a 22 s
+  four-fragment burst held the other station busy throughout, including the
+  gaps between fragments, and a ping queued mid-burst waited for the clear.
+- The chat window now has one send button (`>> Broadcast` / `>> CALL`), a
+  station context menu, and an Add Station box; all confirmed on the bench.
 
 ## What exists
 
@@ -46,19 +47,22 @@ sync was last seen, and a receiver locked for over a minute is ignored.
 5. `down` removes the bench workdir and its logs. Copy logs out first if a run
    showed something worth keeping.
 
-## Next step: prove carrier sense on the bench
+## Open findings from the 2026-09-21 bench run (not yet decided)
 
-```sh
-cmake --build build -j$(nproc)
-test/test_text_chat_loopback.sh up      # then press Start in both windows
-```
+1. Replies (PONG/ACK) wait behind the station's own 5 s reply window in
+   `TextMessagingProtocol::quietUntilLocked()`, so a reply goes out just as the
+   far end's identical window expires, and the two collide (21:23:44/45 in
+   that run). Candidate fix: exempt replies from the outbox part of the window.
+2. Two stations' retry timers can expire in the same second (21:24:21); the
+   turnaround jitter is fixed per callsign, not drawn per attempt.
+3. A receiver that rejoins a burst mid-way flaps sync with ~0.5 s clear gaps
+   inside one burst; CHANNEL_BUSY_HOLD_MILLISECONDS (1000) does not bridge
+   them all.
+4. Enter in the message box queues while the transmitter is keyed, though the
+   send button is disabled then. Harmless (the queue holds it) but inconsistent
+   with the doc.
 
-Send a long (multi-fragment) message from A, and while it is still keyed queue
-a message from B. Expected in stationB's `freedv.log`: a busy spell logged by
-the transport, B's burst held until A's fragments end plus the hold, then B
-keys. Failure modes to look for: B keying between A's fragments (hold too
-short), B never keying (sync stuck; the one-minute ignore should clear it), or
-a busy spell logged while nothing is on the air (false trigger on the null
-sink's silence).
+## Running the bench from a tmux shell
 
-Then `test/test_text_chat_loopback.sh down`.
+The shell has no X variables. Export `DISPLAY=:0.0` and the `XAUTHORITY` that
+`tmux show-environment` reports, then `FREEDV_TEST_MODE=4 test/test_text_chat_loopback.sh up`.
