@@ -897,11 +897,6 @@ void MainFrame::loadConfiguration_()
     int y = wxGetApp().appConfiguration.mainWindowTop;
     int w = wxGetApp().appConfiguration.mainWindowWidth;
     int h = wxGetApp().appConfiguration.mainWindowHeight;
-
-    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
-    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
-    g_SquelchLevel /= 2.0;
-
     
     if (!wxGetApp().appConfiguration.independentWorkspace)
     {

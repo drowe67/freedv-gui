@@ -1012,8 +1012,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     shareGroup(txLevelSizer, rightSizer, radioAudio, 0);
     shareGroup(micSpeakerLevelSizer, rightSizer, radioAudio, 1);
     shareGroup(reportFrequencySizer, rightSizer, radioAudio, 2);
-    shareGroup(sbSizer_mode, rightSizer, radioAudio, 4);
-    shareGroup(sbSizer3, rightSizer, radioAudio, 5);
     shareGroup(sbSizer5, rightSizer, control, 0);
     shareGroup(lowerSizer, centerSizer, received, 0);
 
@@ -1350,7 +1348,6 @@ void TopFrame::SetIndependentControlPresentation(bool independent)
     }
 
     callsignSizer_->SetOrientation(independent ? wxHORIZONTAL : wxVERTICAL);
-    sbSizer_mode->SetOrientation(independent ? wxHORIZONTAL : wxVERTICAL);
     statsFieldsSizer_->SetVGap(independent ? ::FromDIP(this, 4) : 0);
     m_cboReportFrequency->GetContainingSizer()->GetItem(m_cboReportFrequency)->SetFlag(
         independent ? static_cast<int>(wxALL) | static_cast<int>(wxEXPAND) : wxALL);
@@ -1358,7 +1355,6 @@ void TopFrame::SetIndependentControlPresentation(bool independent)
     m_gaugeSNR->GetContainingSizer()->GetItem(m_gaugeSNR)->SetFlag(
         wxALL | levelFlags);
     m_sliderMicSpkrLevel->GetContainingSizer()->GetItem(m_sliderMicSpkrLevel)->SetFlag(levelFlags);
-    m_sliderSQ->GetContainingSizer()->GetItem(m_sliderSQ)->SetFlag(levelFlags);
 
     // Sort the temporary copy for the independent layout; controlGroups_ retains notebook order.
     auto groups = controlGroups_;

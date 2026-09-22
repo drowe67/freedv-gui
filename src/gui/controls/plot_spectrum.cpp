@@ -26,7 +26,6 @@
 #include "plot_spectrum.h"
 #include "defines.h"
 #include "gui/theme/FreeDVTheme.h"
-#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 
 #define HZ_GRANULARITY 10

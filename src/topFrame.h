@@ -107,7 +107,7 @@ class TopFrame : public wxFrame
         LevelGauge* m_gaugeSNR;
         wxStaticText* m_textSNR;
         wxCheckBox* m_ckboxSNR;
-        LevelGauge* m_gaugeLevel;
+        wxGauge* m_gaugeLevel;
         wxPanel* m_levelTargetMarker;
 
 
@@ -151,7 +151,6 @@ class TopFrame : public wxFrame
         wxSizer* rightSizer;
 
         wxStaticBox* modeBox;
-        wxStaticBoxSizer* sbSizer_mode;
         
         wxMenuItem* m_menuItemPlayFileFromRadio;
         wxMenuItem* m_menuItemExportConfig;
