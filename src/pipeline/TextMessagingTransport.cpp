@@ -158,6 +158,11 @@ bool TextMessagingTransport::isTransmitting() const
     if (keyed_.load(std::memory_order_acquire)) return true;
     if (textMessagingTxQueue().isTransmitting()) return true;
 
+    return pttHeld();
+}
+
+bool TextMessagingTransport::pttHeld() const
+{
     VoiceTransmitCheck check;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -222,6 +227,22 @@ void TextMessagingTransport::poll()
         {
             log_info("TX: +%llu ms queue drained", (unsigned long long)(now - keyedAtMs_));
         }
+    }
+
+    // The operator can unkey from the main window while a burst is playing.
+    // With the transmitter gone the rest of the burst goes nowhere, and left
+    // alone the burst would stand as "Transmitting" until the watchdog fired:
+    // on the bench, twenty seconds after XMIT was pressed. The transmit thread
+    // does not pick a burst up until the radio is keyed, so having seen it
+    // start and now finding the radio unkeyed means somebody else unkeyed it.
+    if (sawTransmitting_ && !pttHeld())
+    {
+        log_warn("Text messaging burst was unkeyed from the main window %llu ms in; dropping it",
+                 (unsigned long long)(now - keyedAtMs_));
+        queue.clear();
+        queue.setTransmitting(false);
+        unkey();
+        return;
     }
 
     // The transmit thread clearing the transmitting flag means the sound card

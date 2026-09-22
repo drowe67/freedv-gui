@@ -79,6 +79,9 @@ public:
 private:
     void unkey();
 
+    // Whether the main window has the radio keyed, for voice or for us.
+    bool pttHeld() const;
+
     TextMessagingModem* modem_;
     PttFunction pttFunction_;
     VoiceTransmitCheck voiceTransmitCheck_;

@@ -41,6 +41,10 @@ says chat.
 * The send button is disabled while a burst is on the air, so nothing is
   queued behind a keyed transmitter. Enter is held off in the same way; the
   text stays in the box until the transmitter is free.
+* Pressing **XMIT** in the main window while a chat burst is on the air ends
+  the burst at once; the rest of it is dropped rather than played into an
+  unkeyed radio, and a message that was on its way is retried or marked
+  failed like any other unanswered one.
 * The status line along the bottom says what the station is doing. A notice
   that something is queued gives way to `Transmitting...` once the transmitter
   keys. While an acknowledgement is outstanding it reads `Awaiting message ACK.` or
