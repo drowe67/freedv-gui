@@ -16,7 +16,7 @@ if(APPLE AND BUILD_OSX_UNIVERSAL)
 ExternalProject_Add(build_mpg123_x86
     DOWNLOAD_EXTRACT_TIMESTAMP NO
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=x86_64-apple-darwin --target=x86_64-apple-darwin CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -arch\ x86_64\ -O3\ -mmacosx-version-min=11.0
+    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=x86_64-apple-darwin --target=x86_64-apple-darwin CPPFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT} CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -arch\ x86_64\ -O3\ -mmacosx-version-min=11.0
     BUILD_COMMAND $(MAKE) && $(MAKE) install
     INSTALL_COMMAND ""
     URL ${MPG123_URL}
@@ -25,7 +25,7 @@ ExternalProject_Add(build_mpg123_x86
 ExternalProject_Add(build_mpg123_arm
     DOWNLOAD_EXTRACT_TIMESTAMP NO
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=aarch64-apple-darwin --target=aarch64-apple-darwin CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -arch\ arm64\ -O3\ -mmacosx-version-min=11.0
+    CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=aarch64-apple-darwin --target=aarch64-apple-darwin CPPFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT} CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -arch\ arm64\ -O3\ -mmacosx-version-min=11.0
     BUILD_COMMAND $(MAKE) && $(MAKE) install
     INSTALL_COMMAND ""
     URL ${MPG123_URL}
@@ -54,7 +54,7 @@ set_target_properties(mpg123 PROPERTIES
 
 else(APPLE AND BUILD_OSX_UNIVERSAL)
 if(APPLE)
-set(CONFIGURE_COMMAND ${CONFIGURE_COMMAND} CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -O3\ -mmacosx-version-min=11.0)
+set(CONFIGURE_COMMAND ${CONFIGURE_COMMAND} CPPFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT} CFLAGS=${EXTERNAL_PROJECT_APPLE_ISYSROOT}\ -O3\ -mmacosx-version-min=11.0)
 endif(APPLE)
 ExternalProject_Add(build_mpg123
     BUILD_IN_SOURCE 1
