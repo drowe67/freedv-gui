@@ -26,3 +26,16 @@ if(CMAKE_CXX_COMPILER_LAUNCHER)
 else()
     set(EXTERNAL_PROJECT_CXX "${CMAKE_CXX_COMPILER}")
 endif()
+
+# CMAKE_C_COMPILER/CMAKE_CXX_COMPILER above can resolve to the Xcode
+# toolchain's raw absolute cc/c++ path (inside XcodeDefault.xctoolchain)
+# rather than /usr/bin/cc or `xcrun cc`. autoconf's own compiler-works check
+# invokes that path directly, without going through xcrun, so it doesn't
+# auto-discover the default SDK and fails with "ld: library 'System' not
+# found". Pass -isysroot explicitly so these dependencies' ./configure can
+# actually link its test program.
+if(APPLE AND CMAKE_OSX_SYSROOT)
+    set(EXTERNAL_PROJECT_APPLE_ISYSROOT -isysroot\ ${CMAKE_OSX_SYSROOT})
+else()
+    set(EXTERNAL_PROJECT_APPLE_ISYSROOT "")
+endif()
