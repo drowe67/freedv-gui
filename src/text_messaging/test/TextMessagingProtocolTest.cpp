@@ -33,6 +33,7 @@
 //=========================================================================
 
 #include <cstdio>
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -121,10 +122,11 @@ struct Station
 
     // Runs the protocol far enough to put a queued transmission on the air and
     // see it through to the end of the over. The clock skips past any
-    // turnaround first, since a real station would simply have waited.
+    // turnaround or retry backoff first, since a real station would simply
+    // have waited.
     void completeOneTransmission()
     {
-        nowMs += MAX_TURNAROUND_MILLISECONDS + 1;
+        nowMs += std::max(MAX_TURNAROUND_MILLISECONDS, MAX_RETRY_BACKOFF_MILLISECONDS) + 1;
         protocol.tick(); // hands the burst to the transport
         transport.transmitting = false;
         protocol.tick(); // the over has finished
@@ -592,6 +594,94 @@ void testTheWindowEndsWhenTheReplyArrives()
     CHECK(sender.transport.transmissions.size() == 2);
 }
 
+// A reply we owe is not held for our own reply window. On the bench a station
+// waiting on an acknowledgement decoded a ping, held the pong five seconds for
+// its own window, and keyed it one second before the pinging station, whose
+// identical window had just expired, keyed its next message over the top.
+void testReplyIsNotHeldForOurOwnReplyWindow()
+{
+    Station sender("W1AW");
+    Station other("DJ2LS");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("needs an ack", "VK3ABC", error));
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.size() == 1);
+
+    // Somebody else pings us while VK3ABC's reply is still owed.
+    CHECK(other.protocol.sendPing("W1AW", error));
+    other.completeOneTransmission();
+    sender.receiveFrom(other.transport);
+
+    // Past the turnarounds but well inside the reply window, which is where
+    // testAWaitedReplyOutlastsThePlainTurnaround shows a message still waits.
+    CHECK(TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1 <
+          REPLY_WINDOW_MILLISECONDS);
+    sender.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
+    sender.protocol.tick();
+    CHECK(sender.transport.transmissions.size() == 2);
+    CHECK(sender.transport.signallingFlags.back()); // the pong
+}
+
+// A retry backs off by a random amount before keying again, bounded by the
+// attempt number, and different stations draw differently: on the bench two
+// stations' retry timers expired in the same second and they keyed together,
+// too close for either to sense the other's carrier.
+void testRetryBacksOffBeforeKeyingAgain()
+{
+    const char* callsigns[] = {"W1AW", "VK3ABC", "DJ2LS", "G0ABC", "K1ABC", "TEST1/P"};
+    std::vector<uint64_t> firstBackoffs;
+
+    for (const char* callsign : callsigns)
+    {
+        Station sender(callsign);
+
+        std::string error;
+        CHECK(sender.protocol.sendMessage("Anybody there", "VK3XYZ", error));
+
+        for (int attempt = 1; attempt <= MAX_MESSAGE_RETRIES; attempt++)
+        {
+            sender.completeOneTransmission();
+            size_t sentSoFar = sender.transport.transmissions.size();
+
+            // The timer expires; the retry is queued but must not key at once
+            // unless its backoff happened to be zero.
+            sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+            uint64_t expiredAt = sender.nowMs;
+            uint64_t bound = (uint64_t)RETRY_BACKOFF_MILLISECONDS * attempt;
+
+            uint64_t keyedAfter = 0;
+            for (;;)
+            {
+                sender.protocol.tick();
+                if (sender.transport.transmissions.size() > sentSoFar)
+                {
+                    keyedAfter = sender.nowMs - expiredAt;
+                    break;
+                }
+                CHECK(sender.nowMs - expiredAt <= bound); // never later than the bound
+                if (sender.nowMs - expiredAt > bound) break;
+                sender.nowMs += 100;
+            }
+
+            CHECK(keyedAfter <= bound);
+            if (attempt == 1) firstBackoffs.push_back(keyedAfter);
+        }
+    }
+
+    // Six stations with identical traffic must not all key at the same moment,
+    // and the backoff has to be real, not a bound that is never used.
+    bool allEqual = true;
+    uint64_t largest = 0;
+    for (uint64_t backoff : firstBackoffs)
+    {
+        if (backoff != firstBackoffs[0]) allEqual = false;
+        if (backoff > largest) largest = backoff;
+    }
+    CHECK(!allEqual);
+    CHECK(largest > 0);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting.
 void testBusyChannelFreezesTheQueue()
@@ -737,6 +827,8 @@ int main()
     testNextBurstWaitsForTheFarEndToAnswer();
     testAWaitedReplyOutlastsThePlainTurnaround();
     testTheWindowEndsWhenTheReplyArrives();
+    testReplyIsNotHeldForOurOwnReplyWindow();
+    testRetryBacksOffBeforeKeyingAgain();
     testAckWaitCoversTheWholeCycle();
     testBusyChannelFreezesTheQueue();
     testBusyChannelHoldsTheAcknowledgementTimer();

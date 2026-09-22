@@ -165,10 +165,12 @@ private:
         bool signalling = false;                    // DATAC13 rather than DATAC4
         bool expectsAck = false;
         bool isPing = false;
+        bool reply = false;      // an acknowledgement or pong we owe somebody
         std::string destination;
         int retries = 0;
         uint64_t deadlineMs = 0;
         uint64_t sentAtMs = 0;   // end of our burst, for the reply window
+        uint64_t notBeforeMs = 0; // retry backoff; nothing to do with the far end
         TransmissionState state = TransmissionState::Queued;
     };
 
@@ -211,10 +213,10 @@ private:
     // Holds the transmitter off until the far end has had its turn. Never
     // shortens a wait that is already running.
     void deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs);
-    uint64_t quietUntilLocked() const;
+    uint64_t quietUntilLocked(bool forReply) const;
     bool channelFrozenLocked(uint64_t nowMs);
     void holdTimersLocked(uint64_t pausedMs);
-    uint32_t turnaroundJitterLocked(int jitterMs);
+    uint32_t randomDelayLocked(int maxMs);
     void serviceOutboxLocked(uint64_t nowMs, bool frozen, std::vector<PendingEvent>& events);
     uint16_t nextAirIdLocked();
     Frame makeFrameLocked(FrameType type, const std::string& destination, uint16_t airId,

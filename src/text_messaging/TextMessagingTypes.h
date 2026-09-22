@@ -122,9 +122,9 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
 constexpr int REPLY_WINDOW_MILLISECONDS = 5000;
 
 // Two stations that back off by exactly the same amount collide again on the
-// retry, so the wait after our own burst carries jitter. It is drawn from the
-// station's own callsign, which keeps it reproducible per station while
-// decorrelating any two of them.
+// retry, so the wait after our own burst carries jitter. It is drawn from a
+// sequence seeded by the station's own callsign, which keeps it reproducible
+// per station while decorrelating any two of them.
 constexpr int TURNAROUND_JITTER_MILLISECONDS = 1000;
 constexpr int MAX_TURNAROUND_MILLISECONDS =
     REPLY_WINDOW_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS;
@@ -148,6 +148,16 @@ constexpr int MAX_CHANNEL_BUSY_MILLISECONDS = 60000;
 constexpr int MAX_MESSAGE_RETRIES = 3;
 constexpr int ACK_TIMEOUT_MILLISECONDS = 15000;
 constexpr int PING_TIMEOUT_MILLISECONDS = 15000;
+
+// A retry does not key the moment its timer expires. Two stations whose timers
+// expire in the same second cannot see each other by carrier sense, which
+// needs about a second of preamble, and the bench caught exactly that: one
+// station's second retry and the other's first keyed together at 21:24:21.
+// Each retry therefore waits a random backoff first, drawn from a range that
+// grows with the attempt, so two stations that collided once are unlikely to
+// collide the same way again.
+constexpr int RETRY_BACKOFF_MILLISECONDS = 3000;
+constexpr int MAX_RETRY_BACKOFF_MILLISECONDS = RETRY_BACKOFF_MILLISECONDS * MAX_MESSAGE_RETRIES;
 
 // What the station is currently waiting to hear back, which is what the chat
 // window's status line reports while an acknowledgement cycle is running.

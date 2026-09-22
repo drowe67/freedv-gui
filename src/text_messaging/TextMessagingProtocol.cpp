@@ -388,6 +388,7 @@ void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint1
     pending.frames.push_back(encoded);
     pending.signalling = true;
     pending.expectsAck = false;
+    pending.reply = true;
     pending.destination = destination;
     pending.state = TransmissionState::Queued;
 
@@ -406,6 +407,7 @@ void TextMessagingProtocol::queuePongLocked(const std::string& destination, floa
     pending.frames.push_back(encoded);
     pending.signalling = true;
     pending.expectsAck = false;
+    pending.reply = true;
     pending.destination = destination;
     pending.state = TransmissionState::Queued;
     outbox_.push_front(pending);
@@ -672,9 +674,20 @@ bool TextMessagingProtocol::isTransmitting() const
 // answer it: it waits out its own turnaround first and then sends a whole
 // burst, none of which we can hear while keyed. The window disappears by
 // itself when the acknowledgement arrives, because the entry goes with it.
-uint64_t TextMessagingProtocol::quietUntilLocked() const
+//
+// A reply we owe -- an acknowledgement or a pong -- waits out the turnarounds
+// but not that window. The station we are answering has just finished a burst
+// and is waiting on a window of exactly the same length before it keys again,
+// so a reply held for our own window goes out at the very moment that
+// station's window expires, and the two collide. The bench showed it: a pong
+// held five seconds keyed one second before the far end's next message. The
+// cost is that a reply to one station can key while a slow acknowledgement
+// from another is just starting; carrier sense covers that once the other
+// burst is more than a second old.
+uint64_t TextMessagingProtocol::quietUntilLocked(bool forReply) const
 {
     uint64_t quietUntil = quietUntilMs_;
+    if (forReply) return quietUntil;
 
     for (const PendingTransmission& pending : outbox_)
     {
@@ -727,16 +740,18 @@ void TextMessagingProtocol::holdTimersLocked(uint64_t pausedMs)
 
 void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
 {
-    uint64_t until = nowMs + (uint64_t)baseMs + turnaroundJitterLocked(jitterMs);
+    uint64_t until = nowMs + (uint64_t)baseMs + randomDelayLocked(jitterMs);
     if (until > quietUntilMs_) quietUntilMs_ = until;
 }
 
-uint32_t TextMessagingProtocol::turnaroundJitterLocked(int jitterMs)
+// A delay in [0, maxMs] from the station's own sequence, so any two stations
+// draw differently and no draw repeats the last.
+uint32_t TextMessagingProtocol::randomDelayLocked(int maxMs)
 {
-    if (jitterMs <= 0) return 0;
+    if (maxMs <= 0) return 0;
 
     jitterState_ = jitterState_ * 1103515245u + 12345u;
-    return (jitterState_ >> 16) % (uint32_t)(jitterMs + 1);
+    return (jitterState_ >> 16) % (uint32_t)(maxMs + 1);
 }
 
 void TextMessagingProtocol::tick()
@@ -801,13 +816,16 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
 
         // The turnaround is the far end's turn; anything queued waits it out.
         // Only the start of a burst is held back -- the acknowledgement timers
-        // below keep running, so a retry is never late because of it.
-        if (!frozen && nowMs >= quietUntilLocked())
+        // below keep running, so a retry is never late because of it. An entry
+        // still backing off from a retry steps aside for whatever is behind it.
+        if (!frozen)
         {
             for (size_t i = 0; i < outbox_.size(); i++)
             {
                 PendingTransmission& next = outbox_[i];
                 if (next.state != TransmissionState::Queued) continue;
+                if (nowMs < next.notBeforeMs) continue;
+                if (nowMs < quietUntilLocked(next.reply)) continue;
 
                 if (transport_->transmit(next.frames, next.signalling))
                 {
@@ -837,6 +855,8 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
         {
             waiting.retries++;
             waiting.state = TransmissionState::Queued;
+            waiting.notBeforeMs =
+                nowMs + randomDelayLocked(RETRY_BACKOFF_MILLISECONDS * waiting.retries);
             updateStatusLocked(waiting, MessageStatus::Retrying, events);
             i++;
             continue;
