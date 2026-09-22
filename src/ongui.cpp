@@ -1606,12 +1606,18 @@ void MainFrame::togglePTT(void) {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
         
-        // tx-> rx transition, swap to the page we were on for last rx
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+        // tx-> rx transition, swap to the page we were on for last rx. Not for
+        // a text chat burst, which never switched away: the switch would focus
+        // the page and, on wxGTK, present the main window over whatever the
+        // operator is doing (see textMessagingChangeover_ in main.h).
+        if (!textMessagingChangeover_)
         {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            page->Refresh();
+            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+            for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+            {
+                auto page = m_auiNbookCtrl->GetPage(index);
+                page->Refresh();
+            }
         }
 
         // enable sync text
@@ -1641,22 +1647,28 @@ void MainFrame::togglePTT(void) {
             wxGetApp().m_pttInSerialPort->suspendChanges(true);
         }
         
-        // rx-> tx transition, swap to Mic In page to monitor speech
-
-        // Save currently visible plot so we can go back to it on RX.
-        wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
-
-        // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
-        // the current page ourselves is a better bet.
-        size_t index = 0;
-        for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+        // rx-> tx transition, swap to Mic In page to monitor speech. A text
+        // chat burst carries no speech and has nobody at the main window, so
+        // it leaves the page alone: the switch would focus the page and, on
+        // wxGTK, present the main window over whatever the operator is doing
+        // (see textMessagingChangeover_ in main.h).
+        if (!textMessagingChangeover_)
         {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
+            // Save currently visible plot so we can go back to it on RX.
+            wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
+
+            // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+            // the current page ourselves is a better bet.
+            size_t index = 0;
+            for (; index < m_auiNbookCtrl->GetPageCount(); index++)
             {
-                m_auiNbookCtrl->ChangeSelection(index);
-                page->Refresh();
-                break;
+                auto page = m_auiNbookCtrl->GetPage(index);
+                if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
+                {
+                    m_auiNbookCtrl->ChangeSelection(index);
+                    page->Refresh();
+                    break;
+                }
             }
         }
 

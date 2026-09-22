@@ -1269,6 +1269,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
+    textMessagingChangeover_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1776,7 +1777,9 @@ void MainFrame::setTextMessagingPtt_(bool keyed)
         if (!m_btnTogPTT->GetValue())
         {
             m_btnTogPTT->SetValue(true);
+            textMessagingChangeover_ = true;
             togglePTT();
+            textMessagingChangeover_ = false;
         }
 
         return;
@@ -1786,7 +1789,9 @@ void MainFrame::setTextMessagingPtt_(bool keyed)
     {
         m_btnTogPTT->SetValue(false);
         endingTx.store(true, std::memory_order_release);
+        textMessagingChangeover_ = true;
         togglePTT();
+        textMessagingChangeover_ = false;
     }
 
     // Ownership is released only now: the transmit thread has to keep

@@ -316,6 +316,15 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
         bool                    txChangeoverOccurring_;
+
+        // True while togglePTT() is running on behalf of a text chat burst.
+        // Nobody is at the main window for one of those, so it must not
+        // switch the notebook page: on wxGTK the switch focuses the page,
+        // and focusing a widget presents its toplevel, which pulls the main
+        // window onto the operator's workspace and takes the keyboard away
+        // from whatever they were typing into. With space bar PTT enabled
+        // the next space they type then keys the radio.
+        bool                    textMessagingChangeover_;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
