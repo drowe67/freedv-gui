@@ -705,11 +705,14 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     SetAppearance(wxAppearance);
     FreeDVTheme::SetDarkModeEnabled(
         wxSystemSettings::GetAppearance().IsDark());
-#else
+#elif wxCHECK_VERSION(3, 1, 3)
     FreeDVTheme::SetDarkModeEnabled(
         appearanceMode == FreeDVTheme::AppearanceMode::Dark ||
         (appearanceMode == FreeDVTheme::AppearanceMode::System &&
          wxSystemSettings::GetAppearance().IsDark()));
+#else
+    FreeDVTheme::SetDarkModeEnabled(
+        appearanceMode == FreeDVTheme::AppearanceMode::Dark);
 #endif
 
     long signalDisplayStyle = 0;
