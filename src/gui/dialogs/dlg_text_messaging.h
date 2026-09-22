@@ -88,6 +88,12 @@ private:
     void renderChat();
     void refreshStations();
     std::string selectedCallsign() const;
+    long stationItem(const std::string& callsign) const;
+    long stationAt(const wxMouseEvent& event) const;
+    void connectStationMouse(bool connect);
+    void setStationSelected(long item, bool selected);
+    void updateSelectionControls();
+    void addStation();
     void send(const std::string& destination);
     void appendMessage(const TextMessaging::TextMessage& message);
     void updateTransmitControls();
@@ -107,21 +113,27 @@ private:
     void updateAckWaitStatus();
 
     void OnSend(wxCommandEvent& event);
-    void OnBroadcast(wxCommandEvent& event);
     void OnPing(wxCommandEvent& event);
     void OnStationSelected(wxListEvent& event);
     void OnStationDeselected(wxListEvent& event);
+    void OnStationLeftDown(wxMouseEvent& event);
+    void OnStationRightDown(wxMouseEvent& event);
+    void OnMenuSelectStation(wxCommandEvent& event);
+    void OnMenuRemoveStation(wxCommandEvent& event);
+    void OnAddStationText(wxCommandEvent& event);
+    void OnAddStation(wxCommandEvent& event);
     void OnAutoReplyToggled(wxCommandEvent& event);
     void OnEntryKeyDown(wxKeyEvent& event);
     void OnTimer(wxTimerEvent& event);
     void OnClose(wxCloseEvent& event);
 
     wxListCtrl* m_stationList;
+    wxTextCtrl* m_txtAddStation;
+    wxButton* m_btnAddStation;
     wxButton* m_btnPing;
     wxHtmlWindow* m_chatWindow;
     wxTextCtrl* m_txtEntry;
     wxButton* m_btnSend;
-    wxButton* m_btnBroadcast;
     wxCheckBox* m_chkAutoReply;
     wxStaticText* m_txtStatus;
     wxTimer m_refreshTimer;
@@ -131,6 +143,10 @@ private:
     bool m_transmitControlsDisabled;
     StatusKind m_statusKind;
     TextMessaging::AckWait m_lastAckWait;
+
+    // The station the context menu was opened on. Looked up again by name
+    // when an item is chosen, since the list may have changed underneath.
+    std::string m_menuCallsign;
 
     std::vector<TextMessaging::TextMessage> m_messages;
 };

@@ -15,7 +15,17 @@ says chat.
 
 * **Heard Stations** lists every station whose frames have been decoded, with
   the SNR they were last heard at and how long ago that was. Entries age out
-  after an hour.
+  after an hour. Clicking a station selects it as the destination; clicking
+  the selected station again clears the selection. Right-clicking a station
+  offers **Select Station** or **Deselect Station**, **Remove**, and a line
+  saying when and at what SNR it was last heard.
+* **Add Station** puts a callsign on the list before it has been heard, so a
+  directed message can be the first thing sent. The button is enabled once
+  something is typed in the box beside it, and Enter adds too. A station
+  added this way is selected at once, never ages out, and stays until removed,
+  but it is not remembered across a restart. Once heard on the air it shows
+  its SNR and time like any other. Removing a station is likewise for this
+  session only: one heard within the last hour is back after a restart.
 * **Ping** (enabled when a station is selected) asks that station to answer.
   Both the ping and the reply appear in the chat pane as small lines:
   `W1AW >> VK3ABC : PING!` and `VK3ABC >> W1AW : PONG! (4.0 dB, heard you at
@@ -28,8 +38,8 @@ says chat.
   attempt alone; once a message has been retried the chip keeps its retry
   number for the whole of that attempt, on the air and while the
   acknowledgement timer runs, so progress never appears to go backwards.
-* **Send** and **Send as Broadcast** are disabled while a burst is on the air,
-  so nothing is queued behind a keyed transmitter.
+* The send button is disabled while a burst is on the air, so nothing is
+  queued behind a keyed transmitter.
 * The status line along the bottom says what the station is doing. A notice
   that something is queued gives way to `Transmitting...` once the transmitter
   keys. While an acknowledgement is outstanding it reads `Awaiting message ACK.` or
@@ -39,11 +49,13 @@ says chat.
   to say about what it is doing. A broadcast expects nothing back, so it ends
   at `Broadcast sent.` rather than waiting on an acknowledgement that is never
   coming.
-* **Send** transmits to the highlighted station and asks for confirmation. If
+* The send button says where the message goes. With a station selected it
+  reads **>> CALL** and transmits to that station asking for confirmation. If
   no confirmation arrives within 15 seconds the message is sent again, up to
   three times, and then marked failed.
-* **Send as Broadcast** clears the highlight and transmits to everybody. No
-  confirmation is requested and the message is tagged `BCAST` in the window.
+* With no station selected it reads **>> Broadcast** and transmits to
+  everybody. No confirmation is requested and the message is tagged `BCAST`
+  in the window.
 * **Automatically acknowledge messages and answer pings** controls whether
   this station transmits by itself. Leave it off if you may not transmit
   unattended; incoming messages are still displayed.

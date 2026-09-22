@@ -38,11 +38,13 @@
 #include <cstdlib>
 
 #include <wx/datetime.h>
+#include <wx/menu.h>
 #include <wx/settings.h>
 #include <wx/sizer.h>
 #include <wx/statbox.h>
 
 #include "main.h"
+#include "text_messaging/FrameCodec.h"
 #include "text_messaging/HeardStationList.h"
 #include "text_messaging/MessageStore.h"
 #include "text_messaging/TextMessagingSession.h"
@@ -58,9 +60,13 @@ constexpr int REFRESH_INTERVAL_MS = 1000;
 enum
 {
     ID_STATION_LIST = wxID_HIGHEST + 700,
+    ID_ADD_STATION_ENTRY,
+    ID_ADD_STATION,
+    ID_MENU_SELECT_STATION,
+    ID_MENU_REMOVE_STATION,
+    ID_MENU_LAST_HEARD,
     ID_PING,
     ID_SEND,
-    ID_BROADCAST,
     ID_AUTO_REPLY,
     ID_ENTRY,
     ID_REFRESH_TIMER,
@@ -106,6 +112,17 @@ wxString formatAge(std::time_t lastHeard, std::time_t now)
     if (age < 3600) return wxString::Format(_("%d min ago"), (int)(age / 60));
 
     return wxString::Format(_("%d hr ago"), (int)(age / 3600));
+}
+
+// A station added by hand has no decode to show until it is heard.
+wxString formatStationSnr(const HeardStation& station)
+{
+    return station.lastHeard == 0 ? wxString() : formatSnr(station.snr);
+}
+
+wxString formatStationAge(const HeardStation& station, std::time_t now)
+{
+    return station.lastHeard == 0 ? wxString(_("never")) : formatAge(station.lastHeard, now);
 }
 
 // Set FREEDV_TEXT_CHAT_UI_LOG to have the window report what it is showing.
@@ -213,11 +230,12 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
                                          const wxPoint& pos, const wxSize& size, long style)
     : wxDialog(parent, id, title, pos, size, style)
     , m_stationList(nullptr)
+    , m_txtAddStation(nullptr)
+    , m_btnAddStation(nullptr)
     , m_btnPing(nullptr)
     , m_chatWindow(nullptr)
     , m_txtEntry(nullptr)
     , m_btnSend(nullptr)
-    , m_btnBroadcast(nullptr)
     , m_chkAutoReply(nullptr)
     , m_txtStatus(nullptr)
     , m_refreshTimer(this, ID_REFRESH_TIMER)
@@ -229,10 +247,18 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
 
     Connect(ID_SEND, wxEVT_COMMAND_BUTTON_CLICKED,
             wxCommandEventHandler(TextMessagingDialog::OnSend));
-    Connect(ID_BROADCAST, wxEVT_COMMAND_BUTTON_CLICKED,
-            wxCommandEventHandler(TextMessagingDialog::OnBroadcast));
     Connect(ID_PING, wxEVT_COMMAND_BUTTON_CLICKED,
             wxCommandEventHandler(TextMessagingDialog::OnPing));
+    Connect(ID_ADD_STATION, wxEVT_COMMAND_BUTTON_CLICKED,
+            wxCommandEventHandler(TextMessagingDialog::OnAddStation));
+    Connect(ID_ADD_STATION_ENTRY, wxEVT_COMMAND_TEXT_ENTER,
+            wxCommandEventHandler(TextMessagingDialog::OnAddStation));
+    Connect(ID_ADD_STATION_ENTRY, wxEVT_COMMAND_TEXT_UPDATED,
+            wxCommandEventHandler(TextMessagingDialog::OnAddStationText));
+    Connect(ID_MENU_SELECT_STATION, wxEVT_COMMAND_MENU_SELECTED,
+            wxCommandEventHandler(TextMessagingDialog::OnMenuSelectStation));
+    Connect(ID_MENU_REMOVE_STATION, wxEVT_COMMAND_MENU_SELECTED,
+            wxCommandEventHandler(TextMessagingDialog::OnMenuRemoveStation));
     Connect(ID_AUTO_REPLY, wxEVT_COMMAND_CHECKBOX_CLICKED,
             wxCommandEventHandler(TextMessagingDialog::OnAutoReplyToggled));
     Connect(ID_STATION_LIST, wxEVT_COMMAND_LIST_ITEM_SELECTED,
@@ -244,6 +270,7 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
 
     m_txtEntry->Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(TextMessagingDialog::OnEntryKeyDown),
                         nullptr, this);
+    connectStationMouse(true);
 
     TextMessagingSession::instance().protocol().setObserver(this);
     m_refreshTimer.Start(REFRESH_INTERVAL_MS);
@@ -258,6 +285,42 @@ TextMessagingDialog::~TextMessagingDialog()
 
     m_txtEntry->Disconnect(wxEVT_KEY_DOWN, wxKeyEventHandler(TextMessagingDialog::OnEntryKeyDown),
                            nullptr, this);
+    connectStationMouse(false);
+}
+
+// Selection is decided here rather than by the list. A click on the selected
+// station clears it, and a right click leaves the selection alone so the menu
+// can offer either choice; the toolkit does the opposite on both counts, so
+// the press is taken before it sees it. Where the control is native the press
+// arrives on the control; the generic implementation delivers it to a child
+// window instead, so every window the list is made of is listened to.
+void TextMessagingDialog::connectStationMouse(bool connect)
+{
+    std::vector<wxWindow*> windows;
+    windows.push_back(m_stationList);
+    for (wxWindow* child : m_stationList->GetChildren()) windows.push_back(child);
+
+    for (wxWindow* window : windows)
+    {
+        if (connect)
+        {
+            window->Connect(wxEVT_LEFT_DOWN,
+                            wxMouseEventHandler(TextMessagingDialog::OnStationLeftDown),
+                            nullptr, this);
+            window->Connect(wxEVT_RIGHT_DOWN,
+                            wxMouseEventHandler(TextMessagingDialog::OnStationRightDown),
+                            nullptr, this);
+        }
+        else
+        {
+            window->Disconnect(wxEVT_LEFT_DOWN,
+                               wxMouseEventHandler(TextMessagingDialog::OnStationLeftDown),
+                               nullptr, this);
+            window->Disconnect(wxEVT_RIGHT_DOWN,
+                               wxMouseEventHandler(TextMessagingDialog::OnStationRightDown),
+                               nullptr, this);
+        }
+    }
 }
 
 TextMessagingDialog::Palette TextMessagingDialog::palette() const
@@ -308,6 +371,20 @@ void TextMessagingDialog::buildControls()
     m_stationList->InsertColumn(2, _("Heard"), wxLIST_FORMAT_LEFT, 90);
     stationSizer->Add(m_stationList, 1, wxEXPAND | wxALL, 2);
 
+    // Typing a callsign puts a station on the list before it has been heard,
+    // so a directed message can be the first thing sent.
+    wxBoxSizer* addSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_txtAddStation = new wxTextCtrl(stationBox, ID_ADD_STATION_ENTRY, wxEmptyString,
+                                     wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+    m_txtAddStation->SetHint(_("Callsign"));
+    m_txtAddStation->SetToolTip(_("Add a station to message before it has been heard."));
+    addSizer->Add(m_txtAddStation, 1, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+
+    m_btnAddStation = new wxButton(stationBox, ID_ADD_STATION, _("Add Station"));
+    m_btnAddStation->Enable(false);
+    addSizer->Add(m_btnAddStation, 0, wxALL, 2);
+    stationSizer->Add(addSizer, 0, wxEXPAND);
+
     m_btnPing = new wxButton(stationBox, ID_PING, _("Ping"));
     m_btnPing->SetToolTip(_("Ask the selected station to answer, to see whether you are being heard."));
     m_btnPing->Enable(false);
@@ -332,15 +409,11 @@ void TextMessagingDialog::buildControls()
     m_txtEntry->SetToolTip(_("Enter sends the message; Shift+Enter starts a new line."));
     entrySizer->Add(m_txtEntry, 1, wxEXPAND | wxALL, 4);
 
-    m_btnSend = new wxButton(this, ID_SEND, _("Send"), wxDefaultPosition, wxSize(140, 70));
+    // The button names where the message goes; updateSelectionControls keeps
+    // it right as the selection changes.
+    m_btnSend = new wxButton(this, ID_SEND, wxEmptyString, wxDefaultPosition, wxSize(140, 70));
     entrySizer->Add(m_btnSend, 0, wxEXPAND | wxALL, 4);
     mainSizer->Add(entrySizer, 0, wxEXPAND);
-
-    m_btnBroadcast = new wxButton(this, ID_BROADCAST, _("Send as Broadcast"), wxDefaultPosition,
-                                  wxSize(-1, 40));
-    m_btnBroadcast->SetToolTip(
-        _("Send to everybody listening. Nothing is expected back, so there is no delivery check."));
-    mainSizer->Add(m_btnBroadcast, 0, wxEXPAND | wxALL, 4);
 
     wxBoxSizer* bottomSizer = new wxBoxSizer(wxHORIZONTAL);
     m_chkAutoReply = new wxCheckBox(this, ID_AUTO_REPLY,
@@ -353,6 +426,8 @@ void TextMessagingDialog::buildControls()
     m_txtStatus = new wxStaticText(this, wxID_ANY, wxEmptyString);
     bottomSizer->Add(m_txtStatus, 1, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     mainSizer->Add(bottomSizer, 0, wxEXPAND);
+
+    updateSelectionControls();
 
     SetSizer(mainSizer);
     Layout();
@@ -527,8 +602,8 @@ void TextMessagingDialog::refreshStations()
     {
         for (size_t index = 0; index < stations.size(); index++)
         {
-            setColumnIfChanged((long)index, 1, formatSnr(stations[index].snr));
-            setColumnIfChanged((long)index, 2, formatAge(stations[index].lastHeard, now));
+            setColumnIfChanged((long)index, 1, formatStationSnr(stations[index]));
+            setColumnIfChanged((long)index, 2, formatStationAge(stations[index], now));
         }
         return;
     }
@@ -548,8 +623,8 @@ void TextMessagingDialog::refreshStations()
     {
         const HeardStation& station = stations[index];
         long item = m_stationList->InsertItem((long)index, wxString::FromUTF8(station.callsign));
-        m_stationList->SetItem(item, 1, formatSnr(station.snr));
-        m_stationList->SetItem(item, 2, formatAge(station.lastHeard, now));
+        m_stationList->SetItem(item, 1, formatStationSnr(station));
+        m_stationList->SetItem(item, 2, formatStationAge(station, now));
 
         if (station.callsign == previousSelection) selectedIndex = item;
     }
@@ -561,7 +636,8 @@ void TextMessagingDialog::refreshStations()
         m_stationList->SetItemState(selectedIndex, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
     }
 
-    if (m_btnPing->IsEnabled() != (selectedIndex >= 0)) m_btnPing->Enable(selectedIndex >= 0);
+    // A rebuild can drop the selection without the list saying so.
+    updateSelectionControls();
 }
 
 // A wxListCtrl repaints a cell whenever it is set, so the text is compared
@@ -578,6 +654,108 @@ std::string TextMessagingDialog::selectedCallsign() const
     if (item < 0) return "";
 
     return m_stationList->GetItemText(item).ToStdString();
+}
+
+long TextMessagingDialog::stationItem(const std::string& callsign) const
+{
+    for (long item = 0; item < m_stationList->GetItemCount(); item++)
+    {
+        if (m_stationList->GetItemText(item).ToStdString() == callsign) return item;
+    }
+
+    return -1;
+}
+
+// The row under the mouse, or -1 for the header, the space below the last
+// row, or anywhere else a click means nothing. Row rectangles come back in
+// the control's own coordinates on every port, so the press is mapped into
+// those whichever of the list's windows delivered it.
+long TextMessagingDialog::stationAt(const wxMouseEvent& event) const
+{
+    wxWindow* source = dynamic_cast<wxWindow*>(event.GetEventObject());
+    if (source == nullptr) return -1;
+
+    wxPoint point = m_stationList->ScreenToClient(source->ClientToScreen(event.GetPosition()));
+    for (long item = 0; item < m_stationList->GetItemCount(); item++)
+    {
+        wxRect rect;
+        if (m_stationList->GetItemRect(item, rect) && rect.Contains(point)) return item;
+    }
+
+    return -1;
+}
+
+void TextMessagingDialog::setStationSelected(long item, bool selected)
+{
+    m_stationList->SetItemState(item, selected ? wxLIST_STATE_SELECTED : 0,
+                                wxLIST_STATE_SELECTED);
+
+    // The list reports the change as an event, but not on every platform for
+    // every path, so the controls are brought up to date here regardless.
+    updateSelectionControls();
+}
+
+// Ping and the send button follow the selection: the send button names where
+// the message goes, so there is no second button for broadcasting. Clearing
+// the selection is how the operator reaches everybody.
+void TextMessagingDialog::updateSelectionControls()
+{
+    std::string callsign = selectedCallsign();
+    bool selected = !callsign.empty();
+
+    if (m_btnPing->IsEnabled() != selected) m_btnPing->Enable(selected);
+
+    wxString label = selected ? wxString::Format(">> %s", wxString::FromUTF8(callsign))
+                              : wxString(_(">> Broadcast"));
+    if (m_btnSend->GetLabel() == label) return;
+
+    m_btnSend->SetLabel(label);
+    m_btnSend->SetToolTip(
+        selected ? wxString::Format(_("Send to %s and ask for confirmation."),
+                                    wxString::FromUTF8(callsign))
+                 : wxString(_("Send to everybody listening. Nothing is expected back, "
+                              "so there is no delivery check.")));
+
+    if (uiLogEnabled()) log_info("UI: send button \"%s\"", (const char*)label.ToUTF8());
+}
+
+void TextMessagingDialog::addStation()
+{
+    auto& session = TextMessagingSession::instance();
+
+    wxString typed = m_txtAddStation->GetValue();
+    if (typed.empty()) return;
+
+    std::string callsign = FrameCodec::normalizeCallsign(typed.ToStdString());
+    if (callsign.empty())
+    {
+        setStatus(wxString::Format(_("\"%s\" has nothing in it a callsign can carry."), typed));
+        return;
+    }
+
+    if ((int)callsign.size() > MAX_PACKED_CALLSIGN_CHARS)
+    {
+        setStatus(wxString::Format(_("%s is longer than the %d characters a frame can carry."),
+                                   wxString::FromUTF8(callsign), MAX_PACKED_CALLSIGN_CHARS));
+        return;
+    }
+
+    if (callsign == session.protocol().myCallsign())
+    {
+        setStatus(_("That is your own callsign."));
+        return;
+    }
+
+    session.stations().pin(callsign);
+    m_txtAddStation->Clear();
+    refreshStations();
+
+    // Adding a station is the first step of messaging it, so it is selected.
+    long item = stationItem(callsign);
+    if (item >= 0) setStationSelected(item, true);
+
+    setStatus(wxString::Format(_("%s added to the station list."), wxString::FromUTF8(callsign)));
+    if (uiLogEnabled()) log_info("UI: station %s added by hand", callsign.c_str());
 }
 
 void TextMessagingDialog::send(const std::string& destination)
@@ -606,18 +784,6 @@ void TextMessagingDialog::OnSend(wxCommandEvent&)
     updateTransmitControls();
 }
 
-void TextMessagingDialog::OnBroadcast(wxCommandEvent&)
-{
-    // A broadcast goes to nobody in particular, so the highlighted station is
-    // cleared to make that obvious.
-    long item = m_stationList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-    if (item >= 0) m_stationList->SetItemState(item, 0, wxLIST_STATE_SELECTED);
-    m_btnPing->Enable(false);
-
-    send("");
-    updateTransmitControls();
-}
-
 void TextMessagingDialog::OnPing(wxCommandEvent&)
 {
     std::string destination = selectedCallsign();
@@ -637,14 +803,94 @@ void TextMessagingDialog::OnPing(wxCommandEvent&)
 
 void TextMessagingDialog::OnStationSelected(wxListEvent& event)
 {
-    m_btnPing->Enable(true);
+    updateSelectionControls();
     event.Skip();
 }
 
 void TextMessagingDialog::OnStationDeselected(wxListEvent& event)
 {
-    m_btnPing->Enable(false);
+    updateSelectionControls();
     event.Skip();
+}
+
+void TextMessagingDialog::OnStationLeftDown(wxMouseEvent& event)
+{
+    long item = stationAt(event);
+    if (item >= 0 && m_stationList->GetItemState(item, wxLIST_STATE_SELECTED) != 0)
+    {
+        // Clicking the selected station again clears it. The press is not
+        // passed on, or the list would select it straight back.
+        setStationSelected(item, false);
+        return;
+    }
+
+    event.Skip();
+}
+
+void TextMessagingDialog::OnStationRightDown(wxMouseEvent& event)
+{
+    long item = stationAt(event);
+    if (item < 0)
+    {
+        event.Skip();
+        return;
+    }
+
+    m_menuCallsign = m_stationList->GetItemText(item).ToStdString();
+    bool selected = m_stationList->GetItemState(item, wxLIST_STATE_SELECTED) != 0;
+
+    wxString lastHeard = _("Never heard");
+    HeardStation station;
+    if (TextMessagingSession::instance().stations().find(m_menuCallsign, station) &&
+        station.lastHeard != 0)
+    {
+        lastHeard = wxString::Format(_("Last heard %s (%s) at %s"), formatTime(station.lastHeard),
+                                     formatAge(station.lastHeard, std::time(nullptr)),
+                                     formatSnr(station.snr));
+    }
+
+    wxMenu menu;
+    menu.Append(ID_MENU_SELECT_STATION, selected ? _("Deselect Station") : _("Select Station"));
+    menu.Append(ID_MENU_REMOVE_STATION, _("Remove"));
+    menu.AppendSeparator();
+    menu.Append(ID_MENU_LAST_HEARD, lastHeard)->Enable(false);
+
+    // The press is not passed on: the list would move the selection to the
+    // row under the menu, which is the choice the menu is there to offer.
+    PopupMenu(&menu);
+}
+
+void TextMessagingDialog::OnMenuSelectStation(wxCommandEvent&)
+{
+    long item = stationItem(m_menuCallsign);
+    if (item < 0) return; // aged out while the menu was open
+
+    bool selected = m_stationList->GetItemState(item, wxLIST_STATE_SELECTED) != 0;
+    setStationSelected(item, !selected);
+}
+
+void TextMessagingDialog::OnMenuRemoveStation(wxCommandEvent&)
+{
+    if (!TextMessagingSession::instance().stations().remove(m_menuCallsign)) return;
+
+    // The rebuild cannot restore a selection the list no longer holds, so a
+    // removed selected station leaves the send button on Broadcast.
+    refreshStations();
+    setStatus(wxString::Format(_("%s removed from the station list."),
+                               wxString::FromUTF8(m_menuCallsign)));
+    if (uiLogEnabled()) log_info("UI: station %s removed", m_menuCallsign.c_str());
+}
+
+void TextMessagingDialog::OnAddStationText(wxCommandEvent& event)
+{
+    bool hasText = !m_txtAddStation->GetValue().empty();
+    if (m_btnAddStation->IsEnabled() != hasText) m_btnAddStation->Enable(hasText);
+    event.Skip();
+}
+
+void TextMessagingDialog::OnAddStation(wxCommandEvent&)
+{
+    addStation();
 }
 
 void TextMessagingDialog::OnAutoReplyToggled(wxCommandEvent& event)
@@ -691,7 +937,6 @@ void TextMessagingDialog::updateTransmitControls()
 
     m_transmitControlsDisabled = transmitting;
     m_btnSend->Enable(!transmitting);
-    m_btnBroadcast->Enable(!transmitting);
 
     // Whatever was queued is on the air now, so a notice saying it is waiting
     // has become a lie. The chat pane's delivery chip carries on from here.
@@ -706,8 +951,8 @@ void TextMessagingDialog::updateTransmitControls()
 
     if (uiLogEnabled())
     {
-        log_info("UI: send buttons %s", transmitting ? "disabled, transmitter keyed"
-                                                     : "enabled, transmitter free");
+        log_info("UI: send button %s", transmitting ? "disabled, transmitter keyed"
+                                                    : "enabled, transmitter free");
     }
 }
 
