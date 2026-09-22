@@ -99,6 +99,7 @@ TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationLi
     , jitterState_(1)
     , channelBusy_(false)
     , channelBusySinceMs_(0)
+    , channelReservedUntilMs_(0)
     , lastTickMs_(0)
     , monotonicMs_([]() {
         return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -500,12 +501,29 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
     deliver(events);
 }
 
+// See TEXT_FRAGMENT_AIR_MILLISECONDS. The last fragment, or one after a lost
+// one, ends the sender's keying whether or not the message is complete.
+void TextMessagingProtocol::reserveChannelForFragmentsLocked(const Frame& frame, uint64_t nowMs)
+{
+    if (frame.fragmentIndex + 1 >= frame.fragmentCount)
+    {
+        channelReservedUntilMs_ = 0;
+        return;
+    }
+
+    uint64_t remaining = (uint64_t)(frame.fragmentCount - frame.fragmentIndex - 1);
+    uint64_t until = nowMs + remaining * (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS;
+    if (until > channelReservedUntilMs_) channelReservedUntilMs_ = until;
+}
+
 void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, float snr,
                                                          std::vector<PendingEvent>& events)
 {
     bool broadcast = frame.type == FrameType::Broadcast;
     ReassemblyKey key(frame.originCallsign, frame.airId);
     uint64_t nowMs = monotonicMs_();
+
+    reserveChannelForFragmentsLocked(frame, nowMs);
 
     // The sender is retransmitting a message we already have, which means our
     // acknowledgement did not reach them. Send it again rather than showing
@@ -700,15 +718,22 @@ uint64_t TextMessagingProtocol::quietUntilLocked(bool forReply) const
     return quietUntil;
 }
 
-// Whether the queue is frozen because somebody else has the channel. A spell
-// that outlasts any real transmission is a receiver false triggering, not
-// traffic, and is ignored until it clears so it cannot silence us for good.
+// Whether the queue is frozen because somebody else has the channel: the
+// receiver says so, or a fragmented message we are part way through hearing
+// has more bursts to come. A spell that outlasts any real transmission is a
+// receiver false triggering, not traffic, and is ignored until it clears so
+// it cannot silence us for good.
 bool TextMessagingProtocol::channelFrozenLocked(uint64_t nowMs)
 {
-    bool busy = transport_ != nullptr && transport_->isChannelBusy();
+    bool busy = (transport_ != nullptr && transport_->isChannelBusy()) ||
+                nowMs < channelReservedUntilMs_;
 
     if (!busy)
     {
+        // Everybody who heard that burst comes unfrozen at the same instant,
+        // and two of them keying together cannot sense each other. A random
+        // moment's pause spreads them out.
+        if (channelBusy_) deferTransmissionLocked(nowMs, 0, TURNAROUND_JITTER_MILLISECONDS);
         channelBusy_ = false;
         return false;
     }
@@ -794,7 +819,11 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
             PendingTransmission& sent = outbox_[i];
             if (sent.state != TransmissionState::Transmitting) continue;
 
-            deferTransmissionLocked(nowMs, TURNAROUND_AFTER_TX_MILLISECONDS,
+            // Having answered somebody, give them the channel: see the note
+            // on REPLY_WINDOW_MILLISECONDS.
+            deferTransmissionLocked(nowMs,
+                                    sent.reply ? REPLY_WINDOW_MILLISECONDS
+                                               : TURNAROUND_AFTER_TX_MILLISECONDS,
                                     TURNAROUND_JITTER_MILLISECONDS);
 
             sent.sentAtMs = nowMs;

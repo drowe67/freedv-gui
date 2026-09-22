@@ -92,7 +92,10 @@ A reply we owe, an acknowledgement or a pong, waits out the turnarounds but
 not that longer window. The station waiting for it is sitting on a window of
 exactly the same length, so a reply held for ours would key at the very moment
 its window expired, and the two would collide. The loopback bench showed that
-happen.
+happen. Having sent a reply, the station then serves the same window before
+starting traffic of its own: the station it answered is already turning around
+and usually has more to say, and on the bench the two keyed together four
+times in one run when it did not.
 
 The station also listens before it talks. While either demodulator is locked
 onto a burst -- from the moment it recognises a preamble until the packet is
@@ -102,9 +105,15 @@ outstanding, since no reply can get through a busy channel and the burst being
 received may be the reply itself. The channel stays busy for two seconds after
 sync was last seen: a receiver that joins a burst part way through, as it does
 whenever we unkey while somebody else is still sending, flickers in and out of
-sync, and the hold bridges the gaps. A receiver that stays locked for more than
-a minute is treated as false triggering on noise and ignored, so it cannot
-silence the station for good.
+sync, and the hold bridges the gaps. Between fragments of one message the gap
+can be longer than that, so the protocol does not rely on the receiver there:
+fragment k of n means the sender holds the channel for n - k more bursts, and
+the station reserves it for that long, releasing it when the last fragment
+arrives. When the channel clears, every station that was waiting on it pauses
+a random moment before keying, so two that heard the same burst do not key
+together. A receiver that stays locked for more than a minute is treated as
+false triggering on noise and ignored, so it cannot silence the station for
+good.
 
 ## How it works on the air
 

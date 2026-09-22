@@ -119,6 +119,12 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 1500;
 // over the top of it at 14:29:25 and lost the reply. The window ends early
 // anyway when the acknowledgement arrives, because the entry waiting on it is
 // removed from the outbox.
+//
+// The same window is served after we send a reply. The station we answered
+// is already turning around and usually has more to say; on the bench it
+// keyed two seconds after our acknowledgement ended, exactly when our own
+// plain turnaround let us key, four times in one run. Waiting the window
+// hands it the channel with a gap carrier sense can see.
 constexpr int REPLY_WINDOW_MILLISECONDS = 5000;
 
 // Two stations that back off by exactly the same amount collide again on the
@@ -144,6 +150,16 @@ constexpr int MAX_TURNAROUND_MILLISECONDS =
 // those gaps. Two covers the widest gap seen with margin, at the cost of about
 // a second more before keying after every burst received.
 constexpr int CHANNEL_BUSY_HOLD_MILLISECONDS = 2000;
+
+// The hold cannot bridge every gap: between fragments of one message the
+// demodulator drops sync at the end of a payload and regains it well into the
+// next preamble, four seconds apart on the bench. The protocol knows better
+// than the demodulator here. Fragment k of n means the sender keeps the
+// channel for n - k more bursts of this length, so it is reserved for that
+// long and released when the last fragment arrives. This is the longest a
+// DATAC4 fragment takes on the air, preamble to inter-burst gap; the modem
+// checks it against codec2 when it opens.
+constexpr int TEXT_FRAGMENT_AIR_MILLISECONDS = 5500;
 
 // A demodulator that keeps false triggering on band noise must not be able to
 // silence the station for good. The longest real traffic is eight DATAC4

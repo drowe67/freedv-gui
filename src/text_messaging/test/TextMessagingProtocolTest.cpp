@@ -682,8 +682,127 @@ void testRetryBacksOffBeforeKeyingAgain()
     CHECK(largest > 0);
 }
 
+// Having answered a station, we give it the channel for a whole reply window
+// before starting traffic of our own. On the bench the acknowledged station
+// keyed two seconds after our acknowledgement ended, exactly when the plain
+// turnaround let us key, and the two collided four times in one run.
+void testAReplyGivesTheOtherStationTheChannel()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    sender.completeOneTransmission();
+    receiver.receiveFrom(sender.transport); // queues our acknowledgement
+
+    CHECK(receiver.protocol.sendMessage("mine", "W1AW", error));
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 1);
+    CHECK(receiver.transport.signallingFlags.back()); // the acknowledgement went first
+
+    // Past the plain turnaround: still theirs.
+    receiver.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
+    receiver.protocol.tick();
+    CHECK(receiver.transport.transmissions.size() == 1);
+
+    // Past the window: ours.
+    receiver.nowMs += REPLY_WINDOW_MILLISECONDS;
+    receiver.protocol.tick();
+    CHECK(receiver.transport.transmissions.size() == 2);
+}
+
+// Fragment k of n means the sender holds the channel for n - k more bursts,
+// whatever the demodulator says in between: on the bench it read the channel
+// clear for two seconds in the middle of a four fragment message.
+void testFragmentsStillToComeReserveTheChannel()
+{
+    Station sender("W1AW");
+
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    sender.completeOneTransmission();
+    const auto& frames = sender.transport.transmissions[0];
+    CHECK(frames.size() == 3);
+
+    auto decodeInto = [&](Station& station, size_t index)
+    {
+        Frame frame;
+        CHECK(FrameCodec::decode(frames[index].data(), (int)frames[index].size(), frame));
+        station.protocol.onFrameReceived(frame, 5.0f);
+    };
+
+    // Only the first fragment has been heard: two more bursts are coming.
+    Station partial("VK3ABC");
+    CHECK(partial.protocol.sendMessage("waiting", "W1AW", error));
+    uint64_t heardAt = partial.nowMs;
+    decodeInto(partial, 0);
+
+    partial.nowMs = heardAt + MAX_TURNAROUND_MILLISECONDS + 1;
+    partial.protocol.tick();
+    CHECK(partial.transport.transmissions.empty());
+
+    // The reservation lapses, then the random pause every release carries.
+    partial.nowMs = heardAt + 2 * TEXT_FRAGMENT_AIR_MILLISECONDS + 1;
+    partial.protocol.tick();
+    partial.nowMs += TURNAROUND_JITTER_MILLISECONDS + 1;
+    partial.protocol.tick();
+    CHECK(partial.transport.transmissions.size() == 1);
+
+    // The last fragment ends the sender's keying, even with one lost before it.
+    Station lossy("VK3ABC");
+    CHECK(lossy.protocol.sendMessage("waiting", "W1AW", error));
+    decodeInto(lossy, 0);
+    decodeInto(lossy, 2);
+    lossy.nowMs += MAX_TURNAROUND_MILLISECONDS + 1;
+    lossy.protocol.tick();
+    CHECK(lossy.transport.transmissions.size() == 1);
+}
+
+// Everybody who heard a burst comes unfrozen at the same instant, so the
+// release carries a random pause: stations with identical traffic must not
+// all key together the moment the channel clears.
+void testClearingChannelReleasesStationsAtDifferentMoments()
+{
+    const char* callsigns[] = {"W1AW", "VK3ABC", "DJ2LS", "G0ABC", "K1ABC", "TEST1/P"};
+    std::vector<uint64_t> delays;
+
+    for (const char* callsign : callsigns)
+    {
+        Station station(callsign);
+        station.transport.channelBusy = true;
+
+        std::string error;
+        CHECK(station.protocol.sendMessage("Hold it", "VK3XYZ", error));
+        station.nowMs += 2000;
+        station.protocol.tick();
+        CHECK(station.transport.transmissions.empty());
+
+        station.transport.channelBusy = false;
+        uint64_t clearedAt = station.nowMs;
+        for (;;)
+        {
+            station.protocol.tick();
+            if (!station.transport.transmissions.empty()) break;
+            CHECK(station.nowMs - clearedAt <= TURNAROUND_JITTER_MILLISECONDS);
+            if (station.nowMs - clearedAt > TURNAROUND_JITTER_MILLISECONDS) break;
+            station.nowMs += 100;
+        }
+        delays.push_back(station.nowMs - clearedAt);
+    }
+
+    bool allEqual = true;
+    for (uint64_t delay : delays)
+    {
+        if (delay != delays[0]) allEqual = false;
+    }
+    CHECK(!allEqual);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
-// nothing we have queued may start, however long it has been waiting.
+// nothing we have queued may start, however long it has been waiting. Once
+// it clears, the queue moves again within the random pause a release carries.
 void testBusyChannelFreezesTheQueue()
 {
     Station sender("W1AW");
@@ -700,6 +819,8 @@ void testBusyChannelFreezesTheQueue()
     CHECK(sender.transport.transmissions.empty());
 
     sender.transport.channelBusy = false;
+    sender.protocol.tick();
+    sender.nowMs += TURNAROUND_JITTER_MILLISECONDS + 1;
     sender.protocol.tick();
     CHECK(sender.transport.transmissions.size() == 1);
 }
@@ -829,6 +950,9 @@ int main()
     testTheWindowEndsWhenTheReplyArrives();
     testReplyIsNotHeldForOurOwnReplyWindow();
     testRetryBacksOffBeforeKeyingAgain();
+    testAReplyGivesTheOtherStationTheChannel();
+    testFragmentsStillToComeReserveTheChannel();
+    testClearingChannelReleasesStationsAtDifferentMoments();
     testAckWaitCoversTheWholeCycle();
     testBusyChannelFreezesTheQueue();
     testBusyChannelHoldsTheAcknowledgementTimer();

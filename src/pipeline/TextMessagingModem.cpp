@@ -128,6 +128,22 @@ bool TextMessagingModem::open()
         return false;
     }
 
+    // The protocol reserves the channel for the fragments it has not heard
+    // yet using TEXT_FRAGMENT_AIR_MILLISECONDS; a fragment that ran longer
+    // than that on the air would leave a gap it could key into.
+    int textFrameSamples = freedv_get_n_tx_preamble_modem_samples(textTx_) +
+                           freedv_get_n_tx_modem_samples(textTx_) +
+                           freedv_get_n_tx_postamble_modem_samples(textTx_) +
+                           MODEM_SAMPLE_RATE * INTER_BURST_GAP_MS / 1000;
+    int textFrameMs = textFrameSamples * 1000 / MODEM_SAMPLE_RATE;
+    if (textFrameMs > TEXT_FRAGMENT_AIR_MILLISECONDS)
+    {
+        log_warn("A text fragment takes %d ms on the air, more than the %d ms the protocol "
+                 "reserves for one", textFrameMs, TEXT_FRAGMENT_AIR_MILLISECONDS);
+        closeLocked();
+        return false;
+    }
+
     freedv_set_verbose(signallingTx_, 0);
     freedv_set_verbose(textTx_, 0);
 

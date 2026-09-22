@@ -199,6 +199,7 @@ private:
                             std::string& errorOut, std::vector<PendingEvent>& events);
     void queueAckLocked(const std::string& destination, uint16_t airId);
     void queuePongLocked(const std::string& destination, float snr);
+    void reserveChannelForFragmentsLocked(const Frame& frame, uint64_t nowMs);
     void handleIncomingFragmentLocked(const Frame& frame, float snr,
                                       std::vector<PendingEvent>& events);
     void handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
@@ -244,6 +245,7 @@ private:
     // is queued, so a busy spell is measured from when it really began.
     bool channelBusy_;
     uint64_t channelBusySinceMs_;
+    uint64_t channelReservedUntilMs_; // a fragmented message still on the air
     uint64_t lastTickMs_;
 
     std::deque<PendingTransmission> outbox_;
