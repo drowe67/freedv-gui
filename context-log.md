@@ -47,20 +47,28 @@ sync was last seen, and a receiver locked for over a minute is ignored.
 5. `down` removes the bench workdir and its logs. Copy logs out first if a run
    showed something worth keeping.
 
-## Open findings from the 2026-09-21 bench run (not yet decided)
+## Bench status as of 2026-09-21 evening (five runs)
 
-1. Replies (PONG/ACK) wait behind the station's own 5 s reply window in
-   `TextMessagingProtocol::quietUntilLocked()`, so a reply goes out just as the
-   far end's identical window expires, and the two collide (21:23:44/45 in
-   that run). Candidate fix: exempt replies from the outbox part of the window.
-2. Two stations' retry timers can expire in the same second (21:24:21); the
-   turnaround jitter is fixed per callsign, not drawn per attempt.
-3. A receiver that rejoins a burst mid-way flaps sync with ~0.5 s clear gaps
-   inside one burst; CHANNEL_BUSY_HOLD_MILLISECONDS (1000) does not bridge
-   them all.
-4. Enter in the message box queues while the transmitter is keyed, though the
-   send button is disabled then. Harmless (the queue holds it) but inconsistent
-   with the doc.
+Fixed and confirmed on the bench: prompt replies, retry backoff, the
+answered station going first, fragment reservation (any addressee), the
+random pause when the channel clears, the receiver reset after our own burst
+(a frame was lost on a clean channel without it), the busy hold at 2 s, the
+main window no longer stealing focus on a chat changeover, and a burst being
+dropped when XMIT is pressed during it.
+
+Still open:
+
+1. The transmit thread fails to confirm about one burst in fifteen; the
+   transport releases it one second late by the playout margin. Confirmation
+   depends on the transmit thread seeing the output buffer drain, and that
+   thread is paced by microphone input, which on the bench is a silent
+   monitor source. Measure on a real sound device before changing anything.
+2. The answered station always goes first, so a long queue on one side holds
+   the channel; the other station's retry waited 80 s in run 4. Possible
+   rule: the acknowledging station gets a turn after a few consecutive ACKs.
+3. Same-second keying is down to about one in thirty. The last case was a
+   station re-keying after a broadcast; the post-transmit turnaround is now
+   3.5 s to put the listener first. Not yet seen on the bench after that.
 
 ## Running the bench from a tmux shell
 
