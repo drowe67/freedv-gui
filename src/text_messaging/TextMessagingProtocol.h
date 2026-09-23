@@ -161,15 +161,15 @@ private:
     struct PendingTransmission
     {
         TextMessage message;                        // the chat line it belongs to
-        std::vector<std::vector<uint8_t>> frames;   // signalling: the one burst
 
-        // A message keeps its fragments unencoded: each keying is built from
-        // the ones the far end has not confirmed, and every burst has to say
-        // how many more follow it in that keying.
-        std::vector<Frame> fragments;
+        // What it is sent as, unencoded: a frame per fragment for a message,
+        // one frame for anything else. A keying is encoded as a whole, because
+        // every burst has to say how many follow it in that keying, which
+        // depends on what else is in it: a message leaves out the fragments
+        // the far end has confirmed, and a reply may have a message behind it.
+        std::vector<Frame> frames;
         uint32_t confirmed = 0;  // fragments a partial acknowledgement said arrived
-
-        bool signalling = false;                    // DATAC13 rather than DATAC4
+        BurstMode mode = BurstMode::Text;
         bool expectsAck = false;
         bool isPing = false;
         bool reply = false;      // an acknowledgement or pong we owe somebody
@@ -232,7 +232,9 @@ private:
     void handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
     void handlePartialAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
     bool retryOrFailLocked(size_t index, uint64_t nowMs, std::vector<PendingEvent>& events);
-    std::vector<OutgoingBurst> keyingBurstsLocked(const PendingTransmission& pending) const;
+    PendingTransmission* riderLocked(size_t replyIndex, uint64_t nowMs);
+    std::vector<OutgoingBurst> keyingBurstsLocked(
+        const std::vector<const PendingTransmission*>& entries) const;
     void handlePingLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void handlePongLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void addSystemMessageLocked(const std::string& text, const std::string& destination,

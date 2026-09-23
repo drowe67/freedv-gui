@@ -263,7 +263,7 @@ bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
     // Encode before storing, so a message that cannot go on the air never
     // appears in the chat window as something that was sent.
     PendingTransmission pending;
-    pending.signalling = false;
+    pending.mode = BurstMode::Text;
     pending.expectsAck = !broadcast;
     pending.isPing = false;
     pending.destination = normalizedDestination;
@@ -288,7 +288,7 @@ bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
             return false;
         }
 
-        pending.fragments.push_back(frame);
+        pending.frames.push_back(frame);
     }
 
     TextMessage message;
@@ -372,8 +372,8 @@ bool TextMessagingProtocol::sendPing(const std::string& destination, std::string
 
         PendingTransmission pending;
         pending.message = message;
-        pending.frames.push_back(encoded);
-        pending.signalling = true;
+        pending.frames.push_back(frame);
+        pending.mode = BurstMode::Signalling;
         pending.expectsAck = true;
         pending.isPing = true;
         pending.destination = normalizedDestination;
@@ -419,8 +419,8 @@ void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint1
     if (encoded.empty()) return;
 
     PendingTransmission pending;
-    pending.frames.push_back(encoded);
-    pending.signalling = true;
+    pending.frames.push_back(frame);
+    pending.mode = BurstMode::Signalling;
     pending.expectsAck = false;
     pending.reply = true;
     pending.ack = true;
@@ -447,14 +447,14 @@ void TextMessagingProtocol::queuePartialAckLocked(const std::string& destination
         if (queued.partialAck && queued.state == TransmissionState::Queued &&
             queued.destination == destination && queued.message.airId == airId)
         {
-            queued.frames.assign(1, encoded);
+            queued.frames.assign(1, frame);
             return;
         }
     }
 
     PendingTransmission pending;
-    pending.frames.push_back(encoded);
-    pending.signalling = true;
+    pending.frames.push_back(frame);
+    pending.mode = BurstMode::Signalling;
     pending.expectsAck = false;
     pending.reply = true;
     pending.partialAck = true;
@@ -493,8 +493,8 @@ void TextMessagingProtocol::queuePongLocked(const std::string& destination, floa
     if (encoded.empty()) return;
 
     PendingTransmission pending;
-    pending.frames.push_back(encoded);
-    pending.signalling = true;
+    pending.frames.push_back(frame);
+    pending.mode = BurstMode::Signalling;
     pending.expectsAck = false;
     pending.reply = true;
     pending.destination = destination;
@@ -531,7 +531,8 @@ void TextMessagingProtocol::updateStatusLocked(PendingTransmission& pending, Mes
 
     pending.message.status = status;
     pending.message.retryCount = pending.retries;
-    pending.message.fragmentCount = (int)pending.fragments.size();
+    pending.message.fragmentCount =
+        pending.mode == BurstMode::Text ? (int)pending.frames.size() : 0;
     pending.message.fragmentsConfirmed = std::popcount(pending.confirmed);
     store_.updateMessageStatus(pending.message.id, status, pending.retries);
 
@@ -729,11 +730,11 @@ void TextMessagingProtocol::handlePartialAckLocked(const Frame& frame,
     for (size_t i = 0; i < outbox_.size(); i++)
     {
         PendingTransmission& pending = outbox_[i];
-        if (pending.isPing || !pending.expectsAck || pending.fragments.empty()) continue;
+        if (pending.isPing || !pending.expectsAck || pending.mode != BurstMode::Text) continue;
         if (pending.message.airId != frame.airId) continue;
         if (pending.destination != frame.originCallsign) continue;
 
-        uint32_t all = (1u << pending.fragments.size()) - 1u;
+        uint32_t all = (1u << pending.frames.size()) - 1u;
         uint32_t received = frame.payload[0] & all;
         bool progress = (received & ~pending.confirmed) != 0;
         pending.confirmed |= received;
@@ -990,12 +991,17 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
     // any entry rather than just the first.
     if (!transport_->isTransmitting())
     {
-        // The burst we handed to the transport has finished. Acknowledgements
-        // push to the front, so it is not necessarily the first entry.
-        for (size_t i = 0; i < outbox_.size(); i++)
+        // The keying we handed to the transport has finished, with everything
+        // that was in it: a reply and the message that rode behind it both.
+        // Acknowledgements push to the front, so neither is necessarily first.
+        for (size_t i = 0; i < outbox_.size();)
         {
             PendingTransmission& sent = outbox_[i];
-            if (sent.state != TransmissionState::Transmitting) continue;
+            if (sent.state != TransmissionState::Transmitting)
+            {
+                i++;
+                continue;
+            }
 
             // Having answered somebody, give them the channel: see the note
             // on REPLY_WINDOW_MILLISECONDS.
@@ -1012,13 +1018,13 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                 sent.deadlineMs = nowMs + (uint64_t)(sent.isPing ? PING_TIMEOUT_MILLISECONDS
                                                                  : ACK_TIMEOUT_MILLISECONDS);
                 updateStatusLocked(sent, MessageStatus::AwaitingAck, events);
+                i++;
             }
             else
             {
                 updateStatusLocked(sent, MessageStatus::Sent, events);
                 outbox_.erase(outbox_.begin() + (std::ptrdiff_t)i);
             }
-            break;
         }
 
         // The turnaround is the far end's turn; anything queued waits it out.
@@ -1034,11 +1040,22 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                 if (nowMs < next.notBeforeMs) continue;
                 if (nowMs < quietUntilLocked(next.reply)) continue;
 
-                std::vector<OutgoingBurst> keying = keyingBurstsLocked(next);
+                std::vector<PendingTransmission*> entries{&next};
+                if (next.reply)
+                {
+                    PendingTransmission* rider = riderLocked(i, nowMs);
+                    if (rider != nullptr) entries.push_back(rider);
+                }
+
+                std::vector<OutgoingBurst> keying = keyingBurstsLocked(
+                    std::vector<const PendingTransmission*>(entries.begin(), entries.end()));
                 if (!keying.empty() && transport_->transmit(keying))
                 {
-                    next.state = TransmissionState::Transmitting;
-                    updateStatusLocked(next, MessageStatus::Transmitting, events);
+                    for (PendingTransmission* entry : entries)
+                    {
+                        entry->state = TransmissionState::Transmitting;
+                        updateStatusLocked(*entry, MessageStatus::Transmitting, events);
+                    }
                 }
                 break;
             }
@@ -1089,36 +1106,64 @@ bool TextMessagingProtocol::retryOrFailLocked(size_t index, uint64_t nowMs,
     return true;
 }
 
-// The bursts for one keying. A message sends the fragments not yet confirmed,
-// in order, each saying how many of them are still to come; everything else is
-// the single burst it was queued as.
-std::vector<OutgoingBurst> TextMessagingProtocol::keyingBurstsLocked(
-    const PendingTransmission& pending) const
+// A transmission of our own to send behind the reply at replyIndex, in the
+// same keying, or null. Without this a station with a message queued only
+// ever acknowledged while the other side had traffic, because every reply
+// gives the answered station the channel: it was starved for as long as the
+// other station kept typing. With it the two alternate a message each. One
+// rider at most, or a station with a long queue would hold the channel as
+// long as it liked. It need not wait out our own quiet time: that is there
+// to keep us from starting a keying, and this one has already started, with
+// every listener told how long it will last. A retry still backing off
+// waits, and so does anything already on its way or waiting on an answer.
+TextMessagingProtocol::PendingTransmission* TextMessagingProtocol::riderLocked(size_t replyIndex,
+                                                                              uint64_t nowMs)
 {
+    for (size_t i = 0; i < outbox_.size(); i++)
+    {
+        if (i == replyIndex) continue;
+
+        PendingTransmission& candidate = outbox_[i];
+        if (candidate.reply || candidate.state != TransmissionState::Queued) continue;
+        if (nowMs < candidate.notBeforeMs) continue;
+
+        return &candidate;
+    }
+
+    return nullptr;
+}
+
+// The bursts for one keying: every frame each entry still has to send, in
+// order, each saying how many bursts follow it in the keying as a whole. A
+// message leaves out the fragments the far end has confirmed.
+std::vector<OutgoingBurst> TextMessagingProtocol::keyingBurstsLocked(
+    const std::vector<const PendingTransmission*>& entries) const
+{
+    std::vector<std::pair<BurstMode, const Frame*>> order;
+    for (const PendingTransmission* entry : entries)
+    {
+        for (size_t index = 0; index < entry->frames.size(); index++)
+        {
+            if ((entry->confirmed & (1u << index)) != 0) continue;
+            order.push_back({entry->mode, &entry->frames[index]});
+        }
+    }
+
     std::vector<OutgoingBurst> keying;
-
-    if (pending.fragments.empty())
+    for (size_t position = 0; position < order.size(); position++)
     {
-        BurstMode mode = pending.signalling ? BurstMode::Signalling : BurstMode::Text;
-        for (const std::vector<uint8_t>& frame : pending.frames) keying.push_back({mode, frame});
-        return keying;
-    }
+        BurstMode mode = order[position].first;
+        Frame frame = *order[position].second;
+        frame.burstsFollowing = (uint8_t)(order.size() - 1 - position);
 
-    std::vector<const Frame*> outstanding;
-    for (size_t index = 0; index < pending.fragments.size(); index++)
-    {
-        if ((pending.confirmed & (1u << index)) == 0) outstanding.push_back(&pending.fragments[index]);
-    }
+        // Every frame encoded when it was queued, and a keying holds at most a
+        // reply and one message, so the count after any fragment still fits:
+        // this does not fail.
+        std::vector<uint8_t> encoded = FrameCodec::encode(
+            frame, mode == BurstMode::Signalling ? SIGNALLING_FRAME_BYTES : TEXT_FRAME_BYTES);
+        if (encoded.empty()) return {};
 
-    for (size_t position = 0; position < outstanding.size(); position++)
-    {
-        Frame frame = *outstanding[position];
-        frame.burstsFollowing = (uint8_t)(outstanding.size() - 1 - position);
-
-        // Every fragment encoded when the message was queued, with at least as
-        // many following as it can have here, so this does not fail.
-        keying.push_back({BurstMode::Text, FrameCodec::encode(frame, TEXT_FRAME_BYTES)});
-        if (keying.back().frame.empty()) return {};
+        keying.push_back({mode, encoded});
     }
 
     return keying;

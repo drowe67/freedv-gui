@@ -158,6 +158,22 @@ struct Station
     uint64_t nowMs = 1000;
 };
 
+Frame decodeOne(const std::vector<uint8_t>& raw)
+{
+    Frame frame;
+    CHECK(FrameCodec::decode(raw.data(), (int)raw.size(), frame));
+    return frame;
+}
+
+bool everUpdatedTo(const RecordingObserver& observer, int64_t id, MessageStatus status)
+{
+    for (const TextMessage& update : observer.updated)
+    {
+        if (update.id == id && update.status == status) return true;
+    }
+    return false;
+}
+
 void testAddressedMessageIsAcknowledged()
 {
     Station sender("W1AW");
@@ -689,7 +705,7 @@ void testRetryBacksOffBeforeKeyingAgain()
 }
 
 // Having answered a station, we give it the channel for a whole reply window
-// before starting traffic of our own. On the bench the acknowledged station
+// before starting a keying of our own. On the bench the acknowledged station
 // keyed two seconds after our acknowledgement ended, exactly when the plain
 // turnaround let us key, and the two collided four times in one run.
 void testAReplyGivesTheOtherStationTheChannel()
@@ -702,20 +718,138 @@ void testAReplyGivesTheOtherStationTheChannel()
     sender.completeOneTransmission();
     receiver.receiveFrom(sender.transport); // queues our acknowledgement
 
-    CHECK(receiver.protocol.sendMessage("mine", "W1AW", error));
+    // Nothing of ours is queued, so the acknowledgement goes alone.
     receiver.completeOneTransmission();
     CHECK(receiver.transport.transmissions.size() == 1);
-    CHECK(receiver.transport.modes.back()[0] == BurstMode::Signalling); // the acknowledgement went first
+    CHECK(receiver.transport.modes.back().size() == 1);
+    CHECK(decodeOne(receiver.transport.transmissions.back()[0]).burstsFollowing == 0);
 
-    // Past the plain turnaround: still theirs.
+    // Traffic queued after it waits past the plain turnaround...
+    CHECK(receiver.protocol.sendMessage("mine", "W1AW", error));
     receiver.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
     receiver.protocol.tick();
     CHECK(receiver.transport.transmissions.size() == 1);
 
-    // Past the window: ours.
+    // ...until the window is up.
     receiver.nowMs += REPLY_WINDOW_MILLISECONDS;
     receiver.protocol.tick();
     CHECK(receiver.transport.transmissions.size() == 2);
+}
+
+// A station with a message queued sends it behind the acknowledgement it owes,
+// in the same keying, rather than waiting for a gap that the other side's
+// traffic never leaves. The acknowledgement says more follows, so listeners
+// leave the channel alone for the message too.
+void testQueuedMessageRidesBehindAReply()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    CHECK(receiver.protocol.sendMessage("mine", "W1AW", error));
+    int64_t mine = receiver.observer.added[0].id;
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    int64_t first = sender.observer.added[0].id;
+    sender.completeOneTransmission();
+    receiver.receiveFrom(sender.transport);
+
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 1);
+    const std::vector<BurstMode>& modes = receiver.transport.modes.back();
+    CHECK(modes.size() == 2);
+    CHECK(modes.size() == 2 && modes[0] == BurstMode::Signalling && modes[1] == BurstMode::Text);
+    Frame ack = decodeOne(receiver.transport.transmissions.back()[0]);
+    CHECK(ack.type == FrameType::MessageAck);
+    CHECK(ack.burstsFollowing == 1);
+    CHECK(decodeOne(receiver.transport.transmissions.back()[1]).burstsFollowing == 0);
+
+    // Both went on the air and both concluded: one delivered, one awaiting.
+    const TextMessage* update = receiver.observer.lastUpdateFor(mine);
+    CHECK(update != nullptr && update->status == MessageStatus::AwaitingAck);
+    CHECK(receiver.protocol.ackWait() == AckWait::Message);
+
+    sender.receiveFrom(receiver.transport);
+    update = sender.observer.lastUpdateFor(first);
+    CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
+    CHECK(sender.observer.added.size() == 2);
+    CHECK(sender.observer.added.size() == 2 && sender.observer.added[1].text == "mine");
+}
+
+// What rides behind a reply is traffic of our own that is waiting its turn:
+// not a message already sent and waiting on its answer, which would go out
+// again early, and not another reply, which would take the place of our own
+// message and leave it waiting.
+void testOnlyWaitingTrafficOfOurOwnRides()
+{
+    std::string error;
+
+    // Sent already and awaiting its acknowledgement: the reply goes alone.
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+    CHECK(receiver.protocol.sendMessage("earlier", "W1AW", error));
+    receiver.completeOneTransmission();
+    CHECK(receiver.protocol.ackWait() == AckWait::Message);
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    sender.completeOneTransmission();
+    receiver.receiveFrom(sender.transport);
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 2);
+    CHECK(receiver.transport.modes.back().size() == 1);
+
+    // Two replies owed and a message queued: the message rides behind the
+    // first reply, and the second reply follows on its own.
+    Station one("W1AW");
+    Station two("DJ2LS");
+    Station busy("VK3ABC");
+    CHECK(busy.protocol.sendMessage("mine", "K1ABC", error));
+    CHECK(one.protocol.sendMessage("from one", "VK3ABC", error));
+    CHECK(two.protocol.sendMessage("from two", "VK3ABC", error));
+    one.completeOneTransmission();
+    two.completeOneTransmission();
+    busy.receiveFrom(one.transport);
+    busy.receiveFrom(two.transport);
+    CHECK(busy.protocol.pendingCount() == 3);
+
+    busy.completeOneTransmission();
+    const std::vector<BurstMode>& modes = busy.transport.modes.back();
+    CHECK(modes.size() == 2 && modes[0] == BurstMode::Signalling && modes[1] == BurstMode::Text);
+}
+
+// Two stations with messages queued for each other alternate one each: every
+// keying after the first is an acknowledgement with the next message behind
+// it. Before, whichever station went first sent its whole queue while the
+// other only acknowledged.
+void testBusyStationsTakeTurns()
+{
+    Station a("W1AW");
+    Station b("VK3ABC");
+
+    std::string error;
+    for (const char* text : {"a1", "a2", "a3"}) CHECK(a.protocol.sendMessage(text, "VK3ABC", error));
+    for (const char* text : {"b1", "b2", "b3"}) CHECK(b.protocol.sendMessage(text, "W1AW", error));
+
+    // Who said what, in the order it reached the other side.
+    std::vector<std::string> heard;
+    Station* talker = &a;
+    Station* listener = &b;
+    for (int keying = 0; keying < 7; keying++)
+    {
+        size_t before = listener->observer.added.size();
+        talker->completeOneTransmission();
+        listener->receiveFrom(talker->transport);
+        for (size_t i = before; i < listener->observer.added.size(); i++)
+        {
+            heard.push_back(listener->observer.added[i].text);
+        }
+
+        if (keying > 0 && keying < 6) CHECK(talker->transport.modes.back().size() == 2);
+        std::swap(talker, listener);
+    }
+
+    std::vector<std::string> expected{"a1", "b1", "a2", "b2", "a3", "b3"};
+    CHECK(heard == expected);
+    CHECK(a.protocol.pendingCount() == 0);
+    CHECK(b.protocol.pendingCount() == 0);
 }
 
 // A fragment says how many more bursts its sender holds the channel for,
@@ -1010,22 +1144,6 @@ void testReservationFollowsTheBurstsStillToCome()
     plain.protocol.onFrameReceived(ack, 5.0f);
     waited = keyedAfter(plain, heardAt, 4 * TEXT_FRAGMENT_AIR_MILLISECONDS);
     CHECK(waited <= (uint64_t)MAX_TURNAROUND_MILLISECONDS);
-}
-
-Frame decodeOne(const std::vector<uint8_t>& raw)
-{
-    Frame frame;
-    CHECK(FrameCodec::decode(raw.data(), (int)raw.size(), frame));
-    return frame;
-}
-
-bool everUpdatedTo(const RecordingObserver& observer, int64_t id, MessageStatus status)
-{
-    for (const TextMessage& update : observer.updated)
-    {
-        if (update.id == id && update.status == status) return true;
-    }
-    return false;
 }
 
 // A receiver that heard part of a message tells the sender which fragments
@@ -1485,6 +1603,9 @@ int main()
     testReplyIsNotHeldForOurOwnReplyWindow();
     testRetryBacksOffBeforeKeyingAgain();
     testAReplyGivesTheOtherStationTheChannel();
+    testQueuedMessageRidesBehindAReply();
+    testBusyStationsTakeTurns();
+    testOnlyWaitingTrafficOfOurOwnRides();
     testFragmentsStillToComeReserveTheChannel();
     testReservationFollowsTheBurstsStillToCome();
     testClearingChannelReleasesStationsAtDifferentMoments();

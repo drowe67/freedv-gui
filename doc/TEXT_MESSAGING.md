@@ -101,9 +101,16 @@ not that longer window. The station waiting for it is sitting on a window of
 exactly the same length, so a reply held for ours would key at the very moment
 its window expired, and the two would collide. The loopback bench showed that
 happen. Having sent a reply, the station then serves the same window before
-starting traffic of its own: the station it answered is already turning around
-and usually has more to say, and on the bench the two keyed together four
-times in one run when it did not.
+starting a keying of its own: the station it answered is already turning
+around and usually has more to say, and on the bench the two keyed together
+four times in one run when it did not.
+
+Traffic of its own does not wait for that, though. A station with a message
+queued sends it behind the reply, in the same keying: the acknowledgement,
+then the message. Two stations with messages for each other therefore take
+turns, a message each, instead of whichever went first sending everything
+while the other only acknowledged. Only one message rides behind a reply, and
+a retry still backing off does not ride at all.
 
 The station also listens before it talks. While either demodulator is locked
 onto a burst -- from the moment it recognises a preamble until the packet is

@@ -146,7 +146,9 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 4000;
 // is already turning around and usually has more to say; on the bench it
 // keyed two seconds after our acknowledgement ended, exactly when our own
 // plain turnaround let us key, four times in one run. Waiting the window
-// hands it the channel with a gap carrier sense can see.
+// hands it the channel with a gap carrier sense can see. Traffic of our own
+// does not have to wait for it: one queued transmission goes out behind the
+// reply, in the same keying.
 constexpr int REPLY_WINDOW_MILLISECONDS = 6000;
 
 // Two stations that back off by exactly the same amount collide again on the
