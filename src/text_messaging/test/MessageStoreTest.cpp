@@ -121,6 +121,11 @@ void testMessageRoundTrip()
     CHECK(store.updateMessageStatus(sent.id, MessageStatus::Acknowledged, 2));
     messages = store.recentMessages(50);
     CHECK(messages[0].status == MessageStatus::Acknowledged);
+
+    // A message discarded unsent keeps saying so after a restart.
+    CHECK(store.updateMessageStatus(sent.id, MessageStatus::NotSent, 0));
+    messages = store.recentMessages(50);
+    CHECK(messages[0].status == MessageStatus::NotSent);
 }
 
 void testMessageLimitAndPrune()

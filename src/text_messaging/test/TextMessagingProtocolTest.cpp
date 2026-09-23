@@ -895,6 +895,80 @@ void testRepliesDoNotWaitForTheAnsweredStationsTurn()
           decodeOne(replier.transport.transmissions.back()[0]).type == FrameType::MessageAck);
 }
 
+// A station on a frequency where it may not send data transmits nothing at
+// all: what was waiting is discarded as not sent, new traffic is refused with
+// the reason, and messages it receives are shown but not acknowledged.
+void testInhibitedStationTransmitsNothing()
+{
+    const std::string reason = "not here";
+    std::string error;
+
+    Station station("VK3ABC");
+    CHECK(station.protocol.sendMessage("waiting", "W1AW", error));
+    int64_t waiting = station.observer.added[0].id;
+    station.protocol.setTransmitInhibited(reason);
+    CHECK(station.protocol.transmitInhibitedReason() == reason);
+    CHECK(station.protocol.pendingCount() == 0);
+    const TextMessage* update = station.observer.lastUpdateFor(waiting);
+    CHECK(update != nullptr && update->status == MessageStatus::NotSent);
+    CHECK(update != nullptr && deliveryChipState(*update).kind == DeliveryChipKind::NotSent);
+
+    CHECK(!station.protocol.sendMessage("refused", "W1AW", error));
+    CHECK(error == reason);
+    error.clear();
+    CHECK(!station.protocol.sendPing("W1AW", error));
+    CHECK(error == reason);
+
+    // A message arrives: shown, but its acknowledgement never goes out.
+    Station sender("W1AW");
+    CHECK(sender.protocol.sendMessage("hello", "VK3ABC", error));
+    sender.completeOneTransmission();
+    station.receiveFrom(sender.transport);
+    CHECK(station.observer.added.size() == 2);
+    for (int i = 0; i < 5; i++) station.completeOneTransmission();
+    CHECK(station.transport.transmissions.empty());
+    CHECK(station.protocol.pendingCount() == 0);
+
+    // Lifted, it transmits again.
+    station.protocol.setTransmitInhibited("");
+    CHECK(station.protocol.sendMessage("now", "W1AW", error));
+    station.completeOneTransmission();
+    CHECK(station.transport.transmissions.size() == 1);
+}
+
+// Inhibiting stops what has not gone out, not what has: a message already sent
+// can still be acknowledged, since receiving carries on, but one whose timer
+// runs out is not retried.
+void testInhibitingLeavesSentMessagesToTheirAnswers()
+{
+    std::string error;
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    CHECK(sender.protocol.sendMessage("answered", "VK3ABC", error));
+    int64_t answered = sender.observer.added[0].id;
+    sender.completeOneTransmission();
+    sender.protocol.setTransmitInhibited("not here");
+    receiver.receiveFrom(sender.transport);
+    receiver.completeOneTransmission();
+    sender.receiveFrom(receiver.transport);
+    const TextMessage* update = sender.observer.lastUpdateFor(answered);
+    CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
+
+    Station lonely("W1AW");
+    CHECK(lonely.protocol.sendMessage("unanswered", "VK3ABC", error));
+    int64_t unanswered = lonely.observer.added[0].id;
+    lonely.completeOneTransmission();
+    lonely.protocol.setTransmitInhibited("not here");
+    lonely.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+    lonely.protocol.tick();
+    for (int i = 0; i < 3; i++) lonely.completeOneTransmission();
+    CHECK(lonely.transport.transmissions.size() == 1);
+    update = lonely.observer.lastUpdateFor(unanswered);
+    CHECK(update != nullptr && update->status == MessageStatus::NotSent);
+    CHECK(lonely.protocol.pendingCount() == 0);
+}
+
 // Two stations with messages queued for each other alternate one each: every
 // keying after the first is an acknowledgement with the next message behind
 // it. Before, whichever station went first sent its whole queue while the
@@ -1692,6 +1766,8 @@ int main()
     testOnlyWaitingTrafficOfOurOwnRides();
     testOwnTrafficWaitsUntilListenersLetGo();
     testRepliesDoNotWaitForTheAnsweredStationsTurn();
+    testInhibitedStationTransmitsNothing();
+    testInhibitingLeavesSentMessagesToTheirAnswers();
     testFragmentsStillToComeReserveTheChannel();
     testReservationFollowsTheBurstsStillToCome();
     testClearingChannelReleasesStationsAtDifferentMoments();

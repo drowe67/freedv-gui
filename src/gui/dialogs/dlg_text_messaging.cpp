@@ -187,6 +187,10 @@ DeliveryChip deliveryChip(const TextMessage& message)
             chip.label = _("NO ACK");
             chip.background = "#E74C3C";
             break;
+        case DeliveryChipKind::NotSent:
+            chip.label = _("NOT SENT");
+            chip.background = grey;
+            break;
     }
 
     // How many fragments the far end has, out of how many there are.

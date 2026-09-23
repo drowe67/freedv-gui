@@ -116,6 +116,15 @@ public:
     void setAutoReplyEnabled(bool enabled);
     bool autoReplyEnabled() const;
 
+    // Stops every chat transmission, for a station on a frequency where it
+    // may not send data. Whatever is waiting to go out is discarded as not
+    // sent, including a retry or a reply that becomes due while inhibited,
+    // and sending is refused with this reason. A keying already on the air
+    // finishes, and a message already sent can still be acknowledged, since
+    // receiving carries on. An empty reason lifts it.
+    void setTransmitInhibited(const std::string& reason);
+    std::string transmitInhibitedReason() const;
+
     // Replaces the clocks the protocol reads. Milliseconds must be monotonic
     // (timeouts) and the wall clock is what the chat window timestamps with.
     void setClocks(std::function<uint64_t()> monotonicMs, std::function<std::time_t()> wallClock);
@@ -242,6 +251,7 @@ private:
     void updateStatusLocked(PendingTransmission& pending, MessageStatus status,
                             std::vector<PendingEvent>& events);
     void purgeStaleReassembliesLocked(uint64_t nowMs);
+    void discardQueuedLocked(std::vector<PendingEvent>& events);
 
     // Holds the transmitter off until the far end has had its turn. Never
     // shortens a wait that is already running. The first holds everything;
@@ -270,6 +280,7 @@ private:
     std::string myCallsign_;
     uint32_t myCallsignCrc_;
     bool autoReplyEnabled_;
+    std::string inhibitReason_;   // empty unless transmitting is inhibited
     uint16_t nextAirId_;
 
     uint64_t quietUntilMs_;           // turnarounds: nothing keys before this

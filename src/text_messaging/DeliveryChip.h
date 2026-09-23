@@ -53,6 +53,7 @@ enum class DeliveryChipKind
     Resend,          // the far end has part of it; the rest is on its way
     Acknowledged,
     NotAcknowledged, // out of retries
+    NotSent,         // discarded before it went out
 };
 
 struct DeliveryChipState
@@ -109,6 +110,9 @@ inline DeliveryChipState deliveryChipState(const TextMessage& message)
             break;
         case MessageStatus::Failed:
             state.kind = DeliveryChipKind::NotAcknowledged;
+            break;
+        case MessageStatus::NotSent:
+            state.kind = DeliveryChipKind::NotSent;
             break;
         case MessageStatus::Sent:
             state.kind = DeliveryChipKind::Sent;

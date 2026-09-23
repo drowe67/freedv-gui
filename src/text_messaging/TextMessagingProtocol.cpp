@@ -167,6 +167,41 @@ bool TextMessagingProtocol::autoReplyEnabled() const
     return autoReplyEnabled_;
 }
 
+void TextMessagingProtocol::setTransmitInhibited(const std::string& reason)
+{
+    std::vector<PendingEvent> events;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        inhibitReason_ = reason;
+        if (!inhibitReason_.empty()) discardQueuedLocked(events);
+    }
+
+    deliver(events);
+}
+
+std::string TextMessagingProtocol::transmitInhibitedReason() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return inhibitReason_;
+}
+
+// Everything waiting for the transmitter, dropped. A chat line says it was
+// not sent; an acknowledgement or pong has no line and simply goes.
+void TextMessagingProtocol::discardQueuedLocked(std::vector<PendingEvent>& events)
+{
+    for (auto it = outbox_.begin(); it != outbox_.end();)
+    {
+        if (it->state != TransmissionState::Queued)
+        {
+            ++it;
+            continue;
+        }
+
+        updateStatusLocked(*it, MessageStatus::NotSent, events);
+        it = outbox_.erase(it);
+    }
+}
+
 void TextMessagingProtocol::setClocks(std::function<uint64_t()> monotonicMs,
                                       std::function<std::time_t()> wallClock)
 {
@@ -241,6 +276,12 @@ bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
     if (transport_ == nullptr)
     {
         errorOut = "FreeDV is not running, so there is nothing to transmit with.";
+        return false;
+    }
+
+    if (!inhibitReason_.empty())
+    {
+        errorOut = inhibitReason_;
         return false;
     }
 
@@ -337,6 +378,12 @@ bool TextMessagingProtocol::sendPing(const std::string& destination, std::string
         if (transport_ == nullptr)
         {
             errorOut = "FreeDV is not running, so there is nothing to transmit with.";
+            return false;
+        }
+
+        if (!inhibitReason_.empty())
+        {
+            errorOut = inhibitReason_;
             return false;
         }
 
@@ -981,6 +1028,11 @@ void TextMessagingProtocol::tick()
         uint64_t nowMs = monotonicMs_();
         purgeStaleReassembliesLocked(nowMs);
         requestMissingFragmentsLocked(nowMs);
+
+        // Replies queued as frames arrive, retries whose timers ran out and
+        // resends that a partial acknowledgement asked for all land in the
+        // queue; while inhibited none of them may go out.
+        if (!inhibitReason_.empty()) discardQueuedLocked(events);
 
         // While the channel is busy everything waits, timers included: the far
         // end cannot answer us through somebody else's burst, and it may be the
