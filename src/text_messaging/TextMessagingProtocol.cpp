@@ -1034,8 +1034,8 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                 if (nowMs < next.notBeforeMs) continue;
                 if (nowMs < quietUntilLocked(next.reply)) continue;
 
-                std::vector<std::vector<uint8_t>> keying = keyingFramesLocked(next);
-                if (!keying.empty() && transport_->transmit(keying, next.signalling))
+                std::vector<OutgoingBurst> keying = keyingBurstsLocked(next);
+                if (!keying.empty() && transport_->transmit(keying))
                 {
                     next.state = TransmissionState::Transmitting;
                     updateStatusLocked(next, MessageStatus::Transmitting, events);
@@ -1092,10 +1092,17 @@ bool TextMessagingProtocol::retryOrFailLocked(size_t index, uint64_t nowMs,
 // The bursts for one keying. A message sends the fragments not yet confirmed,
 // in order, each saying how many of them are still to come; everything else is
 // the single burst it was queued as.
-std::vector<std::vector<uint8_t>> TextMessagingProtocol::keyingFramesLocked(
+std::vector<OutgoingBurst> TextMessagingProtocol::keyingBurstsLocked(
     const PendingTransmission& pending) const
 {
-    if (pending.fragments.empty()) return pending.frames;
+    std::vector<OutgoingBurst> keying;
+
+    if (pending.fragments.empty())
+    {
+        BurstMode mode = pending.signalling ? BurstMode::Signalling : BurstMode::Text;
+        for (const std::vector<uint8_t>& frame : pending.frames) keying.push_back({mode, frame});
+        return keying;
+    }
 
     std::vector<const Frame*> outstanding;
     for (size_t index = 0; index < pending.fragments.size(); index++)
@@ -1103,7 +1110,6 @@ std::vector<std::vector<uint8_t>> TextMessagingProtocol::keyingFramesLocked(
         if ((pending.confirmed & (1u << index)) == 0) outstanding.push_back(&pending.fragments[index]);
     }
 
-    std::vector<std::vector<uint8_t>> keying;
     for (size_t position = 0; position < outstanding.size(); position++)
     {
         Frame frame = *outstanding[position];
@@ -1111,8 +1117,8 @@ std::vector<std::vector<uint8_t>> TextMessagingProtocol::keyingFramesLocked(
 
         // Every fragment encoded when the message was queued, with at least as
         // many following as it can have here, so this does not fail.
-        keying.push_back(FrameCodec::encode(frame, TEXT_FRAME_BYTES));
-        if (keying.back().empty()) return {};
+        keying.push_back({BurstMode::Text, FrameCodec::encode(frame, TEXT_FRAME_BYTES)});
+        if (keying.back().frame.empty()) return {};
     }
 
     return keying;

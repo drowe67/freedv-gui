@@ -34,6 +34,7 @@
 
 #include "TextMessagingTransport.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 
@@ -107,8 +108,7 @@ void TextMessagingTransport::setTransmitAllowedCheck(VoiceTransmitCheck transmit
     transmitAllowedCheck_ = std::move(transmitAllowedCheck);
 }
 
-bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& frames,
-                                      bool signalling)
+bool TextMessagingTransport::transmit(const std::vector<TextMessaging::OutgoingBurst>& bursts)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -121,7 +121,7 @@ bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& f
 
     if (transmitAllowedCheck_ != nullptr && !transmitAllowedCheck_()) return false;
 
-    if (!modem_->modulate(frames, signalling, samples_)) return false;
+    if (!modem_->modulate(bursts, samples_)) return false;
 
     auto& queue = textMessagingTxQueue();
     if (!queue.enqueue(samples_.data(), (int)samples_.size()))
@@ -143,8 +143,12 @@ bool TextMessagingTransport::transmit(const std::vector<std::vector<uint8_t>>& f
 
     if (txLogEnabled())
     {
-        log_info("TX: keying for %d %s frame(s), %d samples, %llu ms of audio",
-                 (int)frames.size(), signalling ? "signalling" : "text",
+        int signallingBursts = (int)std::count_if(
+            bursts.begin(), bursts.end(),
+            [](const TextMessaging::OutgoingBurst& burst)
+            { return burst.mode == TextMessaging::BurstMode::Signalling; });
+        log_info("TX: keying for %d signalling and %d text frame(s), %d samples, %llu ms of audio",
+                 signallingBursts, (int)bursts.size() - signallingBursts,
                  (int)samples_.size(), (unsigned long long)burstMs);
     }
 

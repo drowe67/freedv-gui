@@ -54,17 +54,17 @@ class HeardStationList;
 class MessageStore;
 
 // Implemented by the audio pipeline. A transmission is one keying of the
-// transmitter carrying every frame handed to transmit(); once transmit()
-// returns true, isTransmitting() must keep returning true until the last
-// sample of that burst has been sent, and must also be true while the
-// operator is transmitting voice. That contract is what lets the protocol
-// know when its acknowledgement timer should start.
+// transmitter carrying every burst handed to transmit(), in order, each in
+// its own mode; once transmit() returns true, isTransmitting() must keep
+// returning true until the last sample of the last burst has been sent, and
+// must also be true while the operator is transmitting voice. That contract
+// is what lets the protocol know when its acknowledgement timer should start.
 class ITextMessagingTransport
 {
 public:
     virtual ~ITextMessagingTransport() = default;
 
-    virtual bool transmit(const std::vector<std::vector<uint8_t>>& frames, bool signalling) = 0;
+    virtual bool transmit(const std::vector<OutgoingBurst>& bursts) = 0;
     virtual bool isTransmitting() const = 0;
 
     // Called from the same loop that drives tick(), so a transport can finish
@@ -232,7 +232,7 @@ private:
     void handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
     void handlePartialAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
     bool retryOrFailLocked(size_t index, uint64_t nowMs, std::vector<PendingEvent>& events);
-    std::vector<std::vector<uint8_t>> keyingFramesLocked(const PendingTransmission& pending) const;
+    std::vector<OutgoingBurst> keyingBurstsLocked(const PendingTransmission& pending) const;
     void handlePingLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void handlePongLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void addSystemMessageLocked(const std::string& text, const std::string& destination,

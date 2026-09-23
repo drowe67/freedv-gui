@@ -66,12 +66,17 @@ void check(bool condition, const char* what, int line)
 class FakeTransport : public ITextMessagingTransport
 {
 public:
-    bool transmit(const std::vector<std::vector<uint8_t>>& frames, bool signalling) override
+    bool transmit(const std::vector<OutgoingBurst>& bursts) override
     {
         if (refuse) return false;
 
-        transmissions.push_back(frames);
-        signallingFlags.push_back(signalling);
+        transmissions.emplace_back();
+        modes.emplace_back();
+        for (const OutgoingBurst& burst : bursts)
+        {
+            transmissions.back().push_back(burst.frame);
+            modes.back().push_back(burst.mode);
+        }
         transmitting = true;
         return true;
     }
@@ -79,8 +84,8 @@ public:
     bool isTransmitting() const override { return transmitting || voiceActive; }
     bool isChannelBusy() const override { return channelBusy; }
 
-    std::vector<std::vector<std::vector<uint8_t>>> transmissions;
-    std::vector<bool> signallingFlags;
+    std::vector<std::vector<std::vector<uint8_t>>> transmissions; // frames, per keying
+    std::vector<std::vector<BurstMode>> modes;                    // and their modes
     bool transmitting = false;
     bool voiceActive = false;
     bool channelBusy = false;
@@ -169,7 +174,7 @@ void testAddressedMessageIsAcknowledged()
     sender.completeOneTransmission();
     CHECK(sender.transport.transmissions.size() == 1);
     CHECK(sender.transport.transmissions[0].size() == 1); // short message, one fragment
-    CHECK(!sender.transport.signallingFlags[0]);          // text goes in the wider mode
+    CHECK(sender.transport.modes[0][0] == BurstMode::Text);          // text goes in the wider mode
 
     int64_t messageId = sender.observer.added[0].id;
     const TextMessage* update = sender.observer.lastUpdateFor(messageId);
@@ -186,7 +191,7 @@ void testAddressedMessageIsAcknowledged()
     CHECK(receiver.protocol.pendingCount() == 1);
 
     receiver.completeOneTransmission();
-    CHECK(receiver.transport.signallingFlags[0]); // acknowledgements are signalling
+    CHECK(receiver.transport.modes[0][0] == BurstMode::Signalling); // acknowledgements are signalling
     CHECK(receiver.protocol.pendingCount() == 0);
 
     sender.receiveFrom(receiver.transport);
@@ -325,7 +330,7 @@ void testPingAndPong()
     CHECK(sender.observer.added[0].text == "W1AW >> VK3ABC : PING!");
 
     sender.completeOneTransmission();
-    CHECK(sender.transport.signallingFlags[0]);
+    CHECK(sender.transport.modes[0][0] == BurstMode::Signalling);
 
     receiver.receiveFrom(sender.transport, 8.0f);
     CHECK(receiver.observer.added.size() == 1);
@@ -621,7 +626,7 @@ void testReplyIsNotHeldForOurOwnReplyWindow()
     sender.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;
     sender.protocol.tick();
     CHECK(sender.transport.transmissions.size() == 2);
-    CHECK(sender.transport.signallingFlags.back()); // the pong
+    CHECK(sender.transport.modes.back()[0] == BurstMode::Signalling); // the pong
 }
 
 // A retry backs off by a random amount before keying again, bounded by the
@@ -700,7 +705,7 @@ void testAReplyGivesTheOtherStationTheChannel()
     CHECK(receiver.protocol.sendMessage("mine", "W1AW", error));
     receiver.completeOneTransmission();
     CHECK(receiver.transport.transmissions.size() == 1);
-    CHECK(receiver.transport.signallingFlags.back()); // the acknowledgement went first
+    CHECK(receiver.transport.modes.back()[0] == BurstMode::Signalling); // the acknowledgement went first
 
     // Past the plain turnaround: still theirs.
     receiver.nowMs += TURNAROUND_AFTER_TX_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 1;

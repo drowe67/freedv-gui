@@ -263,17 +263,17 @@ bool TextMessagingModem::modulateFrame(struct freedv* modem, const std::vector<u
     return true;
 }
 
-bool TextMessagingModem::modulate(const std::vector<std::vector<uint8_t>>& frames, bool signalling,
+bool TextMessagingModem::modulate(const std::vector<OutgoingBurst>& bursts,
                                   std::vector<short>& samplesOut)
 {
     if (!open_) return false;
 
-    struct freedv* modem = signalling ? signallingTx_ : textTx_;
     samplesOut.clear();
 
-    for (const std::vector<uint8_t>& frame : frames)
+    for (const OutgoingBurst& burst : bursts)
     {
-        if (!modulateFrame(modem, frame, samplesOut))
+        struct freedv* modem = burst.mode == BurstMode::Signalling ? signallingTx_ : textTx_;
+        if (!modulateFrame(modem, burst.frame, samplesOut))
         {
             samplesOut.clear();
             return false;

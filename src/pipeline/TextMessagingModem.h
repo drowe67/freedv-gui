@@ -79,10 +79,11 @@ public:
     // Called before audio starts. The callback runs on the tap thread.
     void setFrameCallback(FrameCallback callback);
 
-    // Turns encoded frames into 8 kHz samples ready for the transmitter.
-    // Returns false if the modem is not open or a frame is the wrong size for
-    // the mode it was encoded for.
-    bool modulate(const std::vector<std::vector<uint8_t>>& frames, bool signalling,
+    // Turns a keying's bursts into 8 kHz samples ready for the transmitter,
+    // each burst in its own mode and complete with its own preamble, so a
+    // keying may mix the two. Returns false if the modem is not open or a
+    // frame is the wrong size for the mode it is to be sent in.
+    bool modulate(const std::vector<TextMessaging::OutgoingBurst>& bursts,
                   std::vector<short>& samplesOut);
 
     // Feeds received 8 kHz audio to both demodulators, invoking the frame

@@ -282,6 +282,21 @@ struct TextMessage
     int fragmentsConfirmed = 0;
 };
 
+// The two data modes a burst can be sent in. One keying of the transmitter may
+// carry bursts in both, for example an acknowledgement followed by a message.
+enum class BurstMode
+{
+    Signalling, // DATAC13: pings, pongs and acknowledgements
+    Text,       // DATAC4: message fragments
+};
+
+// One burst of a keying: an encoded frame and the mode it goes on the air in.
+struct OutgoingBurst
+{
+    BurstMode mode = BurstMode::Text;
+    std::vector<uint8_t> frame;
+};
+
 // A station we have decoded something from, shown in the heard stations list.
 // One the operator typed in by hand is pinned: it may never have been heard
 // (lastHeard stays 0), it does not age out, and only the operator removes it.

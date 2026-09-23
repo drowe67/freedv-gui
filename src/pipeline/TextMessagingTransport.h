@@ -67,8 +67,7 @@ public:
     // not running.
     void setTransmitAllowedCheck(VoiceTransmitCheck transmitAllowedCheck);
 
-    virtual bool transmit(const std::vector<std::vector<uint8_t>>& frames,
-                          bool signalling) override;
+    virtual bool transmit(const std::vector<TextMessaging::OutgoingBurst>& bursts) override;
     virtual bool isTransmitting() const override;
     virtual bool isChannelBusy() const override;
     virtual void poll() override;
