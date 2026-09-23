@@ -1203,6 +1203,10 @@ void testMissingFragmentsAreAskedForAndResent()
     const TextMessage* update = sender.observer.lastUpdateFor(id);
     CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
     CHECK(update != nullptr && update->retryCount == 0);
+
+    // Delivered is all of it: the bench showed "OK 2/3" here once.
+    CHECK(update != nullptr && update->fragmentsConfirmed == 3);
+    CHECK(update != nullptr && !deliveryChipState(*update).showsProgress());
 }
 
 // With the last fragment lost there is nothing saying the keying ended, so

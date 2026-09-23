@@ -711,6 +711,9 @@ void TextMessagingProtocol::handleAckLocked(const Frame& frame, std::vector<Pend
         if (it->message.airId != frame.airId) continue;
         if (it->destination != frame.originCallsign) continue;
 
+        // The whole message is there now, however much of it a partial
+        // acknowledgement had confirmed; the window read "OK 7/8" without this.
+        it->confirmed = (1u << it->frames.size()) - 1u;
         updateStatusLocked(*it, MessageStatus::Acknowledged, events);
         outbox_.erase(it);
         return;
