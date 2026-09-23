@@ -810,6 +810,32 @@ void testClearingChannelReleasesStationsAtDifferentMoments()
     CHECK(!allEqual);
 }
 
+// A retransmitted message we already have arrives one fragment at a time, and
+// every duplicate fragment asks for the acknowledgement again. One queued
+// acknowledgement answers them all.
+void testRetransmittedFragmentsQueueOneAcknowledgement()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    sender.completeOneTransmission();
+    receiver.receiveFrom(sender.transport);
+    CHECK(receiver.observer.added.size() == 1);
+    receiver.completeOneTransmission(); // the acknowledgement, lost on the way
+
+    sender.nowMs += ACK_TIMEOUT_MILLISECONDS + 1;
+    sender.protocol.tick();
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.back().size() == 3);
+
+    receiver.receiveFrom(sender.transport);
+    CHECK(receiver.observer.added.size() == 1);
+    CHECK(receiver.protocol.pendingCount() == 1);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -950,6 +976,7 @@ int main()
     testMessageNotForUsIsIgnored();
     testLongMessageIsFragmentedAndReassembled();
     testRetransmissionIsNotShownTwice();
+    testRetransmittedFragmentsQueueOneAcknowledgement();
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();

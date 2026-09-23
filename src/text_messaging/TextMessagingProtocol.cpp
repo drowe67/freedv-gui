@@ -381,6 +381,19 @@ bool TextMessagingProtocol::sendPing(const std::string& destination, std::string
 
 void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint16_t airId)
 {
+    // A retransmission of a message we already have arrives one fragment at a
+    // time, and each duplicate fragment asks for the acknowledgement again.
+    // One queued acknowledgement answers all of them; eight would hold the
+    // channel for eight bursts saying the same thing.
+    for (const PendingTransmission& queued : outbox_)
+    {
+        if (queued.ack && queued.state == TransmissionState::Queued &&
+            queued.destination == destination && queued.message.airId == airId)
+        {
+            return;
+        }
+    }
+
     Frame frame = makeFrameLocked(FrameType::MessageAck, destination, airId, 0, 1, {});
     std::vector<uint8_t> encoded = FrameCodec::encode(frame, SIGNALLING_FRAME_BYTES);
     if (encoded.empty()) return;
@@ -390,6 +403,8 @@ void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint1
     pending.signalling = true;
     pending.expectsAck = false;
     pending.reply = true;
+    pending.ack = true;
+    pending.message.airId = airId;
     pending.destination = destination;
     pending.state = TransmissionState::Queued;
 

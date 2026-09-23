@@ -166,6 +166,7 @@ private:
         bool expectsAck = false;
         bool isPing = false;
         bool reply = false;      // an acknowledgement or pong we owe somebody
+        bool ack = false;        // an acknowledgement; message.airId says of what
         std::string destination;
         int retries = 0;
         uint64_t deadlineMs = 0;
