@@ -404,9 +404,27 @@ when enabled.</p>
 <h1 data-number="5" id="quick-record"><span
 class="header-section-number">5</span> Quick Record</h1>
 <p>To quickly record incoming signals from the radio, a ‘Record’ button
-is provided in the main window. Clicking this button will create a file
-beginning with the name “FreeDV_FromRadio” and containing the current
-date and time. Clicking ‘Record’ again will stop recording.</p>
+is provided in the main window. Clicking this button opens a dialog that
+lets you choose what to record:</p>
+<ul>
+<li>“Off Air”: records the raw audio coming in from the radio (while
+transmitting, the modulated audio being sent to the radio instead).
+Files are named “FDV_FromRadio” followed by the current date and time,
+plus an optional suffix.</li>
+<li>“Decoded”: records the decoded audio coming out of the demodulator.
+Files are named “FDV_FromDecoder” in the same way. Decoded recordings
+can optionally be saved as MP3.</li>
+<li>“Both”: records both of the above at the same time to two separate
+files, both as 16-bit 48 kHz WAV. Note that the decoded recording only
+starts once the modem syncs, and lags the off-air recording by the
+modem’s processing delay, so the two files can be aligned in an audio
+editor. While transmitting in half-duplex mode the decoded recording is
+silent (or contains the monitored microphone audio if “Monitor
+transmitted audio” is enabled).</li>
+</ul>
+<p>Clicking ‘Record’ again will stop recording (all active files if
+“Both” was chosen).</p>
+<p>All recordings are 16-bit, 48 kHz, mono.</p>
 <p>The Audio tab inside Settings-Edit Settings allows control of where
 these recordings are saved. By default, this is inside the current
 user’s Documents folder.</p>
@@ -1118,6 +1136,8 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 #1418)</li>
 <li>Rework Easy Setup window into new Setup Wizard. (PR #1418,
 #1432)</li>
+<li>Add ability to record both the raw and decoded RX audio. (PR
+#1501)</li>
 </ul></li>
 <li>Other:
 <ul>
@@ -1137,6 +1157,34 @@ class="header-section-number">19.2</span> V2.4.1 TBD 2026</h2>
 thread to function. (PR #1474)</li>
 <li>Fix RX/TX level-meter gauge contamination. (PR #1475) - thanks <span
 class="citation" data-cites="barjac">@barjac</span>!</li>
+<li>Fix Hamlib-related build failure with Hamlib 5.0~git. (PR
+#1477)</li>
+<li>macOS: Fix dyld error on startup when enabling sanitizers in build.
+(PR #1478)</li>
+<li>Fix potential equalizer bug that could introduce corrupted audio.
+(PR #1480)</li>
+<li>Fix uninitialized value read during waterfall plot render. (PR
+#1481)</li>
+<li>Match std::atomic memory ordering to what each atomic actually
+synchronises. (PR #1482)</li>
+<li>Remove use of mutexes in audio path during callsign decode. (PR
+#1486, #1493)</li>
+<li>Tighten audio thread timings on macOS and Windows. (PR #1494)</li>
+<li>Harden audio FIFO handling and WASAPI stop timing. (PR #1496)</li>
+<li>Fix crash when testing Easy Setup with an invalid audio
+configuration. (PR #1500)</li>
+<li>Various data race cleanups. (PR #1502)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>Windows versions are now built with llvm-mingw 20260908 (PR
+#1489)</li>
+<li>Ccache support extended to third party dependencies. (PR #1498)</li>
+</ul></li>
+<li>Other:
+<ul>
+<li>Waterfall and other plot performance improvements. (PR #1481)</li>
+<li>Windows audio thread timing improvements. (PR #1488)</li>
 </ul></li>
 </ol>
 <h2 data-number="19.3" id="v2.4.0-august-2026"><span

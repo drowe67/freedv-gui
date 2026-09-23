@@ -833,14 +833,14 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
-     	if (g_dump_fifo_state) {
-    	  // If this drops to zero we have a problem as we will run out of output samples
-    	  // to send to the sound driver
-          FREEDV_BEGIN_VERIFIED_SAFE
-    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
-                      cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
-          FREEDV_END_VERIFIED_SAFE
-    	}
+        if (g_dump_fifo_state) {
+             // If this drops to zero we have a problem as we will run out of output samples
+             // to send to the sound driver
+             FREEDV_BEGIN_VERIFIED_SAFE
+                 log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
+                           cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
+             FREEDV_END_VERIFIED_SAFE
+        }
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
         assert(nsam_in_48 > 0);
