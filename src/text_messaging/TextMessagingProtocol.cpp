@@ -34,6 +34,7 @@
 
 #include "TextMessagingProtocol.h"
 
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -530,6 +531,8 @@ void TextMessagingProtocol::updateStatusLocked(PendingTransmission& pending, Mes
 
     pending.message.status = status;
     pending.message.retryCount = pending.retries;
+    pending.message.fragmentCount = (int)pending.fragments.size();
+    pending.message.fragmentsConfirmed = std::popcount(pending.confirmed);
     store_.updateMessageStatus(pending.message.id, status, pending.retries);
 
     PendingEvent event;
@@ -750,6 +753,10 @@ void TextMessagingProtocol::handlePartialAckLocked(const Frame& frame,
         {
             pending.state = TransmissionState::Queued;
             pending.notBeforeMs = 0;
+
+            // No new status: the message is still waiting on the far end. But
+            // the window shows how far it got, and that has changed.
+            updateStatusLocked(pending, pending.message.status, events);
             return;
         }
 

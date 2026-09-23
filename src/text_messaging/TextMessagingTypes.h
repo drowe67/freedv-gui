@@ -274,6 +274,12 @@ struct TextMessage
     MessageStatus status = MessageStatus::Queued;
     int retryCount = 0;
     float snr = 0.0f;               // SNR the message was received at
+
+    // How much of a sent message the far end has confirmed, for the chat
+    // window while it is being delivered. Not kept in the message store: a
+    // message outlives the attempt to deliver it by less than a restart.
+    int fragmentCount = 0;
+    int fragmentsConfirmed = 0;
 };
 
 // A station we have decoded something from, shown in the heard stations list.

@@ -44,6 +44,7 @@
 #include <wx/statbox.h>
 
 #include "main.h"
+#include "text_messaging/DeliveryChip.h"
 #include "text_messaging/FrameCodec.h"
 #include "text_messaging/HeardStationList.h"
 #include "text_messaging/MessageStore.h"
@@ -142,75 +143,58 @@ struct DeliveryChip
     wxString foreground = "#FFFFFF";
 };
 
+// Which chip applies is decided in DeliveryChip.h; this is its wording and
+// colours.
 DeliveryChip deliveryChip(const TextMessage& message)
 {
-    wxString label;
-    wxString background;
-    wxString foreground = "#FFFFFF";
+    DeliveryChipState state = deliveryChipState(message);
 
-    switch (message.status)
+    const wxString grey = "#7F8C8D";
+    const wxString yellow = "#F1C40F";
+
+    DeliveryChip chip;
+    switch (state.kind)
     {
-        case MessageStatus::Queued:
-            label = _("QUEUED");
-            background = "#7F8C8D";
+        case DeliveryChipKind::None:
+            return chip;
+        case DeliveryChipKind::Queued:
+            chip.label = _("QUEUED");
+            chip.background = grey;
             break;
-        case MessageStatus::Transmitting:
-            // Only the first attempt is plain SENDING. A retransmission keeps
-            // its retry number, or the chip appears to go backwards every time
-            // the message returns to the air.
-            if (message.retryCount > 0)
-            {
-                label = wxString::Format(_("RETRY #%d"), message.retryCount);
-                background = "#F1C40F";
-                foreground = "#000000";
-            }
-            else
-            {
-                label = _("SENDING");
-                background = "#2980B9";
-            }
+        case DeliveryChipKind::Sending:
+            chip.label = _("SENDING");
+            chip.background = "#2980B9";
             break;
-        case MessageStatus::AwaitingAck:
-            // A retried message goes back to awaiting an acknowledgement, so
-            // without this the chip drops to a bare SENT and the operator
-            // cannot tell the third attempt from the first.
-            if (message.retryCount > 0)
-            {
-                label = wxString::Format(_("RETRY #%d"), message.retryCount);
-                background = "#F1C40F";
-                foreground = "#000000";
-            }
-            else
-            {
-                label = _("SENT");
-                background = "#7F8C8D";
-            }
+        case DeliveryChipKind::Sent:
+            chip.label = _("SENT");
+            chip.background = grey;
             break;
-        case MessageStatus::Retrying:
-            label = wxString::Format(_("RETRY #%d"), message.retryCount);
-            background = "#F1C40F";
-            foreground = "#000000";
+        case DeliveryChipKind::Retry:
+            chip.label = wxString::Format(_("RETRY #%d"), state.retry);
+            chip.background = yellow;
+            chip.foreground = "#000000";
             break;
-        case MessageStatus::Acknowledged:
-            label = _("OK");
-            background = "#27AE60";
+        case DeliveryChipKind::Resend:
+            chip.label = _("RESEND");
+            chip.background = yellow;
+            chip.foreground = "#000000";
             break;
-        case MessageStatus::Failed:
-            label = _("NO ACK");
-            background = "#E74C3C";
+        case DeliveryChipKind::Acknowledged:
+            chip.label = _("OK");
+            chip.background = "#27AE60";
             break;
-        case MessageStatus::Sent:
-            label = _("SENT");
-            background = "#7F8C8D";
-            break;
-        case MessageStatus::Received:
+        case DeliveryChipKind::NotAcknowledged:
+            chip.label = _("NO ACK");
+            chip.background = "#E74C3C";
             break;
     }
 
-    DeliveryChip chip;
-    chip.label = label;
-    chip.background = background;
-    chip.foreground = foreground;
+    // How many fragments the far end has, out of how many there are.
+    if (state.showsProgress())
+    {
+        chip.label += wxString::Format(" %d/%d", state.fragmentsConfirmed, state.fragmentCount);
+    }
+
     return chip;
 }
 

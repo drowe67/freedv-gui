@@ -34,10 +34,13 @@ says chat.
   light blue background; messages received are on the left, prefixed with the
   sender's callsign. Under each message is the time on the left and, for your
   own messages, a delivery chip on the right: `SENDING`, `SENT`, `RETRY #n`
-  (yellow), `OK` (green) or `NO ACK` (red). `SENDING` belongs to the first
-  attempt alone; once a message has been retried the chip keeps its retry
-  number for the whole of that attempt, on the air and while the
-  acknowledgement timer runs, so progress never appears to go backwards.
+  (yellow), `RESEND` (yellow), `OK` (green) or `NO ACK` (red). Once the far end
+  has said it holds part of a long message, the chip also shows how much, as
+  in `RESEND 5/8`: five of eight fragments are there and the rest are being
+  resent. `SENDING` belongs to the first attempt alone; once a message has
+  been retried the chip keeps its retry number for the whole of that attempt,
+  on the air and while the acknowledgement timer runs, so progress never
+  appears to go backwards.
 * The send button is disabled while a burst is on the air, so nothing is
   queued behind a keyed transmitter. Enter is held off in the same way; the
   text stays in the box until the transmitter is free.

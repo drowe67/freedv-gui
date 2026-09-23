@@ -37,6 +37,7 @@
 #include <string>
 #include <vector>
 
+#include "../DeliveryChip.h"
 #include "../FrameCodec.h"
 #include "../HeardStationList.h"
 #include "../MessageStore.h"
@@ -1051,7 +1052,13 @@ void testMissingFragmentsAreAskedForAndResent()
     CHECK(partial.airId == decodeOne(first[0]).airId);
     CHECK(partial.payload.size() == 1 && partial.payload[0] == 0x05);
 
+    // The window learns how far the message got the moment the report arrives.
     sender.receiveFrom(receiver.transport);
+    const TextMessage* progress = sender.observer.lastUpdateFor(id);
+    CHECK(progress != nullptr && progress->fragmentsConfirmed == 2);
+    CHECK(progress != nullptr && progress->fragmentCount == 3);
+    CHECK(progress != nullptr && deliveryChipState(*progress).kind == DeliveryChipKind::Resend);
+
     sender.completeOneTransmission();
     CHECK(sender.transport.transmissions.size() == 2);
     CHECK(sender.transport.transmissions.back().size() == 1);
@@ -1259,6 +1266,59 @@ void testPartialAckWithNoNewsCountsAsARetry()
     CHECK(update != nullptr && update->status != MessageStatus::Acknowledged);
 }
 
+// Which delivery chip a sent message shows. SENDING and SENT belong to the
+// first attempt alone; a retry keeps its number through the whole attempt so
+// the chip never appears to go backwards; a message the far end holds part
+// of says so, and how much.
+void testDeliveryChip()
+{
+    auto kindOf = [](MessageStatus status, int retry, int confirmed, int count)
+    {
+        TextMessage message;
+        message.status = status;
+        message.retryCount = retry;
+        message.fragmentsConfirmed = confirmed;
+        message.fragmentCount = count;
+        return deliveryChipState(message);
+    };
+
+    CHECK(kindOf(MessageStatus::Queued, 0, 0, 3).kind == DeliveryChipKind::Queued);
+    CHECK(kindOf(MessageStatus::Transmitting, 0, 0, 3).kind == DeliveryChipKind::Sending);
+    CHECK(kindOf(MessageStatus::AwaitingAck, 0, 0, 3).kind == DeliveryChipKind::Sent);
+    CHECK(kindOf(MessageStatus::Sent, 0, 0, 3).kind == DeliveryChipKind::Sent);
+    CHECK(kindOf(MessageStatus::Received, 0, 0, 0).kind == DeliveryChipKind::None);
+    CHECK(kindOf(MessageStatus::Acknowledged, 2, 3, 3).kind == DeliveryChipKind::Acknowledged);
+
+    for (MessageStatus status : {MessageStatus::Retrying, MessageStatus::Transmitting,
+                                 MessageStatus::AwaitingAck})
+    {
+        DeliveryChipState retry = kindOf(status, 2, 0, 3);
+        CHECK(retry.kind == DeliveryChipKind::Retry);
+        CHECK(retry.retry == 2);
+        CHECK(!retry.showsProgress());
+
+        // Part delivered, no failed attempt: a resend, with how far it got.
+        DeliveryChipState resend = kindOf(status, 0, 5, 8);
+        CHECK(resend.kind == DeliveryChipKind::Resend);
+        CHECK(resend.showsProgress());
+        CHECK(resend.fragmentsConfirmed == 5 && resend.fragmentCount == 8);
+
+        // A failed attempt after progress keeps both.
+        DeliveryChipState both = kindOf(status, 1, 5, 8);
+        CHECK(both.kind == DeliveryChipKind::Retry);
+        CHECK(both.showsProgress());
+    }
+
+    // Out of retries part way through still says how far it got.
+    DeliveryChipState failed = kindOf(MessageStatus::Failed, 3, 5, 8);
+    CHECK(failed.kind == DeliveryChipKind::NotAcknowledged);
+    CHECK(failed.showsProgress());
+
+    // Nothing or everything confirmed is not progress worth showing.
+    CHECK(!kindOf(MessageStatus::AwaitingAck, 0, 0, 8).showsProgress());
+    CHECK(!kindOf(MessageStatus::Acknowledged, 0, 8, 8).showsProgress());
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -1408,6 +1468,7 @@ int main()
     testQueuedReportsStayCurrent();
     testProgressDoesNotUseUpRetries();
     testPartialAckWithNoNewsCountsAsARetry();
+    testDeliveryChip();
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();
