@@ -58,6 +58,8 @@ extern std::atomic<bool>                g_recFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
 extern bool g_recFileFromRadio;
 
+extern std::atomic<bool>                g_playFileFromRadio;
+
 extern std::atomic<SNDFILE*> g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
@@ -1413,6 +1415,12 @@ void MainFrame::togglePTT(void) {
         return;
     }
     txChangeoverOccurring_ = true;
+
+    // If we're playing a RX file, we want to stop it before TX.
+    if (g_playFileFromRadio.load(std::memory_order_acquire))
+    {
+        StopPlaybackFileFromRadio();
+    }
 
     std::chrono::high_resolution_clock highResClock;
 
