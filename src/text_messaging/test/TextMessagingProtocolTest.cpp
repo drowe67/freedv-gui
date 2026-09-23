@@ -712,7 +712,7 @@ void testAReplyGivesTheOtherStationTheChannel()
     CHECK(receiver.transport.transmissions.size() == 2);
 }
 
-// Fragment k of n means the sender holds the channel for n - k more bursts,
+// A fragment says how many more bursts its sender holds the channel for,
 // whatever the demodulator says in between: on the bench it read the channel
 // clear for two seconds in the middle of a four fragment message.
 void testFragmentsStillToComeReserveTheChannel()
@@ -943,6 +943,69 @@ void testRetriesFillInAMessageOverTime()
     CHECK(quiet.observer.added.empty());
 }
 
+// The reservation comes from what the frame says is still to come in its
+// keying, not from its fragment number. A resend of fragments 2 and 6 of 8
+// ends after fragment 6; "fragment k of n" would hold the channel for five
+// more bursts after fragment 2 that are never coming.
+void testReservationFollowsTheBurstsStillToCome()
+{
+    auto keyedAfter = [](Station& station, uint64_t heardAt, uint64_t limit) -> uint64_t
+    {
+        for (station.nowMs = heardAt; station.nowMs <= heardAt + limit; station.nowMs += 100)
+        {
+            station.protocol.tick();
+            if (!station.transport.transmissions.empty()) return station.nowMs - heardAt;
+        }
+        return UINT64_MAX;
+    };
+
+    std::string error;
+    Frame resend;
+    resend.type = FrameType::Message;
+    resend.destinationCrc = FrameCodec::callsignCrc24("K1ABC");
+    resend.originCallsign = "DJ2LS";
+    resend.airId = 0x4242;
+    resend.fragmentIndex = 1;
+    resend.fragmentCount = 8;
+    resend.burstsFollowing = 1; // fragment 6 comes next, then the keying ends
+    resend.payload.assign(1, 'x');
+
+    Station bystander("VK3ABC");
+    CHECK(bystander.protocol.sendMessage("waiting", "W1AW", error));
+    uint64_t heardAt = bystander.nowMs;
+    bystander.protocol.onFrameReceived(resend, 5.0f);
+    uint64_t waited = keyedAfter(bystander, heardAt, 8 * TEXT_FRAGMENT_AIR_MILLISECONDS);
+    CHECK(waited >= (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS);
+    CHECK(waited <= (uint64_t)(TEXT_FRAGMENT_AIR_MILLISECONDS + TURNAROUND_JITTER_MILLISECONDS + 100));
+
+    // A signalling frame that says more follows holds the channel for the
+    // text that comes after it, allowing for the first fragment being lost.
+    Frame ack;
+    ack.type = FrameType::MessageAck;
+    ack.destinationCrc = FrameCodec::callsignCrc24("K1ABC");
+    ack.originCallsign = "DJ2LS";
+    ack.airId = 0x4243;
+    ack.burstsFollowing = 1;
+
+    Station listener("VK3ABC");
+    CHECK(listener.protocol.sendMessage("waiting", "W1AW", error));
+    heardAt = listener.nowMs;
+    listener.protocol.onFrameReceived(ack, 5.0f);
+    waited = keyedAfter(listener, heardAt, 4 * TEXT_FRAGMENT_AIR_MILLISECONDS);
+    CHECK(waited >= (uint64_t)SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS);
+    CHECK(waited <= (uint64_t)(SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS +
+                               TURNAROUND_JITTER_MILLISECONDS + 100));
+
+    // And a signalling frame with nothing after it reserves nothing.
+    ack.burstsFollowing = 0;
+    Station plain("VK3ABC");
+    CHECK(plain.protocol.sendMessage("waiting", "W1AW", error));
+    heardAt = plain.nowMs;
+    plain.protocol.onFrameReceived(ack, 5.0f);
+    waited = keyedAfter(plain, heardAt, 4 * TEXT_FRAGMENT_AIR_MILLISECONDS);
+    CHECK(waited <= (uint64_t)MAX_TURNAROUND_MILLISECONDS);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -1099,6 +1162,7 @@ int main()
     testRetryBacksOffBeforeKeyingAgain();
     testAReplyGivesTheOtherStationTheChannel();
     testFragmentsStillToComeReserveTheChannel();
+    testReservationFollowsTheBurstsStillToCome();
     testClearingChannelReleasesStationsAtDifferentMoments();
     testAckWaitCoversTheWholeCycle();
     testBusyChannelFreezesTheQueue();

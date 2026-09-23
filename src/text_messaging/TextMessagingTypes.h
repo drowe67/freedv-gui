@@ -73,6 +73,12 @@ constexpr int TEXT_FRAME_BYTES = 54;       // DATAC4: 448 bits - CRC16
 // instead, which is what lets a ping fit in DATAC13 at all. Both end with a
 // payload length byte, which is how the decoder tells payload from the zero
 // padding out to the modem frame size.
+//
+// Every frame also says whether more bursts follow it in the same keying, so
+// that listeners know how long the sender will hold the channel. A text frame
+// carries how many, in the high nibble of its fragment index byte; a
+// signalling frame has no spare byte and carries only whether any do, in the
+// top bit of its type byte. See FrameCodec for the layout.
 constexpr int SIGNALLING_HEADER_BYTES = 13;
 constexpr int TEXT_HEADER_BYTES = 15;
 constexpr int TEXT_BYTES_PER_FRAGMENT = TEXT_FRAME_BYTES - TEXT_HEADER_BYTES;
@@ -165,12 +171,17 @@ constexpr int CHANNEL_BUSY_HOLD_MILLISECONDS = 2000;
 // The hold cannot bridge every gap: between fragments of one message the
 // demodulator drops sync at the end of a payload and regains it well into the
 // next preamble, four seconds apart on the bench. The protocol knows better
-// than the demodulator here. Fragment k of n means the sender keeps the
-// channel for n - k more bursts of this length, so it is reserved for that
-// long and released when the last fragment arrives. This is the longest a
+// than the demodulator here. Each text frame says how many more bursts its
+// sender has to send in this keying, so the channel is reserved for that many
+// bursts of this length and released by the last. This is the longest a
 // DATAC4 fragment takes on the air, preamble to inter-burst gap; the modem
 // checks it against codec2 when it opens.
 constexpr int TEXT_FRAGMENT_AIR_MILLISECONDS = 5500;
+
+// A signalling frame says only that more follows, and what follows one is
+// message text. Two fragments' worth covers the first of them being lost to a
+// fade; the first that is heard then sets the reservation exactly.
+constexpr int SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS = 2 * TEXT_FRAGMENT_AIR_MILLISECONDS;
 
 // A demodulator that keeps false triggering on band noise must not be able to
 // silence the station for good. The longest real traffic is eight DATAC4

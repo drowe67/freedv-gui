@@ -179,6 +179,59 @@ void testRoundTrip()
     CHECK(decoded.payload.size() == 1);
 }
 
+// How many bursts follow in the keying is how listeners know how long to
+// leave the channel alone, and it is a wire format change, so the bytes are
+// pinned: the high nibble of a text frame's fragment index byte, and the top
+// bit of a signalling frame's type byte.
+void testBurstsFollowing()
+{
+    Frame text = makeMessageFrame(); // fragment index 1
+    text.burstsFollowing = 5;
+    std::vector<uint8_t> encoded = FrameCodec::encode(text, TEXT_FRAME_BYTES);
+    CHECK((int)encoded.size() == TEXT_FRAME_BYTES);
+    CHECK(encoded[0] == 0x20);  // Message, no flag: text frames carry the count
+    CHECK(encoded[12] == 0x51); // five following, fragment index 1
+
+    Frame decoded;
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.fragmentIndex == 1);
+    CHECK(decoded.fragmentCount == 3);
+    CHECK(decoded.burstsFollowing == 5);
+
+    // The last burst of a keying says none follow, and encodes exactly as a
+    // frame did before the field existed.
+    text.burstsFollowing = 0;
+    encoded = FrameCodec::encode(text, TEXT_FRAME_BYTES);
+    CHECK(encoded[12] == 0x01);
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.burstsFollowing == 0);
+
+    // A signalling frame can only say whether any follow.
+    Frame ping = makePingFrame();
+    ping.burstsFollowing = 3;
+    encoded = FrameCodec::encode(ping, SIGNALLING_FRAME_BYTES);
+    CHECK(encoded[0] == 0x90);
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.type == FrameType::Ping);
+    CHECK(decoded.burstsFollowing == 1);
+
+    ping.burstsFollowing = 0;
+    encoded = FrameCodec::encode(ping, SIGNALLING_FRAME_BYTES);
+    CHECK(encoded[0] == 0x10);
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.burstsFollowing == 0);
+
+    // More than the nibble holds cannot be sent.
+    text.burstsFollowing = MAX_TEXT_BURSTS_FOLLOWING + 1;
+    CHECK(FrameCodec::encode(text, TEXT_FRAME_BYTES).empty());
+
+    // The type bit on a text frame is nothing we send, so it is corruption.
+    text.burstsFollowing = 2;
+    encoded = FrameCodec::encode(text, TEXT_FRAME_BYTES);
+    encoded[0] |= 0x80;
+    CHECK(!FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+}
+
 void testEncodeRejections()
 {
     Frame oversized = makeMessageFrame();
@@ -269,6 +322,7 @@ int main()
 {
     testCallsignEncoding();
     testRoundTrip();
+    testBurstsFollowing();
     testEncodeRejections();
     testDecodeRejections();
 

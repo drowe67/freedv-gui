@@ -337,10 +337,10 @@ void TextMessagingModem::demodulateOne(Demodulator& demodulator, const short* sa
 
         if (rxLogEnabled())
         {
-            log_info("RX: %s %s from %s id %u fragment %d/%d to %06X, %.1f dB",
+            log_info("RX: %s %s from %s id %u fragment %d/%d (+%d to come) to %06X, %.1f dB",
                      demodulator.name, frameTypeName(frame.type),
                      frame.originCallsign.c_str(), (unsigned)frame.airId,
-                     frame.fragmentIndex + 1, frame.fragmentCount,
+                     frame.fragmentIndex + 1, frame.fragmentCount, frame.burstsFollowing,
                      (unsigned)frame.destinationCrc, (double)snr);
         }
 

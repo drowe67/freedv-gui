@@ -209,7 +209,7 @@ private:
                             std::string& errorOut, std::vector<PendingEvent>& events);
     void queueAckLocked(const std::string& destination, uint16_t airId);
     void queuePongLocked(const std::string& destination, float snr);
-    void reserveChannelForFragmentsLocked(const Frame& frame, uint64_t nowMs);
+    void reserveChannelForKeyingLocked(const Frame& frame, uint64_t nowMs);
     void handleIncomingFragmentLocked(const Frame& frame, float snr,
                                       std::vector<PendingEvent>& events);
     void handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events);

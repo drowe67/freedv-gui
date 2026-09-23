@@ -277,6 +277,7 @@ bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
         Frame frame = makeFrameLocked(broadcast ? FrameType::Broadcast : FrameType::Message,
                                       normalizedDestination, airId, (uint8_t)index,
                                       (uint8_t)fragmentCount, payload);
+        frame.burstsFollowing = (uint8_t)(fragmentCount - 1 - index);
         std::vector<uint8_t> encoded = FrameCodec::encode(frame, TEXT_FRAME_BYTES);
         if (encoded.empty())
         {
@@ -500,15 +501,16 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
         stationsChanged.type = PendingEvent::Type::StationsChanged;
         events.push_back(stationsChanged);
 
+        // Whoever the frame is for, its sender holds the channel for the rest
+        // of its keying.
+        reserveChannelForKeyingLocked(frame, monotonicMs_());
+
         switch (frame.type)
         {
             case FrameType::Broadcast:
-                reserveChannelForFragmentsLocked(frame, monotonicMs_());
                 handleIncomingFragmentLocked(frame, snr, events);
                 break;
             case FrameType::Message:
-                // Whoever it is for, the sender holds the channel for the rest.
-                reserveChannelForFragmentsLocked(frame, monotonicMs_());
                 if (isAddressedToMeLocked(frame)) handleIncomingFragmentLocked(frame, snr, events);
                 break;
             case FrameType::MessageAck:
@@ -526,19 +528,27 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
     deliver(events);
 }
 
-// See TEXT_FRAGMENT_AIR_MILLISECONDS. The last fragment, or one after a lost
-// one, ends the sender's keying whether or not the message is complete.
-void TextMessagingProtocol::reserveChannelForFragmentsLocked(const Frame& frame, uint64_t nowMs)
+// Every frame says how many bursts its sender still has to send in this
+// keying; see TEXT_FRAGMENT_AIR_MILLISECONDS. A text frame gives the count,
+// so it sets the reservation exactly, and the last burst of a keying releases
+// it. That also covers a keying that is not a whole message, such as a resend
+// of the fragments a receiver was missing, which "fragment k of n" could not.
+void TextMessagingProtocol::reserveChannelForKeyingLocked(const Frame& frame, uint64_t nowMs)
 {
-    if (frame.fragmentIndex + 1 >= frame.fragmentCount)
+    if (FrameCodec::isSignallingFrameType(frame.type))
     {
-        channelReservedUntilMs_ = 0;
+        // Only "more follows", and only ever lengthens a reservation.
+        if (frame.burstsFollowing == 0) return;
+
+        uint64_t until = nowMs + (uint64_t)SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS;
+        if (until > channelReservedUntilMs_) channelReservedUntilMs_ = until;
         return;
     }
 
-    uint64_t remaining = (uint64_t)(frame.fragmentCount - frame.fragmentIndex - 1);
-    uint64_t until = nowMs + remaining * (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS;
-    if (until > channelReservedUntilMs_) channelReservedUntilMs_ = until;
+    channelReservedUntilMs_ =
+        frame.burstsFollowing == 0
+            ? 0
+            : nowMs + (uint64_t)frame.burstsFollowing * (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS;
 }
 
 void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, float snr,

@@ -74,6 +74,26 @@ constexpr int OFFSET_FRAGMENT_COUNT = 13;  // text frames only
 constexpr int OFFSET_SIGNALLING_PAYLOAD_LENGTH = 12;
 constexpr int OFFSET_TEXT_PAYLOAD_LENGTH = 14;
 
+// Bursts still to come in the keying. Fragment numbers never reach 16, so a
+// text frame's fragment index byte has a spare high nibble for the count.
+// A signalling frame has no spare byte, but frame type values stay below
+// 0x80, which leaves the top bit of the type byte to say "more follows".
+constexpr uint8_t TYPE_MORE_FOLLOWS = 0x80;
+constexpr uint8_t TYPE_VALUE_MASK = 0x7F;
+constexpr uint8_t FRAGMENT_INDEX_MASK = 0x0F;
+constexpr int BURSTS_FOLLOWING_SHIFT = 4;
+
+static_assert(MAX_FRAGMENTS_PER_MESSAGE <= FRAGMENT_INDEX_MASK + 1,
+              "fragment index no longer leaves room for the bursts following count");
+static_assert(MAX_TEXT_BURSTS_FOLLOWING == (0xFF >> BURSTS_FOLLOWING_SHIFT),
+              "bursts following count and its nibble disagree");
+static_assert(((uint8_t)FrameType::Ping & TYPE_MORE_FOLLOWS) == 0 &&
+                  ((uint8_t)FrameType::PingAck & TYPE_MORE_FOLLOWS) == 0 &&
+                  ((uint8_t)FrameType::Message & TYPE_MORE_FOLLOWS) == 0 &&
+                  ((uint8_t)FrameType::MessageAck & TYPE_MORE_FOLLOWS) == 0 &&
+                  ((uint8_t)FrameType::Broadcast & TYPE_MORE_FOLLOWS) == 0,
+              "a frame type value collides with the more-follows bit");
+
 static_assert(OFFSET_AIR_ID == OFFSET_ORIGIN_CALLSIGN + PACKED_CALLSIGN_BYTES,
               "packed callsign does not fit its header field");
 static_assert(OFFSET_SIGNALLING_PAYLOAD_LENGTH + 1 == SIGNALLING_HEADER_BYTES,
@@ -241,11 +261,14 @@ std::vector<uint8_t> FrameCodec::encode(const Frame& frame, int frameBytes)
     {
         if (frame.fragmentCount == 0) return {};
         if (frame.fragmentIndex >= frame.fragmentCount) return {};
+        if (frame.fragmentIndex > FRAGMENT_INDEX_MASK) return {};
+        if (frame.burstsFollowing > MAX_TEXT_BURSTS_FOLLOWING) return {};
     }
 
     std::vector<uint8_t> out(frameBytes, 0);
 
     out[OFFSET_TYPE] = (uint8_t)frame.type;
+    if (signalling && frame.burstsFollowing > 0) out[OFFSET_TYPE] |= TYPE_MORE_FOLLOWS;
     out[OFFSET_DEST_CRC] = (uint8_t)(frame.destinationCrc >> 16);
     out[OFFSET_DEST_CRC + 1] = (uint8_t)(frame.destinationCrc >> 8);
     out[OFFSET_DEST_CRC + 2] = (uint8_t)frame.destinationCrc;
@@ -255,7 +278,8 @@ std::vector<uint8_t> FrameCodec::encode(const Frame& frame, int frameBytes)
 
     if (!signalling)
     {
-        out[OFFSET_FRAGMENT_INDEX] = frame.fragmentIndex;
+        out[OFFSET_FRAGMENT_INDEX] =
+            (uint8_t)((frame.burstsFollowing << BURSTS_FOLLOWING_SHIFT) | frame.fragmentIndex);
         out[OFFSET_FRAGMENT_COUNT] = frame.fragmentCount;
     }
 
@@ -274,9 +298,12 @@ bool FrameCodec::decode(const uint8_t* data, int length, Frame& frameOut)
     // The type byte decides which layout the rest of the frame is in, so it
     // has to be checked before anything is read at a layout dependent offset.
     if (data == nullptr || length < 1) return false;
-    if (!isKnownFrameType(data[OFFSET_TYPE])) return false;
 
-    FrameType type = (FrameType)data[OFFSET_TYPE];
+    const bool moreFollows = (data[OFFSET_TYPE] & TYPE_MORE_FOLLOWS) != 0;
+    const uint8_t typeValue = data[OFFSET_TYPE] & TYPE_VALUE_MASK;
+    if (!isKnownFrameType(typeValue)) return false;
+
+    FrameType type = (FrameType)typeValue;
     const int header = headerBytes(type);
     const bool signalling = isSignallingFrameType(type);
     if (length < header) return false;
@@ -286,9 +313,15 @@ bool FrameCodec::decode(const uint8_t* data, int length, Frame& frameOut)
 
     uint8_t fragmentIndex = 0;
     uint8_t fragmentCount = 1;
+    uint8_t burstsFollowing = moreFollows ? 1 : 0;
     if (!signalling)
     {
-        fragmentIndex = data[OFFSET_FRAGMENT_INDEX];
+        // A text frame says how many follow in its own header; the type bit
+        // is not something we send on one.
+        if (moreFollows) return false;
+
+        fragmentIndex = data[OFFSET_FRAGMENT_INDEX] & FRAGMENT_INDEX_MASK;
+        burstsFollowing = data[OFFSET_FRAGMENT_INDEX] >> BURSTS_FOLLOWING_SHIFT;
         fragmentCount = data[OFFSET_FRAGMENT_COUNT];
         if (fragmentCount == 0 || fragmentIndex >= fragmentCount) return false;
         if (fragmentCount > MAX_FRAGMENTS_PER_MESSAGE) return false;
@@ -306,6 +339,7 @@ bool FrameCodec::decode(const uint8_t* data, int length, Frame& frameOut)
     frameOut.airId = (uint16_t)(((uint16_t)data[OFFSET_AIR_ID] << 8) | data[OFFSET_AIR_ID + 1]);
     frameOut.fragmentIndex = fragmentIndex;
     frameOut.fragmentCount = fragmentCount;
+    frameOut.burstsFollowing = burstsFollowing;
     frameOut.payload.assign(&data[header], &data[header] + payloadLength);
 
     return true;

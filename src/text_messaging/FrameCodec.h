@@ -56,8 +56,17 @@ struct Frame
     uint16_t airId = 0;             // matches a message to its acknowledgement
     uint8_t fragmentIndex = 0;      // zero based
     uint8_t fragmentCount = 1;
+
+    // Bursts still to come after this one in the same keying of the sender's
+    // transmitter. A text frame carries the exact count (up to
+    // MAX_TEXT_BURSTS_FOLLOWING); a signalling frame carries only whether it
+    // is zero, so it always decodes as 0 or 1.
+    uint8_t burstsFollowing = 0;
+
     std::vector<uint8_t> payload;
 };
+
+constexpr int MAX_TEXT_BURSTS_FOLLOWING = 15;
 
 class FrameCodec
 {
@@ -79,7 +88,8 @@ public:
     // Serializes a frame, zero padded out to frameBytes (SIGNALLING_FRAME_BYTES
     // or TEXT_FRAME_BYTES). Returns an empty vector if the frame does not fit
     // the header its type requires, if the payload does not fit behind that
-    // header, or if it carries a callsign that cannot be packed.
+    // header, if it carries a callsign that cannot be packed, or if a text
+    // frame claims more bursts following than its header can say.
     static std::vector<uint8_t> encode(const Frame& frame, int frameBytes);
 
     // Parses a frame received from the modem. Returns false when the frame is

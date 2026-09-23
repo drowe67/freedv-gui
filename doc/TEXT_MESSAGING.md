@@ -112,9 +112,9 @@ sync was last seen: a receiver that joins a burst part way through, as it does
 whenever we unkey while somebody else is still sending, flickers in and out of
 sync, and the hold bridges the gaps. Between fragments of one message the gap
 can be longer than that, so the protocol does not rely on the receiver there:
-fragment k of n means the sender holds the channel for n - k more bursts, and
-the station reserves it for that long, releasing it when the last fragment
-arrives. When the channel clears, every station that was waiting on it pauses
+every frame says how many more bursts its sender will send in the same keying,
+and the station reserves the channel for that long, releasing it when the
+last burst of the keying arrives. When the channel clears, every station that was waiting on it pauses
 a random moment before keying, so two that heard the same burst do not key
 together. A receiver that stays locked for more than a minute is treated as
 false triggering on noise and ignored, so it cannot silence the station for
@@ -156,6 +156,16 @@ frames are always a single fragment and spend those two bytes on payload
 instead, which is what lets a ping fit in DATAC13 at all. Both end with a
 payload length byte, which tells the decoder where the payload stops and the
 zero padding out to the modem frame size begins.
+
+Every frame also tells listeners whether more bursts follow it in the same
+keying. A text frame carries how many, from 0 to 15, in the high four bits of
+its fragment index byte, which only needs three. A signalling frame has no
+byte to spare, so it carries only whether any follow, in the top bit of its
+type byte; frame type values stay below 0x80 to leave that bit free. Builds
+from before this field cannot talk to builds after it: an older build rejects
+any text frame with bursts still to come, and a newer build reads each of an
+older sender's fragments as the end of its keying and may transmit over the
+rest.
 
 That leaves a 13 byte header and one payload byte in a signalling frame --
 exactly enough for the SNR a pong reports -- and a 15 byte header with 39
