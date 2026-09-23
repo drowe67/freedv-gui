@@ -815,6 +815,86 @@ void testOnlyWaitingTrafficOfOurOwnRides()
     CHECK(modes.size() == 2 && modes[0] == BurstMode::Signalling && modes[1] == BurstMode::Text);
 }
 
+// A listener told by a reply that more follows, which then loses what follows
+// to a fade, holds the channel for two fragments after the reply, however
+// short the keying was. The station that replied must not start a keying of
+// its own until that station has had its turn after that: on the bench it
+// counted from its own unkeying instead, and the two keyed together.
+void testOwnTrafficWaitsUntilListenersLetGo()
+{
+    Station sender("W1AW");
+    Station replier("VK3ABC");
+
+    std::string error;
+    CHECK(replier.protocol.sendMessage("rides", "W1AW", error));
+    CHECK(replier.protocol.sendMessage("waits", "W1AW", error));
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    sender.completeOneTransmission();
+    replier.receiveFrom(sender.transport);
+
+    // The acknowledgement with one message behind it; the harness's keying
+    // starts and ends at the same instant, the shortest a keying can be.
+    replier.completeOneTransmission();
+    CHECK(replier.transport.transmissions.size() == 1);
+    CHECK(replier.transport.modes.back().size() == 2);
+    uint64_t keyedAt = replier.nowMs;
+
+    // When a listener that lost the message could still be holding on, plus
+    // the turn it is owed.
+    uint64_t heldUntil = keyedAt + TEXT_FRAGMENT_AIR_MILLISECONDS +
+                         SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS;
+    uint64_t earliest = heldUntil + REPLY_WINDOW_MILLISECONDS;
+
+    uint64_t firstOwn = 0;
+    for (replier.nowMs = keyedAt; replier.nowMs <= earliest + 5000; replier.nowMs += 100)
+    {
+        replier.protocol.tick();
+        if (replier.transport.transmissions.size() > 1)
+        {
+            firstOwn = replier.nowMs;
+            break;
+        }
+    }
+    CHECK(firstOwn >= earliest);
+    CHECK(firstOwn != 0);
+}
+
+// The turn given to a station just answered holds back our own traffic, not a
+// reply to what that station sends in its turn.
+void testRepliesDoNotWaitForTheAnsweredStationsTurn()
+{
+    Station sender("W1AW");
+    Station replier("VK3ABC");
+
+    std::string error;
+    CHECK(sender.protocol.sendMessage("first", "VK3ABC", error));
+    CHECK(sender.protocol.sendMessage("second", "VK3ABC", error));
+    sender.completeOneTransmission();
+    replier.receiveFrom(sender.transport);
+    replier.completeOneTransmission(); // the acknowledgement, alone
+    uint64_t keyedAt = replier.nowMs;
+
+    // The sender takes its turn, and the second message arrives at once.
+    sender.receiveFrom(replier.transport);
+    sender.completeOneTransmission();
+    replier.receiveFrom(sender.transport);
+
+    // Its acknowledgement goes after the turnarounds, not after the window.
+    uint64_t acked = 0;
+    for (; replier.nowMs <= keyedAt + REPLY_WINDOW_MILLISECONDS; replier.nowMs += 100)
+    {
+        replier.protocol.tick();
+        if (replier.transport.transmissions.size() > 1)
+        {
+            acked = replier.nowMs;
+            break;
+        }
+    }
+    CHECK(acked != 0);
+    CHECK(acked != 0 &&
+          decodeOne(replier.transport.transmissions.back()[0]).type == FrameType::MessageAck);
+}
+
 // Two stations with messages queued for each other alternate one each: every
 // keying after the first is an acknowledgement with the next message behind
 // it. Before, whichever station went first sent its whole queue while the
@@ -1610,6 +1690,8 @@ int main()
     testQueuedMessageRidesBehindAReply();
     testBusyStationsTakeTurns();
     testOnlyWaitingTrafficOfOurOwnRides();
+    testOwnTrafficWaitsUntilListenersLetGo();
+    testRepliesDoNotWaitForTheAnsweredStationsTurn();
     testFragmentsStillToComeReserveTheChannel();
     testReservationFollowsTheBurstsStillToCome();
     testClearingChannelReleasesStationsAtDifferentMoments();

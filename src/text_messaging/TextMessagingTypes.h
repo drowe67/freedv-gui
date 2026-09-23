@@ -148,7 +148,12 @@ constexpr int TURNAROUND_AFTER_TX_MILLISECONDS = 4000;
 // plain turnaround let us key, four times in one run. Waiting the window
 // hands it the channel with a gap carrier sense can see. Traffic of our own
 // does not have to wait for it: one queued transmission goes out behind the
-// reply, in the same keying.
+// reply, in the same keying. The window holds back only keyings of our own,
+// not a reply to whatever we hear meanwhile, and it runs from when listeners
+// stop holding the channel for us, not from our unkeying. On the bench a
+// fade took the message behind a reply, the listener held the channel for
+// the two fragments the reply's "more follows" promised, and it keyed as the
+// window counted from our unkeying ran out.
 constexpr int REPLY_WINDOW_MILLISECONDS = 6000;
 
 // Two stations that back off by exactly the same amount collide again on the

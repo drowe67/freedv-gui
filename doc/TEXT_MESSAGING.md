@@ -103,7 +103,11 @@ its window expired, and the two would collide. The loopback bench showed that
 happen. Having sent a reply, the station then serves the same window before
 starting a keying of its own: the station it answered is already turning
 around and usually has more to say, and on the bench the two keyed together
-four times in one run when it did not.
+four times in one run when it did not. The window holds back only its own
+traffic, not a reply to something heard meanwhile, and it starts when
+listeners stop holding the channel for it: a listener that loses the message
+behind a reply waits two fragments' worth after the reply, which can be well
+after the keying ended.
 
 Traffic of its own does not wait for that, though. A station with a message
 queued sends it behind the reply, in the same keying: the acknowledgement,

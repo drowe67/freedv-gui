@@ -104,7 +104,9 @@ TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationLi
     , autoReplyEnabled_(true)
     , nextAirId_(randomAirId())
     , quietUntilMs_(0)
+    , ownTrafficQuietUntilMs_(0)
     , jitterState_(1)
+    , keyingHeldUntilMs_(0)
     , channelBusy_(false)
     , channelBusySinceMs_(0)
     , channelReservedUntilMs_(0)
@@ -882,11 +884,14 @@ bool TextMessagingProtocol::isTransmitting() const
 // held five seconds keyed one second before the far end's next message. The
 // cost is that a reply to one station can key while a slow acknowledgement
 // from another is just starting; carrier sense covers that once the other
-// burst is more than a second old.
+// burst is more than a second old. Nor does a reply wait out the turn we give
+// a station we have just answered: that is for keyings of our own.
 uint64_t TextMessagingProtocol::quietUntilLocked(bool forReply) const
 {
     uint64_t quietUntil = quietUntilMs_;
     if (forReply) return quietUntil;
+
+    if (ownTrafficQuietUntilMs_ > quietUntil) quietUntil = ownTrafficQuietUntilMs_;
 
     for (const PendingTransmission& pending : outbox_)
     {
@@ -944,10 +949,16 @@ void TextMessagingProtocol::holdTimersLocked(uint64_t pausedMs)
     }
 }
 
-void TextMessagingProtocol::deferTransmissionLocked(uint64_t nowMs, int baseMs, int jitterMs)
+void TextMessagingProtocol::deferTransmissionLocked(uint64_t fromMs, int baseMs, int jitterMs)
 {
-    uint64_t until = nowMs + (uint64_t)baseMs + randomDelayLocked(jitterMs);
+    uint64_t until = fromMs + (uint64_t)baseMs + randomDelayLocked(jitterMs);
     if (until > quietUntilMs_) quietUntilMs_ = until;
+}
+
+void TextMessagingProtocol::deferOwnTrafficLocked(uint64_t fromMs, int baseMs, int jitterMs)
+{
+    uint64_t until = fromMs + (uint64_t)baseMs + randomDelayLocked(jitterMs);
+    if (until > ownTrafficQuietUntilMs_) ownTrafficQuietUntilMs_ = until;
 }
 
 // A delay in [0, maxMs] from the station's own sequence, so any two stations
@@ -1006,12 +1017,18 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                 continue;
             }
 
-            // Having answered somebody, give them the channel: see the note
-            // on REPLY_WINDOW_MILLISECONDS.
-            deferTransmissionLocked(nowMs,
-                                    sent.reply ? REPLY_WINDOW_MILLISECONDS
-                                               : TURNAROUND_AFTER_TX_MILLISECONDS,
+            deferTransmissionLocked(nowMs, TURNAROUND_AFTER_TX_MILLISECONDS,
                                     TURNAROUND_JITTER_MILLISECONDS);
+
+            // Having answered somebody, give them the channel before keying
+            // anything of our own: see the note on REPLY_WINDOW_MILLISECONDS.
+            // Their turn starts when they stop holding the channel for us,
+            // which can be later than our unkeying.
+            if (sent.reply)
+            {
+                deferOwnTrafficLocked(std::max(nowMs, keyingHeldUntilMs_), REPLY_WINDOW_MILLISECONDS,
+                                      TURNAROUND_JITTER_MILLISECONDS);
+            }
 
             sent.sentAtMs = nowMs;
 
@@ -1054,6 +1071,17 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                     std::vector<const PendingTransmission*>(entries.begin(), entries.end()));
                 if (!keying.empty() && transport_->transmit(keying))
                 {
+                    // A reply with something behind it says more follows, and a
+                    // listener that then loses what follows holds the channel
+                    // for two fragments after the reply, however short the
+                    // keying turns out. The reply burst is shorter than a text
+                    // fragment, so a fragment's air time bounds it.
+                    keyingHeldUntilMs_ =
+                        entries.size() > 1 && entries[0]->mode == BurstMode::Signalling
+                            ? nowMs + (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS +
+                                  (uint64_t)SIGNALLING_FOLLOWED_RESERVATION_MILLISECONDS
+                            : 0;
+
                     for (PendingTransmission* entry : entries)
                     {
                         entry->state = TransmissionState::Transmitting;
