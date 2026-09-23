@@ -62,10 +62,6 @@ uint16_t randomAirId()
     return (uint16_t)(device() & 0xFFFFu);
 }
 
-// Every fragment of a message arrives in one transmission, so a set that is
-// still incomplete after this long is missing frames that will never come.
-constexpr uint64_t REASSEMBLY_TIMEOUT_MS = 120 * 1000;
-
 std::string trim(const std::string& text)
 {
     size_t begin = text.find_first_not_of(" \t\r\n");
@@ -581,13 +577,13 @@ void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, flo
         reassembly.fragments.assign(frame.fragmentCount, "");
         reassembly.fragmentCount = frame.fragmentCount;
         reassembly.receivedMask = 0;
-        reassembly.firstSeenMs = nowMs;
         reassembly.snr = snr;
         reassembly.broadcast = broadcast;
     }
 
     reassembly.fragments[frame.fragmentIndex].assign(frame.payload.begin(), frame.payload.end());
     reassembly.receivedMask |= (1u << frame.fragmentIndex);
+    reassembly.lastHeardMs = nowMs;
     reassembly.snr = (reassembly.snr + snr) / 2.0f;
 
     uint32_t completeMask = (1u << frame.fragmentCount) - 1u;
@@ -674,7 +670,7 @@ void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
 {
     for (auto it = inbox_.begin(); it != inbox_.end();)
     {
-        if (nowMs - it->second.firstSeenMs > REASSEMBLY_TIMEOUT_MS)
+        if (nowMs - it->second.lastHeardMs > (uint64_t)REASSEMBLY_TIMEOUT_MILLISECONDS)
         {
             it = inbox_.erase(it);
         }

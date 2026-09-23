@@ -898,6 +898,51 @@ void testMessageIdsStartAtRandom()
     CHECK(!allEqual);
 }
 
+// Retries resend the same fragments, so a message can be pieced together from
+// several attempts, each of which lost some of it to a fade. The partial copy
+// has to last as long as fragments keep coming: timed from the first fragment
+// it was dropped before a long message's second retry arrived.
+void testRetriesFillInAMessageOverTime()
+{
+    Station sender("W1AW");
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    sender.completeOneTransmission();
+    const auto& frames = sender.transport.transmissions[0];
+    CHECK(frames.size() == 3);
+
+    auto decodeInto = [&](Station& station, size_t index)
+    {
+        Frame frame;
+        CHECK(FrameCodec::decode(frames[index].data(), (int)frames[index].size(), frame));
+        station.protocol.onFrameReceived(frame, 5.0f);
+    };
+
+    // One fragment per attempt, each attempt well inside the timeout of the
+    // last but the whole span well beyond it.
+    uint64_t step = REASSEMBLY_TIMEOUT_MILLISECONDS - 20000;
+    Station receiver("VK3ABC");
+    decodeInto(receiver, 0);
+    receiver.nowMs += step;
+    receiver.protocol.tick();
+    decodeInto(receiver, 1);
+    receiver.nowMs += step;
+    receiver.protocol.tick();
+    decodeInto(receiver, 2);
+    CHECK(receiver.observer.added.size() == 1);
+    CHECK(!receiver.observer.added.empty() && receiver.observer.added[0].text == body);
+
+    // Silence for longer than the timeout still drops what was held.
+    Station quiet("VK3ABC");
+    decodeInto(quiet, 0);
+    quiet.nowMs += REASSEMBLY_TIMEOUT_MILLISECONDS + 1;
+    quiet.protocol.tick();
+    decodeInto(quiet, 1);
+    decodeInto(quiet, 2);
+    CHECK(quiet.observer.added.empty());
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -1041,6 +1086,7 @@ int main()
     testRetransmittedFragmentsQueueOneAcknowledgement();
     testRestartedSenderIsNotMistakenForARetransmission();
     testMessageIdsStartAtRandom();
+    testRetriesFillInAMessageOverTime();
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();

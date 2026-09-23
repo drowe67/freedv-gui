@@ -180,7 +180,7 @@ private:
         std::vector<std::string> fragments;
         uint8_t fragmentCount = 0;
         uint32_t receivedMask = 0;
-        uint64_t firstSeenMs = 0;
+        uint64_t lastHeardMs = 0;   // see REASSEMBLY_TIMEOUT_MILLISECONDS
         float snr = 0.0f;
         bool broadcast = false;
     };

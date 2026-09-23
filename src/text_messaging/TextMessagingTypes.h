@@ -194,6 +194,16 @@ constexpr int PING_TIMEOUT_MILLISECONDS = 15000;
 constexpr int RETRY_BACKOFF_MILLISECONDS = 3000;
 constexpr int MAX_RETRY_BACKOFF_MILLISECONDS = RETRY_BACKOFF_MILLISECONDS * MAX_MESSAGE_RETRIES;
 
+// A message only partly received is kept while fragments keep arriving. A
+// retry resends the same fragments under the same ID, so what one attempt
+// lost to a fade another can fill in. The clock runs from the last fragment
+// heard, not the first: an eight fragment message spends 44 seconds on the
+// air per attempt, and timed from the first fragment its partial copy was
+// thrown away before the second retry arrived. This comfortably outlasts the
+// gap between attempts: the acknowledgement timeout, the retry backoff and
+// the wait for a busy channel.
+constexpr int REASSEMBLY_TIMEOUT_MILLISECONDS = 120 * 1000;
+
 // What the station is currently waiting to hear back, which is what the chat
 // window's status line reports while an acknowledgement cycle is running.
 enum class AckWait

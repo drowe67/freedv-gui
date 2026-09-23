@@ -176,6 +176,10 @@ off the receive audio, on their own thread, and do not touch voice decoding.
   a timer.
 * A message that arrives twice (because our acknowledgement was lost) is
   acknowledged again and shown once.
+* A retry resends the same fragments, so a long message can be pieced
+  together across attempts: fragments one and three from the first attempt
+  and fragment two from a retry make the whole message. A partial message is
+  kept for two minutes after its last fragment was heard.
 * Sending needs a transmit sound device, which means the two sound card
   configuration. Receiving works either way.
 
