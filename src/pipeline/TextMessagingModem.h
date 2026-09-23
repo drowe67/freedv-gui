@@ -107,6 +107,7 @@ private:
     struct Demodulator
     {
         struct freedv* modem = nullptr;
+        const char* name = "";          // the mode, for FREEDV_TEXT_CHAT_RX_LOG
         std::vector<short> buffer;      // samples not yet consumed by the modem
         std::vector<uint8_t> bytes;     // one modem frame of decoded payload
         int payloadBytes = 0;

@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 #include "freedv_api.h"
@@ -64,6 +65,37 @@ uint64_t steadyMs()
         .count();
 }
 
+// Set FREEDV_TEXT_CHAT_RX_LOG to have every burst the receivers finish decoding
+// reported: what each frame was, from whom, which fragment of which message,
+// and every burst that was heard but failed its CRC. A field report of a
+// message "partly received" cannot be analysed without it.
+bool rxLogEnabled()
+{
+    static const bool enabled = std::getenv("FREEDV_TEXT_CHAT_RX_LOG") != nullptr;
+    return enabled;
+}
+
+const char* frameTypeName(FrameType type)
+{
+    switch (type)
+    {
+        case FrameType::Ping: return "ping";
+        case FrameType::PingAck: return "pong";
+        case FrameType::Message: return "message";
+        case FrameType::MessageAck: return "ack";
+        case FrameType::Broadcast: return "broadcast";
+    }
+    return "unknown";
+}
+
+float modemSnr(struct freedv* modem)
+{
+    int sync = 0;
+    float snr = 0.0f;
+    freedv_get_modem_stats(modem, &sync, &snr);
+    return snr;
+}
+
 } // namespace
 
 TextMessagingModem::TextMessagingModem()
@@ -87,7 +119,9 @@ bool TextMessagingModem::open()
     if (open_) return true;
 
     signallingRx_.modem = freedv_open(FREEDV_MODE_DATAC13);
+    signallingRx_.name = "DATAC13";
     textRx_.modem = freedv_open(FREEDV_MODE_DATAC4);
+    textRx_.name = "DATAC4";
     signallingTx_ = freedv_open(FREEDV_MODE_DATAC13);
     textTx_ = freedv_open(FREEDV_MODE_DATAC4);
 
@@ -270,19 +304,45 @@ void TextMessagingModem::demodulateOne(Demodulator& demodulator, const short* sa
         // from the moment a preamble is correlated until the packet is in:
         // the whole time a burst is on the channel, not just the instant a
         // frame decodes.
-        if (freedv_get_rx_status(demodulator.modem) & FREEDV_RX_SYNC)
+        int status = freedv_get_rx_status(demodulator.modem);
+        if (status & FREEDV_RX_SYNC)
         {
             lastSyncMs_.store(steadyMs(), std::memory_order_release);
         }
 
-        if (bytesOut <= 0) continue;
+        // codec2 reports a packet that was demodulated but failed its CRC and
+        // then drops it; this is the only trace a faded burst leaves.
+        if (bytesOut <= 0)
+        {
+            if ((status & FREEDV_RX_BIT_ERRORS) && rxLogEnabled())
+            {
+                log_info("RX: %s burst failed its CRC (%.1f dB)", demodulator.name,
+                         (double)modemSnr(demodulator.modem));
+            }
+            continue;
+        }
+
+        float snr = modemSnr(demodulator.modem);
 
         Frame frame;
-        if (!FrameCodec::decode(demodulator.bytes.data(), bytesOut, frame)) continue;
+        if (!FrameCodec::decode(demodulator.bytes.data(), bytesOut, frame))
+        {
+            if (rxLogEnabled())
+            {
+                log_info("RX: %s frame passed its CRC but is not a chat frame (%.1f dB)",
+                         demodulator.name, (double)snr);
+            }
+            continue;
+        }
 
-        int sync = 0;
-        float snr = 0.0f;
-        freedv_get_modem_stats(demodulator.modem, &sync, &snr);
+        if (rxLogEnabled())
+        {
+            log_info("RX: %s %s from %s id %u fragment %d/%d to %06X, %.1f dB",
+                     demodulator.name, frameTypeName(frame.type),
+                     frame.originCallsign.c_str(), (unsigned)frame.airId,
+                     frame.fragmentIndex + 1, frame.fragmentCount,
+                     (unsigned)frame.destinationCrc, (double)snr);
+        }
 
         FrameCallback callback;
         {

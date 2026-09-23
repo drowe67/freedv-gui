@@ -80,6 +80,11 @@ change that arrived for a message not currently in the view. That last one is
 the silent failure behind a chip that never updates. `test/test_text_chat_loopback.sh`
 sets it for both stations.
 
+Setting `FREEDV_TEXT_CHAT_RX_LOG` makes the receivers log every burst they
+finish: each decoded frame with its type, sender, message ID, fragment number
+and SNR, and every burst that was heard but failed its CRC. Set it for field
+tests; a partly received message can only be pieced together from this.
+
 Transmissions are spaced out rather than sent the moment they are ready. A
 half duplex station hears nothing while it is keyed, so replying the instant a
 burst decodes, or starting the next burst the instant our own ends, talks over
