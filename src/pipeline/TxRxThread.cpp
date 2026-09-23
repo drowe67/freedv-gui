@@ -820,6 +820,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             deferReset_ = false;
             pipeline_->reset();
             clearFifos_();
+            pendingEooCount_ = 0;
 
             // return out and begin processing on the next loop
             return;
@@ -837,21 +838,21 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
-     	if (g_dump_fifo_state) {
-    	  // If this drops to zero we have a problem as we will run out of output samples
-    	  // to send to the sound driver
-          FREEDV_BEGIN_VERIFIED_SAFE
-    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
-                      cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
-          FREEDV_END_VERIFIED_SAFE
-    	}
+        if (g_dump_fifo_state) {
+             // If this drops to zero we have a problem as we will run out of output samples
+             // to send to the sound driver
+             FREEDV_BEGIN_VERIFIED_SAFE
+                 log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
+                           cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
+             FREEDV_END_VERIFIED_SAFE
+        }
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
         assert(nsam_in_48 > 0);
 
         int             nout;
 
-        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
+        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
             
@@ -884,19 +885,41 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                         hasEooBeenSent_ = true;
                     }
 
-                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                    if (nout > 0 && outputSamples != nullptr)
+                    // Only pull a fresh batch of EOO samples out of the pipeline if we don't
+                    // already have an unwritten batch left over from a previous callback --
+                    // the pipeline hands back (and discards from its own internal queue) the
+                    // entire EOO block in one shot, so if we asked again here, any samples that
+                    // failed to make it into outfifo1 last time would be lost for good.
+                    if (pendingEooCount_ == 0)
                     {
-                        if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                        auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
+                        if (nout > 0 && outputSamples != nullptr)
+                        {
+                            assert(nout <= outputSampleRate_);
+                            memcpy(pendingEooSamples_.get(), outputSamples, nout * sizeof(short));
+                            pendingEooCount_ = nout;
+                        }
+                        else
+                        {
+                            // Nothing left buffered upstream and nothing pending here --
+                            // the EOO has been fully handed off to outfifo1.
+                            g_eoo_enqueued.store(true, std::memory_order_release);
+                        }    
+                    }
+
+                    if (pendingEooCount_ > 0)
+                    {
+                        if (cbData->outfifo1->write(pendingEooSamples_.get(), pendingEooCount_) == 0)
+                        {
+                            pendingEooCount_ = 0;
+                            g_eoo_enqueued.store(true, std::memory_order_release);
+                        }
+                        else
                         {
                             FREEDV_BEGIN_VERIFIED_SAFE
-                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d), will retry", cbData->outfifo1->numFree());
                             FREEDV_END_VERIFIED_SAFE
                         }
-                    }
-                    else
-                    {
-                        g_eoo_enqueued.store(true, std::memory_order_release);
                     }
                 }
                 break;
@@ -905,6 +928,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             {
                 g_eoo_enqueued.store(false, std::memory_order_release);
                 hasEooBeenSent_ = false;
+                pendingEooCount_ = 0;
             }
 
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
@@ -978,9 +1002,14 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
-    // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
-        
+    // while we have enough space in the output FIFO ...
+    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame) {
+        // ... and enough input samples are available.
+        if (cbData->infifo1->read(inputSamples_.get(), nsam) != 0)
+        {
+            break;
+        }
+
 #if defined(ENABLE_PROCESSING_STATS)
         processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)

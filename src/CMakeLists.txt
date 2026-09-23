@@ -204,9 +204,22 @@ if(APPLE)
         set(PORTAUDIO_BUNDLE_ARG -s ${portaudio_BINARY_DIR})
     endif(NOT USE_NATIVE_AUDIO)
     
+    # Get folder containing lib*san so we don't need to enter it to macdylibbundler.
+    if(ENABLE_ASAN)
+        set(SANITIZER_LIB_NAME libclang_rt.asan_osx_dynamic.dylib)
+    elseif(ENABLE_RTSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.rtsan_osx_dynamic.dylib)
+    elseif(ENABLE_TSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.tsan_osx_dynamic.dylib)
+    elseif(ENABLE_UBSAN)
+        set(SANITIZER_LIB_NAME libclang_rt.ubsan_osx_dynamic.dylib)
+    else()
+        set(SANITIZER_LIB_NAME libclang_rt.asan_osx_dynamic.dylib)
+    endif()
+
     # Get folder containing libasan so we don't need to enter it to macdylibbundler.
     execute_process(
-        COMMAND ${CMAKE_C_COMPILER} -print-file-name=libclang_rt.asan_osx_dynamic.dylib
+        COMMAND ${CMAKE_C_COMPILER} -print-file-name=${SANITIZER_LIB_NAME}
         OUTPUT_VARIABLE CLANG_SANITIZER_FILE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     
@@ -215,7 +228,7 @@ if(APPLE)
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
         COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${rade_BINARY_DIR}/src -s `dirname ${CLANG_SANITIZER_FILE}` -ns
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/clean-duplicate-rpaths.sh FreeDV.app/Contents/MacOS/FreeDV
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/clean-duplicate-rpaths.sh FreeDV.app/
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
