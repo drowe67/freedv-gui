@@ -91,7 +91,8 @@ static_assert(((uint8_t)FrameType::Ping & TYPE_MORE_FOLLOWS) == 0 &&
                   ((uint8_t)FrameType::PingAck & TYPE_MORE_FOLLOWS) == 0 &&
                   ((uint8_t)FrameType::Message & TYPE_MORE_FOLLOWS) == 0 &&
                   ((uint8_t)FrameType::MessageAck & TYPE_MORE_FOLLOWS) == 0 &&
-                  ((uint8_t)FrameType::Broadcast & TYPE_MORE_FOLLOWS) == 0,
+                  ((uint8_t)FrameType::Broadcast & TYPE_MORE_FOLLOWS) == 0 &&
+                  ((uint8_t)FrameType::MessagePartialAck & TYPE_MORE_FOLLOWS) == 0,
               "a frame type value collides with the more-follows bit");
 
 static_assert(OFFSET_AIR_ID == OFFSET_ORIGIN_CALLSIGN + PACKED_CALLSIGN_BYTES,
@@ -214,6 +215,7 @@ bool FrameCodec::isKnownFrameType(uint8_t type)
         case FrameType::Message:
         case FrameType::MessageAck:
         case FrameType::Broadcast:
+        case FrameType::MessagePartialAck:
             return true;
         default:
             return false;
@@ -227,6 +229,7 @@ bool FrameCodec::isSignallingFrameType(FrameType type)
         case FrameType::Ping:
         case FrameType::PingAck:
         case FrameType::MessageAck:
+        case FrameType::MessagePartialAck:
             return true;
         case FrameType::Message:
         case FrameType::Broadcast:

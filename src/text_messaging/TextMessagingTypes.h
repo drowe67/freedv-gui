@@ -53,6 +53,8 @@ enum class FrameType : uint8_t
     Message = 0x20,    // addressed message fragment, acknowledgement requested
     MessageAck = 0x21, // acknowledgement of a complete addressed message
     Broadcast = 0x22,  // unaddressed message fragment, no acknowledgement
+    MessagePartialAck = 0x23, // which fragments of a message arrived; payload is
+                              // a bit per fragment, and the sender resends the rest
 };
 
 // Modem frame payload sizes: what codec2 hands us per modem frame, less the
@@ -93,6 +95,9 @@ static_assert(TEXT_HEADER_BYTES < TEXT_FRAME_BYTES,
 // by how long we are willing to hold the channel: eight DATAC4 fragments is
 // around 30 seconds.
 constexpr int MAX_FRAGMENTS_PER_MESSAGE = 8;
+
+static_assert(MAX_FRAGMENTS_PER_MESSAGE <= 8 * SIGNALLING_PAYLOAD_BYTES,
+              "a partial acknowledgement has one bit per fragment in a signalling payload");
 constexpr int MAX_MESSAGE_TEXT_BYTES = TEXT_BYTES_PER_FRAGMENT * MAX_FRAGMENTS_PER_MESSAGE;
 
 // Callsigns are packed nine characters into six bytes (base 40), which covers

@@ -84,6 +84,7 @@ const char* frameTypeName(FrameType type)
         case FrameType::Message: return "message";
         case FrameType::MessageAck: return "ack";
         case FrameType::Broadcast: return "broadcast";
+        case FrameType::MessagePartialAck: return "partial ack";
     }
     return "unknown";
 }
@@ -342,6 +343,13 @@ void TextMessagingModem::demodulateOne(Demodulator& demodulator, const short* sa
                      frame.originCallsign.c_str(), (unsigned)frame.airId,
                      frame.fragmentIndex + 1, frame.fragmentCount, frame.burstsFollowing,
                      (unsigned)frame.destinationCrc, (double)snr);
+
+            // Which fragments the far end holds is the point of the frame.
+            if (frame.type == FrameType::MessagePartialAck && !frame.payload.empty())
+            {
+                log_info("RX: partial ack reports fragments %02X received",
+                         (unsigned)frame.payload[0]);
+            }
         }
 
         FrameCallback callback;

@@ -1006,6 +1006,259 @@ void testReservationFollowsTheBurstsStillToCome()
     CHECK(waited <= (uint64_t)MAX_TURNAROUND_MILLISECONDS);
 }
 
+Frame decodeOne(const std::vector<uint8_t>& raw)
+{
+    Frame frame;
+    CHECK(FrameCodec::decode(raw.data(), (int)raw.size(), frame));
+    return frame;
+}
+
+bool everUpdatedTo(const RecordingObserver& observer, int64_t id, MessageStatus status)
+{
+    for (const TextMessage& update : observer.updated)
+    {
+        if (update.id == id && update.status == status) return true;
+    }
+    return false;
+}
+
+// A receiver that heard part of a message tells the sender which fragments
+// arrived once the sender's keying is over, and the sender resends just the
+// rest, at once, without counting a retry.
+void testMissingFragmentsAreAskedForAndResent()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    int64_t id = sender.observer.added[0].id;
+    sender.completeOneTransmission();
+    std::vector<std::vector<uint8_t>> first = sender.transport.transmissions.back();
+    CHECK(first.size() == 3);
+
+    // Fragment two is lost to a fade; fragment three says the keying is over.
+    receiver.protocol.onFrameReceived(decodeOne(first[0]), 5.0f);
+    receiver.protocol.onFrameReceived(decodeOne(first[2]), 5.0f);
+    CHECK(receiver.observer.added.empty());
+
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 1);
+    CHECK(receiver.transport.transmissions.back().size() == 1);
+    Frame partial = decodeOne(receiver.transport.transmissions.back()[0]);
+    CHECK(partial.type == FrameType::MessagePartialAck);
+    CHECK(partial.airId == decodeOne(first[0]).airId);
+    CHECK(partial.payload.size() == 1 && partial.payload[0] == 0x05);
+
+    sender.receiveFrom(receiver.transport);
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.size() == 2);
+    CHECK(sender.transport.transmissions.back().size() == 1);
+    Frame resent = decodeOne(sender.transport.transmissions.back()[0]);
+    CHECK(resent.fragmentIndex == 1);
+    CHECK(resent.fragmentCount == 3);
+    CHECK(resent.burstsFollowing == 0);
+    CHECK(!everUpdatedTo(sender.observer, id, MessageStatus::Retrying));
+
+    // The resend completes the message; one plain acknowledgement goes back.
+    receiver.receiveFrom(sender.transport);
+    CHECK(receiver.observer.added.size() == 1);
+    CHECK(!receiver.observer.added.empty() && receiver.observer.added[0].text == body);
+    CHECK(receiver.protocol.pendingCount() == 1);
+    receiver.completeOneTransmission();
+    CHECK(decodeOne(receiver.transport.transmissions.back()[0]).type == FrameType::MessageAck);
+
+    sender.receiveFrom(receiver.transport);
+    const TextMessage* update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
+    CHECK(update != nullptr && update->retryCount == 0);
+}
+
+// With the last fragment lost there is nothing saying the keying ended, so
+// the receiver waits for as long as the last fragment it heard said the rest
+// would take, and then asks. A broadcast asks for nothing, and neither does a
+// station that may not transmit on its own.
+void testLostLastFragmentStillAsksForTheRest()
+{
+    Station sender("W1AW");
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'A');
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    CHECK(sender.protocol.sendMessage(body, "", error)); // and as a broadcast
+    sender.completeOneTransmission();
+    std::vector<std::vector<uint8_t>> addressed = sender.transport.transmissions.back();
+    sender.completeOneTransmission();
+    std::vector<std::vector<uint8_t>> broadcast = sender.transport.transmissions.back();
+    CHECK(decodeOne(broadcast[0]).type == FrameType::Broadcast);
+
+    Station receiver("VK3ABC");
+    uint64_t heardAt = receiver.nowMs;
+    receiver.protocol.onFrameReceived(decodeOne(addressed[0]), 5.0f); // two still to come
+    receiver.nowMs = heardAt + 2 * TEXT_FRAGMENT_AIR_MILLISECONDS - 1;
+    receiver.protocol.tick();
+    CHECK(receiver.protocol.pendingCount() == 0);
+    receiver.nowMs = heardAt + 2 * TEXT_FRAGMENT_AIR_MILLISECONDS;
+    receiver.protocol.tick();
+    CHECK(receiver.protocol.pendingCount() == 1);
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 1);
+    Frame partial = decodeOne(receiver.transport.transmissions.back()[0]);
+    CHECK(partial.type == FrameType::MessagePartialAck);
+    CHECK(partial.payload.size() == 1 && partial.payload[0] == 0x01);
+
+    Station listener("VK3ABC");
+    listener.protocol.onFrameReceived(decodeOne(broadcast[0]), 5.0f);
+    listener.nowMs += 3 * TEXT_FRAGMENT_AIR_MILLISECONDS;
+    listener.protocol.tick();
+    CHECK(listener.protocol.pendingCount() == 0);
+
+    Station unattended("VK3ABC");
+    unattended.protocol.setAutoReplyEnabled(false);
+    unattended.protocol.onFrameReceived(decodeOne(addressed[0]), 5.0f);
+    unattended.nowMs += 3 * TEXT_FRAGMENT_AIR_MILLISECONDS;
+    unattended.protocol.tick();
+    CHECK(unattended.protocol.pendingCount() == 0);
+}
+
+// A report still waiting to go out must say what is true when it goes: a
+// later keying that brings more fragments updates it rather than queuing a
+// second, and one that completes the message replaces it with a plain
+// acknowledgement.
+void testQueuedReportsStayCurrent()
+{
+    Station sender("W1AW");
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'D'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    sender.completeOneTransmission();
+    std::vector<std::vector<uint8_t>> frames = sender.transport.transmissions.back();
+
+    // Fragment one, then the keying ends with nothing more heard. Somebody is
+    // still on the channel, so the report waits.
+    Station receiver("VK3ABC");
+    Frame first = decodeOne(frames[0]);
+    receiver.protocol.onFrameReceived(first, 5.0f);
+    receiver.transport.channelBusy = true;
+    receiver.nowMs += (uint64_t)first.burstsFollowing * TEXT_FRAGMENT_AIR_MILLISECONDS;
+    receiver.protocol.tick();
+    CHECK(receiver.protocol.pendingCount() == 1);
+    CHECK(receiver.transport.transmissions.empty());
+
+    // Before the report can go out, another keying brings fragment three.
+    receiver.protocol.onFrameReceived(decodeOne(frames[2]), 5.0f);
+    receiver.protocol.tick();
+    CHECK(receiver.protocol.pendingCount() == 1);
+    receiver.transport.channelBusy = false;
+    receiver.protocol.tick(); // the channel clears, and its random pause begins
+    receiver.completeOneTransmission();
+    CHECK(receiver.transport.transmissions.size() == 1);
+    Frame report = decodeOne(receiver.transport.transmissions.back()[0]);
+    CHECK(report.type == FrameType::MessagePartialAck);
+    CHECK(report.payload.size() == 1 && report.payload[0] == 0x05);
+
+    // Fragments one and three again, and the report is queued; then fragment
+    // two completes the message before it is sent.
+    Station overtaken("VK3ABC");
+    overtaken.protocol.onFrameReceived(decodeOne(frames[0]), 5.0f);
+    overtaken.protocol.onFrameReceived(decodeOne(frames[2]), 5.0f);
+    overtaken.protocol.tick();
+    CHECK(overtaken.protocol.pendingCount() == 1);
+    CHECK(overtaken.transport.transmissions.empty()); // still in the turnaround
+    overtaken.protocol.onFrameReceived(decodeOne(frames[1]), 5.0f);
+    CHECK(overtaken.observer.added.size() == 1);
+    CHECK(overtaken.protocol.pendingCount() == 1);
+    overtaken.completeOneTransmission();
+    CHECK(overtaken.transport.transmissions.size() == 1);
+    CHECK(decodeOne(overtaken.transport.transmissions.back()[0]).type == FrameType::MessageAck);
+}
+
+// A message that gets one new fragment through per keying needs more keyings
+// than it has retries. Each of those made progress, so none is a retry, and
+// the message is finished rather than failed.
+void testProgressDoesNotUseUpRetries()
+{
+    Station sender("W1AW");
+    Station receiver("VK3ABC");
+
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 4 + 10, 'B'); // five fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    int64_t id = sender.observer.added[0].id;
+    CHECK(5 > MAX_MESSAGE_RETRIES + 1);
+
+    for (int keying = 0; keying < 5; keying++)
+    {
+        sender.completeOneTransmission();
+        const std::vector<std::vector<uint8_t>>& frames = sender.transport.transmissions.back();
+        CHECK((int)frames.size() == 5 - keying);
+
+        // Only the first burst of each keying gets through.
+        Frame heard = decodeOne(frames[0]);
+        CHECK(heard.fragmentIndex == keying);
+        receiver.protocol.onFrameReceived(heard, 5.0f);
+        if (keying == 4) break;
+
+        receiver.nowMs += (uint64_t)heard.burstsFollowing * TEXT_FRAGMENT_AIR_MILLISECONDS;
+        receiver.protocol.tick();
+        receiver.completeOneTransmission();
+        sender.receiveFrom(receiver.transport);
+    }
+
+    CHECK(receiver.observer.added.size() == 1);
+    CHECK(!receiver.observer.added.empty() && receiver.observer.added[0].text == body);
+    receiver.completeOneTransmission();
+    sender.receiveFrom(receiver.transport);
+
+    const TextMessage* update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::Acknowledged);
+    CHECK(!everUpdatedTo(sender.observer, id, MessageStatus::Retrying));
+    CHECK(!everUpdatedTo(sender.observer, id, MessageStatus::Failed));
+}
+
+// A report that confirms nothing new means the last keying got nothing new
+// through: that is a retry, backed off like one, and it resends only what the
+// far end has still not confirmed.
+void testPartialAckWithNoNewsCountsAsARetry()
+{
+    Station sender("W1AW");
+    std::string error;
+    std::string body(TEXT_BYTES_PER_FRAGMENT * 2 + 10, 'C'); // three fragments
+    CHECK(sender.protocol.sendMessage(body, "VK3ABC", error));
+    int64_t id = sender.observer.added[0].id;
+    sender.completeOneTransmission();
+
+    Frame partial;
+    partial.type = FrameType::MessagePartialAck;
+    partial.destinationCrc = FrameCodec::callsignCrc24("W1AW");
+    partial.originCallsign = "VK3ABC";
+    partial.airId = sender.observer.added[0].airId;
+    partial.payload.assign(1, 0x01);
+
+    sender.protocol.onFrameReceived(partial, 5.0f); // news: fragment one arrived
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.back().size() == 2);
+    CHECK(!everUpdatedTo(sender.observer, id, MessageStatus::Retrying));
+
+    sender.protocol.onFrameReceived(partial, 5.0f); // the same again: no news
+    const TextMessage* update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status == MessageStatus::Retrying);
+    CHECK(update != nullptr && update->retryCount == 1);
+
+    sender.completeOneTransmission();
+    CHECK(sender.transport.transmissions.size() == 3);
+    CHECK(sender.transport.transmissions.back().size() == 2);
+    CHECK(decodeOne(sender.transport.transmissions.back()[0]).fragmentIndex == 1);
+
+    // A partial acknowledgement from anyone but the addressee changes nothing.
+    Frame stranger = partial;
+    stranger.originCallsign = "DJ2LS";
+    stranger.payload.assign(1, 0x07);
+    sender.protocol.onFrameReceived(stranger, 5.0f);
+    update = sender.observer.lastUpdateFor(id);
+    CHECK(update != nullptr && update->status != MessageStatus::Acknowledged);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -1150,6 +1403,11 @@ int main()
     testRestartedSenderIsNotMistakenForARetransmission();
     testMessageIdsStartAtRandom();
     testRetriesFillInAMessageOverTime();
+    testMissingFragmentsAreAskedForAndResent();
+    testLostLastFragmentStillAsksForTheRest();
+    testQueuedReportsStayCurrent();
+    testProgressDoesNotUseUpRetries();
+    testPartialAckWithNoNewsCountsAsARetry();
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();

@@ -168,8 +168,11 @@ older sender's fragments as the end of its keying and may transmit over the
 rest.
 
 That leaves a 13 byte header and one payload byte in a signalling frame --
-exactly enough for the SNR a pong reports -- and a 15 byte header with 39
-bytes of text in a DATAC4 frame.
+exactly enough for the SNR a pong reports, or the bit per fragment of a
+partial acknowledgement -- and a 15 byte header with 39 bytes of text in a
+DATAC4 frame. A partial acknowledgement is a frame type of its own rather than
+a payload on the plain one, so that a build that predates it ignores it
+instead of taking it for "delivered".
 
 The origin callsign CRC-24 is not sent. It is the CRC of the callsign already
 in the frame, and three bytes is a fifth of a DATAC13 frame. The modem's own
@@ -186,6 +189,12 @@ off the receive audio, on their own thread, and do not touch voice decoding.
   a timer.
 * A message that arrives twice (because our acknowledgement was lost) is
   acknowledged again and shown once.
+* A receiver that hears part of a message addressed to it tells the sender
+  which fragments arrived once the sender's keying is over, and the sender
+  resends only the rest, straight away. A resend that gets new fragments
+  through does not use up one of the three retries; one that gets nothing new
+  through does, as a timeout does. A receiver that heard nothing of a keying
+  says nothing, and the sender's timer resends as before.
 * A retry resends the same fragments, so a long message can be pieced
   together across attempts: fragments one and three from the first attempt
   and fragment two from a retry make the whole message. A partial message is

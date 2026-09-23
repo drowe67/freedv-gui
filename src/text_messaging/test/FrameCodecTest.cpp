@@ -232,6 +232,33 @@ void testBurstsFollowing()
     CHECK(!FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
 }
 
+// A partial acknowledgement is a new frame type rather than a payload on the
+// old one, so a build that predates it drops it instead of reading "message
+// delivered". Its one payload byte is a bit per fragment received.
+void testPartialAcknowledgement()
+{
+    Frame partial;
+    partial.type = FrameType::MessagePartialAck;
+    partial.destinationCrc = FrameCodec::callsignCrc24("W1AW");
+    partial.originCallsign = "VK3ABC";
+    partial.airId = 0xBEEF;
+    partial.payload.assign(1, 0x05); // fragments 1 and 3 of three arrived
+
+    std::vector<uint8_t> encoded = FrameCodec::encode(partial, SIGNALLING_FRAME_BYTES);
+    CHECK((int)encoded.size() == SIGNALLING_FRAME_BYTES);
+    CHECK(encoded[0] == 0x23);
+    CHECK(encoded[12] == 1);    // payload length
+    CHECK(encoded[13] == 0x05); // the mask
+
+    Frame decoded;
+    CHECK(FrameCodec::decode(encoded.data(), (int)encoded.size(), decoded));
+    CHECK(decoded.type == FrameType::MessagePartialAck);
+    CHECK(FrameCodec::isSignallingFrameType(decoded.type));
+    CHECK(decoded.airId == 0xBEEF);
+    CHECK(decoded.originCallsign == "VK3ABC");
+    CHECK(decoded.payload.size() == 1 && decoded.payload[0] == 0x05);
+}
+
 void testEncodeRejections()
 {
     Frame oversized = makeMessageFrame();
@@ -323,6 +350,7 @@ int main()
     testCallsignEncoding();
     testRoundTrip();
     testBurstsFollowing();
+    testPartialAcknowledgement();
     testEncodeRejections();
     testDecodeRejections();
 

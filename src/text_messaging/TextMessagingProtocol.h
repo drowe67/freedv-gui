@@ -161,12 +161,20 @@ private:
     struct PendingTransmission
     {
         TextMessage message;                        // the chat line it belongs to
-        std::vector<std::vector<uint8_t>> frames;
+        std::vector<std::vector<uint8_t>> frames;   // signalling: the one burst
+
+        // A message keeps its fragments unencoded: each keying is built from
+        // the ones the far end has not confirmed, and every burst has to say
+        // how many more follow it in that keying.
+        std::vector<Frame> fragments;
+        uint32_t confirmed = 0;  // fragments a partial acknowledgement said arrived
+
         bool signalling = false;                    // DATAC13 rather than DATAC4
         bool expectsAck = false;
         bool isPing = false;
         bool reply = false;      // an acknowledgement or pong we owe somebody
         bool ack = false;        // an acknowledgement; message.airId says of what
+        bool partialAck = false; // a partial acknowledgement; ditto
         std::string destination;
         int retries = 0;
         uint64_t deadlineMs = 0;
@@ -183,6 +191,13 @@ private:
         uint64_t lastHeardMs = 0;   // see REASSEMBLY_TIMEOUT_MILLISECONDS
         float snr = 0.0f;
         bool broadcast = false;
+
+        // When the sender's current keying should be over, from what the last
+        // fragment heard said was still to come, and whether anything of this
+        // message was heard in it. Once it is over, a message still missing
+        // fragments asks for them.
+        uint64_t keyingEndsMs = 0;
+        bool heardThisKeying = false;
     };
 
     using ReassemblyKey = std::pair<std::string, uint16_t>;
@@ -208,11 +223,16 @@ private:
     bool queueMessageLocked(const std::string& text, const std::string& destination,
                             std::string& errorOut, std::vector<PendingEvent>& events);
     void queueAckLocked(const std::string& destination, uint16_t airId);
+    void queuePartialAckLocked(const std::string& destination, uint16_t airId, uint32_t received);
+    void requestMissingFragmentsLocked(uint64_t nowMs);
     void queuePongLocked(const std::string& destination, float snr);
     void reserveChannelForKeyingLocked(const Frame& frame, uint64_t nowMs);
     void handleIncomingFragmentLocked(const Frame& frame, float snr,
                                       std::vector<PendingEvent>& events);
     void handleAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
+    void handlePartialAckLocked(const Frame& frame, std::vector<PendingEvent>& events);
+    bool retryOrFailLocked(size_t index, uint64_t nowMs, std::vector<PendingEvent>& events);
+    std::vector<std::vector<uint8_t>> keyingFramesLocked(const PendingTransmission& pending) const;
     void handlePingLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void handlePongLocked(const Frame& frame, float snr, std::vector<PendingEvent>& events);
     void addSystemMessageLocked(const std::string& text, const std::string& destination,

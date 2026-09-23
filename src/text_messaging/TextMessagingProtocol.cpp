@@ -277,15 +277,17 @@ bool TextMessagingProtocol::queueMessageLocked(const std::string& text,
         Frame frame = makeFrameLocked(broadcast ? FrameType::Broadcast : FrameType::Message,
                                       normalizedDestination, airId, (uint8_t)index,
                                       (uint8_t)fragmentCount, payload);
+
+        // Checked now, as the whole message would be sent, so that a keying
+        // built later from any subset of these fragments cannot fail to encode.
         frame.burstsFollowing = (uint8_t)(fragmentCount - 1 - index);
-        std::vector<uint8_t> encoded = FrameCodec::encode(frame, TEXT_FRAME_BYTES);
-        if (encoded.empty())
+        if (FrameCodec::encode(frame, TEXT_FRAME_BYTES).empty())
         {
             errorOut = "Could not encode the message for transmission.";
             return false;
         }
 
-        pending.frames.push_back(encoded);
+        pending.fragments.push_back(frame);
     }
 
     TextMessage message;
@@ -389,6 +391,15 @@ bool TextMessagingProtocol::sendPing(const std::string& destination, std::string
 
 void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint16_t airId)
 {
+    // The whole message is in, so a request for part of it still waiting to
+    // go out has been overtaken.
+    for (auto it = outbox_.begin(); it != outbox_.end();)
+    {
+        bool overtaken = it->partialAck && it->state == TransmissionState::Queued &&
+                         it->destination == destination && it->message.airId == airId;
+        it = overtaken ? outbox_.erase(it) : std::next(it);
+    }
+
     // A retransmission of a message we already have arrives one fragment at a
     // time, and each duplicate fragment asks for the acknowledgement again.
     // One queued acknowledgement answers all of them; eight would hold the
@@ -418,6 +429,59 @@ void TextMessagingProtocol::queueAckLocked(const std::string& destination, uint1
 
     // Acknowledgements go to the front: the sender is sitting on a timer.
     outbox_.push_front(pending);
+}
+
+// Tells the sender which fragments arrived, so that it resends only the rest.
+// A newer report for the same message replaces one still waiting to go out.
+void TextMessagingProtocol::queuePartialAckLocked(const std::string& destination, uint16_t airId,
+                                                  uint32_t received)
+{
+    std::vector<uint8_t> payload{(uint8_t)received};
+    Frame frame = makeFrameLocked(FrameType::MessagePartialAck, destination, airId, 0, 1, payload);
+    std::vector<uint8_t> encoded = FrameCodec::encode(frame, SIGNALLING_FRAME_BYTES);
+    if (encoded.empty()) return;
+
+    for (PendingTransmission& queued : outbox_)
+    {
+        if (queued.partialAck && queued.state == TransmissionState::Queued &&
+            queued.destination == destination && queued.message.airId == airId)
+        {
+            queued.frames.assign(1, encoded);
+            return;
+        }
+    }
+
+    PendingTransmission pending;
+    pending.frames.push_back(encoded);
+    pending.signalling = true;
+    pending.expectsAck = false;
+    pending.reply = true;
+    pending.partialAck = true;
+    pending.message.airId = airId;
+    pending.destination = destination;
+    pending.state = TransmissionState::Queued;
+
+    // Like an acknowledgement: the sender is sitting on a timer.
+    outbox_.push_front(pending);
+}
+
+// A message addressed to us, heard in part during a keying that is now over,
+// asks the sender for the fragments still missing. One heard nothing in the
+// keying says nothing: the sender's timer covers that, as it always has.
+void TextMessagingProtocol::requestMissingFragmentsLocked(uint64_t nowMs)
+{
+    for (auto& entry : inbox_)
+    {
+        Reassembly& reassembly = entry.second;
+        if (reassembly.broadcast || !reassembly.heardThisKeying) continue;
+        if (nowMs < reassembly.keyingEndsMs) continue;
+
+        reassembly.heardThisKeying = false;
+        if (autoReplyEnabled_)
+        {
+            queuePartialAckLocked(entry.first.first, entry.first.second, reassembly.receivedMask);
+        }
+    }
 }
 
 void TextMessagingProtocol::queuePongLocked(const std::string& destination, float snr)
@@ -516,6 +580,9 @@ void TextMessagingProtocol::onFrameReceived(const Frame& frame, float snr)
             case FrameType::MessageAck:
                 if (isAddressedToMeLocked(frame)) handleAckLocked(frame, events);
                 break;
+            case FrameType::MessagePartialAck:
+                if (isAddressedToMeLocked(frame)) handlePartialAckLocked(frame, events);
+                break;
             case FrameType::Ping:
                 if (isAddressedToMeLocked(frame)) handlePingLocked(frame, snr, events);
                 break;
@@ -594,6 +661,9 @@ void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, flo
     reassembly.fragments[frame.fragmentIndex].assign(frame.payload.begin(), frame.payload.end());
     reassembly.receivedMask |= (1u << frame.fragmentIndex);
     reassembly.lastHeardMs = nowMs;
+    reassembly.heardThisKeying = true;
+    reassembly.keyingEndsMs =
+        nowMs + (uint64_t)frame.burstsFollowing * (uint64_t)TEXT_FRAGMENT_AIR_MILLISECONDS;
     reassembly.snr = (reassembly.snr + snr) / 2.0f;
 
     uint32_t completeMask = (1u << frame.fragmentCount) - 1u;
@@ -639,6 +709,54 @@ void TextMessagingProtocol::handleAckLocked(const Frame& frame, std::vector<Pend
 
         updateStatusLocked(*it, MessageStatus::Acknowledged, events);
         outbox_.erase(it);
+        return;
+    }
+}
+
+// The far end has part of a message of ours. Whatever it confirms is never
+// sent again. A report that brings news resends the rest at once and costs no
+// retry: a message getting through piece by piece is worth finishing. One
+// that brings none means the last keying delivered nothing new, and counts
+// as a retry just as a timeout does.
+void TextMessagingProtocol::handlePartialAckLocked(const Frame& frame,
+                                                   std::vector<PendingEvent>& events)
+{
+    if (frame.payload.size() != 1) return;
+
+    for (size_t i = 0; i < outbox_.size(); i++)
+    {
+        PendingTransmission& pending = outbox_[i];
+        if (pending.isPing || !pending.expectsAck || pending.fragments.empty()) continue;
+        if (pending.message.airId != frame.airId) continue;
+        if (pending.destination != frame.originCallsign) continue;
+
+        uint32_t all = (1u << pending.fragments.size()) - 1u;
+        uint32_t received = frame.payload[0] & all;
+        bool progress = (received & ~pending.confirmed) != 0;
+        pending.confirmed |= received;
+
+        if (pending.confirmed == all)
+        {
+            updateStatusLocked(pending, MessageStatus::Acknowledged, events);
+            outbox_.erase(outbox_.begin() + (std::ptrdiff_t)i);
+            return;
+        }
+
+        // Mid keying the report can only have been meant for an earlier one;
+        // what it confirms is recorded and the keying carries on.
+        if (pending.state == TransmissionState::Transmitting) return;
+
+        if (progress)
+        {
+            pending.state = TransmissionState::Queued;
+            pending.notBeforeMs = 0;
+            return;
+        }
+
+        if (pending.state == TransmissionState::AwaitingAck)
+        {
+            retryOrFailLocked(i, monotonicMs_(), events);
+        }
         return;
     }
 }
@@ -714,7 +832,11 @@ AckWait TextMessagingProtocol::ackWait() const
         // Nothing is outstanding until it has actually been sent once. A
         // message still waiting its turn is queued, not awaited, and saying
         // otherwise would overwrite the notice that says so.
-        if (pending.state != TransmissionState::AwaitingAck && pending.retries == 0) continue;
+        if (pending.state != TransmissionState::AwaitingAck && pending.retries == 0 &&
+            pending.confirmed == 0)
+        {
+            continue;
+        }
 
         return pending.isPing ? AckWait::Ping : AckWait::Message;
     }
@@ -836,6 +958,7 @@ void TextMessagingProtocol::tick()
 
         uint64_t nowMs = monotonicMs_();
         purgeStaleReassembliesLocked(nowMs);
+        requestMissingFragmentsLocked(nowMs);
 
         // While the channel is busy everything waits, timers included: the far
         // end cannot answer us through somebody else's burst, and it may be the
@@ -904,7 +1027,8 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
                 if (nowMs < next.notBeforeMs) continue;
                 if (nowMs < quietUntilLocked(next.reply)) continue;
 
-                if (transport_->transmit(next.frames, next.signalling))
+                std::vector<std::vector<uint8_t>> keying = keyingFramesLocked(next);
+                if (!keying.empty() && transport_->transmit(keying, next.signalling))
                 {
                     next.state = TransmissionState::Transmitting;
                     updateStatusLocked(next, MessageStatus::Transmitting, events);
@@ -916,9 +1040,6 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
 
     // Expired acknowledgement timers, checked even while keying so that a
     // message gets no extra grace just because something else is on the air.
-    // A ping gets one chance; a message gets the retries the operator can see
-    // counting up in the chat window, and goes back to the queue to wait its
-    // turn like any other transmission.
     for (size_t i = 0; i < outbox_.size();)
     {
         PendingTransmission& waiting = outbox_[i];
@@ -928,26 +1049,66 @@ void TextMessagingProtocol::serviceOutboxLocked(uint64_t nowMs, bool frozen,
             continue;
         }
 
-        if (!waiting.isPing && waiting.retries < MAX_MESSAGE_RETRIES)
-        {
-            waiting.retries++;
-            waiting.state = TransmissionState::Queued;
-            waiting.notBeforeMs =
-                nowMs + randomDelayLocked(RETRY_BACKOFF_MILLISECONDS * waiting.retries);
-            updateStatusLocked(waiting, MessageStatus::Retrying, events);
-            i++;
-            continue;
-        }
-
-        if (waiting.isPing)
-        {
-            addSystemMessageLocked(waiting.destination + " : no response to PING",
-                                   waiting.destination, events);
-        }
-
-        updateStatusLocked(waiting, MessageStatus::Failed, events);
-        outbox_.erase(outbox_.begin() + (std::ptrdiff_t)i);
+        if (!retryOrFailLocked(i, nowMs, events)) i++;
     }
+}
+
+// An attempt that got nothing through. A ping gets one chance; a message gets
+// the retries the operator can see counting up in the chat window, and goes
+// back to the queue to wait its turn like any other transmission. Returns true
+// if the entry was removed from the outbox.
+bool TextMessagingProtocol::retryOrFailLocked(size_t index, uint64_t nowMs,
+                                              std::vector<PendingEvent>& events)
+{
+    PendingTransmission& waiting = outbox_[index];
+
+    if (!waiting.isPing && waiting.retries < MAX_MESSAGE_RETRIES)
+    {
+        waiting.retries++;
+        waiting.state = TransmissionState::Queued;
+        waiting.notBeforeMs = nowMs + randomDelayLocked(RETRY_BACKOFF_MILLISECONDS * waiting.retries);
+        updateStatusLocked(waiting, MessageStatus::Retrying, events);
+        return false;
+    }
+
+    if (waiting.isPing)
+    {
+        addSystemMessageLocked(waiting.destination + " : no response to PING",
+                               waiting.destination, events);
+    }
+
+    updateStatusLocked(waiting, MessageStatus::Failed, events);
+    outbox_.erase(outbox_.begin() + (std::ptrdiff_t)index);
+    return true;
+}
+
+// The bursts for one keying. A message sends the fragments not yet confirmed,
+// in order, each saying how many of them are still to come; everything else is
+// the single burst it was queued as.
+std::vector<std::vector<uint8_t>> TextMessagingProtocol::keyingFramesLocked(
+    const PendingTransmission& pending) const
+{
+    if (pending.fragments.empty()) return pending.frames;
+
+    std::vector<const Frame*> outstanding;
+    for (size_t index = 0; index < pending.fragments.size(); index++)
+    {
+        if ((pending.confirmed & (1u << index)) == 0) outstanding.push_back(&pending.fragments[index]);
+    }
+
+    std::vector<std::vector<uint8_t>> keying;
+    for (size_t position = 0; position < outstanding.size(); position++)
+    {
+        Frame frame = *outstanding[position];
+        frame.burstsFollowing = (uint8_t)(outstanding.size() - 1 - position);
+
+        // Every fragment encoded when the message was queued, with at least as
+        // many following as it can have here, so this does not fail.
+        keying.push_back(FrameCodec::encode(frame, TEXT_FRAME_BYTES));
+        if (keying.back().empty()) return {};
+    }
+
+    return keying;
 }
 
 void TextMessagingProtocol::deliver(const std::vector<PendingEvent>& events)
