@@ -836,6 +836,68 @@ void testRetransmittedFragmentsQueueOneAcknowledgement()
     CHECK(receiver.protocol.pendingCount() == 1);
 }
 
+// A sender that restarts must not have its new message taken for a
+// retransmission of an old one that happened to carry the same ID: the
+// receiver would acknowledge it and never show it, and the sender would see
+// OK. The ID is forced to collide here, so the content check is what counts.
+void testRestartedSenderIsNotMistakenForARetransmission()
+{
+    Station receiver("VK3ABC");
+    std::string error;
+
+    Station before("W1AW");
+    CHECK(before.protocol.sendMessage("before the restart", "VK3ABC", error));
+    before.completeOneTransmission();
+    receiver.receiveFrom(before.transport);
+    CHECK(receiver.observer.added.size() == 1);
+    uint16_t reusedId = before.observer.added[0].airId;
+
+    Station after("W1AW");
+    CHECK(after.protocol.sendMessage("after the restart", "VK3ABC", error));
+    after.completeOneTransmission();
+    for (const std::vector<uint8_t>& raw : after.transport.transmissions.back())
+    {
+        Frame frame;
+        CHECK(FrameCodec::decode(raw.data(), (int)raw.size(), frame));
+        frame.airId = reusedId;
+        receiver.protocol.onFrameReceived(frame, 5.0f);
+    }
+
+    CHECK(receiver.observer.added.size() == 2);
+    CHECK(receiver.observer.added.back().text == "after the restart");
+
+    // And a true retransmission of that new message is still recognised.
+    for (const std::vector<uint8_t>& raw : after.transport.transmissions.back())
+    {
+        Frame frame;
+        CHECK(FrameCodec::decode(raw.data(), (int)raw.size(), frame));
+        frame.airId = reusedId;
+        receiver.protocol.onFrameReceived(frame, 5.0f);
+    }
+    CHECK(receiver.observer.added.size() == 2);
+}
+
+// Message IDs start at a random point, so stations that restart do not all
+// begin again at the same ID.
+void testMessageIdsStartAtRandom()
+{
+    std::vector<uint16_t> firstIds;
+    for (int i = 0; i < 4; i++)
+    {
+        Station sender("W1AW");
+        std::string error;
+        CHECK(sender.protocol.sendMessage("hello", "VK3ABC", error));
+        firstIds.push_back(sender.observer.added[0].airId);
+    }
+
+    bool allEqual = true;
+    for (uint16_t id : firstIds)
+    {
+        if (id != firstIds[0]) allEqual = false;
+    }
+    CHECK(!allEqual);
+}
+
 // Carrier sense: while the receiver is locked onto somebody else's burst,
 // nothing we have queued may start, however long it has been waiting. Once
 // it clears, the queue moves again within the random pause a release carries.
@@ -977,6 +1039,8 @@ int main()
     testLongMessageIsFragmentedAndReassembled();
     testRetransmissionIsNotShownTwice();
     testRetransmittedFragmentsQueueOneAcknowledgement();
+    testRestartedSenderIsNotMistakenForARetransmission();
+    testMessageIdsStartAtRandom();
     testPingAndPong();
     testPingTimesOut();
     testAutoReplyCanBeDisabled();

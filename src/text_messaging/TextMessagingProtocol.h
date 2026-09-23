@@ -187,6 +187,15 @@ private:
 
     using ReassemblyKey = std::pair<std::string, uint16_t>;
 
+    // A message we finished taking in, kept so that a retransmission of it
+    // can be recognised: by its fragments, not just its ID, because a sender
+    // that restarts reuses IDs.
+    struct Completed
+    {
+        uint64_t atMs = 0;
+        std::vector<std::string> fragments;
+    };
+
     // Events queued while the lock is held and delivered once it is released,
     // so an observer is free to call back into the protocol.
     struct PendingEvent
@@ -251,7 +260,7 @@ private:
 
     std::deque<PendingTransmission> outbox_;
     std::map<ReassemblyKey, Reassembly> inbox_;
-    std::map<ReassemblyKey, uint64_t> recentlyCompleted_;
+    std::map<ReassemblyKey, Completed> recentlyCompleted_;
 
     std::function<uint64_t()> monotonicMs_;
     std::function<std::time_t()> wallClock_;

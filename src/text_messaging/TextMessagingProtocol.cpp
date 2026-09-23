@@ -37,6 +37,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <random>
 
 #include "HeardStationList.h"
 #include "MessageStore.h"
@@ -50,6 +51,16 @@ namespace
 // A message that completed within this window and arrives again is a
 // retransmission whose acknowledgement we lost, not a new message.
 constexpr uint64_t DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
+// Message IDs start somewhere random rather than at one. Receivers remember
+// (sender, ID) for DUPLICATE_WINDOW_MS, so a station that restarted and began
+// again at one would have its first messages taken for retransmissions of the
+// last ones: acknowledged, and never shown.
+uint16_t randomAirId()
+{
+    std::random_device device;
+    return (uint16_t)(device() & 0xFFFFu);
+}
 
 // Every fragment of a message arrives in one transmission, so a set that is
 // still incomplete after this long is missing frames that will never come.
@@ -94,7 +105,7 @@ TextMessagingProtocol::TextMessagingProtocol(MessageStore& store, HeardStationLi
     , observer_(nullptr)
     , myCallsignCrc_(0)
     , autoReplyEnabled_(true)
-    , nextAirId_(1)
+    , nextAirId_(randomAirId())
     , quietUntilMs_(0)
     , jitterState_(1)
     , channelBusy_(false)
@@ -543,12 +554,25 @@ void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, flo
 
     // The sender is retransmitting a message we already have, which means our
     // acknowledgement did not reach them. Send it again rather than showing
-    // the message twice.
+    // the message twice. A retransmission carries the same fragments; a
+    // fragment that differs under the same ID is a new message from a sender
+    // whose IDs started over, and is taken in as one.
     auto completed = recentlyCompleted_.find(key);
     if (completed != recentlyCompleted_.end())
     {
-        if (!broadcast && autoReplyEnabled_) queueAckLocked(frame.originCallsign, frame.airId);
-        return;
+        const std::vector<std::string>& fragments = completed->second.fragments;
+        bool sameMessage =
+            fragments.size() == frame.fragmentCount &&
+            fragments[frame.fragmentIndex] ==
+                std::string(frame.payload.begin(), frame.payload.end());
+
+        if (sameMessage)
+        {
+            if (!broadcast && autoReplyEnabled_) queueAckLocked(frame.originCallsign, frame.airId);
+            return;
+        }
+
+        recentlyCompleted_.erase(completed);
     }
 
     Reassembly& reassembly = inbox_[key];
@@ -581,8 +605,10 @@ void TextMessagingProtocol::handleIncomingFragmentLocked(const Frame& frame, flo
     message.status = MessageStatus::Received;
     message.snr = reassembly.snr;
 
+    Completed& done = recentlyCompleted_[key];
+    done.atMs = nowMs;
+    done.fragments = reassembly.fragments;
     inbox_.erase(key);
-    recentlyCompleted_[key] = nowMs;
 
     if (store_.addMessage(message))
     {
@@ -660,7 +686,7 @@ void TextMessagingProtocol::purgeStaleReassembliesLocked(uint64_t nowMs)
 
     for (auto it = recentlyCompleted_.begin(); it != recentlyCompleted_.end();)
     {
-        if (nowMs - it->second > DUPLICATE_WINDOW_MS)
+        if (nowMs - it->second.atMs > DUPLICATE_WINDOW_MS)
         {
             it = recentlyCompleted_.erase(it);
         }
