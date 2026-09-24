@@ -48,6 +48,12 @@ void PulseAudioEngine::start()
 {
     std::unique_lock<std::mutex> lk(startStopMtx_);
 
+    // Ensure we haven't already initialized.
+    if (initializedCount_.fetch_add(1, std::memory_order_acq_rel) > 0)
+    {
+        return;
+    }
+    
     // Allocate PA main loop and context.
     mainloop_ = pa_threaded_mainloop_new();
     
@@ -207,6 +213,12 @@ void PulseAudioEngine::stopImpl_()
 {
     std::unique_lock<std::mutex> lk(startStopMtx_);
 
+    // Ensure there still aren't users of this engine.
+    if (initializedCount_.fetch_sub(1, std::memory_order_acq_rel) > 1)
+    {
+        return;
+    }
+    
     if (initialized_)
     {
         pa_threaded_mainloop_lock(mainloop_);
