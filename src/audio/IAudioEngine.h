@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <atomic>
 #include "AudioDeviceSpecification.h"
 
 class IAudioDevice;
@@ -59,6 +60,7 @@ protected:
     
     AudioErrorCallbackFn onAudioErrorFunction;
     void* onAudioErrorState;
+    std::atomic<int> initializedCount_;
 };
 
 #endif // AUDIO_ENGINE_H

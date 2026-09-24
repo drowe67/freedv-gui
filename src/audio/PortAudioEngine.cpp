@@ -42,6 +42,12 @@ PortAudioEngine::~PortAudioEngine()
 
 void PortAudioEngine::start()
 {
+    // Ensure we haven't already initialized.
+    if (initializedCount_.fetch_add(1, std::memory_order_acq_rel) > 0)
+    {
+        return;
+    }
+    
     auto error = portAudioLibrary_->Initialize().get();
     if (error != paNoError)
     {
@@ -67,6 +73,12 @@ void PortAudioEngine::start()
 
 void PortAudioEngine::stop()
 {
+    // Ensure there still aren't users of this engine.
+    if (initializedCount_.fetch_sub(1, std::memory_order_acq_rel) > 1)
+    {
+        return;
+    }
+    
     portAudioLibrary_->Terminate().wait();
     initialized_ = false;
 }
