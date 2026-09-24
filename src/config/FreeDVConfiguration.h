@@ -88,6 +88,11 @@ public:
     
     ConfigurationDataElement<bool> halfDuplexMode;
     ConfigurationDataElement<bool> multipleReceiveEnabled;
+
+    // Text chat transmits only where US rules permit a data emission (47 CFR
+    // 97.305), and not at all while the operating frequency is unknown. On by
+    // default: an operator elsewhere turns it off.
+    ConfigurationDataElement<bool> textChatUsDataSegmentsOnly;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
     
     ConfigurationDataElement<wxString> quickRecordRawPath;

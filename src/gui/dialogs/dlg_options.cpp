@@ -630,6 +630,24 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_multirx->Add(sbSizer_singleThread, 0, wxALIGN_LEFT, 0);
     
     sizerModem->Add(sbSizer_multirx,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 5);
+
+    //------------------------------
+    // Text chat
+    //------------------------------
+    wxStaticBox *sb_textChat = new wxStaticBox(m_modemTab, wxID_ANY, _("Text Chat"));
+    wxStaticBoxSizer* sbSizer_textChat = new wxStaticBoxSizer(sb_textChat, wxVERTICAL);
+
+    m_ckboxTextChatUsDataSegmentsOnly = new wxCheckBox(
+        sb_textChat, wxID_ANY, _("Transmit only where US rules permit data (47 CFR 97.305)"),
+        wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTextChatUsDataSegmentsOnly->SetToolTip(
+        _("Text chat is sent as data. US rules permit data only outside the HF phone segments, "
+          "where FreeDV voice is usually worked. While this is checked, text chat does not "
+          "transmit within 3 kHz of a phone segment, or while FreeDV does not know the "
+          "operating frequency; it still receives."));
+    sbSizer_textChat->Add(m_ckboxTextChatUsDataSegmentsOnly, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 5);
+
+    sizerModem->Add(sbSizer_textChat, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
     
     wxStaticBox *sb_modemstats = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Statistics"));
     wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
@@ -854,7 +872,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
     m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
-    m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
+    m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_ckboxTextChatUsDataSegmentsOnly);
+    m_ckboxTextChatUsDataSegmentsOnly->MoveBeforeInTabOrder(m_statsResetTime);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
     m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
@@ -1071,6 +1090,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckboxMultipleRx->SetValue(wxGetApp().appConfiguration.multipleReceiveEnabled);
         m_ckboxSingleRxThread->SetValue(wxGetApp().appConfiguration.multipleReceiveOnSingleThread);
+        m_ckboxTextChatUsDataSegmentsOnly->SetValue(wxGetApp().appConfiguration.textChatUsDataSegmentsOnly);
         
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
@@ -1250,6 +1270,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
         wxGetApp().appConfiguration.multipleReceiveEnabled = m_ckboxMultipleRx->GetValue();
         wxGetApp().appConfiguration.multipleReceiveOnSingleThread = m_ckboxSingleRxThread->GetValue();
+        wxGetApp().appConfiguration.textChatUsDataSegmentsOnly = m_ckboxTextChatUsDataSegmentsOnly->GetValue();
         
         /* Plot settings */
         wxGetApp().appConfiguration.currentSpectrumAveraging = m_cbxNumSpectrumAveraging->GetSelection();
