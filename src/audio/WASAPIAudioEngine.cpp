@@ -60,6 +60,12 @@ WASAPIAudioEngine::~WASAPIAudioEngine()
 
 void WASAPIAudioEngine::start()
 {
+    // Ensure we haven't already initialized.
+    if (initializedCount_.fetch_add(1, std::memory_order_acq_rel) > 0)
+    {
+        return;
+    }
+    
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
@@ -128,6 +134,12 @@ void WASAPIAudioEngine::start()
 
 void WASAPIAudioEngine::stop()
 {
+    // Ensure there still aren't users of this engine.
+    if (initializedCount_.fetch_sub(1, std::memory_order_acq_rel) > 1)
+    {
+        return;
+    }
+    
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
