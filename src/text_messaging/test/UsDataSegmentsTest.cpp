@@ -58,7 +58,9 @@ void check(bool condition, const char* what, int line)
 
 bool permitted(uint64_t dialHz)
 {
-    return usDataTransmitRestriction(dialHz).empty();
+    bool allowed = usDataTransmitPermitted(dialHz);
+    CHECK(allowed == usDataTransmitRestriction(dialHz).empty());
+    return allowed;
 }
 
 // Where FreeDV voice is worked: phone segments, where data is not authorised.
@@ -73,47 +75,94 @@ void testPhoneSegmentsAreRefused()
     CHECK(!permitted(28330000)); // 10 m
     CHECK(!permitted(29600000)); // 10 m FM, still phone
 
-    // The reason names the frequency and the segment.
+    // The reason names the frequency, the rule, and where to go instead.
     std::string reason = usDataTransmitRestriction(14236000);
     CHECK(reason.find("14.236") != std::string::npos);
-    CHECK(reason.find("14.150-14.350") != std::string::npos);
     CHECK(reason.find("97.305") != std::string::npos);
+    CHECK(reason.find("14.000-14.150") != std::string::npos);
 }
 
-// The RTTY and data segments, and the bands that permit data throughout.
+// Outside every amateur band is refused: the guard lists where data is
+// permitted, and anything it does not list is not. It once listed only the
+// phone segments, and 12.312 MHz passed.
+void testOutsideTheAmateurBandsIsRefused()
+{
+    CHECK(!permitted(12312000));
+    CHECK(!permitted(13000000));
+    CHECK(!permitted(1500000));
+    CHECK(!permitted(30000000));
+    CHECK(!permitted(100000000));
+    CHECK(!permitted(2400000000ULL));
+
+    // Bands left out on purpose.
+    CHECK(!permitted(137000));    // 2200 m: prior notice required
+    CHECK(!permitted(475000));    // 630 m: prior notice required
+    CHECK(!permitted(219500000)); // 1.25 m, 219-220 MHz: message forwarding only
+
+    std::string reason = usDataTransmitRestriction(12312000);
+    CHECK(reason.find("12.312") != std::string::npos);
+    CHECK(reason.find("14.000-14.150") != std::string::npos); // nearer than 30 m
+}
+
+// The data segments, and the bands that permit data throughout.
 void testDataSegmentsArePermitted()
 {
-    CHECK(permitted(1840000));  // 160 m: data throughout
-    CHECK(permitted(3573000));  // 80 m
-    CHECK(permitted(5357000));  // 60 m channel
-    CHECK(permitted(7074000));  // 40 m
-    CHECK(permitted(7110000));  // 40 m, 7.100-7.125
-    CHECK(permitted(10136000)); // 30 m: data throughout
-    CHECK(permitted(14074000)); // 20 m
-    CHECK(permitted(18100000)); // 17 m
-    CHECK(permitted(21074000)); // 15 m
-    CHECK(permitted(24915000)); // 12 m
-    CHECK(permitted(28074000)); // 10 m
-    CHECK(permitted(50313000)); // 6 m and up: not restricted here
+    CHECK(permitted(1840000));    // 160 m
+    CHECK(permitted(3573000));    // 80 m
+    CHECK(permitted(5357000));    // 60 m segment
+    CHECK(permitted(7074000));    // 40 m
+    CHECK(permitted(7110000));    // 40 m, 7.100-7.125
+    CHECK(permitted(10136000));   // 30 m
+    CHECK(permitted(14074000));   // 20 m
+    CHECK(permitted(18100000));   // 17 m
+    CHECK(permitted(21074000));   // 15 m
+    CHECK(permitted(24915000));   // 12 m
+    CHECK(permitted(28074000));   // 10 m
+    CHECK(permitted(50313000));   // 6 m
+    CHECK(permitted(144174000));  // 2 m
+    CHECK(permitted(223500000));  // 1.25 m
+    CHECK(permitted(432100000));  // 70 cm
+    CHECK(permitted(903100000));  // 33 cm
+    CHECK(permitted(1296100000)); // 23 cm
 }
 
-// The dial is not where the signal is: a dial within the margin of a phone
-// segment, on either side of it, counts as in it.
-void testTheMarginAroundEachSegment()
+// The dial is not where the signal is: the dial has to be the margin inside
+// a segment, at both ends, for the signal to be inside it.
+void testTheMarginInsideEachSegment()
 {
-    for (const UsPhoneOnlySegment& segment : US_PHONE_ONLY_SEGMENTS)
+    for (const UsDataSegment& segment : US_DATA_SEGMENTS)
     {
+        CHECK(permitted(segment.lowHz + DATA_SEGMENT_MARGIN_HZ));
+        CHECK(permitted(segment.highHz - DATA_SEGMENT_MARGIN_HZ));
+        CHECK(!permitted(segment.lowHz + DATA_SEGMENT_MARGIN_HZ - 1));
+        CHECK(!permitted(segment.highHz - DATA_SEGMENT_MARGIN_HZ + 1));
         CHECK(!permitted(segment.lowHz));
         CHECK(!permitted(segment.highHz));
-        CHECK(!permitted(segment.lowHz - DATA_SEGMENT_MARGIN_HZ));
-        CHECK(!permitted(segment.highHz + DATA_SEGMENT_MARGIN_HZ));
-        CHECK(permitted(segment.lowHz - DATA_SEGMENT_MARGIN_HZ - 1));
-        CHECK(permitted(segment.highHz + DATA_SEGMENT_MARGIN_HZ + 1));
     }
 
     // 14.148 MHz USB puts the signal around 14.1495, right against the edge.
     CHECK(!permitted(14148000));
-    CHECK(permitted(14146900));
+    CHECK(permitted(14147000));
+}
+
+// The four 60 m channels are narrower than the margin, so each is permitted
+// only at its standard USB dial, 1.5 kHz below its centre, give or take a
+// little.
+void testSixtyMetreChannels()
+{
+    for (uint64_t centre : US_60M_DATA_CHANNEL_CENTRES_HZ)
+    {
+        uint64_t dial = centre - CHANNEL_DIAL_BELOW_CENTRE_HZ;
+        CHECK(permitted(dial));
+        CHECK(permitted(dial - CHANNEL_DIAL_TOLERANCE_HZ));
+        CHECK(permitted(dial + CHANNEL_DIAL_TOLERANCE_HZ));
+        CHECK(!permitted(dial - CHANNEL_DIAL_TOLERANCE_HZ - 1));
+        CHECK(!permitted(dial + CHANNEL_DIAL_TOLERANCE_HZ + 1));
+        CHECK(!permitted(centre)); // the dial on the centre puts the signal off it
+    }
+
+    CHECK(permitted(5330500));  // 5.332 MHz channel
+    CHECK(!permitted(5340000)); // between channels
 }
 
 // Not knowing the frequency is not permission.
@@ -128,8 +177,10 @@ void testUnknownFrequencyIsRefused()
 int main()
 {
     testPhoneSegmentsAreRefused();
+    testOutsideTheAmateurBandsIsRefused();
     testDataSegmentsArePermitted();
-    testTheMarginAroundEachSegment();
+    testTheMarginInsideEachSegment();
+    testSixtyMetreChannels();
     testUnknownFrequencyIsRefused();
 
     if (failures > 0)

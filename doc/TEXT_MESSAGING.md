@@ -140,25 +140,40 @@ when we unkeyed, and miss the next burst to arrive.
 ## Where text chat may transmit
 
 Text chat is sent as data. US rules authorise emissions by band segment
-(47 CFR 97.305(c)): below 30 MHz each band has a segment for phone and image
-but not data, and that is where FreeDV voice is usually worked. So, by default,
-text chat transmits only where US rules permit data:
+(47 CFR 97.305(c)), and the segments where FreeDV voice is usually worked
+permit phone but not data. So, by default, text chat transmits only inside a
+US amateur segment where data is authorised:
 
-| Band | Phone segment, no text chat (MHz) |
+| Band | Data segment (MHz) |
 | --- | --- |
-| 75 m | 3.600 - 4.000 |
-| 40 m | 7.125 - 7.300 |
-| 20 m | 14.150 - 14.350 |
-| 17 m | 18.110 - 18.168 |
-| 15 m | 21.200 - 21.450 |
-| 12 m | 24.930 - 24.990 |
-| 10 m | 28.300 - 29.700 |
+| 160 m | 1.800 - 2.000 |
+| 80 m | 3.500 - 3.600 |
+| 60 m | 5.3515 - 5.3665, and the four channels below |
+| 40 m | 7.000 - 7.125 |
+| 30 m | 10.100 - 10.150 |
+| 20 m | 14.000 - 14.150 |
+| 17 m | 18.068 - 18.110 |
+| 15 m | 21.000 - 21.200 |
+| 12 m | 24.890 - 24.930 |
+| 10 m | 28.000 - 28.300 |
+| 6 m | 50.1 - 54.0 |
+| 2 m | 144.1 - 148.0 |
+| 1.25 m | 222 - 225 |
+| 70 cm | 420 - 450 |
+| 33 cm | 902 - 928 |
+| 23 cm | 1240 - 1300 |
 
-The frequency FreeDV knows is the dial, not where the signal sits, so within
-3 kHz of one of these segments counts as in it. 160, 60 and 30 m, the data
-segments of the other bands, and 6 m and up are not restricted. Nor does text
-chat transmit while FreeDV does not know the operating frequency: enable rig
-control, or type the frequency into the main window.
+The frequency FreeDV knows is the dial, not where the signal sits, so the dial
+has to be at least 3 kHz inside one of these segments. The 60 m channels,
+centred on 5.332, 5.348, 5.373 and 5.405 MHz, are narrower than that, so each
+is allowed only at its standard upper sideband dial frequency, 1.5 kHz below
+the centre, within 100 Hz. Everything else is refused: the phone segments,
+frequencies outside the amateur bands, 2200 m and 630 m (which need notice to
+the utilities council before any operation), and 219-220 MHz (fixed digital
+message forwarding only). Text chat also does not transmit while FreeDV does
+not know the operating frequency: enable rig control, or type the frequency
+into the main window. The segments are the emission rules; staying within the
+privileges of your licence class is still up to you.
 
 Where it may not transmit, the chat window says so above the status line, and
 the send and Ping buttons are disabled. Messages, broadcasts and pings are

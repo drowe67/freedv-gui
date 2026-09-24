@@ -641,10 +641,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         sb_textChat, wxID_ANY, _("Transmit only where US rules permit data (47 CFR 97.305)"),
         wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ckboxTextChatUsDataSegmentsOnly->SetToolTip(
-        _("Text chat is sent as data. US rules permit data only outside the HF phone segments, "
-          "where FreeDV voice is usually worked. While this is checked, text chat does not "
-          "transmit within 3 kHz of a phone segment, or while FreeDV does not know the "
-          "operating frequency; it still receives."));
+        _("Text chat is sent as data, and US rules permit data only in certain segments of "
+          "the amateur bands, not the phone segments where FreeDV voice is usually worked. "
+          "While this is checked, text chat transmits only with the dial at least 3 kHz inside "
+          "a US amateur data segment, and not at all while FreeDV does not know the operating "
+          "frequency; it still receives."));
     sbSizer_textChat->Add(m_ckboxTextChatUsDataSegmentsOnly, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 5);
 
     sizerModem->Add(sbSizer_textChat, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);

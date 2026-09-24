@@ -43,34 +43,82 @@ namespace TextMessaging
 {
 
 // The chat's bursts are data emissions, and US rules authorise emissions by
-// band segment (47 CFR 97.305(c)): below 30 MHz, these segments carry phone
-// and image but not data, and they are where FreeDV voice is usually worked.
-// Elsewhere in the MF and HF bands data is authorised; 160 m, 60 m and 30 m
-// permit it throughout. The 75 m edge is 97.301's Region 2 allocation.
-struct UsPhoneOnlySegment
+// band segment (47 CFR 97.305(c)). This is the list of US amateur segments
+// where data is authorised, with the band edges from 97.301(b) where the
+// table says "entire band". Everything not listed is refused: the phone
+// segments where FreeDV voice is usually worked, frequencies outside the
+// amateur bands, and bands left out on purpose -- 2200 m and 630 m, which
+// need notice to the utilities council before any operation (97.303(g)),
+// and 1.25 m's 219-220 MHz, which is for fixed digital message forwarding
+// only. It does not know the operator's licence class; staying within the
+// operator's own privileges is still the operator's business.
+struct UsDataSegment
 {
     uint64_t lowHz;
     uint64_t highHz;
+    const char* band;
 };
 
-inline constexpr UsPhoneOnlySegment US_PHONE_ONLY_SEGMENTS[] = {
-    {3600000, 4000000},   // 75 m
-    {7125000, 7300000},   // 40 m
-    {14150000, 14350000}, // 20 m
-    {18110000, 18168000}, // 17 m
-    {21200000, 21450000}, // 15 m
-    {24930000, 24990000}, // 12 m
-    {28300000, 29700000}, // 10 m
+inline constexpr UsDataSegment US_DATA_SEGMENTS[] = {
+    {1800000, 2000000, "160 m"},
+    {3500000, 3600000, "80 m"},
+    {5351500, 5366500, "60 m"},
+    {7000000, 7125000, "40 m"},
+    {10100000, 10150000, "30 m"},
+    {14000000, 14150000, "20 m"},
+    {18068000, 18110000, "17 m"},
+    {21000000, 21200000, "15 m"},
+    {24890000, 24930000, "12 m"},
+    {28000000, 28300000, "10 m"},
+    {50100000, 54000000, "6 m"},
+    {144100000, 148000000, "2 m"},
+    {222000000, 225000000, "1.25 m"},
+    {420000000, 450000000, "70 cm"},
+    {902000000, 928000000, "33 cm"},
+    {1240000000, 1300000000, "23 cm"},
 };
 
 // The frequency known is the dial; the signal sits an audio offset away from
-// it on either side depending on sideband. Anything within this of a phone
-// segment is treated as in it.
+// it on either side depending on sideband. So the dial has to be this far
+// inside a segment for the transmission to be.
 constexpr uint64_t DATA_SEGMENT_MARGIN_HZ = 3000;
 
+// 60 m also permits data on four channels (97.303(h)), each only 2.8 kHz wide
+// -- narrower than the margin -- and centred on these frequencies. A channel
+// is used in upper sideband with the dial 1.5 kHz below its centre, which puts
+// the chat signal, centred 1.5 kHz up the audio passband, on the centre; the
+// dial has to be that close to right.
+inline constexpr uint64_t US_60M_DATA_CHANNEL_CENTRES_HZ[] = {5332000, 5348000, 5373000, 5405000};
+constexpr uint64_t CHANNEL_DIAL_BELOW_CENTRE_HZ = 1500;
+constexpr uint64_t CHANNEL_DIAL_TOLERANCE_HZ = 100;
+
+inline bool usDataTransmitPermitted(uint64_t dialHz)
+{
+    if (dialHz == 0) return false;
+
+    for (const UsDataSegment& segment : US_DATA_SEGMENTS)
+    {
+        if (dialHz >= segment.lowHz + DATA_SEGMENT_MARGIN_HZ &&
+            dialHz + DATA_SEGMENT_MARGIN_HZ <= segment.highHz)
+        {
+            return true;
+        }
+    }
+
+    for (uint64_t centre : US_60M_DATA_CHANNEL_CENTRES_HZ)
+    {
+        uint64_t dial = centre - CHANNEL_DIAL_BELOW_CENTRE_HZ;
+        uint64_t off = dialHz > dial ? dialHz - dial : dial - dialHz;
+        if (off <= CHANNEL_DIAL_TOLERANCE_HZ) return true;
+    }
+
+    return false;
+}
+
 // Empty if US rules permit a data transmission at this dial frequency;
-// otherwise why not, for the operator. A frequency of zero means FreeDV does
-// not know where the radio is, and nothing is permitted until it does.
+// otherwise why not, for the operator, naming the nearest segment where it
+// would be. A frequency of zero means FreeDV does not know where the radio
+// is, and nothing is permitted until it does.
 inline std::string usDataTransmitRestriction(uint64_t dialHz)
 {
     if (dialHz == 0)
@@ -79,22 +127,29 @@ inline std::string usDataTransmitRestriction(uint64_t dialHz)
                "Enter it in the main window, or enable rig control.";
     }
 
-    uint64_t lowest = dialHz > DATA_SEGMENT_MARGIN_HZ ? dialHz - DATA_SEGMENT_MARGIN_HZ : 0;
-    uint64_t highest = dialHz + DATA_SEGMENT_MARGIN_HZ;
+    if (usDataTransmitPermitted(dialHz)) return "";
 
-    for (const UsPhoneOnlySegment& segment : US_PHONE_ONLY_SEGMENTS)
+    const UsDataSegment* nearest = nullptr;
+    uint64_t nearestDistance = UINT64_MAX;
+    for (const UsDataSegment& segment : US_DATA_SEGMENTS)
     {
-        if (highest < segment.lowHz || lowest > segment.highHz) continue;
-
-        char reason[200];
-        snprintf(reason, sizeof(reason),
-                 "Text chat will not transmit on %.3f MHz: US rules permit data only outside "
-                 "the %.3f-%.3f MHz phone segment (47 CFR 97.305).",
-                 dialHz / 1e6, segment.lowHz / 1e6, segment.highHz / 1e6);
-        return reason;
+        uint64_t distance = dialHz < segment.lowHz    ? segment.lowHz - dialHz
+                            : dialHz > segment.highHz ? dialHz - segment.highHz
+                                                      : 0;
+        if (distance < nearestDistance)
+        {
+            nearest = &segment;
+            nearestDistance = distance;
+        }
     }
 
-    return "";
+    char reason[240];
+    snprintf(reason, sizeof(reason),
+             "Text chat will not transmit on %.3f MHz: US rules permit data only in the amateur "
+             "data segments (47 CFR 97.305), with 3 kHz to spare. The nearest is %.3f-%.3f MHz "
+             "(%s).",
+             dialHz / 1e6, nearest->lowHz / 1e6, nearest->highHz / 1e6, nearest->band);
+    return reason;
 }
 
 } // namespace TextMessaging
