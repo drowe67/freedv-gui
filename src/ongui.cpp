@@ -2102,7 +2102,7 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
     OnChangeReportFrequency(event);
 }
 
-void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
+void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 {    
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -2157,7 +2157,13 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
 
-    updateTextChatTransmitPermission_();
+    // Text chat follows a frequency once it has been entered: on Enter, on a
+    // choice from the list, or when the box loses focus. Not on each keystroke
+    // while it is being typed -- "14.080" passes through 1, 14 and 14.0 MHz on
+    // the way, and each of those would stop chat and discard what it had
+    // queued. With rig control the radio is not retuned until then either.
+    bool stillTyping = event.GetEventType() == wxEVT_TEXT && suppressFreqModeUpdates_;
+    if (!stillTyping) updateTextChatTransmitPermission_();
 
     if (freqStr != oldFreqString)
     {

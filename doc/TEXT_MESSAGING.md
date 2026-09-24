@@ -180,7 +180,11 @@ the send and Ping buttons are disabled. Messages, broadcasts and pings are
 refused; nothing is acknowledged or answered automatically; and anything
 waiting to go out is discarded and marked `NOT SENT`. Receiving carries on, and
 a message already sent can still be acknowledged. The restriction follows the
-frequency and lifts as soon as FreeDV is somewhere data is permitted.
+frequency and lifts as soon as FreeDV is somewhere data is permitted. A
+frequency typed into the main window counts once it has been entered -- on
+Enter, on a choice from the list, or when the box loses focus -- not on each
+keystroke, so typing one does not pass through the frequencies on the way and
+discard what was queued.
 
 Outside the US, uncheck **Transmit only where US rules permit data** in the
 Text Chat group on the Modem tab of **Tools → Options**, and check your own
