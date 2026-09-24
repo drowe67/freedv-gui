@@ -397,6 +397,63 @@ wxString SetupWizard::getAudioComboDevice(wxComboBox* combo)
     return combo->GetValue();
 }
 
+// When no radio device is configured, tries to find a known radio sound device (e.g. the
+// built-in USB codec found in many radios, FlexRadio DAX, QMX) and
+// pre-selects it for both radio RX and TX. The first matching input device
+// wins; the output device must then belong to the same radio type.
+void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
+{
+    struct RadioDeviceMatch
+    {
+        wxString inputMatch;
+        wxString inputMustContain;
+        wxString outputMatch;
+    };
+
+    // All comparisons are case-insensitive.
+    static const std::vector<RadioDeviceMatch> knownDevices = {
+        { "USB AUDIO CODEC",   "",   "USB AUDIO CODEC" },
+        { "USB AUDIO DEVICE",  "",   "USB AUDIO DEVICE" },
+        { "DAX",               "RX", "DAX TX" },
+        { "QMX TRANSCEIVER",   "",   "QMX TRANSCEIVER" },
+    };
+
+    auto deviceText = [](const AudioDeviceSpecification& dev) {
+        return (dev.name + " " + dev.displayName).Upper();
+    };
+
+    auto inputDevices  = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+    auto outputDevices = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+
+    for (auto& inDev : inputDevices)
+    {
+        wxString inText = deviceText(inDev);
+
+        // Skip loopback/monitor sources (e.g. PulseAudio "Monitor of ...")
+        // and DAX IQ streams, neither of which carry receive audio.
+        if (inText.Contains("MONITOR") || inText.Contains("DAX IQ")) continue;
+
+        for (auto& known : knownDevices)
+        {
+            if (!inText.Contains(known.inputMatch)) continue;
+            if (!known.inputMustContain.IsEmpty() && !inText.Contains(known.inputMustContain)) continue;
+
+            for (auto& outDev : outputDevices)
+            {
+                if (deviceText(outDev).Contains(known.outputMatch))
+                {
+                    log_info("Setup wizard: auto-selecting radio devices %s (RX) and %s (TX)",
+                             (const char*)inDev.name.ToUTF8(), (const char*)outDev.name.ToUTF8());
+                    setAudioComboDevice(m_cbRadioIn, inDev.name);
+                    setAudioComboDevice(m_cbRadioOut, outDev.name);
+                    m_ckReceiveOnly->SetValue(false);
+                    return;
+                }
+            }
+        }
+    }
+}
+
 void SetupWizard::populateSerialPorts()
 {
     std::vector<wxString> portList;
@@ -563,6 +620,17 @@ void SetupWizard::loadConfig()
         setAudioComboDevice(m_cbSpeakerOut, sc2out);
         setAudioComboDevice(m_cbMicIn, sc2in);
         setAudioComboDevice(m_cbRadioOut, cfg.audioConfiguration.soundCard1Out.deviceName);
+    }
+
+    // If no radio device has been selected yet (e.g. new installation),
+    // try to find one automatically. Receive-only setups intentionally
+    // have no radio output device, so that doesn't count as missing.
+    auto isUnset = [](const wxString& name) { return name.IsEmpty() || name == "none"; };
+    bool radioInMissing  = isUnset(cfg.audioConfiguration.soundCard1In.deviceName);
+    bool radioOutMissing = !rxOnly && isUnset(cfg.audioConfiguration.soundCard1Out.deviceName);
+    if (radioInMissing || radioOutMissing)
+    {
+        autoSelectRadioDevices(audioEngine.get());
     }
 
     // Page 2: Radio Control — Hamlib
