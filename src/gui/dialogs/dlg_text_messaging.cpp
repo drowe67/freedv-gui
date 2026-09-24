@@ -226,7 +226,9 @@ TextMessagingDialog::TextMessagingDialog(wxWindow* parent, wxWindowID id, const 
     , m_btnSend(nullptr)
     , m_chkAutoReply(nullptr)
     , m_txtStatus(nullptr)
+    , m_txtInhibited(nullptr)
     , m_refreshTimer(this, ID_REFRESH_TIMER)
+    , m_transmitting(false)
     , m_transmitControlsDisabled(false)
     , m_statusKind(StatusKind::Sticky)
     , m_lastAckWait(AckWait::Nothing)
@@ -403,6 +405,13 @@ void TextMessagingDialog::buildControls()
     entrySizer->Add(m_btnSend, 0, wxEXPAND | wxALL, 4);
     mainSizer->Add(entrySizer, 0, wxEXPAND);
 
+    // Why the station may not transmit, while it may not. A line of its own,
+    // so that the ordinary status line cannot write over it.
+    m_txtInhibited = new wxStaticText(this, wxID_ANY, wxEmptyString);
+    m_txtInhibited->SetForegroundColour(wxColour("#E67E22"));
+    m_txtInhibited->Hide();
+    mainSizer->Add(m_txtInhibited, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 4);
+
     wxBoxSizer* bottomSizer = new wxBoxSizer(wxHORIZONTAL);
     m_chkAutoReply = new wxCheckBox(this, ID_AUTO_REPLY,
                                     _("Automatically acknowledge messages and answer pings"));
@@ -444,6 +453,7 @@ void TextMessagingDialog::refreshFromSession()
 
     renderChat();
     refreshStations();
+    updateTransmitControls();
 }
 
 void TextMessagingDialog::setStatus(const wxString& status, StatusKind kind)
@@ -691,7 +701,8 @@ void TextMessagingDialog::updateSelectionControls()
     std::string callsign = selectedCallsign();
     bool selected = !callsign.empty();
 
-    if (m_btnPing->IsEnabled() != selected) m_btnPing->Enable(selected);
+    bool pingable = selected && m_inhibitReason.empty();
+    if (m_btnPing->IsEnabled() != pingable) m_btnPing->Enable(pingable);
 
     wxString label = selected ? wxString::Format(">> %s", wxString::FromUTF8(callsign))
                               : wxString(_(">> Broadcast"));
@@ -903,8 +914,8 @@ void TextMessagingDialog::OnEntryKeyDown(wxKeyEvent& event)
     if (isEnter && !event.ShiftDown())
     {
         // Enter is the send button by another route, so it is held off while
-        // the transmitter is keyed just as the button is. The text stays put;
-        // the status line already says why.
+        // the transmitter is keyed, or may not be used, just as the button is.
+        // The text stays put; the window already says why.
         if (!m_transmitControlsDisabled) send(selectedCallsign());
         return;
     }
@@ -923,27 +934,55 @@ void TextMessagingDialog::OnTimer(wxTimerEvent&)
 // transmitter back when it is actually free.
 void TextMessagingDialog::updateTransmitControls()
 {
-    bool transmitting = TextMessagingSession::instance().protocol().isTransmitting();
-    if (transmitting == m_transmitControlsDisabled) return;
+    auto& protocol = TextMessagingSession::instance().protocol();
 
-    m_transmitControlsDisabled = transmitting;
-    m_btnSend->Enable(!transmitting);
+    // Somewhere the station may not send data: say so, on its own line.
+    std::string reason = protocol.transmitInhibitedReason();
+    if (reason != m_inhibitReason)
+    {
+        m_inhibitReason = reason;
+        m_txtInhibited->SetLabel(
+            reason.empty() ? wxString()
+                           : wxString::Format(_("Receive only. %s"), wxString::FromUTF8(reason)));
+        m_txtInhibited->Wrap(GetClientSize().GetWidth() - 16);
+        m_txtInhibited->Show(!reason.empty());
+        updateSelectionControls();
+        Layout();
+
+        if (uiLogEnabled())
+        {
+            log_info("UI: %s", reason.empty() ? "transmitting permitted again"
+                                              : ("receive only: " + reason).c_str());
+        }
+    }
 
     // Whatever was queued is on the air now, so a notice saying it is waiting
     // has become a lie. The chat pane's delivery chip carries on from here.
-    if (transmitting)
+    bool transmitting = protocol.isTransmitting();
+    if (transmitting != m_transmitting)
     {
-        setStatus(_("Transmitting..."), StatusKind::Activity);
+        m_transmitting = transmitting;
+        if (transmitting)
+        {
+            setStatus(_("Transmitting..."), StatusKind::Activity);
+        }
+        else if (m_statusKind == StatusKind::Activity)
+        {
+            setStatus(wxEmptyString);
+        }
     }
-    else if (m_statusKind == StatusKind::Activity)
-    {
-        setStatus(wxEmptyString);
-    }
+
+    bool disabled = transmitting || !m_inhibitReason.empty();
+    if (disabled == m_transmitControlsDisabled) return;
+
+    m_transmitControlsDisabled = disabled;
+    m_btnSend->Enable(!disabled);
 
     if (uiLogEnabled())
     {
-        log_info("UI: send button %s", transmitting ? "disabled, transmitter keyed"
-                                                    : "enabled, transmitter free");
+        log_info("UI: send button %s", !disabled      ? "enabled, transmitter free"
+                                       : transmitting ? "disabled, transmitter keyed"
+                                                      : "disabled, receive only");
     }
 }
 

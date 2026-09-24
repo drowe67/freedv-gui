@@ -393,6 +393,11 @@ class MainFrame : public TopFrame
     // Keys and unkeys the radio for a text messaging burst. Called on the GUI
     // thread; see startTextMessaging_().
     void setTextMessagingPtt_(bool keyed);
+
+    // Keeps text chat off the air where the operator's preference says it may
+    // not send data. Call whenever the frequency or that preference changes.
+    void updateTextChatTransmitPermission_();
+
     void startTextMessaging_();
     void stopTextMessaging_();
 

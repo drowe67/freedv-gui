@@ -137,6 +137,40 @@ every burst of ours they are put back to searching for a preamble; left alone,
 a receiver that was locked onto a burst when we keyed would still think so
 when we unkeyed, and miss the next burst to arrive.
 
+## Where text chat may transmit
+
+Text chat is sent as data. US rules authorise emissions by band segment
+(47 CFR 97.305(c)): below 30 MHz each band has a segment for phone and image
+but not data, and that is where FreeDV voice is usually worked. So, by default,
+text chat transmits only where US rules permit data:
+
+| Band | Phone segment, no text chat (MHz) |
+| --- | --- |
+| 75 m | 3.600 - 4.000 |
+| 40 m | 7.125 - 7.300 |
+| 20 m | 14.150 - 14.350 |
+| 17 m | 18.110 - 18.168 |
+| 15 m | 21.200 - 21.450 |
+| 12 m | 24.930 - 24.990 |
+| 10 m | 28.300 - 29.700 |
+
+The frequency FreeDV knows is the dial, not where the signal sits, so within
+3 kHz of one of these segments counts as in it. 160, 60 and 30 m, the data
+segments of the other bands, and 6 m and up are not restricted. Nor does text
+chat transmit while FreeDV does not know the operating frequency: enable rig
+control, or type the frequency into the main window.
+
+Where it may not transmit, the chat window says so above the status line, and
+the send and Ping buttons are disabled. Messages, broadcasts and pings are
+refused; nothing is acknowledged or answered automatically; and anything
+waiting to go out is discarded and marked `NOT SENT`. Receiving carries on, and
+a message already sent can still be acknowledged. The restriction follows the
+frequency and lifts as soon as FreeDV is somewhere data is permitted.
+
+Outside the US, uncheck **Transmit only where US rules permit data** in the
+Text Chat group on the Modem tab of **Tools → Options**, and check your own
+administration's rules.
+
 ## How it works on the air
 
 Text messaging does not travel inside RADE. It uses the codec2 raw data

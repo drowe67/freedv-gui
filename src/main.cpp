@@ -64,6 +64,7 @@
 #include "pipeline/TextMessagingTransport.h"
 #include "pipeline/TextMessagingTxQueue.h"
 #include "text_messaging/TextMessagingSession.h"
+#include "text_messaging/UsDataSegments.h"
 #include "gui/util/WindowPositionRestore.h"
 #include "gui/util/TabLayoutSerializer.h"
 
@@ -1748,6 +1749,43 @@ void MainFrame::startTextMessaging_()
 
     session.protocol().setMyCallsign(
         wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString());
+
+    updateTextChatTransmitPermission_();
+}
+
+//-------------------------------------------------------------------------
+// updateTextChatTransmitPermission_(): with the preference on, text chat
+// transmits only where US rules permit data. The frequency is the one FreeDV
+// already keeps: the rig's when rig control reports it, otherwise the one
+// typed into the main window, and zero while neither has said.
+//-------------------------------------------------------------------------
+void MainFrame::updateTextChatTransmitPermission_()
+{
+    // The frequency box passes through zero while the window is being built,
+    // before text chat has started; startTextMessaging_() applies the real
+    // frequency when it does.
+    if (m_textMessagingTransport == nullptr) return;
+
+    std::string reason;
+    if (wxGetApp().appConfiguration.textChatUsDataSegmentsOnly)
+    {
+        reason = TextMessaging::usDataTransmitRestriction(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+    }
+
+    auto& protocol = TextMessaging::TextMessagingSession::instance().protocol();
+    if (reason == protocol.transmitInhibitedReason()) return;
+
+    if (reason.empty())
+    {
+        log_info("Text chat may transmit again");
+    }
+    else
+    {
+        log_info("Text chat transmit inhibited: %s", reason.c_str());
+    }
+
+    protocol.setTransmitInhibited(reason);
 }
 
 //-------------------------------------------------------------------------

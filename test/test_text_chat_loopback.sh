@@ -24,6 +24,12 @@ WORKDIR="${FREEDV_TEXT_CHAT_WORKDIR:-$(pwd)/text_chat_loopback}"
 # CPU starved dropout does not get mistaken for a protocol bug.
 FREEDV_TEST_MODE="${FREEDV_TEST_MODE:-257}"
 
+# Text chat transmits only where US rules permit data, and not at all while the
+# frequency is unknown, which it is with no rig control and nothing typed in.
+# Nothing here reaches the air, so both stations claim a 20 m data segment
+# frequency; set a phone segment one, such as 14236000, to see the guard.
+FREEDV_TEXT_CHAT_FREQUENCY_HZ="${FREEDV_TEXT_CHAT_FREQUENCY_HZ:-14080000}"
+
 # Deliberately not anybody's callsign: this never reaches the air, and a real
 # one has no business being a default in a public repository. The portable
 # suffix is on purpose, since it exercises the base 40 packing that carries "/"
@@ -88,6 +94,7 @@ writeStationConfig () {
         -e "s|@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@|$spkout|g" \
         -e "s|@FREEDV_CALLSIGN@|$callsign|g" \
         -e "s|@FREEDV_TEST_MODE@|$FREEDV_TEST_MODE|g" \
+        -e "s|@FREEDV_FREQUENCY_HZ@|$FREEDV_TEXT_CHAT_FREQUENCY_HZ|g" \
         "$SCRIPTPATH/freedv-text-chat-station.conf.tmpl" > "$dir/freedv.conf"
 }
 

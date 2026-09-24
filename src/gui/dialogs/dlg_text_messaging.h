@@ -136,11 +136,15 @@ private:
     wxButton* m_btnSend;
     wxCheckBox* m_chkAutoReply;
     wxStaticText* m_txtStatus;
+    wxStaticText* m_txtInhibited;
     wxTimer m_refreshTimer;
 
-    // Remembered so the one second timer only touches the buttons when the
-    // transmitter's state actually changes, rather than on every tick.
+    // Remembered so the one second timer only touches the controls when the
+    // transmitter's state, or whether it may be used, actually changes,
+    // rather than on every tick.
+    bool m_transmitting;
     bool m_transmitControlsDisabled;
+    std::string m_inhibitReason;
     StatusKind m_statusKind;
     TextMessaging::AckWait m_lastAckWait;
 

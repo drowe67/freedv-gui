@@ -262,6 +262,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 
         // Update reporting list.
         updateReportingFreqList_();
+
+        // The text chat preference may have changed.
+        updateTextChatTransmitPermission_();
     
         // Show/hide frequency box based on CAT control configuration.
         m_freqBox->Show(isFrequencyControlEnabled_());
@@ -575,6 +578,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // here.
             auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+            updateTextChatTransmitPermission_();
             if (oldFreq != newFreq)
             {
                 for (auto& ptr : wxGetApp().m_reporters)
@@ -2152,6 +2156,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
+
+    updateTextChatTransmitPermission_();
 
     if (freqStr != oldFreqString)
     {
