@@ -631,7 +631,21 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
     // Nominal period in 100ns units -- matches what SetWaitableTimer expects,
     // and lets the compensation below track sub-millisecond amounts instead
     // of being rounded down to whole milliseconds.
-    int64_t nominalHns = ((10000000LL * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0);
+    //
+    // The nominal wait is the audio event period itself (BLOCK_TIME_NS, the
+    // period passed to IAudioClient::Initialize()), halved in fast mode --
+    // the same quantity MacAudioDevice derives from its packet frame size
+    // and PulseAudioDevice from its 20ms target latency. The semaphore
+    // normally wakes us early on every capture packet; this value only
+    // bounds how long we sit out when signals are missed or coalesced.
+    //
+    // The previous formula, (10ms * bufferFrameCount_) / sampleRate_, scaled
+    // with the device's *maximum* buffer duration, which is device-dependent:
+    // sub-millisecond to a few milliseconds on typical buffers (collapsing
+    // the wait into a spin loop at CRITICAL priority) and far longer on
+    // devices with large max buffers (delaying recovery from a missed
+    // semaphore signal long enough for the output FIFO to run dry).
+    int64_t nominalHns = BLOCK_TIME_NS >> (fastMode ? 1 : 0);
 
     // Compensate for how much of the period THIS cycle's own processing
     // already used, measured directly against startTime_ (set by
@@ -671,7 +685,16 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
         ntQueryTimerResolution(&minResHns, &maxResHns, &curResHns) >= 0 &&
         curResHns > 0)
     {
-        int64_t sleepHns = hns - (int64_t)curResHns;
+        // Spin for at most the last tick of the OS's current timer
+        // resolution. If the resolution is coarser than the entire wait
+        // (e.g. the 1ms timeBeginPeriod() grant was lost and curResHns is
+        // the ~15.6ms default), there is no tick leftover to correct: a
+        // blocking wait is as precise as it's going to get, and spinning
+        // the full duration at CRITICAL priority would only starve the
+        // audio threads this one is trying to protect.
+        int64_t spinHns = (hns < (int64_t)curResHns) ? hns : (int64_t)curResHns;
+        int64_t sleepHns = hns - spinHns;
+
         if (sleepHns > 0)
         {
             DWORD sleepMs = (DWORD)(sleepHns / 10000); // 100ns units -> ms, rounded down
@@ -679,19 +702,29 @@ void WASAPIAudioDevice::stopRealTimeWork(bool fastMode)
             {
                 signaledEarly = true;
             }
-        }
 
-        if (!signaledEarly)
-        {
-            auto dueTime = waitStartTime + std::chrono::nanoseconds(hns * 100);
-            while (std::chrono::steady_clock::now() < dueTime)
+            if (!signaledEarly)
             {
-                if (WaitForSingleObject(semaphore_, 0) == WAIT_OBJECT_0)
+                auto dueTime = waitStartTime + std::chrono::nanoseconds(hns * 100);
+                while (std::chrono::steady_clock::now() < dueTime)
                 {
-                    signaledEarly = true;
-                    break;
+                    if (WaitForSingleObject(semaphore_, 0) == WAIT_OBJECT_0)
+                    {
+                        signaledEarly = true;
+                        break;
+                    }
+                    YieldProcessor();
                 }
-                YieldProcessor();
+            }
+        }
+        else if (!signaledEarly)
+        {
+            // Wait shorter than one timer tick: round to the nearest ms and
+            // block; the scheduler wakes us on the enclosing tick anyway.
+            DWORD waitMs = (DWORD)((hns + 5000) / 10000);
+            if (WaitForSingleObject(semaphore_, waitMs) == WAIT_OBJECT_0)
+            {
+                signaledEarly = true;
             }
         }
     }
