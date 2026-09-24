@@ -1133,7 +1133,7 @@ class="header-section-number">19.1</span> V3.0.0 TBD 2026</h2>
 <li>RADEV2: Standardize mode as USB. (PR #1397, #1454) - thanks <span
 class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Combine all configuration into Settings-&gt;Edit Settings. (PR
-#1418)</li>
+#1418, #1511)</li>
 <li>Rework Easy Setup window into new Setup Wizard. (PR #1418,
 #1432)</li>
 <li>Add ability to record both the raw and decoded RX audio. (PR
@@ -1174,12 +1174,17 @@ synchronises. (PR #1482)</li>
 <li>Fix crash when testing Easy Setup with an invalid audio
 configuration. (PR #1500)</li>
 <li>Various data race cleanups. (PR #1502)</li>
+<li>Avoid page cache miss on startup when loading RADE. (PR #1506)</li>
+<li>Stop playback of RX file before TX start. (PR #1507)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Windows versions are now built with llvm-mingw 20260908 (PR
 #1489)</li>
-<li>Ccache support extended to third party dependencies. (PR #1498)</li>
+<li>Ccache support extended to third party dependencies. (PR #1498,
+#1505))</li>
+<li>Fix bundled libsndfile build on lib64 systems and strncpy build
+error. (PR #1510)</li>
 </ul></li>
 <li>Other:
 <ul>
