@@ -265,6 +265,10 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = wxString::FromUTF8(i->name);
+            if (i->description != nullptr)
+            {
+                device.displayName = wxString::FromUTF8(i->description);
+            }
             device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
@@ -289,6 +293,10 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = wxString::FromUTF8(i->name);
+            if (i->description != nullptr)
+            {
+                device.displayName = wxString::FromUTF8(i->description);
+            }
             device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
@@ -338,6 +346,22 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
         if (tempObj.cardResult.find(obj.cardIndex) != tempObj.cardResult.end())
         {
             obj.cardName = wxString::FromUTF8(tempObj.cardResult[obj.cardIndex].c_str());
+        }
+    }
+
+    // PulseAudio/PipeWire descriptions aren't guaranteed to be unique (e.g. two
+    // identical USB sound cards). Append the internal name to any duplicates so
+    // that the user can tell them apart.
+    std::map<wxString, int> displayNameCounts;
+    for (auto& obj : tempObj.result)
+    {
+        displayNameCounts[obj.getDisplayName()]++;
+    }
+    for (auto& obj : tempObj.result)
+    {
+        if (displayNameCounts[obj.getDisplayName()] > 1)
+        {
+            obj.displayName = wxString::Format("%s (%s)", obj.getDisplayName(), obj.name);
         }
     }
     

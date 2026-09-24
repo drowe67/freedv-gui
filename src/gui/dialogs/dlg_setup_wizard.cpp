@@ -365,9 +365,36 @@ void SetupWizard::populateAudioCombo(wxComboBox* combo, IAudioEngine::AudioDirec
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->start();
     for (auto& dev : engine->getAudioDeviceList(dir))
-        combo->Append(dev.name);
-    combo->Append("none");
+        combo->Append(dev.getDisplayName(), new wxStringClientData(dev.name));
+    combo->Append("none", new wxStringClientData("none"));
     engine->stop();
+}
+
+// Selects the entry for the given internal (config) device name; the combo
+// box itself displays the device's user-friendly name.
+void SetupWizard::setAudioComboDevice(wxComboBox* combo, const wxString& devName)
+{
+    for (unsigned int i = 0; i < combo->GetCount(); i++)
+    {
+        auto data = static_cast<wxStringClientData*>(combo->GetClientObject(i));
+        if (data != nullptr && data->GetData().IsSameAs(devName))
+        {
+            combo->SetSelection(i);
+            return;
+        }
+    }
+    combo->SetValue(devName);
+}
+
+wxString SetupWizard::getAudioComboDevice(wxComboBox* combo)
+{
+    int sel = combo->GetSelection();
+    if (sel != wxNOT_FOUND)
+    {
+        auto data = static_cast<wxStringClientData*>(combo->GetClientObject(sel));
+        if (data != nullptr) return data->GetData();
+    }
+    return combo->GetValue();
 }
 
 void SetupWizard::populateSerialPorts()
@@ -506,7 +533,7 @@ void SetupWizard::loadConfig()
     audioEngine->start();
 
     // Page 0: Receive Audio
-    m_cbRadioIn->SetValue(cfg.audioConfiguration.soundCard1In.deviceName);
+    setAudioComboDevice(m_cbRadioIn, cfg.audioConfiguration.soundCard1In.deviceName);
 
     // Page 1: Transmit Audio
     // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
@@ -525,17 +552,17 @@ void SetupWizard::loadConfig()
             auto def = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
             if (def.isValid()) spk = def.name;
         }
-        m_cbSpeakerOut->SetValue(spk);
+        setAudioComboDevice(m_cbSpeakerOut, spk);
         // Pre-fill microphone with system default so the user sees a sensible suggestion
         auto def = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
-        if (def.isValid()) m_cbMicIn->SetValue(def.name);
+        if (def.isValid()) setAudioComboDevice(m_cbMicIn, def.name);
     }
     else
     {
         // 2-card: SC2Out is speakers, SC1Out is radio TX
-        m_cbSpeakerOut->SetValue(sc2out);
-        m_cbMicIn->SetValue(sc2in);
-        m_cbRadioOut->SetValue(cfg.audioConfiguration.soundCard1Out.deviceName);
+        setAudioComboDevice(m_cbSpeakerOut, sc2out);
+        setAudioComboDevice(m_cbMicIn, sc2in);
+        setAudioComboDevice(m_cbRadioOut, cfg.audioConfiguration.soundCard1Out.deviceName);
     }
 
     // Page 2: Radio Control — Hamlib
@@ -591,8 +618,8 @@ void SetupWizard::saveConfig()
 
     // Mapping: 1-card (receive-only): SC1Out = speakers, SC2* = "none"
     //          2-card (RX+TX):        SC1Out = radio TX, SC2Out = speakers
-    wxString sc1in = m_cbRadioIn->GetValue();
-    wxString spk   = m_cbSpeakerOut->GetValue();
+    wxString sc1in = getAudioComboDevice(m_cbRadioIn);
+    wxString spk   = getAudioComboDevice(m_cbSpeakerOut);
 
     cfg.audioConfiguration.soundCard1In.deviceName = sc1in;
     int r;
@@ -611,8 +638,8 @@ void SetupWizard::saveConfig()
     else
     {
         // 2-card: SC1Out = radio TX, SC2Out = speakers
-        wxString radioTx = m_cbRadioOut->GetValue();
-        wxString sc2in   = m_cbMicIn->GetValue();
+        wxString radioTx = getAudioComboDevice(m_cbRadioOut);
+        wxString sc2in   = getAudioComboDevice(m_cbMicIn);
         cfg.audioConfiguration.soundCard1Out.deviceName = radioTx;
         r = getSampleRate(radioTx, IAudioEngine::AUDIO_ENGINE_OUT);
         if (r > 0) cfg.audioConfiguration.soundCard1Out.sampleRate = r;

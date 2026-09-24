@@ -89,6 +89,8 @@ private:
 
     // Helpers
     void populateAudioCombo(wxComboBox* combo, IAudioEngine::AudioDirection dir);
+    static void setAudioComboDevice(wxComboBox* combo, const wxString& devName);
+    static wxString getAudioComboDevice(wxComboBox* combo);
     void populateSerialPorts();
     void populateBaudRates(int rigIndex = -1);
     void loadConfig();
