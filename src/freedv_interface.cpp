@@ -68,7 +68,6 @@ FreeDVInterface::~FreeDVInterface()
     if (isRunning()) stop();
 }
 
-
 void FreeDVInterface::OnRadeTextRx_(rade_text_t, const char* txt_ptr, int, void* state) 
 {
     log_info("FreeDVInterface::OnRadeTextRx_: received %s", txt_ptr);
