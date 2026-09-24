@@ -944,6 +944,10 @@ void TextMessagingDialog::updateTransmitControls()
         m_txtInhibited->SetLabel(
             reason.empty() ? wxString()
                            : wxString::Format(_("Receive only. %s"), wxString::FromUTF8(reason)));
+        // wxWidgets 3.3 skips a Wrap() to the width it last wrapped at, even
+        // when the label has changed since, which left the next reason on one
+        // line cut off at the window edge. Wrap(-1), no wrapping, resets that.
+        m_txtInhibited->Wrap(-1);
         m_txtInhibited->Wrap(GetClientSize().GetWidth() - 16);
         m_txtInhibited->Show(!reason.empty());
         updateSelectionControls();
