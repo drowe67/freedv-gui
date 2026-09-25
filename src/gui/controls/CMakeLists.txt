@@ -7,6 +7,13 @@ add_library(fdv_gui_controls STATIC
     ReportMessageRenderer.cpp
     MsgListPopup.cpp)
 
+if(APPLE)
+    target_sources(fdv_gui_controls PRIVATE plot_waterfall_osx.mm)
+
+    # wx/defs.h names the deprecated NSOpenGL* types when compiled as Objective-C++.
+    set_source_files_properties(plot_waterfall_osx.mm PROPERTIES COMPILE_OPTIONS -Wno-deprecated-declarations)
+endif(APPLE)
+
 target_include_directories(fdv_gui_controls PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 add_dependencies(fdv_gui_controls codec2)
 target_compile_options(fdv_gui_controls PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})

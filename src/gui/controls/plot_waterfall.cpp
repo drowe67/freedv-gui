@@ -29,6 +29,10 @@
 #include "plot_waterfall.h"
 #include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
+#if defined(__APPLE__)
+wxGraphicsBitmap CreateWaterfallBitmapInWindowColorSpace(wxGraphicsContext* gc, wxWindow* window, const wxImage& image);
+#endif // defined(__APPLE__)
+
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
@@ -612,7 +616,11 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
         // the screen.
         WaterfallSlice slice;
         slice.height = dy;
+#if defined(__APPLE__)
+        slice.gfxBitmap = CreateWaterfallBitmapInWindowColorSpace(gc, this, scaledImage);
+#else
         slice.gfxBitmap = gc->CreateBitmapFromImage(scaledImage);
+#endif // defined(__APPLE__)
 
         if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
         {
