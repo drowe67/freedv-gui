@@ -641,12 +641,35 @@ void SetupWizard::importSettings(const ImportSource& source)
     // in a Qt @Variant(), so just look for the enum name.
     wxString rigName   = readQtIniString(ini, "Rig");
     wxString pttMethod = readQtIniString(ini, "PTTMethod");
-    // WSJT-X keeps both serial and network port settings around, so use
-    // whichever one applies to the selected rig.
-    bool networkRig    = rigName.Contains("NET rigctl") || rigName.StartsWith("FLRig");
-    wxString catPort   = readQtIniString(ini, networkRig ? "CATNetworkPort" : "CATSerialPort");
     wxString pttPort   = readQtIniString(ini, "PTTport");
-    long catRate       = ini.ReadLong("CATSerialRate", 0);
+    int rigIndex       = HamlibRigController::RigNameToIndex(std::string(rigName.ToUTF8()));
+
+    // WSJT-X keeps serial, USB and network port settings around, so use
+    // whichever one applies to the selected rig's Hamlib port type (as
+    // WSJT-X itself does).
+    auto portType = (rigIndex >= 0)
+        ? HamlibRigController::GetRigPortType(rigIndex)
+        : HamlibRigController::PORT_SERIAL;
+    wxString catPort;
+    long catRate = 0;
+    if (portType == HamlibRigController::PORT_NETWORK)
+    {
+        catPort = readQtIniString(ini, "CATNetworkPort");
+
+        // WSJT-X leaves this blank to use Hamlib's default (e.g. localhost:4532),
+        // but FreeDV always passes the port to Hamlib.
+        if (catPort.IsEmpty())
+            catPort = wxString::FromUTF8(HamlibRigController::GetDefaultRigPathname(rigIndex).c_str());
+    }
+    else if (portType == HamlibRigController::PORT_USB)
+    {
+        catPort = readQtIniString(ini, "CATUSBPort");
+    }
+    else
+    {
+        catPort = readQtIniString(ini, "CATSerialPort");
+        catRate = ini.ReadLong("CATSerialRate", 0);
+    }
 
     bool pttCat = pttMethod.Contains("PTT_method_CAT");
     bool pttDtr = pttMethod.Contains("PTT_method_DTR");
@@ -656,7 +679,6 @@ void SetupWizard::importSettings(const ImportSource& source)
     if (pttPort.IsSameAs("CAT", false) || pttPort == catPort)
         pttPort = wxEmptyString;
 
-    int rigIndex = HamlibRigController::RigNameToIndex(std::string(rigName.ToUTF8()));
     if (rigIndex >= 0 && rigName != "None")
     {
         m_ckHamlib->SetValue(true);
@@ -667,8 +689,7 @@ void SetupWizard::importSettings(const ImportSource& source)
         m_cbRigName->SetSelection(rigIndex);
         populateBaudRates(rigIndex);
         m_cbSerialPort->SetValue(catPort);
-        if (catRate > 0)
-            m_cbSerialRate->SetValue(wxString::Format("%ld", catRate));
+        m_cbSerialRate->SetValue((catRate > 0) ? wxString::Format("%ld", catRate) : wxString("default"));
 
         HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_NONE;
         if (pttCat) pttType = HamlibRigController::PTT_VIA_CAT;

@@ -67,6 +67,10 @@ public:
     static int GetNumberSupportedRadios();
     static int GetMinimumSerialBaudRate(unsigned int rigIndex);
     static int GetMaximumSerialBaudRate(unsigned int rigIndex);
+
+    enum PortType { PORT_SERIAL, PORT_NETWORK, PORT_USB, PORT_OTHER };
+    static PortType GetRigPortType(unsigned int rigIndex);
+    static std::string GetDefaultRigPathname(unsigned int rigIndex);
     
     virtual int getRigResponseTimeMicroseconds() override;
 
