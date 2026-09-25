@@ -441,7 +441,7 @@ wxString SetupWizard::getAudioComboDevice(wxComboBox* combo)
 
 // When no radio device is configured, tries to find a known radio sound device (e.g. the
 // built-in USB codec found in many radios, FlexRadio DAX, QMX) and
-// pre-selects it for both radio RX and TX. The first matching input device
+// selects it for both radio RX and TX. The first matching input device
 // wins; the output device must then belong to the same radio type.
 void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
 {
@@ -623,18 +623,18 @@ void SetupWizard::importSettings(const ImportSource& source)
     auto outputDevices = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
     engine->stop();
 
-    wxString soundIn  = readQtIniString(ini, "SoundInName");
-    wxString soundOut = readQtIniString(ini, "SoundOutName");
-    bool foundIn  = selectImportedAudioDevice(m_cbRadioIn, soundIn, inputDevices);
-    bool foundOut = selectImportedAudioDevice(m_cbRadioOut, soundOut, outputDevices);
-    if (foundOut)
+    wxString radioInName  = readQtIniString(ini, "SoundInName");
+    wxString radioOutName = readQtIniString(ini, "SoundOutName");
+    bool radioInFound  = selectImportedAudioDevice(m_cbRadioIn, radioInName, inputDevices);
+    bool radioOutFound = selectImportedAudioDevice(m_cbRadioOut, radioOutName, outputDevices);
+    if (radioOutFound)
     {
         m_ckReceiveOnly->SetValue(false);
         updateTxState();
     }
-    if (foundIn || foundOut)
+    if (radioInFound || radioOutFound)
         imported.Add(_("radio audio devices"));
-    if ((!soundIn.IsEmpty() && !foundIn) || (!soundOut.IsEmpty() && !foundOut))
+    if ((!radioInName.IsEmpty() && !radioInFound) || (!radioOutName.IsEmpty() && !radioOutFound))
         notImported.Add(_("radio audio devices (not currently connected)"));
 
     // Rig control. PTTMethod may be stored as a plain enum name or wrapped
