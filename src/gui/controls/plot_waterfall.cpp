@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <memory>
 
 #include <wx/wx.h>
 #include "os/os_interface.h"
@@ -52,6 +53,7 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
     EVT_KEY_DOWN        (PlotWaterfall::OnKeyDown)
+    EVT_SYS_COLOUR_CHANGED(PlotWaterfall::OnSysColourChanged)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -92,6 +94,8 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int
     tmpImage_ = nullptr;
     leftOffset_ = 0;
     graticuleLabelsValid_ = false;
+    graticuleBitmapScale_ = 0;
+    graticuleBitmapValid_ = false;
 
     SetLabelSize(10.0);
 
@@ -139,6 +143,7 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     // Label positions depend on the geometry we just recalculated.
     graticuleLabelsValid_ = false;
+    graticuleBitmapValid_ = false;
 
     m_dT = DT;
 
@@ -364,9 +369,167 @@ void PlotWaterfall::rebuildGraticuleLabels_()
 }
 
 //-------------------------------------------------------------------------
+// OnSysColourChanged()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnSysColourChanged(wxSysColourChangedEvent& event)
+{
+    // The cached graticule uses the system text colour (e.g. light/dark mode).
+    graticuleBitmapValid_ = false;
+    Refresh();
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
+// rebuildGraticuleBitmaps_()
+//-------------------------------------------------------------------------
+void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
+{
+    double scale = GetContentScaleFactor();
+    wxSize size = GetClientSize();
+    size.SetWidth(std::max(1, size.GetWidth()));
+    size.SetHeight(std::max(1, size.GetHeight()));
+
+    // Render the whole graticule once, on the same background OnPaint() clears to
+    // and at the display's pixel density, then keep just the margins.
+    wxBitmap bitmap;
+    bitmap.CreateWithDIPSize(size, scale);
+    {
+        wxMemoryDC dc(bitmap);
+        dc.SetBackground(wxBrush(GetBackgroundColour()));
+        dc.Clear();
+
+        std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
+        drawStaticGraticule_(gc.get());
+    }
+    wxImage image = bitmap.ConvertToImage();
+
+    int dataX0 = PLOT_BORDER + leftOffset_;
+    int dataY0 = PLOT_BORDER + YBOTTOM_OFFSET;
+    auto toPixels = [&](int v, int limit) { return std::clamp((int)std::lround(v * scale), 1, limit); };
+    int topHeightPx = toPixels(dataY0, image.GetHeight());
+    wxImage top = image.GetSubImage(wxRect(0, 0, image.GetWidth(), topHeightPx));
+    wxImage left = image.GetSubImage(wxRect(
+        0, topHeightPx,
+        toPixels(dataX0, image.GetWidth()), std::max(1, image.GetHeight() - topHeightPx)));
+
+#if defined(__APPLE__)
+    graticuleTop_ = CreateWaterfallBitmapInWindowColorSpace(ctx, this, top);
+    graticuleLeft_ = CreateWaterfallBitmapInWindowColorSpace(ctx, this, left);
+#else
+    graticuleTop_ = ctx->CreateBitmapFromImage(top);
+    graticuleLeft_ = ctx->CreateBitmapFromImage(left);
+#endif // defined(__APPLE__)
+
+    graticuleBitmapScale_ = scale;
+    graticuleBitmapValid_ = true;
+}
+
+//-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
 void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
+{
+    // The scale changes when the window moves to a display with a different density.
+    if (!graticuleBitmapValid_ || graticuleBitmapScale_ != GetContentScaleFactor())
+    {
+        rebuildGraticuleBitmaps_(ctx);
+    }
+
+    wxSize size = GetClientSize();
+    int dataX0 = PLOT_BORDER + leftOffset_;
+    int dataY0 = PLOT_BORDER + YBOTTOM_OFFSET;
+    ctx->DrawBitmap(graticuleTop_, 0, 0, size.GetWidth(), dataY0);
+    ctx->DrawBitmap(graticuleLeft_, 0, dataY0, dataX0, std::max(1, size.GetHeight() - dataY0));
+
+    drawDataGridlines_(ctx);
+
+    float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
+    
+    float sum = 0.0;
+    for (auto& f : rxOffsets_)
+    {
+        sum += f;
+    }
+    float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
+    
+    if (m_rxFreq != 0.0) {
+        int x;
+
+        // get average offset and draw sync tuning line
+        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+        x += PLOT_BORDER + leftOffset_;
+        ctx->StrokeLine(x, 0, x, verticalBarLength);
+    
+        // red rx tuning line
+        ctx->SetPen(wxPen(RED_COLOR, 3));
+        x = m_rxFreq*freq_hz_to_px;
+        x += PLOT_BORDER + leftOffset_;
+        ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
+    }
+}
+
+//-------------------------------------------------------------------------
+// drawDataGridlines_()
+//
+// The parts of drawStaticGraticule_() that lie over the waterfall itself, which
+// changes every frame. Clipped to the waterfall so the margins keep their cached
+// pixels exactly.
+//-------------------------------------------------------------------------
+void PlotWaterfall::drawDataGridlines_(wxGraphicsContext* ctx)
+{
+    int dataX0   = PLOT_BORDER + leftOffset_;
+    int dataY0   = PLOT_BORDER + YBOTTOM_OFFSET;
+    int dataYEnd = dataY0 + m_imgHeight;
+    float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+
+    ctx->PushState();
+    ctx->Clip(dataX0, dataY0, m_imgWidth, m_imgHeight);
+
+    // Major vertical gridlines and the Y axis ticks share a pen, so stroke them as one path.
+    wxGraphicsPath path = ctx->CreatePath();
+    if (m_graticule)
+    {
+        for (float f = STEP_F_HZ; f < MAX_F_HZ; f += STEP_F_HZ)
+        {
+            int x = f*freq_hz_to_px + dataX0;
+            path.MoveToPoint(x, m_imgHeight + PLOT_BORDER);
+            path.AddLineToPoint(x, PLOT_BORDER);
+        }
+    }
+    float time = 0;
+    for (int y = dataY0; y < dataYEnd; time += 1.0f, y += Y_PER_SECOND)
+    {
+        bool isMajor = (fmodf(time, (float)WATERFALL_SECS_STEP) < 0.5f);
+        path.MoveToPoint(dataX0, y);
+        path.AddLineToPoint(dataX0 + (isMajor ? 8 : 4), y);
+    }
+    ctx->SetPen(wxPen(foregroundColor, 1));
+    ctx->StrokePath(path);
+
+    // Horizontal gridlines at 5s intervals (graticule mode only). Stroked separately
+    // so each starts its dash pattern afresh, as before.
+    if (m_graticule)
+    {
+        ctx->SetPen(m_penDotDash);
+        for (int y = dataY0; y < dataYEnd; y += Y_PER_SECOND * WATERFALL_SECS_STEP)
+        {
+            ctx->StrokeLine(dataX0, y, m_rGrid.GetWidth() + dataX0, y);
+        }
+    }
+
+    ctx->PopState();
+}
+
+//-------------------------------------------------------------------------
+// drawStaticGraticule_()
+//
+// Everything in the graticule that doesn't move; the margins of it are cached
+// (see graticuleTop_/graticuleLeft_) and drawDataGridlines_() redraws the rest.
+//-------------------------------------------------------------------------
+void PlotWaterfall::drawStaticGraticule_(wxGraphicsContext* ctx)
 {
     int      x, y;
     float    f, time, freq_hz_to_px;
@@ -447,29 +610,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     {
         ctx->DrawText(label.text, label.x, label.y);
     }
-
-   float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
-   
-   float sum = 0.0;
-   for (auto& f : rxOffsets_)
-   {
-       sum += f;
-   }
-   float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
-   
-   if (m_rxFreq != 0.0) {
-       // get average offset and draw sync tuning line
-        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-        x += PLOT_BORDER + leftOffset_;
-        ctx->StrokeLine(x, 0, x, verticalBarLength);
-   
-       // red rx tuning line
-       ctx->SetPen(wxPen(RED_COLOR, 3));
-       x = m_rxFreq*freq_hz_to_px;
-       x += PLOT_BORDER + leftOffset_;
-       ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
-   }
 }
 
 //-------------------------------------------------------------------------
