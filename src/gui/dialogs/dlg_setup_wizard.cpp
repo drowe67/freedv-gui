@@ -12,6 +12,7 @@
 //==========================================================================
 
 #include <algorithm>
+#include <climits>
 #include <vector>
 
 #include "dlg_setup_wizard.h"
@@ -422,21 +423,53 @@ void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
         return (dev.name + " " + dev.displayName).Upper();
     };
 
+    // Skip loopback/monitor sources (e.g. PulseAudio "Monitor of ...")
+    // and DAX IQ streams, neither of which carry receive audio.
+    auto isInputCandidate = [&](const AudioDeviceSpecification& dev, const RadioDeviceMatch& known) {
+        wxString text = deviceText(dev);
+        if (text.Contains("MONITOR") || text.Contains("DAX IQ")) return false;
+        if (!text.Contains(known.inputMatch)) return false;
+        return known.inputMustContain.IsEmpty() || text.Contains(known.inputMustContain);
+    };
+
+    // Returns the channel number following "RX" (e.g. 1 for "DAX Audio RX 1"),
+    // or INT_MAX if there isn't one.
+    auto rxChannel = [&](const AudioDeviceSpecification& dev) {
+        wxString text = deviceText(dev);
+        int pos = text.Find("RX");
+        if (pos == wxNOT_FOUND) return INT_MAX;
+        wxString rest = text.Mid(pos + 2).Trim(false);
+        wxString digits;
+        for (auto ch : rest)
+        {
+            if (!wxIsdigit(ch)) break;
+            digits += ch;
+        }
+        long channel = 0;
+        return digits.ToLong(&channel) ? (int)channel : INT_MAX;
+    };
+
     auto inputDevices  = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
     auto outputDevices = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
 
-    for (auto& inDev : inputDevices)
+    for (auto& dev : inputDevices)
     {
-        wxString inText = deviceText(inDev);
-
-        // Skip loopback/monitor sources (e.g. PulseAudio "Monitor of ...")
-        // and DAX IQ streams, neither of which carry receive audio.
-        if (inText.Contains("MONITOR") || inText.Contains("DAX IQ")) continue;
-
         for (auto& known : knownDevices)
         {
-            if (!inText.Contains(known.inputMatch)) continue;
-            if (!known.inputMustContain.IsEmpty() && !inText.Contains(known.inputMustContain)) continue;
+            if (!isInputCandidate(dev, known)) continue;
+
+            // Radios with multiple RX channels (e.g. DAX) may not enumerate
+            // them in order; prefer the lowest-numbered channel.
+            const AudioDeviceSpecification* inDevPtr = &dev;
+            if (!known.inputMustContain.IsEmpty())
+            {
+                for (auto& other : inputDevices)
+                {
+                    if (isInputCandidate(other, known) && rxChannel(other) < rxChannel(*inDevPtr))
+                        inDevPtr = &other;
+                }
+            }
+            auto& inDev = *inDevPtr;
 
             for (auto& outDev : outputDevices)
             {
