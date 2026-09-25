@@ -29,7 +29,8 @@
 struct AudioDeviceSpecification
 {
     int deviceId;
-    wxString name;     // Display/config name of device
+    wxString name;     // Config name of device (used to look up/open the device)
+    wxString displayName; // User-friendly name of device. Optional; if empty, name is used.
     wxString cardName; // Name of the audio device
     int cardIndex;     // TBD - internal data for PulseAudio to look up cardName
     wxString portName; // Name of the port from the above audio device (e.g. "Speakers" on Windows). Optional.
@@ -39,6 +40,7 @@ struct AudioDeviceSpecification
     int minChannels;
     
     bool isValid() const;
+    wxString getDisplayName() const;
     static AudioDeviceSpecification GetInvalidDevice();
 };
 

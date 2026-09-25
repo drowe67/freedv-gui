@@ -27,11 +27,17 @@ bool AudioDeviceSpecification::isValid() const
     return deviceId != -1;
 }
 
+wxString AudioDeviceSpecification::getDisplayName() const
+{
+    return displayName.IsEmpty() ? name : displayName;
+}
+
 AudioDeviceSpecification AudioDeviceSpecification::GetInvalidDevice()
 {
     AudioDeviceSpecification result = {
         .deviceId = -1,
         .name = "",
+        .displayName = "",
         .cardName = "",
         .cardIndex = -1,
         .portName = "",

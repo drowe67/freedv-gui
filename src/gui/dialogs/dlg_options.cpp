@@ -1635,10 +1635,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
                 return 0;
             };
 
-            wxString sc1in   = m_tcSoundCard1InDevice->GetValue();
-            wxString spk     = m_tcSoundCard1OutDevice->GetValue(); // "Output From Computer To Speaker/Headphones"
-            wxString sc2in   = m_tcSoundCard2InDevice->GetValue();
-            wxString radioTx = m_tcSoundCard2OutDevice->GetValue(); // "Output From Computer To Radio"
+            wxString sc1in   = getSelectedAudioDeviceName(m_tcSoundCard1InDevice);
+            wxString spk     = getSelectedAudioDeviceName(m_tcSoundCard1OutDevice); // "Output From Computer To Speaker/Headphones"
+            wxString sc2in   = getSelectedAudioDeviceName(m_tcSoundCard2InDevice);
+            wxString radioTx = getSelectedAudioDeviceName(m_tcSoundCard2OutDevice); // "Output From Computer To Radio"
 
             if (m_ckTxReceiveOnly->GetValue())
             {
@@ -2711,13 +2711,17 @@ void OptionsDlg::populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDi
     auto devList = engine->getAudioDeviceList(direction);
     engine->stop();
 
+    auto& names = audioDeviceNames_[list];
+    names.clear();
     for (auto& dev : devList)
     {
-        long idx = list->InsertItem(list->GetItemCount(), dev.name);
+        long idx = list->InsertItem(list->GetItemCount(), dev.getDisplayName());
         list->SetItem(idx, 1, dev.apiName);
         list->SetItem(idx, 2, wxString::Format("%d Hz", dev.defaultSampleRate));
+        names.push_back(dev.name);
     }
     list->InsertItem(list->GetItemCount(), "none");
+    names.push_back("none");
 
     list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
     list->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
@@ -2739,38 +2743,57 @@ void OptionsDlg::populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDi
 void OptionsDlg::selectListDevice(wxListCtrl* list, wxTextCtrl* tc, const wxString& devName)
 {
     wxString target = devName.IsEmpty() ? wxString("none") : devName;
-    for (long i = 0; i < list->GetItemCount(); i++)
+    auto& names = audioDeviceNames_[list];
+    for (long i = 0; i < list->GetItemCount() && i < (long)names.size(); i++)
     {
-        if (list->GetItemText(i, 0).IsSameAs(target))
+        if (names[i].IsSameAs(target))
         {
             list->SetItemState(i, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED,
                                   wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
             list->EnsureVisible(i);
-            tc->SetValue(target);
+            onAudioDeviceSelected(list, tc, i);
             return;
         }
     }
     tc->SetValue(wxEmptyString);
+    tc->SetClientObject(nullptr);
+}
+
+//-------------------------------------------------------------------------
+// onAudioDeviceSelected() - shows the user-friendly name of the selected
+// device while retaining its internal name for saving to the config.
+//-------------------------------------------------------------------------
+void OptionsDlg::onAudioDeviceSelected(wxListCtrl* list, wxTextCtrl* tc, long index)
+{
+    auto& names = audioDeviceNames_[list];
+    tc->SetValue(list->GetItemText(index, 0));
+    tc->SetClientObject(index < (long)names.size() ? new wxStringClientData(names[index]) : nullptr);
+}
+
+wxString OptionsDlg::getSelectedAudioDeviceName(wxTextCtrl* tc)
+{
+    auto data = static_cast<wxStringClientData*>(tc->GetClientObject());
+    return data != nullptr ? data->GetData() : wxString(wxEmptyString);
 }
 
 void OptionsDlg::OnSoundCard1InDeviceSelect(wxListEvent& evt)
 {
-    m_tcSoundCard1InDevice->SetValue(m_lcSoundCard1InDevice->GetItemText(evt.GetIndex(), 0));
+    onAudioDeviceSelected(m_lcSoundCard1InDevice, m_tcSoundCard1InDevice, evt.GetIndex());
 }
 
 void OptionsDlg::OnSoundCard1OutDeviceSelect(wxListEvent& evt)
 {
-    m_tcSoundCard1OutDevice->SetValue(m_lcSoundCard1OutDevice->GetItemText(evt.GetIndex(), 0));
+    onAudioDeviceSelected(m_lcSoundCard1OutDevice, m_tcSoundCard1OutDevice, evt.GetIndex());
 }
 
 void OptionsDlg::OnSoundCard2InDeviceSelect(wxListEvent& evt)
 {
-    m_tcSoundCard2InDevice->SetValue(m_lcSoundCard2InDevice->GetItemText(evt.GetIndex(), 0));
+    onAudioDeviceSelected(m_lcSoundCard2InDevice, m_tcSoundCard2InDevice, evt.GetIndex());
 }
 
 void OptionsDlg::OnSoundCard2OutDeviceSelect(wxListEvent& evt)
 {
-    m_tcSoundCard2OutDevice->SetValue(m_lcSoundCard2OutDevice->GetItemText(evt.GetIndex(), 0));
+    onAudioDeviceSelected(m_lcSoundCard2OutDevice, m_tcSoundCard2OutDevice, evt.GetIndex());
 }
 
 void OptionsDlg::OnTxReceiveOnlyChanged(wxCommandEvent&)
@@ -2787,10 +2810,10 @@ void OptionsDlg::OnTxReceiveOnlyChanged(wxCommandEvent&)
 void OptionsDlg::OnRefreshAudioDevices(wxCommandEvent&)
 {
     // Preserve the user's current selections so they survive the repopulation
-    wxString sel1In  = m_tcSoundCard1InDevice->GetValue();
-    wxString sel1Out = m_tcSoundCard1OutDevice->GetValue();
-    wxString sel2In  = m_tcSoundCard2InDevice->GetValue();
-    wxString sel2Out = m_tcSoundCard2OutDevice->GetValue();
+    wxString sel1In  = getSelectedAudioDeviceName(m_tcSoundCard1InDevice);
+    wxString sel1Out = getSelectedAudioDeviceName(m_tcSoundCard1OutDevice);
+    wxString sel2In  = getSelectedAudioDeviceName(m_tcSoundCard2InDevice);
+    wxString sel2Out = getSelectedAudioDeviceName(m_tcSoundCard2OutDevice);
 
     // Restart engine so it re-enumerates available devices
     auto engine = AudioEngineFactory::GetAudioEngine();
@@ -3010,10 +3033,10 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 {
-    wxString outDev = m_tcSoundCard2OutDevice->GetValue();
+    wxString outDev = getSelectedAudioDeviceName(m_tcSoundCard2OutDevice);
     if (outDev.IsEmpty() || outDev == "none")
-        outDev = m_tcSoundCard1OutDevice->GetValue();
-    testAudioInput(m_tcSoundCard1InDevice->GetValue(), outDev, m_btnSoundCard1InTest);
+        outDev = getSelectedAudioDeviceName(m_tcSoundCard1OutDevice);
+    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard1InDevice), outDev, m_btnSoundCard1InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -3021,7 +3044,7 @@ void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_tcSoundCard1OutDevice->GetValue(), m_btnSoundCard1OutTest);
+    testAudioOutput(getSelectedAudioDeviceName(m_tcSoundCard1OutDevice), m_btnSoundCard1OutTest);
 }
 
 //-------------------------------------------------------------------------
@@ -3029,7 +3052,7 @@ void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 {
-    testAudioInput(m_tcSoundCard2InDevice->GetValue(), m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2InTest);
+    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard2InDevice), getSelectedAudioDeviceName(m_tcSoundCard2OutDevice), m_btnSoundCard2InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -3037,5 +3060,5 @@ void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2OutTest(wxCommandEvent&)
 {
-    testAudioOutput(m_tcSoundCard2OutDevice->GetValue(), m_btnSoundCard2OutTest);
+    testAudioOutput(getSelectedAudioDeviceName(m_tcSoundCard2OutDevice), m_btnSoundCard2OutTest);
 }
