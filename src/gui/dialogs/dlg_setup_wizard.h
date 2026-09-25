@@ -85,6 +85,7 @@ private:
     wxStaticText*  m_stOmniRigId;
     wxComboBox*    m_cbOmniRigRigId;
 #endif
+    wxCheckBox*    m_ckUseAnalogModes;
 
     // Page 3: Reporting
     wxCheckBox*   m_ckReportingEnable;

@@ -359,6 +359,10 @@ wxPanel* SetupWizard::makeRadioPage()
     vs->Add(omniBox, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
 #endif
 
+    // Applies to both Hamlib and OmniRig.
+    m_ckUseAnalogModes = new wxCheckBox(page, wxID_ANY, _("Use USB instead of DIGU"));
+    vs->Add(m_ckUseAnalogModes, 0, static_cast<int>(wxALL), 4);
+
     page->SetSizer(vs);
     return page;
 }
@@ -642,6 +646,17 @@ void SetupWizard::importSettings(const ImportSource& source)
     wxString rigName   = readQtIniString(ini, "Rig");
     wxString pttMethod = readQtIniString(ini, "PTTMethod");
     wxString pttPort   = readQtIniString(ini, "PTTport");
+    // Like PTTMethod, these are enums that may be wrapped in @Variant().
+    bool txAudioRear   = readQtIniString(ini, "TXAudioSource").Contains("TX_audio_source_rear");
+    wxString dataMode  = readQtIniString(ini, "DataMode");
+    auto importDataMode = [this](const wxString& mode) {
+        // WSJT-X's "None" mode setting doesn't change the mode at all,
+        // so leave the checkbox as-is in that case.
+        if (mode.Contains("data_mode_USB"))
+            m_ckUseAnalogModes->SetValue(true);
+        else if (mode.Contains("data_mode_data"))
+            m_ckUseAnalogModes->SetValue(false);
+    };
     int rigIndex       = HamlibRigController::RigNameToIndex(std::string(rigName.ToUTF8()));
 
     // WSJT-X keeps serial, USB and network port settings around, so use
@@ -692,12 +707,15 @@ void SetupWizard::importSettings(const ImportSource& source)
         m_cbSerialRate->SetValue((catRate > 0) ? wxString::Format("%ld", catRate) : wxString("default"));
 
         HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_NONE;
-        if (pttCat) pttType = HamlibRigController::PTT_VIA_CAT;
+        // Rear/Data TX audio source means PTT has to key the data port so
+        // the radio takes audio from there.
+        if (pttCat) pttType = txAudioRear ? HamlibRigController::PTT_VIA_CAT_DATA : HamlibRigController::PTT_VIA_CAT;
         else if (pttDtr) pttType = HamlibRigController::PTT_VIA_DTR;
         else if (pttRts) pttType = HamlibRigController::PTT_VIA_RTS;
         m_cbPttMethod->SetSelection((int)pttType);
         m_cbPttSerialPort->SetValue((pttDtr || pttRts) ? pttPort : wxString(wxEmptyString));
 
+        importDataMode(dataMode);
         imported.Add(wxString::Format(_("Hamlib rig control (%s)"), rigName));
     }
 #if defined(WIN32)
@@ -707,6 +725,7 @@ void SetupWizard::importSettings(const ImportSource& source)
         m_ckHamlib->SetValue(false);
         m_ckSerialPTT->SetValue(false);
         m_cbOmniRigRigId->SetSelection(rigName.EndsWith("2") ? 1 : 0);
+        importDataMode(dataMode);
         imported.Add(wxString::Format(_("OmniRig rig control (%s)"), rigName.Mid(8)));
     }
 #endif
@@ -977,6 +996,7 @@ void SetupWizard::loadConfig()
     m_ckOmniRig->SetValue(cfg.rigControlConfiguration.useOmniRig);
     m_cbOmniRigRigId->SetSelection(cfg.rigControlConfiguration.omniRigRigId);
 #endif
+    m_ckUseAnalogModes->SetValue(cfg.rigControlConfiguration.hamlibUseAnalogModes);
 
     // Page 3: Reporting
     m_ckReportingEnable->SetValue(cfg.reportingConfiguration.reportingEnabled);
@@ -1067,6 +1087,7 @@ void SetupWizard::saveConfig()
     cfg.rigControlConfiguration.useOmniRig   = m_ckOmniRig->GetValue();
     cfg.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetCurrentSelection();
 #endif
+    cfg.rigControlConfiguration.hamlibUseAnalogModes = m_ckUseAnalogModes->GetValue();
 
     // Page 3: Reporting
     bool reportingOn = m_ckReportingEnable->GetValue();
@@ -1141,11 +1162,13 @@ void SetupWizard::updateRadioState()
     m_rbUseDTR->Enable(sp);
     m_ckDTRPos->Enable(sp);
 
+    bool omni = false;
 #if defined(WIN32)
-    bool omni = m_ckOmniRig->GetValue();
+    omni = m_ckOmniRig->GetValue();
     m_stOmniRigId->Enable(omni);
     m_cbOmniRigRigId->Enable(omni);
 #endif
+    m_ckUseAnalogModes->Enable(hl || omni);
 }
 
 void SetupWizard::updateReportingState()
