@@ -33,6 +33,7 @@
 #include <climits>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
+#include <wx/filename.h>
 #include <wx/uiaction.h>
 
 #if wxCHECK_VERSION(3,2,0)
@@ -58,6 +59,12 @@
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/dialogs/dlg_text_messaging.h"
+#include "pipeline/TextMessagingModem.h"
+#include "pipeline/TextMessagingTransport.h"
+#include "pipeline/TextMessagingTxQueue.h"
+#include "text_messaging/TextMessagingSession.h"
+#include "text_messaging/UsDataSegments.h"
 #include "gui/util/WindowPositionRestore.h"
 #include "gui/util/TabLayoutSerializer.h"
 
@@ -1263,6 +1270,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
     txChangeoverOccurring_ = false;
+    textMessagingChangeover_ = false;
 
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
@@ -1283,6 +1291,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 #endif // defined(UNOFFICIAL_RELEASE)
     
     m_reporterDialog = nullptr;
+    m_textMessagingDialog = nullptr;
+    m_textMessagingTransport = nullptr;
     m_filterDialog = nullptr;
 
     // Initialize panel pointers to null before creation since "page changed" 
@@ -1550,6 +1560,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
+
+    startTextMessaging_();
 }
 
 void MainFrame::restoreCallsignListFromCsv_()
@@ -1691,10 +1703,156 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
 }
 
 //-------------------------------------------------------------------------
+// startTextMessaging_(): brings up the chat session for the whole run of the
+// application, so retries and incoming messages keep working with the chat
+// window closed.
+//-------------------------------------------------------------------------
+void MainFrame::startTextMessaging_()
+{
+    if (!textMessagingModem().open())
+    {
+        log_warn("Text messaging unavailable: the data modems could not be opened");
+        return;
+    }
+
+    m_textMessagingTransport = new TextMessagingTransport(&textMessagingModem());
+    m_textMessagingTransport->setPttFunction([this](bool keyed) {
+        // Called from the session thread; PTT belongs to the GUI thread.
+        CallAfter([this, keyed]() { setTextMessagingPtt_(keyed); });
+    });
+    m_textMessagingTransport->setVoiceTransmitCheck([]() {
+        return g_tx.load(std::memory_order_acquire) ||
+               g_voice_keyer_tx.load(std::memory_order_acquire);
+    });
+
+    m_textMessagingTransport->setTransmitAllowedCheck([]() {
+        // Sending needs the transmit thread, which only exists when FreeDV is
+        // running with a transmit sound device.
+        return m_txThread != nullptr;
+    });
+
+    textMessagingModem().setFrameCallback([](const TextMessaging::Frame& frame, float snr) {
+        TextMessaging::TextMessagingSession::instance().protocol().onFrameReceived(frame, snr);
+    });
+
+    wxString databasePath = wxStandardPaths::Get().GetUserDataDir();
+    if (!wxDirExists(databasePath)) wxMkdir(databasePath);
+    databasePath += wxFileName::GetPathSeparator();
+    databasePath += "text_messaging.db";
+
+    auto& session = TextMessaging::TextMessagingSession::instance();
+    if (!session.start(databasePath.ToStdString(), m_textMessagingTransport))
+    {
+        log_warn("Could not start text messaging: %s", session.lastError().c_str());
+        return;
+    }
+
+    session.protocol().setMyCallsign(
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString());
+
+    updateTextChatTransmitPermission_();
+}
+
+//-------------------------------------------------------------------------
+// updateTextChatTransmitPermission_(): with the preference on, text chat
+// transmits only where US rules permit data. The frequency is the one FreeDV
+// already keeps: the rig's when rig control reports it, otherwise the one
+// typed into the main window, and zero while neither has said.
+//-------------------------------------------------------------------------
+void MainFrame::updateTextChatTransmitPermission_()
+{
+    // The frequency box passes through zero while the window is being built,
+    // before text chat has started; startTextMessaging_() applies the real
+    // frequency when it does.
+    if (m_textMessagingTransport == nullptr) return;
+
+    std::string reason;
+    if (wxGetApp().appConfiguration.textChatUsDataSegmentsOnly)
+    {
+        reason = TextMessaging::usDataTransmitRestriction(
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+    }
+
+    auto& protocol = TextMessaging::TextMessagingSession::instance().protocol();
+    if (reason == protocol.transmitInhibitedReason()) return;
+
+    if (reason.empty())
+    {
+        log_info("Text chat may transmit again");
+    }
+    else
+    {
+        log_info("Text chat transmit inhibited: %s", reason.c_str());
+    }
+
+    protocol.setTransmitInhibited(reason);
+}
+
+//-------------------------------------------------------------------------
+// stopTextMessaging_()
+//-------------------------------------------------------------------------
+void MainFrame::stopTextMessaging_()
+{
+    if (m_textMessagingTransport != nullptr) m_textMessagingTransport->abort();
+
+    TextMessaging::TextMessagingSession::instance().stop();
+
+    textMessagingModem().setFrameCallback(nullptr);
+    textMessagingModem().close();
+
+    delete m_textMessagingTransport;
+    m_textMessagingTransport = nullptr;
+}
+
+//-------------------------------------------------------------------------
+// setTextMessagingPtt_(): keys and unkeys the radio for one chat burst,
+// through the same path the voice keyer uses.
+//-------------------------------------------------------------------------
+void MainFrame::setTextMessagingPtt_(bool keyed)
+{
+    if (keyed)
+    {
+        if (!m_btnTogPTT->GetValue())
+        {
+            m_btnTogPTT->SetValue(true);
+            textMessagingChangeover_ = true;
+            togglePTT();
+            textMessagingChangeover_ = false;
+        }
+
+        return;
+    }
+
+    if (m_btnTogPTT->GetValue())
+    {
+        m_btnTogPTT->SetValue(false);
+        endingTx.store(true, std::memory_order_release);
+        textMessagingChangeover_ = true;
+        togglePTT();
+        textMessagingChangeover_ = false;
+    }
+
+    // Ownership is released only now: the transmit thread has to keep
+    // microphone audio off the air for the whole changeover, not just until
+    // the burst has run out of samples.
+    textMessagingTxQueue().setOwnsTransmitter(false);
+}
+
+//-------------------------------------------------------------------------
 // ~MainFrame()
 //-------------------------------------------------------------------------
 MainFrame::~MainFrame()
 {
+    // Stops the chat session before the modems it uses go away.
+    stopTextMessaging_();
+
+    if (m_textMessagingDialog != nullptr)
+    {
+        m_textMessagingDialog->Close();
+        m_textMessagingDialog->Destroy();
+        m_textMessagingDialog = nullptr;
+    }
+
     delete voiceKeyerPopupMenu_;
     
     if (m_filterDialog != nullptr)
@@ -3185,6 +3343,9 @@ void MainFrame::stopRxStream()
         StopLowLatencyActivity();
 
         m_RxRunning = false;
+
+        // Nothing can play a burst once the audio threads are gone.
+        if (m_textMessagingTransport != nullptr) m_textMessagingTransport->abort();
 
         if (m_txThread)
         {

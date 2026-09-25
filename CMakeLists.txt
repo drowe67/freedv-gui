@@ -619,6 +619,11 @@ enable_testing()
 endif(UNITTEST)
 
 #
+# Third party libraries built from vendored sources
+#
+add_subdirectory(external/sqlite3)
+
+#
 # Freedv
 #
 add_subdirectory(src)
