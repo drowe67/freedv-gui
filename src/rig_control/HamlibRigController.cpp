@@ -306,6 +306,49 @@ int HamlibRigController::GetMaximumSerialBaudRate(unsigned int rigIndex)
     return RigList_[rigIndex]->serial_rate_max;
 }
 
+HamlibRigController::PortType HamlibRigController::GetRigPortType(unsigned int rigIndex)
+{
+    InitializeHamlibLibrary();
+    switch (RigList_[rigIndex]->port_type)
+    {
+        case RIG_PORT_SERIAL:
+            return PORT_SERIAL;
+        case RIG_PORT_NETWORK:
+        case RIG_PORT_UDP_NETWORK:
+            return PORT_NETWORK;
+        case RIG_PORT_USB:
+            return PORT_USB;
+        default:
+            return PORT_OTHER;
+    }
+}
+
+// Returns the port Hamlib uses for the given rig if none is specified
+// (e.g. "127.0.0.1:4532" for NET rigctl).
+std::string HamlibRigController::GetDefaultRigPathname(unsigned int rigIndex)
+{
+    InitializeHamlibLibrary();
+
+    std::string pathname;
+    auto tmpRig = rig_init(RigList_[rigIndex]->rig_model);
+    if (tmpRig != nullptr)
+    {
+        constexpr int PATHNAME_BUF_LEN = 1024;
+        char buf[PATHNAME_BUF_LEN] = {0};
+#if defined(HAMLIB_USE_FRIENDLY_ERRORS)
+        auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, "rig_pathname"), buf, PATHNAME_BUF_LEN);
+#else
+        auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, "rig_pathname"), buf);
+#endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
+        if (result == RIG_OK)
+        {
+            pathname = buf;
+        }
+        rig_cleanup(tmpRig);
+    }
+    return pathname;
+}
+
 int HamlibRigController::GetNumberSupportedRadios()
 {
     InitializeHamlibLibrary();

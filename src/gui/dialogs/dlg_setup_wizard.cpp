@@ -12,9 +12,14 @@
 //==========================================================================
 
 #include <algorithm>
+#include <climits>
 #include <vector>
 
 #include "dlg_setup_wizard.h"
+
+#include <wx/fileconf.h>
+#include <wx/filename.h>
+#include <wx/log.h>
 
 #ifdef __WXMSW__
 #include <wx/msw/registry.h>
@@ -59,6 +64,10 @@ SetupWizard::SetupWizard(wxWindow* parent)
 {
     wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
 
+    // Look for other programs' settings before building page 0, since
+    // the import controls are only shown if something is found.
+    findImportSources();
+
     // Book
     m_book = new wxSimplebook(this, wxID_ANY);
     m_book->AddPage(makeReceivePage(),   wxEmptyString);
@@ -95,6 +104,9 @@ SetupWizard::SetupWizard(wxWindow* parent)
     m_btnPrev->Bind(wxEVT_BUTTON,   &SetupWizard::OnPrev,   this);
     m_btnNext->Bind(wxEVT_BUTTON,   &SetupWizard::OnNext,   this);
     m_btnFinish->Bind(wxEVT_BUTTON, &SetupWizard::OnFinish, this);
+
+    if (m_btnImport != nullptr)
+        m_btnImport->Bind(wxEVT_BUTTON, &SetupWizard::OnImport, this);
 
     m_ckReceiveOnly->Bind(wxEVT_CHECKBOX, &SetupWizard::OnReceiveOnlyChanged, this);
 
@@ -146,6 +158,36 @@ wxPanel* SetupWizard::makeReceivePage()
     grid->Add(m_cbSpeakerOut, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALIGN_CENTER_VERTICAL));
 
     vs->Add(grid, 0, static_cast<int>(wxEXPAND));
+
+    m_chImportSource = nullptr;
+    m_btnImport      = nullptr;
+    m_stImportStatus = nullptr;
+    if (!m_importSources.empty())
+    {
+        wxStaticBoxSizer* importBox = new wxStaticBoxSizer(wxVERTICAL,
+            page, _("Import From Another Program"));
+        wxStaticBox* importSB = importBox->GetStaticBox();
+
+        importBox->Add(new wxStaticText(importSB, wxID_ANY,
+            _("Copy radio audio devices, rig control and callsign/grid square settings\nfrom another program installed on this computer.")),
+            0, static_cast<int>(wxALL), 4);
+
+        wxBoxSizer* importRow = new wxBoxSizer(wxHORIZONTAL);
+        m_chImportSource = new wxChoice(importSB, wxID_ANY);
+        for (auto& source : m_importSources)
+            m_chImportSource->Append(source.appName);
+        m_chImportSource->SetSelection(0);
+        importRow->Add(m_chImportSource, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 8);
+        m_btnImport = new wxButton(importSB, wxID_ANY, _("Import"));
+        importRow->Add(m_btnImport, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
+        importBox->Add(importRow, 0, static_cast<int>(wxALL), 4);
+
+        m_stImportStatus = new wxStaticText(importSB, wxID_ANY, wxEmptyString);
+        importBox->Add(m_stImportStatus, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 4);
+
+        vs->Add(importBox, 0, static_cast<int>(wxEXPAND) | wxTOP, 12);
+    }
+
     page->SetSizer(vs);
     return page;
 }
@@ -317,6 +359,10 @@ wxPanel* SetupWizard::makeRadioPage()
     vs->Add(omniBox, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 8);
 #endif
 
+    // Applies to both Hamlib and OmniRig.
+    m_ckUseAnalogModes = new wxCheckBox(page, wxID_ANY, _("Use USB instead of DIGU"));
+    vs->Add(m_ckUseAnalogModes, 0, static_cast<int>(wxALL), 4);
+
     page->SetSizer(vs);
     return page;
 }
@@ -395,6 +441,352 @@ wxString SetupWizard::getAudioComboDevice(wxComboBox* combo)
         if (data != nullptr) return data->GetData();
     }
     return combo->GetValue();
+}
+
+// When no radio device is configured, tries to find a known radio sound device (e.g. the
+// built-in USB codec found in many radios, FlexRadio DAX, QMX) and
+// selects it for both radio RX and TX. The first matching input device
+// wins; the output device must then belong to the same radio type.
+void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
+{
+    struct RadioDeviceMatch
+    {
+        wxString inputMatch;
+        wxString inputMustContain;
+        wxString outputMatch;
+    };
+
+    // All comparisons are case-insensitive.
+    static const std::vector<RadioDeviceMatch> knownDevices = {
+        { "USB AUDIO CODEC",   "",   "USB AUDIO CODEC" },
+        { "USB AUDIO DEVICE",  "",   "USB AUDIO DEVICE" },
+        { "DAX",               "RX", "DAX TX" },
+        { "QMX TRANSCEIVER",   "",   "QMX TRANSCEIVER" },
+    };
+
+    auto deviceText = [](const AudioDeviceSpecification& dev) {
+        return (dev.name + " " + dev.displayName).Upper();
+    };
+
+    // Skip loopback/monitor sources (e.g. PulseAudio "Monitor of ...")
+    // and DAX IQ streams, neither of which carry receive audio.
+    auto isInputCandidate = [&](const AudioDeviceSpecification& dev, const RadioDeviceMatch& known) {
+        wxString text = deviceText(dev);
+        if (text.Contains("MONITOR") || text.Contains("DAX IQ")) return false;
+        if (!text.Contains(known.inputMatch)) return false;
+        return known.inputMustContain.IsEmpty() || text.Contains(known.inputMustContain);
+    };
+
+    // Returns the channel number following "RX" (e.g. 1 for "DAX Audio RX 1"),
+    // or INT_MAX if there isn't one.
+    auto rxChannel = [&](const AudioDeviceSpecification& dev) {
+        wxString text = deviceText(dev);
+        int pos = text.Find("RX");
+        if (pos == wxNOT_FOUND) return INT_MAX;
+        wxString rest = text.Mid(pos + 2).Trim(false);
+        wxString digits;
+        for (auto ch : rest)
+        {
+            if (!wxIsdigit(ch)) break;
+            digits += ch;
+        }
+        long channel = 0;
+        return digits.ToLong(&channel) ? (int)channel : INT_MAX;
+    };
+
+    auto inputDevices  = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+    auto outputDevices = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+
+    for (auto& dev : inputDevices)
+    {
+        for (auto& known : knownDevices)
+        {
+            if (!isInputCandidate(dev, known)) continue;
+
+            // Radios with multiple RX channels (e.g. DAX) may not enumerate
+            // them in order; prefer the lowest-numbered channel.
+            const AudioDeviceSpecification* inDevPtr = &dev;
+            if (!known.inputMustContain.IsEmpty())
+            {
+                for (auto& other : inputDevices)
+                {
+                    if (isInputCandidate(other, known) && rxChannel(other) < rxChannel(*inDevPtr))
+                        inDevPtr = &other;
+                }
+            }
+            auto& inDev = *inDevPtr;
+
+            for (auto& outDev : outputDevices)
+            {
+                if (deviceText(outDev).Contains(known.outputMatch))
+                {
+                    log_info("Setup wizard: auto-selecting radio devices %s (RX) and %s (TX)",
+                             (const char*)inDev.name.ToUTF8(), (const char*)outDev.name.ToUTF8());
+                    setAudioComboDevice(m_cbRadioIn, inDev.name);
+                    setAudioComboDevice(m_cbRadioOut, outDev.name);
+                    m_ckReceiveOnly->SetValue(false);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+// Looks for settings files from other digital mode programs whose settings
+// can be imported. WSJT-X and its derivatives (JTDX, JS8Call) all store
+// their settings in the same QSettings INI format.
+void SetupWizard::findImportSources()
+{
+    static const char* apps[] = { "WSJT-X", "JTDX", "JS8Call" };
+
+    for (auto app : apps)
+    {
+        wxString appName = app;
+        wxFileName path;
+#if defined(__WXMSW__)
+        wxString localAppData;
+        if (!wxGetEnv("LOCALAPPDATA", &localAppData)) break;
+        path.Assign(localAppData + wxFILE_SEP_PATH + appName, appName + ".ini");
+#elif defined(__WXOSX__)
+        path.Assign(wxGetHomeDir() + "/Library/Preferences", appName + ".ini");
+#else
+        wxString configDir;
+        if (!wxGetEnv("XDG_CONFIG_HOME", &configDir) || configDir.IsEmpty())
+            configDir = wxGetHomeDir() + "/.config";
+        path.Assign(configDir, appName + ".ini");
+#endif
+        if (path.FileExists())
+        {
+            log_info("Setup wizard: found %s settings at %s",
+                     (const char*)appName.ToUTF8(), (const char*)path.GetFullPath().ToUTF8());
+            m_importSources.push_back({ appName, path.GetFullPath() });
+        }
+    }
+}
+
+// Selects the device in the combo box matching a device name saved by another
+// program. Names may not match exactly (e.g. older Qt versions on Windows
+// truncate names to 31 characters), so fall back to a prefix match.
+bool SetupWizard::selectImportedAudioDevice(wxComboBox* combo, const wxString& importedName,
+                                            const std::vector<AudioDeviceSpecification>& devices)
+{
+    wxString name = importedName.Upper().Trim().Trim(false);
+    if (name.IsEmpty()) return false;
+
+    for (auto& dev : devices)
+    {
+        if (dev.name.Upper().Trim() == name || dev.getDisplayName().Upper().Trim() == name)
+        {
+            setAudioComboDevice(combo, dev.name);
+            return true;
+        }
+    }
+
+    if (name.Length() < 8) return false; // too short to safely prefix match
+    for (auto& dev : devices)
+    {
+        if (dev.name.Upper().StartsWith(name) || dev.getDisplayName().Upper().StartsWith(name))
+        {
+            setAudioComboDevice(combo, dev.name);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Reads a string value written by Qt's QSettings, which quotes values
+// containing special characters (e.g. commas) and escapes backslashes
+// and quotes within them.
+static wxString readQtIniString(wxFileConfig& ini, const wxString& key)
+{
+    wxString value = ini.Read(key, wxEmptyString).Trim().Trim(false);
+    if (value.Length() >= 2 && value.StartsWith("\"") && value.EndsWith("\""))
+        value = value.Mid(1, value.Length() - 2);
+    value.Replace("\\\"", "\"");
+    value.Replace("\\\\", "\\");
+    return value.Trim().Trim(false);
+}
+
+void SetupWizard::importSettings(const ImportSource& source)
+{
+    wxLogNull suppressLogs; // don't pop up errors for Qt-specific syntax
+
+    wxFileConfig ini(wxEmptyString, wxEmptyString, source.path, wxEmptyString,
+                     wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_NO_ESCAPE_CHARACTERS);
+    ini.SetExpandEnvVars(false);
+    ini.SetPath("/Configuration");
+
+    wxArrayString imported;
+    wxArrayString notImported;
+
+    // Audio devices
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
+    auto inputDevices  = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+    auto outputDevices = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+    engine->stop();
+
+    wxString radioInName  = readQtIniString(ini, "SoundInName");
+    wxString radioOutName = readQtIniString(ini, "SoundOutName");
+    bool radioInFound  = selectImportedAudioDevice(m_cbRadioIn, radioInName, inputDevices);
+    bool radioOutFound = selectImportedAudioDevice(m_cbRadioOut, radioOutName, outputDevices);
+    if (radioOutFound)
+    {
+        m_ckReceiveOnly->SetValue(false);
+        updateTxState();
+    }
+    if (radioInFound || radioOutFound)
+        imported.Add(_("radio audio devices"));
+    if ((!radioInName.IsEmpty() && !radioInFound) || (!radioOutName.IsEmpty() && !radioOutFound))
+        notImported.Add(_("radio audio devices (not currently connected)"));
+
+    // Rig control. PTTMethod may be stored as a plain enum name or wrapped
+    // in a Qt @Variant(), so just look for the enum name.
+    wxString rigName   = readQtIniString(ini, "Rig");
+    wxString pttMethod = readQtIniString(ini, "PTTMethod");
+    wxString pttPort   = readQtIniString(ini, "PTTport");
+    // Like PTTMethod, these are enums that may be wrapped in @Variant().
+    bool txAudioRear   = readQtIniString(ini, "TXAudioSource").Contains("TX_audio_source_rear");
+    wxString dataMode  = readQtIniString(ini, "DataMode");
+    auto importDataMode = [this](const wxString& mode) {
+        // WSJT-X's "None" mode setting doesn't change the mode at all,
+        // so leave the checkbox as-is in that case.
+        if (mode.Contains("data_mode_USB"))
+            m_ckUseAnalogModes->SetValue(true);
+        else if (mode.Contains("data_mode_data"))
+            m_ckUseAnalogModes->SetValue(false);
+    };
+    int rigIndex       = HamlibRigController::RigNameToIndex(std::string(rigName.ToUTF8()));
+
+    // WSJT-X keeps serial, USB and network port settings around, so use
+    // whichever one applies to the selected rig's Hamlib port type (as
+    // WSJT-X itself does).
+    auto portType = (rigIndex >= 0)
+        ? HamlibRigController::GetRigPortType(rigIndex)
+        : HamlibRigController::PORT_SERIAL;
+    wxString catPort;
+    long catRate = 0;
+    if (portType == HamlibRigController::PORT_NETWORK)
+    {
+        catPort = readQtIniString(ini, "CATNetworkPort");
+
+        // WSJT-X leaves this blank to use Hamlib's default (e.g. localhost:4532),
+        // but FreeDV always passes the port to Hamlib.
+        if (catPort.IsEmpty())
+            catPort = wxString::FromUTF8(HamlibRigController::GetDefaultRigPathname(rigIndex).c_str());
+    }
+    else if (portType == HamlibRigController::PORT_USB)
+    {
+        catPort = readQtIniString(ini, "CATUSBPort");
+    }
+    else
+    {
+        catPort = readQtIniString(ini, "CATSerialPort");
+        catRate = ini.ReadLong("CATSerialRate", 0);
+    }
+
+    bool pttCat = pttMethod.Contains("PTT_method_CAT");
+    bool pttDtr = pttMethod.Contains("PTT_method_DTR");
+    bool pttRts = pttMethod.Contains("PTT_method_RTS");
+
+    // "CAT" as the PTT port means the same port as CAT control.
+    if (pttPort.IsSameAs("CAT", false) || pttPort == catPort)
+        pttPort = wxEmptyString;
+
+    if (rigIndex >= 0 && rigName != "None")
+    {
+        m_ckHamlib->SetValue(true);
+        m_ckSerialPTT->SetValue(false);
+#if defined(WIN32)
+        m_ckOmniRig->SetValue(false);
+#endif
+        m_cbRigName->SetSelection(rigIndex);
+        populateBaudRates(rigIndex);
+        m_cbSerialPort->SetValue(catPort);
+        m_cbSerialRate->SetValue((catRate > 0) ? wxString::Format("%ld", catRate) : wxString("default"));
+
+        HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_NONE;
+        // Rear/Data TX audio source means PTT has to key the data port so
+        // the radio takes audio from there.
+        if (pttCat) pttType = txAudioRear ? HamlibRigController::PTT_VIA_CAT_DATA : HamlibRigController::PTT_VIA_CAT;
+        else if (pttDtr) pttType = HamlibRigController::PTT_VIA_DTR;
+        else if (pttRts) pttType = HamlibRigController::PTT_VIA_RTS;
+        m_cbPttMethod->SetSelection((int)pttType);
+        m_cbPttSerialPort->SetValue((pttDtr || pttRts) ? pttPort : wxString(wxEmptyString));
+
+        importDataMode(dataMode);
+        imported.Add(wxString::Format(_("Hamlib rig control (%s)"), rigName));
+    }
+#if defined(WIN32)
+    else if (rigName.StartsWith("OmniRig Rig "))
+    {
+        m_ckOmniRig->SetValue(true);
+        m_ckHamlib->SetValue(false);
+        m_ckSerialPTT->SetValue(false);
+        m_cbOmniRigRigId->SetSelection(rigName.EndsWith("2") ? 1 : 0);
+        importDataMode(dataMode);
+        imported.Add(wxString::Format(_("OmniRig rig control (%s)"), rigName.Mid(8)));
+    }
+#endif
+    else if (rigName.IsEmpty() || rigName == "None")
+    {
+        // No CAT control, but PTT may still be keyed via a serial port.
+        if ((pttDtr || pttRts) && !pttPort.IsEmpty())
+        {
+            m_ckSerialPTT->SetValue(true);
+            m_ckHamlib->SetValue(false);
+#if defined(WIN32)
+            m_ckOmniRig->SetValue(false);
+#endif
+            m_cbCtlDevicePath->SetValue(pttPort);
+            m_rbUseRTS->SetValue(pttRts);
+            m_rbUseDTR->SetValue(pttDtr);
+            m_ckRTSPos->SetValue(false);
+            m_ckDTRPos->SetValue(false);
+            imported.Add(wxString::Format(_("serial port PTT (%s)"), pttPort));
+        }
+    }
+    else
+    {
+        notImported.Add(wxString::Format(_("rig control (%s is not supported by FreeDV)"), rigName));
+    }
+    updateRadioState();
+
+    // Reporting
+    wxString callsign = readQtIniString(ini, "MyCall");
+    wxString grid     = readQtIniString(ini, "MyGrid");
+    if (!callsign.IsEmpty())
+    {
+        m_txtCallsign->SetValue(callsign);
+        imported.Add(_("callsign"));
+    }
+    if (!grid.IsEmpty())
+    {
+        m_txtGridSquare->SetValue(grid);
+        imported.Add(_("grid square"));
+    }
+
+    auto joinList = [](const wxArrayString& items) {
+        wxString result;
+        for (size_t i = 0; i < items.GetCount(); i++)
+            result += (i > 0 ? ", " : "") + items[i];
+        return result;
+    };
+
+    wxString status;
+    if (imported.IsEmpty())
+        status = wxString::Format(_("No usable settings were found in %s."), source.appName);
+    else
+        status = wxString::Format(_("Imported: %s."), joinList(imported));
+    if (!notImported.IsEmpty())
+        status += "\n" + wxString::Format(_("Not imported: %s."), joinList(notImported));
+    status += "\n" + _("Review each page before clicking Finish.");
+
+    log_info("Setup wizard: %s import: %s", (const char*)source.appName.ToUTF8(), (const char*)status.ToUTF8());
+    m_stImportStatus->SetLabel(status);
+    m_stImportStatus->Wrap(m_stImportStatus->GetParent()->GetClientSize().GetWidth() - 16);
+    fitToCurrentPage();
 }
 
 void SetupWizard::populateSerialPorts()
@@ -565,6 +957,17 @@ void SetupWizard::loadConfig()
         setAudioComboDevice(m_cbRadioOut, cfg.audioConfiguration.soundCard1Out.deviceName);
     }
 
+    // If no radio device has been selected yet (e.g. new installation),
+    // try to find one automatically. Receive-only setups intentionally
+    // have no radio output device, so that doesn't count as missing.
+    auto isUnset = [](const wxString& name) { return name.IsEmpty() || name == "none"; };
+    bool radioInMissing  = isUnset(cfg.audioConfiguration.soundCard1In.deviceName);
+    bool radioOutMissing = !rxOnly && isUnset(cfg.audioConfiguration.soundCard1Out.deviceName);
+    if (radioInMissing || radioOutMissing)
+    {
+        autoSelectRadioDevices(audioEngine.get());
+    }
+
     // Page 2: Radio Control — Hamlib
     m_ckHamlib->SetValue(cfg.rigControlConfiguration.hamlibUseForPTT);
     m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
@@ -593,6 +996,7 @@ void SetupWizard::loadConfig()
     m_ckOmniRig->SetValue(cfg.rigControlConfiguration.useOmniRig);
     m_cbOmniRigRigId->SetSelection(cfg.rigControlConfiguration.omniRigRigId);
 #endif
+    m_ckUseAnalogModes->SetValue(cfg.rigControlConfiguration.hamlibUseAnalogModes);
 
     // Page 3: Reporting
     m_ckReportingEnable->SetValue(cfg.reportingConfiguration.reportingEnabled);
@@ -683,6 +1087,7 @@ void SetupWizard::saveConfig()
     cfg.rigControlConfiguration.useOmniRig   = m_ckOmniRig->GetValue();
     cfg.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetCurrentSelection();
 #endif
+    cfg.rigControlConfiguration.hamlibUseAnalogModes = m_ckUseAnalogModes->GetValue();
 
     // Page 3: Reporting
     bool reportingOn = m_ckReportingEnable->GetValue();
@@ -757,11 +1162,13 @@ void SetupWizard::updateRadioState()
     m_rbUseDTR->Enable(sp);
     m_ckDTRPos->Enable(sp);
 
+    bool omni = false;
 #if defined(WIN32)
-    bool omni = m_ckOmniRig->GetValue();
+    omni = m_ckOmniRig->GetValue();
     m_stOmniRigId->Enable(omni);
     m_cbOmniRigRigId->Enable(omni);
 #endif
+    m_ckUseAnalogModes->Enable(hl || omni);
 }
 
 void SetupWizard::updateReportingState()
@@ -837,4 +1244,11 @@ void SetupWizard::OnRigNameChanged(wxCommandEvent&)
 void SetupWizard::OnReportingEnableChanged(wxCommandEvent&)
 {
     updateReportingState();
+}
+
+void SetupWizard::OnImport(wxCommandEvent&)
+{
+    int sel = m_chImportSource->GetSelection();
+    if (sel == wxNOT_FOUND) return;
+    importSettings(m_importSources[sel]);
 }
