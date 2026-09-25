@@ -380,6 +380,46 @@ void PlotWaterfall::OnSysColourChanged(wxSysColourChangedEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// cropImage()
+//
+// Stands in for wxImage::GetSubImage(), which offsets the image's alpha pointer
+// even when it's null (i.e. the image has no alpha) -- undefined behaviour that
+// UBSan reports. The rectangle is clamped to the image.
+//-------------------------------------------------------------------------
+static wxImage cropImage(const wxImage& src, wxRect rect)
+{
+    rect.Intersect(wxRect(0, 0, src.GetWidth(), src.GetHeight()));
+    int width = std::max(1, rect.GetWidth());
+    int height = std::max(1, rect.GetHeight());
+
+    wxImage dst(width, height, true);
+    if (rect.IsEmpty())
+    {
+        return dst;
+    }
+
+    const unsigned char* srcData = src.GetData();
+    unsigned char* dstData = dst.GetData();
+    for (int y = 0; y < height; y++)
+    {
+        memcpy(dstData + y * width * 3, srcData + ((rect.GetTop() + y) * src.GetWidth() + rect.GetLeft()) * 3, width * 3);
+    }
+
+    if (src.HasAlpha())
+    {
+        dst.SetAlpha();
+        const unsigned char* srcAlpha = src.GetAlpha();
+        unsigned char* dstAlpha = dst.GetAlpha();
+        for (int y = 0; y < height; y++)
+        {
+            memcpy(dstAlpha + y * width, srcAlpha + (rect.GetTop() + y) * src.GetWidth() + rect.GetLeft(), width);
+        }
+    }
+
+    return dst;
+}
+
+//-------------------------------------------------------------------------
 // rebuildGraticuleBitmaps_()
 //-------------------------------------------------------------------------
 void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
@@ -391,8 +431,9 @@ void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
 
     // Render the whole graticule once, on the same background OnPaint() clears to
     // and at the display's pixel density, then keep just the margins.
+    // (CreateScaled() rather than CreateWithDIPSize(), which needs wxWidgets 3.1.6+.)
     wxBitmap bitmap;
-    bitmap.CreateWithDIPSize(size, scale);
+    bitmap.CreateScaled(size.GetWidth(), size.GetHeight(), wxBITMAP_SCREEN_DEPTH, scale);
     {
         wxMemoryDC dc(bitmap);
         dc.SetBackground(wxBrush(GetBackgroundColour()));
@@ -407,8 +448,8 @@ void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
     int dataY0 = PLOT_BORDER + YBOTTOM_OFFSET;
     auto toPixels = [&](int v, int limit) { return std::clamp((int)std::lround(v * scale), 1, limit); };
     int topHeightPx = toPixels(dataY0, image.GetHeight());
-    wxImage top = image.GetSubImage(wxRect(0, 0, image.GetWidth(), topHeightPx));
-    wxImage left = image.GetSubImage(wxRect(
+    wxImage top = cropImage(image, wxRect(0, 0, image.GetWidth(), topHeightPx));
+    wxImage left = cropImage(image, wxRect(
         0, topHeightPx,
         toPixels(dataX0, image.GetWidth()), std::max(1, image.GetHeight() - topHeightPx)));
 
