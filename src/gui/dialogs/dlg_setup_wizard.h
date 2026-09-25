@@ -17,6 +17,7 @@
 #include <wx/wx.h>
 #include <wx/simplebook.h>
 #include <wx/statline.h>
+#include <vector>
 #include "audio/IAudioEngine.h"
 #include "../../main.h"
 
@@ -39,6 +40,17 @@ private:
     // Page 0: Receive Audio
     wxComboBox*   m_cbRadioIn;
     wxComboBox*   m_cbSpeakerOut;
+
+    // Page 0: Import settings from other programs (e.g. WSJT-X)
+    struct ImportSource
+    {
+        wxString appName;
+        wxString path;
+    };
+    std::vector<ImportSource> m_importSources;
+    wxChoice*     m_chImportSource;
+    wxButton*     m_btnImport;
+    wxStaticText* m_stImportStatus;
 
     // Page 1: Transmit Audio
     wxCheckBox*   m_ckReceiveOnly;
@@ -92,6 +104,10 @@ private:
     static void setAudioComboDevice(wxComboBox* combo, const wxString& devName);
     static wxString getAudioComboDevice(wxComboBox* combo);
     void autoSelectRadioDevices(IAudioEngine* engine);
+    void findImportSources();
+    void importSettings(const ImportSource& source);
+    static bool selectImportedAudioDevice(wxComboBox* combo, const wxString& importedName,
+                                          const std::vector<AudioDeviceSpecification>& devices);
     void populateSerialPorts();
     void populateBaudRates(int rigIndex = -1);
     void loadConfig();
@@ -111,6 +127,7 @@ private:
     void OnSerialPTTChanged(wxCommandEvent&);
     void OnRigNameChanged(wxCommandEvent&);
     void OnReportingEnableChanged(wxCommandEvent&);
+    void OnImport(wxCommandEvent&);
 };
 
 #endif // __DLG_SETUP_WIZARD_H__
