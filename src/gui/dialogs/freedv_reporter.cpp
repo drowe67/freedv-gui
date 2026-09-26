@@ -1458,7 +1458,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
                         if (isHighlightUpdated)
                         {
-                            needsColumnAutosize = true;
+                            columnsNeedAutosize_ = true;
                         }
                     }
                 }
@@ -1467,10 +1467,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
         if (itemsChanged.size() > 0)
         {
-            if (needsColumnAutosize)
-            {
-                setColumnAutosize_(false);
-            }
             ItemsChanged(itemsChanged);
         }
         
