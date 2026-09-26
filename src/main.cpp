@@ -778,6 +778,11 @@ static void SuppressButtonPressFlicker_()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if wxCHECK_VERSION(3,3,0)
+   // Opt into dark mode on Windows. No effect on other platforms.
+   SetAppearance(Appearance::System);
+#endif // wxCHECK_VERSION(3,3,0)
+
 #if wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
     // Suppress spurious GTK logging.
     GTKSuppressDiagnostics();
