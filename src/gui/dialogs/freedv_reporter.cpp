@@ -21,6 +21,8 @@
 
 #include <sstream>
 #include <set>
+#include <memory>
+#include <algorithm>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
@@ -801,6 +803,7 @@ void FreeDVReporterDialog::refreshLayout()
 
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+    model->requestColumnAutosize();
     model->refreshAllRows();
 
     // Update status controls.
@@ -871,6 +874,10 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
     col->SetHidden(!newColValue);
+
+    // A newly shown column may have been hidden across content changes.
+    FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+    model->requestColumnAutosize();
 }
 
 void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
@@ -1235,6 +1242,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
 #endif // defined(__APPLE__)
 {
 #if defined(__APPLE__)
+    if (autosize == columnsAutosized_)
+    {
+        return;
+    }
+    columnsAutosized_ = autosize;
+
     if (autosize)
     {
         // Re-enable autosizing
@@ -1260,16 +1273,57 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
 #endif // defined(__APPLE__)
 }
 
+#if defined(__APPLE__) || defined(WIN32)
+bool FreeDVReporterDialog::FreeDVReporterDataModel::maxTextWidthsChanged_()
+{
+    std::vector<int> maxWidths(NUM_COLS, 0);
+    std::unique_ptr<wxClientDC> dc; // only created if a row needs measuring
+
+    for (auto& item : allReporterData_)
+    {
+        auto row = item.second;
+        if (!row->isVisible || row->isPendingDelete)
+        {
+            continue;
+        }
+
+        if (row->cellTextWidths.empty())
+        {
+            if (!dc)
+            {
+                dc = std::make_unique<wxClientDC>(parent_->m_listSpots);
+                dc->SetFont(parent_->m_listSpots->GetFont());
+            }
+
+            row->cellTextWidths.resize(NUM_COLS, 0);
+            for (int col = 0; col < NUM_COLS; col++)
+            {
+                // USER_MESSAGE_COL isn't autosized.
+                if (col != USER_MESSAGE_COL)
+                {
+                    row->cellTextWidths[col] = dc->GetTextExtent(getColumnDisplayValue_(row, col)).GetWidth();
+                }
+            }
+        }
+
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            maxWidths[col] = std::max(maxWidths[col], row->cellTextWidths[col]);
+        }
+    }
+
+    bool changed = maxWidths != maxTextWidths_;
+    maxTextWidths_ = std::move(maxWidths);
+    return changed;
+}
+#endif // defined(__APPLE__) || defined(WIN32)
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
     
     handler.fn = [this](CallbackHandler&) {
-#if defined(WIN32)
-        bool doAutoSizeColumns = false;
-#endif // define(WIN32)
-    
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -1281,24 +1335,16 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
         wxDataViewItemArray itemsDeleted;
-
-        // setColumnAutosize_() forces a full column relayout (SetWidth() on
-        // every column -- see the macOS branch below), which is only ever
-        // needed when a row's visibility or highlight color actually
-        // changes. A plain data refresh (isPendingUpdate, e.g. an updated
-        // SNR/frequency from a busy reporter network) still needs its cell
-        // repainted via ItemsChanged() below, but doesn't need the column
-        // widths touched. On a busy network isPendingUpdate can be true on
-        // effectively every 250ms tick, so without this the relayout dance
-        // was running continuously instead of only when actually needed.
-        bool needsColumnAutosize = false;
-
+        bool contentChanged = false;
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
             {
                 if (item.second->isVisible)
                 {
+                    setColumnAutosize_(false);
+                    contentChanged = true;
+
                     wxDataViewItem dvi(item.second);
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                     item.second->isVisible = false;
@@ -1369,16 +1415,17 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             if (newVisibility != reportData->isVisible)
             {
                 setColumnAutosize_(false);
+                contentChanged = true;
                 
                 reportData->isVisible = newVisibility;
                 if (newVisibility)
                 {
+                    // Text may have changed while the row was hidden.
+                    reportData->cellTextWidths.clear();
+
                     wxDataViewItem dvi(reportData);
                     ItemAdded(wxDataViewItem(nullptr), dvi);
                     itemsAdded.Add(dvi);
-#if defined(WIN32)
-                    doAutoSizeColumns = true;
-#endif // defined(WIN32)
                 }
                 else
                 {
@@ -1399,6 +1446,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 {
                     if (reportData->isVisible)
                     {
+                        if (reportData->isPendingUpdate)
+                        {
+                            contentChanged = true;
+                            reportData->cellTextWidths.clear();
+                        }
                         reportData->isPendingUpdate = false;
 
                         wxDataViewItem dvi(reportData);
@@ -1421,21 +1473,31 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             }
             ItemsChanged(itemsChanged);
         }
-
-        if (itemsAdded.size() > 0 || itemsDeleted.size() > 0 || needsColumnAutosize)
-        {
-            setColumnAutosize_(true);
-        }
         
-#if defined(WIN32)
-        // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-        // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.size() > 0 || doAutoSizeColumns)
+        if (contentChanged || columnsNeedWidthCheck_ || columnsNeedAutosize_)
         {
-            parent_->autosizeColumns();
-        }
+#if defined(__APPLE__) || defined(WIN32)
+            // Refitting measures every row of every column, so only do it when the
+            // widest text in some column has actually changed.
+            bool refit = maxTextWidthsChanged_() || columnsNeedAutosize_;
+#else
+            // GTK sizes autosized columns itself; there's nothing to refit.
+            bool refit = false;
+#endif // defined(__APPLE__) || defined(WIN32)
+
+            columnsNeedAutosize_ = false;
+            columnsNeedWidthCheck_ = false;
+            if (refit)
+            {
+#if defined(WIN32)
+                // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+                // platforms causes excessive CPU usage for no benefit.
+                parent_->autosizeColumns();
+#else
+                setColumnAutosize_(true);
 #endif // defined(WIN32)
-    
+            }
+        }
     };
     fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
@@ -2289,6 +2351,20 @@ void FreeDVReporterDialog::autosizeColumns()
             col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
         }
     }
+
+    // Then pin each column at the width it was just fitted to. After any item change,
+    // wxDataViewCtrl re-measures every row of wxCOL_WIDTH_AUTOSIZE columns at idle
+    // time, which with the Reporter's frequent updates cost as much as refitting here
+    // did; fixed-width columns skip that. FreeDVReporterDataModel calls this again
+    // when the widest text in a column changes.
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        if (index != USER_MESSAGE_COL)
+        {
+            auto col = getColumnForModelColId_(index);
+            col->SetWidth(col->GetWidth());
+        }
+    }
 }
 #endif // defined(WIN32)
 
@@ -2761,6 +2837,11 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , currentBandFilter_(BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
+#if defined(__APPLE__)
+    , columnsAutosized_(true)
+#endif // defined(__APPLE__)
+    , columnsNeedAutosize_(false)
+    , columnsNeedWidthCheck_(false)
 {
     // Initialize column filter state from config
     columnFilterOperators_.resize(NUM_COLS, FreeDVReporterDialog::FILTER_NONE);
@@ -2853,6 +2934,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 {
     std::unique_lock<std::recursive_mutex> lk(dataMtx_);
     assert(wxThread::IsMain());
+
+    columnsNeedWidthCheck_ = true;
 
     for (auto& row : allReporterData_)
     {
@@ -3285,6 +3368,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
+                // Text may have changed while the row was hidden.
+                kvp.second->cellTextWidths.clear();
+
                 itemsAdded.Add(wxDataViewItem(kvp.second));
 #if defined(WIN32)
                 doAutoSizeColumns = true;
@@ -3312,6 +3398,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
     {
         Cleared(); // avoids spurious errors on macOS
+        columnsNeedWidthCheck_ = true;
         if (currentSelection.IsOk())
         {
             // Reselect after redraw
@@ -3322,7 +3409,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     }
     
 #if defined(WIN32)
-    if (doAutoSizeColumns)
+    if (doAutoSizeColumns && maxTextWidthsChanged_())
     {
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
@@ -3576,6 +3663,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 // are thrown. We can set it to false once the item's removed.
                 item->isVisible = false;
 #endif // defined(__linux__)
+
+                columnsNeedWidthCheck_ = true;
             }
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
