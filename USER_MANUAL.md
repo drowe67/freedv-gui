@@ -965,6 +965,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid page cache miss on startup when loading RADE. (PR #1506)
     * Stop playback of RX file before TX start. (PR #1507)
     * Fix horizontal lines in waterfall on HiDPI/fractionally scaled Linux displays. (PR #1514)
+    * Reduce GUI thread paint and FreeDV Reporter overhead. (PR #1515)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))

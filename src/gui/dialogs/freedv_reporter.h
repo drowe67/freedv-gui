@@ -26,6 +26,7 @@
 #include <map>
 #include <deque>
 #include <mutex>
+#include <vector>
 
 #include <wx/tipwin.h>
 #include <wx/combo.h>
@@ -254,6 +255,7 @@ class FreeDVReporterDialog : public wxFrame
              void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString const& customText);
              void updateHighlights();
              void triggerResort();
+             void requestColumnAutosize() { columnsNeedAutosize_ = true; }
              void deallocateRemovedItems();
              void updateMessage(wxString const& statusMsg)
              {
@@ -415,6 +417,10 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour foregroundColor;
                 wxColour backgroundColor;
 
+                // Measured text width of each column's value (macOS and Windows); empty
+                // when the row's text has changed and needs measuring again.
+                std::vector<int> cellTextWidths;
+
                 ReporterData()
                     : lastTxDate(wxInvalidDateTime)
                     , lastRxDate(wxInvalidDateTime)
@@ -488,6 +494,22 @@ class FreeDVReporterDialog : public wxFrame
             void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
             void setColumnAutosize_(bool autosize);
+
+            // Refitting columns to their contents measures every row, so on macOS and
+            // Windows it's only done when the widest text in some column changes
+            // (see maxTextWidths_). columnsNeedAutosize_ forces a refit regardless, e.g.
+            // after header or unit changes; columnsNeedWidthCheck_ asks for a check after
+            // rows are added/removed outside of updateHighlights().
+#if defined(__APPLE__)
+            bool columnsAutosized_;
+#endif // defined(__APPLE__)
+            bool columnsNeedAutosize_;
+            bool columnsNeedWidthCheck_;
+
+            // Widest text in each column at the last check. Most updates (e.g. a new
+            // "last update" time) leave these unchanged and so need no refit.
+            std::vector<int> maxTextWidths_;
+            bool maxTextWidthsChanged_();
             
             static double DegreesToRadians_(double degrees);
             static double RadiansToDegrees_(double radians);

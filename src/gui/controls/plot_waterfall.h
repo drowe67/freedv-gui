@@ -134,6 +134,24 @@ class PlotWaterfall : public PlotPanel
         void cleanupSlices_();
         void rebuildGraticuleLabels_();
 
+        // The axis labels and ticks only change with the control's size, colours or
+        // pixel density, but laying out and rendering their text on every frame was a
+        // large part of the paint. All of it sits in the top and left margins, where
+        // there's nothing underneath but the background, so those margins are rendered
+        // once into opaque bitmaps that each paint just copies. (A transparent overlay
+        // of the whole control was tried first, but alpha blending it every frame cost
+        // far more on macOS than it saved.) The few grid lines crossing the waterfall
+        // and the RX tuning markers are still drawn live.
+        wxGraphicsBitmap graticuleTop_;
+        wxGraphicsBitmap graticuleLeft_;
+        double graticuleBitmapScale_;
+        bool graticuleBitmapValid_;
+
+        void rebuildGraticuleBitmaps_(wxGraphicsContext* ctx);
+        void drawStaticGraticule_(wxGraphicsContext* ctx, const wxGraphicsFont& font);
+        void drawDataGridlines_(wxGraphicsContext* ctx);
+        void OnSysColourChanged(wxSysColourChangedEvent& event);
+
         DECLARE_EVENT_TABLE()
 };
 
