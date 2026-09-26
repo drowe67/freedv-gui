@@ -39,10 +39,14 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     env:
-      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
-      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
-      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      # The radio path is on VAC and the mic/speaker on VB-Cable, not the other way
+      # around: VB-Cable occasionally inserts ~10 ms of silence into its loop early in a
+      # stream, which is a timing jump RADE loses sync on (a spurious fullduplex/rade_loss
+      # failure). On the mic/speaker path the same glitch is harmless.
+      RADIO_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Line 1 (Virtual Audio Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_SPEAKER_DEVICE: "Speakers (VB-Audio Virtual Cable)"
       # LSan has no Windows runtime, so it's intentionally not configured here.
       # Options are colon-separated key=value pairs, so an absolute Windows
       # path (drive-letter colon, e.g. D:\...) breaks the parser -- it reads
