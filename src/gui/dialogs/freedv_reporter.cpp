@@ -1296,7 +1296,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
 #endif // defined(__APPLE__)
 }
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(WIN32)
 bool FreeDVReporterDialog::FreeDVReporterDataModel::maxTextWidthsChanged_()
 {
     std::vector<int> maxWidths(NUM_COLS, 0);
@@ -1339,7 +1339,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::maxTextWidthsChanged_()
     maxTextWidths_ = std::move(maxWidths);
     return changed;
 }
-#endif // defined(__APPLE__)
+#endif // defined(__APPLE__) || defined(WIN32)
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
@@ -1347,10 +1347,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
     CallbackHandler handler;
     
     handler.fn = [this](CallbackHandler&) {
-#if defined(WIN32)
-        bool doAutoSizeColumns = false;
-#endif // define(WIN32)
-    
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -1453,9 +1449,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                     wxDataViewItem dvi(reportData);
                     ItemAdded(wxDataViewItem(nullptr), dvi);
                     itemsAdded.Add(dvi);
-#if defined(WIN32)
-                    doAutoSizeColumns = true;
-#endif // defined(WIN32)
                 }
                 else
                 {
@@ -1498,31 +1491,28 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         
         if (contentChanged || columnsNeedWidthCheck_ || columnsNeedAutosize_)
         {
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(WIN32)
             // Refitting measures every row of every column, so only do it when the
             // widest text in some column has actually changed.
             bool refit = maxTextWidthsChanged_() || columnsNeedAutosize_;
 #else
-            bool refit = true;
-#endif // defined(__APPLE__)
+            // GTK sizes autosized columns itself; there's nothing to refit.
+            bool refit = false;
+#endif // defined(__APPLE__) || defined(WIN32)
 
             columnsNeedAutosize_ = false;
             columnsNeedWidthCheck_ = false;
             if (refit)
             {
+#if defined(WIN32)
+                // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+                // platforms causes excessive CPU usage for no benefit.
+                parent_->autosizeColumns();
+#else
                 setColumnAutosize_(true);
+#endif // defined(WIN32)
             }
         }
-        
-#if defined(WIN32)
-        // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-        // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.size() > 0 || doAutoSizeColumns)
-        {
-            parent_->autosizeColumns();
-        }
-#endif // defined(WIN32)
-    
     };
     fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
@@ -3422,7 +3412,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     }
     
 #if defined(WIN32)
-    if (doAutoSizeColumns)
+    if (doAutoSizeColumns && maxTextWidthsChanged_())
     {
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.

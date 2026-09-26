@@ -417,7 +417,7 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour foregroundColor;
                 wxColour backgroundColor;
 
-                // Measured text width of each column's value (macOS only); empty
+                // Measured text width of each column's value (macOS and Windows); empty
                 // when the row's text has changed and needs measuring again.
                 std::vector<int> cellTextWidths;
 
@@ -495,8 +495,8 @@ class FreeDVReporterDialog : public wxFrame
 
             void setColumnAutosize_(bool autosize);
 
-            // Refitting columns to their contents measures every row, so on macOS the
-            // columns stay at fixed widths until the widest text in some column changes
+            // Refitting columns to their contents measures every row, so on macOS and
+            // Windows it's only done when the widest text in some column changes
             // (see maxTextWidths_). columnsNeedAutosize_ forces a refit regardless, e.g.
             // after header or unit changes; columnsNeedWidthCheck_ asks for a check after
             // rows are added/removed outside of updateHighlights().
