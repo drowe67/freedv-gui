@@ -766,6 +766,12 @@ void SetupWizard::importSettings(const ImportSource& source)
         m_txtGridSquare->SetValue(grid);
         imported.Add(_("grid square"));
     }
+    if (readQtIniString(ini, "PSKReporter").IsSameAs("true", false))
+    {
+        m_ckReportingEnable->SetValue(true);
+        updateReportingState();
+        imported.Add(_("reporting enabled"));
+    }
 
     auto joinList = [](const wxArrayString& items) {
         wxString result;
