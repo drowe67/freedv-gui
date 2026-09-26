@@ -148,7 +148,7 @@ class PlotWaterfall : public PlotPanel
         bool graticuleBitmapValid_;
 
         void rebuildGraticuleBitmaps_(wxGraphicsContext* ctx);
-        void drawStaticGraticule_(wxGraphicsContext* ctx);
+        void drawStaticGraticule_(wxGraphicsContext* ctx, const wxGraphicsFont& font);
         void drawDataGridlines_(wxGraphicsContext* ctx);
         void OnSysColourChanged(wxSysColourChangedEvent& event);
 

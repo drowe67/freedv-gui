@@ -439,8 +439,11 @@ void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
         dc.SetBackground(wxBrush(GetBackgroundColour()));
         dc.Clear();
 
+        // Create the label font from the window's context: CreateFont() sizes it for its
+        // own context's DPI, and on Windows a memory DC's is the default 96 rather than
+        // the window's, which drew the labels too small on scaled displays.
         std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
-        drawStaticGraticule_(gc.get());
+        drawStaticGraticule_(gc.get(), ctx->CreateFont(GetFont(), GetForegroundColour()));
     }
     wxImage image = bitmap.ConvertToImage();
 
@@ -570,7 +573,7 @@ void PlotWaterfall::drawDataGridlines_(wxGraphicsContext* ctx)
 // Everything in the graticule that doesn't move; the margins of it are cached
 // (see graticuleTop_/graticuleLeft_) and drawDataGridlines_() redraws the rest.
 //-------------------------------------------------------------------------
-void PlotWaterfall::drawStaticGraticule_(wxGraphicsContext* ctx)
+void PlotWaterfall::drawStaticGraticule_(wxGraphicsContext* ctx, const wxGraphicsFont& font)
 {
     int      x, y;
     float    f, time, freq_hz_to_px;
@@ -582,8 +585,7 @@ void PlotWaterfall::drawStaticGraticule_(wxGraphicsContext* ctx)
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(foregroundColor, 1));
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
+    ctx->SetFont(font);
 
     if (!graticuleLabelsValid_)
     {
