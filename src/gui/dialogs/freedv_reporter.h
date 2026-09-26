@@ -500,7 +500,9 @@ class FreeDVReporterDialog : public wxFrame
             // (see maxTextWidths_). columnsNeedAutosize_ forces a refit regardless, e.g.
             // after header or unit changes; columnsNeedWidthCheck_ asks for a check after
             // rows are added/removed outside of updateHighlights().
+#if defined(__APPLE__)
             bool columnsAutosized_;
+#endif // defined(__APPLE__)
             bool columnsNeedAutosize_;
             bool columnsNeedWidthCheck_;
 

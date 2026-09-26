@@ -2836,7 +2836,9 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , currentBandFilter_(BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
+#if defined(__APPLE__)
     , columnsAutosized_(true)
+#endif // defined(__APPLE__)
     , columnsNeedAutosize_(false)
     , columnsNeedWidthCheck_(false)
 {
