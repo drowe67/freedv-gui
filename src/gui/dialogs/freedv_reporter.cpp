@@ -2363,6 +2363,20 @@ void FreeDVReporterDialog::autosizeColumns()
             col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
         }
     }
+
+    // Then pin each column at the width it was just fitted to. After any item change,
+    // wxDataViewCtrl re-measures every row of wxCOL_WIDTH_AUTOSIZE columns at idle
+    // time, which with the Reporter's frequent updates cost as much as refitting here
+    // did; fixed-width columns skip that. FreeDVReporterDataModel calls this again
+    // when the widest text in a column changes.
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        if (index != USER_MESSAGE_COL)
+        {
+            auto col = getColumnForModelColId_(index);
+            col->SetWidth(col->GetWidth());
+        }
+    }
 }
 #endif // defined(WIN32)
 
