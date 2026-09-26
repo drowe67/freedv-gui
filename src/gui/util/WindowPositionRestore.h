@@ -22,12 +22,16 @@
 #ifndef WINDOW_POSITION_RESTORE_H
 #define WINDOW_POSITION_RESTORE_H
 
+#include <wx/gdicmn.h>
+
 class wxFrame;
 
 // Restores a top-level frame's position from saved configuration.
 //
-// Must be called before the frame is shown. On Linux/GTK3, some window
-// managers/compositors (observed: KWin on Plasma 6, labwc on Wayland)
+// For initial placement, call before the frame is shown. Shown frames move
+// immediately. Repeated restores replace any pending GTK placement request.
+// On Linux/GTK3, some window managers/compositors (observed: KWin on Plasma 6,
+// labwc on Wayland)
 // apply their own asynchronous initial-placement policy shortly after the
 // window is mapped, silently overriding whatever position the client
 // already set -- no matter how early or late the client's own move
@@ -37,5 +41,8 @@ class wxFrame;
 // then stops so it won't fight the user's own later repositioning. On
 // other platforms this is just a straightforward deferred move.
 void RestoreWindowPosition(wxFrame* frame, int x, int y);
+
+// Recover a usable ordinary rectangle on a current monitor's work area.
+wxRect RestoreWindowGeometry(wxFrame* frame, wxRect rect, const wxSize& minimum);
 
 #endif // WINDOW_POSITION_RESTORE_H

@@ -26,6 +26,7 @@
 #include <wx/wx.h>
 #include "os/os_interface.h"
 
+#include "gui/theme/FreeDVTheme.h"
 #include "plot_waterfall.h"
 #include "defines.h" // for FDMDV_FCENTRE
 
@@ -466,6 +467,14 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
        x += PLOT_BORDER + leftOffset_;
        ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
    }
+
+   ctx->SetPen(wxPen(FreeDVTheme::GetPalette().accent, 1));
+   ctx->SetBrush(*wxTRANSPARENT_BRUSH);
+   ctx->DrawRectangle(
+       PLOT_BORDER + leftOffset_,
+       dataY0,
+       m_imgWidth,
+       m_imgHeight);
 }
 
 //-------------------------------------------------------------------------

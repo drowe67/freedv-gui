@@ -609,9 +609,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* sizerDisplay = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------
-    // Waterfall color 
+    // Signal display style
     //----------------------------------------------------------
-    wxStaticBox* sb_waterfall = new wxStaticBox(m_displayTab, wxID_ANY, _("Waterfall Style"));
+    wxStaticBox* sb_waterfall = new wxStaticBox(m_displayTab, wxID_ANY, _("Signal Display Style"));
     wxStaticBoxSizer* sbSizer_waterfallColor =  new wxStaticBoxSizer(sb_waterfall, wxHORIZONTAL);
     
     m_waterfallColorScheme1 = new wxRadioButton(sb_waterfall, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
@@ -1502,7 +1502,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // Stats reset time
         m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.statsResetTimeSecs.get()));
         
-        // Waterfall color
+        // Signal display style
         switch (wxGetApp().appConfiguration.waterfallColor)
         {
             case 1:

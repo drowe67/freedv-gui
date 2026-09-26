@@ -28,6 +28,7 @@
 
 #include "plot_scalar.h"
 
+#include "gui/theme/FreeDVTheme.h"
 #include "util/logging/ulog.h"
 
 BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
@@ -55,7 +56,8 @@ PlotScalar::PlotScalar(wxWindow* parent,
                        const char* plotName,
                        bool halfPlot,
                        float defaultVal,
-                       bool disableFirstLastLabels)
+                       bool disableFirstLastLabels,
+                       TraceStyle traceStyle)
     : PlotPanel(parent, plotName)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
@@ -67,6 +69,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     addedPoints_ = 0;
     halfPlot_ = halfPlot;
     disableFirstLastLabels_ = disableFirstLastLabels;
+    traceStyle_ = traceStyle;
 
     int i;
 
@@ -391,7 +394,97 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
                 path.AddLineToPoint(x, item->y2);
             }
             path.AddLineToPoint(from, lineMap_[from].y1);
+
+            if (traceStyle_ == TraceStyle::MagnitudeGradient)
+            {
+                wxGraphicsGradientStops stops(
+                    FreeDVTheme::GetSignalTraceColour(1.0),
+                    FreeDVTheme::GetSignalTraceColour(1.0));
+                stops.Add(wxGraphicsGradientStop(
+                    FreeDVTheme::GetSignalTraceColour(0.5), 0.25));
+                stops.Add(wxGraphicsGradientStop(
+                    FreeDVTheme::GetSignalTraceColour(0.15), 0.50));
+                stops.Add(wxGraphicsGradientStop(
+                    FreeDVTheme::GetSignalTraceColour(0.5), 0.75));
+
+                plotCtx->SetBrush(plotCtx->CreateLinearGradientBrush(
+                    0, 0, 0, plotHeight, stops));
+            }
+
             plotCtx->FillPath(path);
+
+            if (traceStyle_ == TraceStyle::MagnitudeGradient)
+            {
+                const double center = plotHeight / 2.0;
+                constexpr double outlineLift = 0.65;
+
+                for (int index = from + 1; index < plotWidth; index++)
+                {
+                    const auto previous = &lineMap_[index - 1];
+                    const auto current = &lineMap_[index];
+
+                    for (bool upper : {true, false})
+                    {
+                        const int previousPos = upper ? previous->y1 : previous->y2;
+                        const int currentPos = upper ? current->y1 : current->y2;
+                        const double magnitude =
+                            std::min(1.0,
+                                std::abs(((previousPos + currentPos) / 2.0) - center) /
+                                center);
+
+                        const wxColour colour =
+                            FreeDVTheme::GetSignalDisplayColour(magnitude);
+                        const auto lift = [](unsigned char component)
+                        {
+                            return static_cast<unsigned char>(
+                                component + (255 - component) * outlineLift);
+                        };
+
+                        plotCtx->SetPen(wxPen(
+                            wxColour(
+                                lift(colour.Red()),
+                                lift(colour.Green()),
+                                lift(colour.Blue())),
+                            2));
+                        plotCtx->StrokeLine(
+                            index - 1, previousPos,
+                            index, currentPos);
+                    }
+                }
+            }
+        }
+        else if (traceStyle_ == TraceStyle::ValueGradient)
+        {
+            for (int index = from + 1; index < plotWidth; index++)
+            {
+                const auto previous = &lineMap_[index - 1];
+                const auto current = &lineMap_[index];
+                const double position = 1.0 -
+                    (static_cast<double>(previous->y1 + current->y1) /
+                     (2.0 * plotHeight));
+                const wxColour traceColour =
+                    FreeDVTheme::GetSignalTraceColour(position);
+                const wxColour fillColour(
+                    traceColour.Red(),
+                    traceColour.Green(),
+                    traceColour.Blue(),
+                    80);
+
+                wxGraphicsPath fillPath = plotCtx->CreatePath();
+                fillPath.MoveToPoint(index - 1, plotHeight);
+                fillPath.AddLineToPoint(index - 1, previous->y1);
+                fillPath.AddLineToPoint(index, current->y1);
+                fillPath.AddLineToPoint(index, plotHeight);
+                fillPath.CloseSubpath();
+
+                plotCtx->SetPen(*wxTRANSPARENT_PEN);
+                plotCtx->SetBrush(wxBrush(fillColour));
+                plotCtx->FillPath(fillPath);
+
+                plotCtx->SetPen(wxPen(traceColour, 2));
+                plotCtx->StrokeLine(index - 1, previous->y1,
+                                    index, current->y1);
+            }
         }
         else
         {
@@ -561,6 +654,14 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
    else
    {
        ctx->DrawBitmap(plotLinesBMP_, PLOT_BORDER + leftOffset_, PLOT_BORDER, plotWidth, plotHeight);
+
+       ctx->SetPen(wxPen(FreeDVTheme::GetPalette().accent, 1));
+       ctx->SetBrush(*wxTRANSPARENT_BRUSH);
+       ctx->DrawRectangle(
+           PLOT_BORDER + leftOffset_,
+           PLOT_BORDER,
+           plotWidth,
+           plotHeight);
    }
 }
 

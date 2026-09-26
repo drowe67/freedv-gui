@@ -57,9 +57,15 @@
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
 #include <wx/collpane.h>
+#include <wx/timer.h>
 #include <wx/combo.h>
+#include <vector>
+#include <array>
 
 #include "gui/util/wxListViewComboPopup.h"
+#include "gui/displays/DisplayWorkspace.h"
+#include "gui/controls/LevelGauge.h"
+#include "gui/theme/FreeDVTheme.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -74,6 +80,7 @@
 #define ID_ABOUT 1008
 
 #define ID_MODE_COLLAPSE 1100
+#define ID_TIMER_TIME_DISPLAY 1101
 
 class wxListViewComboPopup;
 
@@ -98,11 +105,12 @@ class TopFrame : public wxFrame
         wxMenu* settings;
         wxMenu* tools;
         wxMenu* help;
-        wxGauge* m_gaugeSNR;
+        LevelGauge* m_gaugeSNR;
         wxStaticText* m_textSNR;
         wxCheckBox* m_ckboxSNR;
         wxGauge* m_gaugeLevel;
         wxPanel* m_levelTargetMarker;
+
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
@@ -144,13 +152,72 @@ class TopFrame : public wxFrame
         wxSizer* rightSizer;
 
         wxStaticBox* modeBox;
-        wxStaticBoxSizer* sbSizer_mode;
         
         wxMenuItem* m_menuItemPlayFileFromRadio;
         wxMenuItem* m_menuItemExportConfig;
         wxMenuItem* m_menuItemImportConfig;
 
         wxToggleButton *m_reporterHidden;
+
+        void SetIndependentControlPresentation(bool independent);
+        void SetAppearanceSelection(FreeDVTheme::AppearanceMode mode);
+        void SetDisplayVisibilityChecked(DisplayId id, bool visible);
+        virtual void OnDisplayVisibilityRequest(DisplayId, bool) {}
+        virtual void OnWorkspaceRequest(bool) {}
+        virtual void OnAppearanceRequest(FreeDVTheme::AppearanceMode) {}
+
+    private:
+        wxTimer timeDisplayTimer_;
+        wxStaticText* localTimeText_ = nullptr;
+        wxStaticText* utcTimeText_ = nullptr;
+
+        void UpdateTimeDisplay();
+        void UpdateControlMinimumSize();
+        void StylePrimaryControlButton(wxToggleButton* button);
+        wxStaticBoxSizer* CreateWorkspaceSelector(std::size_t index);
+        wxStaticBoxSizer* CreateAppearanceSelector(std::size_t index);
+
+        struct WorkspaceSelector
+        {
+            wxStaticBoxSizer* sizer;
+            wxRadioButton* notebook;
+            wxRadioButton* independent;
+        };
+        std::array<WorkspaceSelector, 2> workspaceSelectors_{};
+
+        struct AppearanceSelector
+        {
+            wxStaticBoxSizer* sizer;
+            wxRadioButton* system;
+            wxRadioButton* light;
+            wxRadioButton* dark;
+        };
+        std::array<AppearanceSelector, 2> appearanceSelectors_{};
+
+        struct ControlGroup
+        {
+            wxSizer* sizer;
+            wxSizer* notebookParent;
+            wxSizer* independentParent;
+            int independentOrder;
+            int proportion;
+            int flags;
+            int border;
+        };
+        std::vector<ControlGroup> controlGroups_;
+        wxSizer* notebookSizer_ = nullptr;
+        wxSizer* independentSizer_ = nullptr;
+        wxStaticText* controlHeading_ = nullptr;
+        wxStaticBoxSizer* displayVisibilitySizer_ = nullptr;
+        std::array<wxCheckBox*, static_cast<std::size_t>(DisplayId::Count)> displayVisibilityChecks_{};
+        wxBoxSizer* callsignSizer_ = nullptr;
+        wxStaticBoxSizer* statsSizer_ = nullptr;
+        wxFlexGridSizer* statsFieldsSizer_ = nullptr;
+        wxSize notebookMinimumSize_;
+        wxSize notebookPanelMinimumSize_;
+        bool independentControls_ = false;
+
+    protected:
     
         // Virtual event handlers, override them in your derived class
         virtual void OnActivateWindow(wxActivateEvent& event) { event.Skip(); }

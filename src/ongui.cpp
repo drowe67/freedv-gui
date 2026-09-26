@@ -20,6 +20,7 @@
 #include "gui/dialogs/freedv_reporter.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 #include "gui/dialogs/log_entry.h"
+#include "gui/theme/FreeDVTheme.h"
 #include "gui/util/FrequencyOps.h"
 
 #if defined(WIN32)
@@ -68,7 +69,10 @@ void clickTune(float frequency); // callback to pass new click freq
 //-------------------------------------------------------------------------
 void MainFrame::topFrame_OnSize( wxSizeEvent& event )
 {
-    m_auiNbookCtrl->Refresh();
+    if (displayWorkspace_.IsIndependent())
+        m_panel->Refresh();
+    else
+        m_auiNbookCtrl->Refresh();
     TopFrame::topFrame_OnSize(event);
 }
 
@@ -98,6 +102,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent&)
     if (m_reporterDialog == nullptr)
     {
         m_reporterDialog = new FreeDVReporterDialog(this);
+        displayWorkspace_.RegisterSnapWindow(*m_reporterDialog);
     }
 
     m_reporterDialog->refreshLayout();
@@ -159,6 +164,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     if (optionsDlg->ShowModal() == wxOK)
     {
+        const int signalDisplayStyle =
+            wxGetApp().appConfiguration.waterfallColor;
+        if (signalDisplayStyle >= 0 && signalDisplayStyle <= 2)
+        {
+            FreeDVTheme::SetSignalDisplayStyle(
+                static_cast<FreeDVTheme::SignalDisplayStyle>(
+                    signalDisplayStyle));
+        }
+
         // Enable/disable FreeDV Reporter quick options
         m_reporterHidden->Enable(
             wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
@@ -948,7 +962,7 @@ int MainApp::FilterEvent(wxEvent& event)
             PttKeyDown_ = true;
 
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
-            bool mainWindowActive = frame->IsActive();
+            bool mainWindowActive = frame->IsActive() || frame->HasActiveDisplay();
             bool reporterActiveButNotUpdatingTextMessage =
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
@@ -994,7 +1008,7 @@ int MainApp::FilterEvent(wxEvent& event)
         {
             PttKeyDown_ = false;
 
-            bool mainWindowActive = frame->IsActive();
+            bool mainWindowActive = frame->IsActive() || frame->HasActiveDisplay();
             bool reporterActiveButNotUpdatingTextMessage =
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
@@ -1232,35 +1246,6 @@ void MainFrame::OnTOTWarningTimer(wxTimerEvent&)
     }
 }
 
-// Returns the notebook page index that should be restored once we're done showing
-// "Frm Mic" (e.g. on RX, or after voice keyer recording finishes).
-//
-// GetSelection() isn't the right choice here since more than one tab group can be
-// visible at the same time once tabs have been split (e.g. via a saved custom tab
-// layout) - see https://forums.wxwidgets.org/viewtopic.php?t=14721. Instead, ask the
-// specific tab group that "Frm Mic" lives in what's actually active there.
-int MainFrame::captureCurrentMicGroupTab_()
-{
-    auto savedTab = m_auiNbookCtrl->GetSelection();
-
-#if wxCHECK_VERSION(3,1,4)
-    wxAuiTabCtrl* fromMicTabControl = nullptr;
-    int fromMicTabIndex = 0;
-    if (m_panelSpeechIn != nullptr &&
-        m_auiNbookCtrl->FindTab(m_panelSpeechIn, &fromMicTabControl, &fromMicTabIndex))
-    {
-        int localActiveIdx = fromMicTabControl->GetActivePage();
-        if (localActiveIdx >= 0 && localActiveIdx < (int)fromMicTabControl->GetPageCount())
-        {
-            wxWindow* activeWindow = fromMicTabControl->GetWindowFromIdx(localActiveIdx);
-            savedTab = m_auiNbookCtrl->GetPageIndex(activeWindow);
-        }
-    }
-#endif // wxCHECK_VERSION(3,1,4)
-
-    return savedTab;
-}
-
 void MainFrame::togglePTT(void) {
     // Guard against re-entrant calls during the TX drain (Yield() processes events).
     // This is necessary because we are not disabling the button during the changeover,
@@ -1437,12 +1422,8 @@ void MainFrame::togglePTT(void) {
         }
         
         // tx-> rx transition, swap to the page we were on for last rx
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
-        {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            page->Refresh();
-        }
+        displayWorkspace_.RestoreAfterMic(wxGetApp().appConfiguration.currentNotebookTab);
+        displayWorkspace_.RefreshAll();
 
         // enable sync text
 
@@ -1474,21 +1455,8 @@ void MainFrame::togglePTT(void) {
         // rx-> tx transition, swap to Mic In page to monitor speech
 
         // Save currently visible plot so we can go back to it on RX.
-        wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
-
-        // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
-        // the current page ourselves is a better bet.
-        size_t index = 0;
-        for (; index < m_auiNbookCtrl->GetPageCount(); index++)
-        {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
-            {
-                m_auiNbookCtrl->ChangeSelection(index);
-                page->Refresh();
-                break;
-            }
-        }
+        wxGetApp().appConfiguration.currentNotebookTab = displayWorkspace_.CaptureMicReturnPage();
+        displayWorkspace_.ShowDisplay(DisplayId::FrmMic);
 
         // disable sync text
 
@@ -1654,7 +1622,7 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
     // Make sure focus on Tune button is actually cleared once tune state is switched.
     // Seems to be a common problem on some Linux systems for some reason.
-    m_auiNbookCtrl->SetFocus();
+    displayWorkspace_.FocusOperatingWindow();
 }
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()

@@ -20,8 +20,56 @@
 //==========================================================================
 
 #include "WindowPositionRestore.h"
+#include "DpiUtils.h"
 
 #include <wx/frame.h>
+#include <wx/display.h>
+#include <algorithm>
+
+wxRect RestoreWindowGeometry(wxFrame* frame, wxRect rect, const wxSize& minimum)
+{
+    if (rect.width <= 0 || rect.height <= 0)
+        rect.SetSize(frame->GetSize());
+    rect.width = std::max(rect.width, minimum.x);
+    rect.height = std::max(rect.height, minimum.y);
+
+    int monitor = wxNOT_FOUND;
+    for (unsigned int i = 0; i < wxDisplay::GetCount(); ++i)
+    {
+        const wxRect area = wxDisplay(i).GetClientArea();
+        const wxRect title(rect.x, rect.y, rect.width, FromDIP(frame, 32));
+        const wxRect visible = title.Intersect(area);
+        if (visible.width >= FromDIP(frame, 120) && visible.height >= FromDIP(frame, 20))
+        {
+            monitor = i;
+            break;
+        }
+    }
+    const bool recoverPosition = monitor == wxNOT_FOUND;
+    if (recoverPosition)
+    {
+        monitor = wxDisplay::GetFromWindow(frame);
+        if (monitor == wxNOT_FOUND && wxDisplay::GetCount() > 0)
+            monitor = 0;
+    }
+    if (monitor != wxNOT_FOUND)
+    {
+        const wxRect area = wxDisplay(monitor).GetClientArea();
+        rect.width = std::min(rect.width, std::max(area.width, minimum.x));
+        rect.height = std::min(rect.height, std::max(area.height, minimum.y));
+        if (recoverPosition)
+        {
+            rect.x = std::clamp(rect.x, area.x, area.x + std::max(0, area.width - rect.width));
+            rect.y = std::clamp(rect.y, area.y, area.y + std::max(0, area.height - rect.height));
+        }
+    }
+    else
+        rect.SetPosition(wxPoint(20, 20));
+
+    frame->SetSize(rect.GetSize());
+    RestoreWindowPosition(frame, rect.x, rect.y);
+    return rect;
+}
 
 #if defined(__WXGTK__) && defined(HAS_GTK3)
 #include <gtk/gtk.h>
@@ -46,13 +94,14 @@ struct SettlePositionContext_
     guint timeoutId;
 };
 
-void OnFrameDestroyed_(GtkWidget*, gpointer userData)
+void OnFrameDestroyed_(GtkWidget* widget, gpointer userData)
 {
     auto* ctx = static_cast<SettlePositionContext_*>(userData);
     if (ctx->timeoutId != 0)
     {
         g_source_remove(ctx->timeoutId);
     }
+    g_object_set_data(G_OBJECT(widget), "freedv-position-restore", nullptr);
     delete ctx;
 }
 
@@ -69,6 +118,7 @@ gboolean OnSettleTick_(gpointer userData)
     if (g_get_monotonic_time() >= ctx->deadlineUs)
     {
         ctx->timeoutId = 0;
+        g_object_set_data(G_OBJECT(ctx->frame->GetHandle()), "freedv-position-restore", nullptr);
         g_signal_handlers_disconnect_by_func(
             GTK_WIDGET(ctx->frame->GetHandle()), (gpointer)OnFrameDestroyed_, ctx);
         delete ctx;
@@ -96,8 +146,24 @@ gboolean OnFrameMapEvent_(GtkWidget* widget, GdkEventAny*, gpointer userData)
 
 void RestoreWindowPosition(wxFrame* frame, int x, int y)
 {
-    auto* ctx = new SettlePositionContext_{frame, x, y, 0, 0};
     GtkWidget* widget = GTK_WIDGET(frame->GetHandle());
+    auto* previous = static_cast<SettlePositionContext_*>(
+        g_object_get_data(G_OBJECT(widget), "freedv-position-restore"));
+    if (previous != nullptr)
+    {
+        g_signal_handlers_disconnect_by_data(widget, previous);
+        if (previous->timeoutId != 0)
+            g_source_remove(previous->timeoutId);
+        delete previous;
+        g_object_set_data(G_OBJECT(widget), "freedv-position-restore", nullptr);
+    }
+    frame->Move(x, y);
+    if (frame->IsShown())
+    {
+        return;
+    }
+    auto* ctx = new SettlePositionContext_{frame, x, y, 0, 0};
+    g_object_set_data(G_OBJECT(widget), "freedv-position-restore", ctx);
     g_signal_connect(widget, "map-event", G_CALLBACK(OnFrameMapEvent_), ctx);
     g_signal_connect(widget, "destroy", G_CALLBACK(OnFrameDestroyed_), ctx);
 }
@@ -106,6 +172,11 @@ void RestoreWindowPosition(wxFrame* frame, int x, int y)
 
 void RestoreWindowPosition(wxFrame* frame, int x, int y)
 {
+    if (frame->IsShown())
+    {
+        frame->Move(x, y);
+        return;
+    }
     frame->CallAfter([frame, x, y]()
     {
         frame->Move(x, y);

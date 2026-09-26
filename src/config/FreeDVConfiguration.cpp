@@ -36,6 +36,47 @@ FreeDVConfiguration::FreeDVConfiguration()
     , mainWindowWidth("/MainFrame/width", 800)
     , mainWindowHeight("/MainFrame/height", 780)
 
+    , appearanceMode("/Appearance/Mode", static_cast<long>(FreeDVTheme::AppearanceMode::System))
+
+    , independentWorkspace("/Windows/Independent/active", false)
+    , independentVisibilitySaved("/Windows/Independent/visibilitySaved", false)
+    , independentWindowLeft("/Windows/Independent/Control/left", 20)
+    , independentWindowTop("/Windows/Independent/Control/top", 20)
+    , independentWindowWidth("/Windows/Independent/Control/width", -1)
+    , independentWindowHeight("/Windows/Independent/Control/height", -1)
+    , independentDisplays{{
+        {{"/Windows/Independent/Displays/Waterfall/left", 20},
+         {"/Windows/Independent/Displays/Waterfall/top", 20},
+         {"/Windows/Independent/Displays/Waterfall/width", -1},
+         {"/Windows/Independent/Displays/Waterfall/height", -1},
+         {"/Windows/Independent/Displays/Waterfall/visible", false}},
+        {{"/Windows/Independent/Displays/Spectrum/left", 20},
+         {"/Windows/Independent/Displays/Spectrum/top", 20},
+         {"/Windows/Independent/Displays/Spectrum/width", -1},
+         {"/Windows/Independent/Displays/Spectrum/height", -1},
+         {"/Windows/Independent/Displays/Spectrum/visible", false}},
+        {{"/Windows/Independent/Displays/FrmRadio/left", 20},
+         {"/Windows/Independent/Displays/FrmRadio/top", 20},
+         {"/Windows/Independent/Displays/FrmRadio/width", -1},
+         {"/Windows/Independent/Displays/FrmRadio/height", -1},
+         {"/Windows/Independent/Displays/FrmRadio/visible", false}},
+        {{"/Windows/Independent/Displays/FrmMic/left", 20},
+         {"/Windows/Independent/Displays/FrmMic/top", 20},
+         {"/Windows/Independent/Displays/FrmMic/width", -1},
+         {"/Windows/Independent/Displays/FrmMic/height", -1},
+         {"/Windows/Independent/Displays/FrmMic/visible", false}},
+        {{"/Windows/Independent/Displays/FrmDecoder/left", 20},
+         {"/Windows/Independent/Displays/FrmDecoder/top", 20},
+         {"/Windows/Independent/Displays/FrmDecoder/width", -1},
+         {"/Windows/Independent/Displays/FrmDecoder/height", -1},
+         {"/Windows/Independent/Displays/FrmDecoder/visible", false}},
+        {{"/Windows/Independent/Displays/SNR/left", 20},
+         {"/Windows/Independent/Displays/SNR/top", 20},
+         {"/Windows/Independent/Displays/SNR/width", -1},
+         {"/Windows/Independent/Displays/SNR/height", -1},
+         {"/Windows/Independent/Displays/SNR/visible", false}},
+    }}
+
     /* Position and size of Audio Config window */
     , audioConfigWindowLeft("/Windows/AudioConfig/left", -1)
     , audioConfigWindowTop("/Windows/AudioConfig/top", -1)
@@ -123,6 +164,40 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, mainWindowTop);
     load_(config, mainWindowWidth);
     load_(config, mainWindowHeight);
+
+    if (config->HasEntry(appearanceMode.getElementName()))
+    {
+        load_(config, appearanceMode);
+        const long mode = appearanceMode;
+        if (mode < static_cast<long>(FreeDVTheme::AppearanceMode::System) ||
+            mode > static_cast<long>(FreeDVTheme::AppearanceMode::Dark))
+        {
+            appearanceMode = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+        }
+    }
+    else if (config->HasEntry("/Appearance/DarkMode"))
+    {
+        bool legacyDarkMode = false;
+        config->Read("/Appearance/DarkMode", &legacyDarkMode, false);
+        appearanceMode = static_cast<long>(
+            legacyDarkMode ? FreeDVTheme::AppearanceMode::Dark
+                           : FreeDVTheme::AppearanceMode::Light);
+    }
+
+    load_(config, independentWorkspace);
+    load_(config, independentVisibilitySaved);
+    load_(config, independentWindowLeft);
+    load_(config, independentWindowTop);
+    load_(config, independentWindowWidth);
+    load_(config, independentWindowHeight);
+    for (auto& display : independentDisplays)
+    {
+        load_(config, display.left);
+        load_(config, display.top);
+        load_(config, display.width);
+        load_(config, display.height);
+        load_(config, display.visible);
+    }
 
     load_(config, audioConfigWindowLeft);
     load_(config, audioConfigWindowTop);
@@ -244,6 +319,23 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, mainWindowTop);
     save_(config, mainWindowWidth);
     save_(config, mainWindowHeight);
+
+    save_(config, appearanceMode);
+
+    save_(config, independentWorkspace);
+    save_(config, independentVisibilitySaved);
+    save_(config, independentWindowLeft);
+    save_(config, independentWindowTop);
+    save_(config, independentWindowWidth);
+    save_(config, independentWindowHeight);
+    for (auto& display : independentDisplays)
+    {
+        save_(config, display.left);
+        save_(config, display.top);
+        save_(config, display.width);
+        save_(config, display.height);
+        save_(config, display.visible);
+    }
 
     save_(config, audioConfigWindowLeft);
     save_(config, audioConfigWindowTop);

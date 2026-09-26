@@ -57,6 +57,7 @@
 #include "gui/dialogs/dlg_setup_wizard.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/theme/FreeDVTheme.h"
 #include "gui/util/WindowPositionRestore.h"
 #include "gui/util/TabLayoutSerializer.h"
 
@@ -534,6 +535,7 @@ void MainApp::UnitTest_()
 void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 {
     wxApp::OnInitCmdLine(parser);
+    parser.AddSwitch(wxEmptyString, "dark-mode", "Use the dark theme for this session.");
     parser.AddOption("f", "config", "Use different configuration file instead of the default.");
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
@@ -561,6 +563,8 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     {
         return false;
     }
+
+    const bool darkModeOverride = parser.Found("dark-mode");
 
     wxString configPath;
     if (parser.Found("f", &configPath))
@@ -658,7 +662,68 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 
     pConfig = wxConfigBase::Get();
     pConfig->SetRecordDefaults();
-    
+
+    long appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+    if (pConfig->HasEntry("/Appearance/Mode"))
+    {
+        pConfig->Read("/Appearance/Mode", &appearanceModeValue,
+                      static_cast<long>(FreeDVTheme::AppearanceMode::System));
+        if (appearanceModeValue < static_cast<long>(FreeDVTheme::AppearanceMode::System) ||
+            appearanceModeValue > static_cast<long>(FreeDVTheme::AppearanceMode::Dark))
+        {
+            appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::System);
+        }
+    }
+    else if (pConfig->HasEntry("/Appearance/DarkMode"))
+    {
+        bool legacyDarkMode = false;
+        pConfig->Read("/Appearance/DarkMode", &legacyDarkMode, false);
+        appearanceModeValue = static_cast<long>(
+            legacyDarkMode ? FreeDVTheme::AppearanceMode::Dark
+                           : FreeDVTheme::AppearanceMode::Light);
+    }
+
+    if (darkModeOverride)
+    {
+        appearanceModeValue = static_cast<long>(FreeDVTheme::AppearanceMode::Dark);
+    }
+
+    const auto appearanceMode =
+        static_cast<FreeDVTheme::AppearanceMode>(appearanceModeValue);
+
+#if wxCHECK_VERSION(3, 3, 0)
+    wxApp::Appearance wxAppearance = wxApp::Appearance::System;
+    if (appearanceMode == FreeDVTheme::AppearanceMode::Light)
+    {
+        wxAppearance = wxApp::Appearance::Light;
+    }
+    else if (appearanceMode == FreeDVTheme::AppearanceMode::Dark)
+    {
+        wxAppearance = wxApp::Appearance::Dark;
+    }
+
+    SetAppearance(wxAppearance);
+    FreeDVTheme::SetDarkModeEnabled(
+        wxSystemSettings::GetAppearance().IsDark());
+#elif wxCHECK_VERSION(3, 1, 3)
+    FreeDVTheme::SetDarkModeEnabled(
+        appearanceMode == FreeDVTheme::AppearanceMode::Dark ||
+        (appearanceMode == FreeDVTheme::AppearanceMode::System &&
+         wxSystemSettings::GetAppearance().IsDark()));
+#else
+    FreeDVTheme::SetDarkModeEnabled(
+        appearanceMode == FreeDVTheme::AppearanceMode::Dark);
+#endif
+
+    long signalDisplayStyle = 0;
+    pConfig->Read("/Waterfall/Color", &signalDisplayStyle, 0);
+    if (signalDisplayStyle < 0 || signalDisplayStyle > 2)
+    {
+        signalDisplayStyle = 0;
+    }
+    FreeDVTheme::SetSignalDisplayStyle(
+        static_cast<FreeDVTheme::SignalDisplayStyle>(signalDisplayStyle));
+
     if (parser.Found("ut", &testName))
     {
         log_info("Executing test %s", (const char*)testName.ToUTF8());
@@ -857,6 +922,15 @@ int MainApp::OnExit()
 //-------------------------------------------------------------------------
 void MainFrame::loadConfiguration_()
 {
+    // Existing layout restoration requires the plots to be in the notebook.
+    if (!displayWorkspace_.SetIndependent(false))
+    {
+        wxMessageBox("Could not return all displays to the notebook.", "Displays", wxOK | wxICON_ERROR, this);
+        displayWorkspace_.SetSnappingEnabled(true);
+        return;
+    }
+    SetIndependentControlPresentation(false);
+    updateDisplayVisibilityControls_();
     wxGetApp().appConfiguration.load(pConfig);
     
     // restore frame position and size
@@ -864,39 +938,32 @@ void MainFrame::loadConfiguration_()
     int y = wxGetApp().appConfiguration.mainWindowTop;
     int w = wxGetApp().appConfiguration.mainWindowWidth;
     int h = wxGetApp().appConfiguration.mainWindowHeight;
-
-    // sanitise frame position as a first pass at Win32 registry bug
-
-    if (x < 0 || x > 2048) x = 20;
-    if (y < 0 || y > 2048) y = 20;
-    if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 780;
     
-    wxSize size = GetMinSize();
-
-    if (w < size.GetWidth()) w = size.GetWidth();
-    if (h < size.GetHeight()) h = size.GetHeight();
-
-    RestoreWindowPosition(this, x, y);
-
-    // XXX - with really short windows, wxWidgets sometimes doesn't size
-    // the components properly until the user resizes the window (even if only
-    // by a pixel or two). As a really hacky workaround, we emulate this behavior
-    // when restoring window sizing. These resize events also happen after configuration
-    // is restored but I'm not sure this is necessary.
-    CallAfter([=, this]()
+    if (!wxGetApp().appConfiguration.independentWorkspace)
     {
-        SetSize(w, h);
-    });
-    CallAfter([=, this]()
-    {
-        SetSize(w + 1, h + 1);
-    });
-    CallAfter([=, this]()
-    {
-        SetSize(w, h);
-    });
-    
+        const wxRect rect = RestoreWindowGeometry(this, wxRect(x, y, w, h), GetMinSize());
+        w = rect.width;
+        h = rect.height;
+
+        // XXX - with really short windows, wxWidgets sometimes doesn't size
+        // the components properly until the user resizes the window (even if only
+        // by a pixel or two). As a really hacky workaround, we emulate this behavior
+        // when restoring window sizing. These resize events also happen after configuration
+        // is restored but I'm not sure this is necessary.
+        CallAfter([=, this]()
+        {
+            SetSize(w, h);
+        });
+        CallAfter([=, this]()
+        {
+            SetSize(w + 1, h + 1);
+        });
+        CallAfter([=, this]()
+        {
+            SetSize(w, h);
+        });
+    }
+
     // Load AGC state
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release);
     if (wxGetApp().appConfiguration.filterConfiguration.agcEnabled)
@@ -1111,6 +1178,12 @@ void MainFrame::loadConfiguration_()
     
     statsBox->Show(wxGetApp().appConfiguration.showDecodeStats);
 
+    if (wxGetApp().appConfiguration.independentWorkspace && !switchWorkspace_(true, false))
+        wxMessageBox("Could not restore the Independent workspace.", "Displays", wxOK | wxICON_ERROR, this);
+
+    SetAppearanceSelection(static_cast<FreeDVTheme::AppearanceMode>(
+        wxGetApp().appConfiguration.appearanceMode.get()));
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     
@@ -1162,6 +1235,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     CLK_OFF_FMT("ClkOff: %+-d")
 {
     SetThreadName("GUI");
+
+    std::fill_n(g_avmag_waterfall, MODEM_STATS_NSPEC, MIN_MAG_DB);
+    std::fill_n(g_avmag_spectrum, MODEM_STATS_NSPEC, MIN_MAG_DB);
 
     terminating_ = false;
     realigned_ = false;
@@ -1224,20 +1300,45 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
 
     // Add Demod Input window
-    m_panelDemodIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelDemodIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, "", false, 0, false, PlotScalar::TraceStyle::MagnitudeGradient);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
 
     // Add Speech Input window
-    m_panelSpeechIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelSpeechIn = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, "", false, 0, false, PlotScalar::TraceStyle::MagnitudeGradient);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
 
     // Add Speech Output window
-    m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_panelSpeechOut = new PlotScalar(m_auiNbookCtrl, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, "", false, 0, false, PlotScalar::TraceStyle::MagnitudeGradient);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("Frm Decoder"), false, wxNullBitmap);
 
     // Add SNR window
-    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false);
+    m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false, PlotScalar::TraceStyle::ValueGradient);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
+
+    displayWorkspace_.RegisterDisplay(DisplayId::Waterfall, *m_panelWaterfall);
+    displayWorkspace_.RegisterDisplay(DisplayId::Spectrum, *m_panelSpectrum);
+    displayWorkspace_.RegisterDisplay(DisplayId::FrmRadio, *m_panelDemodIn);
+    displayWorkspace_.RegisterDisplay(DisplayId::FrmMic, *m_panelSpeechIn);
+    displayWorkspace_.RegisterDisplay(DisplayId::FrmDecoder, *m_panelSpeechOut);
+    displayWorkspace_.RegisterDisplay(DisplayId::SNR, *m_panelSNR);
+
+    displayWorkspace_.SetLayoutHandlers([this]() -> wxString {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutSerializer serializer;
+        m_auiNbookCtrl->SaveLayout("notebook", serializer);
+        return serializer.GetLayout();
+#else
+        return static_cast<TabFreeAuiNotebook*>(m_auiNbookCtrl)->SavePerspective();
+#endif
+    }, [this](const wxString& layout) {
+#if wxCHECK_VERSION(3, 3, 0)
+        TabLayoutDeserializer deserializer(layout);
+        m_auiNbookCtrl->LoadLayout("notebook", deserializer);
+#else
+        static_cast<TabFreeAuiNotebook*>(m_auiNbookCtrl)->LoadPerspective(layout);
+#endif
+        const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+    });
 
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1417,6 +1518,19 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         });
     }
 
+    displayWorkspace_.SetVisibilityChangedHandler([this]() {
+        updateDisplayVisibilityControls_();
+    });
+
+    auto* independentWindowsItem = tools->AppendCheckItem(wxID_ANY, _("Independent Windows"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event) {
+        OnWorkspaceRequest(event.IsChecked());
+    }, independentWindowsItem->GetId());
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
+        event.Enable(canSwitchWorkspace_());
+        event.Check(displayWorkspace_.IsIndependent());
+    }, independentWindowsItem->GetId());
+
     wxGetApp().appConfiguration.firstTimeUse = false;
 
     //#define FTEST
@@ -1524,34 +1638,158 @@ void MainFrame::setConfiguration_(wxConfigBase* config)
 
 void MainFrame::exportConfiguration_(wxConfigBase* config)
 {
-    if (!IsIconized()) {
-        int w = 0;
-        int h = 0;
-        int x = 0;
-        int y = 0;
-        GetSize(&w, &h);
-        GetPosition(&x, &y);
-        
-        wxGetApp().appConfiguration.mainWindowLeft = x;
-        wxGetApp().appConfiguration.mainWindowTop = y;
-        wxGetApp().appConfiguration.mainWindowWidth = w;
-        wxGetApp().appConfiguration.mainWindowHeight = h;
-    }
+    captureWorkspace_();
 
     if (tabLayoutPersistenceEnabledAtStartup_)
     {
-#if wxCHECK_VERSION(3, 3, 0)
-        TabLayoutSerializer serializer;
-        m_auiNbookCtrl->SaveLayout("notebook", serializer);
-        wxGetApp().appConfiguration.tabLayout = serializer.GetLayout();
-#else
-        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
-#endif // wxCHECK_VERSION(3, 3, 0)
+        wxGetApp().appConfiguration.tabLayout = displayWorkspace_.GetNotebookLayout();
     }
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     autoSaveCurrentBandLevels_(false);
     wxGetApp().appConfiguration.save(config);
+}
+
+void MainFrame::captureWorkspace_()
+{
+    auto& config = wxGetApp().appConfiguration;
+    const bool independent = displayWorkspace_.IsIndependent();
+    config.independentWorkspace = independent;
+    if (!IsIconized() && !IsMaximized())
+    {
+        const wxRect rect = GetRect();
+        if (independent)
+        {
+            config.independentWindowLeft = rect.x;
+            config.independentWindowTop = rect.y;
+            config.independentWindowWidth = rect.width;
+            config.independentWindowHeight = rect.height;
+        }
+        else
+        {
+            config.mainWindowLeft = rect.x;
+            config.mainWindowTop = rect.y;
+            config.mainWindowWidth = rect.width;
+            config.mainWindowHeight = rect.height;
+        }
+    }
+    if (independent)
+    {
+        static_assert(std::tuple_size<decltype(config.independentDisplays)>::value ==
+                      static_cast<std::size_t>(DisplayId::Count));
+        for (std::size_t index = 0; index < config.independentDisplays.size(); ++index)
+        {
+            const auto id = static_cast<DisplayId>(index);
+            auto& display = config.independentDisplays[index];
+            const wxRect rect = displayWorkspace_.GetDisplayGeometry(id);
+            if (!rect.IsEmpty())
+            {
+                display.left = rect.x;
+                display.top = rect.y;
+                display.width = rect.width;
+                display.height = rect.height;
+            }
+            display.visible = displayWorkspace_.IsDisplayVisible(id);
+        }
+        config.independentVisibilitySaved = true;
+    }
+}
+
+bool MainFrame::switchWorkspace_(bool independent, bool captureCurrent)
+{
+    if (independent == displayWorkspace_.IsIndependent())
+        return true;
+    if (captureCurrent)
+        captureWorkspace_();
+    if (!displayWorkspace_.SetIndependent(independent, false))
+    {
+        SetIndependentControlPresentation(displayWorkspace_.IsIndependent());
+        updateDisplayVisibilityControls_();
+        displayWorkspace_.SetSnappingEnabled(true);
+        return false;
+    }
+    if (IsIconized() || IsMaximized())
+        Restore();
+    SetIndependentControlPresentation(independent);
+    auto& config = wxGetApp().appConfiguration;
+    config.independentWorkspace = independent;
+    if (independent)
+    {
+        const wxRect control = RestoreWindowGeometry(this,
+            wxRect(config.independentWindowLeft, config.independentWindowTop,
+                   config.independentWindowWidth, config.independentWindowHeight), GetMinSize());
+        config.independentWindowLeft = control.x;
+        config.independentWindowTop = control.y;
+        config.independentWindowWidth = control.width;
+        config.independentWindowHeight = control.height;
+        for (std::size_t index = 0; index < config.independentDisplays.size(); ++index)
+        {
+            const auto id = static_cast<DisplayId>(index);
+            auto& display = config.independentDisplays[index];
+            const wxRect rect = displayWorkspace_.RestoreDisplayGeometry(id,
+                wxRect(display.left, display.top, display.width, display.height));
+            display.left = rect.x;
+            display.top = rect.y;
+            display.width = rect.width;
+            display.height = rect.height;
+            const bool visible = config.independentVisibilitySaved ? display.visible.get() : id == DisplayId::Waterfall;
+            displayWorkspace_.SetDisplayVisible(id, visible);
+        }
+    }
+    else
+    {
+        RestoreWindowGeometry(this,
+            wxRect(config.mainWindowLeft, config.mainWindowTop,
+                   config.mainWindowWidth, config.mainWindowHeight), GetMinSize());
+        m_panel->Layout();
+    }
+    updateDisplayVisibilityControls_();
+    displayWorkspace_.SetSnappingEnabled(true);
+    return true;
+}
+
+bool MainFrame::canSwitchWorkspace_() const
+{
+    return !terminating_ && !txChangeoverOccurring_ &&
+        !m_btnTogPTT->GetValue() && !g_recVoiceKeyerFile && vk_state == VK_IDLE;
+}
+
+void MainFrame::OnWorkspaceRequest(bool independent)
+{
+    if (canSwitchWorkspace_() && !switchWorkspace_(independent))
+        wxMessageBox("Display transfer failed. Retry returning to the notebook.",
+                     "Displays", wxOK | wxICON_ERROR, this);
+    SetIndependentControlPresentation(displayWorkspace_.IsIndependent());
+    updateDisplayVisibilityControls_();
+}
+
+void MainFrame::OnAppearanceRequest(FreeDVTheme::AppearanceMode mode)
+{
+    auto& config = wxGetApp().appConfiguration;
+    config.appearanceMode = static_cast<long>(mode);
+    SetAppearanceSelection(mode);
+
+    auto* pConfig = wxConfigBase::Get();
+    config.save(pConfig);
+    pConfig->Flush();
+
+    wxMessageBox(_("Appearance will change the next time FreeDV starts."),
+                 _("Appearance"), wxOK | wxICON_INFORMATION, this);
+}
+
+void MainFrame::OnDisplayVisibilityRequest(DisplayId id, bool visible)
+{
+    displayWorkspace_.SetDisplayVisible(id, visible);
+    SetDisplayVisibilityChecked(id, displayWorkspace_.IsDisplayVisible(id));
+}
+
+void MainFrame::updateDisplayVisibilityControls_()
+{
+    for (std::size_t index = 0; index < static_cast<std::size_t>(DisplayId::Count); ++index)
+    {
+        const auto id = static_cast<DisplayId>(index);
+        SetDisplayVisibilityChecked(id, displayWorkspace_.IsDisplayVisible(id));
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -1861,14 +2099,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
-        if (snr_limited < -5.0) snr_limited = -5.0;
-        if (snr_limited > 40.0) snr_limited = 40.0;
+        if (snr_limited < NO_SNR_VAL) snr_limited = NO_SNR_VAL;
+        if (snr_limited > MAX_SNR_VAL) snr_limited = MAX_SNR_VAL;
         wxString snrString = wxString::Format(SNR_FORMAT_STR, (int)(g_snr + 0.5));
 
         if (syncState)
         {
             m_textSNR->SetLabel(snrString);
-            m_gaugeSNR->SetValue((int)(snr_limited+5));
+            m_gaugeSNR->SetValue((int)(snr_limited - NO_SNR_VAL));
         }
         else
         {
@@ -2213,6 +2451,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
+    displayWorkspace_.SetSnappingEnabled(false);
     if (terminating_)
     {
         // A previous close request already kicked off the async RX/PTT
@@ -2274,6 +2513,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent&)
 {
+    displayWorkspace_.SetSnappingEnabled(false);
     if (m_RxRunning)
     {
         if (m_btnTogPTT->GetValue())
@@ -2766,7 +3006,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 // focus after clicking on Start. This causes the frequency
                 // to never update. To avoid this, we force focus to be elsewhere
                 // in the window.
-                m_auiNbookCtrl->SetFocus();
+                displayWorkspace_.FocusOperatingWindow();
             });
         });
         onOffExec.detach();
@@ -3613,6 +3853,7 @@ void MainFrame::initializeFreeDVReporter_()
     if (m_reporterDialog == nullptr)
     {
         m_reporterDialog = new FreeDVReporterDialog(this);
+        displayWorkspace_.RegisterSnapWindow(*m_reporterDialog);
     }
         
     m_reporterDialog->setReporter(wxGetApp().m_sharedReporterObject);
@@ -3863,4 +4104,3 @@ void MainFrame::OnRxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
         }
     }
 }
-

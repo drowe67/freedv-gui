@@ -30,6 +30,7 @@
 #include <wx/numdlg.h>
 #include <wx/textdlg.h>
 #include "../controls/MsgListPopup.h"
+#include "../theme/FreeDVTheme.h"
 #include "../util/FrequencyOps.h"
 #include "../util/WindowPositionRestore.h"
 
@@ -210,6 +211,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         SetTitle(wxString::Format("%s (%s)", _("FreeDV Reporter"), wxGetApp().customConfigFileName));
     }
 
+    FreeDVTheme::ApplyWindowSurface(*this);
+
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
@@ -286,6 +289,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         }
     }
     m_listSpots->AppendTextColumn(wxT(" "), RIGHTMOST_COL, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
+
+#if wxCHECK_VERSION(3, 1, 0)
+    wxItemAttr headerAttr;
+    headerAttr.SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
+    m_listSpots->SetHeaderAttr(headerAttr);
+#endif
 
     // Apply column filter indicators if filters were loaded from config
     // (called after all columns are created so getColumnForModelColId_ works)

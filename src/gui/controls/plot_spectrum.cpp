@@ -24,7 +24,9 @@
 #include <wx/wx.h>
 
 #include "plot_spectrum.h"
-#include "defines.h" // for FDMDV_FCENTRE
+#include "defines.h"
+#include "gui/theme/FreeDVTheme.h"
+
 
 #define HZ_GRANULARITY 10
 
@@ -155,24 +157,19 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // draw spectrum
 
-    int   x, y, prev_x, index;
+    int   x, y, prev_x, prev_y, index;
     float index_to_px, mag_dB_to_py, mag;
+    float prev_mag = m_min_mag_db;
 
     m_newdata = false;
-
-    wxPen pen;
-    pen.SetColour(DARK_GREEN_COLOR);
-    pen.SetWidth(1);
-    ctx->SetPen(pen);
 
     index_to_px = (float)m_rGrid.GetWidth()/m_n_magdB;
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
 
     prev_x = PLOT_BORDER + leftOffset_;
+    prev_y = PLOT_BORDER + m_rGrid.GetHeight();
 
     auto freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
-
-    wxGraphicsPath path = ctx->CreatePath();
     for(index = 0; index < m_n_magdB; index++)
     {
         x = index*index_to_px;
@@ -206,15 +203,45 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
         if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px))
         {
-            path.AddLineToPoint(x, y);
+            const double position =
+                ((static_cast<double>(prev_mag) + mag) * 0.5 - m_min_mag_db) /
+                (m_max_mag_db - m_min_mag_db);
+
+            const wxColour traceColour =
+                FreeDVTheme::GetSignalTraceColour(position);
+            const wxColour fillColour(
+                traceColour.Red(),
+                traceColour.Green(),
+                traceColour.Blue(),
+                80);
+
+            wxGraphicsPath fillPath = ctx->CreatePath();
+            const double baseline =
+                PLOT_BORDER + bottomOffset_ + m_rGrid.GetHeight();
+            fillPath.MoveToPoint(prev_x, baseline);
+            fillPath.AddLineToPoint(prev_x, prev_y);
+            fillPath.AddLineToPoint(x, y);
+            fillPath.AddLineToPoint(x, baseline);
+            fillPath.CloseSubpath();
+
+            ctx->SetPen(*wxTRANSPARENT_PEN);
+            ctx->SetBrush(wxBrush(fillColour));
+            ctx->FillPath(fillPath);
+
+            ctx->SetPen(wxPen(traceColour, 2));
+            ctx->StrokeLine(prev_x, prev_y, x, y);
+
+            prev_x = x;
+            prev_y = y;
+            prev_mag = mag;
         }
-        if (!index)
+        else if (!index)
         {
-            path.MoveToPoint(x, y);
+            prev_x = x;
+            prev_y = y;
+            prev_mag = mag;
         }
-        prev_x = x;
     }
-    ctx->StrokePath(path);
 
     // and finally draw Graticule
     drawGraticuleFast(ctx, repaintDataOnly);
@@ -329,6 +356,14 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
             ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
         }
     }
+
+    ctx->SetPen(wxPen(FreeDVTheme::GetPalette().accent, 1));
+    ctx->SetBrush(*wxTRANSPARENT_BRUSH);
+    ctx->DrawRectangle(
+        PLOT_BORDER + leftOffset_,
+        PLOT_BORDER + bottomOffset_,
+        m_rGrid.GetWidth(),
+        m_rGrid.GetHeight());
 }
 
 //-------------------------------------------------------------------------
