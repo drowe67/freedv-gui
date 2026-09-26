@@ -21,6 +21,7 @@
 #include <string.h>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 
 #include <wx/wx.h>
 #include "os/os_interface.h"
@@ -268,9 +269,8 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     int yOffset = 0;
     for (auto& slice : waterfallSlices_)
     {
-        int sliceHeight = slice.bitmap->GetHeight();
-        gc->DrawBitmap(slice.gfxBitmap, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, sliceHeight);
-        yOffset += sliceHeight;
+        gc->DrawBitmap(slice.gfxBitmap, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, slice.height);
+        yOffset += slice.height;
     }
 
     if (yOffset < m_imgHeight)
@@ -605,36 +605,28 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     {
         tmpImage_->SetData(dyImageData_, true);
 
-        WaterfallSlice slice;
-        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
-        {
-            // Recycle the oldest block's bitmap as the render target for the newest one.
-            // Its cached gfxBitmap goes with it and is rebuilt below.
-            slice.bitmap = waterfallSlices_.back().bitmap;
-            waterfallSlices_.pop_back();
-        }
-        else
-        {
-            slice.bitmap = new wxBitmap(m_imgWidth, dy);
-        }
-
-        wxBitmap srcBmp(*tmpImage_);
-        {
-            // Scoped so both DCs release the bitmaps before the graphics bitmap is made
-            // from slice.bitmap -- a bitmap still selected into a wxMemoryDC is under raw
-            // access and cannot be handed to the renderer.
-            wxMemoryDC sourceDC;
-            sourceDC.SelectObjectAsSource(srcBmp);
-            wxMemoryDC destDC(*slice.bitmap);
-
-            destDC.StretchBlit(0, 0, m_imgWidth, srcBmp.GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, srcBmp.GetHeight());
-        }
+        // Build the block at the display's pixel density rather than at 1x. A 1x block
+        // gets upscaled by the renderer on HiDPI displays (e.g. GTK3 under fractional
+        // scaling, which renders at 2x), which left dark horizontal seams between
+        // blocks. Upscaling the whole plot on every paint was also ~40x slower than
+        // drawing it 1:1.
+        double scale = GetContentScaleFactor();
+        wxImage scaledImage = tmpImage_->Scale(
+            std::max(1, (int)std::lround(m_imgWidth * scale)),
+            std::max(1, (int)std::lround(dy * scale)),
+            wxIMAGE_QUALITY_NEAREST);
 
         // Convert once, here, rather than on every paint: a block's pixels never change
-        // again after this blit, and it will be composited on each of the frames it spends
-        // scrolling down the screen.
-        slice.gfxBitmap = gc->CreateBitmap(*slice.bitmap);
+        // again, and it will be composited on each of the frames it spends scrolling down
+        // the screen.
+        WaterfallSlice slice;
+        slice.height = dy;
+        slice.gfxBitmap = gc->CreateBitmapFromImage(scaledImage);
 
+        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
+        {
+            waterfallSlices_.pop_back();
+        }
         waterfallSlices_.push_front(slice);
     }
 }
@@ -748,10 +740,6 @@ void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent&)
 
 void PlotWaterfall::cleanupSlices_()
 {
-    for (auto& slice : waterfallSlices_)
-    {
-        delete slice.bitmap;
-    }
     waterfallSlices_.clear();
 
     dy_ = 0;
