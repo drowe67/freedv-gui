@@ -4,6 +4,8 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    # macOS-only performance experiment; see cmake-macos.yml on that branch.
+    - 'ms-ci-plotscalar-perf'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
