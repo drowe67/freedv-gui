@@ -4,6 +4,8 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    # macOS-only audio device experiment; see cmake-macos.yml on that branch.
+    - 'ms-ci-macos-audio-ab'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
