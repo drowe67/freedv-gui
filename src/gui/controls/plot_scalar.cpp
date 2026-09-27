@@ -40,6 +40,25 @@ END_EVENT_TABLE()
 
 constexpr int STR_LENGTH = 15;
 
+#if defined(__APPLE__) || defined(_WIN32)
+// On macOS and Windows the plot is drawn straight into the window as vectors instead of
+// through the plotArea_/plotLines_ bitmaps. The Frm Mic plot repaints ten times a second
+// while transmitting, and scrolling, converting and compositing those bitmaps on every
+// frame was the largest single cost on the GUI thread:
+//
+// - On macOS a wxBitmap is always sRGB and 1x while the window is almost never sRGB and is
+//   usually 2x, so CoreGraphics color matched and rescaled both bitmaps on every frame.
+//   Keeping native bitmaps in the window's color space and pixel density avoided that but
+//   still cost a 2x scroll, a snapshot copy and a pixel format conversion per frame.
+// - On Windows, drawing the bitmaps through GDI+ took over twice as long as rasterizing
+//   the paths directly.
+//
+// Linux (GTK) keeps the bitmaps, which weren't a significant cost there.
+constexpr bool DRAW_DIRECTLY = true;
+#else
+constexpr bool DRAW_DIRECTLY = false;
+#endif // defined(__APPLE__) || defined(_WIN32)
+
 //----------------------------------------------------------------
 // PlotScalar()
 //----------------------------------------------------------------
@@ -237,33 +256,49 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (plotWidth <= 0 || plotHeight <= 0) return;
  
-    if (plotArea_ == nullptr)
-    {
-        plotArea_ = new wxBitmap(plotWidth, plotHeight);
-        assert(plotArea_ != nullptr);
-
-        addedPoints_ = 0; // force rendering of all points
-    }
-
-    plotAreaDC_->SelectObject(*plotArea_);
-
-    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    plotAreaDC_->SetBrush(ltGraphBkgBrush);
-    plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
-
     index_to_px = (float)plotWidth/m_samples;
-    int pixelsUpdated = std::min(plotWidth, (int)std::floor(index_to_px * addedPoints_));
+    int pixelsUpdated = 0;
+    wxAntialiasMode antialiasMode = ctx->GetAntialiasMode();
 
-    if (repaintDataOnly && pixelsUpdated > 0)
+    if (DRAW_DIRECTLY)
     {
-        // Clear only the area that we're updating
-        plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
-        plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+        // Redraw the whole plot area in plot coordinates; see DRAW_DIRECTLY.
+        ctx->PushState();
+        ctx->Translate(plotX, plotY);
+        ctx->Clip(0, 0, plotWidth, plotHeight);
+        ctx->SetPen(*wxTRANSPARENT_PEN);
+        ctx->SetBrush(wxBrush(BLACK_COLOR));
+        ctx->DrawRectangle(0, 0, plotWidth, plotHeight);
     }
     else
     {
-        plotAreaDC_->DrawRectangle(0, 0, plotWidth, plotHeight);
-        addedPoints_ = 0;
+        if (plotArea_ == nullptr)
+        {
+            plotArea_ = new wxBitmap(plotWidth, plotHeight);
+            assert(plotArea_ != nullptr);
+
+            addedPoints_ = 0; // force rendering of all points
+        }
+
+        plotAreaDC_->SelectObject(*plotArea_);
+
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        plotAreaDC_->SetBrush(ltGraphBkgBrush);
+        plotAreaDC_->SetPen(wxPen(BLACK_COLOR, 0));
+
+        pixelsUpdated = std::min(plotWidth, (int)std::floor(index_to_px * addedPoints_));
+
+        if (repaintDataOnly && pixelsUpdated > 0)
+        {
+            // Clear only the area that we're updating
+            plotAreaDC_->Blit(0, 0, plotWidth - pixelsUpdated, plotHeight, plotAreaDC_, pixelsUpdated, 0);
+            plotAreaDC_->DrawRectangle(plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+        }
+        else
+        {
+            plotAreaDC_->DrawRectangle(0, 0, plotWidth, plotHeight);
+            addedPoints_ = 0;
+        }
     }
     
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
@@ -271,8 +306,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    plotAreaDC_->SetPen(pen);
-    plotAreaDC_->SetBrush(wxBrush(DARK_GREEN_COLOR));
+    if (!DRAW_DIRECTLY)
+    {
+        plotAreaDC_->SetPen(pen);
+        plotAreaDC_->SetBrush(wxBrush(DARK_GREEN_COLOR));
+    }
 
     // plot each channel     
 
@@ -357,7 +395,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!m_bar_graph)
     {
-        wxGraphicsContext* plotCtx = wxGraphicsContext::Create(*plotAreaDC_);
+        wxGraphicsContext* plotCtx = DRAW_DIRECTLY ? ctx : wxGraphicsContext::Create(*plotAreaDC_);
         assert(plotCtx != nullptr);
 
         plotCtx->SetInterpolationQuality(wxINTERPOLATION_NONE);
@@ -397,7 +435,20 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             plotCtx->StrokePath(path);
         }
-        delete plotCtx;
+        if (!DRAW_DIRECTLY)
+        {
+            delete plotCtx;
+        }
+    }
+
+    if (DRAW_DIRECTLY)
+    {
+        ctx->PopState();
+        ctx->SetAntialiasMode(antialiasMode);
+
+        addedPoints_ = 0;
+        drawGraticuleFast(ctx, repaintDataOnly);
+        return;
     }
 
     plotAreaDC_->SelectObject(wxNullBitmap);
@@ -431,7 +482,29 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     wxGraphicsContext* plotCtx = nullptr;
     bool drawPlotLines = false;
-    if (plotLines_ == nullptr)
+
+    // With DRAW_DIRECTLY the gridlines are collected into paths and stroked into the
+    // window at the end, rather than composited from the cached plotLines_ overlay.
+    wxGraphicsPath verticalLines = DRAW_DIRECTLY ? ctx->CreatePath() : wxGraphicsPath();
+    wxGraphicsPath horizontalLines = DRAW_DIRECTLY ? ctx->CreatePath() : wxGraphicsPath();
+    auto strokeGridLine = [&](wxGraphicsPath& path, wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2)
+    {
+        if (DRAW_DIRECTLY)
+        {
+            path.MoveToPoint(x1, y1);
+            path.AddLineToPoint(x2, y2);
+        }
+        else
+        {
+            plotCtx->StrokeLine(x1, y1, x2, y2);
+        }
+    };
+
+    if (DRAW_DIRECTLY)
+    {
+        drawPlotLines = true;
+    }
+    else if (plotLines_ == nullptr)
     {
         plotLines_ = new wxImage(plotWidth, plotHeight);
         assert(plotLines_ != nullptr);
@@ -460,17 +533,17 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // Vertical gridlines
 
-    if (drawPlotLines) plotCtx->SetPen(m_penShortDash);
+    if (drawPlotLines && !DRAW_DIRECTLY) plotCtx->SetPen(m_penShortDash);
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step)
     {
         x = t*sec_to_px;
         if (m_mini && drawPlotLines) 
         {
-            plotCtx->StrokeLine(x, plotHeight, x, 0);
+            strokeGridLine(verticalLines, x, plotHeight, x, 0);
         }
         else 
         {
-            if (drawPlotLines) plotCtx->StrokeLine(x, plotHeight, x, 0);
+            if (drawPlotLines) strokeGridLine(verticalLines, x, plotHeight, x, 0);
             x += PLOT_BORDER + leftOffset_;
             if (!repaintDataOnly) 
             {
@@ -496,7 +569,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // Horizontal gridlines
 
-    if (drawPlotLines) plotCtx->SetPen(m_penDotDash);
+    if (drawPlotLines && !DRAW_DIRECTLY) plotCtx->SetPen(m_penDotDash);
     for(a=m_a_min; a<=m_a_max; ) 
     {
         if (m_logy) 
@@ -510,11 +583,11 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         }
         if (m_mini && drawPlotLines) 
         {
-            plotCtx->StrokeLine(0, y, plotWidth, y);
+            strokeGridLine(horizontalLines, 0, y, plotWidth, y);
         }
         else 
         {
-            if (drawPlotLines) plotCtx->StrokeLine(0, y, plotWidth, y);
+            if (drawPlotLines) strokeGridLine(horizontalLines, 0, y, plotWidth, y);
             y += PLOT_BORDER;
             if (!repaintDataOnly)
             {
@@ -544,6 +617,33 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         }
    }
 
+   int plotX = m_mini ? 0 : PLOT_BORDER + leftOffset_;
+   int plotY = m_mini ? 0 : PLOT_BORDER;
+
+   if (DRAW_DIRECTLY)
+   {
+       wxAntialiasMode antialiasMode = ctx->GetAntialiasMode();
+       ctx->PushState();
+       ctx->Translate(plotX, plotY);
+       ctx->Clip(0, 0, plotWidth, plotHeight);
+       ctx->SetAntialiasMode(wxANTIALIAS_NONE);
+       ctx->SetPen(m_penShortDash);
+       ctx->StrokePath(verticalLines);
+
+#if defined(__APPLE__)
+       // In the plotLines_ overlay this replaces, horizontal lines land one point above
+       // their nominal y, which is where the waveform's zero line is drawn. Stroked here
+       // they'd land one point below it instead, so shift them to match. (On Windows they
+       // already land where the overlay put them.)
+       ctx->Translate(0, -1);
+#endif // defined(__APPLE__)
+       ctx->SetPen(m_penDotDash);
+       ctx->StrokePath(horizontalLines);
+       ctx->PopState();
+       ctx->SetAntialiasMode(antialiasMode);
+       return;
+   }
+
    if (drawPlotLines) 
    {
        delete plotCtx;
@@ -554,14 +654,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
        plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
    }
 
-   if (m_mini)
-   {
-       ctx->DrawBitmap(plotLinesBMP_, 0, 0, plotWidth, plotHeight);
-   }
-   else
-   {
-       ctx->DrawBitmap(plotLinesBMP_, PLOT_BORDER + leftOffset_, PLOT_BORDER, plotWidth, plotHeight);
-   }
+   ctx->DrawBitmap(plotLinesBMP_, plotX, plotY, plotWidth, plotHeight);
 }
 
 void PlotScalar::clearSamples()
