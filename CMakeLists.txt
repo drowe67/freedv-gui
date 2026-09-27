@@ -107,6 +107,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 # Find the git hash if this is a working copy.
 #
 include(cmake/CheckGit.cmake)
+include(cmake/CheckLibraryUsable.cmake)
 CheckGitSetup()
 
 # Set default build flags.
@@ -434,27 +435,29 @@ endif(USE_NATIVE_AUDIO)
 #
 if(NOT USE_STATIC_PORTAUDIO AND NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Looking for portaudio...")
-    find_package(portaudio-2.0 REQUIRED)
+    find_package(portaudio-2.0)
     if(PORTAUDIO_FOUND)
         message(STATUS "  portaudio library: ${PORTAUDIO_LIBRARIES}")
         message(STATUS "  portaudio headers: ${PORTAUDIO_INCLUDE_DIRS}")
         if(pkgcfg_lib_PORTAUDIO_portaudio)
-        list(APPEND FREEDV_LINK_LIBS ${pkgcfg_lib_PORTAUDIO_portaudio})
+        set(PORTAUDIO_LINK_LIBS ${pkgcfg_lib_PORTAUDIO_portaudio})
         else(pkgcfg_lib_PORTAUDIO_portaudio)
-        list(APPEND FREEDV_LINK_LIBS ${PORTAUDIO_LIBRARIES})
+        set(PORTAUDIO_LINK_LIBS ${PORTAUDIO_LIBRARIES})
         endif(pkgcfg_lib_PORTAUDIO_portaudio)
+        CheckLibraryUsable(PORTAUDIO_USABLE
+            SYMBOL Pa_Initialize HEADER portaudio.h
+            LIBRARIES ${PORTAUDIO_LINK_LIBS} INCLUDE_DIRS ${PORTAUDIO_INCLUDE_DIRS})
+    endif(PORTAUDIO_FOUND)
+    if(PORTAUDIO_USABLE)
+        list(APPEND FREEDV_LINK_LIBS ${PORTAUDIO_LINK_LIBS})
         include_directories(${PORTAUDIO_INCLUDE_DIRS})
-    else()
-        message(FATAL_ERROR "portaudio library not found.
-On Linux systems try installing:
-    portaudio-devel  (RPM based systems)
-    portaudio19-dev (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
-        )
-    endif()
-    if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
-        message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
-    endif()
+        if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
+            message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
+        endif()
+    else(PORTAUDIO_USABLE)
+        message(STATUS "Will attempt static build of portaudio.")
+        include(cmake/Buildportaudio-2.0.cmake)
+    endif(PORTAUDIO_USABLE)
 elseif(USE_NATIVE_AUDIO AND LINUX)
     message(STATUS "Finding PulseAudio...")
     find_package(PulseAudio REQUIRED)
@@ -490,6 +493,11 @@ find_library(HAMLIB_LIBRARY hamlib PATH_SUFFIXES hamlib)
 message(STATUS "  Hamlib library: ${HAMLIB_LIBRARY}")
 message(STATUS "  Hamlib headers: ${HAMLIB_INCLUDE_DIR}")
 if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
+    CheckLibraryUsable(HAMLIB_USABLE
+        SYMBOL rig_init HEADER hamlib/rig.h
+        LIBRARIES ${HAMLIB_LIBRARY} INCLUDE_DIRS ${HAMLIB_INCLUDE_DIR})
+endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
+if(HAMLIB_USABLE)
     message(STATUS "Hamlib library found.")
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
@@ -538,10 +546,10 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
         message(STATUS "Hamlib: rig state is in rig_state.h, not rig.h.")
         add_definitions(-DHAMLIB_USE_SEPARATE_RIG_STATE_H)
     endif (NOT HAMLIB_RIG_STATE_H STREQUAL "HAMLIB_RIG_STATE_H-NOTFOUND")
-else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
+else(HAMLIB_USABLE)
     message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
-endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
+endif(HAMLIB_USABLE)
 
 # r8brain-free-src (header-only, bundled in src/3rdparty/r8brain)
 
@@ -554,8 +562,13 @@ if(NOT USE_STATIC_SNDFILE)
     find_path(LIBSNDFILE_INCLUDE_DIR sndfile.h)
     message(STATUS "  sndfile library: ${LIBSNDFILE}")
     message(STATUS "  sndfile headers: ${LIBSNDFILE_INCLUDE_DIR}")
-
     if(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
+        CheckLibraryUsable(LIBSNDFILE_USABLE
+            SYMBOL sf_open HEADER sndfile.h
+            LIBRARIES ${LIBSNDFILE} INCLUDE_DIRS ${LIBSNDFILE_INCLUDE_DIR})
+    endif(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
+
+    if(LIBSNDFILE_USABLE)
         # Some Linux distros don't include MP3 support for libsamplefile. 
         # Check for this, and if we don't have the needed config, disable 
         # MP3 support in the app.
@@ -579,10 +592,10 @@ if(NOT USE_STATIC_SNDFILE)
         endif (NOT CMAKE_CROSSCOMPILING)
 
         list(APPEND FREEDV_LINK_LIBS ${LIBSNDFILE})
-    else(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
+    else(LIBSNDFILE_USABLE)
         message(STATUS "Will attempt static build of sndfile.")
         include(cmake/BuildSndfile.cmake)
-    endif(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
+    endif(LIBSNDFILE_USABLE)
 else(NOT USE_STATIC_SNDFILE)
     message(STATUS "Will attempt static build of sndfile.")
     include(cmake/BuildSndfile.cmake)
