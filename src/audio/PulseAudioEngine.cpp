@@ -67,7 +67,7 @@ std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOu
 
     if (requestRealtime)
     {
-        pa_context_set_state_callback(context, [](pa_context* ctx, void* mainloop) {
+        pa_context_set_state_callback(context, [](pa_context* ctx [[maybe_unused]], void* mainloop) {
             pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
 #if defined(USE_RTKIT)
