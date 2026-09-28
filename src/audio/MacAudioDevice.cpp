@@ -127,6 +127,12 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
     sem_ = dispatch_semaphore_create(0);
+
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+    if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+    {
+        timingLogger_ = std::thread(&MacAudioDevice::timingLoggerEntry_, this);
+    }
 }
 
 MacAudioDevice::~MacAudioDevice()
@@ -138,6 +144,50 @@ MacAudioDevice::~MacAudioDevice()
     
     waitForAllTasksComplete_();
     dispatch_release(sem_);
+
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+    timingLoggerStop_.store(true, std::memory_order_release);
+    if (timingLogger_.joinable())
+    {
+        timingLogger_.join();
+    }
+}
+
+// CI DIAGNOSTIC (ms-ci-rade-loss-diag only): logs the irregular output callback cycles
+// OutputProc_() records, and a callback count once a second.
+void MacAudioDevice::timingLoggerEntry_()
+{
+    uint32_t readIndex = 0;
+    uint64_t lastCount = 0;
+    int ticks = 0;
+    while (!timingLoggerStop_.load(std::memory_order_acquire))
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        uint32_t writeIndex = timingWriteIndex_.load(std::memory_order_acquire);
+        if (writeIndex - readIndex > TIMING_EVENTS)
+        {
+            log_warn("TIMINGDIAG \"%s\": lost %u events", deviceName_.c_str(), writeIndex - readIndex - TIMING_EVENTS);
+            readIndex = writeIndex - TIMING_EVENTS;
+        }
+        for (; readIndex != writeIndex; readIndex++)
+        {
+            const TimingEvent& e = timingEvents_[readIndex % TIMING_EVENTS];
+            log_warn("TIMINGDIAG \"%s\": at %.3f s: sample time jumped %+.0f frames (expected %.0f, got %.0f), %.1f ms since previous callback, callback took %.1f ms, %u frames",
+                deviceName_.c_str(),
+                (e.sampleTime - timingFirstSampleTime_) / sampleRate_,
+                e.sampleTime - e.expectedSampleTime, e.expectedSampleTime, e.sampleTime,
+                e.hostGapMs, e.callbackMs, e.frames);
+        }
+        if (++ticks % 10 == 0)
+        {
+            uint64_t count = timingCallbacks_.load(std::memory_order_relaxed);
+            if (count != lastCount)
+            {
+                log_info("TIMINGDIAG \"%s\": %llu output callbacks so far", deviceName_.c_str(), (unsigned long long)count);
+                lastCount = count;
+            }
+        }
+    }
 }
     
 int MacAudioDevice::getNumChannels() FREEDV_NONBLOCKING
@@ -805,16 +855,24 @@ OSStatus MacAudioDevice::InputProc_(
 OSStatus MacAudioDevice::OutputProc_(
             void *inRefCon,
             AudioUnitRenderActionFlags *,
-            const AudioTimeStamp *,
+            const AudioTimeStamp *inTimeStamp,
             UInt32,
             UInt32 inNumberFrames,
             AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
 
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+    static mach_timebase_info_data_t timebase = {0, 0};
+    if (timebase.denom == 0) mach_timebase_info(&timebase);
+    auto toMs = [](uint64_t ticks) { return (double)ticks * timebase.numer / timebase.denom / 1e6; };
+    uint64_t entryTime = mach_absolute_time();
+    uint64_t callbackTicks = 0;
+
     if (thisObj->onAudioDataFunction)
     {
         thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
+        callbackTicks = mach_absolute_time() - entryTime;
         
         for (UInt32 index = 0; index < inNumberFrames; index++)
         {
@@ -824,7 +882,36 @@ OSStatus MacAudioDevice::OutputProc_(
             }
         }
     }
-    
+
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only): record cycles where CoreAudio skipped
+    // samples (sample time jumped), the callback came late, or FreeDV's work took long.
+    if (inTimeStamp != nullptr && (inTimeStamp->mFlags & kAudioTimeStampSampleTimeValid))
+    {
+        double sampleTime = inTimeStamp->mSampleTime;
+        uint64_t hostTime = (inTimeStamp->mFlags & kAudioTimeStampHostTimeValid) ? inTimeStamp->mHostTime : entryTime;
+        double bufferMs = 1000.0 * inNumberFrames / thisObj->sampleRate_;
+        if (thisObj->timingFirstSampleTime_ < 0)
+        {
+            thisObj->timingFirstSampleTime_ = sampleTime;
+        }
+        else
+        {
+            double expected = thisObj->timingLastSampleTime_ + thisObj->timingLastFrames_;
+            double hostGapMs = toMs(hostTime - thisObj->timingLastHostTime_);
+            double callbackMs = toMs(callbackTicks);
+            if (sampleTime != expected || hostGapMs > 1.5 * bufferMs || callbackMs > 0.5 * bufferMs)
+            {
+                uint32_t i = thisObj->timingWriteIndex_.load(std::memory_order_relaxed);
+                thisObj->timingEvents_[i % TIMING_EVENTS] = { sampleTime, expected, hostGapMs, callbackMs, inNumberFrames };
+                thisObj->timingWriteIndex_.store(i + 1, std::memory_order_release);
+            }
+        }
+        thisObj->timingLastSampleTime_ = sampleTime;
+        thisObj->timingLastHostTime_ = hostTime;
+        thisObj->timingLastFrames_ = inNumberFrames;
+    }
+    thisObj->timingCallbacks_.fetch_add(1, std::memory_order_relaxed);
+
     return OSStatus(noErr);
 }
 
@@ -1022,6 +1109,8 @@ int MacAudioDevice::DeviceOverloadCallback_(
 
     // Possible GUI stuff really shouldn't be happening on the audio thread.
     std::thread tmpThread = std::thread([thisObj]() {
+        // CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+        log_warn("TIMINGDIAG \"%s\": CoreAudio reported a processor overload", thisObj->deviceName_.c_str());
         if (thisObj->onAudioUnderflowFunction)
         {
             thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);

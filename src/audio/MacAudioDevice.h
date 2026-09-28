@@ -25,6 +25,8 @@
 
 #include <thread>
 #include <chrono>
+#include <atomic>
+#include <cstdint>
 #include <dispatch/dispatch.h>
 #include <CoreAudio/CoreAudio.h>
 #include <AudioUnit/AudioUnit.h>
@@ -95,6 +97,28 @@ private:
     // matches WASAPIAudioDevice's equivalent fields/fix (36db96e5).
     int64_t waitOvershootUs_ = 0;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
+
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only): output callback timing. The callback
+    // records irregular cycles into a lock-free ring; a separate thread logs them.
+    struct TimingEvent
+    {
+        double sampleTime;          // this callback's mSampleTime
+        double expectedSampleTime;  // previous mSampleTime + previous frame count
+        double hostGapMs;           // host time since the previous callback started
+        double callbackMs;          // time spent in FreeDV's audio data function
+        uint32_t frames;
+    };
+    static constexpr uint32_t TIMING_EVENTS = 256;
+    TimingEvent timingEvents_[TIMING_EVENTS];
+    std::atomic<uint32_t> timingWriteIndex_{0};
+    std::atomic<uint64_t> timingCallbacks_{0};
+    double timingFirstSampleTime_ = -1;
+    double timingLastSampleTime_ = -1;
+    uint64_t timingLastHostTime_ = 0;
+    uint32_t timingLastFrames_ = 0;
+    std::atomic<bool> timingLoggerStop_{false};
+    std::thread timingLogger_;
+    void timingLoggerEntry_();
 
     void stopImpl_();
     void joinWorkgroup_();
