@@ -872,6 +872,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to record both the raw and decoded RX audio. (PR #1501)
     * Linux/PulseAudio: Show friendlier device names in configuration windows. (PR #1508)
     * Add ability to import configuration from WSJT-X/JTDX/JS8Call. (PR #1513)
+    * Add dark mode support for Windows. (PR #1518)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
 
