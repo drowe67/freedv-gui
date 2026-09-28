@@ -74,10 +74,16 @@ protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
     
-    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PulseAudioDevice(wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     std::mutex objLock_;
+
+    // Each device has its own connection (main loop and context) rather than sharing the
+    // engine's, created in start() and destroyed in stop(). With PipeWire, streams that
+    // share a connection can stall: e.g. when a loopback connects a sink FreeDV plays to
+    // with the sink whose monitor it records, pipewire-pulse stopped delivering the
+    // recorded audio for seconds to minutes at a time.
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;

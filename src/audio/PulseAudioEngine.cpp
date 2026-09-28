@@ -32,6 +32,8 @@
 
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
+    , mainloop_(nullptr)
+    , context_(nullptr)
 {
     // empty
 }
@@ -44,6 +46,168 @@ PulseAudioEngine::~PulseAudioEngine()
     }
 }
 
+std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOut, pa_context** contextOut, bool requestRealtime)
+{
+    *mainloopOut = nullptr;
+    *contextOut = nullptr;
+
+    // Allocate PA main loop and context.
+    pa_threaded_mainloop* mainloop = pa_threaded_mainloop_new();
+    if (mainloop == nullptr)
+    {
+        return "Could not allocate PulseAudio main loop.";
+    }
+
+    pa_context* context = pa_context_new(pa_threaded_mainloop_get_api(mainloop), "FreeDV");
+    if (context == nullptr)
+    {
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not allocate PulseAudio context.";
+    }
+
+    if (requestRealtime)
+    {
+        pa_context_set_state_callback(context, [](pa_context* ctx [[maybe_unused]], void* mainloop) {
+            pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
+
+#if defined(USE_RTKIT)
+            // Ask rtkit to raise the main loop thread's priority once per connection, when it
+            // becomes ready, rather than on every state change. rtkit only allows so many
+            // requests per user in a short burst (25 per 20 s by default) and each device has
+            // its own connection, so asking on every state change used most of that on start.
+            if (pa_context_get_state(ctx) == PA_CONTEXT_READY && pa_threaded_mainloop_in_thread(threadedML))
+            {
+                DBusError error;
+                DBusConnection* bus = nullptr;
+                int result = 0;
+
+                dbus_error_init(&error);
+                if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+                {
+                    log_warn("Could not connect to system bus: %s", error.message);
+                }
+                else
+                {
+                    int minNiceLevel = 0;
+                    constexpr int ERROR_BUFFER_SIZE = 1024;
+                    char tmpBuf[ERROR_BUFFER_SIZE];
+                    if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+                    {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                        auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (rv != 0)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#else
+                        auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (ptr == nullptr)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        else
+                        {
+                            memmove(tmpBuf, ptr, strlen(ptr) + 1);
+                        }
+                        log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    }
+                    else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+                    {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                        auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (rv != 0)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        log_warn("rtkit could not make high priority: %s", tmpBuf);
+#else
+                        auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+    		    if (ptr == nullptr)
+    		    {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        else
+                        {
+                            memmove(tmpBuf, ptr, strlen(ptr) + 1);
+                        }
+                        log_warn("rtkit could not make high priority: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    }
+                }
+    
+                if (bus != nullptr)
+                {
+                    dbus_connection_unref(bus);
+                }
+            }
+#endif // defined(USE_RTKIT)
+
+            pa_threaded_mainloop_signal(threadedML, 0);
+        }, mainloop);
+    }
+    else
+    {
+        pa_context_set_state_callback(context, [](pa_context*, void* mainloop) {
+            pa_threaded_mainloop_signal(static_cast<pa_threaded_mainloop *>(mainloop), 0);
+        }, mainloop);
+    }
+    
+    // Start main loop.
+    pa_threaded_mainloop_lock(mainloop);
+    if (pa_threaded_mainloop_start(mainloop) != 0)
+    {
+        pa_threaded_mainloop_unlock(mainloop);
+        pa_context_unref(context);
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not start PulseAudio main loop.";
+    }
+
+    // Connect context to default PA server and wait for it to be ready.
+    bool connected = pa_context_connect(context, NULL, PA_CONTEXT_NOFLAGS, NULL) == 0;
+    while (connected)
+    {
+        pa_context_state_t context_state = pa_context_get_state(context);
+        if (context_state == PA_CONTEXT_READY) break;
+        if (!PA_CONTEXT_IS_GOOD(context_state))
+        {
+            connected = false;
+            break;
+        }
+        pa_threaded_mainloop_wait(mainloop);
+    }
+    pa_threaded_mainloop_unlock(mainloop);
+
+    if (!connected)
+    {
+        pa_threaded_mainloop_stop(mainloop);
+        pa_context_unref(context);
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not connect PulseAudio context.";
+    }
+
+    *mainloopOut = mainloop;
+    *contextOut = context;
+    return "";
+}
+
+void PulseAudioEngine::DestroyConnection(pa_threaded_mainloop* mainloop, pa_context* context)
+{
+    if (mainloop == nullptr || context == nullptr)
+    {
+        return;
+    }
+
+    pa_threaded_mainloop_lock(mainloop);
+    pa_context_disconnect(context);
+    pa_threaded_mainloop_unlock(mainloop);
+
+    pa_threaded_mainloop_stop(mainloop);
+    pa_context_unref(context);
+    pa_threaded_mainloop_free(mainloop);
+}
+
 void PulseAudioEngine::start()
 {
     std::unique_lock<std::mutex> lk(startStopMtx_);
@@ -54,153 +218,18 @@ void PulseAudioEngine::start()
         return;
     }
     
-    // Allocate PA main loop and context.
-    mainloop_ = pa_threaded_mainloop_new();
-    
-    if (mainloop_ == nullptr)
+    // The engine's connection is only used to enumerate devices, so it doesn't need
+    // rtkit's help (and shouldn't use up the per-user rtkit request budget).
+    auto error = CreateConnection(&mainloop_, &context_, false);
+    if (!error.empty())
     {
         if (onAudioErrorFunction)
         {
-            onAudioErrorFunction(*this, "Could not allocate PulseAudio main loop.", onAudioErrorState);
+            onAudioErrorFunction(*this, error, onAudioErrorState);
         }
         return;
     }
-    
-    mainloopApi_ = pa_threaded_mainloop_get_api(mainloop_);
-    context_ = pa_context_new(mainloopApi_, "FreeDV");
-    
-    if (context_ == nullptr)
-    {
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not allocate PulseAudio context.", onAudioErrorState);
-        }
-        
-        pa_threaded_mainloop_free(mainloop_);
-        mainloop_ = nullptr;
-        return;
-    }
-    
-    pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
-        pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
-#if defined(USE_RTKIT)
-        if (pa_threaded_mainloop_in_thread(threadedML))
-        {
-            DBusError error;
-            DBusConnection* bus = nullptr;
-            int result = 0;
-
-            dbus_error_init(&error);
-            if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
-            {
-                log_warn("Could not connect to system bus: %s", error.message);
-            }
-            else
-            {
-                int minNiceLevel = 0;
-                constexpr int ERROR_BUFFER_SIZE = 1024;
-                char tmpBuf[ERROR_BUFFER_SIZE];
-                if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
-                {
-#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (rv != 0)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
-#else
-                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (ptr == nullptr)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    else
-                    {
-                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
-                    }
-                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
-#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                }
-                else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
-                {
-#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (rv != 0)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    log_warn("rtkit could not make high priority: %s", tmpBuf);
-#else
-                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-		    if (ptr == nullptr)
-		    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    else
-                    {
-                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
-                    }
-                    log_warn("rtkit could not make high priority: %s", tmpBuf);
-#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                }
-            }
-    
-            if (bus != nullptr)
-            {
-                dbus_connection_unref(bus);
-            }
-        }
-#endif // defined(USE_RTKIT)
-
-        pa_threaded_mainloop_signal(threadedML, 0);
-    }, mainloop_);
-    
-    // Start main loop.
-    pa_threaded_mainloop_lock(mainloop_);
-    if (pa_threaded_mainloop_start(mainloop_) != 0)
-    {
-        pa_threaded_mainloop_unlock(mainloop_);
-        
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not start PulseAudio main loop.", onAudioErrorState);
-        }
-        
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
-        mainloop_ = nullptr;
-        context_ = nullptr;
-        return;
-    }
-    
-    // Connect context to default PA server.
-    if (pa_context_connect(context_, NULL, PA_CONTEXT_NOFLAGS, NULL) != 0)
-    {
-        pa_threaded_mainloop_unlock(mainloop_);
-        
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not connect PulseAudio context.", onAudioErrorState);
-        }
-        
-        pa_threaded_mainloop_stop(mainloop_);
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
-        return;
-    }
-
-    // Wait for the context to be ready
-    for(;;) 
-    {
-        pa_context_state_t context_state = pa_context_get_state(context_);
-        assert(PA_CONTEXT_IS_GOOD(context_state));
-        if (context_state == PA_CONTEXT_READY) break;
-        pa_threaded_mainloop_wait(mainloop_);
-    }
-    
-    pa_threaded_mainloop_unlock(mainloop_);
     initialized_ = true;
 }
 
@@ -221,16 +250,8 @@ void PulseAudioEngine::stopImpl_()
     
     if (initialized_)
     {
-        pa_threaded_mainloop_lock(mainloop_);
-        pa_context_disconnect(context_);
-        pa_threaded_mainloop_unlock(mainloop_);
-    
-        pa_threaded_mainloop_stop(mainloop_);
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
-
+        DestroyConnection(mainloop_, context_);
         mainloop_ = nullptr;
-        mainloopApi_ = nullptr;
         context_ = nullptr;
         initialized_ = false;
     }
@@ -473,7 +494,7 @@ std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceNa
             // Create device object.
             auto devObj = 
                 new PulseAudioDevice(
-                    mainloop_, context_, deviceName, direction, sampleRate, 
+                    deviceName, direction, sampleRate, 
                     dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
