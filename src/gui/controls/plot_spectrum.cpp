@@ -239,6 +239,27 @@ void PlotSpectrum::drawGraticuleStatic_(wxGraphicsContext* ctx)
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);
 
+    // The labels are laid out using the window's text metrics, so they need to come out
+    // the same size here. They don't when drawing into the cached graticule bitmap on
+    // Windows: a context on a memory DC renders fonts at 96 DPI regardless of the
+    // monitor's, so scale the font to match.
+    {
+        wxDouble ctxWidth = 0, ctxHeight = 0;
+        ctx->GetTextExtent("0dB", &ctxWidth, &ctxHeight);
+        int windowWidth = 0, windowHeight = 0;
+        GetTextExtent("0dB", &windowWidth, &windowHeight);
+        if (ctxHeight > 0 && windowHeight > 0)
+        {
+            double fontScale = windowHeight / ctxHeight;
+            if (fontScale > 1.05 || fontScale < 0.95)
+            {
+                wxFont scaledFont(GetFont());
+                scaledFont.SetFractionalPointSize(scaledFont.GetFractionalPointSize() * fontScale);
+                ctx->SetFont(ctx->CreateFont(scaledFont, GetForegroundColour()));
+            }
+        }
+    }
+
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
 
@@ -310,7 +331,10 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     // transparent bitmap that's then drawn over the spectrum on every repaint.
     GraticuleKey key;
     key.size = GetClientSize();
-    key.scale = GetDPIScaleFactor();
+    // Logical to physical pixels: 2 on a Retina Mac, but always 1 on Windows, where window
+    // sizes are already in physical pixels (GetDPIScaleFactor() would make the bitmap twice
+    // too big there, and it'd be drawn at half size).
+    key.scale = GetContentScaleFactor();
     key.font = GetFont();
     key.foreground = GetForegroundColour();
     key.lineColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
