@@ -90,7 +90,11 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" test.wav &
+    # Keep parecord's buffer small. By default it asks for a very large one, and on
+    # PipeWire the recording then lagged 1-1.7 s behind; hamlibserver.py kills parecord
+    # 80 ms after the last PTT off, so whatever was still buffered -- the end of the last
+    # over, including the EOO frame carrying the callsign -- was lost.
+    parecord --latency-msec=20 --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" test.wav &
 else
     sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
 fi
@@ -141,18 +145,24 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     # Add noise to the recording to check reporting still decodes in a
     # degraded channel.
     #
-    # ch fixes the noise density (--No), not the SNR, and its input
-    # (test.wav) is a live virtual-cable capture whose level varies run to
-    # run; the AWGN realisation ch adds is random each run too. At --No -18
-    # the RADE decode landed at ~5-6 dB SNR -- right on the decode cliff --
-    # so rade_reporting_awgn failed intermittently on the non-sanitizer
-    # Linux legs (masked, but not always, by ctest --repeat until-pass:2).
-    # --No -22 gives ~4 dB of headroom while still being a genuinely noisy
-    # channel.
+    # ch fixes the noise density (--No), not the SNR. The recorded signal
+    # level is steady, so --No -18 lands at ~5 dB SNR (ch's SNR3k). ch never
+    # seeds rand(), so it adds the same noise every run; what varies is where
+    # the overs fall in the recording relative to that noise.
+    #
+    # Measured over 30 such variations per level (callsign decodes: per
+    # over / test passes, i.e. at least one of the two overs):
+    #   --No -18 (~5 dB): 93% / 100%
+    #   --No -17 (~4 dB): 67% /  97%
+    #   --No -16 (~3 dB): 45% /  73%
+    # -18 is the noisiest level that stays above 95% with margin (~99.5%
+    # expected from the per-over rate). Earlier intermittent failures at
+    # this level came from the recording losing the second over's EOO (see
+    # parecord above), which left only one chance to decode the callsign.
     if [ "$2" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     elif [ "$2" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -22 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 

@@ -29,6 +29,7 @@
 #include <signal.h>
 
 #include "PulseAudioDevice.h"
+#include "PulseAudioEngine.h"
 #include "../util/timespec.h"
 
 #if defined(USE_RTKIT)
@@ -47,9 +48,9 @@ using namespace std::chrono_literals;
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 #endif // 0
  
-PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
-    : context_(context)
-    , mainloop_(mainloop)
+PulseAudioDevice::PulseAudioDevice(wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+    : context_(nullptr)
+    , mainloop_(nullptr)
     , stream_(nullptr)
     , devName_(devName)
     , direction_(direction)
@@ -79,6 +80,16 @@ void PulseAudioDevice::start()
     sample_specification.format = PA_SAMPLE_S16LE;
     sample_specification.rate = sampleRate_;
     sample_specification.channels = numChannels_;
+
+    auto error = PulseAudioEngine::CreateConnection(&mainloop_, &context_, true);
+    if (!error.empty())
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, error + " (" + (const char*)devName_.ToUTF8() + ")", onAudioErrorState);
+        }
+        return;
+    }
     
     pa_threaded_mainloop_lock(mainloop_);
     stream_ = pa_stream_new(context_, description.c_str(), &sample_specification, nullptr);
@@ -89,6 +100,10 @@ void PulseAudioDevice::start()
             onAudioErrorFunction(*this, std::string("Could not create PulseAudio stream for ") + (const char*)devName_.ToUTF8(), onAudioErrorState);
         }
         pa_threaded_mainloop_unlock(mainloop_);
+
+        PulseAudioEngine::DestroyConnection(mainloop_, context_);
+        mainloop_ = nullptr;
+        context_ = nullptr;
         return;
     }
     
@@ -177,10 +192,20 @@ void PulseAudioDevice::stopImpl_()
 
         sem_destroy(&sem_);
     }
+
+    // Only after the stream has terminated, as waiting for that needs the main loop.
+    PulseAudioEngine::DestroyConnection(mainloop_, context_);
+    mainloop_ = nullptr;
+    context_ = nullptr;
 }
 
 int64_t PulseAudioDevice::getLatencyInMicroseconds()
 {
+    if (mainloop_ == nullptr)
+    {
+        return 0;
+    }
+
     pa_threaded_mainloop_lock(mainloop_);
     pa_usec_t latency = 0;
     if (stream_ != nullptr)
