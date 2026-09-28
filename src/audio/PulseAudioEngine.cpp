@@ -65,11 +65,15 @@ std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOu
         return "Could not allocate PulseAudio context.";
     }
 
-    pa_context_set_state_callback(context, [](pa_context*, void* mainloop) {
+    pa_context_set_state_callback(context, [](pa_context* ctx, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
 #if defined(USE_RTKIT)
-        if (pa_threaded_mainloop_in_thread(threadedML))
+        // Ask rtkit to raise the main loop thread's priority once per connection, when it
+        // becomes ready, rather than on every state change. rtkit only allows so many
+        // requests per user in a short burst (25 per 20 s by default) and each device has
+        // its own connection, so asking on every state change used most of that on start.
+        if (pa_context_get_state(ctx) == PA_CONTEXT_READY && pa_threaded_mainloop_in_thread(threadedML))
         {
             DBusError error;
             DBusConnection* bus = nullptr;
