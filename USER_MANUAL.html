@@ -1299,6 +1299,7 @@ configuration. (PR #1500)</li>
 displays. (PR #1514)</li>
 <li>Reduce GUI thread paint and FreeDV Reporter overhead. (PR
 #1515)</li>
+<li>PulseAudio: give each device its own connection. (PR #1523)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1308,11 +1309,15 @@ displays. (PR #1514)</li>
 #1505))</li>
 <li>Fix bundled libsndfile build on lib64 systems and strncpy build
 error. (PR #1510)</li>
+<li>Only use system libraries that can actually be linked. (PR
+#1521)</li>
 </ul></li>
 <li>Other:
 <ul>
 <li>Waterfall and other plot performance improvements. (PR #1481)</li>
 <li>Windows audio thread timing improvements. (PR #1488)</li>
+<li>Reduce GUI thread load from the scalar plots during TX (macOS and
+Windows) (PR #1521)</li>
 </ul></li>
 </ol>
 <h2 data-number="19.2" id="v2.4.0-august-2026"><span
