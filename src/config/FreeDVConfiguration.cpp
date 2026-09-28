@@ -81,6 +81,7 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     , halfDuplexMode("/Rig/HalfDuplex", true)
     , multipleReceiveEnabled("/Rig/MultipleRx", true)
+    , textChatUsDataSegmentsOnly("/TextChat/UsDataSegmentsOnly", true)
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
         
     , quickRecordRawPath("/QuickRecord/SavePath", _(""))
@@ -211,6 +212,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, halfDuplexMode);
     load_(config, multipleReceiveEnabled);
+    load_(config, textChatUsDataSegmentsOnly);
     load_(config, multipleReceiveOnSingleThread);
     
     load_(config, freedv700Clip);
@@ -308,6 +310,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, halfDuplexMode);
     save_(config, multipleReceiveEnabled);
+    save_(config, textChatUsDataSegmentsOnly);
     save_(config, multipleReceiveOnSingleThread);
     
     save_(config, quickRecordRawPath);

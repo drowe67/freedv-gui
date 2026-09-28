@@ -12,6 +12,8 @@
 #include <vector>
 
 #include "main.h"
+#include "gui/dialogs/dlg_text_messaging.h"
+#include "text_messaging/TextMessagingSession.h"
 
 #include "git_version.h"
 #include "gui/dialogs/dlg_easy_setup.h"
@@ -163,6 +165,34 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnToolsTextMessaging()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsTextMessaging(wxCommandEvent&)
+{
+    if (m_textMessagingDialog == nullptr)
+    {
+        m_textMessagingDialog = new TextMessagingDialog(this);
+    }
+
+    // Picks up history, the current callsign and anything heard while the
+    // window was closed.
+    m_textMessagingDialog->refreshFromSession();
+    m_textMessagingDialog->Show();
+    m_textMessagingDialog->Iconize(false);
+    m_textMessagingDialog->Raise();
+}
+
+//-------------------------------------------------------------------------
+// OnToolsTextMessagingUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsTextMessagingUI(wxUpdateUIEvent& event)
+{
+    // Chat needs the data modems; without them the window would have nothing
+    // to say.
+    event.Enable(TextMessaging::TextMessagingSession::instance().isStarted());
+}
+
+//-------------------------------------------------------------------------
 // OnToolsAudio()
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
@@ -234,6 +264,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 
         // Update reporting list.
         updateReportingFreqList_();
+
+        // The text chat preference may have changed.
+        updateTextChatTransmitPermission_();
     
         // Show/hide frequency box based on CAT control configuration.
         m_freqBox->Show(isFrequencyControlEnabled_());
@@ -547,6 +580,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // here.
             auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+            updateTextChatTransmitPermission_();
             if (oldFreq != newFreq)
             {
                 for (auto& ptr : wxGetApp().m_reporters)
@@ -1584,12 +1618,18 @@ void MainFrame::togglePTT(void) {
             wxGetApp().m_pttInSerialPort->suspendChanges(false);
         }
         
-        // tx-> rx transition, swap to the page we were on for last rx
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-        for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+        // tx-> rx transition, swap to the page we were on for last rx. Not for
+        // a text chat burst, which never switched away: the switch would focus
+        // the page and, on wxGTK, present the main window over whatever the
+        // operator is doing (see textMessagingChangeover_ in main.h).
+        if (!textMessagingChangeover_)
         {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            page->Refresh();
+            m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
+            for (size_t index = 0; index < m_auiNbookCtrl->GetPageCount(); index++)
+            {
+                auto page = m_auiNbookCtrl->GetPage(index);
+                page->Refresh();
+            }
         }
 
         // enable sync text
@@ -1619,22 +1659,28 @@ void MainFrame::togglePTT(void) {
             wxGetApp().m_pttInSerialPort->suspendChanges(true);
         }
         
-        // rx-> tx transition, swap to Mic In page to monitor speech
-
-        // Save currently visible plot so we can go back to it on RX.
-        wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
-
-        // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
-        // the current page ourselves is a better bet.
-        size_t index = 0;
-        for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+        // rx-> tx transition, swap to Mic In page to monitor speech. A text
+        // chat burst carries no speech and has nobody at the main window, so
+        // it leaves the page alone: the switch would focus the page and, on
+        // wxGTK, present the main window over whatever the operator is doing
+        // (see textMessagingChangeover_ in main.h).
+        if (!textMessagingChangeover_)
         {
-            auto page = m_auiNbookCtrl->GetPage(index);
-            if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
+            // Save currently visible plot so we can go back to it on RX.
+            wxGetApp().appConfiguration.currentNotebookTab = captureCurrentMicGroupTab_();
+
+            // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+            // the current page ourselves is a better bet.
+            size_t index = 0;
+            for (; index < m_auiNbookCtrl->GetPageCount(); index++)
             {
-                m_auiNbookCtrl->ChangeSelection(index);
-                page->Refresh();
-                break;
+                auto page = m_auiNbookCtrl->GetPage(index);
+                if (page != nullptr && page == (wxWindow *)m_panelSpeechIn)
+                {
+                    m_auiNbookCtrl->ChangeSelection(index);
+                    page->Refresh();
+                    break;
+                }
             }
         }
 
@@ -2064,7 +2110,7 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
     OnChangeReportFrequency(event);
 }
 
-void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
+void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 {    
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -2118,6 +2164,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
+
+    // Text chat follows a frequency once it has been entered: on Enter, on a
+    // choice from the list, or when the box loses focus. Not on each keystroke
+    // while it is being typed -- "14.080" passes through 1, 14 and 14.0 MHz on
+    // the way, and each of those would stop chat and discard what it had
+    // queued. With rig control the radio is not retuned until then either.
+    bool stillTyping = event.GetEventType() == wxEVT_TEXT && suppressFreqModeUpdates_;
+    if (!stillTyping) updateTextChatTransmitPermission_();
 
     if (freqStr != oldFreqString)
     {

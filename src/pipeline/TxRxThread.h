@@ -71,6 +71,7 @@ public:
         , hasEooBeenSent_(false)
         , helper_(std::move(helper))
         , deferReset_(false)
+        , dataTxInProgress_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -136,6 +137,12 @@ private:
     bool deferReset_;
     std::thread thread_;
 
+    // Text messaging bursts arrive already modulated at 8 kHz, so they only
+    // need level adjustment and resampling on their way to the sound card.
+    std::unique_ptr<AudioPipeline> dataTxPipeline_;
+    std::unique_ptr<short[]> dataTxSamples_;
+    bool dataTxInProgress_;
+
     Semaphore readySem_;
     Semaphore startSem_;
 
@@ -189,6 +196,7 @@ private:
     void initializePipeline_();
     void txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
+    bool transmitTextMessagingAudio_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void clearFifos_() FREEDV_NONBLOCKING;
 };
 

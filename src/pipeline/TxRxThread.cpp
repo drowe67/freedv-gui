@@ -67,6 +67,9 @@ using namespace std::chrono_literals;
 #include "LinkStep.h"
 #include "BeepStep.h"
 #include "MixStep.h"
+#include "TextMessagingModem.h"
+#include "TextMessagingReceiveStep.h"
+#include "TextMessagingTxQueue.h"
 
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
@@ -311,6 +314,15 @@ void TxRxThread::initializePipeline_()
             return g_txLevelScale.load(std::memory_order_acquire);
         });
         pipeline_->appendPipelineStep(txAttenuationStep);
+
+        // Text messaging bursts skip the microphone pipeline entirely -- they
+        // are already modulated -- but they still have to honor the operator's
+        // transmit level, so they get their own copy of that step.
+        dataTxPipeline_ = std::make_unique<AudioPipeline>(FS, outputSampleRate_);
+        dataTxPipeline_->appendPipelineStep(new LevelAdjustStep(FS, +[]() FREEDV_NONBLOCKING {
+            return g_txLevelScale.load(std::memory_order_acquire);
+        }));
+        dataTxSamples_ = std::make_unique<short[]>((FS * FRAME_DURATION_MS) / MS_TO_SEC);
     }
     else
     {
@@ -363,14 +375,22 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayRadio->appendPipelineStep(playRadio);
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { 
+            +[]() FREEDV_NONBLOCKING {
                 auto result = g_playFileFromRadio.load(std::memory_order_acquire) && (g_sfPlayFileFromRadio.load(std::memory_order_acquire) != NULL);
                 return result;
             },
             eitherOrPlayRadio,
             eitherOrBypassPlayRadio);
         activeRxPipeline->appendPipelineStep(eitherOrPlayRadioStep);
-        
+
+        // Text messaging data demodulation. This is a tap so the DATAC13 and
+        // DATAC4 demodulators run on the tap's own thread, leaving the voice
+        // path untouched whether or not anyone is chatting.
+        auto textMessagingPipeline = new AudioPipeline(inputSampleRate_, FS);
+        textMessagingPipeline->appendPipelineStep(new TextMessagingReceiveStep(&textMessagingModem()));
+        auto textMessagingTap = new TapStep(inputSampleRate_, textMessagingPipeline);
+        activeRxPipeline->appendPipelineStep(textMessagingTap);
+
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(&g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
@@ -798,8 +818,83 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
+bool TxRxThread::transmitTextMessagingAudio_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
+{
+    auto& queue = textMessagingTxQueue();
+    if (dataTxPipeline_ == nullptr) return false;
+
+    paCallBackData* cbData = g_rxUserdata;
+    const int nsamIn = (FS * FRAME_DURATION_MS) / MS_TO_SEC;
+    const int nsamOut = (nsamIn * outputSampleRate_) / FS;
+
+    if (!queue.ownsTransmitter() && !dataTxInProgress_) return false;
+
+    // The transport can conclude a burst without us: its watchdog clears the
+    // queue and the transmitting flag itself. Follow it, because otherwise
+    // this latch stays set, the next burst never gets its transmitting flag
+    // raised, and the transport unkeys it early and clips it off the air.
+    if (dataTxInProgress_ && !queue.isTransmitting() && queue.isEmpty())
+    {
+        dataTxInProgress_ = false;
+    }
+
+    // PTT takes a moment to engage; pushing samples at the radio before it
+    // does would clip the front of the burst. Returning true meanwhile keeps
+    // microphone audio out of the transmitter that is about to be ours.
+    if (!g_tx.load(std::memory_order_acquire)) return true;
+
+    if (!dataTxInProgress_ && !queue.isEmpty())
+    {
+        dataTxInProgress_ = true;
+        queue.setTransmitting(true);
+    }
+
+    // RADE's end of over frame belongs to voice transmissions; tell the PTT
+    // changeover not to wait for one that will never be generated.
+    if (endingTx.load(std::memory_order_acquire))
+    {
+        g_eoo_enqueued.store(true, std::memory_order_release);
+    }
+
+    int nout = 0;
+    while (!helper->mustStopWork() && queue.numUsed() > 0 && cbData->outfifo1->numFree() >= nsamOut)
+    {
+        int numRead = queue.read(dataTxSamples_.get(), nsamIn);
+        if (numRead <= 0) break;
+
+        auto outputSamples = dataTxPipeline_->execute(dataTxSamples_.get(), numRead, &nout);
+        if (outputSamples != nullptr && nout > 0)
+        {
+            if (cbData->outfifo1->write(outputSamples, nout) != 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("TX outfifo1 full, dropped %d text messaging samples (free=%d)", nout, cbData->outfifo1->numFree());
+                FREEDV_END_VERIFIED_SAFE
+            }
+        }
+    }
+
+    // Hold the transmitter until the sound card has actually played out the
+    // burst; unkeying earlier would clip the last frame off the air.
+    if (queue.isEmpty() && cbData->outfifo1->numUsed() <= nsamOut)
+    {
+        dataTxInProgress_ = false;
+        queue.setTransmitting(false);
+
+        // The microphone pipeline has been idle while we borrowed the
+        // transmitter, so start it clean when voice transmit resumes.
+        deferReset_ = true;
+    }
+
+    return true;
+}
+
 void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 {
+    // A text messaging burst owns the transmitter for its duration; the
+    // session only queues one while the operator is not transmitting voice.
+    if (transmitTextMessagingAudio_(helper)) return;
+
     paCallBackData  *cbData = g_rxUserdata;
 
     // Buffers reused by tx and rx processing.  We take samples from

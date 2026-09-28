@@ -167,6 +167,8 @@ void      clearLastUsedConfigPath();
 class MainFrame;
 class FilterDlg;
 class FreeDVReporterDialog;
+class TextMessagingDialog;
+class TextMessagingTransport;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -303,6 +305,8 @@ class MainFrame : public TopFrame
 
         FilterDlg*              m_filterDialog;
         FreeDVReporterDialog*   m_reporterDialog;
+        TextMessagingDialog*    m_textMessagingDialog;
+        TextMessagingTransport* m_textMessagingTransport;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScalar*             m_panelSpeechIn;
@@ -312,6 +316,15 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
         bool                    txChangeoverOccurring_;
+
+        // True while togglePTT() is running on behalf of a text chat burst.
+        // Nobody is at the main window for one of those, so it must not
+        // switch the notebook page: on wxGTK the switch focuses the page,
+        // and focusing a widget presents its toplevel, which pulls the main
+        // window onto the operator's workspace and takes the keyboard away
+        // from whatever they were typing into. With space bar PTT enabled
+        // the next space they type then keys the radio.
+        bool                    textMessagingChangeover_;
         
         bool                    OpenHamlibRig();
 #if defined(WIN32)
@@ -377,6 +390,17 @@ class MainFrame : public TopFrame
 
     void togglePTT(void);
 
+    // Keys and unkeys the radio for a text messaging burst. Called on the GUI
+    // thread; see startTextMessaging_().
+    void setTextMessagingPtt_(bool keyed);
+
+    // Keeps text chat off the air where the operator's preference says it may
+    // not send data. Call whenever the frequency or that preference changes.
+    void updateTextChatTransmitPermission_();
+
+    void startTextMessaging_();
+    void stopTextMessaging_();
+
     bool                    m_schedule_restore;
 
     // Voice Keyer state machine
@@ -416,6 +440,8 @@ class MainFrame : public TopFrame
         void OnToolsEasySetupUI( wxUpdateUIEvent& event ) override;
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
+        void OnToolsTextMessaging( wxCommandEvent& event ) override;
+        void OnToolsTextMessagingUI( wxUpdateUIEvent& event ) override;
         void OnToolsAudio( wxCommandEvent& event ) override;
         void OnToolsAudioUI( wxUpdateUIEvent& event ) override;
         void OnToolsComCfg( wxCommandEvent& event ) override;

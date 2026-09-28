@@ -9,11 +9,15 @@ add_library(fdv_audio_pipeline_extra STATIC
     PlaybackStep.cpp
     RecordStep.cpp
     ResamplePlotStep.cpp
+    TextMessagingModem.cpp
+    TextMessagingReceiveStep.cpp
+    TextMessagingTransport.cpp
+    TextMessagingTxQueue.cpp
     TxRxThread.cpp
 )
 
 target_compile_options(fdv_audio_pipeline_extra PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
-target_link_libraries(fdv_audio_pipeline_extra PUBLIC fdv_audio_pipeline fdv_util samplerate rnnoise_inc)
+target_link_libraries(fdv_audio_pipeline_extra PUBLIC fdv_audio_pipeline fdv_text_messaging fdv_util samplerate rnnoise_inc)
 target_include_directories(fdv_audio_pipeline_extra PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 
 if(BOOTSTRAP_WXWIDGETS)
