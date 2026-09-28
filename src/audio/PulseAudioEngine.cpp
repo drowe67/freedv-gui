@@ -46,7 +46,7 @@ PulseAudioEngine::~PulseAudioEngine()
     }
 }
 
-std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOut, pa_context** contextOut)
+std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOut, pa_context** contextOut, bool requestRealtime)
 {
     *mainloopOut = nullptr;
     *contextOut = nullptr;
@@ -65,85 +65,94 @@ std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOu
         return "Could not allocate PulseAudio context.";
     }
 
-    pa_context_set_state_callback(context, [](pa_context* ctx, void* mainloop) {
-        pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
+    if (requestRealtime)
+    {
+        pa_context_set_state_callback(context, [](pa_context* ctx, void* mainloop) {
+            pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
 #if defined(USE_RTKIT)
-        // Ask rtkit to raise the main loop thread's priority once per connection, when it
-        // becomes ready, rather than on every state change. rtkit only allows so many
-        // requests per user in a short burst (25 per 20 s by default) and each device has
-        // its own connection, so asking on every state change used most of that on start.
-        if (pa_context_get_state(ctx) == PA_CONTEXT_READY && pa_threaded_mainloop_in_thread(threadedML))
-        {
-            DBusError error;
-            DBusConnection* bus = nullptr;
-            int result = 0;
+            // Ask rtkit to raise the main loop thread's priority once per connection, when it
+            // becomes ready, rather than on every state change. rtkit only allows so many
+            // requests per user in a short burst (25 per 20 s by default) and each device has
+            // its own connection, so asking on every state change used most of that on start.
+            if (pa_context_get_state(ctx) == PA_CONTEXT_READY && pa_threaded_mainloop_in_thread(threadedML))
+            {
+                DBusError error;
+                DBusConnection* bus = nullptr;
+                int result = 0;
 
-            dbus_error_init(&error);
-            if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
-            {
-                log_warn("Could not connect to system bus: %s", error.message);
-            }
-            else
-            {
-                int minNiceLevel = 0;
-                constexpr int ERROR_BUFFER_SIZE = 1024;
-                char tmpBuf[ERROR_BUFFER_SIZE];
-                if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+                dbus_error_init(&error);
+                if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
                 {
-#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (rv != 0)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
-#else
-                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (ptr == nullptr)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    else
-                    {
-                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
-                    }
-                    log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
-#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    log_warn("Could not connect to system bus: %s", error.message);
                 }
-                else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+                else
                 {
+                    int minNiceLevel = 0;
+                    constexpr int ERROR_BUFFER_SIZE = 1024;
+                    char tmpBuf[ERROR_BUFFER_SIZE];
+                    if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+                    {
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-                    auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-                    if (rv != 0)
-                    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    log_warn("rtkit could not make high priority: %s", tmpBuf);
+                        auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (rv != 0)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #else
-                    auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
-		    if (ptr == nullptr)
-		    {
-                        strncpy(tmpBuf, "(null)", 7);
-                    }
-                    else
-                    {
-                        memmove(tmpBuf, ptr, strlen(ptr) + 1);
-                    }
-                    log_warn("rtkit could not make high priority: %s", tmpBuf);
+                        auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (ptr == nullptr)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        else
+                        {
+                            memmove(tmpBuf, ptr, strlen(ptr) + 1);
+                        }
+                        log_warn("rtkit could not get minimum nice level: %s", tmpBuf);
 #endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    }
+                    else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+                    {
+#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                        auto rv = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+                        if (rv != 0)
+                        {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        log_warn("rtkit could not make high priority: %s", tmpBuf);
+#else
+                        auto ptr = strerror_r(-result, tmpBuf, ERROR_BUFFER_SIZE);
+    		    if (ptr == nullptr)
+    		    {
+                            strncpy(tmpBuf, "(null)", 7);
+                        }
+                        else
+                        {
+                            memmove(tmpBuf, ptr, strlen(ptr) + 1);
+                        }
+                        log_warn("rtkit could not make high priority: %s", tmpBuf);
+#endif // (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+                    }
                 }
-            }
     
-            if (bus != nullptr)
-            {
-                dbus_connection_unref(bus);
+                if (bus != nullptr)
+                {
+                    dbus_connection_unref(bus);
+                }
             }
-        }
 #endif // defined(USE_RTKIT)
 
-        pa_threaded_mainloop_signal(threadedML, 0);
-    }, mainloop);
+            pa_threaded_mainloop_signal(threadedML, 0);
+        }, mainloop);
+    }
+    else
+    {
+        pa_context_set_state_callback(context, [](pa_context*, void* mainloop) {
+            pa_threaded_mainloop_signal(static_cast<pa_threaded_mainloop *>(mainloop), 0);
+        }, mainloop);
+    }
     
     // Start main loop.
     pa_threaded_mainloop_lock(mainloop);
@@ -203,7 +212,9 @@ void PulseAudioEngine::start()
 {
     std::unique_lock<std::mutex> lk(startStopMtx_);
 
-    auto error = CreateConnection(&mainloop_, &context_);
+    // The engine's connection is only used to enumerate devices, so it doesn't need
+    // rtkit's help (and shouldn't use up the per-user rtkit request budget).
+    auto error = CreateConnection(&mainloop_, &context_, false);
     if (!error.empty())
     {
         if (onAudioErrorFunction)

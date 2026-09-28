@@ -81,7 +81,7 @@ void PulseAudioDevice::start()
     sample_specification.rate = sampleRate_;
     sample_specification.channels = numChannels_;
 
-    auto error = PulseAudioEngine::CreateConnection(&mainloop_, &context_);
+    auto error = PulseAudioEngine::CreateConnection(&mainloop_, &context_, true);
     if (!error.empty())
     {
         if (onAudioErrorFunction)

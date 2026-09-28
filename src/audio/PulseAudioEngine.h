@@ -42,10 +42,11 @@ public:
     virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels);
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction);
 
-    // Creates a threaded main loop and a context connected to the default server, and
-    // raises the main loop thread's priority via rtkit where available. On success, fills
-    // in mainloop and context and returns an empty string; otherwise returns an error.
-    static std::string CreateConnection(pa_threaded_mainloop** mainloop, pa_context** context);
+    // Creates a threaded main loop and a context connected to the default server and, if
+    // requestRealtime is set, raises the main loop thread's priority via rtkit where
+    // available. On success, fills in mainloop and context and returns an empty string;
+    // otherwise returns an error.
+    static std::string CreateConnection(pa_threaded_mainloop** mainloop, pa_context** context, bool requestRealtime);
 
     // Disconnects and frees a connection made by CreateConnection().
     static void DestroyConnection(pa_threaded_mainloop* mainloop, pa_context* context);
