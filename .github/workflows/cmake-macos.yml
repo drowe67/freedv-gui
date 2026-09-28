@@ -96,7 +96,7 @@ jobs:
           syncs=$(grep -c "Sync changed" $out/run.log)
           # Irregular output callback cycles and overloads logged by the instrumented
           # MacAudioDevice (radio output is BlackHole1 2ch).
-          timing=$(grep -E "TIMINGDIAG .*(jumped|overload)" $out/run.log | wc -l | xargs)
+          timing=$(grep -cE "TIMINGDIAG .*(jumped|overload)" $out/run.log || true)
           grep -E "TIMINGDIAG .*(jumped|overload)" $out/run.log | sed 's#^.*TIMINGDIAG#TIMINGDIAG#' | head -20 || true
           zeroed=none; gps=none; gaps=none; diff=none; capgaps=none
           if [ -f $out/test.wav ]; then
