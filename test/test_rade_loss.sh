@@ -93,6 +93,12 @@ RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
 TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+# Diagnostics: with RADE_LOSS_SAVE_DIR set, also have FreeDV record its own TX output (to
+# compare against the captured test.wav), and keep this run's audio and features there.
+if [ -n "$RADE_LOSS_SAVE_DIR" ]; then
+    rm -f $(pwd)/tx_out.wav
+    TX_ARGS="$TX_ARGS -txoutfile $(pwd)/tx_out.wav "
+fi
 ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log) &
 
 FDV_PID=$!
@@ -126,6 +132,11 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
 
     # Run feature files through loss tool
     $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
+fi
+
+if [ -n "$RADE_LOSS_SAVE_DIR" ]; then
+    mkdir -p "$RADE_LOSS_SAVE_DIR"
+    cp test.wav tx_out.wav txfeatures.f32 rxfeatures.f32 "$RADE_LOSS_SAVE_DIR"/ 2>/dev/null
 fi
 
 # Clean up PulseAudio virtual devices
