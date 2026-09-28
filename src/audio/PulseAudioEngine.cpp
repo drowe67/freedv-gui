@@ -32,6 +32,8 @@
 
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
+    , mainloop_(nullptr)
+    , context_(nullptr)
 {
     // empty
 }
@@ -44,38 +46,26 @@ PulseAudioEngine::~PulseAudioEngine()
     }
 }
 
-void PulseAudioEngine::start()
+std::string PulseAudioEngine::CreateConnection(pa_threaded_mainloop** mainloopOut, pa_context** contextOut)
 {
-    std::unique_lock<std::mutex> lk(startStopMtx_);
+    *mainloopOut = nullptr;
+    *contextOut = nullptr;
 
     // Allocate PA main loop and context.
-    mainloop_ = pa_threaded_mainloop_new();
-    
-    if (mainloop_ == nullptr)
+    pa_threaded_mainloop* mainloop = pa_threaded_mainloop_new();
+    if (mainloop == nullptr)
     {
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not allocate PulseAudio main loop.", onAudioErrorState);
-        }
-        return;
+        return "Could not allocate PulseAudio main loop.";
     }
-    
-    mainloopApi_ = pa_threaded_mainloop_get_api(mainloop_);
-    context_ = pa_context_new(mainloopApi_, "FreeDV");
-    
-    if (context_ == nullptr)
+
+    pa_context* context = pa_context_new(pa_threaded_mainloop_get_api(mainloop), "FreeDV");
+    if (context == nullptr)
     {
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not allocate PulseAudio context.", onAudioErrorState);
-        }
-        
-        pa_threaded_mainloop_free(mainloop_);
-        mainloop_ = nullptr;
-        return;
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not allocate PulseAudio context.";
     }
-    
-    pa_context_set_state_callback(context_, [](pa_context*, void* mainloop) {
+
+    pa_context_set_state_callback(context, [](pa_context*, void* mainloop) {
         pa_threaded_mainloop *threadedML = static_cast<pa_threaded_mainloop *>(mainloop);
 
 #if defined(USE_RTKIT)
@@ -149,52 +139,76 @@ void PulseAudioEngine::start()
 #endif // defined(USE_RTKIT)
 
         pa_threaded_mainloop_signal(threadedML, 0);
-    }, mainloop_);
+    }, mainloop);
     
     // Start main loop.
-    pa_threaded_mainloop_lock(mainloop_);
-    if (pa_threaded_mainloop_start(mainloop_) != 0)
+    pa_threaded_mainloop_lock(mainloop);
+    if (pa_threaded_mainloop_start(mainloop) != 0)
     {
-        pa_threaded_mainloop_unlock(mainloop_);
-        
-        if (onAudioErrorFunction)
-        {
-            onAudioErrorFunction(*this, "Could not start PulseAudio main loop.", onAudioErrorState);
-        }
-        
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
-        mainloop_ = nullptr;
-        context_ = nullptr;
-        return;
+        pa_threaded_mainloop_unlock(mainloop);
+        pa_context_unref(context);
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not start PulseAudio main loop.";
     }
-    
-    // Connect context to default PA server.
-    if (pa_context_connect(context_, NULL, PA_CONTEXT_NOFLAGS, NULL) != 0)
+
+    // Connect context to default PA server and wait for it to be ready.
+    bool connected = pa_context_connect(context, NULL, PA_CONTEXT_NOFLAGS, NULL) == 0;
+    while (connected)
     {
-        pa_threaded_mainloop_unlock(mainloop_);
-        
-        if (onAudioErrorFunction)
+        pa_context_state_t context_state = pa_context_get_state(context);
+        if (context_state == PA_CONTEXT_READY) break;
+        if (!PA_CONTEXT_IS_GOOD(context_state))
         {
-            onAudioErrorFunction(*this, "Could not connect PulseAudio context.", onAudioErrorState);
+            connected = false;
+            break;
         }
-        
-        pa_threaded_mainloop_stop(mainloop_);
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
+        pa_threaded_mainloop_wait(mainloop);
+    }
+    pa_threaded_mainloop_unlock(mainloop);
+
+    if (!connected)
+    {
+        pa_threaded_mainloop_stop(mainloop);
+        pa_context_unref(context);
+        pa_threaded_mainloop_free(mainloop);
+        return "Could not connect PulseAudio context.";
+    }
+
+    *mainloopOut = mainloop;
+    *contextOut = context;
+    return "";
+}
+
+void PulseAudioEngine::DestroyConnection(pa_threaded_mainloop* mainloop, pa_context* context)
+{
+    if (mainloop == nullptr || context == nullptr)
+    {
         return;
     }
 
-    // Wait for the context to be ready
-    for(;;) 
+    pa_threaded_mainloop_lock(mainloop);
+    pa_context_disconnect(context);
+    pa_threaded_mainloop_unlock(mainloop);
+
+    pa_threaded_mainloop_stop(mainloop);
+    pa_context_unref(context);
+    pa_threaded_mainloop_free(mainloop);
+}
+
+void PulseAudioEngine::start()
+{
+    std::unique_lock<std::mutex> lk(startStopMtx_);
+
+    auto error = CreateConnection(&mainloop_, &context_);
+    if (!error.empty())
     {
-        pa_context_state_t context_state = pa_context_get_state(context_);
-        assert(PA_CONTEXT_IS_GOOD(context_state));
-        if (context_state == PA_CONTEXT_READY) break;
-        pa_threaded_mainloop_wait(mainloop_);
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, error, onAudioErrorState);
+        }
+        return;
     }
-    
-    pa_threaded_mainloop_unlock(mainloop_);
+
     initialized_ = true;
 }
 
@@ -209,16 +223,8 @@ void PulseAudioEngine::stopImpl_()
 
     if (initialized_)
     {
-        pa_threaded_mainloop_lock(mainloop_);
-        pa_context_disconnect(context_);
-        pa_threaded_mainloop_unlock(mainloop_);
-    
-        pa_threaded_mainloop_stop(mainloop_);
-        pa_context_unref(context_);
-        pa_threaded_mainloop_free(mainloop_);
-
+        DestroyConnection(mainloop_, context_);
         mainloop_ = nullptr;
-        mainloopApi_ = nullptr;
         context_ = nullptr;
         initialized_ = false;
     }
@@ -437,7 +443,7 @@ std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceNa
             // Create device object.
             auto devObj = 
                 new PulseAudioDevice(
-                    mainloop_, context_, deviceName, direction, sampleRate, 
+                    deviceName, direction, sampleRate, 
                     dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
