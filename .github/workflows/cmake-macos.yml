@@ -90,10 +90,10 @@ jobs:
             FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1 2ch" \
             FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" \
             ../test/test_rade_loss.sh > $out/run.log 2>&1 || true
-          loss=$(grep -oE "loss: [0-9.]+" $out/run.log | awk '{print $2}' | tail -1)
-          result=$(grep -oE "^(PASS|FAIL)" $out/run.log | tail -1)
-          fifo_empty=$(grep -oE "fifo_empty = [0-9]+" $out/run.log | awk '{print $3}' | tail -1)
-          syncs=$(grep -c "Sync changed" $out/run.log)
+          loss=$(grep -oE "loss: [0-9.]+" $out/run.log | awk '{print $2}' | tail -1 || true)
+          result=$(grep -oE "^(PASS|FAIL)" $out/run.log | tail -1 || true)
+          fifo_empty=$(grep -oE "fifo_empty = [0-9]+" $out/run.log | awk '{print $3}' | tail -1 || true)
+          syncs=$(grep -c "Sync changed" $out/run.log || true)
           # Irregular output callback cycles and overloads logged by the instrumented
           # MacAudioDevice (radio output is BlackHole1 2ch).
           timing=$(grep -cE "TIMINGDIAG .*(jumped|overload)" $out/run.log || true)
@@ -103,14 +103,14 @@ jobs:
             sox $out/test.wav -t raw -e signed -b 16 -c 1 -r 48000 $RUNNER_TEMP/capture.raw
             z=$(python3 ${{github.workspace}}/test/diag/zerofrac.py $RUNNER_TEMP/capture.raw "round $round")
             echo "$z"
-            zeroed=$(echo "$z" | grep -oE "[0-9.]+% of" | awk '{print $1}')
-            gps=$(echo "$z" | grep -oE "gaps per second [0-9.]+" | awk '{print $4}')
+            zeroed=$(echo "$z" | grep -oE "[0-9.]+% of" | awk '{print $1}' || true)
+            gps=$(echo "$z" | grep -oE "gaps per second [0-9.]+" | awk '{print $4}' || true)
             gaps=$(echo "$z" | sed -E 's/.*\(samples:count\) ?//' | tr ',' ' ' | xargs)
             if [ -f $out/tx_out.wav ]; then
               sox $out/tx_out.wav -t raw -e signed -b 16 -c 1 -r 48000 $RUNNER_TEMP/txout.raw
               g=$(python3 ${{github.workspace}}/test/diag/gaps_vs_ref.py $RUNNER_TEMP/capture.raw $RUNNER_TEMP/txout.raw "round $round")
               echo "$g"
-              diff=$(echo "$g" | grep -oE "difference [+-]?[0-9]+" | awk '{print $2}')
+              diff=$(echo "$g" | grep -oE "difference [+-]?[0-9]+" | awk '{print $2}' || true)
               capgaps=$(echo "$g" | sed -E 's/.*samples: ?//' | tr ',' ' ' | xargs)
             fi
           fi
