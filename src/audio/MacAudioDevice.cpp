@@ -153,8 +153,20 @@ MacAudioDevice::~MacAudioDevice()
     }
 }
 
+// CI DIAGNOSTIC (ms-ci-rade-loss-diag only): seconds since boot on mach_absolute_time()'s
+// clock, so events from different threads (audio callbacks, this probe, the GUI timer)
+// can be lined up.
+double DiagHostSeconds(uint64_t machTime)
+{
+    static mach_timebase_info_data_t timebase = {0, 0};
+    if (timebase.denom == 0) mach_timebase_info(&timebase);
+    return (double)machTime * timebase.numer / timebase.denom / 1e9;
+}
+
 // CI DIAGNOSTIC (ms-ci-rade-loss-diag only): logs the irregular output callback cycles
-// OutputProc_() records, and a callback count once a second.
+// OutputProc_() records, and a callback count once a second. Also acts as a probe: it
+// wakes every 10 ms and reports when a sleep overruns, which a process- or machine-wide
+// pause would cause but a stall of only the CoreAudio I/O threads wouldn't.
 void MacAudioDevice::timingLoggerEntry_()
 {
     uint32_t readIndex = 0;
@@ -162,7 +174,20 @@ void MacAudioDevice::timingLoggerEntry_()
     int ticks = 0;
     while (!timingLoggerStop_.load(std::memory_order_acquire))
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        uint64_t sleepStart = mach_absolute_time();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        uint64_t sleepEnd = mach_absolute_time();
+        double sleptMs = 1000.0 * (DiagHostSeconds(sleepEnd) - DiagHostSeconds(sleepStart));
+        if (sleptMs > 40)
+        {
+            log_warn("TIMINGDIAG probe \"%s\": 10 ms sleep took %.1f ms (host %.3f to %.3f)",
+                deviceName_.c_str(), sleptMs, DiagHostSeconds(sleepStart), DiagHostSeconds(sleepEnd));
+        }
+        if (++ticks % 10 != 0)
+        {
+            continue;
+        }
+
         uint32_t writeIndex = timingWriteIndex_.load(std::memory_order_acquire);
         if (writeIndex - readIndex > TIMING_EVENTS)
         {
@@ -172,13 +197,14 @@ void MacAudioDevice::timingLoggerEntry_()
         for (; readIndex != writeIndex; readIndex++)
         {
             const TimingEvent& e = timingEvents_[readIndex % TIMING_EVENTS];
-            log_warn("TIMINGDIAG \"%s\": at %.3f s: sample time jumped %+.0f frames (expected %.0f, got %.0f), %.1f ms since previous callback, callback took %.1f ms, %u frames",
+            log_warn("TIMINGDIAG \"%s\": at %.3f s: sample time jumped %+.0f frames (expected %.0f, got %.0f), %.1f ms since previous callback, callback took %.1f ms, %u frames (host %.3f to %.3f)",
                 deviceName_.c_str(),
                 (e.sampleTime - timingFirstSampleTime_) / sampleRate_,
                 e.sampleTime - e.expectedSampleTime, e.expectedSampleTime, e.sampleTime,
-                e.hostGapMs, e.callbackMs, e.frames);
+                e.hostGapMs, e.callbackMs, e.frames,
+                DiagHostSeconds(e.prevEntryTime), DiagHostSeconds(e.entryTime));
         }
-        if (++ticks % 10 == 0)
+        if (ticks % 100 == 0)
         {
             uint64_t count = timingCallbacks_.load(std::memory_order_relaxed);
             if (count != lastCount)
@@ -902,12 +928,13 @@ OSStatus MacAudioDevice::OutputProc_(
             if (sampleTime != expected || hostGapMs > 1.5 * bufferMs || callbackMs > 0.5 * bufferMs)
             {
                 uint32_t i = thisObj->timingWriteIndex_.load(std::memory_order_relaxed);
-                thisObj->timingEvents_[i % TIMING_EVENTS] = { sampleTime, expected, hostGapMs, callbackMs, inNumberFrames };
+                thisObj->timingEvents_[i % TIMING_EVENTS] = { sampleTime, expected, hostGapMs, callbackMs, inNumberFrames, thisObj->timingLastEntryTime_, entryTime };
                 thisObj->timingWriteIndex_.store(i + 1, std::memory_order_release);
             }
         }
         thisObj->timingLastSampleTime_ = sampleTime;
         thisObj->timingLastHostTime_ = hostTime;
+        thisObj->timingLastEntryTime_ = entryTime;
         thisObj->timingLastFrames_ = inNumberFrames;
     }
     thisObj->timingCallbacks_.fetch_add(1, std::memory_order_relaxed);

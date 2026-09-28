@@ -97,7 +97,9 @@ jobs:
           # Irregular output callback cycles and overloads logged by the instrumented
           # MacAudioDevice (radio output is BlackHole1 2ch).
           timing=$(grep -cE "TIMINGDIAG .*(jumped|overload)" $out/run.log || true)
-          grep -E "TIMINGDIAG .*(jumped|overload)" $out/run.log | sed 's#^.*TIMINGDIAG#TIMINGDIAG#' | head -20 || true
+          # ...and, to tell a process- or machine-wide pause from a stall of only the audio
+          # threads, the probe thread's and GUI timer's overruns (all with host times).
+          grep -E "TIMINGDIAG .*(jumped|overload|probe|GUI timer)" $out/run.log | sed 's#^.*TIMINGDIAG#TIMINGDIAG#' | head -40 || true
           zeroed=none; gps=none; gaps=none; diff=none; capgaps=none
           if [ -f $out/test.wav ]; then
             sox $out/test.wav -t raw -e signed -b 16 -c 1 -r 48000 $RUNNER_TEMP/capture.raw

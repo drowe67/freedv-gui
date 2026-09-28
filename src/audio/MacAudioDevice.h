@@ -107,6 +107,8 @@ private:
         double hostGapMs;           // host time since the previous callback started
         double callbackMs;          // time spent in FreeDV's audio data function
         uint32_t frames;
+        uint64_t prevEntryTime;     // mach_absolute_time() at the previous callback's entry
+        uint64_t entryTime;         // ... and at this one's
     };
     static constexpr uint32_t TIMING_EVENTS = 256;
     TimingEvent timingEvents_[TIMING_EVENTS];
@@ -115,6 +117,7 @@ private:
     double timingFirstSampleTime_ = -1;
     double timingLastSampleTime_ = -1;
     uint64_t timingLastHostTime_ = 0;
+    uint64_t timingLastEntryTime_ = 0;
     uint32_t timingLastFrames_ = 0;
     std::atomic<bool> timingLoggerStop_{false};
     std::thread timingLogger_;

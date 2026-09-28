@@ -1829,8 +1829,33 @@ int MainFrame::getIdealStationsHeardColumnLength_(int col)
 // the tabs only the plot that is visible actually gets updated, this
 // keeps CPU load reasonable
 //----------------------------------------------------------------
+#if defined(__APPLE__)
+// CI DIAGNOSTIC (ms-ci-rade-loss-diag only); see MacAudioDevice.cpp.
+extern double DiagHostSeconds(uint64_t machTime);
+#include <mach/mach_time.h>
+#endif // defined(__APPLE__)
+
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
+#if defined(__APPLE__)
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only): report long gaps between GUI timer ticks
+    // (normally 100 ms), with times comparable to MacAudioDevice's TIMINGDIAG lines.
+    {
+        static uint64_t lastTick = 0;
+        uint64_t now = mach_absolute_time();
+        if (lastTick != 0)
+        {
+            double gapMs = 1000.0 * (DiagHostSeconds(now) - DiagHostSeconds(lastTick));
+            if (gapMs > 300)
+            {
+                log_warn("TIMINGDIAG GUI timer: %.1f ms since previous tick (host %.3f to %.3f)",
+                    gapMs, DiagHostSeconds(lastTick), DiagHostSeconds(now));
+            }
+        }
+        lastTick = now;
+    }
+#endif // defined(__APPLE__)
+
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
