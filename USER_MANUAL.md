@@ -970,6 +970,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
+    * Only use system libraries that can actually be linked. (PR #1521)
 3. Other:
     * Waterfall and other plot performance improvements. (PR #1481)
     * Windows audio thread timing improvements. (PR #1488)
