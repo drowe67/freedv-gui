@@ -66,6 +66,7 @@ class PlotSpectrum : public PlotPanel
         int         leftOffset_;
         int         bottomOffset_;
 
+#if wxCHECK_VERSION(3,2,0)
         // The graticule (gridlines, ticks and axis labels) rendered once into a transparent
         // bitmap, and what it was rendered for; see drawGraticuleFast().
         struct GraticuleKey
@@ -90,6 +91,7 @@ class PlotSpectrum : public PlotPanel
         };
         GraticuleKey graticuleKey_;
         wxGraphicsBitmap graticuleBitmap_;
+#endif // wxCHECK_VERSION(3,2,0)
 
         void        OnDoubleClickCommon(wxMouseEvent& event);
 

@@ -303,6 +303,7 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     int      x;
     float    freq_hz_to_px;
 
+#if wxCHECK_VERSION(3,2,0)
     // The gridlines, ticks and axis labels only change when the control's size, font,
     // colors or magnitude range do, but drawing them was most of the time spent drawing
     // the spectrum (the dashed gridlines especially). So they're rendered once into a
@@ -345,6 +346,11 @@ void PlotSpectrum::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnl
     {
         ctx->DrawBitmap(graticuleBitmap_, 0, 0, key.size.GetWidth(), key.size.GetHeight());
     }
+#else
+    // Older wxWidgets can't create a bitmap with an alpha channel to cache the graticule
+    // in, so draw it directly every time.
+    drawGraticuleStatic_(ctx);
+#endif // wxCHECK_VERSION(3,2,0)
 
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
 
