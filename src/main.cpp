@@ -790,7 +790,9 @@ bool MainApp::OnInit()
     GTKSuppressDiagnostics();
 #endif // wxCHECK_VERSION(3,1,6) && defined(__WXGTK__)
 
-    // Initialize locale.
+    // Initialize locale. Note that wxWidgets takes ownership of the wxTranslations
+    // object, but clang-analyzer can't see that and reports a leak further down.
+    // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
     wxTranslations::Set(new wxTranslations());
@@ -818,6 +820,7 @@ bool MainApp::OnInit()
 #endif // wxCHECK_VERSION(3,2,0)
         translations->AddCatalog("freedv");
     }
+    // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
     lastSelectedLoggingRow = LastSelectedRow::UNSELECTED;
     m_reporters.clear();
