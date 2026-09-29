@@ -31,6 +31,7 @@
 #include <wx/tipwin.h>
 #include <wx/combo.h>
 #include <wx/dataview.h>
+#include <wx/regex.h>
 
 class wxListBox;
 
@@ -417,9 +418,13 @@ class FreeDVReporterDialog : public wxFrame
                 wxColour foregroundColor;
                 wxColour backgroundColor;
 
-                // Measured text width of each column's value (macOS and Windows); empty
-                // when the row's text has changed and needs measuring again.
+                // Each column's text and its measured width (macOS and Windows; -1 if
+                // not measured yet), as of the last check. cellTextsStale asks for the
+                // text to be checked again, and only cells whose text has changed are
+                // measured again.
+                std::vector<wxString> cellTexts;
                 std::vector<int> cellTextWidths;
+                bool cellTextsStale = true;
 
                 ReporterData()
                     : lastTxDate(wxInvalidDateTime)
@@ -509,7 +514,20 @@ class FreeDVReporterDialog : public wxFrame
             // Widest text in each column at the last check. Most updates (e.g. a new
             // "last update" time) leave these unchanged and so need no refit.
             std::vector<int> maxTextWidths_;
+            std::vector<bool> maxTextWidthChanged_; // per column, from the last check
             bool maxTextWidthsChanged_();
+#if defined(__APPLE__)
+            void refitChangedColumns_();
+#endif // defined(__APPLE__)
+
+            // Compiled once rather than for every timestamp; see makeValidTime_().
+            wxRegEx millisecondsRgx_;
+            wxRegEx timezoneRgx_;
+
+            // Formats an SNR like wxNumberFormatter::ToString(snr, 1), without looking up
+            // the locale's decimal separator every time.
+            wxString formatSnr_(float snr) const;
+            wxChar decimalSeparator_;
             
             static double DegreesToRadians_(double degrees);
             static double RadiansToDegrees_(double radians);
