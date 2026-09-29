@@ -755,20 +755,21 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
        ctx->PopState();
        ctx->SetAntialiasMode(antialiasMode);
        ctx->SetCompositionMode(compositionMode);
-       return;
    }
-
-   if (drawPlotLines) 
+   else
    {
-       delete plotCtx;
-       
-       plotLines_->SetMaskColour(0, 0, 0);
-       plotLines_->InitAlpha();       
-       
-       plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
-   }
+       if (drawPlotLines)
+       {
+           delete plotCtx;
 
-   ctx->DrawBitmap(plotLinesBMP_, plotX, plotY, plotWidth, plotHeight);
+           plotLines_->SetMaskColour(0, 0, 0);
+           plotLines_->InitAlpha();
+
+           plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
+       }
+
+       ctx->DrawBitmap(plotLinesBMP_, plotX, plotY, plotWidth, plotHeight);
+   }
 
    if (!m_mini)
    {

@@ -607,6 +607,35 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         
     // Display tab
     wxBoxSizer* sizerDisplay = new wxBoxSizer(wxVERTICAL);
+
+    //----------------------------------------------------------
+    // Appearance
+    //----------------------------------------------------------
+    wxStaticBox* sb_appearance = new wxStaticBox(m_displayTab, wxID_ANY, _("Appearance"));
+    wxStaticBoxSizer* sbSizer_appearance = new wxStaticBoxSizer(sb_appearance, wxHORIZONTAL);
+
+    m_rbAppearanceSystem = new wxRadioButton(sb_appearance, wxID_ANY, _("System"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    sbSizer_appearance->Add(m_rbAppearanceSystem, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+    m_rbAppearanceLight = new wxRadioButton(sb_appearance, wxID_ANY, _("Light"));
+    sbSizer_appearance->Add(m_rbAppearanceLight, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+    m_rbAppearanceDark = new wxRadioButton(sb_appearance, wxID_ANY, _("Dark"));
+    sbSizer_appearance->Add(m_rbAppearanceDark, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerDisplay->Add(sbSizer_appearance, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+
+    //----------------------------------------------------------
+    // Workspace
+    //----------------------------------------------------------
+    wxStaticBox* sb_workspace = new wxStaticBox(m_displayTab, wxID_ANY, _("Workspace"));
+    wxStaticBoxSizer* sbSizer_workspace = new wxStaticBoxSizer(sb_workspace, wxHORIZONTAL);
+
+    m_rbWorkspaceNotebook = new wxRadioButton(sb_workspace, wxID_ANY, _("Notebook"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    sbSizer_workspace->Add(m_rbWorkspaceNotebook, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+    m_rbWorkspaceIndependent = new wxRadioButton(sb_workspace, wxID_ANY, _("Independent"));
+    sbSizer_workspace->Add(m_rbWorkspaceIndependent, 0, static_cast<int>(wxALL) | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerDisplay->Add(sbSizer_workspace, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);
+
     
     //----------------------------------------------------------
     // Signal display style
@@ -1502,6 +1531,21 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // Stats reset time
         m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.statsResetTimeSecs.get()));
         
+        // Appearance
+        const auto appearanceMode = static_cast<FreeDVTheme::AppearanceMode>(
+            wxGetApp().appConfiguration.appearanceMode.get());
+        m_rbAppearanceSystem->SetValue(appearanceMode == FreeDVTheme::AppearanceMode::System);
+        m_rbAppearanceLight->SetValue(appearanceMode == FreeDVTheme::AppearanceMode::Light);
+        m_rbAppearanceDark->SetValue(appearanceMode == FreeDVTheme::AppearanceMode::Dark);
+
+        // Workspace
+        const auto* mainFrame = dynamic_cast<MainFrame*>(GetParent());
+        const bool independentWorkspace = mainFrame
+            ? mainFrame->displayWorkspace_.IsIndependent()
+            : wxGetApp().appConfiguration.independentWorkspace.get();
+        m_rbWorkspaceNotebook->SetValue(!independentWorkspace);
+        m_rbWorkspaceIndependent->SetValue(independentWorkspace);
+
         // Signal display style
         switch (wxGetApp().appConfiguration.waterfallColor)
         {
@@ -1740,6 +1784,38 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
+        // Appearance and workspace
+        const auto currentAppearance = static_cast<FreeDVTheme::AppearanceMode>(
+            wxGetApp().appConfiguration.appearanceMode.get());
+
+        FreeDVTheme::AppearanceMode requestedAppearance =
+            FreeDVTheme::AppearanceMode::System;
+
+        if (m_rbAppearanceLight->GetValue())
+            requestedAppearance = FreeDVTheme::AppearanceMode::Light;
+        else if (m_rbAppearanceDark->GetValue())
+            requestedAppearance = FreeDVTheme::AppearanceMode::Dark;
+
+        const bool requestedIndependentWorkspace =
+            m_rbWorkspaceIndependent->GetValue();
+
+        if (auto* mainFrame = dynamic_cast<MainFrame*>(GetParent()))
+        {
+            if (requestedAppearance != currentAppearance)
+                mainFrame->OnAppearanceRequest(requestedAppearance);
+
+            if (requestedIndependentWorkspace != mainFrame->displayWorkspace_.IsIndependent())
+                mainFrame->OnWorkspaceRequest(requestedIndependentWorkspace);
+
+            // A workspace transfer may be rejected while transmitting or
+            // during another state where changing workspace is unsafe.
+            // Keep the dialog synchronized with the actual workspace.
+            m_rbWorkspaceNotebook->SetValue(
+                !mainFrame->displayWorkspace_.IsIndependent());
+            m_rbWorkspaceIndependent->SetValue(
+                mainFrame->displayWorkspace_.IsIndependent());
+        }
+
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())
         {

@@ -29,7 +29,6 @@
 #include <wx/wrapsizer.h>
 #include <wx/aui/tabmdi.h>
 #include <wx/numformatter.h>
-#include <wx/datetime.h>
 
 #include "topFrame.h"
 #include "defines.h"
@@ -923,10 +922,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     auto* rightOuterSizer = new wxBoxSizer(wxVERTICAL);
     rightOuterSizer->Add(rightSizer, 1, wxEXPAND);
-    auto* presentationSizer = new wxBoxSizer(wxHORIZONTAL);
-    presentationSizer->Add(CreateAppearanceSelector(0), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
-    presentationSizer->Add(CreateWorkspaceSelector(0), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
-    rightOuterSizer->Add(presentationSizer, 0, wxALIGN_RIGHT);
     bSizer1->Add(rightOuterSizer, 0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 3);
     
     notebookSizer_ = bSizer1;
@@ -970,10 +965,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     }
     displayVisibilitySizer_->Add(displaySelectors, 0, wxALL, 3);
     supporting->Add(displayVisibilitySizer_, 1, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
-    supporting->Add(CreateAppearanceSelector(1), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
-    supporting->Add(CreateWorkspaceSelector(1), 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 2);
-    appearanceSelectors_[1].sizer->ShowItems(false);
-    workspaceSelectors_[1].sizer->ShowItems(false);
     independentSizer_->Add(supporting, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 3);
     displayVisibilitySizer_->ShowItems(false);
 
@@ -989,36 +980,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     shareGroup(sbSizer3_33, leftSizer, receive, 2);
     shareGroup(sbSizerAudioRecordPlay, leftSizer, operations, 0);
     shareGroup(sbSizerLogging, leftSizer, operations, 1);
-    auto* timeSizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Time"));
-    timeSizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
-
-    auto* timeFields = new wxFlexGridSizer(2, ::FromDIP(this, 4), ::FromDIP(this, 12));
-    timeFields->Add(new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, _("Local")), 0, wxALIGN_CENTER_VERTICAL);
-    localTimeText_ = new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, wxEmptyString);
-    localTimeText_->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
-    timeFields->Add(localTimeText_, 0, wxALIGN_CENTER_VERTICAL);
-
-    timeFields->Add(new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, _("UTC")), 0, wxALIGN_CENTER_VERTICAL);
-    utcTimeText_ = new wxStaticText(timeSizer->GetStaticBox(), wxID_ANY, wxEmptyString);
-    utcTimeText_->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
-    timeFields->Add(utcTimeText_, 0, wxALIGN_CENTER_VERTICAL);
-
-    timeSizer->Add(timeFields, 0, wxALL, 5);
-    leftSizer->Add(timeSizer, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 2);
-
     shareGroup(sbSizerReporterBox, leftSizer, operations, 2);
-    shareGroup(timeSizer, leftSizer, radioAudio, 3);
     shareGroup(sbSizer_ber, leftSizer, statistics, 0);
     shareGroup(txLevelSizer, rightSizer, radioAudio, 0);
     shareGroup(micSpeakerLevelSizer, rightSizer, radioAudio, 1);
     shareGroup(reportFrequencySizer, rightSizer, radioAudio, 2);
     shareGroup(sbSizer5, rightSizer, control, 0);
     shareGroup(lowerSizer, centerSizer, received, 0);
-
-    UpdateTimeDisplay();
-    timeDisplayTimer_.SetOwner(this, ID_TIMER_TIME_DISPLAY);
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { UpdateTimeDisplay(); }, ID_TIMER_TIME_DISPLAY);
-    timeDisplayTimer_.Start(1000, wxTIMER_CONTINUOUS);
 
     m_panel->SetSizerAndFit(bSizer1);
     m_panel->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
@@ -1266,60 +1234,6 @@ void TopFrame::StylePrimaryControlButton(wxToggleButton* button)
     button->SetMinSize(minimumSize);
 }
 
-wxStaticBoxSizer* TopFrame::CreateAppearanceSelector(std::size_t index)
-{
-    auto& selector = appearanceSelectors_[index];
-    selector.sizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Appearance"));
-    selector.sizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
-
-    selector.system = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
-        _("System"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    selector.light = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
-        _("Light"));
-    selector.dark = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
-        _("Dark"));
-
-    selector.sizer->Add(selector.system, 0, wxALL, 2);
-    selector.sizer->Add(selector.light, 0, wxALL, 2);
-    selector.sizer->Add(selector.dark, 0, wxALL, 2);
-
-    selector.system->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
-        OnAppearanceRequest(FreeDVTheme::AppearanceMode::System);
-    });
-    selector.light->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
-        OnAppearanceRequest(FreeDVTheme::AppearanceMode::Light);
-    });
-    selector.dark->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent&) {
-        OnAppearanceRequest(FreeDVTheme::AppearanceMode::Dark);
-    });
-
-    selector.system->SetValue(true);
-    return selector.sizer;
-}
-
-wxStaticBoxSizer* TopFrame::CreateWorkspaceSelector(std::size_t index)
-{
-    auto& selector = workspaceSelectors_[index];
-    selector.sizer = new wxStaticBoxSizer(wxVERTICAL, m_panel, _("Workspace"));
-    selector.sizer->GetStaticBox()->SetFont(FreeDVTheme::GetFont(FreeDVTheme::TypographyRole::Emphasized));
-    for (bool independent : {false, true})
-    {
-        auto* button = new wxRadioButton(selector.sizer->GetStaticBox(), wxID_ANY,
-            independent ? _("Independent") : _("Notebook"), wxDefaultPosition,
-            wxDefaultSize, independent ? 0 : wxRB_GROUP);
-        if (independent)
-            selector.independent = button;
-        else
-            selector.notebook = button;
-        selector.sizer->Add(button, 0, wxALL, 2);
-        button->Bind(wxEVT_RADIOBUTTON, [this, independent](wxCommandEvent&) {
-            OnWorkspaceRequest(independent);
-        });
-    }
-    selector.notebook->SetValue(true);
-    return selector.sizer;
-}
-
 void TopFrame::SetDisplayVisibilityChecked(DisplayId id, bool visible)
 {
     const auto index = static_cast<std::size_t>(id);
@@ -1327,23 +1241,8 @@ void TopFrame::SetDisplayVisibilityChecked(DisplayId id, bool visible)
     displayVisibilityChecks_[index]->SetValue(visible);
 }
 
-void TopFrame::SetAppearanceSelection(FreeDVTheme::AppearanceMode mode)
-{
-    for (const auto& selector : appearanceSelectors_)
-    {
-        selector.system->SetValue(mode == FreeDVTheme::AppearanceMode::System);
-        selector.light->SetValue(mode == FreeDVTheme::AppearanceMode::Light);
-        selector.dark->SetValue(mode == FreeDVTheme::AppearanceMode::Dark);
-    }
-}
-
 void TopFrame::SetIndependentControlPresentation(bool independent)
 {
-    for (const auto& selector : workspaceSelectors_)
-    {
-        selector.notebook->SetValue(!independent);
-        selector.independent->SetValue(independent);
-    }
     if (independentControls_ == independent)
         return;
 
@@ -1382,10 +1281,6 @@ void TopFrame::SetIndependentControlPresentation(bool independent)
     }
 
     controlHeading_->Show(independent);
-    workspaceSelectors_[0].sizer->ShowItems(!independent);
-    workspaceSelectors_[1].sizer->ShowItems(independent);
-    appearanceSelectors_[0].sizer->ShowItems(!independent);
-    appearanceSelectors_[1].sizer->ShowItems(independent);
     displayVisibilitySizer_->ShowItems(independent);
     independentControls_ = independent;
     m_panel->SetSizer(independent ? independentSizer_ : notebookSizer_, false);
@@ -1408,15 +1303,6 @@ void TopFrame::SetIndependentControlPresentation(bool independent)
     m_panel->Layout();
     Thaw();
     m_panel->Refresh();
-}
-
-void TopFrame::UpdateTimeDisplay()
-{
-    const wxDateTime local = wxDateTime::Now();
-    const wxDateTime utc = local.ToUTC();
-
-    localTimeText_->SetLabel(local.Format("%H:%M:%S"));
-    utcTimeText_->SetLabel(utc.Format("%H:%M:%S"));
 }
 
 void TopFrame::UpdateControlMinimumSize()

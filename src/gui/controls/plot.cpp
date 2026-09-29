@@ -262,15 +262,34 @@ void PlotPanel::OnPaint(wxPaintEvent & evt)
 #endif // defined(_WIN32)
 
     bool repaintDataOnly = !repaintAll_(evt);
+#if !defined(_WIN32)
     if (!repaintDataOnly)
     {
-        // TBD -- move to wxGraphicsContext?
         dc.Clear();
     }
+#endif
  
     wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
     if (gc != nullptr)
     {
+#if defined(_WIN32)
+        if (!repaintDataOnly)
+        {
+            // GDI Clear() can reset alpha in the persistent 32bpp buffer.
+            // Replace the background with opaque pixels before drawing labels.
+            const auto background = GetBackgroundColour();
+            const auto compositionMode = gc->GetCompositionMode();
+            gc->PushState();
+            gc->SetCompositionMode(wxCOMPOSITION_SOURCE);
+            gc->SetPen(*wxTRANSPARENT_PEN);
+            gc->SetBrush(wxBrush(wxColour(
+                background.Red(), background.Green(), background.Blue())));
+            const auto size = GetClientSize();
+            gc->DrawRectangle(0, 0, size.GetWidth(), size.GetHeight());
+            gc->PopState();
+            gc->SetCompositionMode(compositionMode);
+        }
+#endif
         gc->SetInterpolationQuality(wxINTERPOLATION_NONE);
         draw(gc, repaintDataOnly);
         delete gc;

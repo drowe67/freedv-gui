@@ -23,6 +23,7 @@
 #define __OPTIONS_DIALOG__
 
 #include <wx/clrpicker.h>
+#include <wx/radiobut.h>
 #include <wx/listctrl.h>
 #include <map>
 #include <vector>
@@ -274,6 +275,13 @@ class OptionsDlg : public wxDialog
         wxTextCtrl*  m_statsResetTime;
         
         wxCheckBox*  m_ckbox_use_utc_time;
+
+        /* Display tab - appearance and workspace */
+        wxRadioButton* m_rbAppearanceSystem;
+        wxRadioButton* m_rbAppearanceLight;
+        wxRadioButton* m_rbAppearanceDark;
+        wxRadioButton* m_rbWorkspaceNotebook;
+        wxRadioButton* m_rbWorkspaceIndependent;
         
         wxListBox*  m_freqList;
         wxStaticText* m_labelEnterFreq;
