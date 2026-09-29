@@ -28,6 +28,10 @@
 #include "plot.h"
 #include "../../defines.h"
 
+#if defined(__APPLE__)
+struct WaterfallCanvas;
+#endif // defined(__APPLE__)
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotWaterfall
 //
@@ -114,6 +118,15 @@ class PlotWaterfall : public PlotPanel
             wxGraphicsBitmap gfxBitmap;
         };
         std::deque<WaterfallSlice> waterfallSlices_;
+
+#if defined(__APPLE__)
+        // On macOS the blocks go into one image instead (see plot_waterfall_osx.mm), and
+        // each paint draws just that. With one image per block, CoreGraphics converted
+        // every block to its own pixel format again on every frame (allocating, clearing
+        // and converting a buffer for each one), which was most of the GUI thread's time
+        // while receiving.
+        WaterfallCanvas* canvas_;
+#endif // defined(__APPLE__)
 
         // Graticule labels only move when the control is resized, but drawGraticule() runs
         // on every frame. Measuring them there is not cheap -- wxWindowMac::DoGetTextExtent
