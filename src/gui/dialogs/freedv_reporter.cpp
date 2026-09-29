@@ -2572,8 +2572,27 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::RadiansToDegrees_(double r
     return (result == 360) ? 0 : result;
 }
 
+#if defined(__APPLE__)
+// CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+#include <mach/mach_time.h>
+static double DiagReporterHostSeconds(uint64_t t)
+{
+    static mach_timebase_info_data_t timebase = {0, 0};
+    if (timebase.denom == 0) mach_timebase_info(&timebase);
+    return (double)t * timebase.numer / timebase.denom / 1e9;
+}
+#endif // defined(__APPLE__)
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
 {
+#if defined(__APPLE__)
+    // CI DIAGNOSTIC (ms-ci-rade-loss-diag only): how many reporter updates each batch
+    // handles on the GUI thread and how long it takes, with host times comparable to the
+    // TIMINGDIAG audio stall lines.
+    uint64_t diagStart = mach_absolute_time();
+    int diagHandled = 0;
+#endif // defined(__APPLE__)
+
     // This ensures that we handle server events in the order they're received.
     std::unique_lock<std::mutex> lk(fnQueueMtx_, std::defer_lock_t());
     lk.lock();
@@ -2587,12 +2606,25 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
         lk.unlock();
 
         handler.fn(handler);
+#if defined(__APPLE__)
+        diagHandled++;
+#endif // defined(__APPLE__)
 
         lk.lock();
         fnQueue_.pop_front();
         size = fnQueue_.size();
         lk.unlock();
     }
+
+#if defined(__APPLE__)
+    if (diagHandled > 0)
+    {
+        uint64_t diagEnd = mach_absolute_time();
+        log_info("TIMINGDIAG reporter: handled %d updates in %.1f ms (host %.3f to %.3f)",
+            diagHandled, 1000.0 * (DiagReporterHostSeconds(diagEnd) - DiagReporterHostSeconds(diagStart)),
+            DiagReporterHostSeconds(diagStart), DiagReporterHostSeconds(diagEnd));
+    }
+#endif // defined(__APPLE__)
 }
 
 FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequency_(uint64_t freq)
