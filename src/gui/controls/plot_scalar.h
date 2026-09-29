@@ -21,10 +21,15 @@
 #ifndef __FDMDV2_PLOT_SCALAR__
 #define __FDMDV2_PLOT_SCALAR__
 
+#include <vector>
 #include <wx/graphics.h>
 
 #include "plot.h"
 #include "defines.h"
+
+#if defined(__APPLE__)
+struct PlotPixelBuffer;
+#endif // defined(__APPLE__)
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotScalar
@@ -65,6 +70,28 @@ class PlotScalar: public PlotPanel
         };
 
         MinMaxPoints* lineMap_;
+
+        // Set while the gridlines are drawn into the pixel buffer rather than stroked
+        // (macOS only; see RASTERIZE_WAVEFORM in plot_scalar.cpp).
+        bool gridlinesRasterized_;
+
+#if defined(__APPLE__)
+        // See RASTERIZE_WAVEFORM in plot_scalar.cpp.
+        PlotPixelBuffer* pixelBuffer_;
+        uint32_t backgroundPixel_;
+        uint32_t waveformPixel_;
+        uint32_t verticalGridPixel_;
+        uint32_t horizontalGridPixel_;
+
+        // Offsets of the gridlines' pixels in the pixel buffer. They only change with
+        // its size, so they're worked out once rather than on every frame.
+        std::vector<uint32_t> verticalGridOffsets_;
+        std::vector<uint32_t> horizontalGridOffsets_;
+
+        bool rasterizeWaveform_(wxGraphicsContext* ctx, int plotWidth, int plotHeight);
+        void getGridlines_(int plotWidth, int plotHeight, std::vector<int>& xs, std::vector<int>& ys);
+        void computeGridOffsets_(int plotWidth, int plotHeight, int width, int height, double scale);
+#endif // defined(__APPLE__)
  
     protected:
 
