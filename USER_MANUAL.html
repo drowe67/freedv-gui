@@ -1134,12 +1134,14 @@ class="header-section-number">19.1</span> V3.0.0 TBD 2026</h2>
 class="citation" data-cites="barjac">@barjac</span>!</li>
 <li>Combine all configuration into Settings-&gt;Edit Settings. (PR
 #1418, #1511)</li>
-<li>Rework Easy Setup window into new Setup Wizard. (PR #1418,
-#1432)</li>
+<li>Rework Easy Setup window into new Setup Wizard. (PR #1418, #1432,
+#1513)</li>
 <li>Add ability to record both the raw and decoded RX audio. (PR
 #1501)</li>
 <li>Linux/PulseAudio: Show friendlier device names in configuration
 windows. (PR #1508)</li>
+<li>Add ability to import configuration from WSJT-X/JTDX/JS8Call. (PR
+#1513)</li>
 </ul></li>
 <li>Other:
 <ul>
@@ -1182,6 +1184,7 @@ configuration. (PR #1500)</li>
 displays. (PR #1514)</li>
 <li>Reduce GUI thread paint and FreeDV Reporter overhead. (PR
 #1515)</li>
+<li>PulseAudio: give each device its own connection. (PR #1523)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1191,11 +1194,15 @@ displays. (PR #1514)</li>
 #1505))</li>
 <li>Fix bundled libsndfile build on lib64 systems and strncpy build
 error. (PR #1510)</li>
+<li>Only use system libraries that can actually be linked. (PR
+#1521)</li>
 </ul></li>
 <li>Other:
 <ul>
 <li>Waterfall and other plot performance improvements. (PR #1481)</li>
 <li>Windows audio thread timing improvements. (PR #1488)</li>
+<li>Reduce GUI thread load from the scalar plots during TX (macOS and
+Windows) (PR #1521)</li>
 </ul></li>
 </ol>
 <h2 data-number="19.3" id="v2.4.0-august-2026"><span

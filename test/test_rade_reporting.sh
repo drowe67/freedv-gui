@@ -90,7 +90,11 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" --format s16le test.wav &
+    # Keep parecord's buffer small. By default it asks for a very large one, and on
+    # PipeWire the recording then lagged 1-1.7 s behind; hamlibserver.py kills parecord
+    # 80 ms after the last PTT off, so whatever was still buffered -- the end of the last
+    # over, including the EOO frame carrying the callsign -- was lost.
+    parecord --latency-msec=20 --channels=1 --file-format=wav --rate 48000 --device "$REC_DEVICE" --format s16le test.wav &
 else
     sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 -b 16 -e signed-integer test.wav >/dev/null 2>&1 &
 fi
