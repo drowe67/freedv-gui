@@ -50,7 +50,7 @@ extern std::atomic<bool> g_tx;
 // extra panel added to file open dialog to add loop checkbox
 MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
 {
-    m_cb = new wxCheckBox(this, -1, wxT("Loop"));
+    m_cb = new wxCheckBox(this, -1, _("Loop"));
     m_cb->SetToolTip(_("When checked file will repeat forever"));
     m_cb->SetValue(g_loopPlayFileToMicIn.load(std::memory_order_relaxed));
 
@@ -113,11 +113,11 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 
         wxFileDialog openFileDialog(
                                     this,
-                                    wxT("Play File - From Radio"),
+                                    _("Play File - From Radio"),
                                     wxGetApp().appConfiguration.playFileFromRadioPath,
                                     wxEmptyString,
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
+                                    _("WAV and RAW files (*.wav;*.raw)") + wxT("|*.wav;*.raw|") +
+                                    _("All files (*.*)") + wxT("|*.*"),
                                     wxFD_OPEN | wxFD_FILE_MUST_EXIST
                                     );
 
@@ -150,7 +150,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         if(g_sfPlayFileFromRadio.load(std::memory_order_acquire) == NULL)
         {
             wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            wxMessageBox(strErr, _("Couldn't open sound file"), wxOK);
             return;
         }
         
@@ -164,11 +164,11 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 
         wxString statusText = "";
         if(extension == wxT("raw")) {
-            statusText = wxString::Format(wxT("Playing raw file %s as radio input (assuming Fs=%d)"), soundFile, (int)sfInfo.samplerate);
+            statusText = wxString::Format(_("Playing raw file %s as radio input (assuming Fs=%d)"), soundFile, (int)sfInfo.samplerate);
         }
         else
         {
-            statusText = wxString::Format(wxT("Playing file %s as radio input"), soundFile);
+            statusText = wxString::Format(_("Playing file %s as radio input"), soundFile);
         }
         SetStatusText(statusText, 0);
         log_debug("OnPlayFileFromRadio:: Playing File Fs = %d", (int)sfInfo.samplerate);
@@ -257,32 +257,32 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             wxString    soundFileRaw;
             wxString    soundFileDecoded;
             SF_INFO     sfInfo;
-            auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
+            auto currentTime = wxDateTime::Now().Format(wxT("%Y%m%d-%H%M%S"));
 
             wxString filenameSuffix = currentTime;
             wxString recordingSuffix = recordDialog.getRecordingSuffix();
             if (recordingSuffix != "")
             {
-                filenameSuffix += wxString::Format(_("_%s"), recordingSuffix);
+                filenameSuffix += wxString::Format(wxT("_%s"), recordingSuffix);
             }
 
             wxString extension;
 #if !defined(SNDFILE_NO_MP3_SUPPORT)
             if (recordDialog.isMp3Format())
             {
-                extension = _("mp3");
+                extension = wxT("mp3");
             }
             else
 #endif // !defined(SNDFILE_NO_MP3_SUPPORT)
             {
-                extension = _("wav");
+                extension = wxT("wav");
             }
 
             if (recordDialog.isRawRecording())
             {
                 soundFileRaw = wxFileName(
                     wxGetApp().appConfiguration.quickRecordRawPath,
-                    wxString::Format(_("%s_%s.%s"), _("FDV_FromRadio"), filenameSuffix, extension))
+                    wxString::Format(wxT("%s_%s.%s"), wxT("FDV_FromRadio"), filenameSuffix, extension))
                     .GetFullPath();
                 log_info("Recording raw to %s", (const char*)soundFileRaw.ToUTF8());
             }
@@ -290,7 +290,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             {
                 soundFileDecoded = wxFileName(
                     wxGetApp().appConfiguration.quickRecordDecodedPath,
-                    wxString::Format(_("%s_%s.%s"), _("FDV_FromDecoder"), filenameSuffix, extension))
+                    wxString::Format(wxT("%s_%s.%s"), wxT("FDV_FromDecoder"), filenameSuffix, extension))
                     .GetFullPath();
                 log_info("Recording decoded to %s", (const char*)soundFileDecoded.ToUTF8());
             }
@@ -317,7 +317,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
                 if (g_sfRecFile.load(std::memory_order_acquire) == NULL)
                 {
                     wxString strErr = sf_strerror(NULL);
-                    wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+                    wxMessageBox(strErr, _("Couldn't open sound file"), wxOK);
                     m_audioRecord->SetValue(false);
                     return;
                 }
@@ -342,7 +342,7 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
                 if (g_sfRecDecoderFile.load(std::memory_order_acquire) == NULL)
                 {
                     wxString strErr = sf_strerror(NULL);
-                    wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+                    wxMessageBox(strErr, _("Couldn't open sound file"), wxOK);
                     if (g_sfRecFile.load(std::memory_order_acquire) != nullptr)
                     {
                         // Roll back the raw recording opened above.
@@ -358,15 +358,15 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
             wxString statusText;
             if (recordDialog.isRawRecording() && recordDialog.isDecodedRecording())
             {
-                statusText = wxT("Recording file ") + soundFileRaw + wxT(" from radio and file ") + soundFileDecoded + wxT(" from decoder");
+                statusText = wxString::Format(_("Recording file %s from radio and file %s from decoder"), soundFileRaw, soundFileDecoded);
             }
             else if (recordDialog.isRawRecording())
             {
-                statusText = wxT("Recording file ") + soundFileRaw + wxT(" from radio");
+                statusText = wxString::Format(_("Recording file %s from radio"), soundFileRaw);
             }
             else
             {
-                statusText = wxT("Recording file ") + soundFileDecoded + wxT(" from decoder");
+                statusText = wxString::Format(_("Recording file %s from decoder"), soundFileDecoded);
             }
             SetStatusText(statusText, 0);
 

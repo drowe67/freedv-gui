@@ -91,20 +91,21 @@ bool MainApp::CanAccessSerialPort(std::string const& portName)
     
     if (!couldOpen)
     {
-        std::string errorMessage = "Could not open serial port " + portName + ".";
-        
-        #ifdef _WIN32
-        errorMessage += " Please ensure that no other applications are accessing the port.";
-        #elif __linux
-        errorMessage += " Please ensure that you have permission to access the port. Adding yourself to the 'dialout' group (and logging out/back in) along with reattaching your radio to your PC will typically ensure this.";
-        #else
-        errorMessage += " Please ensure that you have permission to access the port.";
-        #endif
-         
-        CallAfter([&, errorMessage]() {
+        CallAfter([&, portName]() {
+            wxString errorMessage = wxString::Format(_("Could not open serial port %s."), wxString::FromUTF8(portName.c_str()));
+            errorMessage += wxT(" ");
+            
+            #ifdef _WIN32
+            errorMessage += _("Please ensure that no other applications are accessing the port.");
+            #elif __linux
+            errorMessage += _("Please ensure that you have permission to access the port. Adding yourself to the 'dialout' group (and logging out/back in) along with reattaching your radio to your PC will typically ensure this.");
+            #else
+            errorMessage += _("Please ensure that you have permission to access the port.");
+            #endif
+
             wxMessageBox(
                 errorMessage, 
-                wxT("Error"), wxOK | wxICON_ERROR, GetTopWindow());
+                _("Error"), wxOK | wxICON_ERROR, GetTopWindow());
         });
     }
     
@@ -141,10 +142,11 @@ void MainFrame::OpenSerialPort(void)
             wxGetApp().rigFrequencyController = nullptr;
             
             wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string const& err) {
-                std::string fullErrMsg = "Couldn't open serial port for PTT output: " + err; 
-                CallAfter([&]() 
+                CallAfter([&, err]() 
                 {
-                    wxMessageBox(fullErrMsg, wxT("Error"), wxOK | wxICON_ERROR, this);
+                    // TRANSLATORS: %s is the error message returned by the operating system.
+                    wxString fullErrMsg = wxString::Format(_("Couldn't open serial port for PTT output: %s"), wxString::FromUTF8(err.c_str()));
+                    wxMessageBox(fullErrMsg, _("Error"), wxOK | wxICON_ERROR, this);
                 });
             };
 
@@ -169,10 +171,11 @@ void MainFrame::OpenPTTInPort(void)
             
             wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string const& err)
             {
-                std::string fullErr = "Couldn't open PTT input port: " + err;
-                CallAfter([&]() 
+                CallAfter([&, err]() 
                 {
-                    wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+                    // TRANSLATORS: %s is the error message returned by the operating system.
+                    wxString fullErr = wxString::Format(_("Couldn't open PTT input port: %s"), wxString::FromUTF8(err.c_str()));
+                    wxMessageBox(fullErr, _("Error"), wxOK | wxICON_ERROR, this);
                 });
             };
 

@@ -34,6 +34,8 @@
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
+#include <wx/translation.h>
+#include <wx/filename.h>
 
 #if wxCHECK_VERSION(3,2,0)
 #include <wx/uilocale.h>
@@ -534,7 +536,7 @@ void MainApp::UnitTest_()
 void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 {
     wxApp::OnInitCmdLine(parser);
-    parser.AddOption("f", "config", "Use different configuration file instead of the default.");
+    parser.AddOption("f", "config", _("Use different configuration file instead of the default."));
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
@@ -791,9 +793,31 @@ bool MainApp::OnInit()
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
+    wxTranslations::Set(new wxTranslations());
 #else
-    m_locale.Init();
+    m_locale.Init(); // also creates wxTranslations and loads wxWidgets' own catalog
 #endif // wxCHECK_VERSION(3,2,0)
+
+    // Load translations for the user's preferred language(s). On macOS these are
+    // found automatically in the app bundle; elsewhere they're installed in
+    // <prefix>/share/locale, relative to the executable's location in <prefix>/bin
+    // (this also works when running directly from the build directory).
+#if !defined(__WXOSX__)
+    wxFileName localeDir(wxStandardPaths::Get().GetExecutablePath());
+    localeDir.RemoveLastDir();
+    localeDir.AppendDir("share");
+    localeDir.AppendDir("locale");
+    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(localeDir.GetPath());
+#endif // !defined(__WXOSX__)
+
+    wxTranslations* translations = wxTranslations::Get();
+    if (translations != nullptr)
+    {
+#if wxCHECK_VERSION(3,2,0)
+        translations->AddStdCatalog();
+#endif // wxCHECK_VERSION(3,2,0)
+        translations->AddCatalog("freedv");
+    }
 
     lastSelectedLoggingRow = LastSelectedRow::UNSELECTED;
     m_reporters.clear();
@@ -820,7 +844,7 @@ bool MainApp::OnInit()
     
     if (currentDate > expireDate)
     {
-        wxMessageBox("This version of FreeDV has expired. Please download a new version from freedv.org.", "Application Expired");
+        wxMessageBox(_("This version of FreeDV has expired. Please download a new version from freedv.org."), _("Application Expired"));
         return false;
     }
 #endif // UNOFFICIAL_RELEASE
@@ -1003,13 +1027,13 @@ void MainFrame::loadConfiguration_()
         m_cboReportFrequency->SetValue(sVal);
     }
 
-    m_textBits->SetLabel("Bits: unk");
-    m_textErrors->SetLabel("Errs: unk");
-    m_textBER->SetLabel("BER: unk");
-    m_textFreqOffset->SetLabel("FrqOff: unk");
-    m_textSyncMetric->SetLabel("Sync: unk");
-    m_textCodec2Var->SetLabel("Var: unk");
-    m_textClockOffset->SetLabel("ClkOff: unk");
+    m_textBits->SetLabel(BITS_UNK_LABEL);
+    m_textErrors->SetLabel(ERRS_UNK_LABEL);
+    m_textBER->SetLabel(BER_UNK_LABEL);
+    m_textFreqOffset->SetLabel(FRQ_OFF_UNK_LABEL);
+    m_textSyncMetric->SetLabel(SYNC_UNK_LABEL);
+    m_textCodec2Var->SetLabel(VAR_UNK_LABEL);
+    m_textClockOffset->SetLabel(CLK_OFF_UNK_LABEL);
     
     pConfig->SetPath(wxT("/"));
     
@@ -1084,7 +1108,7 @@ void MainFrame::loadConfiguration_()
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
         vkFileName_ = fullVKPath.GetFullPath().mb_str();
         
-        m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+        m_togBtnVoiceKeyer->SetToolTip(wxString::Format(_("Toggle Voice Keyer using file %s. Right-click for additional options."), wxGetApp().appConfiguration.voiceKeyerWaveFile.get()));
         
         wxString fileNameWithoutExt;
         wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
@@ -1132,7 +1156,7 @@ void MainFrame::loadConfiguration_()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str())),
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str())),
 
     // Create needed strings in advance so we don't need to continually 
     // reallocate memory every time through OnTimer() below. We prioritize
@@ -1140,31 +1164,34 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // fully optimized for real-time use yet (i.e. it dynamically allocates
     // memory while processing audio).
     SNR_FORMAT_STR("%ddB"),
-    MODE_FORMAT_STR("Mode: %s"),
-    MODE_RADE_FORMAT_STR("Mode: RADEV1"),
+    // TRANSLATORS: %s is the name of the FreeDV mode (e.g. RADEV1, 700D).
+    MODE_FORMAT_STR(_("Mode: %s")),
+    MODE_RADE_FORMAT_STR(wxString::Format(MODE_FORMAT_STR, "RADEV1")),
     NO_SNR_LABEL("--"),
     EMPTY_STR(""),
-    MODEM_LABEL("Modem"),
-    BITS_UNK_LABEL("Bits: unk"),
-    ERRS_UNK_LABEL("Errs: unk"),
-    BER_UNK_LABEL("BER: unk"),
-    FRQ_OFF_UNK_LABEL("FrqOff: unk"),
-    SYNC_UNK_LABEL("Sync: unk"),
-    VAR_UNK_LABEL("Var: unk"),
-    CLK_OFF_UNK_LABEL("ClkOff: unk"),
+    // TRANSLATORS: Shown in the Sync box on the main window.
+    MODEM_LABEL(_("Modem")),
+    // TRANSLATORS: "unk" = unknown. The labels in the Stats box are abbreviated to save space.
+    BITS_UNK_LABEL(_("Bits: unk")),
+    ERRS_UNK_LABEL(_("Errs: unk")),
+    BER_UNK_LABEL(_("BER: unk")),
+    FRQ_OFF_UNK_LABEL(_("FrqOff: unk")),
+    SYNC_UNK_LABEL(_("Sync: unk")),
+    VAR_UNK_LABEL(_("Var: unk")),
+    CLK_OFF_UNK_LABEL(_("ClkOff: unk")),
     MIC_SPKR_LEVEL_FORMAT_STR("%s%s"),
     DECIBEL_STR("dB"),
     CURRENT_TIME_FORMAT_STR("%s %s"),
     SNR_FORMAT_STR_NO_DB("%0.1f"),
     CALLSIGN_FORMAT_RGX("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)"),
-    BITS_FMT("Bits: %d"),
-    ERRS_FMT("Errs: %d"),
-    BER_FMT("BER: %4.3f"),
-    RESYNC_FMT("Resyncs: %d"),
-    FRQ_OFF_FMT("FrqOff: %3.1f"),
-    SYNC_FMT("Sync: %3.2f"),
-    VAR_FMT("Var: %4.1f"),
-    CLK_OFF_FMT("ClkOff: %+-d")
+    BITS_FMT(_("Bits: %d")),
+    ERRS_FMT(_("Errs: %d")),
+    BER_FMT(_("BER: %4.3f")),
+    RESYNC_FMT(_("Resyncs: %d")),
+    FRQ_OFF_FMT(_("FrqOff: %3.1f")),
+    SYNC_FMT(_("Sync: %3.2f")),
+    VAR_FMT(_("Var: %4.1f")),
+    CLK_OFF_FMT(_("ClkOff: %+-d"))
 {
     SetThreadName("GUI");
 
@@ -1177,7 +1204,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
     {
-        SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
+        SetTitle(wxString::Format("%s (%s)", wxT("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
     }
     
 #if defined(UNOFFICIAL_RELEASE)
@@ -1188,7 +1215,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
     auto currentTitle = GetTitle();
     
-    currentTitle += wxString::Format(" [Expires %s]", expireDate.FormatDate());
+    currentTitle += wxString::Format(_(" [Expires %s]"), expireDate.FormatDate());
     SetTitle(currentTitle);
 #endif // defined(UNOFFICIAL_RELEASE)
     
@@ -1211,7 +1238,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
-    m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
+    m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , _("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
     this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OnDeleteConfig));
     this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnDeleteConfigUI));
 
@@ -2492,7 +2519,7 @@ void MainFrame::performFreeDVOn_()
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
-                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            wxMessageBox(_("Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled."), _("Error"), wxOK | wxICON_ERROR, this);
                         });
                     }
                     else
@@ -2587,7 +2614,7 @@ void MainFrame::performFreeDVOn_()
     {
         executeOnUiThreadAndWait_([&]() 
         {
-            wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
+            wxMessageBox(_("Microphone permissions must be granted to FreeDV for it to function properly."), _("Error"), wxOK | wxICON_ERROR, this);
         });
     }
 }
@@ -2762,7 +2789,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 
                 if (m_RxRunning)
                 {
-                    m_togBtnOnOff->SetLabel(wxT("&Stop Modem"));
+                    m_togBtnOnOff->SetLabel(_("&Stop Modem"));
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
@@ -2811,7 +2838,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 m_btnTogPTT->Enable(m_RxRunning);
                 optionsDlg->setSessionActive(m_RxRunning);
                 m_togBtnOnOff->SetValue(m_RxRunning);
-                m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
+                m_togBtnOnOff->SetLabel(_("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
                 if (terminating_)
@@ -2991,7 +3018,7 @@ void MainFrame::startRxStream()
         if (g_nSoundCards == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
-                wxMessageBox(wxT("No Sound Cards configured, use Tools->Settings to configure"), wxT("Error"), wxOK);
+                wxMessageBox(_("No Sound Cards configured, use Tools->Settings to configure"), _("Error"), wxOK);
             });
             
             m_RxRunning = false;
@@ -3012,7 +3039,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3028,7 +3055,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3080,7 +3107,7 @@ void MainFrame::startRxStream()
             if (!txInSoundDevice)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find TX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3112,7 +3139,7 @@ void MainFrame::startRxStream()
             if (!txOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find TX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3146,7 +3173,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3162,7 +3189,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3462,8 +3489,8 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         if (silent) return;
         CallAfter([this, error = std::move(error)]() {
             wxMessageBox(wxString::Format(
-                "Error encountered while initializing the audio engine: %s.",
-                error), wxT("Error"), wxOK, this);
+                _("Error encountered while initializing the audio engine: %s."),
+                error), _("Error"), wxOK, this);
         });
     }, nullptr);
     engine->start();
@@ -3528,8 +3555,8 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         if (!silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Settings to check your settings.",
-                failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+                _("Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Settings to check your settings."),
+                failedDeviceName), _("Sound Device Not Found"), wxOK, this);
         }
     }
     else
@@ -3573,8 +3600,8 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         if (!canRun && !silent)
         {
             wxMessageBox(wxString::Format(
-                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Settings to check your settings.",
-                failedDeviceName, failedSampleRate, expectedSampleRate), wxT("Sample Rate Too Low"), wxOK, this);
+                _("Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Settings to check your settings."),
+                failedDeviceName, failedSampleRate, expectedSampleRate), _("Sample Rate Too Low"), wxOK, this);
         }
     }
     
@@ -3661,12 +3688,14 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
     delete args;
 
     double freqFactor = 1000.0;
-    std::string fmtMsg = "%s has requested that you QSY to %s kHz.";
+    // TRANSLATORS: First %s is a callsign, second %s is a frequency.
+    wxString fmtMsg = _("%s has requested that you QSY to %s kHz.");
         
     if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         freqFactor *= 1000.0;
-        fmtMsg = "%s has requested that you QSY to %s MHz.";
+        // TRANSLATORS: First %s is a callsign, second %s is a frequency.
+        fmtMsg = _("%s has requested that you QSY to %s MHz.");
     }
         
     double frequencyReadable = freqHz / freqFactor;
@@ -3680,17 +3709,18 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
         freqString = wxNumberFormatter::ToString(frequencyReadable, 4);
     }
     
-    wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, freqString);
+    wxString fullMessage = wxString::Format(fmtMsg, callsign, freqString);
     int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
     if (wxGetApp().rigFrequencyController != nullptr && 
         (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
     {
+        // TRANSLATORS: %s is the QSY request message.
         fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
         dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
     }
         
-    wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+    wxMessageDialog messageDialog(this, fullMessage, _("FreeDV Reporter"), dialogStyle);
 
     if (dialogStyle & wxYES_NO)
     {
@@ -3709,14 +3739,14 @@ void MainFrame::onAudioEngineError_(IAudioEngine&, std::string const& error, voi
 {
      executeOnUiThreadAndWait_([&, error]() {
          wxMessageBox(wxString::Format(
-                          "Error encountered while initializing the audio engine: %s.", 
-                          error), wxT("Error"), wxOK, this); 
+                          _("Error encountered while initializing the audio engine: %s."), 
+                          error), _("Error"), wxOK, this); 
      });
 }
 
 void MainFrame::onAudioDeviceError_(std::string error)
 {
-    wxMessageBox(wxString::Format("Error encountered while processing audio: %s", std::move(error)), wxT("Error"), wxOK);
+    wxMessageBox(wxString::Format(_("Error encountered while processing audio: %s"), std::move(error)), _("Error"), wxOK);
 }
 
 void MainFrame::OnAudioDeviceError_(IAudioDevice&, std::string const& error, void* state)
