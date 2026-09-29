@@ -595,6 +595,48 @@ void TxRxThread::initializePipeline_()
     }
 }
 
+#if defined(__APPLE__)
+// CI DIAGNOSTIC (ms-ci-rade-loss-diag only): records TX/RX processing iterations that run
+// long, with host times comparable to MacAudioDevice's TIMINGDIAG lines, to see whether a
+// long real-time burst from these (time-constraint) threads precedes CoreAudio stalls.
+#include <mach/mach_time.h>
+#include <atomic>
+#include <mutex>
+namespace
+{
+struct DiagProcEvent { uint64_t start; uint64_t end; bool tx; };
+constexpr uint32_t DIAG_PROC_EVENTS = 256;
+DiagProcEvent g_diagProcEvents[DIAG_PROC_EVENTS];
+std::atomic<uint32_t> g_diagProcWrite{0};
+std::once_flag g_diagProcLoggerOnce;
+
+double diagProcHostSeconds(uint64_t t)
+{
+    static mach_timebase_info_data_t timebase = {0, 0};
+    if (timebase.denom == 0) mach_timebase_info(&timebase);
+    return (double)t * timebase.numer / timebase.denom / 1e9;
+}
+
+void diagProcLogger()
+{
+    uint32_t readIndex = 0;
+    for (;;)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        uint32_t w = g_diagProcWrite.load(std::memory_order_acquire);
+        if (w - readIndex > DIAG_PROC_EVENTS) readIndex = w - DIAG_PROC_EVENTS;
+        for (; readIndex != w; readIndex++)
+        {
+            const DiagProcEvent& e = g_diagProcEvents[readIndex % DIAG_PROC_EVENTS];
+            log_warn("TIMINGDIAG %s thread: processing took %.1f ms (host %.3f to %.3f)",
+                e.tx ? "tx" : "rx", 1000.0 * (diagProcHostSeconds(e.end) - diagProcHostSeconds(e.start)),
+                diagProcHostSeconds(e.start), diagProcHostSeconds(e.end));
+        }
+    }
+}
+}
+#endif // defined(__APPLE__)
+
 void* TxRxThread::Entry() noexcept
 {
     // Get raw pointer so we don't need to constantly access the shared_ptr
@@ -643,8 +685,25 @@ void* TxRxThread::Entry() noexcept
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper->startRealTimeWork();
 
+#if defined(__APPLE__)
+        // CI DIAGNOSTIC (ms-ci-rade-loss-diag only)
+        std::call_once(g_diagProcLoggerOnce, []() { std::thread(diagProcLogger).detach(); });
+        uint64_t diagProcStart = mach_absolute_time();
+#endif // defined(__APPLE__)
+
         if (m_tx) txProcessing_(helper);
         else rxProcessing_(helper);
+
+#if defined(__APPLE__)
+        {
+            uint64_t diagProcEnd = mach_absolute_time();
+            if (diagProcHostSeconds(diagProcEnd) - diagProcHostSeconds(diagProcStart) > 0.020)
+            {
+                uint32_t i = g_diagProcWrite.fetch_add(1, std::memory_order_acq_rel);
+                g_diagProcEvents[i % DIAG_PROC_EVENTS] = { diagProcStart, diagProcEnd, (bool)m_tx };
+            }
+        }
+#endif // defined(__APPLE__)
 
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
