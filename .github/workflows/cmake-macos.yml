@@ -93,6 +93,18 @@ jobs:
           # stalled cycles: tells coreaudiod-wide stalls from ones inside FreeDV's process.
           $RUNNER_TEMP/audioprobe "BlackHole2 2ch 2" > $out/audioprobe.log 2>&1 &
           probe_pid=$!
+          # What else the machine was doing: per-process CPU every 200 ms (on the same host
+          # clock as the stall lines), powermetrics every 250 ms, and afterwards coreaudiod's
+          # log for the round.
+          round_start=$(date "+%Y-%m-%d %H:%M:%S")
+          python3 ${{github.workspace}}/test/diag/proc_sampler.py $out/procs.log 0.2 &
+          sampler_pid=$!
+          sudo powermetrics -i 250 --samplers tasks,cpu_power --show-process-wait-times --show-process-qos -o $out/powermetrics.txt > $out/powermetrics.err 2>&1 &
+          sleep 2
+          if ! pgrep -x powermetrics > /dev/null; then
+            echo "powermetrics with cpu_power didn't start ($(head -c 300 $out/powermetrics.err)); retrying with tasks only"
+            sudo powermetrics -i 250 --samplers tasks --show-process-wait-times --show-process-qos -o $out/powermetrics.txt > $out/powermetrics.err 2>&1 &
+          fi
           # Same devices and sanitizer options as master's test job.
           RADE_LOSS_SAVE_DIR=$out PYTHONPATH=$(pwd)/rade_src \
             TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 \
@@ -101,6 +113,17 @@ jobs:
             ../test/test_rade_loss.sh > $out/run.log 2>&1 || true
           kill -TERM $probe_pid 2>/dev/null || true
           wait $probe_pid 2>/dev/null || true
+          kill -TERM $sampler_pid 2>/dev/null || true
+          wait $sampler_pid 2>/dev/null || true
+          sudo pkill -INT -x powermetrics || true
+          sleep 1
+          round_end=$(date "+%Y-%m-%d %H:%M:%S")
+          /usr/bin/log show --start "$round_start" --end "$round_end" \
+            --predicate 'process == "coreaudiod" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
+            --style compact > $out/coreaudiod.log 2>&1 || true
+          sudo chown $(id -u) $out/powermetrics.txt 2>/dev/null || true
+          gzip -f $out/powermetrics.txt 2>/dev/null || true
+          echo "procs.log $(wc -l < $out/procs.log) lines, coreaudiod.log $(wc -l < $out/coreaudiod.log) lines, powermetrics $(ls -la $out/powermetrics.txt* 2>/dev/null | awk '{print $5}') bytes"
           probe_events=$(grep -c "jumped" $out/audioprobe.log || true)
           grep -E "started|jumped|not found|could not" $out/audioprobe.log | head -20 || true
           loss=$(grep -oE "loss: [0-9.]+" $out/run.log | awk '{print $2}' | tail -1 || true)
