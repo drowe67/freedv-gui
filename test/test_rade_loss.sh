@@ -83,7 +83,9 @@ sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
 
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
+    # Small buffer, so audio still in flight isn't lost when parecord is stopped
+    # (see test_rade_reporting.sh).
+    parecord --latency-msec=20 --channels=1 --file-format=wav --device "$REC_DEVICE" --rate 48000 test.wav &
 else
     sox --buffer 32768 -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav -r 48000 test.wav >/dev/null 2>&1 &
 fi

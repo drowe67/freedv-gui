@@ -146,6 +146,11 @@ class PlotPanel : public wxPanel
         virtual void refreshData() { Refresh(); }
 
     protected:
+#if defined(_WIN32)
+        // Paint buffer; see OnPaint().
+        wxBitmap        paintBuffer_;
+#endif // defined(_WIN32)
+
         int             m_x;
         int             m_y;
         int             m_left;
