@@ -1575,7 +1575,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
                 // platforms causes excessive CPU usage for no benefit.
                 parent_->autosizeColumns();
-#else
+#elif defined(__APPLE__)
                 if (refitAll)
                 {
                     setColumnAutosize_(true);
@@ -1584,6 +1584,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 {
                     refitChangedColumns_();
                 }
+#else
+                setColumnAutosize_(true);
 #endif // defined(WIN32)
             }
         }
