@@ -26,6 +26,10 @@
 #include <wx/rawbmp.h>
 #endif // defined(_WIN32)
 
+#if defined(__APPLE__)
+extern void GivePlotOwnLayer(wxWindow* window); // plot_osx.mm
+#endif // defined(__APPLE__)
+
 BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_PAINT           (PlotPanel::OnPaint)
     EVT_MOTION          (PlotPanel::OnMouseMove)
@@ -66,6 +70,10 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
     m_penSolid          = wxPen(wxColor(0x00, 0x00, 0x00), 1, wxPENSTYLE_SOLID);
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     m_label_size = 10.0;
+
+#if defined(__APPLE__)
+    GivePlotOwnLayer(this);
+#endif // defined(__APPLE__)
 }
 
 //-------------------------------------------------------------------------

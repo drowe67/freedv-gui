@@ -976,6 +976,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Waterfall and other plot performance improvements. (PR #1481)
     * Windows audio thread timing improvements. (PR #1488)
     * Reduce GUI thread load from the scalar plots during TX (macOS and Windows) (PR #1521)
+    * Optimize PlotSpectrum CPU usage. (PR #1524)
 
 ## V2.4.0 August 2026
 

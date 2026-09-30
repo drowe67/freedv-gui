@@ -59,6 +59,26 @@ constexpr bool DRAW_DIRECTLY = true;
 constexpr bool DRAW_DIRECTLY = false;
 #endif // defined(__APPLE__) || defined(_WIN32)
 
+#if defined(__APPLE__)
+// On macOS, the plot area -- background, waveform and gridlines -- is rasterized on the
+// CPU into a pixel buffer at the display's pixel density and drawn as a single image,
+// in copy mode (see PlotPixelBuffer in plot_osx.mm). As paths, CoreGraphics filled the
+// background and the waveform over the whole plot area at 2x and stroked every dash of
+// the gridlines separately on every frame. Here the waveform is a vertical span per
+// pixel column and the gridlines are a precomputed list of pixels. The axis labels are
+// still drawn as text.
+constexpr bool RASTERIZE_WAVEFORM = true;
+
+PlotPixelBuffer* CreatePlotPixelBuffer(wxWindow* window, int width, int height);
+void DestroyPlotPixelBuffer(PlotPixelBuffer* buffer);
+bool PlotPixelBufferHasSize(const PlotPixelBuffer* buffer, int width, int height);
+uint32_t* PlotPixelBufferGetPixels(PlotPixelBuffer* buffer);
+uint32_t PlotPixelBufferGetPixel(const PlotPixelBuffer* buffer, const wxColour& colour);
+wxGraphicsBitmap PlotPixelBufferFinishFrame(PlotPixelBuffer* buffer, wxGraphicsContext* gc);
+#else
+constexpr bool RASTERIZE_WAVEFORM = false;
+#endif // defined(__APPLE__)
+
 #if defined(_WIN32)
 // Everything drawn directly is opaque and unantialiased, so copying pixels gives the same
 // result as blending them. On Windows, telling GDI+ so made filling the plot's background
@@ -101,6 +121,14 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_rCtrl = GetClientRect();
 
     lineMap_ = nullptr;
+#if defined(__APPLE__)
+    pixelBuffer_ = nullptr;
+    backgroundPixel_ = 0;
+    waveformPixel_ = 0;
+    verticalGridPixel_ = 0;
+    horizontalGridPixel_ = 0;
+#endif // defined(__APPLE__)
+    gridlinesRasterized_ = false;
     m_t_secs = t_secs;
     m_sample_period_secs = sample_period_secs;
     m_a_min = a_min;
@@ -136,6 +164,9 @@ PlotScalar::~PlotScalar()
 {
     delete[] m_mem;
     delete[] lineMap_;
+#if defined(__APPLE__)
+    DestroyPlotPixelBuffer(pixelBuffer_);
+#endif // defined(__APPLE__)
 
     delete plotAreaDC_;
 
@@ -267,6 +298,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
  
     index_to_px = (float)plotWidth/m_samples;
     int pixelsUpdated = 0;
+    bool rasterize = RASTERIZE_WAVEFORM && !halfPlot_ && !m_bar_graph;
     wxAntialiasMode antialiasMode = ctx->GetAntialiasMode();
     wxCompositionMode compositionMode = ctx->GetCompositionMode();
 
@@ -280,9 +312,12 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         {
             ctx->SetCompositionMode(wxCOMPOSITION_SOURCE);
         }
-        ctx->SetPen(*wxTRANSPARENT_PEN);
-        ctx->SetBrush(wxBrush(BLACK_COLOR));
-        ctx->DrawRectangle(0, 0, plotWidth, plotHeight);
+        if (!rasterize)
+        {
+            ctx->SetPen(*wxTRANSPARENT_PEN);
+            ctx->SetBrush(wxBrush(BLACK_COLOR));
+            ctx->DrawRectangle(0, 0, plotWidth, plotHeight);
+        }
     }
     else
     {
@@ -407,7 +442,18 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         }
     }
 
-    if (!m_bar_graph)
+#if defined(__APPLE__)
+    if (rasterize && !rasterizeWaveform_(ctx, plotWidth, plotHeight))
+    {
+        // No pixel buffer (e.g. not on screen yet), so fall back to vectors.
+        rasterize = false;
+        ctx->SetPen(*wxTRANSPARENT_PEN);
+        ctx->SetBrush(wxBrush(BLACK_COLOR));
+        ctx->DrawRectangle(0, 0, plotWidth, plotHeight);
+    }
+#endif // defined(__APPLE__)
+
+    if (!m_bar_graph && !rasterize)
     {
         wxGraphicsContext* plotCtx = DRAW_DIRECTLY ? ctx : wxGraphicsContext::Create(*plotAreaDC_);
         assert(plotCtx != nullptr);
@@ -481,6 +527,206 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     drawGraticuleFast(ctx, repaintDataOnly);
 }
 
+#if defined(__APPLE__)
+//-------------------------------------------------------------------------
+// rasterizeWaveform_()
+//-------------------------------------------------------------------------
+// Fills the pixel buffer with the background and the waveform and draws it into ctx
+// (translated to the plot area). The waveform is the same polygon draw() would fill
+// otherwise -- the upper edge through (x, lineMap_[x].y1) left to right, the lower edge
+// through (x, lineMap_[x].y2) back. Compared with CoreGraphics filling that polygon
+// (unantialiased, at 2x), a few dozen edge pixels out of ~170,000 differ per frame.
+// Returns false if there's no pixel buffer to draw with.
+bool PlotScalar::rasterizeWaveform_(wxGraphicsContext* ctx, int plotWidth, int plotHeight)
+{
+    double scale = GetContentScaleFactor();
+    int width = std::max(1, (int)std::lround(plotWidth * scale));
+    int height = std::max(1, (int)std::lround(plotHeight * scale));
+    if (!PlotPixelBufferHasSize(pixelBuffer_, width, height))
+    {
+        DestroyPlotPixelBuffer(pixelBuffer_);
+        pixelBuffer_ = CreatePlotPixelBuffer(this, width, height);
+        if (pixelBuffer_ == nullptr)
+        {
+            return false;
+        }
+        backgroundPixel_ = PlotPixelBufferGetPixel(pixelBuffer_, BLACK_COLOR);
+        waveformPixel_ = PlotPixelBufferGetPixel(pixelBuffer_, DARK_GREEN_COLOR);
+        verticalGridPixel_ = PlotPixelBufferGetPixel(pixelBuffer_, m_penShortDash.GetColour());
+        horizontalGridPixel_ = PlotPixelBufferGetPixel(pixelBuffer_, m_penDotDash.GetColour());
+        computeGridOffsets_(plotWidth, plotHeight, width, height, scale);
+    }
+
+    // Start from the background everywhere. Besides being the fastest way to clear it,
+    // this leaves the buffer in the cache for the waveform's column spans below, which
+    // touch a different cache line for every pixel. (Clearing just the last frame's
+    // waveform instead, or writing every pixel row by row, both cost several times more.)
+    uint32_t* pixels = PlotPixelBufferGetPixels(pixelBuffer_);
+    memset_pattern4(pixels, &backgroundPixel_, (size_t)width * height * sizeof(uint32_t));
+
+    // Same adjustment as the path version: keep a line visible when fully silent.
+    for (int column = 0; column < plotWidth; column++)
+    {
+        if (lineMap_[column].y1 == lineMap_[column].y2)
+        {
+            lineMap_[column].y1--;
+        }
+    }
+
+    // Waveform.
+    for (int px = 0; px < width; px++)
+    {
+        // The polygon spans x = 0 .. plotWidth - 1 (in points).
+        double x = (px + 0.5) / scale;
+        int x0 = (int)x;
+        if (x0 >= plotWidth - 1)
+        {
+            // Only the vertical edge at plotWidth - 1 is out here.
+            break;
+        }
+
+        const MinMaxPoints& a = lineMap_[x0];
+        const MinMaxPoints& b = lineMap_[x0 + 1];
+        if (a.y1 == INT_MAX || b.y1 == INT_MAX)
+        {
+            // No samples in this column.
+            continue;
+        }
+
+        // Fill everything between the edges anywhere across this pixel column, not just
+        // at its center: CoreGraphics' unantialiased fill also includes the pixels that
+        // steep edges pass through.
+        double tl = px / scale - x0;
+        double tr = std::min((px + 1) / scale - x0, 1.0);
+        double upperL = a.y1 + (b.y1 - a.y1) * tl, upperR = a.y1 + (b.y1 - a.y1) * tr;
+        double lowerL = a.y2 + (b.y2 - a.y2) * tl, lowerR = a.y2 + (b.y2 - a.y2) * tr;
+        int firstRow = std::max(0, (int)std::ceil(std::min(upperL, upperR) * scale - 0.5));
+        int lastRow = std::min(height - 1, (int)std::floor(std::max(lowerL, lowerR) * scale - 0.5));
+
+        uint32_t* column = pixels + px;
+        for (int row = firstRow; row <= lastRow; row++)
+        {
+            column[(size_t)row * width] = waveformPixel_;
+        }
+    }
+
+    // Gridlines, drawn over the waveform like drawGraticuleFast() does otherwise.
+    for (uint32_t offset : verticalGridOffsets_)
+    {
+        pixels[offset] = verticalGridPixel_;
+    }
+    for (uint32_t offset : horizontalGridOffsets_)
+    {
+        pixels[offset] = horizontalGridPixel_;
+    }
+    gridlinesRasterized_ = true;
+
+    wxGraphicsBitmap bitmap = PlotPixelBufferFinishFrame(pixelBuffer_, ctx);
+    if (bitmap.IsNull())
+    {
+        gridlinesRasterized_ = false;
+        return false;
+    }
+
+    // Opaque, so copy it rather than blending: a plain memory copy.
+    wxCompositionMode compositionMode = ctx->GetCompositionMode();
+    ctx->SetCompositionMode(wxCOMPOSITION_SOURCE);
+    ctx->DrawBitmap(bitmap, 0, 0, plotWidth, plotHeight);
+    ctx->SetCompositionMode(compositionMode);
+    return true;
+}
+
+//-------------------------------------------------------------------------
+// computeGridOffsets_()
+//-------------------------------------------------------------------------
+// Works out which pixels of the pixel buffer the gridlines cover, the same as
+// drawGraticuleFast() strokes them otherwise: 1 point wide, unantialiased, dashed like
+// wxPENSTYLE_SHORT_DASH (vertical, from the bottom up) and wxPENSTYLE_DOT_DASH
+// (horizontal, left to right), with the dashes restarting at the start of each line.
+void PlotScalar::computeGridOffsets_(int plotWidth, int plotHeight, int width, int height, double scale)
+{
+    verticalGridOffsets_.clear();
+    horizontalGridOffsets_.clear();
+
+    std::vector<int> xs, ys;
+    getGridlines_(plotWidth, plotHeight, xs, ys);
+    auto isDashOn = [](double distance, const double* pattern, int count, double period)
+    {
+        double phase = std::fmod(distance, period);
+        for (int i = 0; i < count; i++)
+        {
+            if (phase < pattern[i]) return (i % 2) == 0;
+            phase -= pattern[i];
+        }
+        return false;
+    };
+    static const double shortDash[] = { 9, 6 };
+    static const double dotDash[] = { 9, 6, 3, 3 };
+    int lineWidth = std::max(1, (int)std::lround(scale));
+
+    for (int x : xs)
+    {
+        // A 1 point line centered on x covers [x - 0.5, x + 0.5).
+        int firstCol = (int)std::ceil((x - 0.5) * scale - 0.5);
+        for (int row = 0; row < height; row++)
+        {
+            if (!isDashOn(plotHeight - (row + 0.5) / scale, shortDash, 2, 15)) continue;
+            for (int col = std::max(0, firstCol); col < std::min(width, firstCol + lineWidth); col++)
+            {
+                verticalGridOffsets_.push_back((uint32_t)(row * width + col));
+            }
+        }
+    }
+    for (int y : ys)
+    {
+        // Drawn one point higher than y; see drawGraticuleFast().
+        int firstRow = (int)std::ceil((y - 1 - 0.5) * scale - 0.5);
+        for (int row = std::max(0, firstRow); row < std::min(height, firstRow + lineWidth); row++)
+        {
+            for (int col = 0; col < width; col++)
+            {
+                if (isDashOn((col + 0.5) / scale, dotDash, 4, 21))
+                {
+                    horizontalGridOffsets_.push_back((uint32_t)(row * width + col));
+                }
+            }
+        }
+    }
+}
+
+//-------------------------------------------------------------------------
+// getGridlines_()
+//-------------------------------------------------------------------------
+// Positions of the vertical and horizontal gridlines within the plot area, in points.
+// Must match the loops in drawGraticuleFast().
+void PlotScalar::getGridlines_(int plotWidth, int plotHeight, std::vector<int>& xs, std::vector<int>& ys)
+{
+    float sec_to_px = (float)plotWidth/m_t_secs;
+    float a_to_py = (float)plotHeight/(m_a_max - m_a_min);
+
+    for (float t = 0; t <= m_t_secs; t += m_graticule_t_step)
+    {
+        xs.push_back(t*sec_to_px);
+    }
+
+    for (float a = m_a_min; a <= m_a_max; )
+    {
+        if (m_logy)
+        {
+            float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
+            ys.push_back(plotHeight*(1.0 - norm));
+            float log10_step_size = floor(log10(a));
+            a += pow(10,log10_step_size);
+        }
+        else
+        {
+            ys.push_back(plotHeight - a*a_to_py + m_a_min*a_to_py);
+            a += m_graticule_a_step;
+        }
+    }
+}
+#endif // defined(__APPLE__)
+
 //-------------------------------------------------------------------------
 // drawGraticuleFast()
 //-------------------------------------------------------------------------
@@ -517,7 +763,9 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (DRAW_DIRECTLY)
     {
-        drawPlotLines = true;
+        // Already drawn into the pixel buffer when rasterizing; see RASTERIZE_WAVEFORM.
+        drawPlotLines = !gridlinesRasterized_;
+        gridlinesRasterized_ = false;
     }
     else if (plotLines_ == nullptr)
     {
@@ -634,6 +882,11 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
    int plotX = m_mini ? 0 : PLOT_BORDER + leftOffset_;
    int plotY = m_mini ? 0 : PLOT_BORDER;
+
+   if (DRAW_DIRECTLY && !drawPlotLines)
+   {
+       return;
+   }
 
    if (DRAW_DIRECTLY)
    {
