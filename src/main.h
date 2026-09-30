@@ -69,8 +69,6 @@
 #include "pipeline/modem_stats.h"
 
 #include "topFrame.h"
-#include "gui/theme/FreeDVTheme.h"
-#include <wx/timer.h>
 #include "gui/displays/DisplayWorkspace.h"
 #include "gui/dialogs/filter_frequency.h"
 #include "gui/dialogs/tot_warning.h"
@@ -624,8 +622,8 @@ class MainFrame : public TopFrame
 
         DisplayWorkspace displayWorkspace_{*m_auiNbookCtrl};
         void OnDisplayVisibilityRequest(DisplayId id, bool visible) override;
-        void OnWorkspaceRequest(bool independent);
-        void OnAppearanceRequest(FreeDVTheme::AppearanceMode mode);
+        void OnWorkspaceRequest(bool independent) override;
+        void OnAppearanceRequest(FreeDVTheme::AppearanceMode mode) override;
         bool canSwitchWorkspace_() const;
         void updateDisplayVisibilityControls_();
         void captureWorkspace_();

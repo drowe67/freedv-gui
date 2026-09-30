@@ -1186,6 +1186,9 @@ void MainFrame::loadConfiguration_()
     if (wxGetApp().appConfiguration.independentWorkspace && !switchWorkspace_(true, false))
         wxMessageBox("Could not restore the Independent workspace.", "Displays", wxOK | wxICON_ERROR, this);
 
+    SetAppearanceSelection(static_cast<FreeDVTheme::AppearanceMode>(
+        wxGetApp().appConfiguration.appearanceMode.get()));
+
     // Initialize FreeDV Reporter as required
     CallAfter(&MainFrame::initializeFreeDVReporter_);
     
@@ -1474,7 +1477,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_resyncs = 0;
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
-    optionsDlg = new OptionsDlg(this);
+    optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
@@ -1759,9 +1762,8 @@ void MainFrame::OnWorkspaceRequest(bool independent)
 void MainFrame::OnAppearanceRequest(FreeDVTheme::AppearanceMode mode)
 {
     auto& config = wxGetApp().appConfiguration;
-    if (config.appearanceMode.get() == static_cast<long>(mode))
-        return;
     config.appearanceMode = static_cast<long>(mode);
+    SetAppearanceSelection(mode);
 
     auto* pConfig = wxConfigBase::Get();
     config.save(pConfig);

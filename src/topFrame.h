@@ -50,12 +50,14 @@
 #include <wx/stattext.h>
 #include <wx/button.h>
 #include <wx/dialog.h>
+#include <wx/radiobut.h>
 #include <wx/combobox.h>
 #include <wx/panel.h>
 #include <wx/listbox.h>
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
 #include <wx/collpane.h>
+#include <wx/timer.h>
 #include <wx/combo.h>
 #include <vector>
 #include <array>
@@ -63,6 +65,7 @@
 #include "gui/util/wxListViewComboPopup.h"
 #include "gui/displays/DisplayWorkspace.h"
 #include "gui/controls/LevelGauge.h"
+#include "gui/theme/FreeDVTheme.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +80,7 @@
 #define ID_ABOUT 1008
 
 #define ID_MODE_COLLAPSE 1100
+#define ID_TIMER_TIME_DISPLAY 1101
 
 class wxListViewComboPopup;
 
@@ -156,12 +160,40 @@ class TopFrame : public wxFrame
         wxToggleButton *m_reporterHidden;
 
         void SetIndependentControlPresentation(bool independent);
+        void SetAppearanceSelection(FreeDVTheme::AppearanceMode mode);
         void SetDisplayVisibilityChecked(DisplayId id, bool visible);
         virtual void OnDisplayVisibilityRequest(DisplayId, bool) {}
+        virtual void OnWorkspaceRequest(bool) {}
+        virtual void OnAppearanceRequest(FreeDVTheme::AppearanceMode) {}
 
     private:
+        wxTimer timeDisplayTimer_;
+        wxStaticText* localTimeText_ = nullptr;
+        wxStaticText* utcTimeText_ = nullptr;
+
+        void UpdateTimeDisplay();
         void UpdateControlMinimumSize();
         void StylePrimaryControlButton(wxToggleButton* button);
+        wxStaticBoxSizer* CreateWorkspaceSelector(std::size_t index);
+        wxStaticBoxSizer* CreateAppearanceSelector(std::size_t index);
+
+        struct WorkspaceSelector
+        {
+            wxStaticBoxSizer* sizer;
+            wxRadioButton* notebook;
+            wxRadioButton* independent;
+        };
+        std::array<WorkspaceSelector, 2> workspaceSelectors_{};
+
+        struct AppearanceSelector
+        {
+            wxStaticBoxSizer* sizer;
+            wxRadioButton* system;
+            wxRadioButton* light;
+            wxRadioButton* dark;
+        };
+        std::array<AppearanceSelector, 2> appearanceSelectors_{};
+
         struct ControlGroup
         {
             wxSizer* sizer;
