@@ -9,6 +9,10 @@ name: Build FreeDV (macOS)
 # inside the captured transmission and for whether the capture is longer than FreeDV's
 # output (silence inserted on the way out) or shorter (samples lost on the way in).
 # Everything else (lint, sanitizers, PGO, packaging) is left out.
+#
+# Each round is also recorded with Instruments' Time Profiler across all processes, to see
+# what was running on the machine when the audio stalled. Traces are kept for failed rounds,
+# plus the first passing round of each job for comparison.
 
 on:
   push:
@@ -63,6 +67,17 @@ jobs:
       shell: bash
       run: swift ${{github.workspace}}/test/diag/device_latency.swift BlackHole
 
+    - name: Set up Instruments
+      shell: bash
+      continue-on-error: true
+      run: |
+        sudo DevToolsSecurity -enable || true
+        xcrun xctrace version
+        # Smoke test, so a problem recording shows up here rather than silently in every round.
+        sudo xcrun xctrace record --template "Time Profiler" --all-processes --time-limit 3s --output $RUNNER_TEMP/smoke.trace 2>&1 | tail -3
+        sudo du -sh $RUNNER_TEMP/smoke.trace || true
+        sudo rm -rf $RUNNER_TEMP/smoke.trace
+
     - name: Build audioprobe
       shell: bash
       run: |
@@ -105,6 +120,13 @@ jobs:
             echo "powermetrics with cpu_power didn't start ($(head -c 300 $out/powermetrics.err)); retrying with tasks only"
             sudo powermetrics -i 250 --samplers tasks --show-process-wait-times --show-process-qos -o $out/powermetrics.txt > $out/powermetrics.err 2>&1 &
           fi
+          # Instruments Time Profiler across all processes for the whole round. clock_ref.txt
+          # maps wall clock time (the trace's start date) to host time (TIMINGDIAG lines).
+          python3 -c 'import time; print(f"wall {time.time():.6f} host {time.clock_gettime(time.CLOCK_UPTIME_RAW):.6f}")' > $out/clock_ref.txt
+          sudo xcrun xctrace record --template "Time Profiler" --all-processes --time-limit 600s \
+            --output $out/profile.trace > $out/xctrace.log 2>&1 &
+          xctrace_pid=$!
+          sleep 3
           # Same devices and sanitizer options as master's test job.
           RADE_LOSS_SAVE_DIR=$out PYTHONPATH=$(pwd)/rade_src \
             TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 \
@@ -116,6 +138,10 @@ jobs:
           kill -TERM $sampler_pid 2>/dev/null || true
           wait $sampler_pid 2>/dev/null || true
           sudo pkill -INT -x powermetrics || true
+          # Stop the profiler; it takes a while to write the trace.
+          sudo pkill -INT -f "xctrace record" || true
+          wait $xctrace_pid 2>/dev/null || true
+          tail -2 $out/xctrace.log || true
           sleep 1
           round_end=$(date "+%Y-%m-%d %H:%M:%S")
           /usr/bin/log show --start "$round_start" --end "$round_end" \
@@ -156,6 +182,16 @@ jobs:
           fi
           tail -5 $out/run.log
           echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events}" | tee -a $RUNNER_TEMP/runs/results.csv
+          # Keep the profile for failed rounds, and for the first passing round as a control.
+          if [ -d $out/profile.trace ]; then
+            sudo chown -R $(id -u) $out/profile.trace
+            if [ "${result:-none}" != "PASS" ] || [ ! -f $RUNNER_TEMP/runs/control_kept ]; then
+              [ "${result:-none}" = "PASS" ] && echo "$round" > $RUNNER_TEMP/runs/control_kept
+              tar czf $out/profile.trace.tgz -C $out profile.trace
+              echo "kept profile: $(ls -la $out/profile.trace.tgz | awk '{print $5}') bytes"
+            fi
+            rm -rf $out/profile.trace
+          fi
           echo "::endgroup::"
         done
 
