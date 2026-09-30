@@ -10,9 +10,11 @@ name: Build FreeDV (macOS)
 # output (silence inserted on the way out) or shorter (samples lost on the way in).
 # Everything else (lint, sanitizers, PGO, packaging) is left out.
 #
-# Each round is also recorded with Instruments' Time Profiler across all processes, to see
-# what was running on the machine when the audio stalled. Traces are kept for failed rounds,
-# plus the first passing round of each job for comparison.
+# The first 100 s of each round (covering the TX transmission, where the capture gaps occur)
+# is also recorded with Instruments' Thread Activity and System Load instruments (the thread
+# state part of System Trace) across all processes, to see whether threads were runnable but
+# not running during the stalls. Traces are large, so they're kept only for failed rounds,
+# plus the first passing round of each instance-1 job for comparison.
 
 on:
   push:
@@ -74,7 +76,9 @@ jobs:
         sudo DevToolsSecurity -enable || true
         xcrun xctrace version
         # Smoke test, so a problem recording shows up here rather than silently in every round.
-        sudo xcrun xctrace record --template "Time Profiler" --all-processes --time-limit 3s --output $RUNNER_TEMP/smoke.trace 2>&1 | tail -3
+        df -h $RUNNER_TEMP | tail -1
+        sudo xcrun xctrace record --instrument "Thread Activity" --instrument "System Load" --all-processes \
+          --time-limit 3s --output $RUNNER_TEMP/smoke.trace 2>&1 | tail -3
         sudo du -sh $RUNNER_TEMP/smoke.trace || true
         sudo rm -rf $RUNNER_TEMP/smoke.trace
 
@@ -108,25 +112,29 @@ jobs:
           # stalled cycles: tells coreaudiod-wide stalls from ones inside FreeDV's process.
           $RUNNER_TEMP/audioprobe "BlackHole2 2ch 2" > $out/audioprobe.log 2>&1 &
           probe_pid=$!
-          # What else the machine was doing: per-process CPU every 200 ms (on the same host
-          # clock as the stall lines), powermetrics every 250 ms, and afterwards coreaudiod's
-          # log for the round.
+          # What else the machine was doing: powermetrics every 250 ms, and afterwards
+          # coreaudiod's log for the round. (The per-process ps sampler is turned off: on these
+          # 3-core runners its ps calls averaged a third of a core, more than FreeDV itself.)
           round_start=$(date "+%Y-%m-%d %H:%M:%S")
-          python3 ${{github.workspace}}/test/diag/proc_sampler.py $out/procs.log 0.2 &
-          sampler_pid=$!
           sudo powermetrics -i 250 --samplers tasks,cpu_power --show-process-wait-times --show-process-qos -o $out/powermetrics.txt > $out/powermetrics.err 2>&1 &
           sleep 2
           if ! pgrep -x powermetrics > /dev/null; then
             echo "powermetrics with cpu_power didn't start ($(head -c 300 $out/powermetrics.err)); retrying with tasks only"
             sudo powermetrics -i 250 --samplers tasks --show-process-wait-times --show-process-qos -o $out/powermetrics.txt > $out/powermetrics.err 2>&1 &
           fi
-          # Instruments Time Profiler across all processes for the whole round. clock_ref.txt
+          # Thread states across all processes for the first 100 s of the round. clock_ref.txt
           # maps wall clock time (the trace's start date) to host time (TIMINGDIAG lines).
           python3 -c 'import time; print(f"wall {time.time():.6f} host {time.clock_gettime(time.CLOCK_UPTIME_RAW):.6f}")' > $out/clock_ref.txt
-          sudo xcrun xctrace record --template "Time Profiler" --all-processes --time-limit 600s \
-            --output $out/profile.trace > $out/xctrace.log 2>&1 &
-          xctrace_pid=$!
-          sleep 3
+          xctrace_pid=
+          free_gb=$(df -g $RUNNER_TEMP | tail -1 | awk '{print $4}')
+          if [ "$free_gb" -ge 20 ]; then
+            sudo xcrun xctrace record --instrument "Thread Activity" --instrument "System Load" --all-processes \
+              --time-limit 100s --output $out/profile.trace > $out/xctrace.log 2>&1 &
+            xctrace_pid=$!
+            sleep 3
+          else
+            echo "only ${free_gb} GB free, not recording this round"
+          fi
           # Same devices and sanitizer options as master's test job.
           RADE_LOSS_SAVE_DIR=$out PYTHONPATH=$(pwd)/rade_src \
             TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 \
@@ -135,13 +143,13 @@ jobs:
             ../test/test_rade_loss.sh > $out/run.log 2>&1 || true
           kill -TERM $probe_pid 2>/dev/null || true
           wait $probe_pid 2>/dev/null || true
-          kill -TERM $sampler_pid 2>/dev/null || true
-          wait $sampler_pid 2>/dev/null || true
           sudo pkill -INT -x powermetrics || true
           # Stop the profiler; it takes a while to write the trace.
-          sudo pkill -INT -f "xctrace record" || true
-          wait $xctrace_pid 2>/dev/null || true
-          tail -2 $out/xctrace.log || true
+          if [ -n "$xctrace_pid" ]; then
+            sudo pkill -INT -f "xctrace record" || true
+            wait $xctrace_pid 2>/dev/null || true
+            tail -2 $out/xctrace.log || true
+          fi
           sleep 1
           round_end=$(date "+%Y-%m-%d %H:%M:%S")
           /usr/bin/log show --start "$round_start" --end "$round_end" \
@@ -149,7 +157,7 @@ jobs:
             --style compact > $out/coreaudiod.log 2>&1 || true
           sudo chown $(id -u) $out/powermetrics.txt 2>/dev/null || true
           gzip -f $out/powermetrics.txt 2>/dev/null || true
-          echo "procs.log $(wc -l < $out/procs.log) lines, coreaudiod.log $(wc -l < $out/coreaudiod.log) lines, powermetrics $(ls -la $out/powermetrics.txt* 2>/dev/null | awk '{print $5}') bytes"
+          echo "coreaudiod.log $(wc -l < $out/coreaudiod.log) lines, powermetrics $(ls -la $out/powermetrics.txt* 2>/dev/null | awk '{print $5}') bytes"
           probe_events=$(grep -c "jumped" $out/audioprobe.log || true)
           grep -E "started|jumped|not found|could not" $out/audioprobe.log | head -20 || true
           loss=$(grep -oE "loss: [0-9.]+" $out/run.log | awk '{print $2}' | tail -1 || true)
@@ -182,10 +190,12 @@ jobs:
           fi
           tail -5 $out/run.log
           echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events}" | tee -a $RUNNER_TEMP/runs/results.csv
-          # Keep the profile for failed rounds, and for the first passing round as a control.
+          # Keep the trace for failed rounds, and for the first passing round of instance-1 jobs
+          # as a control.
           if [ -d $out/profile.trace ]; then
             sudo chown -R $(id -u) $out/profile.trace
-            if [ "${result:-none}" != "PASS" ] || [ ! -f $RUNNER_TEMP/runs/control_kept ]; then
+            echo "trace: $(du -sh $out/profile.trace | awk '{print $1}'), $(df -h $RUNNER_TEMP | tail -1 | awk '{print $4}') free"
+            if [ "${result:-none}" != "PASS" ] || { [ "${{ matrix.instance }}" = "1" ] && [ ! -f $RUNNER_TEMP/runs/control_kept ]; }; then
               [ "${result:-none}" = "PASS" ] && echo "$round" > $RUNNER_TEMP/runs/control_kept
               tar czf $out/profile.trace.tgz -C $out profile.trace
               echo "kept profile: $(ls -la $out/profile.trace.tgz | awk '{print $5}') bytes"
