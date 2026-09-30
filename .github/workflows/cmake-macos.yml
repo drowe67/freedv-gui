@@ -38,7 +38,12 @@ jobs:
         os: [macos-14, macos-15, macos-26]  # ARM64
         instance: [1, 2]
         sanitizer: [WITH_ASAN=0]
-        blackhole_latency: [0]
+        # BlackHole's write-side overload check allows a cycle to be late by only one IO buffer
+        # plus kLatency_Frame_Size (also reported as the safety offset and stream latency). With
+        # 0, a vCPU stall of more than ~21 ms (1024-frame buffers) makes the driver drop a write
+        # and the HAL skip ahead 4-6 buffers; the stalls seen in the thread-state traces were
+        # 14-40 ms. 1024 frames (~43 ms of tolerance) is compared against 0 in the same run.
+        blackhole_latency: [0, 1024]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 150
@@ -239,6 +244,6 @@ jobs:
       uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
-        name: rade-loss-diag-${{ matrix.os }}-${{ matrix.instance }}
+        name: rade-loss-diag-${{ matrix.os }}-${{ matrix.instance }}-lat${{ matrix.blackhole_latency }}
         path: ${{ runner.temp }}/runs
         retention-days: 7
