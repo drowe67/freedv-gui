@@ -1477,7 +1477,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_resyncs = 0;
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
-    optionsDlg = new OptionsDlg(NULL);
+    optionsDlg = new OptionsDlg(this);
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
