@@ -13,8 +13,8 @@ name: Build FreeDV (macOS)
 # The first 100 s of each round (covering the TX transmission, where the capture gaps occur)
 # is also recorded with Instruments' Thread Activity and System Load instruments (the thread
 # state part of System Trace) across all processes, to see whether threads were runnable but
-# not running during the stalls. Traces are large, so they're kept only for failed rounds,
-# plus the first passing round of each instance-1 job for comparison.
+# not running during the stalls. Traces are large (~1.4 GB per round, barely compressible) and
+# the runners have ~20 GB free, so they're kept only for failed rounds.
 
 on:
   push:
@@ -144,7 +144,7 @@ jobs:
           free_gb=$(df -g $RUNNER_TEMP | tail -1 | awk '{print $4}')
           if [ ! -s $RUNNER_TEMP/xctrace_args.txt ]; then
             echo "Instruments setup failed, not recording this round"
-          elif [ "$free_gb" -ge 20 ]; then
+          elif [ "$free_gb" -ge 5 ]; then
             # (bash 3.2 compatible: no mapfile)
             args=()
             while IFS= read -r line; do args+=("$line"); done < $RUNNER_TEMP/xctrace_args.txt
@@ -210,13 +210,11 @@ jobs:
           fi
           tail -5 $out/run.log
           echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events}" | tee -a $RUNNER_TEMP/runs/results.csv
-          # Keep the trace for failed rounds, and for the first passing round of instance-1 jobs
-          # as a control.
+          # Keep the trace only for failed rounds.
           if [ -d $out/profile.trace ]; then
             sudo chown -R $(id -u) $out/profile.trace
             echo "trace: $(du -sh $out/profile.trace | awk '{print $1}'), $(df -h $RUNNER_TEMP | tail -1 | awk '{print $4}') free"
-            if [ "${result:-none}" != "PASS" ] || { [ "${{ matrix.instance }}" = "1" ] && [ ! -f $RUNNER_TEMP/runs/control_kept ]; }; then
-              [ "${result:-none}" = "PASS" ] && echo "$round" > $RUNNER_TEMP/runs/control_kept
+            if [ "${result:-none}" != "PASS" ]; then
               tar czf $out/profile.trace.tgz -C $out profile.trace
               echo "kept profile: $(ls -la $out/profile.trace.tgz | awk '{print $5}') bytes"
             fi
