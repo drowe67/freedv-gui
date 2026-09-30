@@ -77,7 +77,22 @@ jobs:
         xcrun xctrace version
         # Smoke test, so a problem recording shows up here rather than silently in every round.
         df -h $RUNNER_TEMP | tail -1
-        sudo xcrun xctrace record --instrument "Thread Activity" --instrument "System Load" --all-processes \
+        # The thread state instrument is "Thread Activity" in newer Xcode and "Thread State
+        # Trace" in older ones (the runners have xctrace 15.3-16.0); fall back to the whole
+        # System Trace template if neither exists.
+        xcrun xctrace list instruments > $RUNNER_TEMP/instruments.txt
+        grep -iE "thread|system|load|context|sched" $RUNNER_TEMP/instruments.txt || true
+        args=()
+        ts=$(grep -m1 -xE "Thread Activity|Thread State Trace" $RUNNER_TEMP/instruments.txt || true)
+        if [ -n "$ts" ]; then
+          args+=(--instrument "$ts")
+          grep -qx "System Load" $RUNNER_TEMP/instruments.txt && args+=(--instrument "System Load")
+        else
+          args+=(--template "System Trace")
+        fi
+        printf '%s\n' "${args[@]}" > $RUNNER_TEMP/xctrace_args.txt
+        echo "recording with: ${args[*]}"
+        sudo xcrun xctrace record "${args[@]}" --all-processes \
           --time-limit 3s --output $RUNNER_TEMP/smoke.trace 2>&1 | tail -3
         sudo du -sh $RUNNER_TEMP/smoke.trace || true
         sudo rm -rf $RUNNER_TEMP/smoke.trace
@@ -127,8 +142,13 @@ jobs:
           python3 -c 'import time; print(f"wall {time.time():.6f} host {time.clock_gettime(time.CLOCK_UPTIME_RAW):.6f}")' > $out/clock_ref.txt
           xctrace_pid=
           free_gb=$(df -g $RUNNER_TEMP | tail -1 | awk '{print $4}')
-          if [ "$free_gb" -ge 20 ]; then
-            sudo xcrun xctrace record --instrument "Thread Activity" --instrument "System Load" --all-processes \
+          if [ ! -s $RUNNER_TEMP/xctrace_args.txt ]; then
+            echo "Instruments setup failed, not recording this round"
+          elif [ "$free_gb" -ge 20 ]; then
+            # (bash 3.2 compatible: no mapfile)
+            args=()
+            while IFS= read -r line; do args+=("$line"); done < $RUNNER_TEMP/xctrace_args.txt
+            sudo xcrun xctrace record "${args[@]}" --all-processes \
               --time-limit 100s --output $out/profile.trace > $out/xctrace.log 2>&1 &
             xctrace_pid=$!
             sleep 3
