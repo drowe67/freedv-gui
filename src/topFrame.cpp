@@ -1016,8 +1016,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     shareGroup(lowerSizer, centerSizer, received, 0);
 
     UpdateTimeDisplay();
-    timeDisplayTimer_.SetOwner(this, ID_TIMER_TIME_DISPLAY);
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { UpdateTimeDisplay(); }, ID_TIMER_TIME_DISPLAY);
+    timeDisplayTimer_.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { UpdateTimeDisplay(); });
     timeDisplayTimer_.Start(1000, wxTIMER_CONTINUOUS);
 
     m_panel->SetSizerAndFit(bSizer1);
