@@ -27,6 +27,8 @@ concurrency:
 
 env:
   ROUNDS: 8
+  # Seconds a round's test_rade_loss.sh may run before it's treated as hung.
+  ROUND_TIMEOUT: 720
 
 jobs:
   rade-loss-diag:
@@ -35,8 +37,11 @@ jobs:
       matrix:
         # The same macOS versions as the test-app-folder jobs (where the latest regular-build
         # failure was, on macOS 14) plus the test job's.
-        os: [macos-14, macos-15, macos-26]  # ARM64
-        instance: [1, 2]
+        # Only macOS 26 for now: both of its latency-1024 jobs in the last run hung partway
+        # through a round until the job timeout. The latency-0 jobs are the control, to tell a
+        # hang caused by the driver setting from one in FreeDV itself.
+        os: [macos-26]  # ARM64
+        instance: [1, 2, 3]
         sanitizer: [WITH_ASAN=0]
         # BlackHole's write-side overload check allows a cycle to be late by only one IO buffer
         # plus kLatency_Frame_Size (also reported as the safety offset and stream latency). With
@@ -165,7 +170,55 @@ jobs:
             TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 \
             FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1 2ch" \
             FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" \
-            ../test/test_rade_loss.sh > $out/run.log 2>&1 || true
+            ../test/test_rade_loss.sh > $out/run.log 2>&1 &
+          test_pid=$!
+          # Watchdog: the test (TX then RX) normally takes ~5 minutes. If it's still running
+          # after ROUND_TIMEOUT seconds, capture what everything is doing and fail the job
+          # right away, rather than hanging until the job timeout with nothing to show.
+          waited=0
+          while kill -0 $test_pid 2>/dev/null && [ $waited -lt $ROUND_TIMEOUT ]; do
+            sleep 5; waited=$((waited + 5))
+          done
+          if kill -0 $test_pid 2>/dev/null; then
+            echo "::error::round $round: test still running after ${ROUND_TIMEOUT} s, capturing state and failing"
+            ps -axww -o pid,ppid,stat,etime,time,%cpu,command > $out/hang_ps.txt
+            # The test script's process tree (FreeDV, tee, sox, python), plus coreaudiod and xctrace.
+            tree=$test_pid; frontier=$test_pid
+            while [ -n "$frontier" ]; do
+              next=
+              for p in $frontier; do next="$next $(pgrep -P $p | tr '\n' ' ')"; done
+              frontier=$(echo $next); tree="$tree $frontier"
+            done
+            echo "test process tree: $tree"
+            for p in $tree $(pgrep -x coreaudiod) $(pgrep -f "xctrace record"); do
+              name=$(ps -o comm= -p $p 2>/dev/null | xargs basename 2>/dev/null)
+              [ -n "$name" ] || continue
+              echo "sampling $p ($name)"
+              sudo sample $p 5 -mayDie -file $out/hang_sample_${name}_${p}.txt > /dev/null 2>&1 || true
+            done
+            sudo spindump -notarget 5 -file $out/hang_spindump.txt > /dev/null 2>&1 || true
+            /usr/bin/log show --last 20m --style compact \
+              --predicate 'process == "coreaudiod" OR process == "FreeDV" OR process == "sox" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
+              > $out/hang_log.txt 2>&1 || true
+            swift ${{github.workspace}}/test/diag/device_latency.swift > $out/hang_devices.txt 2>&1 || true
+            cp tmp.log $out/hang_tmp.log 2>/dev/null || true
+            echo "--- run.log (last 60 lines)"; tail -60 $out/run.log
+            echo "--- test processes"; grep -E "^ *($(echo $tree | tr ' ' '|')) " $out/hang_ps.txt || true
+            kill -TERM $probe_pid 2>/dev/null || true
+            sudo pkill -INT -x powermetrics || true
+            if [ -n "$xctrace_pid" ]; then
+              sudo pkill -INT -f "xctrace record" || true
+              wait $xctrace_pid 2>/dev/null || true
+              if [ -d $out/profile.trace ]; then
+                sudo chown -R $(id -u) $out/profile.trace
+                tar czf $out/profile.trace.tgz -C $out profile.trace && rm -rf $out/profile.trace
+              fi
+            fi
+            echo "$round,TIMEOUT" >> $RUNNER_TEMP/runs/results.csv
+            echo "::endgroup::"
+            exit 1
+          fi
+          wait $test_pid || true
           kill -TERM $probe_pid 2>/dev/null || true
           wait $probe_pid 2>/dev/null || true
           sudo pkill -INT -x powermetrics || true
@@ -242,7 +295,8 @@ jobs:
 
     - name: Stash results
       uses: actions/upload-artifact@v7
-      if: ${{ !cancelled() }}
+      # Also after a hang (the run step fails) or a cancellation.
+      if: ${{ always() }}
       with:
         name: rade-loss-diag-${{ matrix.os }}-${{ matrix.instance }}-lat${{ matrix.blackhole_latency }}
         path: ${{ runner.temp }}/runs
