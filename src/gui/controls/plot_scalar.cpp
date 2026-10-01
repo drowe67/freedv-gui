@@ -28,6 +28,7 @@
 #include <cairo.h>
 #endif // defined(__WXGTK__) && defined(HAS_CAIRO)
 
+#include <cmath>
 #include <map>
 #include <memory>
 #include <vector>
@@ -92,6 +93,55 @@ static double bitmapScaleFactor_(const wxWindow* window)
 // Keep the plot area in a cairo image surface rather than in plotArea_ (see draw()).
 #define PLOT_SCALAR_CAIRO_SURFACE 1
 #endif // defined(__WXGTK__) && defined(HAS_CAIRO) && wxCHECK_VERSION(3, 2, 0) && wxUSE_CAIRO
+
+#if defined(_WIN32)
+// GDI+ turns every dashed line into a dash pattern again each time it's stroked, which was
+// nearly half the cost of drawing the gridlines, themselves the largest part of drawing the
+// plots. So on Windows the gridlines are built once from solid segments in the same pattern
+// (see drawGraticuleFast()) and reused until the plot is resized.
+constexpr bool CACHE_GRID_PATHS = true;
+#else
+constexpr bool CACHE_GRID_PATHS = false;
+#endif // defined(_WIN32)
+
+// GDI+'s DashStyleDash and DashStyleDashDot patterns (on, off, ...) for a 1 px pen, which
+// is what wxPENSTYLE_SHORT_DASH and wxPENSTYLE_DOT_DASH map to.
+static const int SHORT_DASH_PATTERN[] = { 3, 1 };
+static const int DOT_DASH_PATTERN[] = { 3, 1, 1, 1 };
+
+// Adds the "on" runs of a horizontal or vertical line drawn with the given dash pattern.
+// GDI+ draws both end points of a 1 px line, so a run of n pixels is a line n - 1 long;
+// it draws nothing for a line with no length, though, so single pixels go into dots
+// as 1x1 squares to fill instead.
+static void addDashedLine_(wxGraphicsPath& path, wxGraphicsPath& dots,
+                           wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
+                           const int* pattern, int patternLength)
+{
+    wxDouble length = std::max(std::fabs(x2 - x1), std::fabs(y2 - y1));
+    if (length <= 0) return;
+    wxDouble dx = (x2 - x1) / length;
+    wxDouble dy = (y2 - y1) / length;
+
+    wxDouble pos = 0;
+    for (int index = 0; pos < length; index = (index + 1) % patternLength)
+    {
+        wxDouble end = std::min(length, pos + pattern[index]);
+        if (index % 2 == 0)
+        {
+            wxDouble last = end - 1;
+            if (last > pos)
+            {
+                path.MoveToPoint(x1 + dx * pos, y1 + dy * pos);
+                path.AddLineToPoint(x1 + dx * last, y1 + dy * last);
+            }
+            else
+            {
+                dots.AddRectangle(x1 + dx * pos, y1 + dy * pos, 1, 1);
+            }
+        }
+        pos = end;
+    }
+}
 
 #if defined(_WIN32)
 // Everything drawn directly is opaque and unantialiased, so copying pixels gives the same
@@ -642,14 +692,32 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     // With DRAW_DIRECTLY the gridlines are collected into paths and stroked into the
     // window at the end, rather than composited from the cached plotLines_ overlay.
-    wxGraphicsPath verticalLines = DRAW_DIRECTLY ? ctx->CreatePath() : wxGraphicsPath();
-    wxGraphicsPath horizontalLines = DRAW_DIRECTLY ? ctx->CreatePath() : wxGraphicsPath();
+    // With CACHE_GRID_PATHS they're built only when the plot area has changed size.
+    const bool buildGridPaths = DRAW_DIRECTLY &&
+        (!CACHE_GRID_PATHS || gridVertical_.IsNull() || gridPathsSize_ != wxSize(plotWidth, plotHeight));
+    wxGraphicsPath verticalLines = buildGridPaths ? ctx->CreatePath() : wxGraphicsPath();
+    wxGraphicsPath horizontalLines = buildGridPaths ? ctx->CreatePath() : wxGraphicsPath();
+    wxGraphicsPath gridDots = buildGridPaths && CACHE_GRID_PATHS ? ctx->CreatePath() : wxGraphicsPath();
     auto strokeGridLine = [&](wxGraphicsPath& path, wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2)
     {
         if (DRAW_DIRECTLY)
         {
-            path.MoveToPoint(x1, y1);
-            path.AddLineToPoint(x2, y2);
+            if (!buildGridPaths)
+            {
+                return;
+            }
+            if (CACHE_GRID_PATHS)
+            {
+                bool vertical = &path == &verticalLines;
+                addDashedLine_(path, gridDots, x1, y1, x2, y2,
+                               vertical ? SHORT_DASH_PATTERN : DOT_DASH_PATTERN,
+                               vertical ? WXSIZEOF(SHORT_DASH_PATTERN) : WXSIZEOF(DOT_DASH_PATTERN));
+            }
+            else
+            {
+                path.MoveToPoint(x1, y1);
+                path.AddLineToPoint(x2, y2);
+            }
         }
         else
         {
@@ -810,6 +878,29 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
        {
            ctx->SetCompositionMode(wxCOMPOSITION_SOURCE);
        }
+       if (CACHE_GRID_PATHS)
+       {
+           if (buildGridPaths)
+           {
+               gridVertical_ = verticalLines;
+               gridHorizontal_ = horizontalLines;
+               gridDots_ = gridDots;
+               gridPathsSize_ = wxSize(plotWidth, plotHeight);
+           }
+           // Already dashed; see CACHE_GRID_PATHS.
+           ctx->SetPen(wxPen(m_penShortDash.GetColour(), 1));
+           ctx->StrokePath(gridVertical_);
+           ctx->SetPen(wxPen(m_penDotDash.GetColour(), 1));
+           ctx->StrokePath(gridHorizontal_);
+           ctx->SetPen(*wxTRANSPARENT_PEN);
+           ctx->SetBrush(wxBrush(m_penDotDash.GetColour()));
+           ctx->FillPath(gridDots_);
+           ctx->PopState();
+           ctx->SetAntialiasMode(antialiasMode);
+           ctx->SetCompositionMode(compositionMode);
+           return;
+       }
+
        ctx->SetPen(m_penShortDash);
        ctx->StrokePath(verticalLines);
 

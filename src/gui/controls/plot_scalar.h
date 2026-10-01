@@ -91,6 +91,13 @@ class PlotScalar: public PlotPanel
          wxMemoryDC* plotAreaDC_;
          wxGraphicsBitmap plotLinesBMP_;
 
+         // Gridlines with DRAW_DIRECTLY on Windows, as solid segments; see
+         // drawGraticuleFast(). Rebuilt when the plot area changes size.
+         wxGraphicsPath gridVertical_;
+         wxGraphicsPath gridHorizontal_;
+         wxGraphicsPath gridDots_;
+         wxSize gridPathsSize_;
+
          // With GTK's cairo renderer, the plot area is kept in a cairo image surface
          // (plotSurface_, a cairo_surface_t* owned by plotSurfaceBMP_) instead of
          // plotArea_; see draw().
