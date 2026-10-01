@@ -42,13 +42,12 @@ jobs:
         # failure was, on macOS 14) plus the test job's.
         # Only macOS 26 for now.
         os: [macos-26]  # ARM64
-        instance: [1, 2, 3]
+        instance: [1, 2, 3, 4, 5, 6]
         sanitizer: [WITH_ASAN=0]
-        # A/B: freedv-backend's TapStep as-is (a Utility-QoS thread per tap, fed through a FIFO)
-        # vs. patched to run the tapped step inline on the pipeline thread
-        # (cmake/freedv-backend-inline-tap.patch). BlackHole latency is back to 0: 1024 neither
-        # helped nor hurt without thread-state recording.
-        tap: [threaded, inline]
+        # freedv-backend's TapStep as-is (a Utility-QoS thread per tap), as on master. "inline"
+        # applies cmake/freedv-backend-inline-tap.patch (tapped step run on the pipeline thread);
+        # the last run's A/B showed fewer context switches and no change in rade_loss failures.
+        tap: [threaded]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 150
@@ -131,7 +130,7 @@ jobs:
       run: |
         . ./rade_venv/bin/activate
         mkdir -p $RUNNER_TEMP/runs
-        echo "round,loss,result,zeroed,gaps_per_s,gap_lengths,capture_minus_txout_samples,gaps_in_capture,tx_fifo_empty,sync_changes,timing_events,audioprobe_events,tx_cpu_s,tx_vol_csw,tx_invol_csw,rx_cpu_s,rx_vol_csw,rx_invol_csw" > $RUNNER_TEMP/runs/results.csv
+        echo "round,loss,result,zeroed,gaps_per_s,gap_lengths,capture_minus_txout_samples,gaps_in_capture,tx_fifo_empty,sync_changes,timing_events,audioprobe_events,tx_cpu_s,tx_vol_csw,tx_invol_csw,rx_cpu_s,rx_vol_csw,rx_invol_csw,rl_bh1_jumps,rl_bh1_max_frames,fd_result,fd_sync_changes,fd_bh1_jumps,fd_bh1_max_frames" > $RUNNER_TEMP/runs/results.csv
         # FreeDV runs under /usr/bin/time -l, which appends each run's resource usage (CPU
         # time, voluntary and involuntary context switches, summed over all its threads) to
         # $FREEDV_TIME_LOG: the TX run's, then the RX run's.
@@ -241,6 +240,17 @@ jobs:
           }
           bounded_wait $test_pid $ROUND_TIMEOUT || capture_hang "test_rade_loss.sh" $ROUND_TIMEOUT
           wait $test_pid || true
+          # Then master's fullduplex_RADEV1 test (one FreeDV, HalfDuplex=0, transmitting the mic
+          # tone into BlackHole1 and decoding it from BlackHole1 for ~130 s; passes if RADE's
+          # sync changes exactly once), to see whether it gets the same BlackHole1 skips and
+          # whether its sync survives them.
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1 2ch" \
+            FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" \
+            FREEDV_BINARY=$RUNNER_TEMP/freedv_timed.sh FREEDV_TIME_LOG=$out/fd_time.txt \
+            ../test/test_zeros.sh txrx RADEV1 > $out/fullduplex.log 2>&1 &
+          test_pid=$!
+          bounded_wait $test_pid $ROUND_TIMEOUT || capture_hang "test_zeros.sh txrx RADEV1" $ROUND_TIMEOUT
+          wait $test_pid || true
           kill -TERM $probe_pid 2>/dev/null || true
           bounded_wait $probe_pid 30 || capture_hang "audioprobe (after SIGTERM)" 30 $probe_pid
           wait $probe_pid 2>/dev/null || true
@@ -270,6 +280,16 @@ jobs:
           # Irregular output callback cycles and overloads logged by the instrumented
           # MacAudioDevice (radio output is BlackHole1 2ch).
           timing=$(grep -cE "TIMINGDIAG .*(jumped|overload)" $out/run.log || true)
+          # BlackHole1 (radio) callback skips, in frames: count and largest, per test.
+          bh1_jumps() {
+            grep -oE 'TIMINGDIAG "BlackHole1 2ch": at [0-9.]+ s: sample time jumped \+[0-9]+' $1 2>/dev/null \
+              | grep -oE '[0-9]+$' | sort -n | awk '{n++; m=$1} END {printf "%d,%d", n, m}' || true
+          }
+          rl_bh1=$(bh1_jumps $out/run.log)
+          fd_bh1=$(bh1_jumps $out/fullduplex.log)
+          fd_syncs=$(grep -oE "Got [0-9]+ sync changes" $out/fullduplex.log | awk '{print $2}' | tail -1 || true)
+          if [ "$fd_syncs" = "1" ]; then fd_result=PASS; else fd_result=FAIL; fi
+          echo "fullduplex: $fd_result, ${fd_syncs:-no} sync changes, BlackHole1 jumps/largest $fd_bh1; rade_loss BlackHole1 jumps/largest $rl_bh1"
           # ...and, to tell a process- or machine-wide pause from a stall of only the audio
           # threads, the probe thread's and GUI timer's overruns (all with host times).
           # (The probe thread's overruns are left out here: on CI runners its 10 ms sleeps
@@ -292,7 +312,7 @@ jobs:
             fi
           fi
           tail -5 $out/run.log
-          echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events},$(freedv_usage $out/freedv_time.txt 1),$(freedv_usage $out/freedv_time.txt 2)" | tee -a $RUNNER_TEMP/runs/results.csv
+          echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events},$(freedv_usage $out/freedv_time.txt 1),$(freedv_usage $out/freedv_time.txt 2),${rl_bh1},${fd_result},${fd_syncs:-none},${fd_bh1}" | tee -a $RUNNER_TEMP/runs/results.csv
           # Keep the trace only for failed rounds.
           if [ -d $out/profile.trace ]; then
             sudo chown -R $(id -u) $out/profile.trace
