@@ -10,8 +10,8 @@ name: Build FreeDV (macOS)
 # output (silence inserted on the way out) or shorter (samples lost on the way in).
 # Everything else (lint, sanitizers, PGO, packaging) is left out.
 #
-# The first 100 s of each round (covering the TX transmission, where the capture gaps occur)
-# is also recorded with Instruments' Thread Activity and System Load instruments (the thread
+# With RECORD_THREAD_STATE=1, the first 100 s of each round (covering the TX transmission,
+# where the capture gaps occur) is also recorded with Instruments' Thread Activity and System Load instruments (the thread
 # state part of System Trace) across all processes, to see whether threads were runnable but
 # not running during the stalls. Traces are large (~1.4 GB per round, barely compressible) and
 # the runners have ~20 GB free, so they're kept only for failed rounds.
@@ -29,6 +29,9 @@ env:
   ROUNDS: 8
   # Seconds a round's test_rade_loss.sh may run before it's treated as hung.
   ROUND_TIMEOUT: 720
+  # Thread-state recording (xctrace) is off: its traces already showed the stalls' cause, and
+  # it was what hung in the earlier runs.
+  RECORD_THREAD_STATE: 0
 
 jobs:
   rade-loss-diag:
@@ -80,6 +83,7 @@ jobs:
       run: swift ${{github.workspace}}/test/diag/device_latency.swift BlackHole
 
     - name: Set up Instruments
+      if: ${{ env.RECORD_THREAD_STATE == '1' }}
       shell: bash
       continue-on-error: true
       run: |
@@ -153,7 +157,7 @@ jobs:
           xctrace_pid=
           free_gb=$(df -g $RUNNER_TEMP | tail -1 | awk '{print $4}')
           if [ ! -s $RUNNER_TEMP/xctrace_args.txt ]; then
-            echo "Instruments setup failed, not recording this round"
+            if [ "$RECORD_THREAD_STATE" = "1" ]; then echo "Instruments setup failed, not recording this round"; fi
           elif [ "$free_gb" -ge 5 ]; then
             # (bash 3.2 compatible: no mapfile)
             args=()
