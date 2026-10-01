@@ -172,59 +172,64 @@ jobs:
             FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" \
             ../test/test_rade_loss.sh > $out/run.log 2>&1 &
           test_pid=$!
-          # Watchdog: the test (TX then RX) normally takes ~5 minutes. If it's still running
-          # after ROUND_TIMEOUT seconds, capture what everything is doing and fail the job
-          # right away, rather than hanging until the job timeout with nothing to show.
-          waited=0
-          while kill -0 $test_pid 2>/dev/null && [ $waited -lt $ROUND_TIMEOUT ]; do
-            sleep 5; waited=$((waited + 5))
-          done
-          if kill -0 $test_pid 2>/dev/null; then
-            echo "::error::round $round: test still running after ${ROUND_TIMEOUT} s, capturing state and failing"
+          # Watchdog: every wait in the round is bounded. If the test (normally ~3 minutes), the
+          # audio probe's shutdown or the profiler's save doesn't finish in time, capture what
+          # everything is doing and fail the job right away, rather than hanging until the job
+          # timeout with nothing to show. (Liveness is checked with ps, not kill -0, which fails
+          # on the root-owned sudo xctrace.)
+          bounded_wait() {  # pid seconds -> 0 if it exited in time
+            local w=0
+            while ps -p $1 > /dev/null 2>&1 && [ $w -lt $2 ]; do sleep 2; w=$((w + 2)); done
+            ! ps -p $1 > /dev/null 2>&1
+          }
+          capture_hang() {  # what, seconds, extra pids to sample
+            local what=$1 secs=$2; shift 2
+            echo "::error::round $round: $what still running after $secs s, capturing state and failing"
             ps -axww -o pid,ppid,stat,etime,time,%cpu,command > $out/hang_ps.txt
-            # The test script's process tree (FreeDV, tee, sox, python), plus coreaudiod and xctrace.
-            tree=$test_pid; frontier=$test_pid
+            # The test script's process tree (FreeDV, tee, sox, python), if it's still there.
+            local tree= frontier= next= p name
+            if ps -p $test_pid > /dev/null 2>&1; then tree=$test_pid; frontier=$test_pid; fi
             while [ -n "$frontier" ]; do
               next=
               for p in $frontier; do next="$next $(pgrep -P $p | tr '\n' ' ')"; done
               frontier=$(echo $next); tree="$tree $frontier"
             done
-            echo "test process tree: $tree"
-            for p in $tree $(pgrep -x coreaudiod) $(pgrep -f "xctrace record"); do
+            echo "test process tree: ${tree:-gone}"
+            for p in $tree "$@" $(pgrep -x audioprobe) $(pgrep -x coreaudiod) $(pgrep -f "xctrace record"); do
               name=$(ps -o comm= -p $p 2>/dev/null | xargs basename 2>/dev/null)
               [ -n "$name" ] || continue
+              [ -f $out/hang_sample_${name}_${p}.txt ] && continue
               echo "sampling $p ($name)"
               sudo sample $p 5 -mayDie -file $out/hang_sample_${name}_${p}.txt > /dev/null 2>&1 || true
             done
             sudo spindump -notarget 5 -file $out/hang_spindump.txt > /dev/null 2>&1 || true
             /usr/bin/log show --last 20m --style compact \
-              --predicate 'process == "coreaudiod" OR process == "FreeDV" OR process == "sox" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
-              > $out/hang_log.txt 2>&1 || true
-            swift ${{github.workspace}}/test/diag/device_latency.swift > $out/hang_devices.txt 2>&1 || true
+              --predicate 'process == "coreaudiod" OR process == "FreeDV" OR process == "sox" OR process == "audioprobe" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
+              > $out/hang_log.txt 2>&1 &
+            bounded_wait $! 120 || sudo pkill -9 -f "log show --last 20m" || true
+            swift ${{github.workspace}}/test/diag/device_latency.swift > $out/hang_devices.txt 2>&1 &
+            bounded_wait $! 60 || true
             cp tmp.log $out/hang_tmp.log 2>/dev/null || true
             echo "--- run.log (last 60 lines)"; tail -60 $out/run.log
-            echo "--- test processes"; grep -E "^ *($(echo $tree | tr ' ' '|')) " $out/hang_ps.txt || true
-            kill -TERM $probe_pid 2>/dev/null || true
+            echo "--- xctrace.log"; cat $out/xctrace.log 2>/dev/null || true
+            echo "--- audioprobe.log (last 5 lines)"; tail -5 $out/audioprobe.log
+            echo "--- relevant processes"
+            grep -E "FreeDV|sox|python|tee|audioprobe|xctrace|coreaudiod|test_rade_loss|powermetrics" $out/hang_ps.txt | grep -v grep || true
             sudo pkill -INT -x powermetrics || true
-            if [ -n "$xctrace_pid" ]; then
-              sudo pkill -INT -f "xctrace record" || true
-              wait $xctrace_pid 2>/dev/null || true
-              if [ -d $out/profile.trace ]; then
-                sudo chown -R $(id -u) $out/profile.trace
-                tar czf $out/profile.trace.tgz -C $out profile.trace && rm -rf $out/profile.trace
-              fi
-            fi
-            echo "$round,TIMEOUT" >> $RUNNER_TEMP/runs/results.csv
+            echo "$round,TIMEOUT: $what" >> $RUNNER_TEMP/runs/results.csv
             echo "::endgroup::"
             exit 1
-          fi
+          }
+          bounded_wait $test_pid $ROUND_TIMEOUT || capture_hang "test_rade_loss.sh" $ROUND_TIMEOUT
           wait $test_pid || true
           kill -TERM $probe_pid 2>/dev/null || true
+          bounded_wait $probe_pid 30 || capture_hang "audioprobe (after SIGTERM)" 30 $probe_pid
           wait $probe_pid 2>/dev/null || true
           sudo pkill -INT -x powermetrics || true
           # Stop the profiler; it takes a while to write the trace.
           if [ -n "$xctrace_pid" ]; then
             sudo pkill -INT -f "xctrace record" || true
+            bounded_wait $xctrace_pid 600 || capture_hang "xctrace (saving the trace)" 600
             wait $xctrace_pid 2>/dev/null || true
             tail -2 $out/xctrace.log || true
           fi
@@ -232,7 +237,8 @@ jobs:
           round_end=$(date "+%Y-%m-%d %H:%M:%S")
           /usr/bin/log show --start "$round_start" --end "$round_end" \
             --predicate 'process == "coreaudiod" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
-            --style compact > $out/coreaudiod.log 2>&1 || true
+            --style compact > $out/coreaudiod.log 2>&1 &
+          bounded_wait $! 180 || { echo "log show took over 180 s, skipped"; kill $! 2>/dev/null; }
           sudo chown $(id -u) $out/powermetrics.txt 2>/dev/null || true
           gzip -f $out/powermetrics.txt 2>/dev/null || true
           echo "coreaudiod.log $(wc -l < $out/coreaudiod.log) lines, powermetrics $(ls -la $out/powermetrics.txt* 2>/dev/null | awk '{print $5}') bytes"
