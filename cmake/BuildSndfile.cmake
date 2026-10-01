@@ -2,7 +2,7 @@
 include(cmake/BuildMpg123.cmake)
 include(cmake/BuildLame.cmake)
 
-set(SNDFILE_CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external/dist -DBUILD_SHARED_LIBS=OFF -DBUILD_PROGRAMS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DENABLE_CPACK=OFF -DENABLE_EXTERNAL_LIBS=OFF -Dmp3lame_ROOT=${CMAKE_BINARY_DIR}/external/dist -DLAME_ROOT=${CMAKE_BINARY_DIR}/external/dist -Dmpg123_ROOT=${CMAKE_BINARY_DIR}/external/dist)
+set(SNDFILE_CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external/dist -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=OFF -DBUILD_PROGRAMS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DENABLE_CPACK=OFF -DENABLE_EXTERNAL_LIBS=OFF -Dmp3lame_ROOT=${CMAKE_BINARY_DIR}/external/dist -DLAME_ROOT=${CMAKE_BINARY_DIR}/external/dist -Dmpg123_ROOT=${CMAKE_BINARY_DIR}/external/dist)
 if(CMAKE_CROSSCOMPILING)
     set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
@@ -10,6 +10,19 @@ endif()
 if(APPLE)
     set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_AR=${CMAKE_AR} -DCMAKE_RANLIB=${CMAKE_RANLIB})
 endif(APPLE)
+
+# libsndfile is itself a CMake project, built here as a nested
+# ExternalProject configure/build rather than via add_subdirectory(). That
+# nested cmake invocation gets its own fresh CMakeCache.txt and doesn't
+# inherit the parent project's CMAKE_C_COMPILER_LAUNCHER/
+# CMAKE_CXX_COMPILER_LAUNCHER (e.g. ccache) automatically, so forward it
+# explicitly.
+if(CMAKE_C_COMPILER_LAUNCHER)
+    set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER})
+endif()
+if(CMAKE_CXX_COMPILER_LAUNCHER)
+    set(SNDFILE_CMAKE_ARGS ${SNDFILE_CMAKE_ARGS} -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER})
+endif()
 
 include(ExternalProject)
 ExternalProject_Add(sndfile
@@ -29,7 +42,7 @@ else()
 endif()
 
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
-list(APPEND FREEDV_LINK_LIBS mp3lame mpg123 ${SNDFILE_LIBRARIES})
+list(APPEND FREEDV_LINK_LIBS ${SNDFILE_LIBRARIES} mpg123 mp3lame)
 list(APPEND FREEDV_STATIC_DEPS mpg123 mp3lame sndfile)
 
 add_dependencies(sndfile mpg123 mp3lame)

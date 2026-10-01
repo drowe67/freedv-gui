@@ -1,0 +1,50 @@
+name: 'Start Linux GUI test display'
+description: >
+  Starts a virtual X11 display (Xvfb), a D-Bus session, and a minimal
+  window manager (metacity) for headless GUI/audio tests on Linux CI
+  runners, after making sure rtkit-daemon and (optionally) the PipeWire
+  audio stack are running. DISPLAY, XDG_RUNTIME_DIR, and the D-Bus session
+  address are exported to subsequent steps in the job via $GITHUB_ENV.
+
+inputs:
+  audio-backend:
+    description: 'Audio backend already installed on the runner: "pulseaudio" or "pipewire"'
+    required: false
+    default: 'pulseaudio'
+  screen-geometry:
+    description: 'Xvfb screen geometry'
+    required: false
+    default: '1024x768x16'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Start virtual display and audio session
+      shell: bash
+      run: |
+          sudo systemctl enable rtkit-daemon
+          sudo systemctl start rtkit-daemon
+
+          Xvfb :99 -screen 0 ${{ inputs['screen-geometry'] }} &
+          sleep 5
+          echo "DISPLAY=:99.0" >> "$GITHUB_ENV"
+
+          XDG_RUNTIME_DIR=/run/user/$(id -u)
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+
+          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+          {
+            echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
+            echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID"
+          } >> "$GITHUB_ENV"
+
+          if [ "${{ inputs['audio-backend'] }}" = "pipewire" ]; then
+            systemctl --user enable --now pipewire-pulse.socket
+            systemctl --user enable --now pipewire.service
+            systemctl --user enable --now wireplumber.service
+          fi
+
+          metacity --sm-disable --replace &
+          sleep 5

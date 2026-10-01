@@ -24,6 +24,8 @@
 
 #include <wx/clrpicker.h>
 #include <wx/listctrl.h>
+#include <map>
+#include <vector>
 #include <wx/propgrid/property.h>
 #include <wx/propgrid/props.h>
 
@@ -318,12 +320,18 @@ class OptionsDlg : public wxDialog
 
          void populateAudioDeviceList(wxListCtrl* list, IAudioEngine::AudioDirection direction);
          void selectListDevice(wxListCtrl* list, wxTextCtrl* tc, const wxString& devName);
+         void onAudioDeviceSelected(wxListCtrl* list, wxTextCtrl* tc, long index);
+         static wxString getSelectedAudioDeviceName(wxTextCtrl* tc);
          void testAudioOutput(const wxString& devName, wxButton* btn);
          void testAudioInput(const wxString& inDevName, const wxString& outDevName, wxButton* btn);
 
          bool sessionActive_;
          bool isTesting_;
          std::thread* m_audioPlotThread;
+
+         // Internal (config) device names for each row of the audio device lists.
+         // The lists themselves show the user-friendly names.
+         std::map<wxListCtrl*, std::vector<wxString>> audioDeviceNames_;
 };
 
 #endif // __OPTIONS_DIALOG__

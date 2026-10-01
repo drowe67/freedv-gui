@@ -35,7 +35,9 @@ class BeginRecordingDialog : public wxDialog
         BeginRecordingDialog( wxWindow* parent, wxString const& defaultRecordingSuffix );
         virtual ~BeginRecordingDialog();
 
-        bool isRawRecording() const { return rawRecording_->GetValue(); }
+        bool isRawRecording() const { return rawRecording_->GetValue() || bothRecording_->GetValue(); }
+        bool isDecodedRecording() const { return decodedRecording_->GetValue() || bothRecording_->GetValue(); }
+        bool isBothRecording() const { return bothRecording_->GetValue(); }
         wxString getRecordingSuffix() const { return recordingSuffix_->GetValue(); }
         bool isMp3Format() const { return formatMp3_->GetValue(); }
         
@@ -53,6 +55,7 @@ class BeginRecordingDialog : public wxDialog
         wxTextCtrl *recordingSuffix_;
         wxRadioButton *rawRecording_;
         wxRadioButton *decodedRecording_;
+        wxRadioButton *bothRecording_;
         wxRadioButton *formatWav_;
         wxRadioButton *formatMp3_;
 

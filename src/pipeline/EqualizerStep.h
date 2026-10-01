@@ -36,13 +36,14 @@
 #define AUDIO_PIPELINE__EQUALIZER_STEP_H
 
 #include "IPipelineStep.h"
+#include <atomic>
 #include <memory>
 #include "../util/audio_spin_mutex.h"
 
 class EqualizerStep : public IPipelineStep
 {
 public:
-    EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock);
+    EqualizerStep(int sampleRate, std::atomic<bool>* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock);
     virtual ~EqualizerStep();
     
     virtual int getInputSampleRate() const FREEDV_NONBLOCKING override;
@@ -51,7 +52,7 @@ public:
     
 private:
     int sampleRate_;
-    bool* enableFilter_;
+    std::atomic<bool>* enableFilter_;
     void** bassFilter_;
     void** midFilter_;
     void** trebleFilter_;

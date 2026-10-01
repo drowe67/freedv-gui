@@ -21,12 +21,23 @@
 #include <string.h>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <memory>
 
 #include <wx/wx.h>
 #include "os/os_interface.h"
 
 #include "plot_waterfall.h"
 #include "defines.h" // for FDMDV_FCENTRE
+
+#if defined(__APPLE__)
+wxGraphicsBitmap CreateWaterfallBitmapInWindowColorSpace(wxGraphicsContext* gc, wxWindow* window, const wxImage& image);
+WaterfallCanvas* CreateWaterfallCanvas(wxWindow* window, int width, int height);
+void DestroyWaterfallCanvas(WaterfallCanvas* canvas);
+bool WaterfallCanvasHasSize(const WaterfallCanvas* canvas, int width, int height);
+void WaterfallCanvasPushBlock(WaterfallCanvas* canvas, const wxImage& block);
+wxGraphicsBitmap WaterfallCanvasGetBitmap(WaterfallCanvas* canvas, wxGraphicsContext* gc);
+#endif // defined(__APPLE__)
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
@@ -47,6 +58,7 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
     EVT_KEY_DOWN        (PlotWaterfall::OnKeyDown)
+    EVT_SYS_COLOUR_CHANGED(PlotWaterfall::OnSysColourChanged)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -85,8 +97,13 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int
     dyImageData_ = nullptr;
     dy_ = 0;
     tmpImage_ = nullptr;
+#if defined(__APPLE__)
+    canvas_ = nullptr;
+#endif // defined(__APPLE__)
     leftOffset_ = 0;
     graticuleLabelsValid_ = false;
+    graticuleBitmapScale_ = 0;
+    graticuleBitmapValid_ = false;
 
     SetLabelSize(10.0);
 
@@ -134,6 +151,7 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     // Label positions depend on the geometry we just recalculated.
     graticuleLabelsValid_ = false;
+    graticuleBitmapValid_ = false;
 
     m_dT = DT;
 
@@ -265,11 +283,25 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     }
 
     int yOffset = 0;
+#if defined(__APPLE__)
+    if (canvas_ != nullptr)
+    {
+        wxGraphicsBitmap bitmap = WaterfallCanvasGetBitmap(canvas_, gc);
+        if (!bitmap.IsNull())
+        {
+            // The canvas is opaque, so copy it rather than blending it over what's
+            // underneath: CoreGraphics then does a straight memory copy.
+            gc->SetCompositionMode(wxCOMPOSITION_SOURCE);
+            gc->DrawBitmap(bitmap, PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+            gc->SetCompositionMode(wxCOMPOSITION_OVER);
+            yOffset = m_imgHeight;
+        }
+    }
+#endif // defined(__APPLE__)
     for (auto& slice : waterfallSlices_)
     {
-        int sliceHeight = slice.bitmap->GetHeight();
-        gc->DrawBitmap(slice.gfxBitmap, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, sliceHeight);
-        yOffset += sliceHeight;
+        gc->DrawBitmap(slice.gfxBitmap, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, slice.height);
+        yOffset += slice.height;
     }
 
     if (yOffset < m_imgHeight)
@@ -360,9 +392,211 @@ void PlotWaterfall::rebuildGraticuleLabels_()
 }
 
 //-------------------------------------------------------------------------
+// OnSysColourChanged()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnSysColourChanged(wxSysColourChangedEvent& event)
+{
+    // The cached graticule uses the system text colour (e.g. light/dark mode).
+    graticuleBitmapValid_ = false;
+    Refresh();
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
+// cropImage()
+//
+// Stands in for wxImage::GetSubImage(), which offsets the image's alpha pointer
+// even when it's null (i.e. the image has no alpha) -- undefined behaviour that
+// UBSan reports. The rectangle is clamped to the image.
+//-------------------------------------------------------------------------
+static wxImage cropImage(const wxImage& src, wxRect rect)
+{
+    rect.Intersect(wxRect(0, 0, src.GetWidth(), src.GetHeight()));
+    int width = std::max(1, rect.GetWidth());
+    int height = std::max(1, rect.GetHeight());
+
+    wxImage dst(width, height, true);
+    if (rect.IsEmpty())
+    {
+        return dst;
+    }
+
+    const unsigned char* srcData = src.GetData();
+    unsigned char* dstData = dst.GetData();
+    for (int y = 0; y < height; y++)
+    {
+        memcpy(dstData + y * width * 3, srcData + ((rect.GetTop() + y) * src.GetWidth() + rect.GetLeft()) * 3, width * 3);
+    }
+
+    if (src.HasAlpha())
+    {
+        dst.SetAlpha();
+        const unsigned char* srcAlpha = src.GetAlpha();
+        unsigned char* dstAlpha = dst.GetAlpha();
+        for (int y = 0; y < height; y++)
+        {
+            memcpy(dstAlpha + y * width, srcAlpha + (rect.GetTop() + y) * src.GetWidth() + rect.GetLeft(), width);
+        }
+    }
+
+    return dst;
+}
+
+//-------------------------------------------------------------------------
+// rebuildGraticuleBitmaps_()
+//-------------------------------------------------------------------------
+void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
+{
+    double scale = GetContentScaleFactor();
+    wxSize size = GetClientSize();
+    size.SetWidth(std::max(1, size.GetWidth()));
+    size.SetHeight(std::max(1, size.GetHeight()));
+
+    // Render the whole graticule once, on the same background OnPaint() clears to
+    // and at the display's pixel density, then keep just the margins.
+    // (CreateScaled() rather than CreateWithDIPSize(), which needs wxWidgets 3.1.6+.)
+    wxBitmap bitmap;
+    bitmap.CreateScaled(size.GetWidth(), size.GetHeight(), wxBITMAP_SCREEN_DEPTH, scale);
+    {
+        wxMemoryDC dc(bitmap);
+        dc.SetBackground(wxBrush(GetBackgroundColour()));
+        dc.Clear();
+
+        // Create the label font from the window's context: CreateFont() sizes it for its
+        // own context's DPI, and on Windows a memory DC's is the default 96 rather than
+        // the window's, which drew the labels too small on scaled displays.
+        std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
+        drawStaticGraticule_(gc.get(), ctx->CreateFont(GetFont(), GetForegroundColour()));
+    }
+    wxImage image = bitmap.ConvertToImage();
+
+    int dataX0 = PLOT_BORDER + leftOffset_;
+    int dataY0 = PLOT_BORDER + YBOTTOM_OFFSET;
+    auto toPixels = [&](int v, int limit) { return std::clamp((int)std::lround(v * scale), 1, limit); };
+    int topHeightPx = toPixels(dataY0, image.GetHeight());
+    wxImage top = cropImage(image, wxRect(0, 0, image.GetWidth(), topHeightPx));
+    wxImage left = cropImage(image, wxRect(
+        0, topHeightPx,
+        toPixels(dataX0, image.GetWidth()), std::max(1, image.GetHeight() - topHeightPx)));
+
+#if defined(__APPLE__)
+    graticuleTop_ = CreateWaterfallBitmapInWindowColorSpace(ctx, this, top);
+    graticuleLeft_ = CreateWaterfallBitmapInWindowColorSpace(ctx, this, left);
+#else
+    graticuleTop_ = ctx->CreateBitmapFromImage(top);
+    graticuleLeft_ = ctx->CreateBitmapFromImage(left);
+#endif // defined(__APPLE__)
+
+    graticuleBitmapScale_ = scale;
+    graticuleBitmapValid_ = true;
+}
+
+//-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
 void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
+{
+    // The scale changes when the window moves to a display with a different density.
+    if (!graticuleBitmapValid_ || graticuleBitmapScale_ != GetContentScaleFactor())
+    {
+        rebuildGraticuleBitmaps_(ctx);
+    }
+
+    wxSize size = GetClientSize();
+    int dataX0 = PLOT_BORDER + leftOffset_;
+    int dataY0 = PLOT_BORDER + YBOTTOM_OFFSET;
+    ctx->DrawBitmap(graticuleTop_, 0, 0, size.GetWidth(), dataY0);
+    ctx->DrawBitmap(graticuleLeft_, 0, dataY0, dataX0, std::max(1, size.GetHeight() - dataY0));
+
+    drawDataGridlines_(ctx);
+
+    float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
+    
+    float sum = 0.0;
+    for (auto& f : rxOffsets_)
+    {
+        sum += f;
+    }
+    float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
+    
+    if (m_rxFreq != 0.0) {
+        int x;
+
+        // get average offset and draw sync tuning line
+        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+        x += PLOT_BORDER + leftOffset_;
+        ctx->StrokeLine(x, 0, x, verticalBarLength);
+    
+        // red rx tuning line
+        ctx->SetPen(wxPen(RED_COLOR, 3));
+        x = m_rxFreq*freq_hz_to_px;
+        x += PLOT_BORDER + leftOffset_;
+        ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
+    }
+}
+
+//-------------------------------------------------------------------------
+// drawDataGridlines_()
+//
+// The parts of drawStaticGraticule_() that lie over the waterfall itself, which
+// changes every frame. Clipped to the waterfall so the margins keep their cached
+// pixels exactly.
+//-------------------------------------------------------------------------
+void PlotWaterfall::drawDataGridlines_(wxGraphicsContext* ctx)
+{
+    int dataX0   = PLOT_BORDER + leftOffset_;
+    int dataY0   = PLOT_BORDER + YBOTTOM_OFFSET;
+    int dataYEnd = dataY0 + m_imgHeight;
+    float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+
+    ctx->PushState();
+    ctx->Clip(dataX0, dataY0, m_imgWidth, m_imgHeight);
+
+    // Major vertical gridlines and the Y axis ticks share a pen, so stroke them as one path.
+    wxGraphicsPath path = ctx->CreatePath();
+    if (m_graticule)
+    {
+        for (float f = STEP_F_HZ; f < MAX_F_HZ; f += STEP_F_HZ)
+        {
+            int x = f*freq_hz_to_px + dataX0;
+            path.MoveToPoint(x, m_imgHeight + PLOT_BORDER);
+            path.AddLineToPoint(x, PLOT_BORDER);
+        }
+    }
+    float time = 0;
+    for (int y = dataY0; y < dataYEnd; time += 1.0f, y += Y_PER_SECOND)
+    {
+        bool isMajor = (fmodf(time, (float)WATERFALL_SECS_STEP) < 0.5f);
+        path.MoveToPoint(dataX0, y);
+        path.AddLineToPoint(dataX0 + (isMajor ? 8 : 4), y);
+    }
+    ctx->SetPen(wxPen(foregroundColor, 1));
+    ctx->StrokePath(path);
+
+    // Horizontal gridlines at 5s intervals (graticule mode only). Stroked separately
+    // so each starts its dash pattern afresh, as before.
+    if (m_graticule)
+    {
+        ctx->SetPen(m_penDotDash);
+        for (int y = dataY0; y < dataYEnd; y += Y_PER_SECOND * WATERFALL_SECS_STEP)
+        {
+            ctx->StrokeLine(dataX0, y, m_rGrid.GetWidth() + dataX0, y);
+        }
+    }
+
+    ctx->PopState();
+}
+
+//-------------------------------------------------------------------------
+// drawStaticGraticule_()
+//
+// Everything in the graticule that doesn't move; the margins of it are cached
+// (see graticuleTop_/graticuleLeft_) and drawDataGridlines_() redraws the rest.
+//-------------------------------------------------------------------------
+void PlotWaterfall::drawStaticGraticule_(wxGraphicsContext* ctx, const wxGraphicsFont& font)
 {
     int      x, y;
     float    f, time, freq_hz_to_px;
@@ -374,8 +608,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(foregroundColor, 1));
 
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
+    ctx->SetFont(font);
 
     if (!graticuleLabelsValid_)
     {
@@ -443,29 +676,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     {
         ctx->DrawText(label.text, label.x, label.y);
     }
-
-   float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
-   
-   float sum = 0.0;
-   for (auto& f : rxOffsets_)
-   {
-       sum += f;
-   }
-   float averageOffset = rxOffsets_.size() == 0 ? 0 : sum / rxOffsets_.size();
-   
-   if (m_rxFreq != 0.0) {
-       // get average offset and draw sync tuning line
-        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
-        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
-        x += PLOT_BORDER + leftOffset_;
-        ctx->StrokeLine(x, 0, x, verticalBarLength);
-   
-       // red rx tuning line
-       ctx->SetPen(wxPen(RED_COLOR, 3));
-       x = m_rxFreq*freq_hz_to_px;
-       x += PLOT_BORDER + leftOffset_;
-       ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
-   }
 }
 
 //-------------------------------------------------------------------------
@@ -596,36 +806,47 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     {
         tmpImage_->SetData(dyImageData_, true);
 
-        WaterfallSlice slice;
-        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
-        {
-            // Recycle the oldest block's bitmap as the render target for the newest one.
-            // Its cached gfxBitmap goes with it and is rebuilt below.
-            slice.bitmap = waterfallSlices_.back().bitmap;
-            waterfallSlices_.pop_back();
-        }
-        else
-        {
-            slice.bitmap = new wxBitmap(m_imgWidth, dy);
-        }
+        // Build the block at the display's pixel density rather than at 1x. A 1x block
+        // gets upscaled by the renderer on HiDPI displays (e.g. GTK3 under fractional
+        // scaling, which renders at 2x), which left dark horizontal seams between
+        // blocks. Upscaling the whole plot on every paint was also ~40x slower than
+        // drawing it 1:1.
+        double scale = GetContentScaleFactor();
+        wxImage scaledImage = tmpImage_->Scale(
+            std::max(1, (int)std::lround(m_imgWidth * scale)),
+            std::max(1, (int)std::lround(dy * scale)),
+            wxIMAGE_QUALITY_NEAREST);
 
-        wxBitmap srcBmp(*tmpImage_);
+#if defined(__APPLE__)
+        int canvasWidth = std::max(1, (int)std::lround(m_imgWidth * scale));
+        int canvasHeight = std::max(1, (int)std::lround(m_imgHeight * scale));
+        if (!WaterfallCanvasHasSize(canvas_, canvasWidth, canvasHeight))
         {
-            // Scoped so both DCs release the bitmaps before the graphics bitmap is made
-            // from slice.bitmap -- a bitmap still selected into a wxMemoryDC is under raw
-            // access and cannot be handed to the renderer.
-            wxMemoryDC sourceDC;
-            sourceDC.SelectObjectAsSource(srcBmp);
-            wxMemoryDC destDC(*slice.bitmap);
-
-            destDC.StretchBlit(0, 0, m_imgWidth, srcBmp.GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, srcBmp.GetHeight());
+            DestroyWaterfallCanvas(canvas_);
+            canvas_ = CreateWaterfallCanvas(this, canvasWidth, canvasHeight);
         }
+        if (canvas_ != nullptr)
+        {
+            WaterfallCanvasPushBlock(canvas_, scaledImage);
+            return;
+        }
+#endif // defined(__APPLE__)
 
         // Convert once, here, rather than on every paint: a block's pixels never change
-        // again after this blit, and it will be composited on each of the frames it spends
-        // scrolling down the screen.
-        slice.gfxBitmap = gc->CreateBitmap(*slice.bitmap);
+        // again, and it will be composited on each of the frames it spends scrolling down
+        // the screen.
+        WaterfallSlice slice;
+        slice.height = dy;
+#if defined(__APPLE__)
+        slice.gfxBitmap = CreateWaterfallBitmapInWindowColorSpace(gc, this, scaledImage);
+#else
+        slice.gfxBitmap = gc->CreateBitmapFromImage(scaledImage);
+#endif // defined(__APPLE__)
 
+        if (waterfallSlices_.size() >= (size_t)(m_imgHeight / dy))
+        {
+            waterfallSlices_.pop_back();
+        }
         waterfallSlices_.push_front(slice);
     }
 }
@@ -739,11 +960,11 @@ void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent&)
 
 void PlotWaterfall::cleanupSlices_()
 {
-    for (auto& slice : waterfallSlices_)
-    {
-        delete slice.bitmap;
-    }
     waterfallSlices_.clear();
+#if defined(__APPLE__)
+    DestroyWaterfallCanvas(canvas_);
+    canvas_ = nullptr;
+#endif // defined(__APPLE__)
 
     dy_ = 0;
     if (dyImageData_ != nullptr)

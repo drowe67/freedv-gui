@@ -72,7 +72,7 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
     }
     
     // init Mic In Equaliser Filters
-    if (cb->micInEQEnable && g_nSoundCards > 1) {
+    if (cb->micInEQEnable.load(std::memory_order_relaxed) && g_nSoundCards > 1) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
         //printf("designing new Min In filters\n");
         cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz, wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB, txSampleRate);
@@ -83,18 +83,18 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         assert(cb->sbqMicInBass != nullptr && cb->sbqMicInTreble != nullptr && cb->sbqMicInMid != nullptr);
     }
 
+    cb->micEqLock.unlock();
+    cb->spkEqLock.lock();
+
     // Volume can be adjusted via main window without enabling filters
     if (wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB != 0)
     {
         cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, rxSampleRate);
     }
-    
-    cb->micEqLock.unlock();
-    cb->spkEqLock.lock();
-    
+
     // init Spk Out Equaliser Filters
 
-    if (cb->spkOutEQEnable) {
+    if (cb->spkOutEQEnable.load(std::memory_order_relaxed)) {
         assert(cb->sbqSpkOutBass == nullptr && cb->sbqSpkOutTreble == nullptr && cb->sbqSpkOutMid == nullptr);
         //printf("designing new Spk Out filters\n");
         //printf("designEQFilters: wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz: %f\n",wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz);

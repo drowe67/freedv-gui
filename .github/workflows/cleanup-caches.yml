@@ -1,0 +1,69 @@
+name: Cleanup GitHub Actions caches on closed pull requests
+
+# GitHub Actions caches are immutable and scoped to the branch that created
+# them (refs/heads/<branch>, since our build workflows trigger on `push`,
+# not `pull_request` -- the ref shown in `gh cache list`/the caches API
+# confirms this). Nothing ever overwrites or removes an old cache entry on
+# its own; ccache-action in particular writes a brand-new, uniquely-keyed
+# blob on every single run (see its `append-timestamp` default) and leaves
+# the previous one behind. Across a long-lived PR branch, that adds up
+# fast -- and it all counts against the repo-wide 10GB Actions cache quota
+# shared by every branch, so a few active feature branches can push
+# everyone else out via GitHub's automatic least-recently-used eviction.
+#
+# This deletes every cache entry scoped to a PR's branch once that PR is
+# closed (merged or not), so caches from finished work stop taking up
+# quota that active branches need.
+#
+# Uses pull_request_target (not pull_request) so this also runs for PRs
+# opened from forks -- safe here since this job never checks out or
+# executes the PR's code, it only calls the cache API for its own branch
+# name.
+on:
+  pull_request_target:
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete caches for this PR's branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: refs/heads/${{ github.event.pull_request.head.ref }}
+        run: |
+          set -u
+          echo "Deleting caches for $BRANCH"
+
+          # gh cache list is capped per call, and a long-lived PR can rack
+          # up more entries than that cap, so keep listing/deleting until
+          # nothing matching this branch is left. Bounded to guard against
+          # looping forever if a delete call keeps silently failing.
+          max_iterations=50
+          iteration=0
+          total_deleted=0
+
+          while [ "$iteration" -lt "$max_iterations" ]; do
+            iteration=$((iteration + 1))
+            cacheIds=$(gh cache list --ref "$BRANCH" --limit 100 --json id --jq '.[].id')
+            if [ -z "$cacheIds" ]; then
+              break
+            fi
+
+            for cacheId in $cacheIds; do
+              # Don't let one already-gone/failed delete stop the rest.
+              if gh cache delete "$cacheId"; then
+                total_deleted=$((total_deleted + 1))
+              fi
+            done
+          done
+
+          echo "Deleted $total_deleted cache(s) for $BRANCH"

@@ -21,6 +21,8 @@
 
 #include <sstream>
 #include <set>
+#include <memory>
+#include <algorithm>
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
@@ -46,7 +48,7 @@
 
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase* pConfig;
-extern int g_analog;
+extern std::atomic<int> g_analog;
 
 #define CALLSIGN_COL (0)
 #define GRID_SQUARE_COL (1)
@@ -74,6 +76,12 @@ extern int g_analog;
 #define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
+
+// Whether the list is sorted by the given model column.
+static bool isSortingColumn_(const wxDataViewColumn* sortingColumn, unsigned int modelCol)
+{
+    return sortingColumn != nullptr && sortingColumn->GetModelColumn() == modelCol;
+}
 
 void FreeDVReporterDialog::createColumn_(int col, bool visible)
 {
@@ -801,6 +809,7 @@ void FreeDVReporterDialog::refreshLayout()
 
     // Refresh all data based on current settings and filters.
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+    model->requestColumnAutosize();
     model->refreshAllRows();
 
     // Update status controls.
@@ -871,6 +880,10 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
     col->SetHidden(!newColValue);
+
+    // A newly shown column may have been hidden across content changes.
+    FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+    model->requestColumnAutosize();
 }
 
 void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
@@ -1235,6 +1248,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
 #endif // defined(__APPLE__)
 {
 #if defined(__APPLE__)
+    if (autosize == columnsAutosized_)
+    {
+        return;
+    }
+    columnsAutosized_ = autosize;
+
     if (autosize)
     {
         // Re-enable autosizing
@@ -1260,16 +1279,113 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnAutosize_(bool)
 #endif // defined(__APPLE__)
 }
 
+#if defined(__APPLE__)
+// Refits just the columns whose widest text changed at the last check (see
+// maxTextWidthsChanged_()). Fitting a column measures every row, so this is several
+// times cheaper than refitting all of them, and the result is the same: a column's
+// fitted width only depends on its widest text and its header.
+void FreeDVReporterDialog::FreeDVReporterDataModel::refitChangedColumns_()
+{
+    for (unsigned int index = 0; index < parent_->m_listSpots->GetColumnCount(); index++)
+    {
+        auto col = parent_->m_listSpots->GetColumn(index);
+        auto modelCol = col->GetModelColumn();
+        if (modelCol == USER_MESSAGE_COL || index == RIGHTMOST_COL ||
+            modelCol >= maxTextWidthChanged_.size() || !maxTextWidthChanged_[modelCol])
+        {
+            continue;
+        }
+
+        // Fits the column right away (wxDataViewColumn::SetWidth() on macOS).
+        col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
+        if (!columnsAutosized_)
+        {
+            // Keep it at a fixed width like the others until they're all refitted.
+            col->SetWidth(col->GetWidth());
+        }
+    }
+}
+#endif // defined(__APPLE__)
+
+#if defined(__APPLE__) || defined(WIN32)
+bool FreeDVReporterDialog::FreeDVReporterDataModel::maxTextWidthsChanged_()
+{
+    std::vector<int> maxWidths(NUM_COLS, 0);
+    std::unique_ptr<wxClientDC> dc; // only created if a row needs measuring
+
+    for (auto& item : allReporterData_)
+    {
+        auto row = item.second;
+        if (!row->isVisible || row->isPendingDelete)
+        {
+            continue;
+        }
+
+        if (row->cellTexts.size() != NUM_COLS)
+        {
+            row->cellTexts.assign(NUM_COLS, wxString());
+            row->cellTextWidths.assign(NUM_COLS, -1); // not measured yet
+            row->cellTextsStale = true;
+        }
+
+        if (row->cellTextsStale)
+        {
+            // An update usually changes just one or two of a row's cells, so only
+            // measure the ones whose text actually changed.
+            row->cellTextsStale = false;
+            for (int col = 0; col < NUM_COLS; col++)
+            {
+                // USER_MESSAGE_COL isn't autosized.
+                if (col == USER_MESSAGE_COL)
+                {
+                    continue;
+                }
+
+                wxString text = getColumnDisplayValue_(row, col);
+                if (row->cellTextWidths[col] >= 0 && text == row->cellTexts[col])
+                {
+                    continue;
+                }
+
+                if (!dc)
+                {
+                    dc = std::make_unique<wxClientDC>(parent_->m_listSpots);
+                    dc->SetFont(parent_->m_listSpots->GetFont());
+                }
+                row->cellTextWidths[col] = dc->GetTextExtent(text).GetWidth();
+                row->cellTexts[col] = std::move(text);
+            }
+        }
+
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            // (USER_MESSAGE_COL is never measured and stays at -1.)
+            maxWidths[col] = std::max(maxWidths[col], row->cellTextWidths[col]);
+        }
+    }
+
+    bool firstCheck = maxTextWidths_.size() != (size_t)NUM_COLS;
+    maxTextWidthChanged_.assign(NUM_COLS, false);
+    bool changed = false;
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        if (firstCheck || maxWidths[col] != maxTextWidths_[col])
+        {
+            maxTextWidthChanged_[col] = true;
+            changed = true;
+        }
+    }
+    maxTextWidths_ = std::move(maxWidths);
+    return changed;
+}
+#endif // defined(__APPLE__) || defined(WIN32)
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     CallbackHandler handler;
     
     handler.fn = [this](CallbackHandler&) {
-#if defined(WIN32)
-        bool doAutoSizeColumns = false;
-#endif // define(WIN32)
-    
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
         // Iterate across all visible rows. If a row is currently highlighted
@@ -1277,16 +1393,24 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         auto curDate = wxDateTime::Now().ToUTC();
 
         wxDataViewItem currentSelection = parent_->m_listSpots->GetSelection();
+
+        // Looked up once per pass rather than for every row.
+        const wxColour windowColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+        const wxColour windowTextColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
         
         wxDataViewItemArray itemsAdded;
         wxDataViewItemArray itemsChanged;
         wxDataViewItemArray itemsDeleted;
+        bool contentChanged = false;
         for (auto& item : allReporterData_)
         {
             if (item.second->isPendingDelete)
             {
                 if (item.second->isVisible)
                 {
+                    setColumnAutosize_(false);
+                    contentChanged = true;
+
                     wxDataViewItem dvi(item.second);
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                     item.second->isVisible = false;
@@ -1317,8 +1441,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
 
             // Messaging notifications take highest priority.
-            wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-            wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+            wxColour backgroundColor = windowColor;
+            wxColour foregroundColor = windowTextColor;
 
             if (isMessaging)
             {
@@ -1357,16 +1481,17 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             if (newVisibility != reportData->isVisible)
             {
                 setColumnAutosize_(false);
+                contentChanged = true;
                 
                 reportData->isVisible = newVisibility;
                 if (newVisibility)
                 {
+                    // Text may have changed while the row was hidden.
+                    reportData->cellTextsStale = true;
+
                     wxDataViewItem dvi(reportData);
                     ItemAdded(wxDataViewItem(nullptr), dvi);
                     itemsAdded.Add(dvi);
-#if defined(WIN32)
-                    doAutoSizeColumns = true;
-#endif // defined(WIN32)
                 }
                 else
                 {
@@ -1387,6 +1512,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
                 {
                     if (reportData->isVisible)
                     {
+                        if (reportData->isPendingUpdate)
+                        {
+                            contentChanged = true;
+                            reportData->cellTextsStale = true;
+                        }
                         reportData->isPendingUpdate = false;
 
                         wxDataViewItem dvi(reportData);
@@ -1402,20 +1532,40 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             ItemsChanged(itemsChanged);
         }
         
-        if (itemsAdded.size() > 0 || itemsDeleted.size() > 0 || itemsChanged.size() > 0)
+        if (contentChanged || columnsNeedWidthCheck_ || columnsNeedAutosize_)
         {
-            setColumnAutosize_(true);
-        }
-        
+#if defined(__APPLE__) || defined(WIN32)
+            // Refitting measures every row of every column, so only do it when the
+            // widest text in some column has actually changed.
+            bool refitAll = columnsNeedAutosize_;
+            bool refit = maxTextWidthsChanged_() || refitAll;
+#else
+            // GTK sizes autosized columns itself; there's nothing to refit.
+            bool refit = false;
+#endif // defined(__APPLE__) || defined(WIN32)
+
+            columnsNeedAutosize_ = false;
+            columnsNeedWidthCheck_ = false;
+            if (refit)
+            {
 #if defined(WIN32)
-        // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
-        // platforms causes excessive CPU usage for no benefit.
-        if (itemsChanged.size() > 0 || doAutoSizeColumns)
-        {
-            parent_->autosizeColumns();
-        }
+                // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
+                // platforms causes excessive CPU usage for no benefit.
+                parent_->autosizeColumns();
+#elif defined(__APPLE__)
+                if (refitAll)
+                {
+                    setColumnAutosize_(true);
+                }
+                else
+                {
+                    refitChangedColumns_();
+                }
+#else
+                setColumnAutosize_(true);
 #endif // defined(WIN32)
-    
+            }
+        }
     };
     fnQueue_.push_back(std::move(handler));
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
@@ -1507,11 +1657,12 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
+                bool useAnalog = g_analog.load(std::memory_order_relaxed);
                 wxGetApp().rigFrequencyController->setMode(
                     GetModeForFrequency(
                         frequency, 
                         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes, 
-                        g_analog));
+                        useAnalog));
             }
         }
         DeselectItem();
@@ -2268,6 +2419,20 @@ void FreeDVReporterDialog::autosizeColumns()
             col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
         }
     }
+
+    // Then pin each column at the width it was just fitted to. After any item change,
+    // wxDataViewCtrl re-measures every row of wxCOL_WIDTH_AUTOSIZE columns at idle
+    // time, which with the Reporter's frequent updates cost as much as refitting here
+    // did; fixed-width columns skip that. FreeDVReporterDataModel calls this again
+    // when the widest text in a column changes.
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
+    {
+        if (index != USER_MESSAGE_COL)
+        {
+            auto col = getColumnForModelColId_(index);
+            col->SetWidth(col->GetWidth());
+        }
+    }
 }
 #endif // defined(WIN32)
 
@@ -2279,13 +2444,24 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequenc
     refreshAllRows();
 }
 
+wxString FreeDVReporterDialog::FreeDVReporterDataModel::formatSnr_(float snr) const
+{
+    // SNRs are well under 1000, so there's no thousands separator to worry about.
+    wxString result = wxString::Format(wxT("%.1f"), snr);
+    if (decimalSeparator_ != wxT('.'))
+    {
+        result.Replace(wxT("."), wxString(decimalSeparator_));
+    }
+    return result;
+}
+
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string const& timeStr, wxDateTime& timeObj)
 {
-    wxRegEx millisecondsRemoval(parent_->MS_REMOVAL_RGX);
+    wxRegEx& millisecondsRemoval = millisecondsRgx_;
     wxString tmp = timeStr;
     millisecondsRemoval.Replace(&tmp, parent_->EMPTY_STR);
     
-    wxRegEx timezoneRgx(parent_->TIMEZONE_RGX);
+    wxRegEx& timezoneRgx = timezoneRgx_;
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {
@@ -2740,6 +2916,14 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , currentBandFilter_(BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
+#if defined(__APPLE__)
+    , columnsAutosized_(true)
+#endif // defined(__APPLE__)
+    , columnsNeedAutosize_(false)
+    , columnsNeedWidthCheck_(false)
+    , millisecondsRgx_(parent->MS_REMOVAL_RGX)
+    , timezoneRgx_(parent->TIMEZONE_RGX)
+    , decimalSeparator_(wxNumberFormatter::GetDecimalSeparator())
 {
     // Initialize column filter state from config
     columnFilterOperators_.resize(NUM_COLS, FreeDVReporterDialog::FILTER_NONE);
@@ -2832,6 +3016,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 {
     std::unique_lock<std::recursive_mutex> lk(dataMtx_);
     assert(wxThread::IsMain());
+
+    columnsNeedWidthCheck_ = true;
 
     for (auto& row : allReporterData_)
     {
@@ -3264,6 +3450,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
+                // Text may have changed while the row was hidden.
+                kvp.second->cellTextsStale = true;
+
                 itemsAdded.Add(wxDataViewItem(kvp.second));
 #if defined(WIN32)
                 doAutoSizeColumns = true;
@@ -3291,6 +3480,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     if (itemsDeleted.size() > 0 || itemsAdded.size() > 0)
     {
         Cleared(); // avoids spurious errors on macOS
+        columnsNeedWidthCheck_ = true;
         if (currentSelection.IsOk())
         {
             // Reselect after redraw
@@ -3301,7 +3491,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     }
     
 #if defined(WIN32)
-    if (doAutoSizeColumns)
+    if (doAutoSizeColumns && maxTextWidthsChanged_())
     {
         // Only auto-resize columns on Windows due to known rendering bugs. Trying to do so on other
         // platforms causes excessive CPU usage for no benefit.
@@ -3555,6 +3745,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 // are thrown. We can set it to false once the item's removed.
                 item->isVisible = false;
 #endif // defined(__linux__)
+
+                columnsNeedWidthCheck_ = true;
             }
             item->isPendingDelete = true;
             item->deleteTime = wxDateTime::Now();
@@ -3603,8 +3795,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->getColumnForModelColId_(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
-                (sortingColumn == parent_->getColumnForModelColId_(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
+                (isSortingColumn_(sortingColumn, FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
+                (isSortingColumn_(sortingColumn, LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             bool isDataChanged = 
                 (iter->second->frequency != frequencyHz ||
                  iter->second->lastUpdate != lastUpdateTime);
@@ -3666,8 +3858,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 isChanged |=
-                    (sortingColumn == parent_->getColumnForModelColId_(STATUS_COL) && iter->second->status != txStatus) ||
-                    (sortingColumn == parent_->getColumnForModelColId_(TX_MODE_COL) && iter->second->txMode != txMode);
+                    (isSortingColumn_(sortingColumn, STATUS_COL) && iter->second->status != txStatus) ||
+                    (isSortingColumn_(sortingColumn, TX_MODE_COL) && iter->second->txMode != txMode);
                 isDataChanged |=
                     iter->second->status != txStatus ||
                     iter->second->txMode != txMode;
@@ -3676,7 +3868,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 iter->second->txMode = txMode;
             
                 auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
-                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
+                isChanged |= (isSortingColumn_(sortingColumn, LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
                 isDataChanged |= iter->second->lastTx != lastTxTime;
                 iter->second->lastTx = lastTxTime;
             }
@@ -3727,7 +3919,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
 
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx);
+                (isSortingColumn_(sortingColumn, LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsignWx);
             bool isDataChanged =
                 iter->second->lastRxCallsign != receivedCallsignWx ||
                 iter->second->lastRxMode != rxModeWx;
@@ -3735,13 +3927,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             iter->second->lastRxCallsign = receivedCallsignWx;
             iter->second->lastRxMode = rxModeWx;
 
-            wxString snrString = wxNumberFormatter::ToString(snr, 1) + wxT("  ");
+            wxString snrString = formatSnr_(snr) + wxT("  ");
             if (receivedCallsign == "" && rxMode == "")
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    (sortingColumn == parent_->getColumnForModelColId_(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
-                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
+                    (isSortingColumn_(sortingColumn, LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != parent_->UNKNOWN_STR) ||
+                    (isSortingColumn_(sortingColumn, SNR_COL) && iter->second->snr != parent_->UNKNOWN_STR) ||
                     iter->second->lastRxDate.IsValid();
                 isDataChanged |=
                     iter->second->lastRxCallsign != parent_->UNKNOWN_STR ||
@@ -3758,7 +3950,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 isChanged |=
-                    (sortingColumn == parent_->getColumnForModelColId_(SNR_COL) && iter->second->snr != snrString);
+                    (isSortingColumn_(sortingColumn, SNR_COL) && iter->second->snr != snrString);
                 isDataChanged |=
                     iter->second->snr != snrString;
                 
@@ -3808,13 +4000,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
+                isChanged |= (isSortingColumn_(sortingColumn, USER_MESSAGE_COL) && iter->second->userMessage != parent_->UNKNOWN_STR);
                 iter->second->userMessage = parent_->UNKNOWN_STR;
             }
             else
             {
                 auto msgAsWxString = wxString::FromUTF8(message.c_str());
-                isChanged |= (sortingColumn == parent_->getColumnForModelColId_(USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
+                isChanged |= (isSortingColumn_(sortingColumn, USER_MESSAGE_COL) && iter->second->userMessage != msgAsWxString);
                 iter->second->userMessage = msgAsWxString;
             }
         

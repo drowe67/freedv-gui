@@ -32,6 +32,12 @@ static const int kAdmMaxDeviceNameSize = 128;
 
 void MacAudioEngine::start()
 {
+    // Ensure we haven't already initialized.
+    if (initializedCount_.fetch_add(1, std::memory_order_acq_rel) > 0)
+    {
+        return;
+    }
+    
     // "Undocumented" call that's supposedly required for queries/changes to properly
     // occur. Might not actually be needed but doesn't hurt to keep it.
     CFRunLoopRef theRunLoop = NULL;
@@ -62,6 +68,12 @@ void MacAudioEngine::start()
 
 void MacAudioEngine::stop()
 {
+    // Ensure there still aren't users of this engine.
+    if (initializedCount_.fetch_sub(1, std::memory_order_acq_rel) > 1)
+    {
+        return;
+    }
+    
     AudioObjectPropertyAddress property = { 
         kAudioHardwarePropertyDevices,
         kAudioObjectPropertyScopeGlobal,

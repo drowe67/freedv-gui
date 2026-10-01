@@ -7,8 +7,8 @@
 #include "main.h"
 #include "gui/dialogs/monitor_volume_adj.h"
 
-extern SNDFILE            *g_sfRecMicFile;
-bool                g_recVoiceKeyerFile;
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
+std::atomic<bool>   g_recVoiceKeyerFile;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::atomic<bool> endingTx;
@@ -16,12 +16,12 @@ extern std::atomic<bool> endingTx;
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     // If recording a new VK file, stop doing that now.
-    if (g_recVoiceKeyerFile)
+    if (g_recVoiceKeyerFile.load(std::memory_order_relaxed))
     {       
         g_mutexProtectingCallbackData.Lock();
-        g_recVoiceKeyerFile = false;
-        sf_close(g_sfRecMicFile);
-        g_sfRecMicFile = nullptr;
+        g_recVoiceKeyerFile.store(false, std::memory_order_relaxed);
+        sf_close(g_sfRecMicFile.load(std::memory_order_acquire));
+        g_sfRecMicFile.store(nullptr, std::memory_order_release);
         SetStatusText(wxT(""));
         g_mutexProtectingCallbackData.Unlock();
         
@@ -114,8 +114,8 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     sfInfo.channels   = 1;
     sfInfo.samplerate = sample_rate;
 
-    g_sfRecMicFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
-    if(g_sfRecMicFile == NULL)
+    g_sfRecMicFile.store(sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo), std::memory_order_release);
+    if(g_sfRecMicFile.load(std::memory_order_acquire) == NULL)
     {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
@@ -123,7 +123,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     }
 
     SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
-    g_recVoiceKeyerFile = true;
+    g_recVoiceKeyerFile.store(true, std::memory_order_relaxed);
     vkFileName_ = soundFile;
     
     // Switch tab to "From Mic" during recording.
@@ -229,9 +229,9 @@ void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& )
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<bool> g_playFileToMicIn;
-extern bool g_loopPlayFileToMicIn;
+extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
-extern int g_sfTxFs;
+extern std::atomic<int> g_sfTxFs;
 
 int MainFrame::VoiceKeyerStartTx(void)
 {
@@ -251,9 +251,9 @@ int MainFrame::VoiceKeyerStartTx(void)
         m_togBtnVoiceKeyer->SetValue(false);
     }
     else {
-        g_sfTxFs = sfInfo.samplerate;
+        g_sfTxFs.store(sfInfo.samplerate, std::memory_order_release);
         
-        if (g_sfTxFs < freedvInterface.getRxSpeechSampleRate())
+        if (g_sfTxFs.load(std::memory_order_acquire) < freedvInterface.getRxSpeechSampleRate())
         {
             wxMessageBox(wxT("The selected voice keyer file does not have a high enough sample rate to guarantee acceptable audio quality. Please ensure that your file's sample rate is 16 kHz or greater."), wxT("Sample Rate Too Low"), wxOK);
             sf_close(tmpPlayFile);
@@ -274,7 +274,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_.c_str()) + wxT(" to mic input") , 0);
-        g_loopPlayFileToMicIn = false;
+        g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);
         g_playFileToMicIn.store(true, std::memory_order_release);
 
         // Allow enabling VK during TX.

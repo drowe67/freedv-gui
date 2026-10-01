@@ -82,15 +82,16 @@ using namespace std::chrono_literals;
 // External globals
 // TBD -- work on fully removing the need for these.
 extern paCallBackData* g_rxUserdata;
-extern int g_analog;
+extern std::atomic<int> g_analog;
 extern int g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
 extern std::atomic<bool> g_tx;
 extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
-extern int g_sfTxFs;
-extern bool g_loopPlayFileToMicIn;
+extern std::atomic<int> g_sfTxFs;
+extern std::atomic<bool> g_loopPlayFileToMicIn;
+extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<float> g_TxFreqOffsetHz;
 extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
@@ -100,15 +101,19 @@ extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
 extern int g_resyncs;
-extern bool g_recFileFromRadio;
-extern unsigned int g_recFromRadioSamples;
+extern std::atomic<bool> g_recFileFromRadio;
+extern std::atomic<unsigned int> g_recFromRadioSamples;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
+extern std::atomic<SNDFILE*> g_sfRecDecoderFile;
+extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
+extern std::atomic<bool> g_recFileFromDecoder;
+extern std::atomic<bool> g_recFileFromMic;
+extern std::atomic<bool> g_recVoiceKeyerFile;
+
 extern std::atomic<bool> g_playFileFromRadio;
-extern int g_sfFs;
+extern std::atomic<int> g_sfFs;
 extern std::atomic<bool>     g_totBeepActive;
-extern bool g_loopPlayFileFromRadio;
-extern int g_SquelchActive;
-extern float g_SquelchLevel;
-extern float g_tone_phase;
 extern GenericFIFO<float> g_avmag;
 extern std::atomic<int> g_State;
 extern std::atomic<float> g_RxFreqOffsetHz;
@@ -116,6 +121,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<float> g_tone_phase;
 
 extern long agcLeveler;
 extern long agcLimiter;
@@ -140,14 +146,6 @@ static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
 extern std::atomic<SNDFILE*> g_sfPlayFile;
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE* g_sfRecFile;
-extern SNDFILE* g_sfRecMicFile;
-extern SNDFILE* g_sfRecDecoderFile;
-extern std::atomic<SNDFILE*> g_sfPlayFileFromRadio;
-
-extern bool g_recFileFromMic;
-extern bool g_recVoiceKeyerFile;
-extern bool g_recFileFromDecoder;
 
 #include "sox_biquad.h"
 
@@ -160,7 +158,7 @@ void TxRxThread::initializePipeline_()
         // Record from mic step (optional)
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
-            []() { return g_sfRecMicFile; }, 
+            []() { return g_sfRecMicFile.load(std::memory_order_acquire); }, 
             [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
@@ -173,7 +171,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return (g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)) && (g_sfRecMicFile.load(std::memory_order_acquire) != NULL); },
             recordMicTap,
             bypassRecordMic
         );
@@ -184,10 +182,10 @@ void TxRxThread::initializePipeline_()
         auto eitherOrPlayMicIn = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto playMicIn = new PlaybackStep(
             inputSampleRate_, 
-            []() { return g_sfTxFs; },
+            []() { return g_sfTxFs.load(std::memory_order_acquire); },
             []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile.load(std::memory_order_acquire) : nullptr; },
             []() {
-                if (g_loopPlayFileToMicIn)
+                if (g_loopPlayFileToMicIn.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
@@ -286,7 +284,7 @@ void TxRxThread::initializePipeline_()
         digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
         auto eitherOrDigitalAnalog = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+            +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) != 0; },
             analogTxPipeline,
             digitalTxPipeline);
         pipeline_->appendPipelineStep(eitherOrDigitalAnalog);
@@ -328,10 +326,10 @@ void TxRxThread::initializePipeline_()
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
-            []() { return g_sfRecFile; }, 
+            []() { return g_sfRecFile.load(std::memory_order_acquire); }, 
             [](int numSamples) {
-                g_recFromRadioSamples -= numSamples;
-                if (g_recFromRadioSamples <= 0)
+                g_recFromRadioSamples.fetch_sub(numSamples, std::memory_order_relaxed);
+                if (g_recFromRadioSamples.load(std::memory_order_relaxed) <= 0)
                 {
                     // call stop record menu item, should be thread safe
                     g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
@@ -345,7 +343,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_recFileFromRadio && (g_sfRecFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return g_recFileFromRadio.load(std::memory_order_acquire) && (g_sfRecFile.load(std::memory_order_acquire) != NULL); },
             recordRadioTap,
             bypassRecordRadio
         );
@@ -356,10 +354,10 @@ void TxRxThread::initializePipeline_()
         auto eitherOrPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto playRadio = new PlaybackStep(
             inputSampleRate_, 
-            []() { return g_sfFs; },
+            []() { return g_sfFs.load(std::memory_order_acquire); },
             []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
             []() {
-                if (g_loopPlayFileFromRadio)
+                if (g_loopPlayFileFromRadio.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
@@ -396,7 +394,7 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz; },
             +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude; },
-            +[]() FREEDV_NONBLOCKING { return (float*)&g_tone_phase; }
+            +[]() FREEDV_NONBLOCKING { return &g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone; },
@@ -473,7 +471,7 @@ void TxRxThread::initializePipeline_()
             mutePipeline->appendPipelineStep(muteStep);
             
             auto eitherOrMuteStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_recVoiceKeyerFile; },
+                +[]() FREEDV_NONBLOCKING { return g_recVoiceKeyerFile.load(std::memory_order_relaxed); },
                 mutePipeline,
                 bypassMonitorAudio
             );
@@ -492,9 +490,9 @@ void TxRxThread::initializePipeline_()
         if (equalizedMicAudioLink_ != nullptr)
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog ||
+                +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) ||
                     (
-                        (g_recVoiceKeyerFile) ||
+                        (g_recVoiceKeyerFile.load(std::memory_order_relaxed)) ||
                         (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
                         (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
                     ); 
@@ -505,7 +503,7 @@ void TxRxThread::initializePipeline_()
         else
         {
             eitherOrRfDemodulationStep = new EitherOrStep(
-                +[]() FREEDV_NONBLOCKING { return g_analog != 0; },
+                +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) != 0; },
                 bypassRfDemodulationPipeline,
                 rfDemodulationPipeline);
         }
@@ -525,21 +523,21 @@ void TxRxThread::initializePipeline_()
 
         // Record from decoder step (optional)
         auto recordDecoderStep = new RecordStep(
-            outputSampleRate_, 
-            []() { return g_sfRecDecoderFile; }, 
+            RECORD_FILE_SAMPLE_RATE, 
+            []() { return g_sfRecDecoderFile.load(std::memory_order_acquire); }, 
             [](int) {
                 // Recording stops when the user explicitly tells us to,
                 // no action required here.
             }
         );
-        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+        auto recordDecoderPipeline = new AudioPipeline(outputSampleRate_, recordDecoderStep->getOutputSampleRate());
         recordDecoderPipeline->appendPipelineStep(recordDecoderStep);
         
         auto recordDecoderTap = new TapStep(outputSampleRate_, recordDecoderPipeline);
         auto bypassRecordDecoder = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordDecoder = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder) && (g_sfRecDecoderFile != NULL); },
+            +[]() FREEDV_NONBLOCKING { return (g_recFileFromDecoder.load(std::memory_order_acquire)) && (g_sfRecDecoderFile.load(std::memory_order_acquire) != NULL); },
             recordDecoderTap,
             bypassRecordDecoder
         );
@@ -810,7 +808,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
 
     bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile || g_recFileFromMic))) {        
+    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)))) {        
         if (deferReset_)
         {
             // We just entered TX from RX.
@@ -818,6 +816,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             deferReset_ = false;
             pipeline_->reset();
             clearFifos_();
+            pendingEooCount_ = 0;
 
             // return out and begin processing on the next loop
             return;
@@ -835,21 +834,21 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
-     	if (g_dump_fifo_state) {
-    	  // If this drops to zero we have a problem as we will run out of output samples
-    	  // to send to the sound driver
-          FREEDV_BEGIN_VERIFIED_SAFE
-    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
-                      cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
-          FREEDV_END_VERIFIED_SAFE
-    	}
+        if (g_dump_fifo_state) {
+             // If this drops to zero we have a problem as we will run out of output samples
+             // to send to the sound driver
+             FREEDV_BEGIN_VERIFIED_SAFE
+                 log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
+                           cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
+             FREEDV_END_VERIFIED_SAFE
+        }
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
         assert(nsam_in_48 > 0);
 
         int             nout;
 
-        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
+        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
             
@@ -880,19 +879,41 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                     hasEooBeenSent_ = true;
                 }
 
-                auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
-                if (nout > 0 && outputSamples != nullptr)
+                // Only pull a fresh batch of EOO samples out of the pipeline if we don't
+                // already have an unwritten batch left over from a previous callback --
+                // the pipeline hands back (and discards from its own internal queue) the
+                // entire EOO block in one shot, so if we asked again here, any samples that
+                // failed to make it into outfifo1 last time would be lost for good.
+                if (pendingEooCount_ == 0)
                 {
-                    if (cbData->outfifo1->write(outputSamples, nout) != 0)
+                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
+                    if (nout > 0 && outputSamples != nullptr)
                     {
-                        FREEDV_BEGIN_VERIFIED_SAFE
-                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
-                        FREEDV_END_VERIFIED_SAFE
+                        assert(nout <= outputSampleRate_);
+                        memcpy(pendingEooSamples_.get(), outputSamples, nout * sizeof(short));
+                        pendingEooCount_ = nout;
+                    }
+                    else
+                    {
+                        // Nothing left buffered upstream and nothing pending here --
+                        // the EOO has been fully handed off to outfifo1.
+                        g_eoo_enqueued.store(true, std::memory_order_release);
                     }
                 }
-                else
+
+                if (pendingEooCount_ > 0)
                 {
-                    g_eoo_enqueued.store(true, std::memory_order_release);
+                    if (cbData->outfifo1->write(pendingEooSamples_.get(), pendingEooCount_) == 0)
+                    {
+                        pendingEooCount_ = 0;
+                        g_eoo_enqueued.store(true, std::memory_order_release);
+                    }
+                    else
+                    {
+                        FREEDV_BEGIN_VERIFIED_SAFE
+                        log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d), will retry", cbData->outfifo1->numFree());
+                        FREEDV_END_VERIFIED_SAFE
+                    }
                 }
                 break;
             }
@@ -900,6 +921,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             {
                 g_eoo_enqueued.store(false, std::memory_order_release);
                 hasEooBeenSent_ = false;
+                pendingEooCount_ = 0;
             }
 
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
@@ -966,9 +988,14 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
-    // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
-        
+    // while we have enough space in the output FIFO ...
+    while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame) {
+        // ... and enough input samples are available.
+        if (cbData->infifo1->read(inputSamples_.get(), nsam) != 0)
+        {
+            break;
+        }
+
 #if defined(ENABLE_PROCESSING_STATS)
         processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)

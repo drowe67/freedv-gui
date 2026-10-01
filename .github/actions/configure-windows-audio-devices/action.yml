@@ -1,0 +1,62 @@
+name: 'Configure Windows audio devices for FreeDV testing'
+description: >
+  Grants FreeDV microphone access, waits for the virtual audio endpoints
+  to enumerate, and sets them as the Windows default recording/playback
+  devices. Also pins the CPU to its high-performance power plan on ARM
+  runners to avoid frequency-scaling flakiness.
+
+  Expects the calling job to define RADIO_TO_COMPUTER_DEVICE,
+  COMPUTER_TO_RADIO_DEVICE, MICROPHONE_TO_COMPUTER_DEVICE, and
+  COMPUTER_TO_SPEAKER_DEVICE in its `env:` block (all FreeDV Windows CI
+  jobs that reach this action already do, for the audio drivers installed
+  by the setup-windows-audio-drivers action).
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Grant FreeDV access to the microphone
+      shell: pwsh
+      run: |
+          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore" -Name "microphone" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
+          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
+
+    - name: Wait for virtual audio endpoints
+      shell: pwsh
+      run: |
+          # Restart the audio stack and poll until every endpoint FreeDV needs is
+          # actually enumerable, instead of starting a test and letting it abort
+          # with a fatal "device cannot be found" message box when a virtual
+          # cable endpoint hasn't come up (or has briefly dropped) yet.
+          & "${{ github.workspace }}\ci\Wait-AudioDevices.ps1" `
+            -Playback  "${{ env.COMPUTER_TO_RADIO_DEVICE }}", "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" `
+            -Recording "${{ env.RADIO_TO_COMPUTER_DEVICE }}", "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" `
+            -TimeoutSeconds 180
+
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Get-AudioDevice -List | Format-Table -AutoSize Index, Default, Type, Name
+
+    - name: Set Windows default audio devices
+      shell: pwsh
+      run: |
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.MICROPHONE_TO_COMPUTER_DEVICE }}" } | Set-AudioDevice
+          Get-AudioDevice -List | where { $_.Name -eq "${{ env.COMPUTER_TO_SPEAKER_DEVICE }}" } | Set-AudioDevice
+
+    - name: Set High Performance power plan to prevent CPU frequency scaling
+      if: ${{ matrix.runner == 'windows-11-arm' }}
+      shell: pwsh
+      run: |
+          # Prevent ARM CPU boost->base frequency transitions during audio tests.
+          # This is the Windows equivalent of the Linux "performance" CPU governor.
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          # Explicitly pin minimum processor performance to 100% so the ARM CPU
+          # does not scale down after exhausting its boost budget.
+          powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 100
+          powercfg /setactive SCHEME_CURRENT

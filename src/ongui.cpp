@@ -26,7 +26,7 @@
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
-extern int   g_analog;
+extern std::atomic<int>   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
@@ -46,10 +46,12 @@ extern paCallBackData* g_rxUserdata;
 
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromRadio;
+extern std::atomic<SNDFILE*> g_sfRecFile;
+extern std::atomic<bool> g_recFileFromRadio;
 
-extern SNDFILE            *g_sfRecMicFile;
+extern std::atomic<bool>                g_playFileFromRadio;
+
+extern std::atomic<SNDFILE*> g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
@@ -1269,6 +1271,12 @@ void MainFrame::togglePTT(void) {
     }
     txChangeoverOccurring_ = true;
 
+    // If we're playing a RX file, we want to stop it before TX.
+    if (g_playFileFromRadio.load(std::memory_order_acquire))
+    {
+        StopPlaybackFileFromRadio();
+    }
+
     std::chrono::high_resolution_clock highResClock;
 
     // Record direction now; button value may be toggled by a stray click during
@@ -1511,7 +1519,7 @@ void MainFrame::togglePTT(void) {
     }
     
     // If we're recording, switch to/from modulator and radio.
-    if (g_sfRecFile != nullptr)
+    if (g_sfRecFile.load(std::memory_order_acquire) != nullptr)
     {
         if (!newTx)
         {
@@ -1651,10 +1659,11 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
+    bool useAnalog = g_analog.load(std::memory_order_relaxed);
     return GetModeForFrequency(
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes,
-        g_analog);
+        useAnalog);
 }
 
 //-------------------------------------------------------------------------
@@ -1664,15 +1673,15 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
 {
     auto oldMode = getCurrentMode_();
 
-    if (g_analog == 0) {
-        g_analog = 1;
+    if (g_analog.load(std::memory_order_relaxed) == 0) {
+        g_analog.store(1, std::memory_order_relaxed);
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
         m_panelWaterfall->setFs(FS);
         
         m_togBtnAnalog->SetLabel(wxT("Switch to Di&gital"));
     }
     else {
-        g_analog = 0;
+        g_analog.store(0, std::memory_order_relaxed);
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
         
@@ -1684,7 +1693,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     {
         if (obj != wxGetApp().m_sharedReporterObject || !m_reporterHidden->GetValue())
         {
-            obj->inAnalogMode(g_analog);
+            obj->inAnalogMode(g_analog.load(std::memory_order_relaxed));
         }
     }
     
@@ -2092,7 +2101,7 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 
 void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 {
-    if (m_RxRunning && !g_analog && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+    if (m_RxRunning && !g_analog.load(std::memory_order_relaxed) && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
     {
         if (m_reporterHidden->GetValue())
         {

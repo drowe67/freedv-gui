@@ -39,7 +39,7 @@
 #include "../sox_biquad.h"
 #include <assert.h>
 
-EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock)
+EqualizerStep::EqualizerStep(int sampleRate, std::atomic<bool>* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter, audio_spin_mutex& filterLock)
     : sampleRate_(sampleRate)
     , enableFilter_(enableFilter)
     , bassFilter_(bassFilter)
@@ -84,7 +84,7 @@ short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* num
             sox_biquad_filter(*volFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
     
-        if (*enableFilter_)
+        if (enableFilter_->load(std::memory_order_relaxed))
         {
             if (!copiedToOutput)
             {

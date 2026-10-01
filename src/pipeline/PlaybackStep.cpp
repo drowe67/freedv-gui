@@ -63,6 +63,7 @@ PlaybackStep::PlaybackStep(
     , nonRtThreadEnding_(false)
     , playbackResampler_(nullptr)
     , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)
+    , resamplerResetRequested_(false)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     outputSamples_ = std::make_unique<short[]>(inputSampleRate_);
@@ -97,9 +98,13 @@ short* PlaybackStep::execute(short*, int numInputSamples, int* numOutputSamples)
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);
     
-    if (*numOutputSamples > 0)
+    if (*numOutputSamples > 0 && outputFifo_.read(outputSamples_.get(), *numOutputSamples) != 0)
     {
-        outputFifo_.read(outputSamples_.get(), *numOutputSamples);
+        // Raced with a concurrent reset() (e.g. the resampler being rebuilt
+        // on a sample-rate change); nothing was actually copied into
+        // outputSamples_, so report no output instead of replaying stale
+        // samples from the previous call.
+        *numOutputSamples = 0;
     }
    
     fileIoThreadSem_.signal();
@@ -120,6 +125,13 @@ void PlaybackStep::nonRtThreadEntry_()
     while (!nonRtThreadEnding_.load(std::memory_order_acquire))
     {
         g_mutexProtectingCallbackData.Lock();
+
+        if (resamplerResetRequested_.exchange(false, std::memory_order_acquire) &&
+            playbackResampler_ != nullptr)
+        {
+            playbackResampler_->reset();
+        }
+
         auto playFile = getSndFileFn_();
         if (playFile != nullptr)
         {
@@ -220,10 +232,11 @@ void PlaybackStep::nonRtThreadEntry_()
 
 void PlaybackStep::reset() FREEDV_NONBLOCKING
 {
-    if (playbackResampler_ != nullptr)
-    {
-        playbackResampler_->reset();
-    }
+    // Don't touch playbackResampler_ directly here -- it's owned by
+    // nonRtThreadEntry_() on the file I/O thread, which may be concurrently
+    // recreating or executing it. This thread is real-time and must not
+    // lock, so just flag the request; the owning thread will apply it.
+    resamplerResetRequested_.store(true, std::memory_order_release);
 
     outputFifo_.reset();
 
