@@ -904,10 +904,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
 3. Other:
-    * Waterfall and other plot performance improvements. (PR #1481)
+    * Various GUI performance improvements. (PR #1481, #1521, 1524, 1527)
     * Windows audio thread timing improvements. (PR #1488)
-    * Reduce GUI thread load from the scalar plots during TX (macOS and Windows) (PR #1521)
-    * Optimize PlotSpectrum CPU usage. (PR #1524)
 
 ## V2.4.0 August 2026
 

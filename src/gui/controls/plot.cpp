@@ -24,6 +24,7 @@
 #include <wx/graphics.h>
 #if defined(_WIN32)
 #include <wx/rawbmp.h>
+#include <wx/msw/wrapwin.h>
 #endif // defined(_WIN32)
 
 #if defined(__APPLE__)
@@ -254,9 +255,23 @@ void PlotPanel::OnPaint(wxPaintEvent & evt)
                 p.OffsetY(data, 1);
             }
         }
-        paintBuffer_.UseAlpha(true);
+        paintBuffer_.UseAlpha();
     }
+#if wxCHECK_VERSION(3, 2, 0)
+    // Copy the buffer to the window ourselves (see the end of this function) rather than
+    // with wxBufferedPaintDC: wxWidgets copies a DIB section with StretchDIBits() (or
+    // AlphaBlend(), as this one has an alpha channel), which was slower than BitBlt().
+    // The memory DC is set up the same way as wxBufferedPaintDC's, so that text is laid
+    // out for the window's DPI.
+    wxPaintDC paintDC(this);
+    wxMemoryDC dc(&paintDC);
+    dc.SelectObject(paintBuffer_);
+    dc.GetImpl()->SetWindow(this);
+    dc.CopyAttributes(paintDC);
+    dc.GetImpl()->InheritAttributes(this);
+#else
     wxBufferedPaintDC dc(this, paintBuffer_);
+#endif // wxCHECK_VERSION(3, 2, 0)
 #else
     wxAutoBufferedPaintDC dc(this);
 #endif // defined(_WIN32)
@@ -275,5 +290,12 @@ void PlotPanel::OnPaint(wxPaintEvent & evt)
         draw(gc, repaintDataOnly);
         delete gc;
     }
+
+#if defined(_WIN32) && wxCHECK_VERSION(3, 2, 0)
+    // Only the invalidated area needs copying (just the plot area for repaintDataOnly).
+    wxRect update = GetUpdateRegion().GetBox().Intersect(wxRect(bufferSize));
+    ::BitBlt((HDC)paintDC.GetHDC(), update.x, update.y, update.width, update.height,
+             (HDC)dc.GetHDC(), update.x, update.y, SRCCOPY);
+#endif // defined(_WIN32) && wxCHECK_VERSION(3, 2, 0)
 }
 
