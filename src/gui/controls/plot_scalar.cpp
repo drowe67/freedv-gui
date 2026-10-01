@@ -633,7 +633,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     // Draws into the plotLines_ overlay while it is (re)built; must stay alive until
     // plotCtx is deleted below.
 #if defined(PLOT_SCALAR_SCALED_BITMAPS)
-    wxMemoryDC plotLinesDC;
+    std::unique_ptr<wxMemoryDC> plotLinesDC;
 #else
     std::unique_ptr<wxImage> plotLinesImage;
 #endif // defined(PLOT_SCALAR_SCALED_BITMAPS)
@@ -674,8 +674,8 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
         plotLines_->UseAlpha();
         drawPlotLines = true;
 
-        plotLinesDC.SelectObject(*plotLines_);
-        plotCtx = wxGraphicsContext::Create(plotLinesDC);
+        plotLinesDC.reset(new wxMemoryDC(*plotLines_));
+        plotCtx = wxGraphicsContext::Create(*plotLinesDC);
         assert(plotCtx != nullptr);
         // CreateScaled() leaves the contents undefined; start fully transparent (older
         // wxWidgets uses a black color key instead; see below).
