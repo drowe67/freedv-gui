@@ -22,8 +22,10 @@
 
 #include <wx/wx.h>
 #include <wx/graphics.h>
+#include <wx/utils.h>
 
 #include <map>
+#include <memory>
 #include <vector>
 
 #include "plot_scalar.h"
@@ -58,6 +60,29 @@ constexpr bool DRAW_DIRECTLY = true;
 #else
 constexpr bool DRAW_DIRECTLY = false;
 #endif // defined(__APPLE__) || defined(_WIN32)
+
+#if wxCHECK_VERSION(3, 2, 0)
+// Build plotArea_ and plotLines_ at the display's pixel density (see
+// bitmapScaleFactor_()). This needs wxBitmap::UseAlpha() and wxGetDisplayInfo(), which
+// are new in wxWidgets 3.2; older versions build them at 1x, as before.
+#define PLOT_SCALAR_SCALED_BITMAPS 1
+
+// Pixel density to build plotArea_ and plotLines_ at. Under GTK on X11, keep them at 1x
+// even on a scaled display: cairo-xlib hands the upscale to the X server (on the GPU with
+// Xwayland/glamor), while a full-density bitmap means converting and uploading four times
+// the pixels on every frame. Under Wayland, cairo composites in-process with pixman, where
+// upscaling a 1x bitmap (bilinearly) on every frame is far more expensive.
+static double bitmapScaleFactor_(const wxWindow* window)
+{
+#if defined(__WXGTK__)
+    if (wxGetDisplayInfo().type != wxDisplayWayland)
+    {
+        return 1.0;
+    }
+#endif // defined(__WXGTK__)
+    return window->GetContentScaleFactor();
+}
+#endif // wxCHECK_VERSION(3, 2, 0)
 
 #if defined(_WIN32)
 // Everything drawn directly is opaque and unantialiased, so copying pixels gives the same
@@ -288,8 +313,20 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     {
         if (plotArea_ == nullptr)
         {
+#if defined(PLOT_SCALAR_SCALED_BITMAPS)
+            // Build the bitmap at the density bitmapScaleFactor_() picks (normally the
+            // display's) rather than 1x: on scaled displays a 1x bitmap is upscaled by the
+            // renderer (bilinearly) on every frame. The memory DC keeps the logical
+            // coordinate system (see PlotWaterfall::rebuildGraticuleBitmaps_()), so all
+            // drawing below is unchanged.
+            plotArea_ = new wxBitmap();
+            assert(plotArea_ != nullptr);
+            plotArea_->CreateScaled(plotWidth, plotHeight, wxBITMAP_SCREEN_DEPTH,
+                                    bitmapScaleFactor_(this));
+#else
             plotArea_ = new wxBitmap(plotWidth, plotHeight);
             assert(plotArea_ != nullptr);
+#endif // defined(PLOT_SCALAR_SCALED_BITMAPS)
 
             addedPoints_ = 0; // force rendering of all points
         }
@@ -495,6 +532,13 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     int plotWidth = m_rGrid.GetWidth();
     int plotHeight = m_rGrid.GetHeight();
 
+    // Draws into the plotLines_ overlay while it is (re)built; must stay alive until
+    // plotCtx is deleted below.
+#if defined(PLOT_SCALAR_SCALED_BITMAPS)
+    wxMemoryDC plotLinesDC;
+#else
+    std::unique_ptr<wxImage> plotLinesImage;
+#endif // defined(PLOT_SCALAR_SCALED_BITMAPS)
     wxGraphicsContext* plotCtx = nullptr;
     bool drawPlotLines = false;
 
@@ -521,12 +565,33 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     }
     else if (plotLines_ == nullptr)
     {
-        plotLines_ = new wxImage(plotWidth, plotHeight);
+#if defined(PLOT_SCALAR_SCALED_BITMAPS)
+        // Like plotArea_, build the overlay at bitmapScaleFactor_() so it is drawn 1:1
+        // instead of being upscaled by the renderer on every frame. A wxBitmap (rather
+        // than the wxImage used with older wxWidgets) is needed because
+        // wxGraphicsContext::Create(wxImage&) draws in physical pixels.
+        plotLines_ = new wxBitmap();
         assert(plotLines_ != nullptr);
+        plotLines_->CreateScaled(plotWidth, plotHeight, 32, bitmapScaleFactor_(this));
+        plotLines_->UseAlpha();
         drawPlotLines = true;
-        
-        plotCtx = wxGraphicsContext::Create(*plotLines_);
+
+        plotLinesDC.SelectObject(*plotLines_);
+        plotCtx = wxGraphicsContext::Create(plotLinesDC);
         assert(plotCtx != nullptr);
+        // CreateScaled() leaves the contents undefined; start fully transparent (older
+        // wxWidgets uses a black color key instead; see below).
+        plotCtx->SetCompositionMode(wxCOMPOSITION_CLEAR);
+        plotCtx->DrawRectangle(0, 0, plotWidth, plotHeight);
+        plotCtx->SetCompositionMode(wxCOMPOSITION_OVER);
+#else
+        // Draw on black, which becomes transparent once the overlay is finished below.
+        plotLinesImage.reset(new wxImage(plotWidth, plotHeight));
+        drawPlotLines = true;
+
+        plotCtx = wxGraphicsContext::Create(*plotLinesImage);
+        assert(plotCtx != nullptr);
+#endif // defined(PLOT_SCALAR_SCALED_BITMAPS)
         plotCtx->SetInterpolationQuality(wxINTERPOLATION_NONE);
         plotCtx->SetAntialiasMode(wxANTIALIAS_NONE);
     }
@@ -665,13 +730,16 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
        return;
    }
 
-   if (drawPlotLines) 
+   if (drawPlotLines)
    {
        delete plotCtx;
-       
-       plotLines_->SetMaskColour(0, 0, 0);
-       plotLines_->InitAlpha();       
-       
+
+#if !defined(PLOT_SCALAR_SCALED_BITMAPS)
+       plotLinesImage->SetMaskColour(0, 0, 0);
+       plotLinesImage->InitAlpha();
+       plotLines_ = new wxBitmap(*plotLinesImage);
+       assert(plotLines_ != nullptr);
+#endif // !defined(PLOT_SCALAR_SCALED_BITMAPS)
        plotLinesBMP_ = ctx->CreateBitmap(*plotLines_);
    }
 
@@ -734,11 +802,7 @@ void PlotScalar::OnSize(wxSizeEvent&)
     lineMap_ = new MinMaxPoints[plotWidth];
     assert(lineMap_ != nullptr);
 
-    int plotHeight = m_rGrid.GetHeight();
-    if (plotWidth <= 0 || plotHeight <= 0) return;
-
-    plotArea_ = new wxBitmap(plotWidth, plotHeight);
-    assert(plotArea_ != nullptr);
+    // draw() rebuilds the plot area at the new size.
 }
 
 //----------------------------------------------------------------

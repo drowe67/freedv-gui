@@ -86,7 +86,7 @@ class PlotScalar: public PlotPanel
          bool disableFirstLastLabels_;
 
          wxBitmap* plotArea_;
-         wxImage* plotLines_;
+         wxBitmap* plotLines_;
          int addedPoints_;
          wxMemoryDC* plotAreaDC_;
          wxGraphicsBitmap plotLinesBMP_;
