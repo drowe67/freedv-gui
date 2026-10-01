@@ -24,6 +24,10 @@
 #include <wx/graphics.h>
 #include <wx/utils.h>
 
+#if defined(__WXGTK__) && defined(HAS_CAIRO)
+#include <cairo.h>
+#endif // defined(__WXGTK__) && defined(HAS_CAIRO)
+
 #include <map>
 #include <memory>
 #include <vector>
@@ -84,6 +88,11 @@ static double bitmapScaleFactor_(const wxWindow* window)
 }
 #endif // wxCHECK_VERSION(3, 2, 0)
 
+#if defined(__WXGTK__) && defined(HAS_CAIRO) && wxCHECK_VERSION(3, 2, 0) && wxUSE_CAIRO
+// Keep the plot area in a cairo image surface rather than in plotArea_ (see draw()).
+#define PLOT_SCALAR_CAIRO_SURFACE 1
+#endif // defined(__WXGTK__) && defined(HAS_CAIRO) && wxCHECK_VERSION(3, 2, 0) && wxUSE_CAIRO
+
 #if defined(_WIN32)
 // Everything drawn directly is opaque and unantialiased, so copying pixels gives the same
 // result as blending them. On Windows, telling GDI+ so made filling the plot's background
@@ -117,6 +126,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     
     plotArea_ = nullptr;
     plotLines_ = nullptr;
+    plotSurface_ = nullptr;
     addedPoints_ = 0;
     halfPlot_ = halfPlot;
     disableFirstLastLabels_ = disableFirstLastLabels;
@@ -295,6 +305,17 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     wxAntialiasMode antialiasMode = ctx->GetAntialiasMode();
     wxCompositionMode compositionMode = ctx->GetCompositionMode();
 
+#if defined(PLOT_SCALAR_CAIRO_SURFACE)
+    // With GTK's cairo renderer, keep the plot area in a cairo image surface that the
+    // window draws straight from, and scroll and draw into it in place. A wxBitmap has to
+    // be converted to a new cairo surface on every frame instead, which (at the 2x density
+    // used under Wayland) was most of the cost of the scalar plots on the GUI thread.
+    const bool useSurface = !DRAW_DIRECTLY && ctx->GetRenderer() == wxGraphicsRenderer::GetCairoRenderer();
+    cairo_t* surfaceCtx = nullptr;
+#else
+    constexpr bool useSurface = false;
+#endif // defined(PLOT_SCALAR_CAIRO_SURFACE)
+
     if (DRAW_DIRECTLY)
     {
         // Redraw the whole plot area in plot coordinates; see DRAW_DIRECTLY.
@@ -309,6 +330,56 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         ctx->SetBrush(wxBrush(BLACK_COLOR));
         ctx->DrawRectangle(0, 0, plotWidth, plotHeight);
     }
+#if defined(PLOT_SCALAR_CAIRO_SURFACE)
+    else if (useSurface)
+    {
+        double scale = bitmapScaleFactor_(this);
+        int surfaceWidth = std::max(1, (int)std::lround(plotWidth * scale));
+        int surfaceHeight = std::max(1, (int)std::lround(plotHeight * scale));
+        cairo_surface_t* surface = (cairo_surface_t*)plotSurface_;
+        if (surface == nullptr ||
+            cairo_image_surface_get_width(surface) != surfaceWidth ||
+            cairo_image_surface_get_height(surface) != surfaceHeight)
+        {
+            // plotSurfaceBMP_ takes ownership of the surface. Its pattern refers to the
+            // surface rather than copying it, so drawing into the surface updates it too.
+            surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, surfaceWidth, surfaceHeight);
+            plotSurfaceBMP_ = ctx->GetRenderer()->CreateBitmapFromNativeBitmap(surface);
+            plotSurface_ = surface;
+            addedPoints_ = 0; // force rendering of all points
+        }
+
+        // Draw in plot coordinates, like the memory DC would.
+        surfaceCtx = cairo_create(surface);
+        cairo_scale(surfaceCtx, scale, scale);
+        cairo_set_source_rgb(surfaceCtx, 0, 0, 0); // BLACK_COLOR
+
+        pixelsUpdated = std::min(plotWidth, (int)std::floor(index_to_px * addedPoints_));
+
+        int shift = (int)std::lround(pixelsUpdated * scale);
+        if (repaintDataOnly && pixelsUpdated > 0 && shift < surfaceWidth)
+        {
+            // Scroll left to make room for the new points, then clear just that.
+            cairo_surface_flush(surface);
+            unsigned char* data = cairo_image_surface_get_data(surface);
+            int stride = cairo_image_surface_get_stride(surface);
+            const int bytesPerPixel = 4; // CAIRO_FORMAT_RGB24
+            for (int row = 0; row < surfaceHeight; row++)
+            {
+                unsigned char* rowData = data + row * stride;
+                memmove(rowData, rowData + shift * bytesPerPixel, (surfaceWidth - shift) * bytesPerPixel);
+            }
+            cairo_surface_mark_dirty(surface);
+            cairo_rectangle(surfaceCtx, plotWidth - pixelsUpdated, 0, pixelsUpdated, plotHeight);
+        }
+        else
+        {
+            cairo_rectangle(surfaceCtx, 0, 0, plotWidth, plotHeight);
+            addedPoints_ = 0;
+        }
+        cairo_fill(surfaceCtx);
+    }
+#endif // defined(PLOT_SCALAR_CAIRO_SURFACE)
     else
     {
         if (plotArea_ == nullptr)
@@ -357,7 +428,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    if (!DRAW_DIRECTLY)
+    if (!DRAW_DIRECTLY && !useSurface)
     {
         plotAreaDC_->SetPen(pen);
         plotAreaDC_->SetBrush(wxBrush(DARK_GREEN_COLOR));
@@ -446,7 +517,21 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     if (!m_bar_graph)
     {
-        wxGraphicsContext* plotCtx = DRAW_DIRECTLY ? ctx : wxGraphicsContext::Create(*plotAreaDC_);
+        wxGraphicsContext* plotCtx = nullptr;
+        if (DRAW_DIRECTLY)
+        {
+            plotCtx = ctx;
+        }
+#if defined(PLOT_SCALAR_CAIRO_SURFACE)
+        else if (useSurface)
+        {
+            plotCtx = wxGraphicsRenderer::GetCairoRenderer()->CreateContextFromNativeContext(surfaceCtx);
+        }
+#endif // defined(PLOT_SCALAR_CAIRO_SURFACE)
+        else
+        {
+            plotCtx = wxGraphicsContext::Create(*plotAreaDC_);
+        }
         assert(plotCtx != nullptr);
 
         plotCtx->SetInterpolationQuality(wxINTERPOLATION_NONE);
@@ -502,6 +587,19 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         drawGraticuleFast(ctx, repaintDataOnly);
         return;
     }
+
+#if defined(PLOT_SCALAR_CAIRO_SURFACE)
+    if (useSurface)
+    {
+        cairo_destroy(surfaceCtx);
+        cairo_surface_flush((cairo_surface_t*)plotSurface_);
+        ctx->DrawBitmap(plotSurfaceBMP_, plotX, plotY, plotWidth, plotHeight);
+
+        addedPoints_ = 0;
+        drawGraticuleFast(ctx, repaintDataOnly);
+        return;
+    }
+#endif // defined(PLOT_SCALAR_CAIRO_SURFACE)
 
     plotAreaDC_->SelectObject(wxNullBitmap);
 
@@ -803,6 +901,8 @@ void PlotScalar::OnSize(wxSizeEvent&)
     assert(lineMap_ != nullptr);
 
     // draw() rebuilds the plot area at the new size.
+    plotSurfaceBMP_ = wxGraphicsBitmap();
+    plotSurface_ = nullptr;
 }
 
 //----------------------------------------------------------------
