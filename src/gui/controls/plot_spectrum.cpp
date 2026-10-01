@@ -204,15 +204,19 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
         x += PLOT_BORDER + leftOffset_;
         y += PLOT_BORDER + bottomOffset_;
 
+        // Measure the spacing from the last point drawn rather than the previous bin: bins
+        // can be closer together than HZ_GRANULARITY, and then on a wide enough plot no
+        // bin was ever far enough from the one before it and the trace disappeared.
         if (index && (int)abs(x - prev_x) >= (int)(HZ_GRANULARITY*freq_hz_to_px))
         {
             path.AddLineToPoint(x, y);
+            prev_x = x;
         }
         if (!index)
         {
             path.MoveToPoint(x, y);
+            prev_x = x;
         }
-        prev_x = x;
     }
     ctx->StrokePath(path);
 
