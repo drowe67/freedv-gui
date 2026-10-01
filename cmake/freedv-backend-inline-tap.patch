@@ -1,0 +1,244 @@
+diff --git a/src/pipeline/TapStep.cpp b/src/pipeline/TapStep.cpp
+index e0ca7b6..6b9578e 100644
+--- a/src/pipeline/TapStep.cpp
++++ b/src/pipeline/TapStep.cpp
+@@ -34,57 +34,21 @@
+ 
+ #include "TapStep.h"
+ 
++#include <algorithm>
+ #include <assert.h>
+-#include <future>
+-#include <chrono>
+-
+-#if defined(__APPLE__)
+-#include <pthread.h>
+-#endif // defined(__APPLE__)
+-
+-#include "../os/os_interface.h"
+-
+-using namespace std::chrono_literals;
++#include <string.h>
+ 
+ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
+     : tapStep_(tapStep)
+     , sampleRate_(sampleRate)
+-    , endingTapThread_(false)
+-    , tapThreadInput_(sampleRate * 0.25f)
++    , chunkSize_(sampleRate / 100)
++    , partialChunk_(new short[sampleRate / 100])
++    , partialChunkSize_(0)
+ {
+-    tapThread_ = std::thread([&]() {
+-        const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
+-        short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
+-        assert(fifoInput != nullptr);
+-
+-        SetThreadName("TapStep");
+-
+-#if defined(__APPLE__)
+-        // Downgrade thread QoS to Utility to avoid thread contention issues.        
+-        pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+-#endif // defined(__APPLE__)
+-
+-        while (!endingTapThread_)
+-        {
+-            while (tapThreadInput_.numUsed() >= SAMPLE_RATE_AT_10MS)
+-            {
+-                int temp = 0;
+-                tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
+-                tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
+-            }
+-            sem_.wait();
+-        }
+-
+-        delete[] fifoInput;
+-    });
++    assert(tapStep_->getInputSampleRate() == sampleRate_);
+ }
+ 
+-TapStep::~TapStep()
+-{
+-    endingTapThread_ = true;
+-    sem_.signal();
+-    tapThread_.join();
+-}
++TapStep::~TapStep() = default;
+ 
+ int TapStep::getInputSampleRate() const FREEDV_NONBLOCKING
+ {
+@@ -98,21 +62,41 @@ int TapStep::getOutputSampleRate() const FREEDV_NONBLOCKING
+ 
+ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
+ {
+-    assert(tapStep_->getInputSampleRate() == sampleRate_);
+-
+     *numOutputSamples = numInputSamples;
+-    short* tmpInputSamples = inputSamples;
+-    while (numInputSamples > 0)
++    short* nextSample = inputSamples;
++    int remaining = numInputSamples;
++    int temp = 0;
++
++    // Complete the chunk left over from last time, if any.
++    if (partialChunkSize_ > 0)
+     {
+-        int samplesToRead = std::min(sampleRate_ / 100, numInputSamples);
+-        tapThreadInput_.write(tmpInputSamples, samplesToRead);
+-        tmpInputSamples += samplesToRead;
+-        numInputSamples -= samplesToRead;
+-        if (tapThreadInput_.numUsed() > (100 * sampleRate_ / 1000))
++        int toCopy = std::min(chunkSize_ - partialChunkSize_, remaining);
++        memcpy(partialChunk_.get() + partialChunkSize_, nextSample, toCopy * sizeof(short));
++        partialChunkSize_ += toCopy;
++        nextSample += toCopy;
++        remaining -= toCopy;
++        if (partialChunkSize_ < chunkSize_)
+         {
+-            sem_.signal();
++            return inputSamples;
+         }
++        tapStep_->execute(partialChunk_.get(), chunkSize_, &temp);
++        partialChunkSize_ = 0;
+     }
+- 
++
++    // Full chunks straight from the input.
++    while (remaining >= chunkSize_)
++    {
++        tapStep_->execute(nextSample, chunkSize_, &temp);
++        nextSample += chunkSize_;
++        remaining -= chunkSize_;
++    }
++
++    // Keep the rest for next time.
++    if (remaining > 0)
++    {
++        memcpy(partialChunk_.get(), nextSample, remaining * sizeof(short));
++        partialChunkSize_ = remaining;
++    }
++
+     return inputSamples;
+ }
+diff --git a/src/pipeline/TapStep.h b/src/pipeline/TapStep.h
+index 33d19e5..0b52e6d 100644
+--- a/src/pipeline/TapStep.h
++++ b/src/pipeline/TapStep.h
+@@ -36,13 +36,13 @@
+ #define AUDIO_PIPELINE__TAP_STEP_H
+ 
+ #include <memory>
+-#include <thread>
+-#include <atomic>
+-#include "../util/GenericFIFO.h"
+-#include "../util/Semaphore.h"
+ 
+ #include "IPipelineStep.h"
+ 
++// Passes a copy of the audio through to another step (e.g. plots, spectrum, recording)
++// without changing it. The tapped step runs inline on the calling (pipeline) thread, in
++// exact 10 ms chunks, so it must be non-blocking; steps with blocking work (RecordStep's
++// file I/O) hand it off to their own thread.
+ class TapStep : public IPipelineStep
+ {
+ public:
+@@ -56,10 +56,11 @@ public:
+ private:
+     std::unique_ptr<IPipelineStep> tapStep_;
+     int sampleRate_;
+-    std::thread tapThread_;
+-    std::atomic<bool> endingTapThread_;
+-    GenericFIFO<short> tapThreadInput_;
+-    Semaphore sem_;
++    int chunkSize_; // samples in 10 ms
++
++    // Samples left over from the previous call that didn't make a full chunk.
++    std::unique_ptr<short[]> partialChunk_;
++    int partialChunkSize_;
+ };
+ 
+ #endif // AUDIO_PIPELINE__TAP_STEP_H
+diff --git a/src/pipeline/test/TapTest.cpp b/src/pipeline/test/TapTest.cpp
+index 90f4de2..55661f1 100644
+--- a/src/pipeline/test/TapTest.cpp
++++ b/src/pipeline/test/TapTest.cpp
+@@ -1,3 +1,4 @@
++#include <vector>
+ #include "TapStep.h"
+ #include "PipelineTestCommon.h"
+ 
+@@ -13,7 +14,7 @@ public:
+         return inputSamples;
+     }
+     
+-    short* lastInputSamples;
++    short* lastInputSamples = nullptr;
+ };
+ 
+ bool tapDataEqual()
+@@ -46,8 +47,65 @@ bool tapDataEqual()
+     return true;
+ }
+ 
++// Records every chunk the tap hands it.
++class ChunkRecorderStep : public IPipelineStep
++{
++public:
++    virtual int getInputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
++    virtual int getOutputSampleRate() const FREEDV_NONBLOCKING { return 8000; }
++    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) FREEDV_NONBLOCKING
++    {
++        chunkSizes.push_back(numInputSamples);
++        samples.insert(samples.end(), inputSamples, inputSamples + numInputSamples);
++        *numOutputSamples = 0;
++        return nullptr;
++    }
++
++    std::vector<int> chunkSizes;
++    std::vector<short> samples;
++};
++
++bool tapDeliversExact10msChunks()
++{
++    ChunkRecorderStep* step = new ChunkRecorderStep;
++    TapStep tapStep(8000, step);
++
++    // 8000 Hz: 10 ms = 80 samples. Feed 25 ms, 15 ms, 1 sample, 39 samples (= 80 total
++    // after the first 200), then 0.
++    const int blocks[] = { 200, 120, 1, 39, 0 };
++    std::vector<short> fed;
++    short next = 0;
++    for (int n : blocks)
++    {
++        std::vector<short> block(n);
++        for (auto& x : block) { x = next++; }
++        fed.insert(fed.end(), block.begin(), block.end());
++        int outputSamples = -1;
++        auto result = tapStep.execute(block.data(), n, &outputSamples);
++        if (outputSamples != n || result != block.data())
++        {
++            std::cerr << "[output doesn't pass input through]...";
++            return false;
++        }
++    }
++
++    // 360 samples fed = 4 full chunks, nothing left over.
++    if (step->chunkSizes != std::vector<int>({ 80, 80, 80, 80 }))
++    {
++        std::cerr << "[expected 4 chunks of 80, got " << step->chunkSizes.size() << " chunks]...";
++        return false;
++    }
++    if (step->samples != std::vector<short>(fed.begin(), fed.begin() + 320))
++    {
++        std::cerr << "[tapped samples differ from input]...";
++        return false;
++    }
++    return true;
++}
++
+ int main()
+ {
+     TEST_CASE(tapDataEqual);
++    TEST_CASE(tapDeliversExact10msChunks);
+     return 0;
+ }

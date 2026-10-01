@@ -40,25 +40,24 @@ jobs:
       matrix:
         # The same macOS versions as the test-app-folder jobs (where the latest regular-build
         # failure was, on macOS 14) plus the test job's.
-        # Only macOS 26 for now: both of its latency-1024 jobs in the last run hung partway
-        # through a round until the job timeout. The latency-0 jobs are the control, to tell a
-        # hang caused by the driver setting from one in FreeDV itself.
+        # Only macOS 26 for now.
         os: [macos-26]  # ARM64
         instance: [1, 2, 3]
         sanitizer: [WITH_ASAN=0]
-        # BlackHole's write-side overload check allows a cycle to be late by only one IO buffer
-        # plus kLatency_Frame_Size (also reported as the safety offset and stream latency). With
-        # 0, a vCPU stall of more than ~21 ms (1024-frame buffers) makes the driver drop a write
-        # and the HAL skip ahead 4-6 buffers; the stalls seen in the thread-state traces were
-        # 14-40 ms. 1024 frames (~43 ms of tolerance) is compared against 0 in the same run.
-        blackhole_latency: [0, 1024]
+        # A/B: freedv-backend's TapStep as-is (a Utility-QoS thread per tap, fed through a FIFO)
+        # vs. patched to run the tapped step inline on the pipeline thread
+        # (cmake/freedv-backend-inline-tap.patch). BlackHole latency is back to 0: 1024 neither
+        # helped nor hurt without thread-state recording.
+        tap: [threaded, inline]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 150
 
     env:
       # Read by build_macos_sound_drivers.sh (via setup-macos-virtual-audio).
-      BLACKHOLE_LATENCY_FRAMES: ${{ matrix.blackhole_latency }}
+      BLACKHOLE_LATENCY_FRAMES: 0
+      # Read by cmake/BuildFreeDVBackend.cmake: patch applied to freedv-backend, if any.
+      FREEDV_BACKEND_PATCH: ${{ matrix.tap == 'inline' && format('{0}/cmake/freedv-backend-inline-tap.patch', github.workspace) || '' }}
 
     steps:
     - uses: actions/checkout@v6
@@ -132,7 +131,22 @@ jobs:
       run: |
         . ./rade_venv/bin/activate
         mkdir -p $RUNNER_TEMP/runs
-        echo "round,loss,result,zeroed,gaps_per_s,gap_lengths,capture_minus_txout_samples,gaps_in_capture,tx_fifo_empty,sync_changes,timing_events,audioprobe_events" > $RUNNER_TEMP/runs/results.csv
+        echo "round,loss,result,zeroed,gaps_per_s,gap_lengths,capture_minus_txout_samples,gaps_in_capture,tx_fifo_empty,sync_changes,timing_events,audioprobe_events,tx_cpu_s,tx_vol_csw,tx_invol_csw,rx_cpu_s,rx_vol_csw,rx_invol_csw" > $RUNNER_TEMP/runs/results.csv
+        # FreeDV runs under /usr/bin/time -l, which appends each run's resource usage (CPU
+        # time, voluntary and involuntary context switches, summed over all its threads) to
+        # $FREEDV_TIME_LOG: the TX run's, then the RX run's.
+        cat > $RUNNER_TEMP/freedv_timed.sh <<EOF
+        #!/bin/bash
+        exec /usr/bin/time -l -a -o "\$FREEDV_TIME_LOG" $(pwd)/src/FreeDV.app/Contents/MacOS/FreeDV "\$@"
+        EOF
+        chmod +x $RUNNER_TEMP/freedv_timed.sh
+        # rusage of the Nth FreeDV run in a time log: "cpu_s,voluntary,involuntary".
+        freedv_usage() {
+          awk -v n=$2 '
+            / real .* user .* sys/ { run++; if (run == n) cpu = $3 + $5 }
+            /voluntary context switches/ && run == n { if ($2 == "voluntary") vol = $1; else invol = $1 }
+            END { if (cpu == "") print "none,none,none"; else printf "%.2f,%s,%s\n", cpu, vol, invol }' $1 2>/dev/null || echo "none,none,none"
+        }
         for round in $(seq 1 $ROUNDS); do
           out=$RUNNER_TEMP/runs/run_$round
           mkdir -p $out
@@ -174,6 +188,7 @@ jobs:
             TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 \
             FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1 2ch" \
             FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" \
+            FREEDV_BINARY=$RUNNER_TEMP/freedv_timed.sh FREEDV_TIME_LOG=$out/freedv_time.txt \
             ../test/test_rade_loss.sh > $out/run.log 2>&1 &
           test_pid=$!
           # Watchdog: every wait in the round is bounded. If the test (normally ~3 minutes), the
@@ -277,7 +292,7 @@ jobs:
             fi
           fi
           tail -5 $out/run.log
-          echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events}" | tee -a $RUNNER_TEMP/runs/results.csv
+          echo "$round,${loss:-none},${result:-none},${zeroed},${gps},${gaps:-none},${diff},${capgaps:-none},${fifo_empty:-none},${syncs},${timing},${probe_events},$(freedv_usage $out/freedv_time.txt 1),$(freedv_usage $out/freedv_time.txt 2)" | tee -a $RUNNER_TEMP/runs/results.csv
           # Keep the trace only for failed rounds.
           if [ -d $out/profile.trace ]; then
             sudo chown -R $(id -u) $out/profile.trace
@@ -296,7 +311,7 @@ jobs:
       if: ${{ !cancelled() }}
       run: |
         {
-          echo "### ${{ matrix.os }} #${{ matrix.instance }}"
+          echo "### ${{ matrix.os }} #${{ matrix.instance }} (TapStep ${{ matrix.tap }})"
           echo
           echo '```'
           cat $RUNNER_TEMP/runs/results.csv
@@ -308,6 +323,6 @@ jobs:
       # Also after a hang (the run step fails) or a cancellation.
       if: ${{ always() }}
       with:
-        name: rade-loss-diag-${{ matrix.os }}-${{ matrix.instance }}-lat${{ matrix.blackhole_latency }}
+        name: rade-loss-diag-${{ matrix.os }}-${{ matrix.instance }}-tap-${{ matrix.tap }}
         path: ${{ runner.temp }}/runs
         retention-days: 7
