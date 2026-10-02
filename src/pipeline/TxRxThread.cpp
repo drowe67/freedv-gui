@@ -220,13 +220,12 @@ void TxRxThread::initializePipeline_()
             g_rxUserdata->micEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
 
-        // AGC step (optional): loudness leveler followed by a peak limiter.
+        // AGC: loudness leveler (switchable) followed by a peak limiter (always on).
         // The leveler's feedback is the limiter's measured output loudness.
         // Both share one DiagnosticCsvLogger, which is a no-op unless the
-        // backend is built with -DENABLE_AUDIO_DIAG_LOGGING=ON.
-        auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-
+        // backend is built with -DENABLE_AUDIO_DIAG_LOGGING=ON. The AGC
+        // setting only switches the leveler; the limiter is always in
+        // circuit for peak protection.
         auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
         auto agcDiagLogger = std::make_shared<DiagnosticCsvLogger>();
         auto compressorLimiterStep = new CompressorLimiterStep(
@@ -243,15 +242,10 @@ void TxRxThread::initializePipeline_()
             filterConfig.levelerGainDb.getWithoutProcessing(),
             filterConfig.levelerIntegralErrorDb.getWithoutProcessing(),
             filterConfig.levelerTargetLufs.getWithoutProcessing(),
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); });
-        eitherOrProcessAgc->appendPipelineStep(levelerStep_);
-        eitherOrProcessAgc->appendPipelineStep(compressorLimiterStep);
-
-        auto eitherOrAgcStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); },
-            eitherOrProcessAgc,
-            eitherOrBypassAgc);
-        pipeline_->appendPipelineStep(eitherOrAgcStep); 
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); });
+        pipeline_->appendPipelineStep(levelerStep_);
+        pipeline_->appendPipelineStep(compressorLimiterStep);
 
         // Resample for plot step (after AGC)
         auto resampleForPlotStepAfterAGC = new ResampleForPlotStep(&g_plotSpeechInFifoAfterAGC);

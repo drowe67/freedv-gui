@@ -93,7 +93,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     
     m_ckboxAgcEnabled = new wxCheckBox(sb_rnnoise, wxID_ANY, _("AGC"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_rnnoise->Add(m_ckboxAgcEnabled, 0, static_cast<int>(wxALL) | wxALIGN_LEFT, 5);
-    m_ckboxAgcEnabled->SetToolTip(_("Automatic gain control for microphone"));
+    m_ckboxAgcEnabled->SetToolTip(_("Automatic level control for microphone. Peak limiting stays on when this is off."));
     
     bSizer30->Add(sbSizer_rnnoise, 0, static_cast<int>(wxALL) | static_cast<int>(wxEXPAND), 5);   
 
