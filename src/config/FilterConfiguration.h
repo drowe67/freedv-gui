@@ -96,10 +96,6 @@ public:
     // more headroom ahead of the limiter. Not exposed in the UI.
     ConfigurationDataElement<float> levelerTargetLufs;
 
-    // How long leveler gain keeps converging through a pause in speech
-    // before holding. Not exposed in the UI.
-    ConfigurationDataElement<float> levelerPauseGracePeriodSec;
-
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

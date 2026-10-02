@@ -243,8 +243,7 @@ void TxRxThread::initializePipeline_()
             filterConfig.levelerGainDb.getWithoutProcessing(),
             filterConfig.levelerIntegralErrorDb.getWithoutProcessing(),
             filterConfig.levelerTargetLufs.getWithoutProcessing(),
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
-            filterConfig.levelerPauseGracePeriodSec.getWithoutProcessing());
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); });
         eitherOrProcessAgc->appendPipelineStep(levelerStep_);
         eitherOrProcessAgc->appendPipelineStep(compressorLimiterStep);
 
