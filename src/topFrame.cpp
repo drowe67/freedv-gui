@@ -576,7 +576,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
         levelBox, wxID_ANY, -LEVEL_GAUGE_MIN_DB, 0.0f, LEVEL_METER_SEGMENT_DB,
         LEVEL_METER_AMBER_START_DBFS, LEVEL_METER_RED_START_DBFS, 13, 8);
     m_gaugeLevel->SetToolTip(_("RX: Peak level of radio's audio output, TX: Peak level of microphone audio from the sound card (before noise reduction/AGC/level settings)."));
-    levelSizer->Add(m_gaugeLevel, 1, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxALL), 10);
+    levelSizer->Add(m_gaugeLevel, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxALL), 10);
     
     leftSizer->Add(levelSizer ,0, static_cast<int>(wxALL)|static_cast<int>(wxEXPAND), 2);
 

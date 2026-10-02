@@ -22,6 +22,7 @@
 #include <algorithm>
 
 #include <wx/dcbuffer.h>
+#include <wx/settings.h>
 
 #include "LevelMeterLed.h"
 
@@ -91,7 +92,12 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
 {
     wxAutoBufferedPaintDC dc(this);
 
-    dc.SetBackground(wxBrush(GetParent()->GetBackgroundColour()));
+    // Normally fully covered by segments; the clear only matters if the
+    // widget is ever given more space than DoGetBestSize(). Unstyled
+    // parents (e.g. a wxStaticBox on GTK) don't report a usable colour.
+    wxWindow* parent = GetParent();
+    wxColour background = parent->UseBackgroundColour() ? parent->GetBackgroundColour() : wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
+    dc.SetBackground(wxBrush(background));
     dc.Clear();
 
     static const wxColour GREEN(0, 200, 0);
