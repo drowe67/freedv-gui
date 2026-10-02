@@ -92,7 +92,6 @@ extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<float> g_TxFreqOffsetHz;
-extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
@@ -197,18 +196,6 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
         
-        // Resample for plot step (before equalization)
-        auto resampleForPlotStepBeforeEQ = new ResampleForPlotStep(&g_plotSpeechInFifoBeforeEQ);
-        auto resampleForPlotPipelineBeforeEQ = new AudioPipeline(inputSampleRate_, resampleForPlotStepBeforeEQ->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotResamplerBeforeEQ = new ResampleStep(inputSampleRate_, resampleForPlotStepBeforeEQ->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotResamplerBeforeEQ);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotStepBeforeEQ);
-
-        auto resampleForPlotTapBeforeEQ = new TapStep(inputSampleRate_, resampleForPlotPipelineBeforeEQ);
-        pipeline_->appendPipelineStep(resampleForPlotTapBeforeEQ);
-
         // RNNoise step (optional)
         auto eitherOrProcessRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);

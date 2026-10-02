@@ -1510,7 +1510,9 @@ void MainFrame::togglePTT(void) {
     // reset level gauge
 
     m_maxLevel = 0;
-    m_gaugeLevel->SetValue(0);
+    m_maxLevelDbTx = -LEVEL_GAUGE_MIN_DB;
+    m_gaugeLevel->Reset();
+    m_gaugeLevel->SetZoneColours(newTx);
     
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
