@@ -104,7 +104,7 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
     static const wxColour AMBER(230, 160, 0);
     static const wxColour RED(220, 30, 30);
     static const wxColour BLUE(30, 120, 230);
-    const float DIM_FACTOR = 0.22f;
+    static const wxColour UNLIT(128, 128, 128); // mid grey, visible on light and dark themes
 
     dc.SetPen(*wxTRANSPARENT_PEN);
 
@@ -114,13 +114,7 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
         wxColour zoneColour = !zoneColours_ ? BLUE :
             (lowerDb >= redStartDb_) ? RED : (lowerDb >= amberStartDb_) ? AMBER : GREEN;
 
-        bool lit = i < litSegments_;
-        wxColour fillColour = lit
-            ? zoneColour
-            : wxColour(
-                (unsigned char)(zoneColour.Red() * DIM_FACTOR),
-                (unsigned char)(zoneColour.Green() * DIM_FACTOR),
-                (unsigned char)(zoneColour.Blue() * DIM_FACTOR));
+        wxColour fillColour = (i < litSegments_) ? zoneColour : UNLIT;
 
         dc.SetBrush(wxBrush(fillColour));
         dc.DrawRectangle(i * segmentWidthPx_, 0, segmentWidthPx_, segmentHeightPx_);
