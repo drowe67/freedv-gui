@@ -103,7 +103,7 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
     static const wxColour GREEN(0, 200, 0);
     static const wxColour AMBER(230, 160, 0);
     static const wxColour RED(220, 30, 30);
-    static const wxColour BLUE(30, 120, 230);
+    static const wxColour BLUE(60, 145, 240);
     static const wxColour UNLIT(128, 128, 128); // mid grey, visible on light and dark themes
 
     dc.SetPen(*wxTRANSPARENT_PEN);
