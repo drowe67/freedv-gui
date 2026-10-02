@@ -2,8 +2,10 @@ include(FetchContent)
 
 FetchContent_Declare(
     freedv_backend
-    GIT_REPOSITORY https://github.com/tmiw/freedv-backend
-    GIT_TAG main
+    # TEMPORARY: points at the matching freedv-backend PR branch for review
+    # and testing. Revert to tmiw/freedv-backend main once that PR merges.
+    GIT_REPOSITORY https://github.com/barjac/freedv-backend
+    GIT_TAG bcj-leveler-limiter
 )
 
 FetchContent_MakeAvailable(freedv_backend)

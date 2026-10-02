@@ -30,6 +30,10 @@ FilterConfiguration::FilterConfiguration()
     : noiseReductionEnable("/Filter/speexpp_enable", true)
     , agcEnabled("/Filter/agcEnable", true)
     , bwExpandEnabled("/Filter/bwExpandEnable", true)
+    , levelerGainDb("/Filter/levelerGainDb", 0.0f)
+    , levelerIntegralErrorDb("/Filter/levelerIntegralErrorDb", 0.0f)
+    , levelerTargetLufs("/Filter/levelerTargetLufs", -26.0f)
+    , levelerPauseGracePeriodSec("/Filter/levelerPauseGracePeriodSec", 0.3f)
 {
     // empty
 }
@@ -42,6 +46,10 @@ void FilterConfiguration::load(wxConfigBase* config)
     load_(config, noiseReductionEnable);
     load_(config, agcEnabled);
     load_(config, bwExpandEnabled);
+    load_(config, levelerGainDb);
+    load_(config, levelerIntegralErrorDb);
+    load_(config, levelerTargetLufs);
+    load_(config, levelerPauseGracePeriodSec);
 }
 
 void FilterConfiguration::save(wxConfigBase* config)
@@ -52,4 +60,8 @@ void FilterConfiguration::save(wxConfigBase* config)
     save_(config, noiseReductionEnable);
     save_(config, agcEnabled);
     save_(config, bwExpandEnabled);
+    save_(config, levelerGainDb);
+    save_(config, levelerIntegralErrorDb);
+    save_(config, levelerTargetLufs);
+    save_(config, levelerPauseGracePeriodSec);
 }

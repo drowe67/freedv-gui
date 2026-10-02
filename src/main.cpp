@@ -2854,6 +2854,12 @@ void MainFrame::stopRxStream()
             }
             
             m_txThread = nullptr;
+
+            // The TX thread saved the leveler's final gain state into the
+            // in-memory config as it exited; write it out now. Flush() so
+            // it reaches disk on every Stop, not only at app exit.
+            wxGetApp().appConfiguration.save(pConfig);
+            pConfig->Flush();
         }
 
         if (m_rxThread)

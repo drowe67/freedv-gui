@@ -39,10 +39,6 @@ using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
 
-// WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
-// first.
-#include "AgcStep.h"
-
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -54,6 +50,8 @@ using namespace std::chrono_literals;
 #include "EitherOrStep.h"
 #include "RNNoiseStep.h"
 #include "EqualizerStep.h"
+#include "LevelerStep.h"
+#include "CompressorLimiterStep.h"
 #include "ResamplePlotStep.h"
 #include "ResampleStep.h"
 #include "TapStep.h"
@@ -66,6 +64,7 @@ using namespace std::chrono_literals;
 #include "BeepStep.h"
 #include "MixStep.h"
 
+#include "util/DiagnosticCsvLogger.h"
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
 
@@ -234,12 +233,33 @@ void TxRxThread::initializePipeline_()
             g_rxUserdata->micEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
 
-        // AGC step (optional)
+        // AGC step (optional): loudness leveler followed by a peak limiter.
+        // The leveler's feedback is the limiter's measured output loudness.
+        // Both share one DiagnosticCsvLogger, which is a no-op unless the
+        // backend is built with -DENABLE_AUDIO_DIAG_LOGGING=ON.
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
 
-        auto agcStep = new AgcStep(inputSampleRate_);
-        eitherOrProcessAgc->appendPipelineStep(agcStep);
+        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
+        auto agcDiagLogger = std::make_shared<DiagnosticCsvLogger>();
+        auto compressorLimiterStep = new CompressorLimiterStep(
+            inputSampleRate_,
+            agcDiagLogger,
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); });
+
+        // Gain state is restored from the previous session (saved at the
+        // end of Entry()).
+        levelerStep_ = new LevelerStep(
+            inputSampleRate_,
+            +[]() FREEDV_NONBLOCKING { return CompressorLimiterStep::getLastOutputLoudnessLufs(); },
+            agcDiagLogger,
+            filterConfig.levelerGainDb.getWithoutProcessing(),
+            filterConfig.levelerIntegralErrorDb.getWithoutProcessing(),
+            filterConfig.levelerTargetLufs.getWithoutProcessing(),
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            filterConfig.levelerPauseGracePeriodSec.getWithoutProcessing());
+        eitherOrProcessAgc->appendPipelineStep(levelerStep_);
+        eitherOrProcessAgc->appendPipelineStep(compressorLimiterStep);
 
         auto eitherOrAgcStep = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); },
@@ -662,6 +682,18 @@ void* TxRxThread::Entry() noexcept
     processingStats_.report(m_tx, "processing");
     waitStats_.report(m_tx, "wait");
 #endif // defined(ENABLE_PROCESSING_STATS)
+
+    // Save the leveler's gain state so the next session resumes from it
+    // rather than from 0dB. Safe without synchronization: execute() ran on
+    // this thread and has stopped. MainFrame::stopRxStream() writes the
+    // config to disk once this thread has been joined.
+    if (levelerStep_ != nullptr)
+    {
+        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
+        filterConfig.levelerGainDb.setWithoutProcessing(levelerStep_->getCurrentGainDb());
+        filterConfig.levelerIntegralErrorDb.setWithoutProcessing(levelerStep_->getIntegralErrorDb());
+        levelerStep_ = nullptr;
+    }
 
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
