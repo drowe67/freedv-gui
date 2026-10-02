@@ -817,6 +817,23 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             clearFifos_();
             pendingEooCount_ = 0;
 
+            // Since mic audio arrives at the same rate that outfifo1 is drained,
+            // outfifo1 has no slack to absorb scheduling jitter unless we give it
+            // some. Start it off with a fixed amount of silence (one TX block plus
+            // a couple of processing intervals) so that a late wakeup doesn't
+            // result in gaps in the TX signal.
+            int primeMs = 2 * FRAME_DURATION_MS;
+            FREEDV_BEGIN_VERIFIED_SAFE
+            primeMs += (freedvInterface.getTxNumSpeechSamples() * MS_TO_SEC) / freedvInterface.getTxSpeechSampleRate();
+            FREEDV_END_VERIFIED_SAFE
+            int primeSamples = std::min((outputSampleRate_ * primeMs) / MS_TO_SEC, outputSampleRate_);
+            if (cbData->outfifo1->write(inputSamplesZeros_.get(), primeSamples) != 0)
+            {
+                FREEDV_BEGIN_VERIFIED_SAFE
+                log_warn("Could not prime outfifo1 with %d samples of silence", primeSamples);
+                FREEDV_END_VERIFIED_SAFE
+            }
+
             // return out and begin processing on the next loop
             return;
         }
@@ -827,9 +844,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         // this sound card and the output sound card.
 
         // Run code inside this while loop as soon as we have enough
-        // room for one frame of modem samples.  Aim is to keep
-        // outfifo1 nice and full so we don't have any gaps in tx
-        // signal.
+        // room for one frame of modem samples and there's mic audio to
+        // encode. outfifo1 is only filled as fast as mic audio arrives
+        // (plus the silence it's primed with at the start of TX) to keep
+        // TX latency down.
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
@@ -934,7 +952,20 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 hasEooBeenSent_ = false;
                 pendingEooCount_ = 0;
             }
-            
+
+            if (nread != 0)
+            {
+                // Out of mic audio for now. Wait for more to arrive rather than
+                // encoding silence to fill the gap: since mic audio arrives at the
+                // same rate outfifo1 is drained, any silence added here stays in
+                // outfifo1 for the rest of the over and delays everything sent after
+                // it (including the EOO).
+#if defined(ENABLE_PROCESSING_STATS)
+                processingStats_.end();
+#endif // defined(ENABLE_PROCESSING_STATS)
+                break;
+            }
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
@@ -956,11 +987,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
-
-            if (nread != 0)
-            {
-                break;
-            }
         }
 
         // A quiet mic during the deliberate end-of-transmission tail is

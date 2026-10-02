@@ -1339,12 +1339,32 @@ void MainFrame::togglePTT(void) {
             wxGetApp().Yield(true);
         }
         
+        // Amount of audio (in ms) currently queued in the given FIFO. Used to size
+        // the timeouts below so that they can't expire while audio we still need
+        // to send (in particular the EOO) is waiting to go out.
+        auto fifoDurationMs = [](GenericFIFO<short>* fifo, int sampleRate) {
+            if (fifo == nullptr || sampleRate <= 0)
+            {
+                return 0;
+            }
+            return (int)((int64_t)fifo->numUsed() * 1000 / sampleRate);
+        };
+        auto& audioConfig = wxGetApp().appConfiguration.audioConfiguration;
+
         // Trigger end of TX processing. This causes us to wait for the remaining samples
-        // to flow through the system before toggling PTT.  Note that there is a 1000ms 
-        // timeout as backup.
-        log_info("Waiting for EOO to be queued");
+        // to flow through the system before toggling PTT. Any mic audio still waiting
+        // in infifo2 gets encoded (gated on space in outfifo1) before the EOO, so the
+        // timeout covers that in addition to a fixed backup amount.
+        //
+        // g_eoo_enqueued may still be set from the end of the previous over, so clear
+        // it first to avoid treating the stale value as this over's EOO.
+        int eooTimeoutMs = 2000 +
+            fifoDurationMs(g_rxUserdata->infifo2, audioConfig.soundCard2In.sampleRate) +
+            fifoDurationMs(g_rxUserdata->outfifo1, audioConfig.soundCard1Out.sampleRate);
+        log_info("Waiting for EOO to be queued (timeout = %d ms)", eooTimeoutMs);
+        g_eoo_enqueued.store(false, std::memory_order_release);
         endingTx.store(true, std::memory_order_release);
-            
+
         auto beginTime = std::chrono::high_resolution_clock::now();
         while(true)
         {
@@ -1353,25 +1373,32 @@ void MainFrame::togglePTT(void) {
                 log_info("Detected that EOO has been enqueued");
                 break;
             }
- 
+
             wxThread::Sleep(1);
             wxGetApp().Yield(true);
 
             auto endTime = std::chrono::high_resolution_clock::now();
-            if ((endTime - beginTime) >= std::chrono::seconds(2))
+            if ((endTime - beginTime) >= std::chrono::milliseconds(eooTimeoutMs))
             {
                 log_warn("Timed out waiting for EOO to be enqueued");
                 break;
             }
         }
 
+        // outfifo1 is kept close to full during TX and is sized to fit several EOO
+        // blocks, so it can hold around a second of audio once the EOO is queued.
+        // Wait for at least as long as it takes to play out everything in it rather
+        // than a fixed amount, otherwise we could drop PTT partway through the EOO.
         int sample = g_outfifo1_empty.load(std::memory_order_relaxed);
+        int drainTimeoutMs = std::max(
+            1000,
+            fifoDurationMs(g_rxUserdata->outfifo1, audioConfig.soundCard1Out.sampleRate) + 500);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
             auto tmp = g_outfifo1_empty.load(std::memory_order_relaxed);
-            if (diff >= std::chrono::milliseconds(1000) || (tmp != sample))
+            if (diff >= std::chrono::milliseconds(drainTimeoutMs) || (tmp != sample))
             {
                 log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), tmp, sample);
                 break;

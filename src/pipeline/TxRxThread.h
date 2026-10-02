@@ -71,7 +71,7 @@ public:
         , hasEooBeenSent_(false)
         , pendingEooCount_(0)
         , helper_(std::move(helper))
-        , deferReset_(false)
+        , deferReset_(true) // so that the first TX pass primes outfifo1 (needed for full duplex)
     {
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
