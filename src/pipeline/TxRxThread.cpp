@@ -817,23 +817,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             clearFifos_();
             pendingEooCount_ = 0;
 
-            // Since mic audio arrives at the same rate that outfifo1 is drained,
-            // outfifo1 has no slack to absorb scheduling jitter unless we give it
-            // some. Start it off with a fixed amount of silence (one TX block plus
-            // a couple of processing intervals) so that a late wakeup doesn't
-            // result in gaps in the TX signal.
-            int primeMs = 2 * FRAME_DURATION_MS;
-            FREEDV_BEGIN_VERIFIED_SAFE
-            primeMs += (freedvInterface.getTxNumSpeechSamples() * MS_TO_SEC) / freedvInterface.getTxSpeechSampleRate();
-            FREEDV_END_VERIFIED_SAFE
-            int primeSamples = std::min((outputSampleRate_ * primeMs) / MS_TO_SEC, outputSampleRate_);
-            if (cbData->outfifo1->write(inputSamplesZeros_.get(), primeSamples) != 0)
-            {
-                FREEDV_BEGIN_VERIFIED_SAFE
-                log_warn("Could not prime outfifo1 with %d samples of silence", primeSamples);
-                FREEDV_END_VERIFIED_SAFE
-            }
-
             // return out and begin processing on the next loop
             return;
         }
@@ -844,12 +827,20 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         // this sound card and the output sound card.
 
         // Run code inside this while loop as soon as we have enough
-        // room for one frame of modem samples and there's mic audio to
-        // encode. outfifo1 is only filled as fast as mic audio arrives
-        // (plus the silence it's primed with at the start of TX) to keep
-        // TX latency down.
+        // room for one frame of modem samples.  Aim is to keep about
+        // TX_OUTFIFO_TARGET_MS of audio in outfifo1 so we don't have any
+        // gaps in tx signal if we're woken up late.
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
+
+        // When mic audio runs out, silence is encoded to keep the modem stream
+        // continuous, but only while outfifo1 is below this amount. Since mic
+        // audio arrives at the same rate that outfifo1 is drained, any silence
+        // added stays in outfifo1 for the rest of the over and delays everything
+        // sent after it (including the EOO). This needs to cover the worst case
+        // TX thread wakeup delay (>130ms has been observed on CI runners).
+        constexpr int TX_OUTFIFO_TARGET_MS = 200;
+        unsigned int nsam_outfifo_target = (outputSampleRate_ * TX_OUTFIFO_TARGET_MS) / MS_TO_SEC;
 
         if (g_dump_fifo_state) {
              // If this drops to zero we have a problem as we will run out of output samples
@@ -953,13 +944,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 pendingEooCount_ = 0;
             }
 
-            if (nread != 0)
+            if (nread != 0 && (unsigned)cbData->outfifo1->numUsed() >= nsam_outfifo_target)
             {
-                // Out of mic audio for now. Wait for more to arrive rather than
-                // encoding silence to fill the gap: since mic audio arrives at the
-                // same rate outfifo1 is drained, any silence added here stays in
-                // outfifo1 for the rest of the over and delays everything sent after
-                // it (including the EOO).
+                // Out of mic audio for now, but there's enough already queued
+                // to cover a late wakeup. Wait for more mic audio rather than
+                // adding more latency.
 #if defined(ENABLE_PROCESSING_STATS)
                 processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -987,6 +976,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
+
+            if (nread != 0)
+            {
+                break;
+            }
         }
 
         // A quiet mic during the deliberate end-of-transmission tail is
