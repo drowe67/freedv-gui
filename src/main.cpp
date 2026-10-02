@@ -46,6 +46,7 @@
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "pipeline/TxRxThread.h"
+#include "LevelerStep.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
@@ -1247,6 +1248,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
+    // AGC gain plot -- evaluation aid only, see AGC_GAIN_PLOT_* in defines.h.
+    m_panelAgcGain = new PlotScalar(m_auiNbookCtrl, AGC_GAIN_PLOT_SECONDS, LEVEL_METER_TX_REFRESH_PERIOD_SEC, MIN_AGC_GAIN_PLOT_VAL, MAX_AGC_GAIN_PLOT_VAL, AGC_GAIN_PLOT_SECONDS / AGC_GAIN_PLOT_SECOND_SEGMENTS, 3, "%.1f", 0, "", true, 0, false);
+    m_auiNbookCtrl->AddPage(m_panelAgcGain, _("AGC dB"), false, wxNullBitmap);
+
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
     m_btnTogPTT->Bind(wxEVT_LEFT_DOWN, &MainFrame::OnTogBtnPTTMouseDown, this);
@@ -2217,6 +2222,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         m_gaugeLevel->SetZoneColours(true);
         m_gaugeLevel->SetLevelDb(m_maxLevelDbTx);
+
+        // AGC gain plot (evaluation aid, see AGC_GAIN_PLOT_* in defines.h).
+        m_panelAgcGain->add_new_sample(LevelerStep::getLiveAppliedGainDb());
+        m_panelAgcGain->refreshData();
     }
     else if (timerId == ID_TIMER_LEVEL_METER_TX)
     {

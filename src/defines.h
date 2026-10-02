@@ -79,6 +79,16 @@
 #define SNR_PLOT_SECOND_SEGMENTS (6)
 #define SNR_PLOT_DT (0.1)
 
+// "AGC dB" plot: the leveler's applied gain, updated during TX on the TX
+// level meter's 25ms tick. EVALUATION AID for the leveler/limiter work --
+// not intended to be needed in normal use now that the Level meter shows
+// TX level directly, and can be dropped from a final implementation.
+// Y range matches the leveler's +/-12dB gain limit.
+#define AGC_GAIN_PLOT_SECONDS (10)
+#define AGC_GAIN_PLOT_SECOND_SEGMENTS (5)
+#define MIN_AGC_GAIN_PLOT_VAL (-12)
+#define MAX_AGC_GAIN_PLOT_VAL (12)
+
 // sample rate I/O & conversion constants
 
 #define SAMPLE_RATE         48000                          // 48 kHz sampling rate rec. as we can trust accuracy of sound card
