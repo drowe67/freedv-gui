@@ -459,7 +459,7 @@ void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
     bitmap.CreateScaled(size.GetWidth(), size.GetHeight(), wxBITMAP_SCREEN_DEPTH, scale);
     {
         wxMemoryDC dc(bitmap);
-        dc.SetBackground(wxBrush(GetBackgroundColour()));
+        dc.SetBackground(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW)));
         dc.Clear();
 
         // Create the label font from the window's context: CreateFont() sizes it for its
