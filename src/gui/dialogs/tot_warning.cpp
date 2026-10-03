@@ -81,8 +81,7 @@ void TotWarningDialog::updateRemainingTime(int remainingMs)
 {
     int sec = (remainingMs + 999) / 1000;
     if (sec < 0) sec = 0;
-    m_countdownText_->SetLabel(wxString::Format(_("%d second%s remaining"),
-        sec, sec == 1 ? wxT("") : wxT("s")));
+    m_countdownText_->SetLabel(wxString::Format(wxPLURAL("%d second remaining", "%d seconds remaining", sec), sec));
     Layout();
 }
 

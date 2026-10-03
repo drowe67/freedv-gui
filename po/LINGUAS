@@ -1,0 +1,7 @@
+# Languages that FreeDV has been translated into, one per line.
+# Each entry must have a corresponding <lang>.po file in this directory
+# (e.g. pt_BR -> pt_BR.po). To start a new translation:
+#
+#   msginit --locale=pt_BR --input=freedv.pot --output-file=pt_BR.po
+#
+# then add the language code below.

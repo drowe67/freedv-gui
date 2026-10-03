@@ -37,6 +37,22 @@ add_subdirectory(sox)
 if(APPLE)
     set(RES_FILES freedv.icns)
     set_source_files_properties(freedv.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+    # Translations go in Contents/Resources/<lang>.lproj, where wxWidgets
+    # looks for them by default.
+    set(FREEDV_BUNDLE_LOCALIZATIONS "<string>en</string>")
+    foreach(lang ${FREEDV_LINGUAS})
+        string(APPEND FREEDV_BUNDLE_LOCALIZATIONS "\n\t\t<string>${lang}</string>")
+    endforeach(lang)
+    foreach(mo_file ${FREEDV_MO_FILES})
+        get_filename_component(mo_dir ${mo_file} DIRECTORY)
+        get_filename_component(mo_dir ${mo_dir} DIRECTORY)
+        get_filename_component(lang ${mo_dir} NAME)
+        set_source_files_properties(${mo_file} PROPERTIES
+            GENERATED TRUE
+            MACOSX_PACKAGE_LOCATION "Resources/${lang}.lproj")
+        list(APPEND RES_FILES ${mo_file})
+    endforeach(mo_file)
     add_executable(FreeDV MACOSX_BUNDLE ${FREEDV_SOURCES} ${RES_FILES})
     set_target_properties(FreeDV PROPERTIES
         BUNDLE True
@@ -52,6 +68,14 @@ if(APPLE)
 else()
     add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
 endif(APPLE)
+
+if(TARGET freedv_translations)
+    if(APPLE)
+        add_dependencies(FreeDV freedv_translations)
+    else(APPLE)
+        add_dependencies(freedv freedv_translations)
+    endif(APPLE)
+endif(TARGET freedv_translations)
 
 if(APPLE)
 target_compile_options(FreeDV PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
