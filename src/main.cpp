@@ -3044,7 +3044,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3060,7 +3060,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3112,7 +3112,7 @@ void MainFrame::startRxStream()
             if (!txInSoundDevice)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format(_("Could not find TX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find TX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3144,7 +3144,7 @@ void MainFrame::startRxStream()
             if (!txOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format(_("Could not find TX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find TX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3178,7 +3178,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX input sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -3194,7 +3194,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([]() {
-                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format(_("Could not find RX output sound device '%s'. Please check settings and try again."), wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), _("Error"), wxOK);
                 });
                 failed = true;
             }
