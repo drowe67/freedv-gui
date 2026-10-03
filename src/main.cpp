@@ -778,8 +778,10 @@ static void SuppressButtonPressFlicker_()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-#if wxCHECK_VERSION(3,3,0)
-   // Opt into dark mode on Windows. No effect on other platforms.
+#if wxCHECK_VERSION(3,3,0) && defined(__WXMSW__)
+   // Opt into dark mode on Windows.
+   // Note: This has an effect on macOS despite documentation indicating that it doesn't,
+   // which is why we also have to limit this code to Windows.
    SetAppearance(Appearance::System);
 #endif // wxCHECK_VERSION(3,3,0)
 
