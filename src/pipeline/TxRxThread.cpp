@@ -123,6 +123,9 @@ extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
 extern std::atomic<float> g_tone_phase;
 
+extern long agcLeveler;
+extern long agcLimiter;
+
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
 
@@ -238,7 +241,7 @@ void TxRxThread::initializePipeline_()
         auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
 
-        auto agcStep = new AgcStep(inputSampleRate_);
+        auto agcStep = new AgcStep(inputSampleRate_, agcLimiter != 0, agcLeveler != 0);
         eitherOrProcessAgc->appendPipelineStep(agcStep);
 
         auto eitherOrAgcStep = new EitherOrStep(
