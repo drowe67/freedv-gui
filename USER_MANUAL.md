@@ -896,7 +896,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid page cache miss on startup when loading RADE. (PR #1506)
     * Stop playback of RX file before TX start. (PR #1507)
     * Fix horizontal lines in waterfall on HiDPI/fractionally scaled Linux displays. (PR #1514)
-    * Reduce GUI thread paint and FreeDV Reporter overhead. (PR #1515)
+    * Reduce GUI thread paint and FreeDV Reporter overhead. (PR #1515, #1530)
     * PulseAudio: give each device its own connection. (PR #1523)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
@@ -904,7 +904,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
 3. Other:
-    * Various GUI performance improvements. (PR #1481, #1521, 1524, 1527)
+    * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527)
     * Windows audio thread timing improvements. (PR #1488)
 
 ## V2.4.0 August 2026
