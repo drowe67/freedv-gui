@@ -46,7 +46,6 @@
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "pipeline/TxRxThread.h"
-#include "LevelerStep.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
@@ -122,6 +121,7 @@ float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
+std::atomic<float> g_agcAppliedGainDb;
 std::atomic<bool>  g_bwExpandEnabled;
 
 // tx/rx processing states
@@ -2226,7 +2226,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_gaugeLevel->SetLevelDb(m_maxLevelDbTx);
 
         // AGC gain plot (evaluation aid, see AGC_GAIN_PLOT_* in defines.h).
-        m_panelAgcGain->add_new_sample(LevelerStep::getLiveAppliedGainDb());
+        m_panelAgcGain->add_new_sample(g_agcAppliedGainDb.load(std::memory_order_relaxed));
         m_panelAgcGain->refreshData();
     }
     else if (timerId == ID_TIMER_LEVEL_METER_TX)
