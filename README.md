@@ -98,11 +98,6 @@ You need to install the codec2 shared libraries, and freedv-gui:
   $ sudo ldconfig
   ```
 
-## Radio integrations
-
-FreeDV supports direct integration with several different types of radios. Please see [this README](./src/integrations/README.md) for
-more information.
- 
 ## Testing
 
 The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md)).
