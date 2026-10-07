@@ -27,6 +27,9 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         SetStatusText(wxT(""));
         g_mutexProtectingCallbackData.Unlock();
         
+        // Cache the newly recorded file for playback.
+        vkFileCache_.preload(vkFileName_);
+        
         m_togBtnAnalog->Enable(true);
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
@@ -199,6 +202,7 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
     wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     vkFileName_ = soundFile;
+    vkFileCache_.preload(vkFileName_);
     
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
     setVoiceKeyerButtonLabel_(fileNameWithoutExt);
@@ -231,6 +235,8 @@ void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& )
 }
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
+extern std::mutex g_mutexProtectingPlayFiles;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
@@ -245,7 +251,15 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
+    // Prefer the in-memory copy so that we don't block on file I/O here (and
+    // delay TX) if e.g. the file needs to be re-downloaded from cloud storage.
+    std::unique_ptr<VoiceKeyerMemoryReader> tmpPlayFileReader;
+    SNDFILE* tmpPlayFile = vkFileCache_.open(vkFileName_, &sfInfo, tmpPlayFileReader);
+    if (tmpPlayFile == nullptr)
+    {
+        sfInfo.format = 0;
+        tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
+    }
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxT("Couldn't open:") + wxString::FromUTF8(vkFileName_.c_str()), wxOK);
@@ -274,7 +288,20 @@ int MainFrame::VoiceKeyerStartTx(void)
             return VK_IDLE;
         }
  
-        g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
+        {
+            std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
+
+            // Close any file left over from a prior playback before replacing
+            // its reader, as the reader must outlive the file.
+            auto oldPlayFile = g_sfPlayFile.load(std::memory_order_acquire);
+            if (oldPlayFile != nullptr)
+            {
+                sf_close(oldPlayFile);
+            }
+
+            g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
+            g_sfPlayFileReader = std::move(tmpPlayFileReader);
+        }
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_.c_str()) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);

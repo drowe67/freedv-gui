@@ -302,6 +302,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
+            vkFileCache_.preload(vkFileName_);
             wxGetApp().appConfiguration.voiceKeyerWaveFile = "";
             setVoiceKeyerButtonLabel_("");
         }

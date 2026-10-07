@@ -96,6 +96,7 @@
 #include "pipeline/LinkStep.h"
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
+#include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -613,6 +614,7 @@ class MainFrame : public TopFrame
         int tuneLoadedLevel_{-200};
         
         std::string vkFileName_;
+        VoiceKeyerFileCache vkFileCache_;
         
         wxMenu* voiceKeyerPopupMenu_;
         wxMenu* pttPopupMenu_;

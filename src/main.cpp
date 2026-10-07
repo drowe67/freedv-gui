@@ -31,6 +31,7 @@
 #include <random>
 #include <chrono>
 #include <climits>
+#include <mutex>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
@@ -183,6 +184,7 @@ int                 g_AEstatus2[4];
 // playing and recording from sound files
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
 extern std::atomic<bool>                g_playFileToMicIn;
 extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -222,6 +224,13 @@ std::atomic<float>  g_TxFreqOffsetHz;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
+
+// Protects the lifetime of the SNDFILE handles read by PlaybackStep
+// (g_sfPlayFile and g_sfPlayFileFromRadio). Kept separate from
+// g_mutexProtectingCallbackData so that slow file reads/decodes on the
+// playback thread can't stall the UI thread. If both are needed, take
+// g_mutexProtectingCallbackData first.
+std::mutex g_mutexProtectingPlayFiles;
 
 // End of TX state control
 std::atomic<bool> endingTx;
@@ -1201,6 +1210,7 @@ setDefaultMode:
     {
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
         vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        vkFileCache_.preload(vkFileName_);
         
         m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
         
@@ -1775,11 +1785,15 @@ MainFrame::~MainFrame()
     }
     sox_biquad_finish();
 
-    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
-    if (playFile != NULL)
     {
-        sf_close(playFile);
-        g_sfPlayFile.store(NULL, std::memory_order_release);
+        std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
+        auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+        if (playFile != NULL)
+        {
+            sf_close(playFile);
+            g_sfPlayFile.store(NULL, std::memory_order_release);
+            g_sfPlayFileReader = nullptr;
+        }
     }
     if (g_sfRecFile != NULL)
     {
