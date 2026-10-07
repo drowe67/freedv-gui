@@ -37,6 +37,15 @@ bool ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
         wxGraphicsContext* context = renderer->CreateContextFromUnknownDC(*dc);
         if (context != nullptr)
         {
+            // CreateContextFromUnknownDC() doesn't reliably inherit the
+            // owning wxDataViewCtrl's per-monitor DPI scale factor (it
+            // depends on internal DC-type plumbing in wxWidgets), so text
+            // rendered through this Direct2D path can silently stay pinned
+            // to 96 DPI and not grow when Windows display scaling is above
+            // 100%. Force it explicitly from the control we're actually
+            // painting into.
+            context->SetContentScaleFactor(GetView()->GetContentScaleFactor());
+
             wxColour color = dc->GetTextForeground();
             if (state & wxDATAVIEW_CELL_SELECTED)
             {
