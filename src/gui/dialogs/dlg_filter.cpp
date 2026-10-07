@@ -55,6 +55,7 @@ extern FreeDVInterface freedvInterface;
 extern wxConfigBase *pConfig;
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<bool> g_noiseReductionEnabled;
 extern std::atomic<bool> g_bwExpandEnabled;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -767,6 +768,7 @@ void FilterDlg::OnGammaScroll(wxScrollEvent&) {
 
 void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
+    g_noiseReductionEnabled.store(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
     updateControlState();
 }

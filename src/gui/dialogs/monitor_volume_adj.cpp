@@ -26,9 +26,10 @@
 
 #include "monitor_volume_adj.h"
 
-MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
+MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal, std::atomic<float>& liveVal )
     : wxPopupTransientWindow(parent)
     , configVal_(configVal)
+    , liveVal_(liveVal)
 {
     // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
     // for e.g. numbers. Thus, we only need to override layout direction.
@@ -60,4 +61,5 @@ MonitorVolumeAdjPopup::~MonitorVolumeAdjPopup()
 void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent&)
 {
     configVal_ = volumeSlider_->GetValue();
+    liveVal_.store(configVal_, std::memory_order_release);
 }
