@@ -133,6 +133,14 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
 std::atomic<bool>  g_noiseReductionEnabled;
+// Copies of configuration values read by the audio threads. The configuration
+// elements themselves aren't thread-safe, so the UI thread must update these
+// whenever the corresponding setting changes.
+std::atomic<bool>  g_monitorTxAudio;
+std::atomic<bool>  g_monitorVoiceKeyerAudio;
+std::atomic<float> g_monitorTxAudioVol;
+std::atomic<float> g_monitorVoiceKeyerAudioVol;
+std::atomic<int>   g_noiseSNR;
 std::atomic<bool>  g_bwExpandEnabled;
 // sending and receiving Call Sign data
 std::atomic<GenericFIFO<short>*> g_txDataInFifo;
@@ -949,6 +957,15 @@ void MainFrame::loadConfiguration_()
     
     // Load noise reduction state
     g_noiseReductionEnabled.store(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable, std::memory_order_release);
+    
+    // Load TX/VK monitor state
+    g_monitorTxAudio.store(wxGetApp().appConfiguration.monitorTxAudio, std::memory_order_release);
+    g_monitorVoiceKeyerAudio.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudio, std::memory_order_release);
+    g_monitorTxAudioVol.store(wxGetApp().appConfiguration.monitorTxAudioVol, std::memory_order_release);
+    g_monitorVoiceKeyerAudioVol.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol, std::memory_order_release);
+    
+    // Load channel noise SNR
+    g_noiseSNR.store(wxGetApp().appConfiguration.noiseSNR, std::memory_order_release);
     
     // Load BW expander state
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release);

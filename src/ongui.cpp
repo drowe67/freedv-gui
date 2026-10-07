@@ -36,6 +36,8 @@ extern int   g_SquelchActive;
 extern float g_SquelchLevel;
 extern std::atomic<int>   g_analog;
 extern std::atomic<bool>   g_tx;
+extern std::atomic<bool>  g_monitorTxAudio;
+extern std::atomic<float> g_monitorTxAudioVol;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern std::atomic<bool> g_queueResync;
@@ -1174,12 +1176,13 @@ int MainApp::FilterEvent(wxEvent& event)
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+    g_monitorTxAudio.store(wxGetApp().appConfiguration.monitorTxAudio, std::memory_order_release);
     adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
 }
 
 void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 {
-    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol, g_monitorTxAudioVol);
     popup->Popup();
 }
 

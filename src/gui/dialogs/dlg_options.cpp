@@ -77,6 +77,7 @@ static wxString getPTTKeyName(int keyCode)
 
 // PortAudio over/underflow counters
 
+extern std::atomic<int>    g_noiseSNR;
 extern std::atomic<int>    g_infifo1_full;
 extern std::atomic<int>    g_outfifo1_empty;
 extern std::atomic<int>    g_infifo2_full;
@@ -1078,8 +1079,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
 
         m_ckboxTone->SetValue(wxGetApp().m_tone);
-        m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
-        m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude));
+        m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz.load(std::memory_order_acquire)));
+        m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude.load(std::memory_order_acquire)));
 
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
@@ -1273,6 +1274,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
+        g_noiseSNR.store(wxGetApp().appConfiguration.noiseSNR, std::memory_order_release);
         
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
