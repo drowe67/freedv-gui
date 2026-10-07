@@ -111,6 +111,7 @@ enum {
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
         ID_TIMER_SPEECH_IN,
+        ID_TIMER_LEVEL_METER_TX,
         ID_TIMER_SPEECH_OUT,
         ID_TIMER_DEMOD_IN,
         ID_TIMER_SNR,
@@ -296,6 +297,7 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelSpeechOut;
         PlotScalar*             m_panelDemodIn;
         PlotScalar*             m_panelSNR;
+        PlotScalar*             m_panelAgcGain; // evaluation aid, see AGC_GAIN_PLOT_* in defines.h
 
         bool                    m_RxRunning;
         bool                    txChangeoverOccurring_;
@@ -321,6 +323,7 @@ class MainFrame : public TopFrame
         wxTimer                 m_plotSpectrumTimer;
         wxTimer                 m_plotScatterTimer;
         wxTimer                 m_plotSpeechInTimer;
+        wxTimer                 m_levelMeterTxTimer;
         wxTimer                 m_plotSpeechOutTimer;
         wxTimer                 m_plotDemodInTimer;
         wxTimer                 m_plotSNRTimer;
@@ -560,7 +563,8 @@ class MainFrame : public TopFrame
         class OptionsDlg *optionsDlg;
 
         // level Gauge
-        float       m_maxLevel;
+        float       m_maxLevel;      // RX: linear peak amplitude
+        float       m_maxLevelDbTx;  // TX: peak level in dBFS
 
         // flags to indicate when new EQ filters need to be designed
 

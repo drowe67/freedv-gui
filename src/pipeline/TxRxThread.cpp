@@ -39,10 +39,6 @@ using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
 
-// WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
-// first.
-#include "AgcStep.h"
-
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -54,6 +50,7 @@ using namespace std::chrono_literals;
 #include "EitherOrStep.h"
 #include "RNNoiseStep.h"
 #include "EqualizerStep.h"
+#include "LevelerLimiterStep.h"
 #include "ResamplePlotStep.h"
 #include "ResampleStep.h"
 #include "TapStep.h"
@@ -66,6 +63,7 @@ using namespace std::chrono_literals;
 #include "BeepStep.h"
 #include "MixStep.h"
 
+#include "util/DiagnosticCsvLogger.h"
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
 
@@ -93,7 +91,6 @@ extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<float> g_TxFreqOffsetHz;
-extern GenericFIFO<short> g_plotSpeechInFifoBeforeEQ;
 extern GenericFIFO<short> g_plotSpeechInFifoAfterAGC;
 extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
@@ -121,6 +118,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<float> g_agcAppliedGainDb;
 extern std::atomic<float> g_tone_phase;
 
 #include "../freedv_interface.h"
@@ -200,18 +198,6 @@ void TxRxThread::initializePipeline_()
             eitherOrBypassPlay);
         pipeline_->appendPipelineStep(eitherOrPlayStep);
         
-        // Resample for plot step (before equalization)
-        auto resampleForPlotStepBeforeEQ = new ResampleForPlotStep(&g_plotSpeechInFifoBeforeEQ);
-        auto resampleForPlotPipelineBeforeEQ = new AudioPipeline(inputSampleRate_, resampleForPlotStepBeforeEQ->getOutputSampleRate());
-#if defined(ENABLE_FASTER_PLOTS)
-        auto resampleForPlotResamplerBeforeEQ = new ResampleStep(inputSampleRate_, resampleForPlotStepBeforeEQ->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotResamplerBeforeEQ);
-#endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipelineBeforeEQ->appendPipelineStep(resampleForPlotStepBeforeEQ);
-
-        auto resampleForPlotTapBeforeEQ = new TapStep(inputSampleRate_, resampleForPlotPipelineBeforeEQ);
-        pipeline_->appendPipelineStep(resampleForPlotTapBeforeEQ);
-
         // RNNoise step (optional)
         auto eitherOrProcessRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassRNNoise = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -236,18 +222,22 @@ void TxRxThread::initializePipeline_()
             g_rxUserdata->micEqLock);
         pipeline_->appendPipelineStep(equalizerStep);
 
-        // AGC step (optional)
-        auto eitherOrProcessAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        auto eitherOrBypassAgc = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-
-        auto agcStep = new AgcStep(inputSampleRate_);
-        eitherOrProcessAgc->appendPipelineStep(agcStep);
-
-        auto eitherOrAgcStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); },
-            eitherOrProcessAgc,
-            eitherOrBypassAgc);
-        pipeline_->appendPipelineStep(eitherOrAgcStep); 
+        // AGC: loudness leveler (switchable) followed by a peak limiter
+        // (always on), in one step. The AGC setting only switches the
+        // leveler; the limiter is always in circuit for peak protection.
+        // The DiagnosticCsvLogger is a no-op unless the backend is built
+        // with -DENABLE_AUDIO_DIAG_LOGGING=ON. Gain state is restored from
+        // the previous session (saved at the end of Entry()).
+        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
+        levelerLimiterStep_ = new LevelerLimiterStep(
+            inputSampleRate_,
+            std::make_shared<DiagnosticCsvLogger>(),
+            filterConfig.levelerGainDb.getWithoutProcessing(),
+            filterConfig.levelerIntegralErrorDb.getWithoutProcessing(),
+            filterConfig.levelerTargetLufs.getWithoutProcessing(),
+            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); });
+        pipeline_->appendPipelineStep(levelerLimiterStep_);
 
         // Resample for plot step (after AGC)
         auto resampleForPlotStepAfterAGC = new ResampleForPlotStep(&g_plotSpeechInFifoAfterAGC);
@@ -667,6 +657,18 @@ void* TxRxThread::Entry() noexcept
     waitStats_.report(m_tx, "wait");
 #endif // defined(ENABLE_PROCESSING_STATS)
 
+    // Save the leveler's gain state so the next session resumes from it
+    // rather than from 0dB. Safe without synchronization: execute() ran on
+    // this thread and has stopped. MainFrame::stopRxStream() writes the
+    // config to disk once this thread has been joined.
+    if (levelerLimiterStep_ != nullptr)
+    {
+        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
+        filterConfig.levelerGainDb.setWithoutProcessing(levelerLimiterStep_->getCurrentGainDb());
+        filterConfig.levelerIntegralErrorDb.setWithoutProcessing(levelerLimiterStep_->getIntegralErrorDb());
+        levelerLimiterStep_ = nullptr;
+    }
+
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
@@ -926,6 +928,12 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             }
 
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
+
+            // For the AGC gain plot (polled by the GUI thread).
+            if (levelerLimiterStep_ != nullptr)
+            {
+                g_agcAppliedGainDb.store(levelerLimiterStep_->getLiveAppliedGainDb(), std::memory_order_relaxed);
+            }
             
             if (g_dump_fifo_state) {
                 FREEDV_BEGIN_VERIFIED_SAFE

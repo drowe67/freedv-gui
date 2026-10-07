@@ -21,6 +21,8 @@
 #ifndef __FDMDV2_DEFINES__
 #define __FDMDV2_DEFINES__
 
+#include <cmath>
+
 #include "wx/wx.h"
 #include "logging/ulog.h"
 #include "pipeline/modem_stats.h"
@@ -32,19 +34,14 @@
 // Minimum level for the Level gauge, negated.
 #define LEVEL_GAUGE_MIN_DB 30
 
-// Level meter: Percentage threshold of samples above the current maximum
-// before we adopt a new maximum sample level. This is intended to filter
-// out brief spikes and prevent overadjustment of input levels downward
-// by the user.
-#define LEVEL_METER_MAX_THRESHOLD_PERCENT (0.05f)
-
-// Acceptable-range marker drawn as a thin green strip below the level
-// meter's gauge, in % of the gauge's own 0-100 scale. Centred on the
-// ~50% mid-scale target from LEVEL_METER_REFERENCE_DB above. Also used
-// as the inner edge of the adaptive time-constant ramp above, so the
-// meter's slowest ballistics line up exactly with the visible green zone.
-#define LEVEL_METER_TARGET_LOW_PCT  30
-#define LEVEL_METER_TARGET_HIGH_PCT 85
+// Level meter LED segments: 10 x 3dB across -30..0dBFS. During TX, green
+// up to -9dBFS, amber from -9dBFS, red from -3dBFS (the top segment, which
+// is centred on the limiter's -1.5dBFS ceiling). During RX all segments are
+// blue: the right radio audio level is low on this scale and is better
+// judged from the spectrum display, so TX's zones don't apply.
+#define LEVEL_METER_SEGMENT_DB        3.0f
+#define LEVEL_METER_AMBER_START_DBFS (-9.0f)
+#define LEVEL_METER_RED_START_DBFS   (-3.0f)
 
 // Spectrogram and Waterfall
 
@@ -82,6 +79,16 @@
 #define SNR_PLOT_SECOND_SEGMENTS (6)
 #define SNR_PLOT_DT (0.1)
 
+// "AGC dB" plot: the leveler's applied gain, updated during TX on the TX
+// level meter's 25ms tick. EVALUATION AID for the leveler/limiter work --
+// not intended to be needed in normal use now that the Level meter shows
+// TX level directly, and can be dropped from a final implementation.
+// Y range matches the leveler's +/-12dB gain limit.
+#define AGC_GAIN_PLOT_SECONDS (10)
+#define AGC_GAIN_PLOT_SECOND_SEGMENTS (5)
+#define MIN_AGC_GAIN_PLOT_VAL (-12)
+#define MAX_AGC_GAIN_PLOT_VAL (12)
+
 // sample rate I/O & conversion constants
 
 #define SAMPLE_RATE         48000                          // 48 kHz sampling rate rec. as we can trust accuracy of sound card
@@ -107,13 +114,27 @@
 #define FROM_RADIO_MAX       0.8
 #define FROM_MIC_MAX         0.8
 
-// Decay rate for the Level meter, applied once per GUI update (every DT sec).
-// Target: -12 dB/sec.
-//   20*log10(LEVEL_BETA) = -12 * DT
-//   LEVEL_BETA = 10^(-12*DT/20) = 10^(-0.06) ≈ 0.871   (for DT = 0.10)
-// => -1.20 dB per timer fire; the 30 dB gauge range fully decays in 2.5 s.
-#define LEVEL_DECAY_DB_PER_SEC 12.0
+// RX level meter decay, applied once per GUI update (every DT sec).
+// Target: -6 dB/sec.
+//   20*log10(LEVEL_BETA) = -6 * DT
+//   LEVEL_BETA = 10^(-6*DT/20) = 10^(-0.03) ≈ 0.933   (for DT = 0.10)
+// => -0.60 dB per timer fire; the 30 dB meter range fully decays in 5 s.
+#define LEVEL_DECAY_DB_PER_SEC 6.0
 #define LEVEL_BETA (std::pow(10.0, -LEVEL_DECAY_DB_PER_SEC * DT / 20.0))
+
+// TX level meter: its own 25ms refresh timer, reading raw mic samples from
+// the sound card callback (see g_levelMeterTxRawFifo in main.cpp) rather
+// than the TX pipeline, whose input arrives in bursts paced by the modem's
+// frame size. LEVEL_METER_TX_RAW_BUF_MAX bounds one tick's read and must
+// exceed one tick's worth of samples at the highest sound card rate
+// (16384 covers 100ms at 96kHz), or the FIFO backs up and drops samples.
+#define LEVEL_METER_TX_REFRESH_PERIOD_SEC 0.025
+#define LEVEL_METER_TX_REFRESH_TIMER_PERIOD ((int)(LEVEL_METER_TX_REFRESH_PERIOD_SEC*1000))
+#define LEVEL_METER_TX_RAW_BUF_MAX 16384
+
+// TX level meter decay: constant dB/sec, matching BBC/IEC 60268-10 Type I
+// PPM ballistics (24dB in 2.8s). Attack is instant at this refresh rate.
+#define LEVEL_METER_TX_DECAY_DB_PER_SEC 8.7
 
 // TX Attenuation (0.1 dB increments)
 #define TX_ATTENUATION_MIN (-300) /* -30 dB */

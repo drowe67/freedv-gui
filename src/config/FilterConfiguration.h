@@ -86,7 +86,16 @@ public:
     ConfigurationDataElement<bool> noiseReductionEnable;
     ConfigurationDataElement<bool> agcEnabled;
     ConfigurationDataElement<bool> bwExpandEnabled;
-    
+
+    // Leveler gain state, saved at the end of each session and restored at
+    // the start of the next so it doesn't re-climb from 0dB.
+    ConfigurationDataElement<float> levelerGainDb;
+    ConfigurationDataElement<float> levelerIntegralErrorDb;
+
+    // Leveler loudness target. -26 LUFS rather than EBU R128's -23 leaves
+    // more headroom ahead of the limiter. Not exposed in the UI.
+    ConfigurationDataElement<float> levelerTargetLufs;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
