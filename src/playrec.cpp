@@ -82,12 +82,15 @@ void MainFrame::StopPlayFileToMicIn(void)
 void MainFrame::StopPlaybackFileFromRadio()
 {
     g_mutexProtectingCallbackData.Lock();
-    g_playFileFromRadio.store(false, std::memory_order_release);
-    auto tmp = g_sfPlayFileFromRadio.load(std::memory_order_acquire);
-    sf_close(tmp);
-    g_sfPlayFileFromRadio.store(nullptr, std::memory_order_release);
-    SetStatusText(wxT(""));
-    m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
+    if (g_playFileFromRadio.load(std::memory_order_acquire))
+    {
+        g_playFileFromRadio.store(false, std::memory_order_release);
+        auto tmp = g_sfPlayFileFromRadio.load(std::memory_order_acquire);
+        sf_close(tmp);
+        g_sfPlayFileFromRadio.store(nullptr, std::memory_order_release);
+        SetStatusText(wxT(""));
+        m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
+    }
     g_mutexProtectingCallbackData.Unlock();
 }
 
