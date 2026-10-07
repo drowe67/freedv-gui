@@ -23,6 +23,7 @@
 #define __FDMDV2_MAIN__
 
 #include "config.h"
+#include <atomic>
 #include <wx/wx.h>
 
 #include <wx/tglbtn.h>
@@ -245,9 +246,9 @@ class MainApp : public wxApp
 
         // tone interferer simulation
 
-        bool       m_tone;
-        int        m_tone_freq_hz;
-        int        m_tone_amplitude;
+        std::atomic<bool> m_tone; // read by RX thread
+        std::atomic<int> m_tone_freq_hz; // read by RX thread
+        std::atomic<int> m_tone_amplitude; // read by RX thread
 
         // debugging 700D audio break up
 

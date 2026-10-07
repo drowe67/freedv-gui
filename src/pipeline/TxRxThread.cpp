@@ -123,6 +123,12 @@ extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
 extern std::atomic<int64_t> g_rxMutedUntilNs;
+extern std::atomic<bool> g_noiseReductionEnabled;
+extern std::atomic<bool> g_monitorTxAudio;
+extern std::atomic<bool> g_monitorVoiceKeyerAudio;
+extern std::atomic<float> g_monitorTxAudioVol;
+extern std::atomic<float> g_monitorVoiceKeyerAudioVol;
+extern std::atomic<int> g_noiseSNR;
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
@@ -217,7 +223,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessRNNoise->appendPipelineStep(rnnoiseStep);
         
         auto eitherOrRNNoiseStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_noiseReductionEnabled.load(std::memory_order_acquire); },
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
@@ -392,12 +398,12 @@ void TxRxThread::initializePipeline_()
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto toneInterfererStep = new ToneInterfererStep(
             inputSampleRate_,
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz; },
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude; },
+            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz.load(std::memory_order_acquire); },
+            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return &g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone; },
+            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone.load(std::memory_order_acquire); },
             toneInterfererStep,
             bypassToneInterferer
         );
@@ -426,7 +432,7 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, outputSampleRate_,
             +[]() FREEDV_NONBLOCKING { return &g_State; },
             +[]() FREEDV_NONBLOCKING { return g_channel_noise.load(std::memory_order_acquire); },
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().appConfiguration.noiseSNR.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_noiseSNR.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return g_RxFreqOffsetHz.load(std::memory_order_relaxed); },
             +[]() FREEDV_NONBLOCKING { return &g_sig_pwr_av; },
             helper_
@@ -456,13 +462,13 @@ void TxRxThread::initializePipeline_()
             
             auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, +[]() FREEDV_NONBLOCKING {
                 float volInDb = 0;
-                if (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing())
+                if (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire))
                 {
-                    volInDb = NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudioVol.getWithoutProcessing();
+                    volInDb = g_monitorVoiceKeyerAudioVol.load(std::memory_order_acquire);
                 }
                 else
                 {
-                    volInDb = NonblockingWxGetApp().appConfiguration.monitorTxAudioVol.getWithoutProcessing();
+                    volInDb = g_monitorTxAudioVol.load(std::memory_order_acquire);
                 }
                 
                 return std::exp(volInDb/20.0f * std::log(10.0f));
@@ -481,8 +487,8 @@ void TxRxThread::initializePipeline_()
 
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 +[]() FREEDV_NONBLOCKING { return 
-                    (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) || 
-                    (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()); },
+                    (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) || 
+                    (g_tx.load(std::memory_order_acquire) && g_monitorTxAudio.load(std::memory_order_acquire)); },
                 monitorPipeline,
                 eitherOrMuteStep
             );
@@ -496,8 +502,8 @@ void TxRxThread::initializePipeline_()
                 +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) ||
                     (
                         (g_recVoiceKeyerFile.load(std::memory_order_relaxed)) ||
-                        (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-                        (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
+                        (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) ||
+                        (g_tx.load(std::memory_order_acquire) && g_monitorTxAudio.load(std::memory_order_acquire))
                     ); 
                 },
                 bypassRfDemodulationPipeline,
@@ -586,8 +592,8 @@ void TxRxThread::initializePipeline_()
                     std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() <
                     g_rxMutedUntilNs.load(std::memory_order_acquire);
                 return
-                    (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-                    (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
+                    (tmpVkTx && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) ||
+                    (tmpTx && g_monitorTxAudio.load(std::memory_order_acquire)) ||
                     (!tmpVkTx && ((tmpHalfDuplex && !tmpTx && !tmpWaitingForRadioRx) || !tmpHalfDuplex));
             },
             activeRxPipeline,
