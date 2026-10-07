@@ -188,7 +188,9 @@ void TxRxThread::initializePipeline_()
                     sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlayFileToMicIn();});
+                    // Fire-and-forget: blocking this thread on the UI thread
+                    // would stall file I/O and drain the playback FIFO.
+                    g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                 }
             }
             );
@@ -360,7 +362,9 @@ void TxRxThread::initializePipeline_()
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlaybackFileFromRadio();});
+                    // Fire-and-forget: blocking this thread on the UI thread
+                    // would stall file I/O and drain the playback FIFO.
+                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
         );
