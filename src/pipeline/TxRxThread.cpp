@@ -122,6 +122,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<bool> g_noiseReductionEnabled;
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
@@ -216,7 +217,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessRNNoise->appendPipelineStep(rnnoiseStep);
         
         auto eitherOrRNNoiseStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_noiseReductionEnabled.load(std::memory_order_acquire); },
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
