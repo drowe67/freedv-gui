@@ -968,6 +968,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reduce GUI thread paint and FreeDV Reporter overhead. (PR #1515, #1530)
     * PulseAudio: give each device its own connection. (PR #1523)
     * Fix possible deadlock on playback completion. (PR #1533)
+    * Fix FreeDV hanging when starting the Voice Keyer with a cloud-backed file. (PR #1534)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
