@@ -31,6 +31,7 @@
 #include <random>
 #include <chrono>
 #include <climits>
+#include <mutex>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
@@ -204,6 +205,13 @@ std::atomic<float>  g_TxFreqOffsetHz;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
+
+// Protects the lifetime of the SNDFILE handles read by PlaybackStep
+// (g_sfPlayFile and g_sfPlayFileFromRadio). Kept separate from
+// g_mutexProtectingCallbackData so that slow file reads/decodes on the
+// playback thread can't stall the UI thread. If both are needed, take
+// g_mutexProtectingCallbackData first.
+std::mutex g_mutexProtectingPlayFiles;
 
 // End of TX state control
 std::atomic<bool> endingTx;
@@ -1745,11 +1753,14 @@ MainFrame::~MainFrame()
     }
     sox_biquad_finish();
 
-    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
-    if (playFile != NULL)
     {
-        sf_close(playFile);
-        g_sfPlayFile.store(NULL, std::memory_order_release);
+        std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
+        auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+        if (playFile != NULL)
+        {
+            sf_close(playFile);
+            g_sfPlayFile.store(NULL, std::memory_order_release);
+        }
     }
     if (g_sfRecFile != NULL)
     {
