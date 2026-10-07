@@ -621,8 +621,8 @@ void MainFrame::onRigPttChange_(bool pttState)
     // resume RX once audio captured while it was transmitting has made it
     // through the input device.
     auto now = std::chrono::steady_clock::now();
-    auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    if (g_rxMutedUntilNs.load(std::memory_order_acquire) > nowNs)
+    auto nowInNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    if (g_rxMutedUntilNs.load(std::memory_order_acquire) > nowInNanoseconds)
     {
         auto resumeAt = now + std::chrono::microseconds(g_rxInputLatencyUs.load(std::memory_order_acquire));
         g_rxMutedUntilNs.store(
