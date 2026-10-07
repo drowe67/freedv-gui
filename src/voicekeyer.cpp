@@ -12,6 +12,8 @@ std::atomic<bool>   g_recVoiceKeyerFile;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::atomic<bool> endingTx;
+extern std::atomic<bool> g_monitorVoiceKeyerAudio;
+extern std::atomic<float> g_monitorVoiceKeyerAudioVol;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -217,13 +219,14 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorVoiceKeyerAudio = event.IsChecked();
+    g_monitorVoiceKeyerAudio.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudio, std::memory_order_release);
     adjustMonitorVKVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
     
 }
 
 void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& )
 {
-    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol);
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol, g_monitorVoiceKeyerAudioVol);
     popup->Popup();
 }
 
