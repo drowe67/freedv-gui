@@ -61,7 +61,7 @@ private:
     std::shared_ptr<State> state_ = std::make_shared<State>();
 
     static bool getFileMetadata_(std::string const& path, long long& size, time_t& modTime);
-    static void load_(std::shared_ptr<State> state, std::string path);
+    static void load_(std::shared_ptr<State> const& state, std::string const& path);
 };
 
 #endif // VOICEKEYER_CACHE_H

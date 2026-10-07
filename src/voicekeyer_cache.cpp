@@ -152,7 +152,7 @@ bool VoiceKeyerFileCache::getFileMetadata_(std::string const& path, long long& s
     return true;
 }
 
-void VoiceKeyerFileCache::load_(std::shared_ptr<State> state, std::string path)
+void VoiceKeyerFileCache::load_(std::shared_ptr<State> const& state, std::string const& path)
 {
     auto entry = std::make_shared<Entry>();
     entry->path = path;
