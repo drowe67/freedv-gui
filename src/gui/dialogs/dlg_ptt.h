@@ -24,8 +24,6 @@
 
 #include "../../main.h"
 #include <wx/settings.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/xrc/xh_bmp.h>
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <wx/statbox.h>
