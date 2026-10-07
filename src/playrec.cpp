@@ -13,6 +13,9 @@
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::mutex g_mutexProtectingPlayFiles;
 std::atomic<SNDFILE*> g_sfPlayFile;
+// Read state for g_sfPlayFile when it was opened from VoiceKeyerFileCache.
+// Must be released only after g_sfPlayFile is closed.
+std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
 std::atomic<bool>                g_playFileToMicIn;
 std::atomic<bool>   g_loopPlayFileToMicIn;
 int                 g_playFileToMicInEventId;
@@ -76,6 +79,7 @@ void MainFrame::StopPlayFileToMicIn(void)
             std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
             sf_close(g_sfPlayFile.load(std::memory_order_acquire));
             g_sfPlayFile.store(nullptr, std::memory_order_release);
+            g_sfPlayFileReader = nullptr;
         }
         SetStatusText(wxT(""));
         VoiceKeyerProcessEvent(VK_PLAY_FINISHED);

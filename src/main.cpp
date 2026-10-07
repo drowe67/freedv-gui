@@ -166,6 +166,7 @@ int                 g_AEstatus2[4];
 // playing and recording from sound files
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
 extern std::atomic<bool>                g_playFileToMicIn;
 extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -1179,6 +1180,7 @@ setDefaultMode:
     {
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
         vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        vkFileCache_.preload(vkFileName_);
         
         m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
         
@@ -1760,6 +1762,7 @@ MainFrame::~MainFrame()
         {
             sf_close(playFile);
             g_sfPlayFile.store(NULL, std::memory_order_release);
+            g_sfPlayFileReader = nullptr;
         }
     }
     if (g_sfRecFile != NULL)
