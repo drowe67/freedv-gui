@@ -122,6 +122,7 @@ extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
+extern std::atomic<int64_t> g_rxMutedUntilNs;
 extern std::atomic<bool> g_noiseReductionEnabled;
 extern std::atomic<bool> g_monitorTxAudio;
 extern std::atomic<bool> g_monitorVoiceKeyerAudio;
@@ -585,10 +586,15 @@ void TxRxThread::initializePipeline_()
                 bool tmpTx = g_tx.load(std::memory_order_acquire);
                 bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
                 bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+                
+                // After TX, stay muted until the radio has actually returned to RX.
+                bool tmpWaitingForRadioRx = 
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() <
+                    g_rxMutedUntilNs.load(std::memory_order_acquire);
                 return
                     (tmpVkTx && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) ||
                     (tmpTx && g_monitorTxAudio.load(std::memory_order_acquire)) ||
-                    (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
+                    (!tmpVkTx && ((tmpHalfDuplex && !tmpTx && !tmpWaitingForRadioRx) || !tmpHalfDuplex));
             },
             activeRxPipeline,
             activeRxMutePipeline

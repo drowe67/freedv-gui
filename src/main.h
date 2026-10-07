@@ -665,6 +665,7 @@ class MainFrame : public TopFrame
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
+        void onRigPttChange_(bool pttState);
         void onRadioDisconnected_(IRigController* ptr);
 
         // Audio error handlers
