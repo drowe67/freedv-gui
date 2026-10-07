@@ -7,6 +7,7 @@ set(FREEDV_SOURCES
     util.cpp
     eq.cpp
     voicekeyer.cpp
+    voicekeyer_cache.cpp
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
