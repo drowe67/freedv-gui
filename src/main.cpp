@@ -132,6 +132,13 @@ float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
+
+// In half duplex, RX (including the waterfall/spectrum) stays muted until this
+// steady_clock time (in ns) after TX ends, so that we don't display or decode
+// audio from the radio while it's still transmitting. See
+// MainFrame::onRigPttChange_().
+std::atomic<int64_t> g_rxMutedUntilNs(0);
+std::atomic<int64_t> g_rxInputLatencyUs(0);
 std::atomic<bool>  g_bwExpandEnabled;
 // sending and receiving Call Sign data
 std::atomic<GenericFIFO<short>*> g_txDataInFifo;
