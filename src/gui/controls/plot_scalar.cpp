@@ -33,7 +33,6 @@
 #include <memory>
 #include <vector>
 
-#include "main.h"
 #include "defines.h"
 
 #include "plot_scalar.h"

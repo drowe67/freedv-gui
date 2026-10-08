@@ -29,7 +29,6 @@
 #include <wx/msw/wrapwin.h>
 #endif // defined(_WIN32)
 
-#include "main.h"
 #include "defines.h"
 
 #include "plot.h"

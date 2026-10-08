@@ -21,7 +21,6 @@
 
 #include <wx/wx.h>
 
-#include "main.h"
 #include "defines.h"
 #include "tot_warning.h"
 

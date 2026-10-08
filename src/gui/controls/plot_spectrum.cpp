@@ -23,7 +23,6 @@
 #include <string.h>
 #include <wx/wx.h>
 
-#include "main.h"
 #include "defines.h"
 #include "plot_spectrum.h"
 

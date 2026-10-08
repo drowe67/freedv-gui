@@ -23,7 +23,6 @@
 #include <wx/wx.h>
 #include <wx/graphics.h>
 
-#include "main.h"
 #include "defines.h"
 
 #include "plot_scatter.h"

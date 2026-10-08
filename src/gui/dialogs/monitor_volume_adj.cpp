@@ -24,7 +24,6 @@
 #include <wx/panel.h>
 #include <wx/statbox.h>
 
-#include "main.h"
 #include "defines.h"
 
 #include "monitor_volume_adj.h"

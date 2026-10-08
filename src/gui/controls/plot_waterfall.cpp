@@ -27,7 +27,6 @@
 #include <wx/wx.h>
 #include "os/os_interface.h"
 
-#include "main.h"
 #include "defines.h"
 #include "plot_waterfall.h"
 
