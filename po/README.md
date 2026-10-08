@@ -20,9 +20,9 @@ FreeDV uses [GNU gettext](https://www.gnu.org/software/gettext/) via wxWidgets f
 5. Rebuild FreeDV. The translation will be used automatically when your operating system's
    language is set to that language.
 6. To force FreeDV to execute in a given language for testing (replace `pt_BR` as appropriate):
-   a. macOS: `./src/FreeDV.app/Contents/MacOS/FreeDV -AppleLanguages '(pt_BR)'`
-   b. Linux: `LANG=pt_BR src/freedv`
-   c. Windows: [Locale Emulator](https://github.com/xupefei/Locale-Emulator) may be of help (note: project is no longer being developed)
+   * macOS: `./src/FreeDV.app/Contents/MacOS/FreeDV -AppleLanguages '(pt_BR)'`
+   * Linux: `LANG=pt_BR src/freedv`
+   * Windows: [Locale Emulator](https://github.com/xupefei/Locale-Emulator) may be of help (note: project is no longer being developed)
 
 Notes for translators:
 
