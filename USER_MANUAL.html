@@ -1186,6 +1186,13 @@ displays. (PR #1514)</li>
 <li>Reduce GUI thread paint and FreeDV Reporter overhead. (PR
 #1515)</li>
 <li>PulseAudio: give each device its own connection. (PR #1523)</li>
+<li>Fix possible deadlock on playback completion. (PR #1533)</li>
+<li>Keep RX muted after TX until the radio confirms PTT off. (PR
+#1536)</li>
+<li>Fix FreeDV hanging when starting the Voice Keyer with a cloud-backed
+file. (PR #1534)</li>
+<li>Fix data races on settings read by the audio threads. (PR
+#1535)</li>
 </ul></li>
 <li>Build system:
 <ul>

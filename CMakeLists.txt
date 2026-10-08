@@ -89,7 +89,11 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
-add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
+# Written to a generated source file rather than passed as a compile
+# definition: a definition would change every compile command each day,
+# forcing a full rebuild (wxWidgets included) and defeating ccache.
+# configure_file() only rewrites the file when the date changes.
+configure_file(cmake/build_date.cpp.in ${CMAKE_BINARY_DIR}/generated/build_date.cpp @ONLY)
 
 # Generate custom CTest config
 configure_file(cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
@@ -117,6 +121,12 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -g")
 endif(APPLE)
+
+# Clang otherwise embeds header timestamps in precompiled headers, which
+# makes every fresh checkout produce a different PCH and miss in ccache.
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options("SHELL:-Xclang -fno-pch-timestamp")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

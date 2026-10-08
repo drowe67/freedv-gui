@@ -31,6 +31,7 @@
 #include <random>
 #include <chrono>
 #include <climits>
+#include <mutex>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
@@ -41,6 +42,7 @@
 
 #include "defines.h"
 #include "git_version.h"
+#include "build_date.h"
 #include "main.h"
 #include "os/os_interface.h"
 #include "freedv_interface.h"
@@ -121,6 +123,24 @@ float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
+
+// In half duplex, RX (including the waterfall/spectrum) stays muted until this
+// steady_clock time (in ns) after TX ends, so that we don't display or decode
+// audio from the radio while it's still transmitting. See
+// MainFrame::onRigPttChange_().
+std::atomic<int64_t> g_rxMutedUntilNs(0);
+std::atomic<int64_t> g_rxInputLatencyUs(0);
+
+// Copies of configuration values read by the audio threads. The configuration
+// elements themselves aren't thread-safe, so the UI thread must update these
+// whenever the corresponding setting changes.
+std::atomic<bool>  g_monitorTxAudio;
+std::atomic<bool>  g_monitorVoiceKeyerAudio;
+std::atomic<float> g_monitorTxAudioVol;
+std::atomic<float> g_monitorVoiceKeyerAudioVol;
+std::atomic<int>   g_noiseSNR;
+std::atomic<bool>  g_noiseReductionEnabled;
+
 std::atomic<bool>  g_bwExpandEnabled;
 
 // tx/rx processing states
@@ -152,6 +172,7 @@ int                 g_AEstatus2[4];
 // playing and recording from sound files
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
 extern std::atomic<bool>                g_playFileToMicIn;
 extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
@@ -191,6 +212,13 @@ std::atomic<float>  g_TxFreqOffsetHz;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
+
+// Protects the lifetime of the SNDFILE handles read by PlaybackStep
+// (g_sfPlayFile and g_sfPlayFileFromRadio). Kept separate from
+// g_mutexProtectingCallbackData so that slow file reads/decodes on the
+// playback thread can't stall the UI thread. If both are needed, take
+// g_mutexProtectingCallbackData first.
+std::mutex g_mutexProtectingPlayFiles;
 
 // End of TX state control
 std::atomic<bool> endingTx;
@@ -912,6 +940,15 @@ void MainFrame::loadConfiguration_()
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = 0;
     }
 
+    // Load noise reduction state
+    g_noiseReductionEnabled.store(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable, std::memory_order_release);
+    
+    // Load TX/VK monitor state
+    g_monitorTxAudio.store(wxGetApp().appConfiguration.monitorTxAudio, std::memory_order_release);
+    g_monitorVoiceKeyerAudio.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudio, std::memory_order_release);
+    g_monitorTxAudioVol.store(wxGetApp().appConfiguration.monitorTxAudioVol, std::memory_order_release);
+    g_monitorVoiceKeyerAudioVol.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol, std::memory_order_release);
+    
     // Load BW expander state
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release);
     
@@ -1085,6 +1122,7 @@ void MainFrame::loadConfiguration_()
     {
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
         vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        vkFileCache_.preload(vkFileName_);
         
         m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
         
@@ -1616,11 +1654,15 @@ MainFrame::~MainFrame()
     }
     sox_biquad_finish();
 
-    auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
-    if (playFile != NULL)
     {
-        sf_close(playFile);
-        g_sfPlayFile.store(NULL, std::memory_order_release);
+        std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
+        auto playFile = g_sfPlayFile.load(std::memory_order_acquire);
+        if (playFile != NULL)
+        {
+            sf_close(playFile);
+            g_sfPlayFile.store(NULL, std::memory_order_release);
+            g_sfPlayFileReader = nullptr;
+        }
     }
     auto recFile = g_sfRecFile.load(std::memory_order_acquire);
     auto recFileFromModulator = g_sfRecFileFromModulator.load(std::memory_order_acquire);
