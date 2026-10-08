@@ -150,6 +150,10 @@ void MainFrame::OpenSerialPort(void)
                 });
             };
 
+            wxGetApp().rigPttController->onPttChange += [&](IRigPttController*, bool state) {
+                onRigPttChange_(state);
+            };
+
             wxGetApp().rigPttController->connect();
         }
     }

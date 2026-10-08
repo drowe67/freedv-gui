@@ -14,6 +14,7 @@
 #include "main.h"
 
 #include "git_version.h"
+#include "build_date.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_setup_wizard.h"
@@ -28,6 +29,15 @@
 
 extern std::atomic<int>   g_analog;
 extern std::atomic<bool>   g_tx;
+extern std::atomic<int64_t> g_rxMutedUntilNs;
+extern std::atomic<int64_t> g_rxInputLatencyUs;
+
+// Maximum time to keep RX muted after TX while waiting for the radio to
+// confirm that it has stopped transmitting.
+static constexpr auto RX_MUTE_MAX_WAIT_FOR_RADIO = std::chrono::milliseconds(2000);
+
+extern std::atomic<bool>  g_monitorTxAudio;
+extern std::atomic<float> g_monitorTxAudioVol;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern short *g_error_hist, *g_error_histn;
@@ -212,6 +222,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
+            vkFileCache_.preload(vkFileName_);
             wxGetApp().appConfiguration.voiceKeyerWaveFile = "";
             setVoiceKeyerButtonLabel_("");
         }
@@ -493,6 +504,32 @@ void MainFrame::onRadioDisconnected_(IRigController*)
     });
 }
 
+//-------------------------------------------------------------------------
+// onRigPttChange_(): called (from the rig control thread) once the radio
+// has acknowledged a PTT change.
+//-------------------------------------------------------------------------
+void MainFrame::onRigPttChange_(bool pttState)
+{
+    if (pttState)
+    {
+        return;
+    }
+    
+    // The radio is back in RX. If we're still waiting for that after TX,
+    // resume RX once audio captured while it was transmitting has made it
+    // through the input device.
+    auto now = std::chrono::steady_clock::now();
+    auto nowInNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    if (g_rxMutedUntilNs.load(std::memory_order_acquire) > nowInNanoseconds)
+    {
+        auto resumeAt = now + std::chrono::microseconds(g_rxInputLatencyUs.load(std::memory_order_acquire));
+        g_rxMutedUntilNs.store(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(resumeAt.time_since_epoch()).count(),
+            std::memory_order_release);
+        log_info("Radio confirmed PTT off, resuming RX in %d us", (int)g_rxInputLatencyUs.load(std::memory_order_acquire));
+    }
+}
+
 // Attempt to talk to rig using Hamlib
 
 bool MainFrame::OpenHamlibRig() {
@@ -549,6 +586,10 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
             onFrequencyModeChange_(ptr, freq, mode);
         };
+        
+        wxGetApp().rigPttController->onPttChange += [&](IRigPttController*, bool state) {
+            onRigPttChange_(state);
+        };
         wxGetApp().rigFrequencyController->connect();
         return true;
     }
@@ -572,6 +613,9 @@ void MainFrame::OpenOmniRig()
     if (!wxGetApp().rigPttController)
     {
         wxGetApp().rigPttController = tmp;
+        wxGetApp().rigPttController->onPttChange += [&](IRigPttController*, bool state) {
+            onRigPttChange_(state);
+        };
     }
 
     wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
@@ -1032,12 +1076,13 @@ int MainApp::FilterEvent(wxEvent& event)
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+    g_monitorTxAudio.store(wxGetApp().appConfiguration.monitorTxAudio, std::memory_order_release);
     adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
 }
 
 void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 {
-    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol, g_monitorTxAudioVol);
     popup->Popup();
 }
 
@@ -1431,6 +1476,19 @@ void MainFrame::togglePTT(void) {
                 wxGetApp().Yield(true);
             }
         }
+        // The radio keeps transmitting until it has processed the PTT-off
+        // request below, so keep RX muted until it confirms (see
+        // onRigPttChange_()). If it never does, give up after a timeout.
+        if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
+        {
+            auto inDevice = rxInSoundDevice;
+            g_rxInputLatencyUs.store(inDevice ? inDevice->getLatencyInMicroseconds() : 0, std::memory_order_release);
+            g_rxMutedUntilNs.store(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    (std::chrono::steady_clock::now() + RX_MUTE_MAX_WAIT_FOR_RADIO).time_since_epoch()).count(),
+                std::memory_order_release);
+        }
+        
         g_tx.store(false, std::memory_order_release);
         endingTx.store(false, std::memory_order_release);
         

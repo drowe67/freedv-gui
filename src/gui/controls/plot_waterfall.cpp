@@ -32,6 +32,11 @@
 
 #if defined(__APPLE__)
 wxGraphicsBitmap CreateWaterfallBitmapInWindowColorSpace(wxGraphicsContext* gc, wxWindow* window, const wxImage& image);
+WaterfallCanvas* CreateWaterfallCanvas(wxWindow* window, int width, int height);
+void DestroyWaterfallCanvas(WaterfallCanvas* canvas);
+bool WaterfallCanvasHasSize(const WaterfallCanvas* canvas, int width, int height);
+void WaterfallCanvasPushBlock(WaterfallCanvas* canvas, const wxImage& block);
+wxGraphicsBitmap WaterfallCanvasGetBitmap(WaterfallCanvas* canvas, wxGraphicsContext* gc);
 #endif // defined(__APPLE__)
 
 // Tweak accordingly
@@ -92,6 +97,9 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int
     dyImageData_ = nullptr;
     dy_ = 0;
     tmpImage_ = nullptr;
+#if defined(__APPLE__)
+    canvas_ = nullptr;
+#endif // defined(__APPLE__)
     leftOffset_ = 0;
     graticuleLabelsValid_ = false;
     graticuleBitmapScale_ = 0;
@@ -275,6 +283,21 @@ void PlotWaterfall::draw(wxGraphicsContext* gc, bool repaintDataOnly)
     }
 
     int yOffset = 0;
+#if defined(__APPLE__)
+    if (canvas_ != nullptr)
+    {
+        wxGraphicsBitmap bitmap = WaterfallCanvasGetBitmap(canvas_, gc);
+        if (!bitmap.IsNull())
+        {
+            // The canvas is opaque, so copy it rather than blending it over what's
+            // underneath: CoreGraphics then does a straight memory copy.
+            gc->SetCompositionMode(wxCOMPOSITION_SOURCE);
+            gc->DrawBitmap(bitmap, PLOT_BORDER + leftOffset_, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+            gc->SetCompositionMode(wxCOMPOSITION_OVER);
+            yOffset = m_imgHeight;
+        }
+    }
+#endif // defined(__APPLE__)
     for (auto& slice : waterfallSlices_)
     {
         gc->DrawBitmap(slice.gfxBitmap, PLOT_BORDER + leftOffset_, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, slice.height);
@@ -436,7 +459,7 @@ void PlotWaterfall::rebuildGraticuleBitmaps_(wxGraphicsContext* ctx)
     bitmap.CreateScaled(size.GetWidth(), size.GetHeight(), wxBITMAP_SCREEN_DEPTH, scale);
     {
         wxMemoryDC dc(bitmap);
-        dc.SetBackground(wxBrush(GetBackgroundColour()));
+        dc.SetBackground(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW)));
         dc.Clear();
 
         // Create the label font from the window's context: CreateFont() sizes it for its
@@ -794,6 +817,21 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
             std::max(1, (int)std::lround(dy * scale)),
             wxIMAGE_QUALITY_NEAREST);
 
+#if defined(__APPLE__)
+        int canvasWidth = std::max(1, (int)std::lround(m_imgWidth * scale));
+        int canvasHeight = std::max(1, (int)std::lround(m_imgHeight * scale));
+        if (!WaterfallCanvasHasSize(canvas_, canvasWidth, canvasHeight))
+        {
+            DestroyWaterfallCanvas(canvas_);
+            canvas_ = CreateWaterfallCanvas(this, canvasWidth, canvasHeight);
+        }
+        if (canvas_ != nullptr)
+        {
+            WaterfallCanvasPushBlock(canvas_, scaledImage);
+            return;
+        }
+#endif // defined(__APPLE__)
+
         // Convert once, here, rather than on every paint: a block's pixels never change
         // again, and it will be composited on each of the frames it spends scrolling down
         // the screen.
@@ -923,6 +961,10 @@ void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent&)
 void PlotWaterfall::cleanupSlices_()
 {
     waterfallSlices_.clear();
+#if defined(__APPLE__)
+    DestroyWaterfallCanvas(canvas_);
+    canvas_ = nullptr;
+#endif // defined(__APPLE__)
 
     dy_ = 0;
     if (dyImageData_ != nullptr)

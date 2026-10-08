@@ -19,8 +19,22 @@ target_compile_options(fdv_gui_controls PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 target_link_libraries(fdv_gui_controls PUBLIC fdv_util fdv_audio_pipeline)
 
 if(BOOTSTRAP_WXWIDGETS)
-    add_dependencies(fdv_gui_controls wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+    add_dependencies(fdv_gui_controls wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
     target_compile_definitions(fdv_gui_controls PRIVATE ${WXBUILD_BUILD_DEFS})
     target_include_directories(fdv_gui_controls PRIVATE ${WXBUILD_INCLUDES})
 endif(BOOTSTRAP_WXWIDGETS)
 
+
+# PlotScalar draws its plot area through cairo directly when wxGTK uses it (see
+# PLOT_SCALAR_CAIRO_SURFACE in plot_scalar.cpp). Unlike including GTK's own headers,
+# this is safe whichever GTK version wxWidgets was built for.
+if(LINUX)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(CAIRO QUIET cairo)
+        if(CAIRO_FOUND)
+            target_compile_definitions(fdv_gui_controls PRIVATE HAS_CAIRO)
+            target_include_directories(fdv_gui_controls PRIVATE ${CAIRO_INCLUDE_DIRS})
+        endif(CAIRO_FOUND)
+    endif(PkgConfig_FOUND)
+endif(LINUX)

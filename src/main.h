@@ -23,6 +23,7 @@
 #define __FDMDV2_MAIN__
 
 #include "config.h"
+#include <atomic>
 #include <wx/wx.h>
 
 #include <wx/tglbtn.h>
@@ -93,6 +94,7 @@
 #include "pipeline/LinkStep.h"
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
+#include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -232,9 +234,9 @@ class MainApp : public wxApp
 
         // tone interferer simulation
 
-        bool       m_tone;
-        int        m_tone_freq_hz;
-        int        m_tone_amplitude;
+        std::atomic<bool> m_tone; // read by RX thread
+        std::atomic<int> m_tone_freq_hz; // read by RX thread
+        std::atomic<int> m_tone_amplitude; // read by RX thread
 
         // debugging 700D audio break up
 
@@ -590,6 +592,7 @@ class MainFrame : public TopFrame
         int tuneLoadedLevel_{-200};
         
         std::string vkFileName_;
+        VoiceKeyerFileCache vkFileCache_;
         
         wxMenu* voiceKeyerPopupMenu_;
         wxMenu* pttPopupMenu_;
@@ -640,6 +643,7 @@ class MainFrame : public TopFrame
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
+        void onRigPttChange_(bool pttState);
         void onRadioDisconnected_(IRigController* ptr);
 
         // Audio error handlers
