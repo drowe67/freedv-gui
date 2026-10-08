@@ -112,10 +112,17 @@ foreach(lang ${FREEDV_LINGUAS})
     endif()
 
     # On macOS the catalogs are copied into the app bundle instead (see src/CMakeLists.txt).
+    # On Windows the catalogs are in the same folder as the .exe (see wxFileTranslationsLoader/wxStandardPaths).
+    if(WIN32)
+        set(MO_FILE_DEST bin/${lang})
+    else(WIN32)
+        set(MO_FILE_DEST share/locale/${lang})
+    endif(WIN32)
+
     if(NOT APPLE)
         install(
             DIRECTORY ${mo_dir}
-            DESTINATION share/locale/${lang}
+            DESTINATION ${MO_FILE_DEST}
             FILES_MATCHING PATTERN "*.mo")
     endif(NOT APPLE)
 endforeach(lang)
