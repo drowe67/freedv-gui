@@ -149,16 +149,32 @@ enum
 #define PLUGIN_MAX_PARAMS 4
 
 // Locale support - automatically switch to left-to-right rendering if we don't have
-// a translation for a RTL language (e.g. Arabic or Hebrew).
+// a translation for a RTL language (e.g. Arabic or Hebrew). We don't explicitly
+// check for RTL here, just that we have a translation available. No translation 
+// means English layout/UI.
+//
+// Assumption: the system will use a more generic translation if there's no country
+// specific one available (example: an 'ar' translation exists but not 'ar_JO').
 #define WXWIDGETS_SET_LAYOUT_DIRECTION { \
-    if (wxGetApp().GetLayoutDirection() == wxLayout_RightToLeft || wxGetApp().GetLayoutDirection() == wxLayout_Default) \
-    { \
-        wxTranslations* translations = wxTranslations::Get(); \
+    bool foundLanguage = false; \
+    wxTranslations* translations = wxTranslations::Get(); \
+    if (translations != nullptr) { \
         wxString bestLanguage = translations->GetBestTranslation("freedv"); \
-        if (bestLanguage == "" || bestLanguage.StartsWith("en")) \
-        { \
-            SetLayoutDirection(wxLayout_LeftToRight); \
+        wxArrayString availTranslations = translations->GetAvailableTranslations("freedv"); \
+        int rhsUnderscore = bestLanguage.Find('_'); \
+        if (rhsUnderscore != wxNOT_FOUND) bestLanguage = bestLanguage.Left(rhsUnderscore); \
+        for (size_t i = 0; i < availTranslations.GetCount(); i++) { \
+            wxString tmp = availTranslations.Item(i); \
+            int lhsUnderscore = tmp.Find('_'); \
+            if (lhsUnderscore != wxNOT_FOUND) tmp = tmp.Left(lhsUnderscore); \
+            if (tmp == bestLanguage) { \
+                foundLanguage = true; \
+                break; \
+            } \
         } \
+    } \
+    if (!foundLanguage) { \
+        SetLayoutDirection(wxLayout_LeftToRight); \
     } \
 }
 
