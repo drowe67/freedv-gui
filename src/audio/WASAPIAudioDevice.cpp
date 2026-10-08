@@ -475,9 +475,32 @@ void WASAPIAudioDevice::start()
             // Temporarily raise priority of task
             setHelperRealTime();
 
+            // The render/capture event fires once per buffer period. If it
+            // fails to fire within 2 periods, the device is stalled: log the
+            // stall (once per episode) instead of silently underflowing, and
+            // poll at the faster cadence so we resume as soon as the driver
+            // recovers. Clamp to [25, 100] ms so devices with unusually large
+            // or small buffers still get a sane timeout.
+            UINT32 eventTimeoutMs = (2000 * bufferFrameCount_) / sampleRate_;
+            if (eventTimeoutMs < 25) eventTimeoutMs = 25;
+            if (eventTimeoutMs > 100) eventTimeoutMs = 100;
+            UINT32 consecutiveTimeouts = 0;
+
             while (isRenderCaptureRunning_)
             {
-                WaitForSingleObject(renderCaptureEvent_, 100);
+                DWORD waitResult = WaitForSingleObject(renderCaptureEvent_, eventTimeoutMs);
+                if (waitResult == WAIT_TIMEOUT)
+                {
+                    if (++consecutiveTimeouts == 1)
+                    {
+                        log_warn("WASAPI render/capture event did not fire within %d ms (device may be stalled)", eventTimeoutMs);
+                    }
+                }
+                else if (consecutiveTimeouts > 0)
+                {
+                    log_warn("WASAPI render/capture event resumed after %d timeout(s)", consecutiveTimeouts);
+                    consecutiveTimeouts = 0;
+                }
                 if (isRenderCaptureRunning_)
                 {
                     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)

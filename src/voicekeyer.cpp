@@ -12,6 +12,8 @@ std::atomic<bool>   g_recVoiceKeyerFile;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 extern std::atomic<bool> endingTx;
+extern std::atomic<bool> g_monitorVoiceKeyerAudio;
+extern std::atomic<float> g_monitorVoiceKeyerAudioVol;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -24,6 +26,9 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         g_sfRecMicFile.store(nullptr, std::memory_order_release);
         SetStatusText(wxT(""));
         g_mutexProtectingCallbackData.Unlock();
+        
+        // Cache the newly recorded file for playback.
+        vkFileCache_.preload(vkFileName_);
         
         m_togBtnAnalog->Enable(true);
         m_togBtnVoiceKeyer->SetValue(false);
@@ -197,6 +202,7 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
     wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     vkFileName_ = soundFile;
+    vkFileCache_.preload(vkFileName_);
     
     m_togBtnVoiceKeyer->SetToolTip(wxString::Format(_("Toggle Voice Keyer using file %s. Right-click for additional options."), wxGetApp().appConfiguration.voiceKeyerWaveFile.get()));
     setVoiceKeyerButtonLabel_(fileNameWithoutExt);
@@ -217,17 +223,20 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorVoiceKeyerAudio = event.IsChecked();
+    g_monitorVoiceKeyerAudio.store(wxGetApp().appConfiguration.monitorVoiceKeyerAudio, std::memory_order_release);
     adjustMonitorVKVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
     
 }
 
 void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& )
 {
-    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol);
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol, g_monitorVoiceKeyerAudioVol);
     popup->Popup();
 }
 
 extern std::atomic<SNDFILE*> g_sfPlayFile;
+extern std::unique_ptr<VoiceKeyerMemoryReader> g_sfPlayFileReader;
+extern std::mutex g_mutexProtectingPlayFiles;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
@@ -242,7 +251,15 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
+    // Prefer the in-memory copy so that we don't block on file I/O here (and
+    // delay TX) if e.g. the file needs to be re-downloaded from cloud storage.
+    std::unique_ptr<VoiceKeyerMemoryReader> tmpPlayFileReader;
+    SNDFILE* tmpPlayFile = vkFileCache_.open(vkFileName_, &sfInfo, tmpPlayFileReader);
+    if (tmpPlayFile == nullptr)
+    {
+        sfInfo.format = 0;
+        tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
+    }
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxString::Format(_("Couldn't open: %s"), wxString::FromUTF8(vkFileName_.c_str())), wxOK);
@@ -271,7 +288,20 @@ int MainFrame::VoiceKeyerStartTx(void)
             return VK_IDLE;
         }
  
-        g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
+        {
+            std::unique_lock<std::mutex> lk(g_mutexProtectingPlayFiles);
+
+            // Close any file left over from a prior playback before replacing
+            // its reader, as the reader must outlive the file.
+            auto oldPlayFile = g_sfPlayFile.load(std::memory_order_acquire);
+            if (oldPlayFile != nullptr)
+            {
+                sf_close(oldPlayFile);
+            }
+
+            g_sfPlayFile.store(tmpPlayFile, std::memory_order_release);
+            g_sfPlayFileReader = std::move(tmpPlayFileReader);
+        }
         
         SetStatusText(wxString::Format(_("Voice Keyer: Playing file %s to mic input"), wxString::FromUTF8(vkFileName_.c_str())), 0);
         g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);
