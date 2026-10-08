@@ -23,8 +23,9 @@
 #include <string.h>
 #include <wx/wx.h>
 
+#include "main.h"
+#include "defines.h"
 #include "plot_spectrum.h"
-#include "defines.h" // for FDMDV_FCENTRE
 
 #define HZ_GRANULARITY 10
 
@@ -59,9 +60,7 @@ END_EVENT_TABLE()
 PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB, 
                            float min_mag_db, float max_mag_db, bool clickTune): PlotPanel(parent)
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     m_greyscale     = 0;
     m_Bufsz         = GetMaxClientSize();

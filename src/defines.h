@@ -148,4 +148,18 @@ enum
 
 #define PLUGIN_MAX_PARAMS 4
 
+// Locale support - automatically switch to left-to-right rendering if we don't have
+// a translation for a RTL language (e.g. Arabic or Hebrew).
+#define WXWIDGETS_SET_LAYOUT_DIRECTION { \
+    if (wxGetApp().GetLayoutDirection() == wxLayout_RightToLeft || wxGetApp().GetLayoutDirection() == wxLayout_Default) \
+    { \
+        wxTranslations* translations = wxTranslations::Get(); \
+        wxString bestLanguage = translations->GetBestTranslation("freedv"); \
+        if (bestLanguage == "" || bestLanguage.StartsWith("en")) \
+        { \
+            SetLayoutDirection(wxLayout_LeftToRight); \
+        } \
+    } \
+}
+
 #endif  //__FDMDV2_DEFINES__

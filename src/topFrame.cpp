@@ -29,6 +29,7 @@
 #include <wx/numformatter.h>
 
 #include "topFrame.h"
+#include "main.h"
 #include "defines.h"
 
 #if !wxCHECK_VERSION(3, 3, 0)
@@ -206,9 +207,7 @@ public:
 
 TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook()
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
 }
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
@@ -416,9 +415,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 //=========================================================================
 TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic

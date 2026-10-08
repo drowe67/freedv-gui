@@ -54,9 +54,7 @@ namespace
 BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& defaultRecordingSuffix) 
     : wxDialog(parent, wxID_ANY, _("Start Recording"), wxDefaultPosition, wxSize(250,-1), wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL)
 {    
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
        
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);

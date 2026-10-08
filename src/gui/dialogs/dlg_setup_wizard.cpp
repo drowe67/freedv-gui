@@ -62,6 +62,8 @@ SetupWizard::SetupWizard(wxWindow* parent)
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , m_currentPage(0)
 {
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
+    
     wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
 
     // Look for other programs' settings before building page 0, since
