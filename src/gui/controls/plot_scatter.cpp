@@ -23,6 +23,8 @@
 #include <wx/wx.h>
 #include <wx/graphics.h>
 
+#include "defines.h"
+
 #include "plot_scatter.h"
 
 BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
@@ -38,9 +40,7 @@ BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotScatter::PlotScatter(wxWindow* parent) : PlotPanel(parent)
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     clearCurrentSamples();
 

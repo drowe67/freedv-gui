@@ -66,9 +66,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 {
     volsChanged_ = false;
 
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     if (wxGetApp().customConfigFileName != "")
     {
@@ -128,20 +126,20 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     
     m_MicInEnable = new wxCheckBox(panelMicInEqualizer, wxID_ANY, _("Enable"), wxDefaultPosition,wxDefaultSize, wxCHK_2STATE);
     eqMicInSizerEnable->Add(m_MicInEnable,0,wxALIGN_CENTRE_VERTICAL|static_cast<int>(wxALL),5);
-    m_MicInDefault = new wxButton(panelMicInEqualizer, wxID_ANY, wxT("Default"));
+    m_MicInDefault = new wxButton(panelMicInEqualizer, wxID_ANY, _("Default"));
     eqMicInSizerEnable->Add(m_MicInDefault,0,static_cast<int>(wxALL) | wxALIGN_CENTRE_VERTICAL,5);
     eqMicInSizer->Add(eqMicInSizerEnable,0,static_cast<int>(wxEXPAND));
     
-    m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
+    m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, _("Vol"), MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerVol, 1, static_cast<int>(wxALL), 7);
     
-    m_MicInBass   = newEQ(panelMicInEqualizer, eqMicInSizerBass, "Bass", MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
+    m_MicInBass   = newEQ(panelMicInEqualizer, eqMicInSizerBass, _("Bass"), MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
     eqMicInSizerSliders->Add(eqMicInSizerBass, 1, static_cast<int>(wxALL), 7);
     
-    m_MicInMid    = newEQ(panelMicInEqualizer, eqMicInSizerMid, "Mid", MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
+    m_MicInMid    = newEQ(panelMicInEqualizer, eqMicInSizerMid, _("Mid"), MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerMid, 1, static_cast<int>(wxALL), 7);
         
-    m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
+    m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, _("Treble"), MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerTreble, 1, static_cast<int>(wxALL), 7);
 
     eqMicInSizer->Add(eqMicInSizerSliders, 0, static_cast<int>(wxEXPAND), 0);
@@ -156,20 +154,20 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_SpkOutEnable = new wxCheckBox(panelSpkOutEqualizer, wxID_ANY, _("Enable"), wxDefaultPosition,wxDefaultSize, wxCHK_2STATE);
     eqSpkOutSizerEnable->Add(m_SpkOutEnable,0,wxALIGN_CENTRE_VERTICAL|static_cast<int>(wxALL),5);
-    m_SpkOutDefault = new wxButton(panelSpkOutEqualizer, wxID_ANY, wxT("Default"));
+    m_SpkOutDefault = new wxButton(panelSpkOutEqualizer, wxID_ANY, _("Default"));
     eqSpkOutSizerEnable->Add(m_SpkOutDefault,0,static_cast<int>(wxALL) | wxALIGN_CENTRE_VERTICAL,5);
     eqSpkOutSizer->Add(eqSpkOutSizerEnable,0,static_cast<int>(wxEXPAND));
     
-    m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
+    m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, _("Vol"), MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerVol, 1, static_cast<int>(wxALL), 7);
     
-    m_SpkOutBass   = newEQ(panelSpkOutEqualizer, eqSpkOutSizerBass, "Bass"  , MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
+    m_SpkOutBass   = newEQ(panelSpkOutEqualizer, eqSpkOutSizerBass, _("Bass")  , MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerBass, 1, static_cast<int>(wxALL), 7);
     
-    m_SpkOutMid    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerMid, "Mid"   , MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
+    m_SpkOutMid    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerMid, _("Mid")   , MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerMid, 1, static_cast<int>(wxALL), 7);
         
-    m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
+    m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, _("Treble"), MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerTreble, 1, static_cast<int>(wxALL), 7);
 
     eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, static_cast<int>(wxEXPAND), 0);
@@ -351,7 +349,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float
     if (enableFreq)
     {
         wxSizer* sizerFreq = new wxBoxSizer(wxVERTICAL);
-        newEQControl(eq.eqBox, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", maxSliderFreq);
+        newEQControl(eq.eqBox, &eq.sliderFreq, &eq.valueFreq, sizerFreq, _("Freq"), maxSliderFreq);
         bsEQ->Add(sizerFreq, 1, static_cast<int>(wxEXPAND));
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
@@ -369,7 +367,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float
     }
     
     wxSizer* sizerGain = new wxBoxSizer(wxVERTICAL);
-    newEQControl(eq.eqBox, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain", SLIDER_MAX_GAIN);
+    newEQControl(eq.eqBox, &eq.sliderGain, &eq.valueGain, sizerGain, _("Gain"), SLIDER_MAX_GAIN);
     bsEQ->Add(sizerGain, 1, static_cast<int>(wxEXPAND));
     
 #if wxUSE_ACCESSIBILITY
@@ -382,7 +380,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString const& eqName, float
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
-        newEQControl(eq.eqBox, &eq.sliderQ, &eq.valueQ, sizerQ, "Q", SLIDER_MAX_Q);
+        newEQControl(eq.eqBox, &eq.sliderQ, &eq.valueQ, sizerQ, _("Q"), SLIDER_MAX_Q);
         bsEQ->Add(sizerQ, 1, static_cast<int>(wxEXPAND));
 
 #if wxUSE_ACCESSIBILITY

@@ -637,6 +637,11 @@ enable_testing()
 endif(UNITTEST)
 
 #
+# Translations (needs to come before src so the app bundle can include them)
+#
+add_subdirectory(po)
+
+#
 # Freedv
 #
 add_subdirectory(src)

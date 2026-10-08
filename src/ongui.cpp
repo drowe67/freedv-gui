@@ -333,19 +333,21 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
     wxString msg;
     wxString version = wxString::FromUTF8(GetFreeDVVersion().c_str());
 
-    msg.Printf( wxT("FreeDV GUI %s\n\n")
-                wxT("For Help and Support visit: http://freedv.org\n\n")
+    // TRANSLATORS: The first two %s are the FreeDV version, the third is the git
+    // commit hash and the fourth is the Hamlib version.
+    msg.Printf( _("FreeDV GUI %s\n\n"
+                "For Help and Support visit: http://freedv.org\n\n"
 
-                wxT("GNU Public License V2.1\n\n")
-                wxT("Created by David Witten KD0EAG and David Rowe VK5DGR (2012).  ")
-                wxT("Currently maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
-                wxT("freedv-gui version: %s\n")
-                wxT("freedv-gui git hash: %s\n")
-                wxT("Using %s\n")
+                "GNU Public License V2.1\n\n"
+                "Created by David Witten KD0EAG and David Rowe VK5DGR (2012).  "
+                "Currently maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n"
+                "freedv-gui version: %s\n"
+                "freedv-gui git hash: %s\n"
+                "Using %s\n")
                 , version, version, FREEDV_GIT_HASH, hamlib_version
                 );
 
-    wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox(msg, _("About"), wxOK | wxICON_INFORMATION, this);
 }
 
 void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
@@ -389,7 +391,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
                 m_txtModeStatus->Enable(true);
                 break;
             default:
-                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->SetLabel(_("unk"));
                 m_txtModeStatus->Enable(false);
                 break;
         }
@@ -497,7 +499,7 @@ void MainFrame::onRadioConnected_(IRigController*)
 void MainFrame::onRadioDisconnected_(IRigController*)
 {
     CallAfter([&]() {
-        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->SetLabel(_("unk"));
         m_txtModeStatus->Enable(false);
     });
 }
@@ -537,9 +539,8 @@ bool MainFrame::OpenHamlibRig() {
     int rig = wxGetApp().m_intHamlibRig;    
     if (rig == -1)
     {
-        std::string fullErr = "The radio's model is empty. This is likely due to changes in Hamlib between FreeDV releases. Please click Stop Modem, double-check your CAT settings and push Start Modem again.";
-        CallAfter([&, fullErr]() {
-            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        CallAfter([&]() {
+            wxMessageBox(_("The radio's model is empty. This is likely due to changes in Hamlib between FreeDV releases. Please click Stop Modem, double-check your CAT settings and push Start Modem again."), _("Error"), wxOK | wxICON_ERROR, this);
         });
         return false;
     }
@@ -567,9 +568,10 @@ bool MainFrame::OpenHamlibRig() {
         
         wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string const& err)
         {
-            std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
-            CallAfter([&, fullErr]() {
-                wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+            CallAfter([&, err]() {
+                // TRANSLATORS: %s is the error message returned by Hamlib.
+                wxString fullErr = wxString::Format(_("Couldn't connect to Radio with hamlib: %s"), wxString::FromUTF8(err.c_str()));
+                wxMessageBox(fullErr, _("Error"), wxOK | wxICON_ERROR, this);
             });
         };
 
@@ -618,9 +620,10 @@ void MainFrame::OpenOmniRig()
 
     wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
     {
-        std::string fullErr = "Couldn't connect to Radio with OmniRig: " + err;
-        CallAfter([&, fullErr]() {
-            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        CallAfter([&, err]() {
+            // TRANSLATORS: %s is the error message returned by OmniRig.
+            wxString fullErr = wxString::Format(_("Couldn't connect to Radio with OmniRig: %s"), wxString::FromUTF8(err.c_str()));
+            wxMessageBox(fullErr, _("Error"), wxOK | wxICON_ERROR, this);
         });
     };
 
@@ -677,7 +680,7 @@ void MainFrame::OnTop(wxCommandEvent& event)
 void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
     wxMessageDialog messageDialog(
-        this, "Would you like to restore configuration to defaults?", wxT("Restore Defaults"),
+        this, _("Would you like to restore configuration to defaults?"), _("Restore Defaults"),
         wxYES_NO | wxICON_QUESTION | wxCENTRE);
 
     auto answer = messageDialog.ShowModal();
@@ -685,7 +688,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
     {
         if(pConfig->DeleteAll())
         {
-            wxLogMessage(wxT("Config file/registry key successfully deleted."));
+            wxLogMessage(_("Config file/registry key successfully deleted."));
             
             if (wxGetApp().m_sharedReporterObject)
             {
@@ -706,7 +709,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
         }
         else
         {
-            wxLogError(wxT("Deleting config file/registry key failed."));
+            wxLogError(_("Deleting config file/registry key failed."));
         }
     }
 }
@@ -1343,7 +1346,7 @@ void MainFrame::togglePTT(void) {
         // reliably set, so don't mess with it in the first place.
         m_btnTogPTT->SetForegroundColour(*wxBLACK);
 #endif // !defined(__APPLE__)
-        m_btnTogPTT->SetLabel("TX Ending");
+        m_btnTogPTT->SetLabel(_("TX Ending"));
         m_btnTogPTT->Refresh();
 
         // Stop Time-Out Timer on TX->RX transition (user stopped, VK finished, or TOT fired).
@@ -1700,12 +1703,12 @@ void MainFrame::OnTogBtnTune(wxCommandEvent&)
     if (newTx)
     {
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_tuneLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("Tune &Attenuation");
+        m_txLevelBox->SetLabel(_("Tune &Attenuation"));
     }
     else
     {
         fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)g_txLevel/10.0, 1), DECIBEL_STR);
-        m_txLevelBox->SetLabel("TX &Attenuation");
+        m_txLevelBox->SetLabel(_("TX &Attenuation"));
     }
 
     m_txtTxLevelNum->SetLabel(fmtString);
@@ -1736,14 +1739,14 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
         m_panelWaterfall->setFs(FS);
         
-        m_togBtnAnalog->SetLabel(wxT("Switch to Di&gital"));
+        m_togBtnAnalog->SetLabel(_("Switch to Di&gital"));
     }
     else {
         g_analog.store(0, std::memory_order_relaxed);
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
         
-        m_togBtnAnalog->SetLabel(wxT("Switch to A&nalog"));
+        m_togBtnAnalog->SetLabel(_("Switch to A&nalog"));
     }
 
     // Report analog change to registered reporters
@@ -1799,7 +1802,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent&)
     m_txtCtrlCallSign->SetValue(s);
     
     m_lastReportedCallsignListView->DeleteAllItems();
-    m_cboLastReportedCallsigns->SetText(_(""));
+    m_cboLastReportedCallsigns->SetText(wxT(""));
 }
 
 void MainFrame::OnLogQSO(wxCommandEvent&)
@@ -2173,11 +2176,11 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 
     if (m_reporterHidden->GetValue())
     {
-        m_reporterHidden->SetLabel("Turn On");
+        m_reporterHidden->SetLabel(_("Turn On"));
     }
     else
     {
-        m_reporterHidden->SetLabel("Turn Off");
+        m_reporterHidden->SetLabel(_("Turn Off"));
     }
     
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForcedOff = m_reporterHidden->GetValue();
@@ -2202,7 +2205,7 @@ void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
         _("Export FreeDV Configuration"),
         wxGetApp().defaultConfigFilePath,
         wxEmptyString,
-        wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
+        _("FreeDV configuration files (*.conf)") + wxT("|*.conf|") + _("All files (*.*)") + wxT("|*.*"),
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
     );
 
@@ -2225,7 +2228,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
         _("Import FreeDV Configuration"),
         wxGetApp().defaultConfigFilePath,
         wxEmptyString,
-        wxT("FreeDV configuration files (*.conf)|*.conf|All files (*.*)|*.*"),
+        _("FreeDV configuration files (*.conf)") + wxT("|*.conf|") + _("All files (*.*)") + wxT("|*.*"),
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
     );
 
@@ -2253,13 +2256,13 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
     wxFileName fn(path);
     wxGetApp().customConfigFileName = fn.GetFullName();
 
-    SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
+    SetTitle(wxString::Format("%s (%s)", wxT("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
 #if defined(UNOFFICIAL_RELEASE)
     wxDateTime buildDate(wxInvalidDateTime);
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
-    SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
+    SetTitle(GetTitle() + wxString::Format(_(" [Expires %s]"), expireDate.FormatDate()));
 #endif // defined(UNOFFICIAL_RELEASE)
     setConfiguration_(importConfig);
 
@@ -2297,12 +2300,12 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
 
     // Clear any custom config file indicator from the title bar.
     wxGetApp().customConfigFileName = wxEmptyString;
-    SetTitle(_("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()));
+    SetTitle(wxT("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()));
 #if defined(UNOFFICIAL_RELEASE)
     wxDateTime buildDate(wxInvalidDateTime);
     wxString::const_iterator iter;
     buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
     auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
-    SetTitle(GetTitle() + wxString::Format(" [Expires %s]", expireDate.FormatDate()));
+    SetTitle(GetTitle() + wxString::Format(_(" [Expires %s]"), expireDate.FormatDate()));
 #endif // defined(UNOFFICIAL_RELEASE)
 }

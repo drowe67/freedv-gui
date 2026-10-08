@@ -63,22 +63,22 @@ FreeDVConfiguration::FreeDVConfiguration()
     , tuneAttenByBand("/Audio/tuneLevelByBand", {})
         
     /* Recording settings */
-    , playFileToMicInPath("/File/playFileToMicInPath", _(""))
-    , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
+    , playFileToMicInPath("/File/playFileToMicInPath", wxT(""))
+    , playFileFromRadioPath("/File/playFileFromRadioPath", wxT(""))
         
     , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
     , pttKeyCode("/Rig/PttKeyCode", WXK_SPACE)
     , pttMomentaryMode("/Rig/PttMomentaryMode", false)
 
-    , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", _(""))
-    , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
+    , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", wxT(""))
+    , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", wxT("voicekeyer.wav"))
     , voiceKeyerRxPause("/VoiceKeyer/RxPause", 10)
     , voiceKeyerRepeats("/VoiceKeyer/Repeats", 5)
         
     , halfDuplexMode("/Rig/HalfDuplex", true)
         
-    , quickRecordRawPath("/QuickRecord/SavePath", _(""))
-    , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", _(""))
+    , quickRecordRawPath("/QuickRecord/SavePath", wxT(""))
+    , quickRecordDecodedPath("/QuickRecord/SaveDecodedPath", wxT(""))
         
     , debugConsoleEnabled("/Debug/console", false)
         
@@ -93,7 +93,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
     
     , experimentalFeatures("/ExperimentalFeatures", false)
-    , tabLayout("/MainFrame/TabLayout", _(""))
+    , tabLayout("/MainFrame/TabLayout", wxT(""))
 
     , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
     , monitorVoiceKeyerAudioVol("/Monitor/VoiceKeyerAudioVol", 0)
