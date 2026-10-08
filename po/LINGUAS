@@ -5,3 +5,4 @@
 #   msginit --locale=pt_BR --input=freedv.pot --output-file=pt_BR.po
 #
 # then add the language code below.
+pt_BR
