@@ -976,6 +976,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
+    * Optimizations to reduce full rebuild time. (PR #1538)
 3. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)

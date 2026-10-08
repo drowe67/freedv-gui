@@ -42,6 +42,7 @@
 
 #include "defines.h"
 #include "git_version.h"
+#include "build_date.h"
 #include "main.h"
 #include "os/os_interface.h"
 #include "freedv_interface.h"

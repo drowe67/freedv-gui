@@ -25,7 +25,6 @@
 #include "git_version.h"
 #include <wx/version.h>
 #include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
 #include <wx/intl.h>
 #include <wx/string.h>
 #include <wx/bitmap.h>

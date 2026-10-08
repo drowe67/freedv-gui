@@ -40,7 +40,9 @@ if [ "$CODESIGN_KEYCHAIN_PROFILE" != "" ]; then
 fi
 
 if [ $USE_CCACHE == 1 ]; then
-    CCACHE_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_OBJCXX_COMPILER_LAUNCHER=ccache
+    # Needed for ccache to cache compiles that use precompiled headers.
+    export CCACHE_SLOPPINESS=${CCACHE_SLOPPINESS:-pch_defines,time_macros}
+    CCACHE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_OBJCXX_COMPILER_LAUNCHER=ccache"
 else
     CCACHE_ARGS=
 fi

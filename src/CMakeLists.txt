@@ -11,6 +11,7 @@ set(FREEDV_SOURCES
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
+    ${CMAKE_BINARY_DIR}/generated/build_date.cpp
 )
 
 set(FREEDV_LINK_LIBS_OSX
@@ -88,13 +89,13 @@ if(BOOTSTRAP_WXWIDGETS)
         target_compile_definitions(FreeDV PRIVATE ${WXBUILD_BUILD_DEFS})
         target_include_directories(FreeDV PRIVATE ${WXBUILD_INCLUDES})
         
-        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
         target_link_libraries(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
     else(APPLE)
         target_compile_definitions(freedv PRIVATE ${WXBUILD_BUILD_DEFS})
         target_include_directories(freedv PRIVATE ${WXBUILD_INCLUDES})
         
-        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
         target_link_libraries(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
     endif(APPLE)
 endif(BOOTSTRAP_WXWIDGETS)
@@ -105,6 +106,17 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
+
+# Precompile <wx/wx.h> for the targets whose sources mostly include it;
+# parsing it dominates their compile times. C and Objective-C++ sources
+# are excluded.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.16)
+    foreach(_target FreeDV freedv fdv_gui_controls fdv_gui_dialogs fdv_config fdv_audio_pipeline_extra)
+        if(TARGET ${_target})
+            target_precompile_headers(${_target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:<wx/wx.h$<ANGLE-R>>)
+        endif(TARGET ${_target})
+    endforeach()
+endif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.16)
 
 # If on Linux, force static libstdc++. This is to prevent versioning
 # problems when using AppImages.

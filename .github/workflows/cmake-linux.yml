@@ -10,6 +10,10 @@ concurrency:
   cancel-in-progress: true
     
 env:
+  # ccache skips compiles that use precompiled headers (wxWidgets and
+  # FreeDV's GUI targets) unless these are set.
+  CCACHE_SLOPPINESS: pch_defines,time_macros
+
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
 
@@ -53,7 +57,9 @@ jobs:
       run: |
         mkdir build_linux
         cd build_linux
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+        # PCH is disabled because clang-tidy can't read the GCC-built .gch
+        # files that compile_commands.json would otherwise reference.
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(nproc)
 

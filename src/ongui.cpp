@@ -14,6 +14,7 @@
 #include "main.h"
 
 #include "git_version.h"
+#include "build_date.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_audiooptions.h"
