@@ -20,6 +20,7 @@
 //
 //==========================================================================
 
+#include <csignal>
 #include <algorithm>
 #include <inttypes.h>
 #include <time.h>
@@ -851,6 +852,15 @@ static void SuppressButtonPressFlicker_()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if !defined(_WIN32)
+    // Writing to a socket whose peer has closed raises SIGPIPE, which by
+    // default kills the process. That can happen whenever a server (e.g. FreeDV
+    // Reporter) closes a connection just as we send to it, including inside
+    // TLS library writes we can't flag individually. Ignore it so the write
+    // fails with EPIPE and the connection code handles it as a disconnect.
+    signal(SIGPIPE, SIG_IGN);
+#endif // !defined(_WIN32)
+
     // Initialize locale.
 #if wxCHECK_VERSION(3,2,0)
     wxUILocale::UseDefault();
