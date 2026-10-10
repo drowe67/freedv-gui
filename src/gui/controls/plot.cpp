@@ -20,12 +20,18 @@
 //==========================================================================
 #include <string.h>
 #include <algorithm>
-#include "plot.h"
+
+#include <wx/wx.h>
+#include <wx/app.h>
 #include <wx/graphics.h>
 #if defined(_WIN32)
 #include <wx/rawbmp.h>
 #include <wx/msw/wrapwin.h>
 #endif // defined(_WIN32)
+
+#include "defines.h"
+
+#include "plot.h"
 
 #if defined(__APPLE__)
 extern void GivePlotOwnLayer(wxWindow* window); // plot_osx.mm
@@ -54,9 +60,7 @@ END_EVENT_TABLE()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, plotName)
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     m_zoomFactor        = 1.0;
     m_firstPass         = true;

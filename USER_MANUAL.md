@@ -871,8 +871,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Rework Easy Setup window into new Setup Wizard. (PR #1418, #1432, #1513)
     * Add ability to record both the raw and decoded RX audio. (PR #1501)
     * Linux/PulseAudio: Show friendlier device names in configuration windows. (PR #1508)
-    * Add ability to import configuration from WSJT-X/JTDX/JS8Call. (PR #1513)
+    * Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR #1513, #1539)
     * Add dark mode support for Windows. (PR #1518, #1529)
+    * Add infrastructure for translating FreeDV into other languages. (PR #1526)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
 
@@ -898,11 +899,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix horizontal lines in waterfall on HiDPI/fractionally scaled Linux displays. (PR #1514)
     * Reduce GUI thread paint and FreeDV Reporter overhead. (PR #1515, #1530)
     * PulseAudio: give each device its own connection. (PR #1523)
+    * Fix possible deadlock on playback completion. (PR #1533)
+    * Windows: add logic to detect audio device stalls. (PR #1537)
+    * Keep RX muted after TX until the radio confirms PTT off. (PR #1536)
+    * Fix FreeDV hanging when starting the Voice Keyer with a cloud-backed file. (PR #1534)
+    * Fix data races on settings read by the audio threads. (PR #1535)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
+    * Optimizations to reduce full rebuild time. (PR #1538)
 3. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)

@@ -94,25 +94,26 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
     switch (col)
     {
         case CALLSIGN_COL:
-            colName = wxT("Callsign");
+            colName = _("Callsign");
             minWidth = 70;
             break;
         case GRID_SQUARE_COL:
-            colName = wxT("Locator");
+            colName = _("Locator");
             minWidth = 65;
             break;
         case DISTANCE_COL:
-            colName = wxT("km");
+            colName = _("km");
             minWidth = 60;
             alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
             break;
         case HEADING_COL:
-            colName = wxT("Hdg");
+            // TRANSLATORS: Abbreviation of "Heading".
+            colName = _("Hdg");
             minWidth = 60;
             alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
             break;
         case VERSION_COL:
-            colName = wxT("Version");
+            colName = _("Version");
             minWidth = 70;
             break;
         case FREQUENCY_COL:
@@ -121,11 +122,11 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
             alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
             break;
         case TX_MODE_COL:
-            colName = wxT("Mode");
+            colName = _("Mode");
             minWidth = 65;
             break;
         case STATUS_COL:
-            colName = wxT("Status");
+            colName = _("Status");
             minWidth = 60;
             break;
         case USER_MESSAGE_COL:
@@ -133,17 +134,17 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
             // here rather than farther down.
 #if defined(WIN32)
             // Use ReportMessageRenderer only on Windows so that we can render emojis in color.
-            colObj = new wxDataViewColumn(wxT("Msg"), new ReportMessageRenderer(), col, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+            colObj = new wxDataViewColumn(_("Msg"), new ReportMessageRenderer(), col, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
             m_listSpots->AppendColumn(colObj);
 #else
-            colObj = m_listSpots->AppendTextColumn(wxT("Msg"), col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
+            colObj = m_listSpots->AppendTextColumn(_("Msg"), col, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_DEFAULT, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE);
 #endif // defined(WIN32)
             colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
             minWidth = 130;
             ellipsize = true;
             break;
         case LAST_TX_DATE_COL:
-            colName = wxT("Last TX");
+            colName = _("Last TX");
             // Same minWidth as Last Update -- both show the same date/time
             // format, but Last TX is frequently still empty for every row
             // when the dialog first opens (many spotted stations haven't
@@ -152,16 +153,16 @@ void FreeDVReporterDialog::createColumn_(int col, bool visible)
             minWidth = 100;
             break;
         case LAST_RX_CALLSIGN_COL:
-            colName = wxT("RX Call");
+            colName = _("RX Call");
             minWidth = 65;
             break;
         case SNR_COL:
-            colName = wxT("SNR");
+            colName = _("SNR");
             minWidth = 60;
             alignment = wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL;
             break;
         case LAST_UPDATE_DATE_COL:
-            colName = wxT("Last Update");
+            colName = _("Last Update");
             minWidth = 100;
             break;
         default:
@@ -209,9 +210,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , EMPTY_STR("")
     , TIME_FORMAT_STR("%x %X")
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     if (wxGetApp().customConfigFileName != "")
     {
@@ -389,7 +388,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Message:"), wxDefaultPosition, wxDefaultSize);
     statusMessageSizer->Add(statusMessageLabel, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 5);
 
-    m_statusMessage = new wxComboCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), wxTE_PROCESS_ENTER);
+    m_statusMessage = new wxComboCtrl(this, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(180, -1), wxTE_PROCESS_ENTER);
     m_statusMessage->SetPopupControl(new MsgListPopup([this](int idx){ ShowMsgItemContextMenu(idx); }));
     statusMessageSizer->Add(m_statusMessage, 0, static_cast<int>(wxALL) | wxALIGN_LEFT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 5);
 
@@ -442,7 +441,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     menuBar_->Append(filterMenu_, _("Filter"));
     filterMenu_->Append(wxID_ANY, _("Idle more than (minutes)..."), idleLongerThanMenu_);
 
-    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, "Disabled", wxEmptyString, wxITEM_CHECK);
+    auto menuItem = idleLongerThanMenu_->Append(wxID_ANY, _("Disabled"), wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter);
     bool foundChecked = menuItem->IsChecked();
     this->Connect(menuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
@@ -455,7 +454,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         this->Connect(wxID_HIGHEST + 200 + item, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
     }
 
-    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, "Custom...", wxEmptyString, wxITEM_CHECK);
+    menuItem = idleLongerThanMenu_->Append(wxID_HIGHEST + 200, _("Custom..."), wxEmptyString, wxITEM_CHECK);
     menuItem->Check(!foundChecked);
     this->Connect(wxID_HIGHEST + 200, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(FreeDVReporterDialog::OnIdleFilter));
 
@@ -767,11 +766,11 @@ void FreeDVReporterDialog::refreshLayout()
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
-        item->SetTitle("km ");
+        item->SetTitle(_("km"));
     }
     else
     {
-        item->SetTitle("Miles");
+        item->SetTitle(_("Miles"));
     }
     
     // Refresh frequency units as appropriate.
@@ -790,13 +789,14 @@ void FreeDVReporterDialog::refreshLayout()
     auto renderer = item->GetRenderer();
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
-        item->SetTitle("Dir");
+        // TRANSLATORS: Abbreviation of "Direction".
+        item->SetTitle(_("Dir"));
         item->SetAlignment(wxALIGN_LEFT);
         renderer->SetAlignment(wxALIGN_LEFT | wxALIGN_CENTRE_VERTICAL);
     }
     else
     {
-        item->SetTitle("Hdg");
+        item->SetTitle(_("Hdg"));
         item->SetAlignment(wxALIGN_RIGHT);
         renderer->SetAlignment(wxALIGN_RIGHT | wxALIGN_CENTRE_VERTICAL);
     }
@@ -823,7 +823,8 @@ void FreeDVReporterDialog::updateFilterStatus_()
 
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter)
     {
-        labelText = wxString::Format("Idle %d", (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes);
+        // TRANSLATORS: %d is a number of minutes.
+        labelText = wxString::Format(_("Idle %d"), (int)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes);
     }
     else
     {
@@ -1113,7 +1114,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
         model->requestQSY(selected, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, ""); // Custom message TBD
         
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
-        wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
+        wxMessageBox(fullMessage, _("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
 
         m_listSpots->Unselect(selected);
     }
@@ -1686,17 +1687,17 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
 
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
-        tempUserMessage_ = _("");
-        tempCallsign_ = _("");
+        tempUserMessage_ = wxT("");
+        tempCallsign_ = wxT("");
     
         if (col->GetModelColumn() == USER_MESSAGE_COL)
         {
             tempUserMessage_ = model->getUserMessage(item);
             rect = m_listSpots->GetItemRect(item, col);
 #if wxCHECK_VERSION(3,3,2)
-            if (IsActive() && !tipWindow_ && tempUserMessage_ != _(""))
+            if (IsActive() && !tipWindow_ && tempUserMessage_ != wxT(""))
 #else
-            if (IsActive() && tipWindow_ == nullptr && tempUserMessage_ != _(""))
+            if (IsActive() && tipWindow_ == nullptr && tempUserMessage_ != wxT(""))
 #endif  // wxCHECK_VERSION(3,3,2)
             {
                 // Use screen coordinates to determine bounds.
@@ -1735,8 +1736,8 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent&)
     }
     else
     {
-        tempUserMessage_ = _("");
-        tempCallsign_ = _("");
+        tempUserMessage_ = wxT("");
+        tempCallsign_ = wxT("");
     }
 }
 
@@ -1932,17 +1933,17 @@ void FreeDVReporterDialog::OnColumnHeaderRightClick(wxDataViewEvent& event)
         ColumnFilterOperator op;
         const char* label;
     } opItems[] = {
-        {FILTER_GTE, ">= (Greater or equal to)"},
-        {FILTER_GT,  ">  (Greater than)"},
-        {FILTER_EQ,  "=  (Equal to)"},
-        {FILTER_NEQ, "!= (Not equal to)"},
-        {FILTER_LT,  "<  (Less than)"},
-        {FILTER_LTE, "<= (Less or equal to)"},
+        {FILTER_GTE, wxTRANSLATE(">= (Greater or equal to)")},
+        {FILTER_GT,  wxTRANSLATE(">  (Greater than)")},
+        {FILTER_EQ,  wxTRANSLATE("=  (Equal to)")},
+        {FILTER_NEQ, wxTRANSLATE("!= (Not equal to)")},
+        {FILTER_LT,  wxTRANSLATE("<  (Less than)")},
+        {FILTER_LTE, wxTRANSLATE("<= (Less or equal to)")},
     };
 
     for (auto& opItem : opItems)
     {
-        auto menuItem = menu.Append(wxID_ANY, wxString(opItem.label), wxEmptyString, wxITEM_CHECK);
+        auto menuItem = menu.Append(wxID_ANY, wxGetTranslation(opItem.label), wxEmptyString, wxITEM_CHECK);
         if (hasFilter && currentOp == opItem.op)
         {
             menuItem->Check(true);
@@ -2022,7 +2023,7 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
     int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
-    if (tempUserMessage_ != _(""))
+    if (tempUserMessage_ != wxT(""))
     {
         // 170 here has been determined via experimentation to avoid an issue 
         // on some KDE installations where the popup menu immediately closes after
@@ -2030,7 +2031,7 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
         // the mouse pointer.
         m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
     }
-    else if (tempCallsign_ != _(""))
+    else if (tempCallsign_ != wxT(""))
     {
         m_listSpots->PopupMenu(callsignPopupMenu_, wxPoint(mouseX, mouseY));
     }
@@ -2050,7 +2051,7 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
 {
-    if (tempCallsign_ != _(""))
+    if (tempCallsign_ != wxT(""))
     {
         wxLaunchDefaultBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
     }
@@ -2058,7 +2059,7 @@ void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
 {
-    if (tempCallsign_ != _(""))
+    if (tempCallsign_ != wxT(""))
     {
         wxLaunchDefaultBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
     }
@@ -2066,7 +2067,7 @@ void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
 {
-    if (tempCallsign_ != _(""))
+    if (tempCallsign_ != wxT(""))
     {
         wxLaunchDefaultBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
     }
@@ -2905,8 +2906,13 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(ReporterData* da
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetCardinalDirection_(int degrees)
 {
     int cardinalDirectionNumber( static_cast<int>( ( ( degrees / 360.0 ) * 16 ) + 0.5 )  % 16 );
-    const char* const cardinalDirectionTexts[] = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
-    return cardinalDirectionTexts[cardinalDirectionNumber];
+    // TRANSLATORS: Compass directions (N = north, NNE = north-northeast, etc.).
+    const char* const cardinalDirectionTexts[] = { 
+        wxTRANSLATE("N"), wxTRANSLATE("NNE"), wxTRANSLATE("NE"), wxTRANSLATE("ENE"), 
+        wxTRANSLATE("E"), wxTRANSLATE("ESE"), wxTRANSLATE("SE"), wxTRANSLATE("SSE"), 
+        wxTRANSLATE("S"), wxTRANSLATE("SSW"), wxTRANSLATE("SW"), wxTRANSLATE("WSW"), 
+        wxTRANSLATE("W"), wxTRANSLATE("WNW"), wxTRANSLATE("NW"), wxTRANSLATE("NNW") };
+    return wxGetTranslation(cardinalDirectionTexts[cardinalDirectionNumber]);
 }
 
 FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVReporterDialog* parent)
@@ -3587,7 +3593,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             temp->gridSquare += gridSquareWxString.Mid(4, 2).Lower();
         }
 
-        wxRegEx gridSquareRegex(_("^[A-Za-z]{2}[0-9]{2}"));
+        wxRegEx gridSquareRegex(wxT("^[A-Za-z]{2}[0-9]{2}"));
         bool validCharactersInGridSquare = gridSquareRegex.Matches(temp->gridSquare);
 
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "" ||
@@ -3855,7 +3861,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 txStatus = "TX";
             }
         
-            if (iter->second->status != _(RX_ONLY_STATUS))
+            if (iter->second->status != RX_ONLY_STATUS)
             {
                 isChanged |=
                     (isSortingColumn_(sortingColumn, STATUS_COL) && iter->second->status != txStatus) ||

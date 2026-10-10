@@ -1,0 +1,2452 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the FreeDV package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: FreeDV 3.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/drowe67/freedv-gui/issues\n"
+"POT-Creation-Date: 2026-09-29 09:21-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: src/gui/controls/MsgListPopup.cpp
+msgid "Right click for more options"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Start Recording"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Recording Settings"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Recording suffix:"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Recording type:"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Off Air"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Decoded"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Both"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Recording format:"
+msgstr ""
+
+#: src/gui/dialogs/begin_recording.cpp
+msgid "Start"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Mic Audio Pre-Processing"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "TX Noise Suppression"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Enable noise suppression, dereverberation, AGC of mic signal"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "AGC"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Automatic gain control for microphone"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Speaker Audio Post-Processing"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "BW Expander"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid ""
+"Expands RADE RX audio to 24kHz. Requires speaker or headset capable of "
+">16kHz sample rate."
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Enable"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Default"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Vol"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Bass"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Mid"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Treble"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Microphone In Equaliser"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Speaker Out Equaliser"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Freq"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Gain"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.cpp
+msgid "Q"
+msgstr ""
+
+#: src/gui/dialogs/dlg_filter.h src/gui/dialogs/freedv_reporter.cpp
+msgid "Filter"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+#, c-format
+msgid "F%d"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Space"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Tab"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enter"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Escape"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Backspace"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Delete"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Insert"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Home"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "End"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Page Up"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Page Down"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Up"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Down"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Left"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Right"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+#, c-format
+msgid "Key(%d)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "RX Audio"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "TX Audio"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Radio"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Rig Control"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Voice Keyer"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Display"
+msgstr ""
+
+#. TRANSLATORS: Shown in the Sync box on the main window.
+#: src/gui/dialogs/dlg_options.cpp src/main.cpp src/topFrame.cpp
+msgid "Modem"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Debugging"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "VOX PTT Settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Left Channel Vox Tone"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Hamlib Settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Enable CAT control via Hamlib"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Rig Model:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Serial Device (or hostname:port):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Radio Address:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Serial Rate:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "PTT uses:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "PTT Serial Device:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "None"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "CAT via Data port"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Force RTS"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Force DTR"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Serial Port Settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "PTT Port"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Use Serial Port PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Serial Device:  "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Use DTR"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Toggle DTR line for PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Use RTS"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Toggle the RTS pin for PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "DTR = +V"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Set Polarity of the DTR line"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "RTS = +V"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Set Polarity of the RTS line"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "PTT In"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable PTT Input"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "CTS = +V"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Set Polarity of the CTS line"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "OmniRig Settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable CAT control via OmniRig"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Rig ID:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Test PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable Reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Callsign:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Grid Square/Locator:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Manual Frequency Reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Report to PSK Reporter"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Report to FreeDV Reporter"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable QSO Logging"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Enables QSO logging using the WSJT-X support in your preferred logging "
+"program."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "IP Address:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Port:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable UDP Broadcast"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Broadcasts received callsign/frequency data as JSON UDP datagrams (e.g. to a "
+"multicast group or a local listener)."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Stations Heard Log File:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Choose"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/freedv_reporter.cpp
+#: src/gui/dialogs/freedv_reporter.h src/main.cpp
+msgid "FreeDV Reporter"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Hostname:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Secure Connection"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Distances in km"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Show cardinal directions"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Force RX Only reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Callsign List"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Use UTC Time"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "PTT Options"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable key for PTT:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "The key currently assigned to PTT."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Change..."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Momentary PTT (hold key to transmit)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"When enabled, you must hold the PTT button or key to keep transmitting. "
+"Releasing it returns to receive."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "TX/RX Delay (milliseconds): "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"The amount of time to wait between toggling PTT and stopping/starting TX "
+"audio in milliseconds."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable Time-Out Timer (TOT):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"When enabled, FreeDV will automatically stop transmitting after the "
+"configured time period has elapsed."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"The number of seconds FreeDV will transmit before automatically dropping "
+"back to receive."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "seconds"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Frequency/Mode Control Options"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable frequency and mode changes"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable frequency changes only"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "No frequency or mode changes"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Use USB instead of DIGU"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Frequency entry in kHz"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Predefined Frequencies"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Add"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Remove"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Move Up"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Move Down"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enter frequency (kHz):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enter frequency (MHz):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Waterfall Style"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Multicolor"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Black && White"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Blue Tint"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "FreeDV Reporter colors"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "TX Stations:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Background"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Foreground"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "RX Stations:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Message updates:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Plot settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Average spectrum plot across"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "sample(s)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Input To Computer From Radio:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Test"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Selected:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Output From Computer To Speaker/Headphones:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Refresh Device List"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Receive only (I will not be transmitting)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Input From Microphone To Computer:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Output From Computer To Radio:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "File location: "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Path to Voice Keyer audio files"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Rx Pause:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "How long to wait in Rx mode before repeat"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Repeats:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Quick Record"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Location to save raw recordings: "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Location which to save raw recordings started via the Record button in the "
+"main window."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Location to save decoded recordings: "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Location which to save decoded recordings started via the Record button in "
+"the main window."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Modem Options"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Start Automatically on Launch"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Half/Full Duplex Operation"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Half Duplex"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Modem Statistics"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Show Decode Stats"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Time before resetting stats (in seconds):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Debug: Windows"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Show Console"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Debug: FIFO and Under/Over Flow Counters"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Fifo Size (ms):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Reset"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Debug: Application Options"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Verbose"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Enable Experimental Features"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Simulated Interference Tone"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Tone"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Freq (Hz):"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Amplitude (pk): "
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Voice Keyer file location"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Choose Quick Record save location"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Choose CSV log file location"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/ongui.cpp src/playrec.cpp
+#: src/voicekeyer.cpp
+msgid "All files (*.*)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "CSV files (*.csv)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Press any key..."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+#: src/main.cpp
+msgid "Cancel"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid ""
+"Testing of tone based PTT not supported; try PTT after pressing Start on "
+"main window"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/log_entry.cpp src/main.cpp
+#: src/ongui.cpp src/util.cpp
+msgid "Error"
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by Hamlib.
+#: src/gui/dialogs/dlg_options.cpp
+#, c-format
+msgid ""
+"Couldn't connect to Radio with Hamlib (%s). Make sure the Hamlib serial "
+"Device, Rate, and Params match your radio"
+msgstr ""
+
+#. TRANSLATORS: The first %s is the serial port and the second is the error message returned by the operating system.
+#: src/gui/dialogs/dlg_options.cpp
+#, c-format
+msgid ""
+"Couldn't open serial port %s (%s). This is likely due to not having "
+"permission to access the chosen port."
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by OmniRig.
+#: src/gui/dialogs/dlg_options.cpp
+#, c-format
+msgid ""
+"Couldn't connect to Radio with OmniRig (%s). Make sure the rig ID and "
+"OmniRig configuration is correct."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Device"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "API"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Default Sample Rate"
+msgstr ""
+
+#. TRANSLATORS: Shown in the audio device lists to indicate that no device is selected.
+#: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "none"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Audio Test"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Please select an audio output device first."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Playing"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Please select an audio input device first."
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.cpp
+msgid "Recording"
+msgstr ""
+
+#: src/gui/dialogs/dlg_options.h
+msgid "Settings"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "FreeDV Setup Wizard"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "< Previous"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Next >"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Finish"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Step 1 of 4: Receive Audio"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Select the audio devices used for receiving transmissions."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Import From Another Program"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid ""
+"Copy radio audio devices, rig control and callsign/grid square settings\n"
+"from another program installed on this computer."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Import"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Step 2 of 4: Transmit Audio"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid ""
+"Select the audio devices used for transmitting. Skip if you\n"
+"only want to receive."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Step 3 of 4: Radio Control"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid ""
+"Configure PTT (Push-To-Talk) control for your radio.\n"
+"Leave all options unchecked if you do not need PTT control."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "CAT Control via Hamlib"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Serial Device:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Serial Port PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Enable serial port PTT"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Control Device:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Signal:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Inverted"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "OmniRig"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Enable OmniRig"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Rig:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Rig 1"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Rig 2"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Step 4 of 4: Reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid ""
+"Optionally report your station to FreeDV Reporter and PSK Reporter.\n"
+"A valid callsign and grid square are required."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Enable station reporting"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Grid Square:"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "radio audio devices"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "radio audio devices (not currently connected)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "Hamlib rig control (%s)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "OmniRig rig control (%s)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "serial port PTT (%s)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "rig control (%s is not supported by FreeDV)"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "callsign"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "grid square"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "reporting enabled"
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid ", "
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "No usable settings were found in %s."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "Imported: %s."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+#, c-format
+msgid "Not imported: %s."
+msgstr ""
+
+#: src/gui/dialogs/dlg_setup_wizard.cpp
+msgid "Review each page before clicking Finish."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp src/topFrame.cpp
+msgid "Callsign"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Locator"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "km"
+msgstr ""
+
+#. TRANSLATORS: Abbreviation of "Heading".
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Hdg"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Version"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Mode"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Status"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Msg"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Last TX"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "RX Call"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp src/main.cpp src/topFrame.cpp
+msgid "SNR"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Last Update"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Close"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Closes FreeDV Reporter window."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Request QSY"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Asks selected user to switch to your frequency."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Website"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Opens FreeDV Reporter in your Web browser."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "All"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "160 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "80 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "60 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "40 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "30 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "20 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "17 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "15 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "12 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "10 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid ">= 6 m"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Other"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Band:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Track:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid ""
+"Filters FreeDV Reporter list based on radio's current frequency or band."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "band"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "freq."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Idle Off"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Message:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Send"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Sends message to FreeDV Reporter. Right-click for additional options."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Clear"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid ""
+"Clears message from FreeDV Reporter. Right-click for additional options."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Show"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Distance"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Heading"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp src/topFrame.cpp
+msgid "Frequency"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "TX Mode"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "User Message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Last TX Date"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Last RX Callsign"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Idle more than (minutes)..."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Disabled"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Custom..."
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Send and save message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Only save message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Remove selected from list"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Clear all messages from list"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Edit message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Delete message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Add new message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Copy message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Lookup via QRZ"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Lookup via HamQTH"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Lookup via HamCall"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Miles"
+msgstr ""
+
+#. TRANSLATORS: Abbreviation of "Direction".
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Dir"
+msgstr ""
+
+#. TRANSLATORS: %d is a number of minutes.
+#: src/gui/dialogs/freedv_reporter.cpp
+#, c-format
+msgid "Idle %d"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Enter number of minutes: "
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Max Idle Time"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+#, c-format
+msgid "QSY request sent to %s"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid ">= (Greater or equal to)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid ">  (Greater than)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "=  (Equal to)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "!= (Not equal to)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "<  (Less than)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "<= (Less or equal to)"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Enter value for column filter:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Set Column Filter"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Clear Column Filter"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Edit Message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Edit the saved message:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Add Message"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "Enter new message:"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "ENE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "N"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "NE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "NNE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "E"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "ESE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "SE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "SSE"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "S"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "SSW"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "SW"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "WSW"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "NNW"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "NW"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "W"
+msgstr ""
+
+#: src/gui/dialogs/freedv_reporter.cpp
+msgid "WNW"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Log Entry"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Your Call:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Your Locator:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Time (UTC):"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "DX Call:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "DX Locator:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Frequency (Hz):"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "TX Report:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "59"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "RX Report:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Name:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Comments:"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Frequency (kHz):"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Frequency (MHz):"
+msgstr ""
+
+#: src/gui/dialogs/log_entry.cpp
+msgid "Frequency and DX Call must be filled in in order to log the contact."
+msgstr ""
+
+#: src/gui/dialogs/log_entry.h
+msgid "Confirm Log Entry"
+msgstr ""
+
+#: src/gui/dialogs/monitor_volume_adj.cpp
+msgid "Monitor volume (dB)"
+msgstr ""
+
+#: src/gui/dialogs/tot_warning.cpp
+msgid "Time-Out Timer Warning"
+msgstr ""
+
+#: src/gui/dialogs/tot_warning.cpp
+msgid "Transmit time-out is imminent!"
+msgstr ""
+
+#: src/gui/dialogs/tot_warning.cpp
+msgid "Reset Timer"
+msgstr ""
+
+#: src/gui/dialogs/tot_warning.cpp
+msgid "Resets the Time-Out Timer to extend transmission."
+msgstr ""
+
+#: src/gui/dialogs/tot_warning.cpp
+#, c-format
+msgid "%d second remaining"
+msgid_plural "%d seconds remaining"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/main.cpp
+msgid "Use different configuration file instead of the default."
+msgstr ""
+
+#: src/main.cpp
+msgid "Application Expired"
+msgstr ""
+
+#: src/main.cpp
+msgid ""
+"This version of FreeDV has expired. Please download a new version from "
+"freedv.org."
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp
+msgid "Radio Freq. (kHz)"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp
+msgid "kHz"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp src/topFrame.cpp
+msgid "Radio Freq. (MHz)"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp
+msgid "MHz"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp
+msgid "Turn On"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp src/topFrame.cpp
+msgid "Turn Off"
+msgstr ""
+
+#: src/main.cpp src/voicekeyer.cpp
+#, c-format
+msgid "Toggle Voice Keyer using file %s. Right-click for additional options."
+msgstr ""
+
+#. TRANSLATORS: %s is the name of the FreeDV mode (e.g. RADEV1, 700D).
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Mode: %s"
+msgstr ""
+
+#. TRANSLATORS: "unk" = unknown. The labels in the Stats box are abbreviated to save space.
+#: src/main.cpp
+msgid "Bits: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "Errs: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "BER: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "FrqOff: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "Sync: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "Var: unk"
+msgstr ""
+
+#: src/main.cpp
+msgid "ClkOff: unk"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Bits: %d"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Errs: %d"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "BER: %4.3f"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Resyncs: %d"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "FrqOff: %3.1f"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Sync: %3.2f"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "Var: %4.1f"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+#, c-format
+msgid "ClkOff: %+-d"
+msgstr ""
+
+#: src/main.cpp src/ongui.cpp
+#, c-format
+msgid " [Expires %s]"
+msgstr ""
+
+#: src/main.cpp
+msgid "&Restore defaults"
+msgstr ""
+
+#: src/main.cpp
+msgid "Delete config file/keys and restore defaults"
+msgstr ""
+
+#: src/main.cpp
+msgid "Double click to tune, middle click to re-center"
+msgstr ""
+
+#: src/main.cpp
+msgid "Waterfall"
+msgstr ""
+
+#: src/main.cpp
+msgid "Spectrum"
+msgstr ""
+
+#: src/main.cpp
+msgid "Frm Radio"
+msgstr ""
+
+#: src/main.cpp
+msgid "Frm Mic"
+msgstr ""
+
+#: src/main.cpp
+msgid "Frm Decoder"
+msgstr ""
+
+#: src/main.cpp
+msgid "&Use another voice keyer file..."
+msgstr ""
+
+#: src/main.cpp
+msgid "&Record new voice keyer file..."
+msgstr ""
+
+#: src/main.cpp
+msgid "Monitor transmitted audio"
+msgstr ""
+
+#: src/main.cpp
+msgid "Adjust Monitor Volume..."
+msgstr ""
+
+#: src/main.cpp
+msgid ""
+"Reporting requires a valid callsign and grid square in Tools->Settings. "
+"Reporting will be disabled."
+msgstr ""
+
+#: src/main.cpp
+msgid ""
+"Microphone permissions must be granted to FreeDV for it to function properly."
+msgstr ""
+
+#: src/main.cpp
+msgid "&Stop Modem"
+msgstr ""
+
+#: src/main.cpp src/topFrame.cpp
+msgid "&Start Modem"
+msgstr ""
+
+#: src/main.cpp
+msgid "No Sound Cards configured, use Tools->Settings to configure"
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Could not find RX input sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Could not find RX output sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Could not find TX input sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Could not find TX output sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid "Error encountered while initializing the audio engine: %s."
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Your %s device cannot be found and may have been removed from your system. "
+"Please reattach this device, close this message box and retry. If this "
+"fails, go to Tools->Settings to check your settings."
+msgstr ""
+
+#: src/main.cpp
+msgid "Sound Device Not Found"
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid ""
+"Your %s device is set to use a sample rate of %d, which is less than the "
+"minimum of %d. Please go to Tools->Settings to check your settings."
+msgstr ""
+
+#: src/main.cpp src/voicekeyer.cpp
+msgid "Sample Rate Too Low"
+msgstr ""
+
+#. TRANSLATORS: First %s is a callsign, second %s is a frequency.
+#: src/main.cpp
+#, c-format
+msgid "%s has requested that you QSY to %s kHz."
+msgstr ""
+
+#. TRANSLATORS: First %s is a callsign, second %s is a frequency.
+#: src/main.cpp
+#, c-format
+msgid "%s has requested that you QSY to %s MHz."
+msgstr ""
+
+#. TRANSLATORS: %s is the QSY request message.
+#: src/main.cpp
+#, c-format
+msgid "%s Would you like to change to that frequency now?"
+msgstr ""
+
+#: src/main.cpp
+msgid "Change Frequency"
+msgstr ""
+
+#: src/main.cpp
+#, c-format
+msgid "Error encountered while processing audio: %s"
+msgstr ""
+
+#. TRANSLATORS: The first two %s are the FreeDV version, the third is the git
+#. commit hash and the fourth is the Hamlib version.
+#: src/ongui.cpp
+#, c-format
+msgid ""
+"FreeDV GUI %s\n"
+"\n"
+"For Help and Support visit: http://freedv.org\n"
+"\n"
+"GNU Public License V2.1\n"
+"\n"
+"Created by David Witten KD0EAG and David Rowe VK5DGR (2012).  Currently "
+"maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n"
+"\n"
+"freedv-gui version: %s\n"
+"freedv-gui git hash: %s\n"
+"Using %s\n"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "About"
+msgstr ""
+
+#. TRANSLATORS: "unk" = unknown.
+#: src/ongui.cpp src/topFrame.cpp
+msgid "unk"
+msgstr ""
+
+#: src/ongui.cpp
+msgid ""
+"The radio's model is empty. This is likely due to changes in Hamlib between "
+"FreeDV releases. Please click Stop Modem, double-check your CAT settings and "
+"push Start Modem again."
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by Hamlib.
+#: src/ongui.cpp
+#, c-format
+msgid "Couldn't connect to Radio with hamlib: %s"
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by OmniRig.
+#: src/ongui.cpp
+#, c-format
+msgid "Couldn't connect to Radio with OmniRig: %s"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Restore Defaults"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Would you like to restore configuration to defaults?"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Config file/registry key successfully deleted."
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Deleting config file/registry key failed."
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Disable auto-save of TX atten for %s"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Enable auto-save of TX atten for %s"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Restore TX atten level for %s"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Set tune output to minimum (-30 dB)"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Disable auto-save of tune atten for %s"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Enable auto-save of tune atten for %s"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "Restore tune atten level for %s"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "TX Ending"
+msgstr ""
+
+#: src/ongui.cpp src/topFrame.cpp
+msgid "&XMIT"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Tune &Attenuation"
+msgstr ""
+
+#: src/ongui.cpp src/topFrame.cpp
+msgid "TX &Attenuation"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Switch to Di&gital"
+msgstr ""
+
+#: src/ongui.cpp src/topFrame.cpp
+msgid "Switch to A&nalog"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Export FreeDV Configuration"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "FreeDV configuration files (*.conf)"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Import FreeDV Configuration"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Import Error"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "The selected file does not exist."
+msgstr ""
+
+#: src/ongui.cpp
+msgid "The selected file could not be parsed as a FreeDV configuration."
+msgstr ""
+
+#: src/ongui.cpp
+msgid "This will load the default FreeDV configuration. Are you sure?"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "Load Default Configuration"
+msgstr ""
+
+#: src/playrec.cpp
+msgid "Loop"
+msgstr ""
+
+#: src/playrec.cpp
+msgid "When checked file will repeat forever"
+msgstr ""
+
+#: src/playrec.cpp
+msgid "Start Play File - From Radio..."
+msgstr ""
+
+#: src/playrec.cpp
+msgid "Play File - From Radio"
+msgstr ""
+
+#: src/playrec.cpp
+msgid "WAV and RAW files (*.wav;*.raw)"
+msgstr ""
+
+#: src/playrec.cpp src/voicekeyer.cpp
+msgid "Couldn't open sound file"
+msgstr ""
+
+#: src/playrec.cpp
+#, c-format
+msgid "Playing raw file %s as radio input (assuming Fs=%d)"
+msgstr ""
+
+#: src/playrec.cpp
+#, c-format
+msgid "Playing file %s as radio input"
+msgstr ""
+
+#: src/playrec.cpp
+msgid "Stop Play File - From Radio..."
+msgstr ""
+
+#: src/playrec.cpp
+#, c-format
+msgid "Recording file %s from radio and file %s from decoder"
+msgstr ""
+
+#: src/playrec.cpp
+#, c-format
+msgid "Recording file %s from radio"
+msgstr ""
+
+#: src/playrec.cpp
+#, c-format
+msgid "Recording file %s from decoder"
+msgstr ""
+
+#. TRANSLATORS: Read aloud by screen readers in place of the "." in the version number.
+#: src/topFrame.cpp
+msgid " point "
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Always keeps FreeDV above other windows"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Keep &On Top"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "E&xit"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Exit Program"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&File"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Edit Settings...\tCTRL-,"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Miscellaneous FreeDV configuration options"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Edit Settings..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Re-run the FreeDV Setup Wizard"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Setup &Wizard..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Export Configuration..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Exports the current FreeDV configuration to a file"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Use Configuration..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Loads a FreeDV configuration from a file"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Load &Default Configuration"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Resets FreeDV to its default configuration"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Settings"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "FreeDV R&eporter"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Opens browser window and displays FreeDV Reporter service."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Configures audio filtering"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Filter &Audio..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Pipes radio sound input from file"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Start &Play File - From Radio..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Tools"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Check for Updates"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Checks for updates to FreeDV"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&About FreeDV"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "About this program"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&User Manual..."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Loads the user manual"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Get Assistance"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Gets assistance with FreeDV setup"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Help"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Displays signal to noise ratio in dB."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Slow"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Smooth but slow SNR estimation"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Level"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"Acceptable level range (amber = too low, green = target, red = too high)"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"RX: Peak level of radio's audio output, TX: Peak level of microphone audio "
+"as recorded by FreeDV (before AGC/level settings)."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Sync"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "C&enter RX"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Audio Recording"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Record"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Records incoming over the air signals as well as anything transmitted."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Logging"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Log QSO"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Logs most recent QSO."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "FDV Reporting"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings-"
+">Reporting."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Stats"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Reset"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Clear"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Call Sign of transmitting station will appear here"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Date/Time"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Decrease output by 1.0dB"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Decrease output by 0.2dB"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Increase output by 0.2dB"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Increase output by 1.0dB"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"Use mouse scroll wheel to adjust up or down\n"
+"Right click for more options"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Speaker &Level"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Control"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Begin/End receiving data."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Toggle analog/digital operation."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "&Tune"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"Emits 1500 Hz carrier to enable rig/antenna tuning.\n"
+"Right click for more options"
+msgstr ""
+
+#: src/topFrame.cpp src/voicekeyer.cpp
+msgid "Start Voice &Keyer"
+msgstr ""
+
+#: src/topFrame.cpp
+msgid "Toggle Voice Keyer. Right-click for additional options."
+msgstr ""
+
+#: src/topFrame.cpp
+msgid ""
+"Switch between Receive and Transmit. Right-click for additional options."
+msgstr ""
+
+#: src/topFrame.h
+msgid "FreeDV "
+msgstr ""
+
+#: src/util.cpp
+#, c-format
+msgid "Could not open serial port %s."
+msgstr ""
+
+#: src/util.cpp
+msgid "Please ensure that no other applications are accessing the port."
+msgstr ""
+
+#: src/util.cpp
+msgid ""
+"Please ensure that you have permission to access the port. Adding yourself "
+"to the 'dialout' group (and logging out/back in) along with reattaching your "
+"radio to your PC will typically ensure this."
+msgstr ""
+
+#: src/util.cpp
+msgid "Please ensure that you have permission to access the port."
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by the operating system.
+#: src/util.cpp
+#, c-format
+msgid "Couldn't open serial port for PTT output: %s"
+msgstr ""
+
+#. TRANSLATORS: %s is the error message returned by the operating system.
+#: src/util.cpp
+#, c-format
+msgid "Couldn't open PTT input port: %s"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Start Voice Keyer"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Stop Voice Keyer"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Select Voice Keyer File"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "WAV files (*.wav)"
+msgstr ""
+
+#: src/voicekeyer.cpp
+#, c-format
+msgid "Recording file %s from microphone"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Sound files (*.wav;*.mp3)"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "MP3 files (*.mp3)"
+msgstr ""
+
+#: src/voicekeyer.cpp
+#, c-format
+msgid "Couldn't open: %s"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid ""
+"The selected voice keyer file does not have a high enough sample rate to "
+"guarantee acceptable audio quality. Please ensure that your file's sample "
+"rate is 16 kHz or greater."
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid ""
+"The selected voice keyer file must only contain a single channel. Please use "
+"an audio editor to convert the file to a mono file."
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Too Many Channels"
+msgstr ""
+
+#: src/voicekeyer.cpp
+#, c-format
+msgid "Voice Keyer: Playing file %s to mic input"
+msgstr ""
+
+#: src/voicekeyer.cpp
+msgid "Stop Voice &Keyer"
+msgstr ""

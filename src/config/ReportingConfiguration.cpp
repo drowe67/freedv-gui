@@ -31,8 +31,8 @@
 
 ReportingConfiguration::ReportingConfiguration()
     : reportingEnabled("/Reporting/Enable", false)
-    , reportingCallsign("/Reporting/Callsign", _(""))
-    , reportingGridSquare("/Reporting/GridSquare", _(""))
+    , reportingCallsign("/Reporting/Callsign", wxT(""))
+    , reportingGridSquare("/Reporting/GridSquare", wxT(""))
         
     , reportingFrequency("/Reporting/Frequency", 0)
         
@@ -50,7 +50,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterForceReceiveOnly("/Reporting/FreeDV/ForceReceiveOnly", false)
     , freedvReporterBandFilterTracksFreqBand("/Reporting/FreeDV/BandFilterTracking/TracksFreqBand", true)
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
-    , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
+    , freedvReporterStatusText("/Reporting/FreeDV/StatusText", wxT(""))
     , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
     
     , freedvReporterColumnOrder("/Reporting/FreeDV/ColumnOrder", { }) /* empty means default ordering */
@@ -62,34 +62,34 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterColumnFilterValues("/Reporting/FreeDV/ColumnFilterValues", {})
 
     , udpReportingEnabled("/Reporting/UDP/Enable", false)
-    , udpReportingHostname("/Reporting/UDP/Hostname", _("127.0.0.1"))
+    , udpReportingHostname("/Reporting/UDP/Hostname", wxT("127.0.0.1"))
     , udpReportingPort("/Reporting/UDP/Port", 2237)
 
     , udpBroadcastEnabled("/Reporting/UDPBroadcast/Enable", false)
-    , udpBroadcastAddress("/Reporting/UDPBroadcast/Address", _("224.0.0.1"))
+    , udpBroadcastAddress("/Reporting/UDPBroadcast/Address", wxT("224.0.0.1"))
     , udpBroadcastPort("/Reporting/UDPBroadcast/Port", 7177)
 
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
 
     , reportingFrequencyList("/Reporting/FrequencyList", {
-        _("1.8700"),
-        _("3.6250"),
-        _("3.6430"),
-        _("3.6930"),
-        _("3.6970"),
-        _("3.8030"),
-        _("5.4035"),
-        _("5.3685"),
-        _("7.1770"),
-        _("7.1970"),
-        _("14.2360"),
-        _("14.2400"),
-        _("18.1180"),
-        _("21.3130"),
-        _("24.9330"),
-        _("28.3300"),
-        _("28.7200"),
-        _("10489.6400"),
+        wxT("1.8700"),
+        wxT("3.6250"),
+        wxT("3.6430"),
+        wxT("3.6930"),
+        wxT("3.6970"),
+        wxT("3.8030"),
+        wxT("5.4035"),
+        wxT("5.3685"),
+        wxT("7.1770"),
+        wxT("7.1970"),
+        wxT("14.2360"),
+        wxT("14.2400"),
+        wxT("18.1180"),
+        wxT("21.3130"),
+        wxT("24.9330"),
+        wxT("28.3300"),
+        wxT("28.7200"),
+        wxT("10489.6400"),
     })
     , freedvReporterTxRowBackgroundColor("/Reporting/FreeDV/TxRowBackgroundColor", "#fc4500")
     , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
@@ -100,7 +100,7 @@ ReportingConfiguration::ReportingConfiguration()
         
     , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
     , reportingDirectionAsCardinal("/Reporting/DirectionAsCardinal", false)
-    , csvLogFilePath("/Reporting/CSV/LogFilePath", _(""))
+    , csvLogFilePath("/Reporting/CSV/LogFilePath", wxT(""))
 {
     // Special handling for the frequency list to properly handle locales
     reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> const& list) {

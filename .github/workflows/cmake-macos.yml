@@ -10,6 +10,10 @@ concurrency:
   cancel-in-progress: true
     
 env:
+  # ccache skips compiles that use precompiled headers (wxWidgets and
+  # FreeDV's GUI targets) unless these are set.
+  CCACHE_SLOPPINESS: pch_defines,time_macros
+
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
 
@@ -28,7 +32,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
+          brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 gettext
 
     - name: Install LLVM and Clang
       run: |
@@ -92,7 +96,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128
+        brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 gettext
 
     - uses: ./.github/actions/setup-macos-virtual-audio
       timeout-minutes: 3
@@ -184,7 +188,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-        brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
+        brew install automake libtool numpy sox llvm@20 lld@20 gettext # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
     - uses: ./.github/actions/setup-macos-virtual-audio
       timeout-minutes: 3
@@ -224,7 +228,7 @@ jobs:
 
     - name: Install needed packages
       run: |
-        brew install automake libtool numpy sox llvm@20 lld@20  # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
+        brew install automake libtool numpy sox llvm@20 lld@20 gettext # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
     - name: Initialize code signing infrastructure
       if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}

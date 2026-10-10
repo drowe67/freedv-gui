@@ -62,6 +62,8 @@ SetupWizard::SetupWizard(wxWindow* parent)
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , m_currentPage(0)
 {
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
+    
     wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
 
     // Look for other programs' settings before building page 0, since
@@ -283,9 +285,9 @@ wxPanel* SetupWizard::makeRadioPage()
     m_cbPttMethod = new wxComboBox(hamlibSB, wxID_ANY, wxEmptyString,
                                     wxDefaultPosition, wxSize(120, -1), 0, nullptr,
                                     wxCB_DROPDOWN | wxCB_READONLY);
-    m_cbPttMethod->Append(_("CAT"));
-    m_cbPttMethod->Append(_("RTS"));
-    m_cbPttMethod->Append(_("DTR"));
+    m_cbPttMethod->Append(wxT("CAT"));
+    m_cbPttMethod->Append(wxT("RTS"));
+    m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(_("None"));
     m_cbPttMethod->Append(_("CAT via Data port"));
     hGrid->Add(m_cbPttMethod, 0, static_cast<int>(wxALIGN_CENTER_VERTICAL));
@@ -323,10 +325,10 @@ wxPanel* SetupWizard::makeRadioPage()
     sGrid->Add(new wxStaticText(serialSB, wxID_ANY, _("Signal:")),
                0, static_cast<int>(wxALIGN_CENTER_VERTICAL) | wxALIGN_RIGHT);
     wxBoxSizer* signalRow = new wxBoxSizer(wxHORIZONTAL);
-    m_rbUseRTS = new wxRadioButton(serialSB, wxID_ANY, _("RTS"), wxDefaultPosition,
+    m_rbUseRTS = new wxRadioButton(serialSB, wxID_ANY, wxT("RTS"), wxDefaultPosition,
                                     wxDefaultSize, wxRB_GROUP);
     m_ckRTSPos = new wxCheckBox(serialSB, wxID_ANY, _("Inverted"));
-    m_rbUseDTR = new wxRadioButton(serialSB, wxID_ANY, _("DTR"));
+    m_rbUseDTR = new wxRadioButton(serialSB, wxID_ANY, wxT("DTR"));
     m_ckDTRPos = new wxCheckBox(serialSB, wxID_ANY, _("Inverted"));
     signalRow->Add(m_rbUseRTS, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 4);
     signalRow->Add(m_ckRTSPos, 0, wxRIGHT | static_cast<int>(wxALIGN_CENTER_VERTICAL), 12);
@@ -412,7 +414,8 @@ void SetupWizard::populateAudioCombo(wxComboBox* combo, IAudioEngine::AudioDirec
     engine->start();
     for (auto& dev : engine->getAudioDeviceList(dir))
         combo->Append(dev.getDisplayName(), new wxStringClientData(dev.name));
-    combo->Append("none", new wxStringClientData("none"));
+    // TRANSLATORS: Shown in the audio device lists to indicate that no device is selected.
+    combo->Append(_("none"), new wxStringClientData("none"));
     engine->stop();
 }
 
@@ -533,15 +536,20 @@ void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
 }
 
 // Looks for settings files from other digital mode programs whose settings
-// can be imported. WSJT-X and its derivatives (JTDX, JS8Call) all store
-// their settings in the same QSettings INI format.
+// can be imported. WSJT-X and its derivatives (JTDX, JS8Call, WS) all store
+// their settings in the same QSettings INI format, named after the program.
 void SetupWizard::findImportSources()
 {
-    static const char* apps[] = { "WSJT-X", "JTDX", "JS8Call" };
+    static const struct { const char* appName; const char* displayName; } apps[] = {
+        { "WSJT-X", "WSJT-X" },
+        { "WS", "WS (WSJT-X Improved)" },
+        { "JTDX", "JTDX" },
+        { "JS8Call", "JS8Call" },
+    };
 
-    for (auto app : apps)
+    for (auto& app : apps)
     {
-        wxString appName = app;
+        wxString appName = app.appName;
         wxFileName path;
 #if defined(__WXMSW__)
         wxString localAppData;
@@ -559,7 +567,7 @@ void SetupWizard::findImportSources()
         {
             log_info("Setup wizard: found %s settings at %s",
                      (const char*)appName.ToUTF8(), (const char*)path.GetFullPath().ToUTF8());
-            m_importSources.push_back({ appName, path.GetFullPath() });
+            m_importSources.push_back({ app.displayName, path.GetFullPath() });
         }
     }
 }
@@ -776,7 +784,7 @@ void SetupWizard::importSettings(const ImportSource& source)
     auto joinList = [](const wxArrayString& items) {
         wxString result;
         for (size_t i = 0; i < items.GetCount(); i++)
-            result += (i > 0 ? ", " : "") + items[i];
+            result += (i > 0 ? _(", ") : wxString()) + items[i];
         return result;
     };
 
@@ -1155,8 +1163,8 @@ void SetupWizard::updateRadioState()
     m_stPttMethod->Enable(hl);
     m_cbPttMethod->Enable(hl);
     bool pttNeedsSep = hl &&
-        m_cbPttMethod->GetValue() != _("CAT") &&
-        m_cbPttMethod->GetValue() != _("None");
+        m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_CAT &&
+        m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_NONE;
     m_stPttSerialPort->Enable(pttNeedsSep);
     m_cbPttSerialPort->Enable(pttNeedsSep);
 
