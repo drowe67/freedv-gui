@@ -973,12 +973,18 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix FreeDV hanging when starting the Voice Keyer with a cloud-backed file. (PR #1534)
     * Fix data races on settings read by the audio threads. (PR #1535)
     * Prevent a closed network connection from terminating FreeDV with SIGPIPE. (PR #1540)
+    * Fix equalizer bass/treble filters being designed for the wrong sample rate. (PR #1542)
+    * Fix frequency list entries occasionally being saved 1 Hz low. (PR #1542)
+    * Fix text settings containing e.g. "$HOME" being altered when loaded. (PR #1542)
+    * Hamlib/OmniRig: fix frequency/mode requested prior to connecting not being applied. (PR #1542)
+    * Reject stereo files in "Play File - From Radio" instead of playing them at half speed. (PR #1542)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
     * Optimizations to reduce full rebuild time. (PR #1538)
+    * Add unit tests for non-GUI code. (PR #1542)
 3. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)
