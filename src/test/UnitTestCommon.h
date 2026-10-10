@@ -77,8 +77,8 @@ public:
     {
         object_->~T();
 
-        // Kept (and still referenced, so that it's not seen as a leak) until exit.
-        retired_().push_back(memory_);
+        // Kept until exit.
+        retired_().blocks.push_back(memory_);
     }
 
     T& operator*() { return *object_; }
@@ -88,9 +88,23 @@ private:
     void* memory_;
     T* object_;
 
-    static std::vector<void*>& retired_()
+    // Frees everything on exit so that it's not reported as a leak.
+    struct Retired
     {
-        static std::vector<void*> retired;
+        std::vector<void*> blocks;
+
+        ~Retired()
+        {
+            for (auto block : blocks)
+            {
+                ::operator delete(block);
+            }
+        }
+    };
+
+    static Retired& retired_()
+    {
+        static Retired retired;
         return retired;
     }
 };
