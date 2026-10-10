@@ -651,7 +651,7 @@ bool leavesMemoryChannelToChangeFrequency()
         return false;
     }
 
-    // Memory channels can't be retuned, so the radio is switched to VFO A first.
+    // A memory channel's frequency can't be changed, so the radio is switched to VFO A first.
     f.controller.setFrequency(14236000);
     f.controller.setMode(IRigFrequencyController::DIGU);
     if (!f.radioReports(14236000, IRigFrequencyController::DIGU)) return false;
