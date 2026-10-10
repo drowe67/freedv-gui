@@ -536,15 +536,20 @@ void SetupWizard::autoSelectRadioDevices(IAudioEngine* engine)
 }
 
 // Looks for settings files from other digital mode programs whose settings
-// can be imported. WSJT-X and its derivatives (JTDX, JS8Call) all store
-// their settings in the same QSettings INI format.
+// can be imported. WSJT-X and its derivatives (JTDX, JS8Call, WS) all store
+// their settings in the same QSettings INI format, named after the program.
 void SetupWizard::findImportSources()
 {
-    static const char* apps[] = { "WSJT-X", "JTDX", "JS8Call" };
+    static const struct { const char* appName; const char* displayName; } apps[] = {
+        { "WSJT-X", "WSJT-X" },
+        { "WS", "WS (WSJT-X Improved)" },
+        { "JTDX", "JTDX" },
+        { "JS8Call", "JS8Call" },
+    };
 
-    for (auto app : apps)
+    for (auto& app : apps)
     {
-        wxString appName = app;
+        wxString appName = app.appName;
         wxFileName path;
 #if defined(__WXMSW__)
         wxString localAppData;
@@ -562,7 +567,7 @@ void SetupWizard::findImportSources()
         {
             log_info("Setup wizard: found %s settings at %s",
                      (const char*)appName.ToUTF8(), (const char*)path.GetFullPath().ToUTF8());
-            m_importSources.push_back({ appName, path.GetFullPath() });
+            m_importSources.push_back({ app.displayName, path.GetFullPath() });
         }
     }
 }
