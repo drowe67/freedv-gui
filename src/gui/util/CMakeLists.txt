@@ -13,3 +13,16 @@ if(BOOTSTRAP_WXWIDGETS)
     target_compile_definitions(fdv_gui_util PRIVATE ${WXBUILD_BUILD_DEFS})
     target_include_directories(fdv_gui_util PRIVATE ${WXBUILD_INCLUDES})
 endif(BOOTSTRAP_WXWIDGETS)
+
+if(UNITTEST)
+# Header-only; only needs what HamlibRigController.h itself needs.
+DefineFreeDVUnitTest(gui_util FrequencyOpsTest fdv_util)
+
+DefineFreeDVUnitTest(gui_util TabLayoutSerializerTest fdv_gui_util ${FREEDV_LINK_LIBS})
+target_include_directories(TabLayoutSerializerTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+if(BOOTSTRAP_WXWIDGETS)
+    target_compile_definitions(TabLayoutSerializerTest PRIVATE ${WXBUILD_BUILD_DEFS})
+    target_include_directories(TabLayoutSerializerTest PRIVATE ${WXBUILD_INCLUDES})
+    target_link_libraries(TabLayoutSerializerTest PRIVATE wx::core wx::base wx::aui)
+endif(BOOTSTRAP_WXWIDGETS)
+endif(UNITTEST)

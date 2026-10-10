@@ -6,6 +6,7 @@ set(FREEDV_SOURCES
     sox_biquad.c
     util.cpp
     eq.cpp
+    eq_design.cpp
     voicekeyer.cpp
     voicekeyer_cache.cpp
     playrec.cpp
@@ -25,6 +26,16 @@ add_definitions(-DULOG_NO_COLOR)
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
+# Defines a unit test executable (test/<utName>.cpp) that links against the given
+# libraries and registers it with CTest as <prefix>_<utName>.
+macro(DefineFreeDVUnitTest prefix utName)
+    add_executable(${utName} test/${utName}.cpp)
+    target_link_libraries(${utName} PRIVATE ${ARGN})
+    target_compile_options(${utName} PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+
+    add_test(NAME ${prefix}_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)
@@ -33,6 +44,20 @@ add_subdirectory(logging)
 add_subdirectory(pipeline)
 add_subdirectory(rig_control)
 add_subdirectory(sox)
+
+if(UNITTEST)
+DefineFreeDVUnitTest(gui EqDesignTest fdv_sox fdv_util)
+target_sources(EqDesignTest PRIVATE eq_design.cpp sox_biquad.c)
+
+DefineFreeDVUnitTest(gui VoiceKeyerFileCacheTest fdv_util ${FREEDV_LINK_LIBS})
+target_sources(VoiceKeyerFileCacheTest PRIVATE voicekeyer_cache.cpp)
+target_include_directories(VoiceKeyerFileCacheTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(BOOTSTRAP_WXWIDGETS)
+    target_compile_definitions(VoiceKeyerFileCacheTest PRIVATE ${WXBUILD_BUILD_DEFS})
+    target_include_directories(VoiceKeyerFileCacheTest PRIVATE ${WXBUILD_INCLUDES})
+    target_link_libraries(VoiceKeyerFileCacheTest PRIVATE wx::core wx::base)
+endif(BOOTSTRAP_WXWIDGETS)
+endif(UNITTEST)
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.

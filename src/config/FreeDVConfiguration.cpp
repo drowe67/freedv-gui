@@ -126,6 +126,10 @@ FreeDVConfiguration::FreeDVConfiguration()
 
 void FreeDVConfiguration::load(wxConfigBase* config)
 {
+    // Settings should be read back exactly as they were saved; see WxWidgetsConfigStore.cpp.
+    // (This covers the settings that are read directly rather than through load_().)
+    config->SetExpandEnvVars(false);
+
     audioConfiguration.load(config);
     filterConfiguration.load(config);
     rigControlConfiguration.load(config);
