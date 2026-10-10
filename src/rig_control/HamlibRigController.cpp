@@ -588,7 +588,7 @@ void HamlibRigController::pttImpl_(bool state)
     }
     auto newTime = std::chrono::steady_clock::now();
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
-    rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+    rigResponseTime_ = std::max(rigResponseTime_.load(), totalTimeMicroseconds);
     
     if (result != RIG_OK) 
     {

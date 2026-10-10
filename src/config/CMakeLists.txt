@@ -24,12 +24,7 @@ DefineFreeDVUnitTest(config ConfigurationDataElementTest)
 macro(DefineConfigUnitTest utName)
     DefineFreeDVUnitTest(config ${utName} fdv_config ${FREEDV_LINK_LIBS})
     target_include_directories(${utName} PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
-
-    if(BOOTSTRAP_WXWIDGETS)
-        target_compile_definitions(${utName} PRIVATE ${WXBUILD_BUILD_DEFS})
-        target_include_directories(${utName} PRIVATE ${WXBUILD_INCLUDES})
-        target_link_libraries(${utName} PRIVATE wx::core wx::base)
-    endif(BOOTSTRAP_WXWIDGETS)
+    FreeDVUnitTestUsesWxWidgets(${utName})
 endmacro()
 
 DefineConfigUnitTest(ConfigMigrationTest)

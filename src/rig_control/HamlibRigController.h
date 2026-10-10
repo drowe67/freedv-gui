@@ -96,9 +96,9 @@ private:
     uint64_t origFreq_;
     rmode_t origMode_;
     bool freqOnly_;
-    bool destroying_;
+    std::atomic<bool> destroying_;
     
-    int rigResponseTime_;
+    std::atomic<int> rigResponseTime_;
   
     // Tracks errors encountered during/after rig_open() so that
     // we only display the error box once.

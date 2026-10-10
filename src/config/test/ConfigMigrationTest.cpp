@@ -531,7 +531,7 @@ bool savingIsRepeatable()
                 wxString b = index < secondLines.size() ? secondLines[index] : wxString("(nothing)");
                 if (a != b)
                 {
-                    std::cout << "[first saved " << a << ", then " << b << "] ";
+                    std::cout << "[first saved " << (const char*)a.utf8_str() << ", then " << (const char*)b.utf8_str() << "] ";
                     break;
                 }
             }

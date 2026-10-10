@@ -49,13 +49,15 @@ struct Fixture
     std::vector<IRigFrequencyController::Mode> modes;
 
     // Declared last so that it's destroyed (and its thread stopped) first.
-    HamlibRigController controller;
+    NeverReused<HamlibRigController> controllerStorage;
+    HamlibRigController& controller;
 
     explicit Fixture(
         std::string const& rigName = DUMMY_RIG_NAME, 
         HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_CAT,
         bool restoreOnDisconnect = false, bool freqOnly = false, std::string const& serialPort = "")
-        : controller(rigName, serialPort, 0, 0, pttType, "", restoreOnDisconnect, freqOnly, false, false)
+        : controllerStorage(rigName, serialPort, 0, 0, pttType, std::string(""), restoreOnDisconnect, freqOnly, false, false)
+        , controller(*controllerStorage)
     {
         controller.onRigConnected += [this](IRigController*) {
             record_([this]() { numConnects++; });
@@ -200,7 +202,9 @@ bool baudRateRangesAreSane()
 bool canBeConstructedFromRigIndex()
 {
     int index = HamlibRigController::RigNameToIndex(DUMMY_RIG_NAME);
-    HamlibRigController controller(index, "", 0, 0, HamlibRigController::PTT_VIA_CAT, "", false, false, false, false);
+    NeverReused<HamlibRigController> controllerStorage(
+        index, std::string(""), 0, 0, HamlibRigController::PTT_VIA_CAT, std::string(""), false, false, false, false);
+    HamlibRigController& controller = *controllerStorage;
 
     std::mutex mtx;
     std::condition_variable cv;
@@ -624,7 +628,8 @@ bool usesWhicheverVfoIsSelected()
         rig_get_freq(rig, RIG_VFO_B, &freqB);
         rig_get_mode(rig, RIG_VFO_A, &modeA, &width);
     });
-    if (vfo != RIG_VFO_B || freqA != 14236000 || freqB != 7177000 || modeA != RIG_MODE_USB)
+    // (Some versions of Hamlib call the simulated radio's second VFO "Sub".)
+    if ((vfo != RIG_VFO_B && vfo != RIG_VFO_SUB) || freqA != 14236000 || freqB != 7177000 || modeA != RIG_MODE_USB)
     {
         std::cout << "[VFO " << rig_strvfo(vfo) << " selected, A = " << (uint64_t)freqA << " Hz ("
                   << rig_strrmode(modeA) << "), B = " << (uint64_t)freqB << " Hz] ";
@@ -662,7 +667,8 @@ bool leavesMemoryChannelToChangeFrequency()
         rig_get_vfo(rig, &vfo);
         rig_get_freq(rig, RIG_VFO_A, &freqA);
     });
-    if (vfo != RIG_VFO_A || freqA != 14236000)
+    // (Some versions of Hamlib call the simulated radio's first VFO "Main".)
+    if ((vfo != RIG_VFO_A && vfo != RIG_VFO_MAIN) || freqA != 14236000)
     {
         std::cout << "[VFO " << rig_strvfo(vfo) << " selected, A = " << (uint64_t)freqA << " Hz] ";
         return false;

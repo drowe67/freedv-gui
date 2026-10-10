@@ -268,7 +268,8 @@ struct Contact
 struct Fixture
 {
     Receiver receiver;
-    WSJTXNetworkLogger logger { "127.0.0.1", receiver.port() };
+    NeverReused<WSJTXNetworkLogger> loggerStorage { "127.0.0.1", receiver.port() };
+    WSJTXNetworkLogger& logger = *loggerStorage;
 
     // The logger announces itself as soon as it's created.
     bool skipHeartbeat()
@@ -576,7 +577,7 @@ bool sendsHeartbeatsPeriodically()
 
     Receiver receiver;
     auto start = std::chrono::steady_clock::now();
-    WSJTXNetworkLogger logger("127.0.0.1", receiver.port(), INTERVAL_MS);
+    NeverReused<WSJTXNetworkLogger> logger(std::string("127.0.0.1"), receiver.port(), INTERVAL_MS);
 
     // One straight away, then one per interval.
     for (int count = 0; count < NUM_HEARTBEATS; count++)
@@ -601,7 +602,8 @@ bool heartbeatsContinueAroundLoggedContacts()
     const int INTERVAL_MS = 100;
 
     Receiver receiver;
-    WSJTXNetworkLogger logger("127.0.0.1", receiver.port(), INTERVAL_MS);
+    NeverReused<WSJTXNetworkLogger> loggerStorage(std::string("127.0.0.1"), receiver.port(), INTERVAL_MS);
+    WSJTXNetworkLogger& logger = *loggerStorage;
     if (!checkHeartbeat(receiver)) return false;
 
     Contact contact;
@@ -647,7 +649,7 @@ bool stopsSendingHeartbeatsWhenDestroyed()
 {
     Receiver receiver;
     {
-        WSJTXNetworkLogger logger("127.0.0.1", receiver.port(), 50);
+        NeverReused<WSJTXNetworkLogger> logger(std::string("127.0.0.1"), receiver.port(), 50);
         if (!checkHeartbeat(receiver) || !checkHeartbeat(receiver)) return false;
     }
 
@@ -680,7 +682,8 @@ bool nothingListeningIsHarmless()
         port = receiver.port();
     }
 
-    WSJTXNetworkLogger logger("127.0.0.1", port);
+    NeverReused<WSJTXNetworkLogger> loggerStorage(std::string("127.0.0.1"), port);
+    WSJTXNetworkLogger& logger = *loggerStorage;
     Contact().logTo(logger);
     Contact().logTo(logger);
     return true;

@@ -173,30 +173,44 @@ ParallelStep::~ParallelStep()
         taskThread->exitingThread.store(true, std::memory_order_release);
         if (taskThread->thread.joinable())
         {
-            // Destroy semaphore
+            // Wake up the thread so that it sees that it should exit. The
+            // semaphore can only be destroyed once the thread's gone as the 
+            // thread may otherwise still be about to wait on it.
 #if defined(_WIN32)
             if (taskThread->sem != nullptr)
             {
-                auto tmpSem = taskThread->sem;
-                taskThread->sem = nullptr;
-                ReleaseSemaphore(tmpSem, 1, nullptr);
-                CloseHandle(tmpSem);
+                ReleaseSemaphore(taskThread->sem, 1, nullptr);
             }
 #elif defined(__APPLE__)
             if (taskThread->sem != nullptr)
             {
                 dispatch_semaphore_signal(taskThread->sem);
-                dispatch_release(taskThread->sem);
             }
 #else
             sem_post(&taskThread->sem);
-            sem_destroy(&taskThread->sem);
 #endif // defined(_WIN32) || defined(__APPLE__)
-            
+
             // Join thread
             taskThread->thread.join();
+
+            // Destroy semaphore
+#if defined(_WIN32)
+            if (taskThread->sem != nullptr)
+            {
+                CloseHandle(taskThread->sem);
+                taskThread->sem = nullptr;
+            }
+#elif defined(__APPLE__)
+            if (taskThread->sem != nullptr)
+            {
+                dispatch_release(taskThread->sem);
+                taskThread->sem = nullptr;
+            }
+#else
+            sem_destroy(&taskThread->sem);
+#endif // defined(_WIN32) || defined(__APPLE__)
         }
-                
+
         codec2_fifo_destroy(taskThread->inputFifo);
         codec2_fifo_destroy(taskThread->outputFifo);
         taskThread->step = nullptr;

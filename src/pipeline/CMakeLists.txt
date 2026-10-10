@@ -26,9 +26,9 @@ if(UNITTEST)
 macro(DefinePipelineUnitTest utName)
     DefineFreeDVUnitTest(pipeline ${utName} fdv_audio_pipeline_extra fdv_audio_pipeline fdv_util codec2 ${FREEDV_LINK_LIBS})
     target_include_directories(${utName} PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
-    set_target_properties(
-        ${utName}
-        PROPERTIES BUILD_RPATH "${CMAKE_BUILD_RPATH};${CODEC2_BUILD_DIR}/src;${rade_BINARY_DIR}/src")
+
+    # Some of the steps in fdv_audio_pipeline_extra use wxWidgets.
+    FreeDVUnitTestUsesWxWidgets(${utName})
 endmacro()
 
 DefinePipelineUnitTest(BeepStepTest)
@@ -37,11 +37,6 @@ DefinePipelineUnitTest(MixStepTest)
 DefinePipelineUnitTest(ParallelStepTest)
 DefinePipelineUnitTest(PlaybackStepTest)
 DefinePipelineUnitTest(RecordStepTest)
-if(BOOTSTRAP_WXWIDGETS)
-    target_compile_definitions(RecordStepTest PRIVATE ${WXBUILD_BUILD_DEFS})
-    target_include_directories(RecordStepTest PRIVATE ${WXBUILD_INCLUDES})
-    target_link_libraries(RecordStepTest PRIVATE wx::core wx::base)
-endif(BOOTSTRAP_WXWIDGETS)
 
 DefinePipelineUnitTest(EqualizerStepTest)
 target_sources(EqualizerStepTest PRIVATE ../eq_design.cpp ../sox_biquad.c)

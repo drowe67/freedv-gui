@@ -20,6 +20,19 @@
 
 using namespace std::chrono_literals;
 
+// Files are loaded on detached threads. When one of those threads exits and
+// another starts shortly afterward, thread sanitizer has no way of knowing
+// that the first is done with memory the two end up sharing (in practice,
+// errno) and reports a race. Loading the larger files used here is also too
+// slow with it enabled, so these tests aren't run under thread sanitizer.
+#if defined(__SANITIZE_THREAD__)
+#define RUNNING_UNDER_THREAD_SANITIZER 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define RUNNING_UNDER_THREAD_SANITIZER 1
+#endif
+#endif
+
 namespace {
 
 constexpr int SAMPLE_RATE = 8000;
@@ -558,6 +571,11 @@ bool cacheCanBeDestroyedWhileLoading()
 
 int main()
 {
+#if defined(RUNNING_UNDER_THREAD_SANITIZER)
+    std::cout << "Skipped: not supported under thread sanitizer" << std::endl;
+    return 0;
+#endif // defined(RUNNING_UNDER_THREAD_SANITIZER)
+
     wxInitializer initializer;
     if (!initializer.IsOk())
     {

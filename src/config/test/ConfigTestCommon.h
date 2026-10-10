@@ -36,31 +36,52 @@ inline std::unique_ptr<wxFileConfig> reload(wxFileConfig& config)
     return makeConfig(contentsOf(config));
 }
 
-inline std::ostream& operator<<(std::ostream& os, wxString const& str)
+// Prints values in failure messages. (These are functions of our own rather than
+// stream operators as whether wxString has one depends on how wxWidgets was built.)
+inline void printValue(std::ostream& os, wxString const& str)
 {
-    return os << '"' << str.utf8_string() << '"';
+    os << '"' << (const char*)str.utf8_str() << '"';
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& os, std::vector<T> const& list)
+void printValue(std::ostream& os, T const& value)
 {
-    os << "{";
-    for (auto const& item : list) os << " " << item;
-    return os << " }";
+    os << value;
 }
 
-inline std::ostream& operator<<(std::ostream& os, std::map<wxString, int> const& map)
+inline void printValue(std::ostream& os, std::map<wxString, int> const& map)
 {
     os << "{";
-    for (auto const& kv : map) os << " " << kv.first << "=" << kv.second;
-    return os << " }";
+    for (auto const& kv : map)
+    {
+        os << " ";
+        printValue(os, kv.first);
+        os << "=" << kv.second;
+    }
+    os << " }";
+}
+
+template<typename T>
+void printValue(std::ostream& os, std::vector<T> const& list)
+{
+    os << "{";
+    for (size_t index = 0; index < list.size(); index++)
+    {
+        os << " ";
+        printValue(os, (T)list[index]);
+    }
+    os << " }";
 }
 
 template<typename T>
 bool check(const char* description, T const& actual, T const& expected)
 {
     if (actual == expected) return true;
-    std::cout << "[" << description << " was " << actual << ", expected " << expected << "] ";
+    std::cout << "[" << description << " was ";
+    printValue(std::cout, actual);
+    std::cout << ", expected ";
+    printValue(std::cout, expected);
+    std::cout << "] ";
     return false;
 }
 

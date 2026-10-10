@@ -33,7 +33,22 @@ macro(DefineFreeDVUnitTest prefix utName)
     target_link_libraries(${utName} PRIVATE ${ARGN})
     target_compile_options(${utName} PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 
+    # Needed to find codec2/RADE when they're built as part of FreeDV.
+    set_target_properties(
+        ${utName}
+        PROPERTIES BUILD_RPATH "${CMAKE_BUILD_RPATH};${CODEC2_BUILD_DIR}/src;${rade_BINARY_DIR}/src")
+
     add_test(NAME ${prefix}_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
+# Sets up a unit test that uses wxWidgets when wxWidgets is being built as part
+# of FreeDV. (Otherwise, wxWidgets comes in via FREEDV_LINK_LIBS.)
+macro(FreeDVUnitTestUsesWxWidgets utName)
+    if(BOOTSTRAP_WXWIDGETS)
+        target_compile_definitions(${utName} PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(${utName} PRIVATE ${WXBUILD_INCLUDES})
+        target_link_libraries(${utName} PRIVATE wx::core wx::base ${ARGN})
+    endif(BOOTSTRAP_WXWIDGETS)
 endmacro()
 
 # Compile FreeDV components
@@ -52,11 +67,7 @@ target_sources(EqDesignTest PRIVATE eq_design.cpp sox_biquad.c)
 DefineFreeDVUnitTest(gui VoiceKeyerFileCacheTest fdv_util ${FREEDV_LINK_LIBS})
 target_sources(VoiceKeyerFileCacheTest PRIVATE voicekeyer_cache.cpp)
 target_include_directories(VoiceKeyerFileCacheTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-if(BOOTSTRAP_WXWIDGETS)
-    target_compile_definitions(VoiceKeyerFileCacheTest PRIVATE ${WXBUILD_BUILD_DEFS})
-    target_include_directories(VoiceKeyerFileCacheTest PRIVATE ${WXBUILD_INCLUDES})
-    target_link_libraries(VoiceKeyerFileCacheTest PRIVATE wx::core wx::base)
-endif(BOOTSTRAP_WXWIDGETS)
+FreeDVUnitTestUsesWxWidgets(VoiceKeyerFileCacheTest)
 endif(UNITTEST)
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.

@@ -99,7 +99,7 @@ TabList deserialize(wxString const& layout)
 bool layoutIs(wxString const& actual, const char* expected)
 {
     if (actual == expected) return true;
-    std::cout << "[layout was " << actual.utf8_string() << ", expected " << expected << "] ";
+    std::cout << "[layout was " << (const char*)actual.utf8_str() << ", expected " << expected << "] ";
     return false;
 }
 

@@ -5,7 +5,9 @@
 
 #include <functional>
 #include <iostream>
+#include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Names of the test cases that have failed so far. Failures are reported via
@@ -48,5 +50,49 @@ inline int testResult()
     }
     return -1;
 }
+
+// Holds an object in memory that's never used for anything else afterward.
+//
+// Objects that own a thread typically wait for that thread to go idle before
+// they finish being destroyed. Thread sanitizer can't always tell that this
+// happened, so if another object is then created at the same address (as
+// happens with one local variable per test case) it reports a race between 
+// the old object's thread and the new object's constructor. 
+template<typename T>
+class NeverReused
+{
+public:
+    template<typename... Args>
+    explicit NeverReused(Args&&... args)
+        : memory_(::operator new(sizeof(T)))
+        , object_(new (memory_) T(std::forward<Args>(args)...))
+    {
+        // empty
+    }
+
+    NeverReused(NeverReused const&) = delete;
+    NeverReused& operator=(NeverReused const&) = delete;
+
+    ~NeverReused()
+    {
+        object_->~T();
+
+        // Kept (and still referenced, so that it's not seen as a leak) until exit.
+        retired_().push_back(memory_);
+    }
+
+    T& operator*() { return *object_; }
+    T* operator->() { return object_; }
+
+private:
+    void* memory_;
+    T* object_;
+
+    static std::vector<void*>& retired_()
+    {
+        static std::vector<void*> retired;
+        return retired;
+    }
+};
 
 #endif // UNIT_TEST_COMMON_H
