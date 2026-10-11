@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <sndfile.h>
-#include <unistd.h>
 
 #include <wx/init.h>
 #include <wx/thread.h>
@@ -41,9 +40,7 @@ class Recording
 public:
     explicit Recording(bool fileAvailable = true)
     {
-        const char* tmpDir = getenv("TMPDIR");
-        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/RecordStepTest-" +
-            std::to_string(getpid()) + "-" + std::to_string(NextId_++) + ".wav";
+        path_ = unitTestTempPath("RecordStepTest", "-" + std::to_string(NextId_++) + ".wav");
 
         SF_INFO info = {};
         info.samplerate = SAMPLE_RATE;

@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <sndfile.h>
-#include <unistd.h>
 
 #include "../PlaybackStep.h"
 #include "../../util/logging/ulog.h"
@@ -33,9 +32,7 @@ public:
     TestFile(std::vector<short> const& samples, int sampleRate, int channels = 1)
         : sampleRate_(sampleRate)
     {
-        const char* tmpDir = getenv("TMPDIR");
-        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/PlaybackStepTest-" +
-            std::to_string(getpid()) + "-" + std::to_string(NextId_++) + ".wav";
+        path_ = unitTestTempPath("PlaybackStepTest", "-" + std::to_string(NextId_++) + ".wav");
 
         SF_INFO info = {};
         info.samplerate = sampleRate;

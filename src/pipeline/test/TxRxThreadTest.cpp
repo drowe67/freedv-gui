@@ -19,8 +19,11 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <unistd.h>
 #include <vector>
+
+// First, as it brings in wxWidgets, which on Windows has to include
+// winsock2.h before anything else includes windows.h.
+#include "UtilStubs.h"
 
 #include <sndfile.h>
 
@@ -30,7 +33,6 @@
 #include "../TxRxThread.h"
 #include "pipeline/LinkStep.h"
 #include "../../freedv_interface.h"
-#include "UtilStubs.h"
 #include "../../test/UnitTestCommon.h"
 
 // ---------------------------------------------------------------------------
@@ -405,9 +407,7 @@ class RecordingFile
 public:
     explicit RecordingFile(int sampleRate)
     {
-        const char* tmpDir = getenv("TMPDIR");
-        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/TxRxThreadTest-" +
-            std::to_string(getpid()) + "-recording.wav";
+        path_ = unitTestTempPath("TxRxThreadTest", "-recording.wav");
 
         SF_INFO info = {};
         info.samplerate = sampleRate;
@@ -525,9 +525,7 @@ class TestFile
 public:
     TestFile(std::vector<short> const& samples, int sampleRate, int channels = 1)
     {
-        const char* tmpDir = getenv("TMPDIR");
-        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/TxRxThreadTest-" +
-            std::to_string(getpid()) + "-" + std::to_string(NextId_++) + ".wav";
+        path_ = unitTestTempPath("TxRxThreadTest", "-" + std::to_string(NextId_++) + ".wav");
 
         SF_INFO info = {};
         info.samplerate = sampleRate;
@@ -1086,8 +1084,7 @@ public:
         g_analog = 1;
         FifoGuard fifos;
 
-        const char* tmpDir = getenv("TMPDIR");
-        std::string path = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/TxRxThreadTest-" + std::to_string(getpid()) + "-rec.wav";
+        std::string path = unitTestTempPath("TxRxThreadTest", "-rec.wav");
         SF_INFO info = {};
         info.samplerate = RADIO_SAMPLE_RATE;
         info.channels = 1;

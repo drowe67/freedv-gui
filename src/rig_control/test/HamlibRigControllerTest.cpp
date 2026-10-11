@@ -1232,6 +1232,17 @@ bool hasSetting(SettingsProbe::Settings const& settings, std::string const& name
 {
     auto iter = settings.find(name);
     std::string actual = iter != settings.end() ? iter->second : "(not available)";
+
+#if defined(_WIN32)
+    // On Windows, Hamlib puts this in front of the names of some ports so
+    // that COM10 and above can be opened.
+    const std::string devicePrefix = "\\\\.\\";
+    if (actual.rfind(devicePrefix, 0) == 0 && expected.rfind(devicePrefix, 0) != 0)
+    {
+        actual = actual.substr(devicePrefix.size());
+    }
+#endif // defined(_WIN32)
+
     if (actual != expected)
     {
         std::cout << "[" << name << " was \"" << actual << "\", expected \"" << expected << "\"] ";

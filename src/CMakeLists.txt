@@ -26,10 +26,18 @@ add_definitions(-DULOG_NO_COLOR)
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
+# Builds every unit test (and only what they need), e.g. for running them
+# on a machine other than the one they were built on.
+if(UNITTEST AND NOT TARGET unit_tests)
+    add_custom_target(unit_tests)
+endif()
+
 # Defines a unit test executable (test/<utName>.cpp) that links against the given
 # libraries and registers it with CTest as <prefix>_<utName>.
 macro(DefineFreeDVUnitTest prefix utName)
     add_executable(${utName} test/${utName}.cpp)
+    add_dependencies(unit_tests ${utName})
+    set_property(GLOBAL APPEND PROPERTY FREEDV_UNIT_TEST_TARGETS ${utName})
     target_link_libraries(${utName} PRIVATE ${ARGN})
     target_compile_options(${utName} PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
 

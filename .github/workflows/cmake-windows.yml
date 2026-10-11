@@ -154,6 +154,127 @@ jobs:
         path: ${{github.workspace}}/build_windows/sanitizer-${{ matrix.sanitizer_name }}-${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
+  # Unit tests (the *Test programs that CTest runs on Linux and macOS). They're
+  # cross-compiled here like everything else for Windows, gathered into one
+  # folder along with the DLLs they need, and then run on Windows itself by
+  # the unit-tests job below. Unlike the other tests they need neither the
+  # installer nor any audio devices.
+  #
+  # They're built both without and with sanitizers, the latter in the same
+  # combinations as build-sanitizer above (llvm-mingw has no ASan for aarch64).
+  # Unlike the audio tests, these don't depend on timing, so a sanitizer
+  # finding fails the job outright.
+  build-unit-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - variant: plain
+          sanitizer_flag: ""
+          arch: x86_64
+        - variant: plain
+          sanitizer_flag: ""
+          arch: aarch64
+        - variant: UBSAN
+          sanitizer_flag: -DENABLE_UBSAN=1
+          arch: x86_64
+        - variant: UBSAN
+          sanitizer_flag: -DENABLE_UBSAN=1
+          arch: aarch64
+        - variant: ASAN
+          sanitizer_flag: -DENABLE_ASAN=1
+          arch: x86_64
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}-${{ matrix.variant }}-${{ matrix.arch }}
+        max-size: "5G"
+        verbose: 2
+
+    - name: Install required packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config
+
+    - uses: ./.github/actions/download-mingw-llvm
+
+    - name: Configure freedv-gui (unit tests, ${{ matrix.variant }})
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake ${{ matrix.sanitizer_flag }} -DUNITTEST=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build unit tests (${{ matrix.variant }})
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        make -j$(nproc) collect_unit_tests
+
+        # The script that runs them, and the sanitizer suppression files,
+        # which have to be next to the tests (see unit-tests below).
+        cp ${{github.workspace}}/test/RunUnitTests.ps1 unit_tests/
+        cp ${{github.workspace}}/test/asan_suppressions.txt ${{github.workspace}}/test/ubsan_suppressions.txt unit_tests/
+
+    - name: Stash for unit-tests job
+      uses: actions/upload-artifact@v7
+      with:
+        name: unit-tests-${{ matrix.variant }}-${{ matrix.arch }}
+        path: ${{github.workspace}}/build_windows/unit_tests
+
+  unit-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - variant: plain
+          arch: x86_64
+          runner: windows-2022
+        - variant: plain
+          arch: aarch64
+          runner: windows-11-arm
+        - variant: UBSAN
+          arch: x86_64
+          runner: windows-2022
+        - variant: UBSAN
+          arch: aarch64
+          runner: windows-11-arm
+        - variant: ASAN
+          arch: x86_64
+          runner: windows-2022
+
+    runs-on: ${{ matrix.runner }}
+    needs: build-unit-tests
+    env:
+      # Only have an effect on the sanitizer builds. Bare relative filenames
+      # are used for the same reason as in windows-audio-test.yml: a drive
+      # letter's colon would be taken as separating two options.
+      ASAN_OPTIONS: suppressions=asan_suppressions.txt
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1:suppressions=ubsan_suppressions.txt
+
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        name: unit-tests-${{ matrix.variant }}-${{ matrix.arch }}
+        path: ${{github.workspace}}\unit_tests
+
+    - name: Run unit tests (${{ matrix.variant }})
+      shell: pwsh
+      working-directory: ${{github.workspace}}\unit_tests
+      run: |
+          .\RunUnitTests.ps1
+
   # rade_tx_wav / rade_rx_wav are excluded from the Windows build in the rade_c
   # fork (if(NOT WIN32) in src/CMakeLists.txt), so the RADE loss threshold can't be
   # derived on the Windows runners. Compute the software-only baseline here on Linux

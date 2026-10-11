@@ -1,15 +1,17 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include <sndfile.h>
-#include <sys/stat.h>
-#include <sys/time.h>
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif // !defined(_WIN32)
 
 #include <wx/init.h>
 #include <wx/log.h>
@@ -54,9 +56,7 @@ class TestFile
 public:
     explicit TestFile(const char* extension = ".wav")
     {
-        const char* tmpDir = getenv("TMPDIR");
-        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/VoiceKeyerFileCacheTest-" +
-            std::to_string(getpid()) + "-" + std::to_string(NextId_++) + extension;
+        path_ = unitTestTempPath("VoiceKeyerFileCacheTest", "-" + std::to_string(NextId_++) + extension);
     }
 
     TestFile(std::vector<short> const& samples, int sampleRate = SAMPLE_RATE)
@@ -96,23 +96,28 @@ public:
     // that much to disk.
     bool resize(long long numBytes)
     {
-        return truncate(path_.c_str(), numBytes) == 0;
+        std::error_code error;
+        std::filesystem::resize_file(path_, numBytes, error);
+        return !error;
     }
 
     bool setReadable(bool readable)
     {
-        return chmod(path_.c_str(), readable ? 0600 : 0000) == 0;
+        std::error_code error;
+        std::filesystem::permissions(
+            path_,
+            readable ? (std::filesystem::perms::owner_read | std::filesystem::perms::owner_write) : std::filesystem::perms::none,
+            error);
+        return !error;
     }
 
     // File systems may only record modification times to the second, so
     // changes made by a test are given a time of their own.
     void setModificationTime(int secondsFromNow)
     {
-        struct timeval times[2];
-        gettimeofday(&times[0], nullptr);
-        times[0].tv_sec += secondsFromNow;
-        times[1] = times[0];
-        utimes(path_.c_str(), times);
+        std::error_code error;
+        std::filesystem::last_write_time(
+            path_, std::filesystem::file_time_type::clock::now() + std::chrono::seconds(secondsFromNow), error);
     }
 
 private:
@@ -507,11 +512,16 @@ bool veryLargeFileIsNotCached()
 
 bool unreadableFileIsNotCached()
 {
+#if defined(_WIN32)
+    // Windows has no simple way of making a file unreadable to its owner.
+    return true;
+#else
     if (geteuid() == 0)
     {
         // Everything's readable when running as root.
         return true;
     }
+#endif // defined(_WIN32)
 
     auto samples = ramp(1000, 1);
     TestFile file(samples);
@@ -534,8 +544,7 @@ bool unreadableFileIsNotCached()
 bool folderIsNotCached()
 {
     // A folder can be opened but not read from.
-    const char* tmpDir = getenv("TMPDIR");
-    std::string path = tmpDir != nullptr ? tmpDir : "/tmp";
+    std::string path = unitTestTempFolder();
 
     wxLogNull noLogging;
     VoiceKeyerFileCache cache;
