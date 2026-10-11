@@ -130,18 +130,6 @@ extern std::atomic<float> g_monitorVoiceKeyerAudioVol;
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
 
-#include <wx/wx.h>
-#include "../main.h"
-extern wxWindow* g_parent;
-
-static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
-{
-    // Note: wxWidgets implementation of wxGetApp() only returns the App object
-    // and performs no other tasks. Verified RT safe as of wxWidgets version 3.3.1.
-    FREEDV_BEGIN_VERIFIED_SAFE
-    return wxGetApp();
-    FREEDV_END_VERIFIED_SAFE
-}
 
 #include <sndfile.h>
 extern std::atomic<SNDFILE*> g_sfPlayFile;
@@ -185,14 +173,14 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, 
             []() { return g_sfTxFs.load(std::memory_order_acquire); },
             []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile.load(std::memory_order_acquire) : nullptr; },
-            []() {
+            [this]() {
                 if (g_loopPlayFileToMicIn.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
                     // Fire-and-forget: blocking this thread on the UI thread
                     // would stall file I/O and drain the playback FIFO.
-                    g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
+                    uiHooks_.playFileToMicInFinished();
                 }
             }
             );
@@ -322,12 +310,12 @@ void TxRxThread::initializePipeline_()
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile.load(std::memory_order_acquire); }, 
-            [](int numSamples) {
+            [this](int numSamples) {
                 g_recFromRadioSamples.fetch_sub(numSamples, std::memory_order_relaxed);
                 if (g_recFromRadioSamples.load(std::memory_order_relaxed) <= 0)
                 {
                     // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
+                    uiHooks_.recFileFromRadioFinished();
                 }
             }
         );
@@ -351,14 +339,14 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, 
             []() { return g_sfFs.load(std::memory_order_acquire); },
             []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
-            []() {
+            [this]() {
                 if (g_loopPlayFileFromRadio.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
                     // Fire-and-forget: blocking this thread on the UI thread
                     // would stall file I/O and drain the playback FIFO.
-                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
+                    uiHooks_.playFileFromRadioFinished();
                 }
             }
         );
@@ -389,12 +377,12 @@ void TxRxThread::initializePipeline_()
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto toneInterfererStep = new ToneInterfererStep(
             inputSampleRate_,
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz.load(std::memory_order_acquire); },
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude.load(std::memory_order_acquire); },
+            uiHooks_.toneFreqHz,
+            uiHooks_.toneAmplitude,
             +[]() FREEDV_NONBLOCKING { return &g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone.load(std::memory_order_acquire); },
+            uiHooks_.toneEnabled,
             toneInterfererStep,
             bypassToneInterferer
         );
@@ -629,38 +617,7 @@ void* TxRxThread::Entry() noexcept
 
     while (m_run.load(std::memory_order_acquire))
     {
-        if (!m_run.load(std::memory_order_acquire)) break;
-
-#if defined(ENABLE_PROCESSING_STATS)
-        // Closes out the interval opened by waitStats_.start() below, at
-        // the end of the *previous* iteration -- i.e. how long this thread
-        // actually spent inside stopRealTimeWork()'s semaphore wait (a
-        // scheduling delay would show up here even if processing itself,
-        // measured separately in txProcessing_/rxProcessing_, looks fine).
-        waitStats_.end();
-#endif // defined(ENABLE_PROCESSING_STATS)
-
-        //log_info("thread woken up: m_tx=%d", (int)m_tx);
-        helper->startRealTimeWork();
-
-        if (m_tx) txProcessing_(helper);
-        else rxProcessing_(helper);
-
-        // Determine whether we need to pause for a shorter amount
-        // of time to avoid dropouts.
-        paCallBackData  *cbData = g_rxUserdata;
-        auto outFifo = cbData->outfifo1;
-        if (!m_tx)
-        {
-            outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        }
-        auto totalFifoCapacity = outFifo->capacity();
-        auto fifoUsed = outFifo->numUsed();
-
-#if defined(ENABLE_PROCESSING_STATS)
-        waitStats_.start();
-#endif // defined(ENABLE_PROCESSING_STATS)
-        helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
+        runOnce_(helper);
     }
 
 #if defined(ENABLE_PROCESSING_STATS)
@@ -687,6 +644,42 @@ void* TxRxThread::Entry() noexcept
     helper->clearHelperRealTime();
     
     return NULL;
+}
+
+void TxRxThread::runOnce_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
+{
+    if (!m_run.load(std::memory_order_acquire)) return;
+
+#if defined(ENABLE_PROCESSING_STATS)
+    // Closes out the interval opened by waitStats_.start() below, at
+    // the end of the *previous* iteration -- i.e. how long this thread
+    // actually spent inside stopRealTimeWork()'s semaphore wait (a
+    // scheduling delay would show up here even if processing itself,
+    // measured separately in txProcessing_/rxProcessing_, looks fine).
+    waitStats_.end();
+#endif // defined(ENABLE_PROCESSING_STATS)
+
+    //log_info("thread woken up: m_tx=%d", (int)m_tx);
+    helper->startRealTimeWork();
+
+    if (m_tx) txProcessing_(helper);
+    else rxProcessing_(helper);
+
+    // Determine whether we need to pause for a shorter amount
+    // of time to avoid dropouts.
+    paCallBackData  *cbData = g_rxUserdata;
+    auto outFifo = cbData->outfifo1;
+    if (!m_tx)
+    {
+        outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+    }
+    auto totalFifoCapacity = outFifo->capacity();
+    auto fifoUsed = outFifo->numUsed();
+
+#if defined(ENABLE_PROCESSING_STATS)
+    waitStats_.start();
+#endif // defined(ENABLE_PROCESSING_STATS)
+    helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
 }
 
 #if defined(ENABLE_PROCESSING_STATS)

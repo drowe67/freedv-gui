@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/drowe67/freedv-gui/issues\n"
-"POT-Creation-Date: 2026-09-29 09:21-0700\n"
+"POT-Creation-Date: 2026-10-11 15:56-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1430,70 +1430,6 @@ msgstr ""
 msgid "Enter new message:"
 msgstr ""
 
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "ENE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "N"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NNE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "E"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "ESE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SSE"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "S"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SSW"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SW"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "WSW"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NNW"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NW"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "W"
-msgstr ""
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "WNW"
-msgstr ""
-
 #: src/gui/dialogs/log_entry.cpp
 msgid "Log Entry"
 msgstr ""
@@ -1584,6 +1520,70 @@ msgid "%d second remaining"
 msgid_plural "%d seconds remaining"
 msgstr[0] ""
 msgstr[1] ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "ENE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "N"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "NE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "NNE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "E"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "ESE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "SE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "SSE"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "S"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "SSW"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "SW"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "WSW"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "NNW"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "NW"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "W"
+msgstr ""
+
+#: src/gui/util/GridSquare.cpp
+msgid "WNW"
+msgstr ""
 
 #: src/main.cpp
 msgid "Use different configuration file instead of the default."

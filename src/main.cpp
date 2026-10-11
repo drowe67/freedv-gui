@@ -20,6 +20,7 @@
 //
 //==========================================================================
 
+#include <csignal>
 #include <algorithm>
 #include <inttypes.h>
 #include <time.h>
@@ -812,6 +813,15 @@ static void SuppressButtonPressFlicker_()
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+#if !defined(_WIN32)
+    // Writing to a socket whose peer has closed raises SIGPIPE, which by
+    // default kills the process. That can happen whenever a server (e.g. FreeDV
+    // Reporter) closes a connection just as we send to it, including inside
+    // TLS library writes we can't flag individually. Ignore it so the write
+    // fails with EPIPE and the connection code handles it as a disconnect.
+    signal(SIGPIPE, SIG_IGN);
+#endif // !defined(_WIN32)
+
 #if wxCHECK_VERSION(3,3,0) && defined(__WXMSW__)
    // Opt into dark mode on Windows.
    // Note: This has an effect on macOS despite documentation indicating that it doesn't,
@@ -2452,7 +2462,7 @@ void MainFrame::performFreeDVOn_()
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs.store(FS, std::memory_order_release);
     
-        freedvInterface.start(wxGetApp().appConfiguration.fifoSizeMs, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        freedvInterface.start(wxGetApp().appConfiguration.fifoSizeMs, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled, wxGetApp().appConfiguration.debugVerbose);
 
         // Text field/callsign callbacks.
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -3007,6 +3017,39 @@ void MainFrame::destroy_fifos(void)
 }
 
 //-------------------------------------------------------------------------
+// MakeTxRxUiHooks()
+// Wires TxRxThread's callbacks into the UI/app. TxRxThread invokes these
+// from its real-time thread; CallAfter() defers the UI work to the main
+// thread, and the tone getters read MainApp's atomics directly.
+//-------------------------------------------------------------------------
+static TxRxThreadUiHooks MakeTxRxUiHooks()
+{
+    TxRxThreadUiHooks hooks;
+    hooks.playFileToMicInFinished = []() { g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn); };
+    hooks.recFileFromRadioFinished = []() { g_parent->CallAfter(&MainFrame::StopRecFileFromRadio); };
+    hooks.playFileFromRadioFinished = []() { g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio); };
+    hooks.toneFreqHz = +[]() FREEDV_NONBLOCKING -> float {
+        FREEDV_BEGIN_VERIFIED_SAFE
+        auto value = (float)wxGetApp().m_tone_freq_hz.load(std::memory_order_acquire);
+        FREEDV_END_VERIFIED_SAFE
+        return value;
+    };
+    hooks.toneAmplitude = +[]() FREEDV_NONBLOCKING -> float {
+        FREEDV_BEGIN_VERIFIED_SAFE
+        auto value = (float)wxGetApp().m_tone_amplitude.load(std::memory_order_acquire);
+        FREEDV_END_VERIFIED_SAFE
+        return value;
+    };
+    hooks.toneEnabled = +[]() FREEDV_NONBLOCKING -> bool {
+        FREEDV_BEGIN_VERIFIED_SAFE
+        auto value = wxGetApp().m_tone.load(std::memory_order_acquire);
+        FREEDV_END_VERIFIED_SAFE
+        return value;
+    };
+    return hooks;
+}
+
+//-------------------------------------------------------------------------
 // startRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::startRxStream()
@@ -3462,7 +3505,7 @@ void MainFrame::startRxStream()
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = std::make_shared<TxRxThread>(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
+            m_txThread = std::make_shared<TxRxThread>(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice, MakeTxRxUiHooks());
             
             if (!txInSoundDevice->isRunning())
             {
@@ -3489,7 +3532,7 @@ void MainFrame::startRxStream()
             m_txThread->start();
         }
 
-        m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
+        m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice, MakeTxRxUiHooks());
 
         rxInSoundDevice->start();
         if (!rxInSoundDevice->isRunning())

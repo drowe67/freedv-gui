@@ -782,6 +782,26 @@ elseif(UNIX AND NOT APPLE)
 
 endif(WIN32)
 
+if(UNITTEST AND WIN32)
+    # The unit tests can't be run where they're cross-compiled, so provide a
+    # way of gathering them and the DLLs they need for running elsewhere:
+    # "make collect_unit_tests" fills the unit_tests folder of the build.
+    get_property(_unit_test_targets GLOBAL PROPERTY FREEDV_UNIT_TEST_TARGETS)
+    set(_unit_test_files)
+    foreach(_target ${_unit_test_targets})
+        list(APPEND _unit_test_files "$<TARGET_FILE:${_target}>")
+    endforeach()
+
+    set(FREEDV_UNIT_TEST_LIST_FILE ${CMAKE_BINARY_DIR}/unit_tests.txt)
+    set(FREEDV_UNIT_TEST_OUTPUT_DIR ${CMAKE_BINARY_DIR}/unit_tests)
+    file(GENERATE OUTPUT ${FREEDV_UNIT_TEST_LIST_FILE} CONTENT "$<JOIN:${_unit_test_files},\n>\n")
+
+    configure_file(cmake/CollectUnitTests.cmake.in cmake/CollectUnitTests.cmake @ONLY)
+    add_custom_target(collect_unit_tests
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/cmake/CollectUnitTests.cmake
+        DEPENDS unit_tests)
+endif(UNITTEST AND WIN32)
+
 if(UNITTEST)
 # The below tests are currently Linux/macOS-only. A PowerShell version of fullduplex_* 
 # for Windows is implemented in tests/TestFreeDVFullDuplex.ps1.
