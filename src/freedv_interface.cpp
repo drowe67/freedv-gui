@@ -141,7 +141,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
     }
 }
 
-void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReliableText)
+void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReliableText, bool verbose)
 {
     sync_.store(0, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
@@ -167,7 +167,7 @@ void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReli
             // TBD - modelFile may be used by RADE in the future!
             char modelFile[1];
             modelFile[0] = 0;
-            rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
+            rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | (verbose ? 0 : RADE_VERBOSE_0));
             assert(rade_ != nullptr);
 
             // rade_tx()/rade_rx() are the first code paths to actually read every byte of

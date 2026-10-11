@@ -2732,7 +2732,7 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs.store(FS, std::memory_order_release);
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled, wxGetApp().appConfiguration.debugVerbose);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);

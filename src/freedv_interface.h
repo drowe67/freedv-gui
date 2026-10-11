@@ -76,7 +76,7 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText);
+    void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText, bool verbose = false);
     void stop();
     void changeTxMode(int txMode);
     int getTxMode() const { return txMode_; }

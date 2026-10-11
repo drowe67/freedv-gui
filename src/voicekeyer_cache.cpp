@@ -59,7 +59,12 @@ static sf_count_t MemRead_(void* ptr, sf_count_t count, void* userData)
     auto reader = static_cast<VoiceKeyerMemoryReader*>(userData);
     sf_count_t size = reader->data->size();
     sf_count_t toRead = std::max((sf_count_t)0, std::min(count, size - reader->pos));
-    memcpy(ptr, reader->data->data() + reader->pos, toRead);
+    if (toRead > 0)
+    {
+        // An empty file has no data to point at, which memcpy() doesn't allow
+        // even when asked to copy nothing.
+        memcpy(ptr, reader->data->data() + reader->pos, toRead);
+    }
     reader->pos += toRead;
     return toRead;
 }
