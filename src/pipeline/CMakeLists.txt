@@ -55,5 +55,12 @@ endmacro()
 
 DefineUtilBackedPipelineUnitTest(FreeDVTransmitStepTest)
 DefineUtilBackedPipelineUnitTest(FreeDVReceiveStepTest)
+
+# TxRxThread builds the full TX/RX pipeline, so its test also needs
+# FreeDVInterface (only compiled into the app) and EqualizerStep's
+# eq_design/sox_biquad dependencies.
+DefineUtilBackedPipelineUnitTest(TxRxThreadTest)
+target_sources(TxRxThreadTest PRIVATE ../freedv_interface.cpp ../eq_design.cpp ../sox_biquad.c)
+target_link_libraries(TxRxThreadTest PRIVATE fdv_sox)
 DefineUtilBackedPipelineUnitTest(ResamplePlotStepTest)
 endif(UNITTEST)
