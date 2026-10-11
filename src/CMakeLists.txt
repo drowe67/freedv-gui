@@ -6,10 +6,13 @@ set(FREEDV_SOURCES
     sox_biquad.c
     util.cpp
     eq.cpp
+    eq_design.cpp
     voicekeyer.cpp
+    voicekeyer_cache.cpp
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
+    ${CMAKE_BINARY_DIR}/generated/build_date.cpp
 )
 
 set(FREEDV_LINK_LIBS_OSX
@@ -23,6 +26,44 @@ add_definitions(-DULOG_NO_COLOR)
 # Include generated headers
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
+# Builds every unit test (and only what they need), e.g. for running them
+# on a machine other than the one they were built on.
+if(UNITTEST AND NOT TARGET unit_tests)
+    add_custom_target(unit_tests)
+endif()
+
+# Defines a unit test executable (test/<utName>.cpp) that links against the given
+# libraries and registers it with CTest as <prefix>_<utName>.
+macro(DefineFreeDVUnitTest prefix utName)
+    add_executable(${utName} test/${utName}.cpp)
+    add_dependencies(unit_tests ${utName})
+    set_property(GLOBAL APPEND PROPERTY FREEDV_UNIT_TEST_TARGETS ${utName})
+    target_link_libraries(${utName} PRIVATE ${ARGN})
+    target_compile_options(${utName} PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
+
+    # Needed to find codec2/RADE when they're built as part of FreeDV.
+    set_target_properties(
+        ${utName}
+        PROPERTIES BUILD_RPATH "${CMAKE_BUILD_RPATH};${CODEC2_BUILD_DIR}/src;${rade_BINARY_DIR}/src")
+
+    add_test(NAME ${prefix}_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
+# Sets up a unit test that uses wxWidgets when wxWidgets is being built as part
+# of FreeDV. (Otherwise, wxWidgets comes in via FREEDV_LINK_LIBS.)
+macro(FreeDVUnitTestUsesWxWidgets utName)
+    if(BOOTSTRAP_WXWIDGETS)
+        target_compile_definitions(${utName} PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(${utName} PRIVATE ${WXBUILD_INCLUDES})
+        target_link_libraries(${utName} PRIVATE wx::core wx::base ${ARGN})
+    endif(BOOTSTRAP_WXWIDGETS)
+
+    if(WIN32)
+        # Provides the manifest that wxWidgets needs (see the file for why).
+        target_sources(${utName} PRIVATE ${CMAKE_SOURCE_DIR}/src/test/UnitTest.rc)
+    endif(WIN32)
+endmacro()
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)
@@ -32,11 +73,37 @@ add_subdirectory(pipeline)
 add_subdirectory(rig_control)
 add_subdirectory(sox)
 
+if(UNITTEST)
+DefineFreeDVUnitTest(gui EqDesignTest fdv_sox fdv_util)
+target_sources(EqDesignTest PRIVATE eq_design.cpp sox_biquad.c)
+
+DefineFreeDVUnitTest(gui VoiceKeyerFileCacheTest fdv_util ${FREEDV_LINK_LIBS})
+target_sources(VoiceKeyerFileCacheTest PRIVATE voicekeyer_cache.cpp)
+target_include_directories(VoiceKeyerFileCacheTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+FreeDVUnitTestUsesWxWidgets(VoiceKeyerFileCacheTest)
+endif(UNITTEST)
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
     set(RES_FILES freedv.icns)
     set_source_files_properties(freedv.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+    # Translations go in Contents/Resources/<lang>.lproj, where wxWidgets
+    # looks for them by default.
+    set(FREEDV_BUNDLE_LOCALIZATIONS "<string>en</string>")
+    foreach(lang ${FREEDV_LINGUAS})
+        string(APPEND FREEDV_BUNDLE_LOCALIZATIONS "\n\t\t<string>${lang}</string>")
+    endforeach(lang)
+    foreach(mo_file ${FREEDV_MO_FILES})
+        get_filename_component(mo_dir ${mo_file} DIRECTORY)
+        get_filename_component(mo_dir ${mo_dir} DIRECTORY)
+        get_filename_component(lang ${mo_dir} NAME)
+        set_source_files_properties(${mo_file} PROPERTIES
+            GENERATED TRUE
+            MACOSX_PACKAGE_LOCATION "Resources/${lang}.lproj")
+        list(APPEND RES_FILES ${mo_file})
+    endforeach(mo_file)
     add_executable(FreeDV MACOSX_BUNDLE ${FREEDV_SOURCES} ${RES_FILES})
     set_target_properties(FreeDV PROPERTIES
         BUNDLE True
@@ -52,6 +119,14 @@ if(APPLE)
 else()
     add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
 endif(APPLE)
+
+if(TARGET freedv_translations)
+    if(APPLE)
+        add_dependencies(FreeDV freedv_translations)
+    else(APPLE)
+        add_dependencies(freedv freedv_translations)
+    endif(APPLE)
+endif(TARGET freedv_translations)
 
 if(APPLE)
 target_compile_options(FreeDV PRIVATE ${WARNINGS_AS_ERRORS_FLAGS})
@@ -87,13 +162,13 @@ if(BOOTSTRAP_WXWIDGETS)
         target_compile_definitions(FreeDV PRIVATE ${WXBUILD_BUILD_DEFS})
         target_include_directories(FreeDV PRIVATE ${WXBUILD_INCLUDES})
         
-        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
         target_link_libraries(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
     else(APPLE)
         target_compile_definitions(freedv PRIVATE ${WXBUILD_BUILD_DEFS})
         target_include_directories(freedv PRIVATE ${WXBUILD_INCLUDES})
         
-        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
         target_link_libraries(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
     endif(APPLE)
 endif(BOOTSTRAP_WXWIDGETS)
@@ -104,6 +179,17 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
+
+# Precompile <wx/wx.h> for the targets whose sources mostly include it;
+# parsing it dominates their compile times. C and Objective-C++ sources
+# are excluded.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.16)
+    foreach(_target FreeDV freedv fdv_gui_controls fdv_gui_dialogs fdv_config fdv_audio_pipeline_extra)
+        if(TARGET ${_target})
+            target_precompile_headers(${_target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:<wx/wx.h$<ANGLE-R>>)
+        endif(TARGET ${_target})
+    endforeach()
+endif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.16)
 
 # If on Linux, force static libstdc++. This is to prevent versioning
 # problems when using AppImages.

@@ -1,0 +1,3 @@
+#include "build_date.h"
+
+const char* const FREEDV_BUILD_DATE = "@DATE_RESULT@";

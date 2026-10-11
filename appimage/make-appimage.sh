@@ -36,6 +36,12 @@ fi
   --custom-apprun "AppRun.sh" \
   --desktop-file $DESKTOP_FILE
 
+# Copy over translations, if any were built.
+if [ -d "$BUILDDIR/build_linux/share/locale" ]; then
+    mkdir -p "$APPDIR/usr/share/locale"
+    cp -a "$BUILDDIR/build_linux/share/locale/." "$APPDIR/usr/share/locale/"
+fi
+
 # Manually copy over /etc/ssl to APPDIR. Needed for OpenSSL to behave properly on non-Ubuntu
 # distros.
 mkdir -p "$APPDIR/etc/ssl/certs"

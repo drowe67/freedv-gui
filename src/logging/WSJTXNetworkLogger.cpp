@@ -59,17 +59,6 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
 }
 
 template<>
-WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<double>(const double& obj)
-{
-    char* ptr = reallocPacket_(sizeof(double));
-    assert(ptr != nullptr);
-    
-    memcpy(ptr, &obj, sizeof(double));
-
-    return *this;
-}
-
-template<>
 WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<char>(const char& obj)
 {
     char* ptr = reallocPacket_(sizeof(char));
@@ -127,6 +116,18 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     memcpy(ptr, &tmp, sizeof(uint64_t));
     
     return *this;
+}
+
+template<>
+WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_<double>(const double& obj)
+{
+    // Doubles are sent as 64 bit IEEE values in network byte order,
+    // same as the integer types.
+    static_assert(sizeof(double) == sizeof(uint64_t), "double must be 64 bits");
+    uint64_t tmp;
+    memcpy(&tmp, &obj, sizeof(double));
+
+    return serialize_(tmp);
 }
 
 template<>
@@ -196,8 +197,8 @@ WSJTXNetworkLogger::PacketBuilder& WSJTXNetworkLogger::PacketBuilder::serialize_
     return *this;
 }
 
-WSJTXNetworkLogger::WSJTXNetworkLogger(std::string hostname, int port)
-    : heartbeatTimer_(HEARTBEAT_INTERVAL_MS, [&](ThreadedTimer&) {
+WSJTXNetworkLogger::WSJTXNetworkLogger(std::string hostname, int port, int heartbeatIntervalMs)
+    : heartbeatTimer_(heartbeatIntervalMs, [&](ThreadedTimer&) {
         sendHeartbeat_();
     }, true)
     , reportHostname_(std::move(hostname))

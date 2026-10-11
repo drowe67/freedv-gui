@@ -41,7 +41,7 @@ private:
     bool rtsPos_;
     bool useDTR_;
     bool dtrPos_;
-    int rigResponseTime_;
+    std::atomic<int> rigResponseTime_;
 
     void pttImpl_(bool state);
 };

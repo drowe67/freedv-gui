@@ -122,6 +122,12 @@ extern std::atomic<bool> g_voice_keyer_tx;
 extern std::atomic<bool> g_eoo_enqueued;
 extern std::atomic<bool> g_agcEnabled;
 extern std::atomic<float> g_tone_phase;
+extern std::atomic<int64_t> g_rxMutedUntilNs;
+extern std::atomic<bool> g_noiseReductionEnabled;
+extern std::atomic<bool> g_monitorTxAudio;
+extern std::atomic<bool> g_monitorVoiceKeyerAudio;
+extern std::atomic<float> g_monitorTxAudioVol;
+extern std::atomic<float> g_monitorVoiceKeyerAudioVol;
 
 extern long agcLeveler;
 extern long agcLimiter;
@@ -129,18 +135,6 @@ extern long agcLimiter;
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
 
-#include <wx/wx.h>
-#include "../main.h"
-extern wxWindow* g_parent;
-
-static auto& NonblockingWxGetApp() FREEDV_NONBLOCKING
-{
-    // Note: wxWidgets implementation of wxGetApp() only returns the App object
-    // and performs no other tasks. Verified RT safe as of wxWidgets version 3.3.1.
-    FREEDV_BEGIN_VERIFIED_SAFE
-    return wxGetApp();
-    FREEDV_END_VERIFIED_SAFE
-}
 
 #include <sndfile.h>
 extern std::atomic<SNDFILE*> g_sfPlayFile;
@@ -184,12 +178,14 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, 
             []() { return g_sfTxFs.load(std::memory_order_acquire); },
             []() { return g_playFileToMicIn.load(std::memory_order_acquire) ? g_sfPlayFile.load(std::memory_order_acquire) : nullptr; },
-            []() {
+            [this]() {
                 if (g_loopPlayFileToMicIn.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFile.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlayFileToMicIn();});
+                    // Fire-and-forget: blocking this thread on the UI thread
+                    // would stall file I/O and drain the playback FIFO.
+                    uiHooks_.playFileToMicInFinished();
                 }
             }
             );
@@ -221,7 +217,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessRNNoise->appendPipelineStep(rnnoiseStep);
         
         auto eitherOrRNNoiseStep = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return (bool)NonblockingWxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable.getWithoutProcessing(); },
+            +[]() FREEDV_NONBLOCKING { return g_noiseReductionEnabled.load(std::memory_order_acquire); },
             eitherOrProcessRNNoise,
             eitherOrBypassRNNoise);
         pipeline_->appendPipelineStep(eitherOrRNNoiseStep);
@@ -327,12 +323,12 @@ void TxRxThread::initializePipeline_()
         auto recordRadioStep = new RecordStep(
             RECORD_FILE_SAMPLE_RATE, 
             []() { return g_sfRecFile.load(std::memory_order_acquire); }, 
-            [](int numSamples) {
+            [this](int numSamples) {
                 g_recFromRadioSamples.fetch_sub(numSamples, std::memory_order_relaxed);
                 if (g_recFromRadioSamples.load(std::memory_order_relaxed) <= 0)
                 {
                     // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
+                    uiHooks_.recFileFromRadioFinished();
                 }
             }
         );
@@ -356,12 +352,14 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, 
             []() { return g_sfFs.load(std::memory_order_acquire); },
             []() { return g_playFileFromRadio.load(std::memory_order_acquire) ? g_sfPlayFileFromRadio.load(std::memory_order_acquire) : nullptr; },
-            []() {
+            [this]() {
                 if (g_loopPlayFileFromRadio.load(std::memory_order_relaxed))
                     sf_seek(g_sfPlayFileFromRadio.load(std::memory_order_acquire), 0, SEEK_SET);
                 else {
                     log_info("playFileFromRadio finished, issuing event!");
-                    ((MainFrame*)g_parent)->executeOnUiThreadAndWait_([]() { ((MainFrame*)g_parent)->StopPlaybackFileFromRadio();});
+                    // Fire-and-forget: blocking this thread on the UI thread
+                    // would stall file I/O and drain the playback FIFO.
+                    uiHooks_.playFileFromRadioFinished();
                 }
             }
         );
@@ -392,12 +390,12 @@ void TxRxThread::initializePipeline_()
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto toneInterfererStep = new ToneInterfererStep(
             inputSampleRate_,
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_freq_hz; },
-            +[]() FREEDV_NONBLOCKING { return (float)NonblockingWxGetApp().m_tone_amplitude; },
+            uiHooks_.toneFreqHz,
+            uiHooks_.toneAmplitude,
             +[]() FREEDV_NONBLOCKING { return &g_tone_phase; }
         );
         auto eitherOrToneInterferer = new EitherOrStep(
-            +[]() FREEDV_NONBLOCKING { return NonblockingWxGetApp().m_tone; },
+            uiHooks_.toneEnabled,
             toneInterfererStep,
             bypassToneInterferer
         );
@@ -453,13 +451,13 @@ void TxRxThread::initializePipeline_()
             
             auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, +[]() FREEDV_NONBLOCKING {
                 float volInDb = 0;
-                if (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing())
+                if (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire))
                 {
-                    volInDb = NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudioVol.getWithoutProcessing();
+                    volInDb = g_monitorVoiceKeyerAudioVol.load(std::memory_order_acquire);
                 }
                 else
                 {
-                    volInDb = NonblockingWxGetApp().appConfiguration.monitorTxAudioVol.getWithoutProcessing();
+                    volInDb = g_monitorTxAudioVol.load(std::memory_order_acquire);
                 }
                 
                 return std::exp(volInDb/20.0f * std::log(10.0f));
@@ -478,8 +476,8 @@ void TxRxThread::initializePipeline_()
 
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 +[]() FREEDV_NONBLOCKING { return 
-                    (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) || 
-                    (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()); },
+                    (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) || 
+                    (g_tx.load(std::memory_order_acquire) && g_monitorTxAudio.load(std::memory_order_acquire)); },
                 monitorPipeline,
                 eitherOrMuteStep
             );
@@ -493,8 +491,8 @@ void TxRxThread::initializePipeline_()
                 +[]() FREEDV_NONBLOCKING { return g_analog.load(std::memory_order_relaxed) ||
                     (
                         (g_recVoiceKeyerFile.load(std::memory_order_relaxed)) ||
-                        (g_voice_keyer_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-                        (g_tx.load(std::memory_order_acquire) && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing())
+                        (g_voice_keyer_tx.load(std::memory_order_acquire) && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) ||
+                        (g_tx.load(std::memory_order_acquire) && g_monitorTxAudio.load(std::memory_order_acquire))
                     ); 
                 },
                 bypassRfDemodulationPipeline,
@@ -577,10 +575,15 @@ void TxRxThread::initializePipeline_()
                 bool tmpTx = g_tx.load(std::memory_order_acquire);
                 bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
                 bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+                
+                // After TX, stay muted until the radio has actually returned to RX.
+                bool tmpWaitingForRadioRx = 
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() <
+                    g_rxMutedUntilNs.load(std::memory_order_acquire);
                 return
-                    (tmpVkTx && NonblockingWxGetApp().appConfiguration.monitorVoiceKeyerAudio.getWithoutProcessing()) ||
-                    (tmpTx && NonblockingWxGetApp().appConfiguration.monitorTxAudio.getWithoutProcessing()) ||
-                    (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
+                    (tmpVkTx && g_monitorVoiceKeyerAudio.load(std::memory_order_acquire)) ||
+                    (tmpTx && g_monitorTxAudio.load(std::memory_order_acquire)) ||
+                    (!tmpVkTx && ((tmpHalfDuplex && !tmpTx && !tmpWaitingForRadioRx) || !tmpHalfDuplex));
             },
             activeRxPipeline,
             activeRxMutePipeline
@@ -627,38 +630,7 @@ void* TxRxThread::Entry() noexcept
 
     while (m_run.load(std::memory_order_acquire))
     {
-        if (!m_run.load(std::memory_order_acquire)) break;
-
-#if defined(ENABLE_PROCESSING_STATS)
-        // Closes out the interval opened by waitStats_.start() below, at
-        // the end of the *previous* iteration -- i.e. how long this thread
-        // actually spent inside stopRealTimeWork()'s semaphore wait (a
-        // scheduling delay would show up here even if processing itself,
-        // measured separately in txProcessing_/rxProcessing_, looks fine).
-        waitStats_.end();
-#endif // defined(ENABLE_PROCESSING_STATS)
-
-        //log_info("thread woken up: m_tx=%d", (int)m_tx);
-        helper->startRealTimeWork();
-
-        if (m_tx) txProcessing_(helper);
-        else rxProcessing_(helper);
-
-        // Determine whether we need to pause for a shorter amount
-        // of time to avoid dropouts.
-        paCallBackData  *cbData = g_rxUserdata;
-        auto outFifo = cbData->outfifo1;
-        if (!m_tx)
-        {
-            outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        }
-        auto totalFifoCapacity = outFifo->capacity();
-        auto fifoUsed = outFifo->numUsed();
-
-#if defined(ENABLE_PROCESSING_STATS)
-        waitStats_.start();
-#endif // defined(ENABLE_PROCESSING_STATS)
-        helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
+        runOnce_(helper);
     }
 
 #if defined(ENABLE_PROCESSING_STATS)
@@ -673,6 +645,42 @@ void* TxRxThread::Entry() noexcept
     helper->clearHelperRealTime();
     
     return NULL;
+}
+
+void TxRxThread::runOnce_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
+{
+    if (!m_run.load(std::memory_order_acquire)) return;
+
+#if defined(ENABLE_PROCESSING_STATS)
+    // Closes out the interval opened by waitStats_.start() below, at
+    // the end of the *previous* iteration -- i.e. how long this thread
+    // actually spent inside stopRealTimeWork()'s semaphore wait (a
+    // scheduling delay would show up here even if processing itself,
+    // measured separately in txProcessing_/rxProcessing_, looks fine).
+    waitStats_.end();
+#endif // defined(ENABLE_PROCESSING_STATS)
+
+    //log_info("thread woken up: m_tx=%d", (int)m_tx);
+    helper->startRealTimeWork();
+
+    if (m_tx) txProcessing_(helper);
+    else rxProcessing_(helper);
+
+    // Determine whether we need to pause for a shorter amount
+    // of time to avoid dropouts.
+    paCallBackData  *cbData = g_rxUserdata;
+    auto outFifo = cbData->outfifo1;
+    if (!m_tx)
+    {
+        outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+    }
+    auto totalFifoCapacity = outFifo->capacity();
+    auto fifoUsed = outFifo->numUsed();
+
+#if defined(ENABLE_PROCESSING_STATS)
+    waitStats_.start();
+#endif // defined(ENABLE_PROCESSING_STATS)
+    helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
 }
 
 #if defined(ENABLE_PROCESSING_STATS)

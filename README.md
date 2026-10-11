@@ -15,7 +15,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo apt install libspeexdsp-dev sox git \
   libwxgtk3.2-dev libhamlib-dev libasound2-dev libao-dev \
   libgsm1-dev libsndfile1-dev cmake module-assistant build-essential \
-  autoconf automake libtool libebur128-dev
+  autoconf automake libtool libebur128-dev gettext
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
@@ -34,7 +34,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel gcc-c++ sox autoconf automake libtool libebur128-devel
+    gsm-devel gcc-c++ sox autoconf automake libtool libebur128-devel gettext
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
@@ -118,6 +118,7 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 * Linux (tested on Ubuntu 22.04)
     * *NOTE: This does not currently work on macOS due to CMake using incorrect library suffixes.*
 * NSIS for generating the installer (for example, `sudo apt install nsis` on Ubuntu)
+* gettext to include translations
 
 ### Instructions
 
@@ -135,13 +136,13 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake wget pkgconf
+$ sudo port install automake git libtool sox +universal cmake wget pkgconf gettext
 ```
 
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake wget pkgconf
+$ brew install automake libtool git sox cmake wget pkgconf gettext
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build

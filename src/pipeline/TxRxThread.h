@@ -46,6 +46,7 @@
 
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
+#include "util/realtime_fp.h"
 #include "util/Semaphore.h"
 #include "freedv_sanitizers.h"
 
@@ -58,17 +59,39 @@ class BeepStep;
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
+
+// Callbacks that replace TxRxThread reaching directly into the wx UI
+// (g_parent/MainFrame) and MainApp's tone-interferer settings. The app wires
+// these to MainFrame::CallAfter() and MainApp members; unit tests wire them
+// to counters. All are called from the real-time processing thread.
+struct TxRxThreadUiHooks
+{
+    std::function<void()> playFileToMicInFinished;
+    std::function<void()> recFileFromRadioFinished;
+    std::function<void()> playFileFromRadioFinished;
+
+    // Tone getters are realtime_fp (raw function pointers): ToneInterfererStep
+    // and EitherOrStep only accept RT-safe function pointers, so the app wires
+    // these to captureless lambdas reading MainApp's atomics.
+    realtime_fp<float()> toneFreqHz;
+    realtime_fp<float()> toneAmplitude;
+    realtime_fp<bool()> toneEnabled;
+};
+
 class TxRxThread
 {
 public:
-    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<LinkStep> micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
+    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<LinkStep> micAudioLink, std::shared_ptr<IRealtimeHelper> helper, TxRxThreadUiHooks uiHooks)
         : m_tx(tx)
         , m_run(1)
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
         , outputSampleRate_(outputSampleRate)
         , equalizedMicAudioLink_(std::move(micAudioLink))
+        , uiHooks_(std::move(uiHooks))
+        , beepStep_(nullptr)
         , hasEooBeenSent_(false)
+        , pendingEooCount_(0)
         , helper_(std::move(helper))
         , deferReset_(false)
     { 
@@ -126,6 +149,7 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
+    TxRxThreadUiHooks uiHooks_;
     BeepStep* beepStep_;
     bool hasEooBeenSent_;
     std::unique_ptr<short[]> pendingEooSamples_;
@@ -187,9 +211,17 @@ private:
 #endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
+    // One iteration of the processing loop (startRealTimeWork ->
+    // tx/rxProcessing_ -> stopRealTimeWork). Extracted from Entry() so unit
+    // tests can drive a full cycle without spawning the thread.
+    void runOnce_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING;
     void clearFifos_() FREEDV_NONBLOCKING;
+
+    // Lets TxRxThreadTest drive runOnce_/txProcessing_/rxProcessing_/
+    // initializePipeline_ directly.
+    friend class TxRxThreadTest;
 };
 
 #endif // AUDIO_PIPELINE__TX_RX_THREAD_H

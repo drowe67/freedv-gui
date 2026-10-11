@@ -23,6 +23,7 @@
 #ifndef SERIAL_PORT_RIG_CONTROLLER_H
 #define SERIAL_PORT_RIG_CONTROLLER_H
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -62,7 +63,7 @@ public:
 protected:
     SerialPortRigController(std::string serialPort);
 
-    com_handle_t serialPortHandle_;
+    std::atomic<com_handle_t> serialPortHandle_;
 
     // Virtual method to allow derived classes to skip termios configuration
     // This is to work around a bug in the tty0tty kernel driver that causes

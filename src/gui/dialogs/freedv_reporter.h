@@ -237,7 +237,6 @@ class FreeDVReporterDialog : public wxFrame
         
      private:
         const wxString UNKNOWN_STR;
-        const wxString ALL_LETTERS_RGX;
         const wxString MS_REMOVAL_RGX;
         const wxString TIMEZONE_RGX;
         const wxString TZ_OFFSET_STR;
@@ -494,9 +493,6 @@ class FreeDVReporterDialog : public wxFrame
             void execQueuedAction_();
 
             wxString makeValidTime_(std::string const& timeStr, wxDateTime& timeObj);
-            double calculateDistance_(wxString const& gridSquare1, wxString const& gridSquare2);
-            double calculateBearingInDegrees_(wxString const& gridSquare1, wxString const& gridSquare2);
-            void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
             void setColumnAutosize_(bool autosize);
 
@@ -529,9 +525,6 @@ class FreeDVReporterDialog : public wxFrame
             wxString formatSnr_(float snr) const;
             wxChar decimalSeparator_;
             
-            static double DegreesToRadians_(double degrees);
-            static double RadiansToDegrees_(double radians);
-            static wxString GetCardinalDirection_(int degrees);
         };
 
         bool isSelectionPossible_;
