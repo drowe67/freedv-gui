@@ -56,4 +56,7 @@ endmacro()
 DefineUtilBackedPipelineUnitTest(FreeDVTransmitStepTest)
 DefineUtilBackedPipelineUnitTest(FreeDVReceiveStepTest)
 DefineUtilBackedPipelineUnitTest(ResamplePlotStepTest)
+
+# The rest of what can be tested in util.cpp without the application's windows.
+DefineUtilBackedPipelineUnitTest(UtilTest)
 endif(UNITTEST)

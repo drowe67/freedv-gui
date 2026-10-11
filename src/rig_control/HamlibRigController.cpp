@@ -433,23 +433,26 @@ void HamlibRigController::connectImpl_()
 
     // Set timeouts so that we don't wait an extremely long time to begin TX.
     // However, only do so if the default timeout is larger than 625ms.
-    const char* MAX_TIMEOUT = "625";
-    const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
-    constexpr int TIMEOUT_BUF_LEN = 1024;
-    char currentTimeout[TIMEOUT_BUF_LEN];
+    auto limitTimeout = [tmpRig]() {
+        const char* MAX_TIMEOUT = "625";
+        const char* HAMLIB_TIMEOUT_TOKEN_NAME = "timeout";
+        constexpr int TIMEOUT_BUF_LEN = 1024;
+        char currentTimeout[TIMEOUT_BUF_LEN] = { 0 };
 #if defined(HAMLIB_USE_FRIENDLY_ERRORS)
-    // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
-    // causes compile errors in FreeDV due to -Werror.
-    auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
+        // Hamlib 4.6+ has rig_get_conf2. rig_get_conf is officially deprecated in 5.0+ and 
+        // causes compile errors in FreeDV due to -Werror.
+        auto result = rig_get_conf2(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout, TIMEOUT_BUF_LEN);
 #else
-    auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
+        auto result = rig_get_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), currentTimeout);
 #endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
-    log_info("Current rig timeout: %s ms", currentTimeout);
-    if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
-    {
-        log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
-        rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
-    }
+        log_info("Current rig timeout: %s ms", currentTimeout);
+        if (result != RIG_OK || (atoi(currentTimeout) >= atoi(MAX_TIMEOUT)))
+        {
+            log_info("Setting rig timeout to %s ms", MAX_TIMEOUT);
+            rig_set_conf(tmpRig, rig_token_lookup(tmpRig, HAMLIB_TIMEOUT_TOKEN_NAME), MAX_TIMEOUT);
+        }
+    };
+    limitTimeout();
 
     // Initially allow two retries if we time out while sending commands. This is needed
     // to better support Icom marine radios due to their ability to power themselves on
@@ -458,10 +461,15 @@ void HamlibRigController::connectImpl_()
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "retry"), "2");
     rig_set_conf(tmpRig, rig_token_lookup(tmpRig, "timeout_retry"), "2");
             
-    result = rig_open(tmpRig);
+    auto result = rig_open(tmpRig);
     if (result == RIG_OK) 
     {
         log_debug("hamlib: rig_open() OK");
+
+        // Some versions of Hamlib replace the timeout with the radio's
+        // default on opening it, so make sure that it's still limited.
+        limitTimeout();
+
         onRigConnected(this);
         
         // Determine whether we have multiple VFOs.

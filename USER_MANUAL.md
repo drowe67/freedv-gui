@@ -978,6 +978,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix text settings containing e.g. "$HOME" being altered when loaded. (PR #1542)
     * Hamlib/OmniRig: fix frequency/mode requested prior to connecting not being applied. (PR #1542)
     * Reject stereo files in "Play File - From Radio" instead of playing them at half speed. (PR #1542)
+    * Fix possible crashes when stopping while using a serial port for PTT input. (PR #1542)
+    * Hamlib: fix limit on time spent waiting for the radio not always being applied. (PR #1542)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))

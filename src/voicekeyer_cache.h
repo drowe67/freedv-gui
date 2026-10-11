@@ -20,6 +20,10 @@ struct VoiceKeyerMemoryReader
 {
     std::shared_ptr<const std::vector<char>> data;
     sf_count_t pos = 0;
+
+    // What libsndfile uses to read a file's contents from one of these
+    // (which is passed as the user data).
+    static SF_VIRTUAL_IO* VirtualIo();
 };
 
 // Starting the voice keyer must not perform blocking file I/O on the UI

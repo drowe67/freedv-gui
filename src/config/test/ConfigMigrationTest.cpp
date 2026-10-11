@@ -294,6 +294,7 @@ bool reportingDefaultsWithNothingConfigured()
     return result;
 }
 
+#if defined(__linux__)
 // The default CSV log path is computed from XDG_DATA_HOME during load(),
 // and the folder is created as a side effect. Point XDG_DATA_HOME at a temp
 // directory so both can be observed without touching the real one.
@@ -361,6 +362,26 @@ bool csvLogPathFallsBackToHomeLocalShare()
     wxFileName::Rmdir(tmpDir, wxPATH_RMDIR_RECURSIVE);
     return result;
 }
+#else
+// Everywhere but Linux, the default CSV log path is a "freedv" folder inside
+// the user's Documents folder, which load() creates as a side effect.
+bool csvLogPathDefaultsToDocumentsFolder()
+{
+    auto config = makeConfig("");
+    ReportingConfiguration reporting;
+    reporting.load(config.get());
+
+    wxString expectedDir = wxStandardPaths::Get().GetDocumentsDir() + wxFILE_SEP_PATH + "freedv";
+    bool result = check("CSV log path", reporting.csvLogFilePath.get(),
+                        expectedDir + wxFILE_SEP_PATH + "freedv_rx_log.csv");
+    if (!wxDirExists(expectedDir))
+    {
+        std::cout << "[load() did not create the freedv folder] ";
+        result = false;
+    }
+    return result;
+}
+#endif // defined(__linux__)
 
 bool reportingFrequencySurvivesRestart()
 {
@@ -637,8 +658,12 @@ int main()
     executeTestCase("reportingMigratesFromPskReporterSettings", reportingMigratesFromPskReporterSettings);
     executeTestCase("reportingCurrentSettingsTakePrecedence", reportingCurrentSettingsTakePrecedence);
     executeTestCase("reportingDefaultsWithNothingConfigured", reportingDefaultsWithNothingConfigured);
+#if defined(__linux__)
     executeTestCase("csvLogPathDefaultsToXdgDataHome", csvLogPathDefaultsToXdgDataHome);
     executeTestCase("csvLogPathFallsBackToHomeLocalShare", csvLogPathFallsBackToHomeLocalShare);
+#else
+    executeTestCase("csvLogPathDefaultsToDocumentsFolder", csvLogPathDefaultsToDocumentsFolder);
+#endif // defined(__linux__)
     executeTestCase("reportingFrequencySurvivesRestart", reportingFrequencySurvivesRestart);
     executeTestCase("frequencyListLoadsInConfiguredUnits", frequencyListLoadsInConfiguredUnits);
     executeTestCase("frequencyListSurvivesRestart", frequencyListSurvivesRestart);

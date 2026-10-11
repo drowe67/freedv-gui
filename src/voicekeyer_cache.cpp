@@ -76,6 +76,18 @@ static sf_count_t MemTell_(void* userData)
     return reader->pos;
 }
 
+SF_VIRTUAL_IO* VoiceKeyerMemoryReader::VirtualIo()
+{
+    static SF_VIRTUAL_IO virtualIo = {
+        .get_filelen = MemGetFileLen_,
+        .seek = MemSeek_,
+        .read = MemRead_,
+        .write = MemWrite_,
+        .tell = MemTell_,
+    };
+    return &virtualIo;
+}
+
 void VoiceKeyerFileCache::preload(std::string const& path)
 {
     {
@@ -114,18 +126,10 @@ SNDFILE* VoiceKeyerFileCache::open(std::string const& path, SF_INFO* sfInfo, std
         return nullptr;
     }
 
-    static SF_VIRTUAL_IO virtualIo = {
-        .get_filelen = MemGetFileLen_,
-        .seek = MemSeek_,
-        .read = MemRead_,
-        .write = MemWrite_,
-        .tell = MemTell_,
-    };
-
     auto newReader = std::make_unique<VoiceKeyerMemoryReader>();
     newReader->data = entry->data;
 
-    SNDFILE* file = sf_open_virtual(&virtualIo, SFM_READ, sfInfo, newReader.get());
+    SNDFILE* file = sf_open_virtual(VoiceKeyerMemoryReader::VirtualIo(), SFM_READ, sfInfo, newReader.get());
     if (file != nullptr)
     {
         reader = std::move(newReader);

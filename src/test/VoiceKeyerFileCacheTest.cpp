@@ -531,6 +531,93 @@ bool unreadableFileIsNotCached()
     return result && cached.waitForOpen(cache, file.path()) && samplesAre(cached.read(), samples);
 }
 
+bool folderIsNotCached()
+{
+    // A folder can be opened but not read from.
+    const char* tmpDir = getenv("TMPDIR");
+    std::string path = tmpDir != nullptr ? tmpDir : "/tmp";
+
+    wxLogNull noLogging;
+    VoiceKeyerFileCache cache;
+    cache.preload(path);
+    return neverAvailable(cache, path, "a folder");
+}
+
+// libsndfile reads a cached file's contents through a set of functions that
+// stand in for the file. Which of them it uses (and how) depends on the type
+// of file, so they're also checked directly.
+struct MemoryFile
+{
+    VoiceKeyerMemoryReader reader;
+    SF_VIRTUAL_IO* io = VoiceKeyerMemoryReader::VirtualIo();
+
+    explicit MemoryFile(std::string const& contents)
+    {
+        reader.data = std::make_shared<const std::vector<char>>(contents.begin(), contents.end());
+    }
+
+    sf_count_t seek(sf_count_t offset, int whence) { return io->seek(offset, whence, &reader); }
+    sf_count_t tell() { return io->tell(&reader); }
+
+    std::string read(sf_count_t count)
+    {
+        std::string result(count, '?');
+        result.resize(io->read(&result[0], count, &reader));
+        return result;
+    }
+};
+
+bool memoryFileSeeksFromStartCurrentAndEnd()
+{
+    MemoryFile file("0123456789");
+    return 
+        file.io->get_filelen(&file.reader) == 10 && file.tell() == 0 &&
+        file.seek(4, SEEK_SET) == 4 && file.tell() == 4 && file.read(2) == "45" &&
+        file.seek(2, SEEK_CUR) == 8 && file.read(1) == "8" &&
+        file.seek(-3, SEEK_CUR) == 6 && file.read(1) == "6" &&
+        file.seek(-1, SEEK_END) == 9 && file.read(1) == "9" &&
+        file.seek(0, SEEK_END) == 10 && file.tell() == 10 &&
+        file.seek(0, SEEK_SET) == 0 && file.read(3) == "012";
+}
+
+bool memoryFileRejectsSeeksOutsideFile()
+{
+    MemoryFile file("0123456789");
+    if (file.seek(5, SEEK_SET) != 5) return false;
+
+    // A failed seek leaves the file where it was.
+    return 
+        file.seek(-1, SEEK_SET) == -1 && file.seek(11, SEEK_SET) == -1 &&
+        file.seek(-6, SEEK_CUR) == -1 && file.seek(6, SEEK_CUR) == -1 &&
+        file.seek(1, SEEK_END) == -1 && file.seek(-11, SEEK_END) == -1 &&
+        file.seek(0, 12345) == -1 &&
+        file.tell() == 5 && file.read(1) == "5";
+}
+
+bool memoryFileReadsStopAtEnd()
+{
+    MemoryFile file("0123456789");
+    return 
+        file.read(4) == "0123" && file.read(100) == "456789" && file.tell() == 10 &&
+        file.read(100) == "" && file.read(0) == "" && file.tell() == 10;
+}
+
+bool memoryFileCannotBeWrittenTo()
+{
+    MemoryFile file("0123456789");
+    return 
+        file.io->write("abc", 3, &file.reader) == 0 && 
+        file.tell() == 0 && file.read(10) == "0123456789";
+}
+
+bool emptyMemoryFileIsHandled()
+{
+    MemoryFile file("");
+    return 
+        file.io->get_filelen(&file.reader) == 0 && file.read(10) == "" &&
+        file.seek(0, SEEK_END) == 0 && file.seek(1, SEEK_SET) == -1;
+}
+
 bool openFileOutlivesCache()
 {
     auto samples = ramp(1000, 1);
@@ -600,6 +687,12 @@ int main()
     executeTestCase("nonAudioFileIsNeverAvailable", nonAudioFileIsNeverAvailable);
     executeTestCase("veryLargeFileIsNotCached", veryLargeFileIsNotCached);
     executeTestCase("unreadableFileIsNotCached", unreadableFileIsNotCached);
+    executeTestCase("folderIsNotCached", folderIsNotCached);
+    executeTestCase("memoryFileSeeksFromStartCurrentAndEnd", memoryFileSeeksFromStartCurrentAndEnd);
+    executeTestCase("memoryFileRejectsSeeksOutsideFile", memoryFileRejectsSeeksOutsideFile);
+    executeTestCase("memoryFileReadsStopAtEnd", memoryFileReadsStopAtEnd);
+    executeTestCase("memoryFileCannotBeWrittenTo", memoryFileCannotBeWrittenTo);
+    executeTestCase("emptyMemoryFileIsHandled", emptyMemoryFileIsHandled);
     executeTestCase("openFileOutlivesCache", openFileOutlivesCache);
     executeTestCase("cacheCanBeDestroyedWhileLoading", cacheCanBeDestroyedWhileLoading);
     return testResult();

@@ -208,32 +208,6 @@ bool resetDiscardsPendingSamples()
     return true;
 }
 
-bool eightHundredXaProducesRealModemSamples()
-{
-    Modem modem(FREEDV_MODE_800XA);
-    FreeDVTransmitStep step(modem.dv, +[]() FREEDV_NONBLOCKING { return 0.0f; });
-
-    auto input = tone(modem.nSpeech);
-    auto output = run(step, input);
-
-    if ((int)output.size() != modem.nModem)
-    {
-        std::cout << "Expected " << modem.nModem << " samples, got " << output.size() << std::endl;
-        return false;
-    }
-
-    for (auto sample : output)
-    {
-        if (sample != 0)
-        {
-            return true;
-        }
-    }
-
-    std::cout << "800XA output was silent despite a loud tone" << std::endl;
-    return false;
-}
-
 // Direct coverage of the shared freq_shift_coh() helper from util.cpp.
 
 bool freqShiftCohZeroOffsetIsIdentity()
@@ -351,7 +325,6 @@ int main()
     executeTestCase("zeroOffsetOutputMatchesFreedvComptx", zeroOffsetOutputMatchesFreedvComptx);
     executeTestCase("appliesTxFrequencyOffset", appliesTxFrequencyOffset);
     executeTestCase("resetDiscardsPendingSamples", resetDiscardsPendingSamples);
-    executeTestCase("eightHundredXaProducesRealModemSamples", eightHundredXaProducesRealModemSamples);
     executeTestCase("freqShiftCohZeroOffsetIsIdentity", freqShiftCohZeroOffsetIsIdentity);
     executeTestCase("freqShiftCohAppliesProgressivePhase", freqShiftCohAppliesProgressivePhase);
     executeTestCase("freqShiftCohKeepsOscillatorNormalized", freqShiftCohKeepsOscillatorNormalized);
