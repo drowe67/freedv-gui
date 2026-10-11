@@ -1310,6 +1310,22 @@ file. (PR #1534)</li>
 #1535)</li>
 <li>Prevent a closed network connection from terminating FreeDV with
 SIGPIPE. (PR #1540)</li>
+<li>Fix equalizer bass/treble filters being designed for the wrong
+sample rate. (PR #1542)</li>
+<li>Fix frequency list entries occasionally being saved 1 Hz low. (PR
+#1542)</li>
+<li>Fix text settings containing e.g. “$HOME” being altered when loaded.
+(PR #1542)</li>
+<li>Hamlib/OmniRig: fix frequency/mode requested prior to connecting not
+being applied. (PR #1542)</li>
+<li>Reject stereo files in “Play File - From Radio” instead of playing
+them at half speed. (PR #1542)</li>
+<li>Fix possible crashes when stopping while using a serial port for PTT
+input. (PR #1542)</li>
+<li>Hamlib: fix limit on time spent waiting for the radio not always
+being applied. (PR #1542)</li>
+<li>FreeDV Reporter: fix incorrect distances/headings when one’s own
+grid square is incomplete. (PR #1542)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1322,6 +1338,7 @@ error. (PR #1510)</li>
 <li>Only use system libraries that can actually be linked. (PR
 #1521)</li>
 <li>Optimizations to reduce full rebuild time. (PR #1538)</li>
+<li>Add unit tests for non-GUI code. (PR #1542)</li>
 </ul></li>
 <li>Other:
 <ul>
