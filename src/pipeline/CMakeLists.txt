@@ -63,4 +63,7 @@ DefineUtilBackedPipelineUnitTest(TxRxThreadTest)
 target_sources(TxRxThreadTest PRIVATE ../freedv_interface.cpp ../eq_design.cpp ../sox_biquad.c)
 target_link_libraries(TxRxThreadTest PRIVATE fdv_sox)
 DefineUtilBackedPipelineUnitTest(ResamplePlotStepTest)
+
+# The rest of what can be tested in util.cpp without the application's windows.
+DefineUtilBackedPipelineUnitTest(UtilTest)
 endif(UNITTEST)

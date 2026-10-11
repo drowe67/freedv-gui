@@ -420,6 +420,73 @@ bool playsFilesWithDifferentSampleRatesInTurn()
     return true;
 }
 
+bool switchesStraightToFileWithDifferentSampleRate()
+{
+    // e.g. the user picks another file to play without stopping the first.
+    const double SECOND_TONE_FREQ_HZ = 1000;
+    const int SECOND_SAMPLE_RATE = 16000;
+    TestFile first(tone(400, SAMPLE_RATE, SAMPLE_RATE * 20), SAMPLE_RATE);
+    TestFile second(tone(SECOND_TONE_FREQ_HZ, SECOND_SAMPLE_RATE, SECOND_SAMPLE_RATE), SECOND_SAMPLE_RATE);
+
+    Fixture f;
+    f.currentFile = &first;
+    if (f.collect(SAMPLE_RATE / 2).size() != (size_t)SAMPLE_RATE / 2) return false;
+
+    f.currentFile = &second;
+    auto output = f.collect(SAMPLE_RATE * 30, [&f]() { return f.numCompletions > 0; });
+
+    // The second file plays to its end at the right pitch. (How much of what
+    // was already buffered from the first file comes out beforehand depends
+    // on how quickly the step notices the change.)
+    if (f.numCompletions != 1 || output.size() < (size_t)SAMPLE_RATE / 2)
+    {
+        std::cout << "[got " << output.size() << " samples and " << f.numCompletions << " completion(s)] ";
+        return false;
+    }
+
+    std::vector<short> ending(output.end() - SAMPLE_RATE / 2, output.end());
+    double freqHz = toneFrequency(ending, SAMPLE_RATE);
+    if (std::fabs(freqHz - SECOND_TONE_FREQ_HZ) > 10)
+    {
+        std::cout << "[ended on a " << freqHz << " Hz tone, expected " << SECOND_TONE_FREQ_HZ << " Hz] ";
+        return false;
+    }
+    return true;
+}
+
+bool readsNothingIfFileGoesAwayBeforeItCanBeRead()
+{
+    // The file's there when the step first looks but has been closed by the
+    // time the step is in a position to read from it.
+    TestFile file(ramp(SAMPLE_RATE), SAMPLE_RATE);
+    std::atomic<int> numLooks { 0 };
+    std::atomic<int> numCompletions { 0 };
+
+    PlaybackStep step(
+        SAMPLE_RATE,
+        []() { return SAMPLE_RATE; },
+        [&]() -> SNDFILE* { return numLooks++ == 0 ? file.get() : nullptr; },
+        [&]() { numCompletions++; });
+
+    int totalOutput = 0;
+    auto deadline = std::chrono::steady_clock::now() + TIMEOUT;
+    for (int iteration = 0; iteration < 50 || (numLooks < 3 && std::chrono::steady_clock::now() < deadline); iteration++)
+    {
+        int numOutput = 0;
+        step.execute(nullptr, BLOCK_SIZE, &numOutput);
+        totalOutput += numOutput;
+        std::this_thread::sleep_for(1ms);
+    }
+
+    if (numLooks < 3 || totalOutput != 0 || numCompletions != 0)
+    {
+        std::cout << "[" << numLooks << " look(s) at the file, " << totalOutput << " samples played, "
+                  << numCompletions << " completion(s)] ";
+        return false;
+    }
+    return true;
+}
+
 bool resetDiscardsBufferedAudio()
 {
     auto contents = ramp(SAMPLE_RATE * 2);
@@ -507,6 +574,8 @@ int main()
     executeTestCase("stopsWhenFileIsClosedDuringPlayback", stopsWhenFileIsClosedDuringPlayback);
     executeTestCase("playsSecondFileAfterFirst", playsSecondFileAfterFirst);
     executeTestCase("playsFilesWithDifferentSampleRatesInTurn", playsFilesWithDifferentSampleRatesInTurn);
+    executeTestCase("switchesStraightToFileWithDifferentSampleRate", switchesStraightToFileWithDifferentSampleRate);
+    executeTestCase("readsNothingIfFileGoesAwayBeforeItCanBeRead", readsNothingIfFileGoesAwayBeforeItCanBeRead);
     executeTestCase("resetDiscardsBufferedAudio", resetDiscardsBufferedAudio);
     executeTestCase("destroysCleanlyDuringPlayback", destroysCleanlyDuringPlayback);
     executeTestCase("stereoFileIsConsumedAsInterleavedSamples", stereoFileIsConsumedAsInterleavedSamples);

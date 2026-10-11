@@ -1,6 +1,8 @@
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <future>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -28,12 +30,210 @@ struct HamlibRigControllerTestAccess
         });
         done.get_future().wait();
     }
+
+    // Adds a radio to the list that the controller got from Hamlib.
+    static void addRadio(const struct rig_caps* caps)
+    {
+        HamlibRigController::InitializeHamlibLibrary();
+
+        std::unique_lock<std::mutex> lk(HamlibRigController::RigListMutex_);
+        HamlibRigController::RigList_.push_back(caps);
+        HamlibRigController::RigNameList_.push_back(std::string(caps->mfg_name) + " " + caps->model_name);
+    }
 };
 
 namespace {
 
 const std::string DUMMY_RIG_NAME = "Hamlib Dummy";
 constexpr auto TIMEOUT = 5s;
+
+// A request that the simulated radio can be told to fail (see RadioFaults).
+struct RadioFault
+{
+    static constexpr int ALWAYS = -1;
+
+    std::atomic<int> numToPass { 0 };
+    std::atomic<int> numToFail { 0 };
+
+    // Fails every request from now on.
+    void always() { failAfter(0, ALWAYS); }
+
+    // Lets the given number of requests through and then fails the given number.
+    void failAfter(int pass, int fail)
+    {
+        numToPass = pass;
+        numToFail = fail;
+    }
+
+    void clear() { failAfter(0, 0); }
+
+    bool shouldFail()
+    {
+        if (numToPass > 0)
+        {
+            numToPass--;
+            return false;
+        }
+        if (numToFail == ALWAYS) return true;
+        if (numToFail > 0)
+        {
+            numToFail--;
+            return true;
+        }
+        return false;
+    }
+};
+
+// Makes the simulated radio fail requests on demand. Hamlib calls into each
+// radio's driver through a table of functions; while a test is running, that
+// table is swapped for a copy which can be told to report an error instead of
+// passing the request on to the simulated radio.
+struct RadioFaults
+{
+    using Fault = RadioFault;
+    static constexpr int ALWAYS = RadioFault::ALWAYS;
+
+    static inline Fault setPtt, setFreq, getFreq, setMode, getMode, getVfo;
+    static inline struct rig_caps hookedCaps;
+    static inline const struct rig_caps* realCaps = nullptr;
+
+    static void clearAll()
+    {
+        for (auto fault : { &setPtt, &setFreq, &getFreq, &setMode, &getMode, &getVfo })
+        {
+            fault->clear();
+        }
+    }
+
+    // Must be called on the controller's thread (see HamlibRigControllerTestAccess).
+    static void install(RIG* rig)
+    {
+        realCaps = rig->caps;
+        hookedCaps = *realCaps;
+        hookedCaps.set_ptt = [](RIG* r, vfo_t vfo, ptt_t ptt) -> int {
+            return setPtt.shouldFail() ? -RIG_EIO : realCaps->set_ptt(r, vfo, ptt);
+        };
+        hookedCaps.set_freq = [](RIG* r, vfo_t vfo, freq_t freq) -> int {
+            return setFreq.shouldFail() ? -RIG_EIO : realCaps->set_freq(r, vfo, freq);
+        };
+        hookedCaps.get_freq = [](RIG* r, vfo_t vfo, freq_t* freq) -> int {
+            return getFreq.shouldFail() ? -RIG_EIO : realCaps->get_freq(r, vfo, freq);
+        };
+        hookedCaps.set_mode = [](RIG* r, vfo_t vfo, rmode_t mode, pbwidth_t width) -> int {
+            return setMode.shouldFail() ? -RIG_EIO : realCaps->set_mode(r, vfo, mode, width);
+        };
+        hookedCaps.get_mode = [](RIG* r, vfo_t vfo, rmode_t* mode, pbwidth_t* width) -> int {
+            return getMode.shouldFail() ? -RIG_EIO : realCaps->get_mode(r, vfo, mode, width);
+        };
+        hookedCaps.get_vfo = [](RIG* r, vfo_t* vfo) -> int {
+            return getVfo.shouldFail() ? -RIG_EIO : realCaps->get_vfo(r, vfo);
+        };
+        rig->caps = &hookedCaps;
+
+        // Otherwise Hamlib answers some requests from memory without asking the radio.
+        rig_set_cache_timeout_ms(rig, HAMLIB_CACHE_ALL, 0);
+    }
+};
+
+// Lets tests see the settings Hamlib was given for a connection. The simulated
+// radio ignores most of them, so stand-ins for radios that use a serial port
+// are added to Hamlib's list. These note down their settings as Hamlib
+// discards them, which the controller has it do once the connection fails --
+// and it always does, as no radio's attached.
+struct SettingsProbe
+{
+    static inline const std::string SERIAL_RIG_NAME = "Yaesu FreeDV Test Radio";
+    static inline const std::string ICOM_RIG_NAME = "Icom FreeDV Test Radio";
+    static inline const std::string SERIAL_PORT = "/nonexistent/serial/port";
+
+    // A simulated radio that, left alone, is given a long time to answer.
+    static inline const std::string SLOW_RIG_NAME = "Hamlib FreeDV Test Slow Radio";
+    static constexpr int SLOW_RIG_TIMEOUT_MS = 3000;
+
+    using Settings = std::map<std::string, std::string>;
+    static inline Settings captured;
+
+    static inline struct rig_caps serialCaps;
+    static inline struct rig_caps icomCaps;
+    static inline struct rig_caps slowCaps;
+    static inline int (*realSerialCleanup)(RIG*) = nullptr;
+    static inline int (*realIcomCleanup)(RIG*) = nullptr;
+
+    // Note: Hamlib forgets about these if its list of radios is loaded again, 
+    // so this has to follow the controller doing so.
+    static bool registerRadios()
+    {
+        HamlibRigController::InitializeHamlibLibrary();
+
+        auto serialSource = rig_get_caps(RIG_MODEL_FT817);
+        auto icomSource = rig_get_caps(RIG_MODEL_IC7300);
+        auto slowSource = rig_get_caps(RIG_MODEL_DUMMY);
+        if (serialSource == nullptr || icomSource == nullptr || slowSource == nullptr) return false;
+
+        slowCaps = *slowSource;
+        slowCaps.rig_model = RIG_MAKE_MODEL(RIG_DUMMY, 97);
+        slowCaps.model_name = "FreeDV Test Slow Radio";
+        slowCaps.timeout = SLOW_RIG_TIMEOUT_MS;
+
+        serialCaps = *serialSource;
+        serialCaps.rig_model = RIG_MAKE_MODEL(RIG_DUMMY, 98);
+        serialCaps.model_name = "FreeDV Test Radio";
+        realSerialCleanup = serialCaps.rig_cleanup;
+        serialCaps.rig_cleanup = [](RIG* rig) -> int {
+            capture(rig);
+            return realSerialCleanup != nullptr ? realSerialCleanup(rig) : RIG_OK;
+        };
+
+        icomCaps = *icomSource;
+        icomCaps.rig_model = RIG_MAKE_MODEL(RIG_DUMMY, 99);
+        icomCaps.model_name = "FreeDV Test Radio";
+        realIcomCleanup = icomCaps.rig_cleanup;
+        icomCaps.rig_cleanup = [](RIG* rig) -> int {
+            capture(rig);
+            return realIcomCleanup != nullptr ? realIcomCleanup(rig) : RIG_OK;
+        };
+
+        if (rig_register(&serialCaps) != RIG_OK || rig_register(&icomCaps) != RIG_OK ||
+            rig_register(&slowCaps) != RIG_OK) 
+        {
+            return false;
+        }
+        HamlibRigControllerTestAccess::addRadio(&slowCaps);
+
+        HamlibRigControllerTestAccess::addRadio(&serialCaps);
+        HamlibRigControllerTestAccess::addRadio(&icomCaps);
+        return true;
+    }
+
+    static void capture(RIG* rig)
+    {
+        captured.clear();
+        for (auto name : { 
+            "rig_pathname", "serial_speed", "ptt_type", "ptt_pathname", "ptt_share", 
+            "rts_state", "dtr_state", "civaddr" })
+        {
+            std::string value;
+            if (read(rig, name, value)) captured[name] = value;
+        }
+    }
+
+    // Reads one of the settings that Hamlib currently has for a radio.
+    static bool read(RIG* rig, const char* name, std::string& value)
+    {
+        auto token = rig_token_lookup(rig, name);
+        if (token == RIG_CONF_END) return false;
+
+        constexpr int BUF_LEN = 1024;
+        char buf[BUF_LEN] = { 0 };
+#if defined(HAMLIB_USE_FRIENDLY_ERRORS)
+        int result = rig_get_conf2(rig, token, buf, BUF_LEN);
+#else
+        int result = rig_get_conf(rig, token, buf);
+#endif // defined(HAMLIB_USE_FRIENDLY_ERRORS)
+        value = buf;
+        return result == RIG_OK;
+    }
+};
 
 // Records the events raised by a controller. These are raised from the
 // controller's own thread, so tests have to wait for them to show up.
@@ -55,10 +255,14 @@ struct Fixture
     explicit Fixture(
         std::string const& rigName = DUMMY_RIG_NAME, 
         HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_CAT,
-        bool restoreOnDisconnect = false, bool freqOnly = false, std::string const& serialPort = "")
-        : controllerStorage(rigName, serialPort, 0, 0, pttType, std::string(""), restoreOnDisconnect, freqOnly, false, false)
+        bool restoreOnDisconnect = false, bool freqOnly = false, std::string const& serialPort = "",
+        int serialRate = 0, int civHex = 0, std::string const& pttSerialPort = "",
+        bool forceRtsOn = false, bool forceDtrOn = false)
+        : controllerStorage(rigName, serialPort, serialRate, civHex, pttType, pttSerialPort, restoreOnDisconnect, freqOnly, forceRtsOn, forceDtrOn)
         , controller(*controllerStorage)
     {
+        RadioFaults::clearAll();
+
         controller.onRigConnected += [this](IRigController*) {
             record_([this]() { numConnects++; });
         };
@@ -90,6 +294,72 @@ struct Fixture
     {
         controller.connect();
         return waitFor([this]() { return numConnects == 1 || !errors.empty(); }) && errors.empty();
+    }
+
+    // Connects to a radio that can then be made to fail requests (see RadioFaults).
+    bool connectToFaultyRadio()
+    {
+        if (!connect()) return false;
+        onRadio([](RIG* rig) { RadioFaults::install(rig); });
+        return true;
+    }
+
+    // Connects and puts the radio on a known frequency and mode.
+    bool connectToFaultyRadioOn(uint64_t freq, IRigFrequencyController::Mode mode)
+    {
+        if (!connectToFaultyRadio()) return false;
+        controller.setFrequency(freq);
+        controller.setMode(mode);
+        return radioReports(freq, mode);
+    }
+
+    // Waits for exactly one error mentioning the given text.
+    bool reportsOneError(std::string const& text)
+    {
+        waitFor([this]() { return !errors.empty(); });
+        waitUntilIdle();
+
+        std::unique_lock<std::mutex> lk(mtx);
+        if (errors.size() != 1 || errors[0].find(text) == std::string::npos)
+        {
+            std::cout << "[" << errors.size() << " error(s)";
+            for (auto& err : errors) std::cout << ": \"" << err << "\"";
+            std::cout << "; expected one mentioning \"" << text << "\"] ";
+            return false;
+        }
+        return true;
+    }
+
+    bool noErrors()
+    {
+        waitUntilIdle();
+
+        std::unique_lock<std::mutex> lk(mtx);
+        if (!errors.empty())
+        {
+            std::cout << "[unexpected error: \"" << errors[0] << "\"] ";
+            return false;
+        }
+        return true;
+    }
+
+    // What the radio itself is on, regardless of what the controller has reported.
+    bool radioIsOn(uint64_t expectedFreq, rmode_t expectedMode)
+    {
+        freq_t freq = 0;
+        rmode_t mode = RIG_MODE_NONE;
+        onRadio([&](RIG* rig) {
+            pbwidth_t width;
+            rig_get_freq(rig, RIG_VFO_CURR, &freq);
+            rig_get_mode(rig, RIG_VFO_CURR, &mode, &width);
+        });
+        if ((uint64_t)freq != expectedFreq || mode != expectedMode)
+        {
+            std::cout << "[radio is on " << (uint64_t)freq << " Hz (" << rig_strrmode(mode) << "); expected "
+                      << expectedFreq << " Hz (" << rig_strrmode(expectedMode) << ")] ";
+            return false;
+        }
+        return true;
     }
 
     // Asks the radio for its frequency/mode until it reports the expected ones.
@@ -711,6 +981,356 @@ bool ignoresRequestsWhenNotConnected()
     return f.connect() && f.pttChanges.empty();
 }
 
+bool changesModeWhileTransmitting()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    f.controller.ptt(true);
+    f.controller.setMode(IRigFrequencyController::DIGU);
+    f.waitUntilIdle();
+
+    // The radio's left transmitting, and the controller briefly unkeying it
+    // to change mode isn't reported.
+    ptt_t ptt = RIG_PTT_OFF;
+    f.onRadio([&](RIG* rig) { rig_get_ptt(rig, RIG_VFO_CURR, &ptt); });
+    if (ptt == RIG_PTT_OFF)
+    {
+        std::cout << "[radio was left receiving] ";
+        return false;
+    }
+
+    f.controller.ptt(false);
+    return 
+        f.radioReports(14236000, IRigFrequencyController::DIGU) &&
+        f.pttChanges == std::vector<bool> { true, false } &&
+        f.noErrors();
+}
+
+bool reportsErrorWhenPttFails()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadio()) return false;
+
+    RadioFaults::setPtt.always();
+    f.controller.ptt(true);
+    if (!f.reportsOneError("Cannot set PTT")) return false;
+
+    // The user's told once, not every time (PTT may be retried many times a second).
+    f.controller.ptt(true);
+    f.controller.ptt(true);
+    if (!f.reportsOneError("Cannot set PTT")) return false;
+
+    // Nothing's reported as having changed until the radio actually does.
+    {
+        std::unique_lock<std::mutex> lk(f.mtx);
+        if (!f.pttChanges.empty())
+        {
+            std::cout << "[PTT reported as changed despite the error] ";
+            return false;
+        }
+    }
+
+    RadioFaults::setPtt.clear();
+    f.controller.ptt(true);
+    return f.waitFor([&]() { return f.pttChanges == std::vector<bool> { true }; });
+}
+
+bool reportsErrorWhenFrequencyCannotBeSet()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::setFreq.always();
+    f.controller.setFrequency(7177000);
+    if (!f.reportsOneError("Could not set current frequency")) return false;
+
+    // The radio's still where it was, and that's what gets reported.
+    RadioFaults::setFreq.clear();
+    return f.radioIsOn(14236000, RIG_MODE_USB) && f.radioReports(14236000, IRigFrequencyController::USB);
+}
+
+bool reportsErrorWhenModeCannotBeSet()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::setMode.always();
+    f.controller.setMode(IRigFrequencyController::LSB);
+    if (!f.reportsOneError("Could not set mode")) return false;
+
+    RadioFaults::setMode.clear();
+    return f.radioIsOn(14236000, RIG_MODE_USB) && f.radioReports(14236000, IRigFrequencyController::USB);
+}
+
+// Some radios reject requests that name a specific VFO. When that happens the
+// controller tries again without naming one before giving up.
+bool retriesFrequencyAndModeWithoutNamingVfo()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::setFreq.failAfter(0, 1);
+    f.controller.setFrequency(7177000);
+    if (!f.radioReports(7177000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::setMode.failAfter(0, 1);
+    f.controller.setMode(IRigFrequencyController::LSB);
+    if (!f.radioReports(7177000, IRigFrequencyController::LSB)) return false;
+
+    RadioFaults::getMode.failAfter(0, 1);
+    f.controller.setFrequency(14236000);
+    if (!f.radioReports(14236000, IRigFrequencyController::LSB)) return false;
+
+    RadioFaults::getFreq.failAfter(0, 1);
+    f.controller.setFrequency(14240000);
+    return f.radioReports(14240000, IRigFrequencyController::LSB) && f.noErrors();
+}
+
+// The radio's polled every few seconds, so a single failure isn't worth
+// bothering the user with -- but a radio that's stopped responding is.
+bool reportsErrorOnceRadioStopsAnswering(RadioFaults::Fault& fault, std::string const& expectedError)
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+    f.waitUntilIdle();
+    size_t numReports = f.numReports();
+
+    // One failure, then the radio's fine again.
+    fault.always();
+    f.controller.requestCurrentFrequencyMode();
+    if (!f.noErrors()) return false;
+    fault.clear();
+    f.controller.requestCurrentFrequencyMode();
+    if (!f.waitFor([&]() { return f.frequencies.size() == numReports + 1; })) return false;
+
+    // That success means the next failure is the first again.
+    fault.always();
+    f.controller.requestCurrentFrequencyMode();
+    if (!f.noErrors()) return false;
+
+    f.controller.requestCurrentFrequencyMode();
+    if (!f.reportsOneError(expectedError)) return false;
+
+    // Nothing was reported for the requests that failed.
+    if (f.numReports() != numReports + 1)
+    {
+        std::cout << "[" << (f.numReports() - numReports) << " frequency report(s); expected 1] ";
+        return false;
+    }
+
+    f.controller.requestCurrentFrequencyMode();
+    return f.reportsOneError(expectedError);
+}
+
+bool usesCurrentVfoWhenRadioWontSayWhichIsSelected()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::getVfo.always();
+    f.controller.setFrequency(7177000);
+    f.controller.setMode(IRigFrequencyController::LSB);
+    f.waitUntilIdle();
+    RadioFaults::getVfo.clear();
+
+    return f.radioIsOn(7177000, RIG_MODE_LSB) && f.noErrors();
+}
+
+// The radio has to stop transmitting for its frequency/mode to be changed.
+// If it won't, the change isn't attempted.
+bool doesNotChangeFrequencyOrModeIfRadioWontStopTransmitting()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+    f.controller.ptt(true);
+    if (!f.waitFor([&]() { return f.pttChanges.size() == 1; })) return false;
+
+    RadioFaults::setPtt.always();
+    f.controller.setFrequency(7177000);
+    if (!f.reportsOneError("Could not disable PTT prior to frequency change")) return false;
+
+    f.controller.setMode(IRigFrequencyController::LSB);
+    f.waitUntilIdle();
+    RadioFaults::setPtt.clear();
+
+    return f.radioIsOn(14236000, RIG_MODE_USB) && f.reportsOneError("Could not disable PTT prior to frequency change");
+}
+
+bool reportsErrorIfModeChangeBlockedByTransmit()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+    f.controller.ptt(true);
+    if (!f.waitFor([&]() { return f.pttChanges.size() == 1; })) return false;
+
+    RadioFaults::setPtt.always();
+    f.controller.setMode(IRigFrequencyController::LSB);
+    bool result = f.reportsOneError("Could not disable PTT prior to mode change");
+    RadioFaults::setPtt.clear();
+
+    return result && f.radioIsOn(14236000, RIG_MODE_USB);
+}
+
+// Here the radio stops transmitting and changes frequency/mode, but then
+// won't start transmitting again.
+bool reportsErrorIfTransmitCannotResume(bool changeMode)
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+    f.controller.ptt(true);
+    if (!f.waitFor([&]() { return f.pttChanges.size() == 1; })) return false;
+
+    RadioFaults::setPtt.failAfter(1, RadioFaults::ALWAYS);
+    bool result;
+    if (changeMode)
+    {
+        f.controller.setMode(IRigFrequencyController::LSB);
+        result = f.reportsOneError("Could not enable PTT after mode change");
+    }
+    else
+    {
+        f.controller.setFrequency(7177000);
+        result = f.reportsOneError("Could not enable PTT after frequency change");
+    }
+    RadioFaults::setPtt.clear();
+
+    return result && f.radioIsOn(changeMode ? 14236000 : 7177000, changeMode ? RIG_MODE_LSB : RIG_MODE_USB);
+}
+
+// Changing mode is followed by the frequency being sent again (some radios
+// shift frequency on a mode change). That's a nicety; its failure isn't an error.
+bool modeChangeSurvivesFailedFrequencyResend()
+{
+    Fixture f;
+    if (!f.connectToFaultyRadioOn(14236000, IRigFrequencyController::USB)) return false;
+
+    RadioFaults::setFreq.always();
+    f.controller.setMode(IRigFrequencyController::LSB);
+    f.waitUntilIdle();
+    RadioFaults::setFreq.clear();
+
+    return f.radioReports(14236000, IRigFrequencyController::LSB) && f.noErrors();
+}
+
+// Attempts a connection with the given settings and returns what Hamlib was told.
+SettingsProbe::Settings settingsGivenToHamlib(
+    HamlibRigController::PttType pttType = HamlibRigController::PTT_VIA_CAT, int serialRate = 0, 
+    std::string const& pttSerialPort = "", bool forceRtsOn = false, bool forceDtrOn = false, 
+    std::string const& rigName = SettingsProbe::SERIAL_RIG_NAME, int civHex = 0)
+{
+    SettingsProbe::captured.clear();
+
+    Fixture f(rigName, pttType, false, false, SettingsProbe::SERIAL_PORT, serialRate, civHex, pttSerialPort, forceRtsOn, forceDtrOn);
+    f.controller.connect();
+    f.waitFor([&]() { return !f.errors.empty(); });
+    f.waitUntilIdle();
+    return SettingsProbe::captured;
+}
+
+bool hasSetting(SettingsProbe::Settings const& settings, std::string const& name, std::string const& expected)
+{
+    auto iter = settings.find(name);
+    std::string actual = iter != settings.end() ? iter->second : "(not available)";
+    if (actual != expected)
+    {
+        std::cout << "[" << name << " was \"" << actual << "\", expected \"" << expected << "\"] ";
+        return false;
+    }
+    return true;
+}
+
+bool passesSerialPortAndSpeedToHamlib()
+{
+    auto defaults = settingsGivenToHamlib();
+    auto settings = settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT, 19200);
+
+    // A speed of zero means "use the radio's default", so there has to be one.
+    return 
+        hasSetting(settings, "rig_pathname", SettingsProbe::SERIAL_PORT) &&
+        hasSetting(settings, "serial_speed", "19200") &&
+        hasSetting(defaults, "rig_pathname", SettingsProbe::SERIAL_PORT) &&
+        defaults["serial_speed"] != "19200" && atoi(defaults["serial_speed"].c_str()) > 0;
+}
+
+bool passesPttTypeToHamlib()
+{
+    bool result = true;
+    result &= hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT), "ptt_type", "RIG");
+    result &= hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT_DATA), "ptt_type", "RIGMICDATA");
+    result &= hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_NONE), "ptt_type", "None");
+    result &= hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_RTS), "ptt_type", "RTS");
+    result &= hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_DTR), "ptt_type", "DTR");
+    return result;
+}
+
+bool sharesSerialPortWhenKeyingWithControlLines()
+{
+    // The same port carries CAT commands, so Hamlib mustn't open it exclusively for PTT.
+    auto cat = settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT);
+    return 
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_RTS), "ptt_share", "1") &&
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_DTR), "ptt_share", "1") &&
+        cat["ptt_share"] != "1";
+}
+
+bool usesSeparatePttPortOnlyForControlLines()
+{
+    const std::string PTT_PORT = "/nonexistent/ptt/port";
+    auto withoutPttPort = settingsGivenToHamlib(HamlibRigController::PTT_VIA_RTS);
+
+    return 
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_RTS, 0, PTT_PORT), "ptt_pathname", PTT_PORT) &&
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_DTR, 0, PTT_PORT), "ptt_pathname", PTT_PORT) &&
+        // CAT commands only ever go to the radio's own port...
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT, 0, PTT_PORT), "ptt_pathname", withoutPttPort["ptt_pathname"]) &&
+        // ...and naming the radio's port again isn't a separate port.
+        hasSetting(settingsGivenToHamlib(HamlibRigController::PTT_VIA_RTS, 0, SettingsProbe::SERIAL_PORT), "ptt_pathname", withoutPttPort["ptt_pathname"]);
+}
+
+bool forcesControlLinesOnWhenAsked()
+{
+    auto neither = settingsGivenToHamlib();
+    auto rts = settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT, 0, "", true, false);
+    auto dtr = settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT, 0, "", false, true);
+    auto both = settingsGivenToHamlib(HamlibRigController::PTT_VIA_CAT, 0, "", true, true);
+
+    return 
+        neither["rts_state"] != "ON" && neither["dtr_state"] != "ON" &&
+        hasSetting(rts, "rts_state", "ON") && hasSetting(rts, "dtr_state", neither["dtr_state"]) &&
+        hasSetting(dtr, "dtr_state", "ON") && hasSetting(dtr, "rts_state", neither["rts_state"]) &&
+        hasSetting(both, "rts_state", "ON") && hasSetting(both, "dtr_state", "ON");
+}
+
+bool passesCivAddressToIcomRadios()
+{
+    auto settings = settingsGivenToHamlib(
+        HamlibRigController::PTT_VIA_CAT, 0, "", false, false, SettingsProbe::ICOM_RIG_NAME, 0x7C);
+    return hasSetting(settings, "civaddr", "124");
+}
+
+// Otherwise it can take a long time to begin transmitting (or to tell the
+// user that something's wrong) if the radio isn't answering.
+bool limitsTimeToWaitForRadio()
+{
+    Fixture f(SettingsProbe::SLOW_RIG_NAME);
+    if (!f.connect()) return false;
+
+    // What matters is the limit in force once connected: Hamlib may put the
+    // radio's own default back while opening it.
+    std::string timeout;
+    bool couldRead = false;
+    f.onRadio([&](RIG* rig) { couldRead = SettingsProbe::read(rig, "timeout", timeout); });
+
+    int timeoutMs = atoi(timeout.c_str());
+    if (!couldRead || timeoutMs <= 0 || timeoutMs > 625)
+    {
+        std::cout << "[timeout was \"" << timeout << "\" ms] ";
+        return false;
+    }
+    return f.noErrors();
+}
+
 bool destroysCleanlyWhileConnected()
 {
     for (int i = 0; i < 2; i++)
@@ -728,6 +1348,12 @@ int main()
 {
     // Hamlib's own debug output is routed through the logger and is very verbose.
     ulog_set_quiet(true);
+
+    if (!SettingsProbe::registerRadios())
+    {
+        std::cout << "Could not add test radios to Hamlib" << std::endl;
+        return -1;
+    }
 
     executeTestCase("rigListIsPopulated", rigListIsPopulated);
     executeTestCase("rigNamesMapBackToThemselves", rigNamesMapBackToThemselves);
@@ -760,6 +1386,30 @@ int main()
     executeTestCase("usesWhicheverVfoIsSelected", usesWhicheverVfoIsSelected);
     executeTestCase("leavesMemoryChannelToChangeFrequency", leavesMemoryChannelToChangeFrequency);
     executeTestCase("ignoresRequestsWhenNotConnected", ignoresRequestsWhenNotConnected);
+    executeTestCase("changesModeWhileTransmitting", changesModeWhileTransmitting);
+    executeTestCase("reportsErrorWhenPttFails", reportsErrorWhenPttFails);
+    executeTestCase("reportsErrorWhenFrequencyCannotBeSet", reportsErrorWhenFrequencyCannotBeSet);
+    executeTestCase("reportsErrorWhenModeCannotBeSet", reportsErrorWhenModeCannotBeSet);
+    executeTestCase("retriesFrequencyAndModeWithoutNamingVfo", retriesFrequencyAndModeWithoutNamingVfo);
+    executeTestCase("reportsErrorOnceRadioStopsAnswering (mode)", []() { 
+        return reportsErrorOnceRadioStopsAnswering(RadioFaults::getMode, "Could not retrieve current radio mode"); 
+    });
+    executeTestCase("reportsErrorOnceRadioStopsAnswering (frequency)", []() { 
+        return reportsErrorOnceRadioStopsAnswering(RadioFaults::getFreq, "Could not get current frequency"); 
+    });
+    executeTestCase("usesCurrentVfoWhenRadioWontSayWhichIsSelected", usesCurrentVfoWhenRadioWontSayWhichIsSelected);
+    executeTestCase("doesNotChangeFrequencyOrModeIfRadioWontStopTransmitting", doesNotChangeFrequencyOrModeIfRadioWontStopTransmitting);
+    executeTestCase("reportsErrorIfModeChangeBlockedByTransmit", reportsErrorIfModeChangeBlockedByTransmit);
+    executeTestCase("reportsErrorIfTransmitCannotResume (frequency)", []() { return reportsErrorIfTransmitCannotResume(false); });
+    executeTestCase("reportsErrorIfTransmitCannotResume (mode)", []() { return reportsErrorIfTransmitCannotResume(true); });
+    executeTestCase("modeChangeSurvivesFailedFrequencyResend", modeChangeSurvivesFailedFrequencyResend);
+    executeTestCase("passesSerialPortAndSpeedToHamlib", passesSerialPortAndSpeedToHamlib);
+    executeTestCase("passesPttTypeToHamlib", passesPttTypeToHamlib);
+    executeTestCase("sharesSerialPortWhenKeyingWithControlLines", sharesSerialPortWhenKeyingWithControlLines);
+    executeTestCase("usesSeparatePttPortOnlyForControlLines", usesSeparatePttPortOnlyForControlLines);
+    executeTestCase("forcesControlLinesOnWhenAsked", forcesControlLinesOnWhenAsked);
+    executeTestCase("passesCivAddressToIcomRadios", passesCivAddressToIcomRadios);
+    executeTestCase("limitsTimeToWaitForRadio", limitsTimeToWaitForRadio);
     executeTestCase("destroysCleanlyWhileConnected", destroysCleanlyWhileConnected);
     return testResult();
 }

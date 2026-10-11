@@ -28,4 +28,10 @@ else(HAMLIB_ADD_DEPENDENCY)
     DefineFreeDVUnitTest(rig_control HamlibRigControllerTest fdv_rig_control ${HAMLIB_LIBRARY})
 endif(HAMLIB_ADD_DEPENDENCY)
 target_include_directories(HamlibRigControllerTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+
+if(NOT WIN32)
+    # Uses a pseudo-terminal in place of a serial port.
+    DefineFreeDVUnitTest(rig_control SerialPortRigControllerTest fdv_rig_control)
+    target_include_directories(SerialPortRigControllerTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+endif(NOT WIN32)
 endif(UNITTEST)
