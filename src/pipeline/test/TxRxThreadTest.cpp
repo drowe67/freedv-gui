@@ -113,6 +113,11 @@ namespace {
 constexpr int TEST_SAMPLE_RATE = 8000;
 constexpr int FIFO_CAPACITY = 16000;
 
+// What the tone hooks given to the thread under test report.
+std::atomic<float> g_testToneFreq(1000.0f);
+std::atomic<float> g_testToneAmplitude(0.0f);
+std::atomic<bool> g_testToneEnabled(false);
+
 // Prints a bracketed mismatch on failure, like the other pipeline tests' helper.
 template<typename T>
 bool check(const char* description, T actual, T expected)
@@ -166,6 +171,13 @@ void resetGlobals()
     g_sfRecFile = nullptr;
     g_recFromRadioSamples = 0;
     g_dump_fifo_state = 0;
+    g_sfRecDecoderFile = nullptr;
+    g_RxFreqOffsetHz = 0.0f;
+    g_TxFreqOffsetHz = 0.0f;
+    g_tone_phase = 0.0f;
+    g_testToneFreq = 1000.0f;
+    g_testToneAmplitude = 0.0f;
+    g_testToneEnabled = false;
 }
 
 // Owns a fresh set of sound-card FIFOs for the duration of a test case.
@@ -203,7 +215,23 @@ public:
     void startRealTimeWork() FREEDV_NONBLOCKING override { startCalls++; }
     void stopRealTimeWork(bool fastMode) FREEDV_NONBLOCKING override { stopCalls++; lastFastMode = fastMode; }
     void clearHelperRealTime() FREEDV_NONBLOCKING override { clearRealTimeCalls++; }
-    bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
+    bool mustStopWork() FREEDV_NONBLOCKING override
+    {
+        if (stopWork.load(std::memory_order_acquire)) return true;
+
+        int allowed = framesAllowed.load(std::memory_order_acquire);
+        if (allowed < 0) return false;
+        if (allowed == 0) return true;
+        framesAllowed.store(allowed - 1, std::memory_order_release);
+        return false;
+    }
+
+    // What the thread is told when it asks whether it has run out of time.
+    std::atomic<bool> stopWork{false};
+
+    // If not negative, the number of frames the thread may still process
+    // before being told that it has run out of time.
+    std::atomic<int> framesAllowed{-1};
 
     // Atomic as the thread under test updates these while the test reads them.
     std::atomic<int> setRealTimeCalls{0};
@@ -215,9 +243,9 @@ public:
 
 // Tone getters: realtime_fp only accepts raw function pointers, so these are
 // captureless file-scope functions (the app's equivalents live in main.cpp).
-float testToneFreq() FREEDV_NONBLOCKING { return 1000.0f; }
-float testToneAmplitude() FREEDV_NONBLOCKING { return 0.0f; }
-bool testToneEnabled() FREEDV_NONBLOCKING { return false; }
+float testToneFreq() FREEDV_NONBLOCKING { return g_testToneFreq.load(std::memory_order_acquire); }
+float testToneAmplitude() FREEDV_NONBLOCKING { return g_testToneAmplitude.load(std::memory_order_acquire); }
+bool testToneEnabled() FREEDV_NONBLOCKING { return g_testToneEnabled.load(std::memory_order_acquire); }
 
 TxRxThreadUiHooks makeHooks(std::atomic<int>& playFileToMicInFinished, std::atomic<int>& recFileFromRadioFinished, std::atomic<int>& playFileFromRadioFinished)
 {
@@ -293,6 +321,162 @@ void seedSilence(GenericFIFO<short>* fifo, int numSamples)
     std::vector<short> samples(numSamples, 0);
     fifo->write(samples.data(), numSamples);
 }
+
+double rms(std::vector<short> const& samples)
+{
+    if (samples.empty()) return 0.0;
+
+    double sum = 0.0;
+    for (auto sample : samples)
+    {
+        sum += (double)sample * sample;
+    }
+    return std::sqrt(sum / samples.size());
+}
+
+// Returns the frequency of a tone from how often it crosses zero.
+double toneFrequency(std::vector<short> const& samples, int sampleRate)
+{
+    int crossings = 0;
+    for (size_t i = 1; i < samples.size(); i++)
+    {
+        if ((samples[i - 1] < 0) != (samples[i] < 0)) crossings++;
+    }
+    return samples.empty() ? 0.0 : crossings / 2.0 * sampleRate / samples.size();
+}
+
+// Returns the power in each of 256 evenly spaced frequency bands (up to
+// half the sample rate), averaged over the signal in blocks of 512 samples.
+std::vector<double> powerSpectrum(std::vector<short> const& samples)
+{
+    const size_t blockSize = 512;
+    std::vector<double> power(blockSize / 2, 0.0);
+
+    for (size_t start = 0; start + blockSize <= samples.size(); start += blockSize)
+    {
+        for (size_t bin = 1; bin < blockSize / 2; bin++)
+        {
+            double re = 0.0;
+            double im = 0.0;
+            for (size_t i = 0; i < blockSize; i++)
+            {
+                double angle = 2.0 * M_PI * bin * i / blockSize;
+                re += samples[start + i] * std::cos(angle);
+                im -= samples[start + i] * std::sin(angle);
+            }
+            power[bin] += re * re + im * im;
+        }
+    }
+
+    return power;
+}
+
+// Returns the frequency around which a signal's energy is centered.
+double centerFrequency(std::vector<short> const& samples, int sampleRate)
+{
+    auto power = powerSpectrum(samples);
+    double weighted = 0.0;
+    double total = 0.0;
+
+    for (size_t bin = 0; bin < power.size(); bin++)
+    {
+        weighted += power[bin] * bin * sampleRate / (2.0 * power.size());
+        total += power[bin];
+    }
+
+    return total > 0.0 ? weighted / total : 0.0;
+}
+
+std::vector<short> noise(int numSamples, int amplitude)
+{
+    std::vector<short> samples(numSamples);
+    unsigned int seed = 1;
+    for (auto& sample : samples)
+    {
+        seed = seed * 1103515245u + 12345u;
+        sample = (short)((int)((seed >> 16) % (2 * amplitude)) - amplitude);
+    }
+    return samples;
+}
+
+// A sound file being recorded to, removed once the test case is done.
+class RecordingFile
+{
+public:
+    explicit RecordingFile(int sampleRate)
+    {
+        const char* tmpDir = getenv("TMPDIR");
+        path_ = std::string(tmpDir != nullptr ? tmpDir : "/tmp") + "/TxRxThreadTest-" +
+            std::to_string(getpid()) + "-recording.wav";
+
+        SF_INFO info = {};
+        info.samplerate = sampleRate;
+        info.channels = 1;
+        info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        file_ = sf_open(path_.c_str(), SFM_WRITE, &info);
+    }
+
+    ~RecordingFile()
+    {
+        close();
+        remove(path_.c_str());
+    }
+
+    SNDFILE* get() const { return file_; }
+
+    // Returns how much has been recorded so far. RecordStep holds this lock
+    // while writing, so the file isn't touched while it's being asked.
+    int samplesSoFar()
+    {
+        g_mutexProtectingCallbackData.Lock();
+        int result = (int)sf_seek(file_, 0, SEEK_CUR);
+        g_mutexProtectingCallbackData.Unlock();
+        return result;
+    }
+
+    // Recording happens on other threads; gives them time to catch up.
+    void waitForSamples(int numSamples)
+    {
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (samplesSoFar() < numSamples && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+    }
+
+    // Closes the file and returns what ended up in it.
+    std::vector<short> finish()
+    {
+        close();
+
+        SF_INFO info = {};
+        std::vector<short> samples;
+        SNDFILE* recorded = sf_open(path_.c_str(), SFM_READ, &info);
+        if (recorded != nullptr)
+        {
+            samples.resize(info.frames);
+            sf_read_short(recorded, samples.data(), samples.size());
+            sf_close(recorded);
+        }
+        return samples;
+    }
+
+    RecordingFile(const RecordingFile&) = delete;
+    RecordingFile& operator=(const RecordingFile&) = delete;
+
+private:
+    void close()
+    {
+        if (file_ != nullptr)
+        {
+            sf_close(file_);
+            file_ = nullptr;
+        }
+    }
+
+    std::string path_;
+    SNDFILE* file_ = nullptr;
+};
 
 bool anyNonZero(std::vector<short> const& samples)
 {
@@ -1013,6 +1197,396 @@ public:
         return result;
     }
 
+    // Runs a second of silence from the radio through a receive thread and
+    // returns what reaches the speaker.
+    static std::vector<short> speakerOutputForSilentRadio()
+    {
+        FifoGuard fifos;
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(false, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+        seedSilence(g_rxUserdata->infifo1, TEST_SAMPLE_RATE);
+
+        FakeRealtimeHelper helper;
+        thread.rxProcessing_(&helper);
+
+        return drain(g_rxUserdata->outfifo2);
+    }
+
+    static bool interferingToneIsAddedToReceivedAudio()
+    {
+        resetGlobals();
+        g_analog = 1; // so that what's received reaches the speaker as is
+        g_testToneEnabled = true;
+        g_testToneFreq = 1000.0f;
+        g_testToneAmplitude = 8000.0f;
+
+        auto speakerOut = speakerOutputForSilentRadio();
+
+        bool result = true;
+
+        // Mixing with the (silent) time-out beep brings a peak of 8000 down to about 5600.
+        result &= checkBetween("loudest speaker sample", peak(speakerOut), 5400, 5800);
+        result &= checkBetween("tone frequency", (int)std::lround(toneFrequency(speakerOut, TEST_SAMPLE_RATE)), 995, 1005);
+        return result;
+    }
+
+    static bool interferingToneFollowsItsFrequencyAndAmplitudeSettings()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_testToneEnabled = true;
+        g_testToneFreq = 400.0f;
+        g_testToneAmplitude = 800.0f;
+
+        auto speakerOut = speakerOutputForSilentRadio();
+
+        bool result = true;
+        result &= checkBetween("loudest speaker sample", peak(speakerOut), 540, 590);
+        result &= checkBetween("tone frequency", (int)std::lround(toneFrequency(speakerOut, TEST_SAMPLE_RATE)), 395, 405);
+        return result;
+    }
+
+    static bool noInterferingToneUnlessEnabled()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_testToneFreq = 1000.0f;
+        g_testToneAmplitude = 8000.0f;
+
+        return check("loudest speaker sample", peak(speakerOutputForSilentRadio()), 0);
+    }
+
+    // Recordings are fed through buffers sized for audio arriving as it's
+    // spoken or received, so these hand a second of tone over a tenth of a
+    // second at a time and let the recording keep up.
+    static constexpr int RECORD_ROUNDS = 10;
+    static constexpr int SAMPLES_PER_ROUND = TEST_SAMPLE_RATE / RECORD_ROUNDS;
+    static constexpr int FRAMES_PER_ROUND = SAMPLES_PER_ROUND / (TEST_SAMPLE_RATE * FRAME_DURATION_MS / MS_TO_SEC);
+
+    static void waitForRound(RecordingFile& recording, int round, int fileSampleRate)
+    {
+        // Up to a tenth of a second is held back until more arrives. The
+        // buffer has room for a quarter of a second, so the next round is
+        // only safe to hand over once there's little more than that waiting.
+        int expectedSoFar = fileSampleRate * (round + 1) / RECORD_ROUNDS;
+        recording.waitForSamples(expectedSoFar - fileSampleRate * 13 / 100);
+    }
+
+    static void transmitSecondOfTone(RecordingFile& recording, int fileSampleRate)
+    {
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        auto mic = sine(TEST_SAMPLE_RATE, 440.0, 8000.0);
+        FakeRealtimeHelper helper;
+        for (int round = 0; round < RECORD_ROUNDS; round++)
+        {
+            g_rxUserdata->infifo2->write(&mic[round * SAMPLES_PER_ROUND], SAMPLES_PER_ROUND);
+
+            // Stop once the microphone audio is used up; carrying on would
+            // send (and record) silence in its place.
+            helper.framesAllowed = FRAMES_PER_ROUND;
+            thread.txProcessing_(&helper);
+            drain(g_rxUserdata->outfifo1);
+            waitForRound(recording, round, fileSampleRate);
+        }
+    }
+
+    static void receiveSecondOfTone(RecordingFile& recording, int fileSampleRate)
+    {
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(false, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        auto radio = sine(TEST_SAMPLE_RATE, 440.0, 8000.0);
+        FakeRealtimeHelper helper;
+        for (int round = 0; round < RECORD_ROUNDS; round++)
+        {
+            g_rxUserdata->infifo1->write(&radio[round * SAMPLES_PER_ROUND], SAMPLES_PER_ROUND);
+            thread.rxProcessing_(&helper);
+            drain(g_rxUserdata->outfifo2);
+            waitForRound(recording, round, fileSampleRate);
+        }
+    }
+
+    static bool isRecordingOfTone(std::vector<short> const& recorded, int fileSampleRate, int lowestPeak, int highestPeak)
+    {
+        bool result = true;
+
+        // The last couple of tenths of a second may still have been waiting to be recorded.
+        result &= checkBetween("samples recorded", (int)recorded.size(), fileSampleRate * 3 / 4, fileSampleRate);
+        result &= checkBetween("loudest recorded sample", peak(recorded), lowestPeak, highestPeak);
+        result &= checkBetween("recorded tone frequency", (int)std::lround(toneFrequency(recorded, fileSampleRate)), 435, 445);
+        return result;
+    }
+
+    static bool recordsMicrophoneAudio()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        FifoGuard fifos;
+
+        RecordingFile recording(TEST_SAMPLE_RATE);
+        if (recording.get() == nullptr)
+        {
+            std::cout << "[could not create file to record to] ";
+            return false;
+        }
+        g_sfRecMicFile = recording.get();
+        g_recFileFromMic = true;
+
+        transmitSecondOfTone(recording, TEST_SAMPLE_RATE);
+
+        g_recFileFromMic = false;
+        g_sfRecMicFile = nullptr;
+
+        // What's recorded is the microphone as is, not what was then done to it.
+        return isRecordingOfTone(recording.finish(), TEST_SAMPLE_RATE, 7900, 8000);
+    }
+
+    static bool recordsWhatIsSentToRadio()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1; // sends the microphone at twice its level
+        FifoGuard fifos;
+
+        RecordingFile recording(RECORD_FILE_SAMPLE_RATE);
+        if (recording.get() == nullptr)
+        {
+            std::cout << "[could not create file to record to] ";
+            return false;
+        }
+        g_sfRecFileFromModulator = recording.get();
+        g_recFileFromModulator = true;
+
+        transmitSecondOfTone(recording, RECORD_FILE_SAMPLE_RATE);
+
+        g_recFileFromModulator = false;
+        g_sfRecFileFromModulator = nullptr;
+
+        return isRecordingOfTone(recording.finish(), RECORD_FILE_SAMPLE_RATE, 15800, 16200);
+    }
+
+    static bool recordsWhatIsSentToSpeaker()
+    {
+        resetGlobals();
+        g_analog = 1;
+        FifoGuard fifos;
+
+        RecordingFile recording(TEST_SAMPLE_RATE);
+        if (recording.get() == nullptr)
+        {
+            std::cout << "[could not create file to record to] ";
+            return false;
+        }
+        g_sfRecDecoderFile = recording.get();
+        g_recFileFromDecoder = true;
+
+        receiveSecondOfTone(recording, TEST_SAMPLE_RATE);
+
+        g_recFileFromDecoder = false;
+        g_sfRecDecoderFile = nullptr;
+
+        return isRecordingOfTone(recording.finish(), TEST_SAMPLE_RATE, 7900, 8000);
+    }
+
+    static bool nothingIsRecordedUnlessAskedFor()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_half_duplex = false; // so that both directions run
+        g_analog = 1;
+        FifoGuard fifos;
+
+        // A file is open in all four places, but recording isn't turned on for any.
+        RecordingFile mic(TEST_SAMPLE_RATE);
+        if (mic.get() == nullptr)
+        {
+            std::cout << "[could not create file to record to] ";
+            return false;
+        }
+        g_sfRecMicFile = mic.get();
+        g_sfRecFileFromModulator = mic.get();
+        g_sfRecFile = mic.get();
+        g_sfRecDecoderFile = mic.get();
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        {
+            TxRxThread txThread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+            TxRxThread rxThread(false, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+            txThread.initializePipeline_();
+            rxThread.initializePipeline_();
+            seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE);
+            seedSine(g_rxUserdata->infifo1, TEST_SAMPLE_RATE);
+
+            FakeRealtimeHelper helper;
+            txThread.txProcessing_(&helper);
+            rxThread.rxProcessing_(&helper);
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+
+        g_sfRecMicFile = nullptr;
+        g_sfRecFileFromModulator = nullptr;
+        g_sfRecFile = nullptr;
+        g_sfRecDecoderFile = nullptr;
+
+        return check("samples recorded", (int)mic.finish().size(), 0);
+    }
+
+    // Runs four seconds of the given microphone audio through a transmit
+    // thread in analog mode and returns what was sent to the radio during
+    // the last of them.
+    static std::vector<short> lastSecondSentToRadio(std::vector<short> const& oneSecondOfMic)
+    {
+        FifoGuard fifos;
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        FakeRealtimeHelper helper;
+        std::vector<short> sent;
+        for (int second = 0; second < 4; second++)
+        {
+            g_rxUserdata->infifo2->write(const_cast<short*>(oneSecondOfMic.data()), oneSecondOfMic.size());
+            thread.txProcessing_(&helper);
+            sent = drain(g_rxUserdata->outfifo1);
+        }
+        return sent;
+    }
+
+    static bool automaticGainControlRaisesQuietMicrophone()
+    {
+        auto quietSpeech = sine(TEST_SAMPLE_RATE, 440.0, 300.0);
+
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        double without = rms(lastSecondSentToRadio(quietSpeech));
+
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        g_agcEnabled = true;
+        double with = rms(lastSecondSentToRadio(quietSpeech));
+
+        bool result = true;
+        result &= checkBetween("level sent without gain control", (int)without, 400, 450); // 300 peak, doubled
+        if (with < without * 1.15)
+        {
+            std::cout << "[level sent with gain control was " << with << ", expected well above " << without << "] ";
+            result = false;
+        }
+        return result;
+    }
+
+    static bool noiseReductionQuietensNoise()
+    {
+        auto hiss = noise(TEST_SAMPLE_RATE, 3000);
+
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        double without = rms(lastSecondSentToRadio(hiss));
+
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        g_noiseReductionEnabled = true;
+        double with = rms(lastSecondSentToRadio(hiss));
+
+        bool result = true;
+        if (without < 1000.0)
+        {
+            std::cout << "[level sent without noise reduction was only " << without << "] ";
+            result = false;
+        }
+        if (with > without / 2.0)
+        {
+            std::cout << "[level sent with noise reduction was " << with << ", expected at most half of " << without << "] ";
+            result = false;
+        }
+        return result;
+    }
+
+    static bool transmitFrequencyOffsetShiftsWhatIsSent()
+    {
+        const float OFFSET_HZ = 300.0f;
+
+        // Returns where the energy of a second of 1600 signal is centered.
+        auto centerOfTransmission = []() {
+            FifoGuard fifos;
+            seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE);
+
+            std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+            TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+            thread.initializePipeline_();
+            seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE);
+
+            FakeRealtimeHelper helper;
+            thread.txProcessing_(&helper);
+            return centerFrequency(drain(g_rxUserdata->outfifo1), TEST_SAMPLE_RATE);
+        };
+
+        resetGlobals();
+        g_tx = true;
+        double centered = centerOfTransmission();
+
+        resetGlobals();
+        g_tx = true;
+        g_TxFreqOffsetHz = OFFSET_HZ;
+        double shifted = centerOfTransmission();
+
+        bool result = true;
+        result &= checkBetween("center of signal without offset (Hz)", (int)centered, 1300, 1700);
+        result &= checkBetween("shift caused by offset (Hz)", (int)std::lround(shifted - centered), 270, 330);
+        return result;
+    }
+
+    static bool stopsProcessingWhenToldTimeIsUp()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_half_duplex = false;
+        g_analog = 1;
+        FifoGuard fifos;
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread txThread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        TxRxThread rxThread(false, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        txThread.initializePipeline_();
+        rxThread.initializePipeline_();
+        seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE);
+        seedSine(g_rxUserdata->infifo1, TEST_SAMPLE_RATE);
+
+        FakeRealtimeHelper helper;
+        helper.stopWork = true;
+        txThread.txProcessing_(&helper);
+        rxThread.rxProcessing_(&helper);
+
+        bool result = true;
+
+        // Nothing is lost; it's all still there for next time.
+        result &= check("microphone samples still waiting", g_rxUserdata->infifo2->numUsed(), TEST_SAMPLE_RATE);
+        result &= check("radio samples still waiting", g_rxUserdata->infifo1->numUsed(), TEST_SAMPLE_RATE);
+        result &= check("samples sent to radio", g_rxUserdata->outfifo1->numUsed(), 0);
+        result &= check("samples sent to speaker", g_rxUserdata->outfifo2->numUsed(), 0);
+
+        helper.stopWork = false;
+        txThread.txProcessing_(&helper);
+        rxThread.rxProcessing_(&helper);
+        result &= check("microphone samples waiting once there's time", g_rxUserdata->infifo2->numUsed(), 0);
+        result &= check("radio samples waiting once there's time", g_rxUserdata->infifo1->numUsed(), 0);
+        result &= checkBetween("samples sent to radio once there's time", g_rxUserdata->outfifo1->numUsed(), TEST_SAMPLE_RATE * 9 / 10, TEST_SAMPLE_RATE * 11 / 10);
+        result &= checkBetween("samples sent to speaker once there's time", g_rxUserdata->outfifo2->numUsed(), TEST_SAMPLE_RATE * 9 / 10, TEST_SAMPLE_RATE * 11 / 10);
+        return result;
+    }
+
     static bool endingTransmitInLegacyModeSendsNothingMore()
     {
         resetGlobals();
@@ -1142,6 +1716,17 @@ int main()
     executeTestCase("recordingFromRadioContinuesUntilStopped", &TxRxThreadTest::recordingFromRadioContinuesUntilStopped);
     executeTestCase("queuedResyncIsCarriedOutOnce", &TxRxThreadTest::queuedResyncIsCarriedOutOnce);
     executeTestCase("timeOutWarningBeepsThenTurnsItselfOff", &TxRxThreadTest::timeOutWarningBeepsThenTurnsItselfOff);
+    executeTestCase("interferingToneIsAddedToReceivedAudio", &TxRxThreadTest::interferingToneIsAddedToReceivedAudio);
+    executeTestCase("interferingToneFollowsItsFrequencyAndAmplitudeSettings", &TxRxThreadTest::interferingToneFollowsItsFrequencyAndAmplitudeSettings);
+    executeTestCase("noInterferingToneUnlessEnabled", &TxRxThreadTest::noInterferingToneUnlessEnabled);
+    executeTestCase("recordsMicrophoneAudio", &TxRxThreadTest::recordsMicrophoneAudio);
+    executeTestCase("recordsWhatIsSentToRadio", &TxRxThreadTest::recordsWhatIsSentToRadio);
+    executeTestCase("recordsWhatIsSentToSpeaker", &TxRxThreadTest::recordsWhatIsSentToSpeaker);
+    executeTestCase("nothingIsRecordedUnlessAskedFor", &TxRxThreadTest::nothingIsRecordedUnlessAskedFor);
+    executeTestCase("automaticGainControlRaisesQuietMicrophone", &TxRxThreadTest::automaticGainControlRaisesQuietMicrophone);
+    executeTestCase("noiseReductionQuietensNoise", &TxRxThreadTest::noiseReductionQuietensNoise);
+    executeTestCase("transmitFrequencyOffsetShiftsWhatIsSent", &TxRxThreadTest::transmitFrequencyOffsetShiftsWhatIsSent);
+    executeTestCase("stopsProcessingWhenToldTimeIsUp", &TxRxThreadTest::stopsProcessingWhenToldTimeIsUp);
     executeTestCase("endingTransmitInLegacyModeSendsNothingMore", &TxRxThreadTest::endingTransmitInLegacyModeSendsNothingMore);
     executeTestCase("startStopRunsRealTimeHelperLifecycle", &TxRxThreadTest::startStopRunsRealTimeHelperLifecycle);
 

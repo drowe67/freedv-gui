@@ -64,6 +64,10 @@ bool checkTrue(const char* description, bool condition)
 std::atomic<int> g_rxState(0);
 float g_sigPwrAvg = 0.0f;
 
+// How far the user has asked for the signal to be moved, in Hz.
+std::atomic<float> g_txFreqOffset(0.0f);
+std::atomic<float> g_rxFreqOffset(0.0f);
+
 // A started FreeDVInterface that's stopped again once the test case is done.
 class Interface
 {
@@ -72,6 +76,9 @@ public:
     {
         g_rxState = 0;
         g_sigPwrAvg = 0.0f;
+        g_txFreqOffset = 0.0f;
+        g_rxFreqOffset = 0.0f;
+        g_bwExpandEnabled = false;
 
         for (auto mode : modes)
         {
@@ -89,7 +96,7 @@ public:
     {
         return std::unique_ptr<IPipelineStep>(dv.createTransmitPipeline(
             speechSampleRate, MODEM_SAMPLE_RATE,
-            +[]() FREEDV_NONBLOCKING { return 0.0f; },
+            +[]() FREEDV_NONBLOCKING { return g_txFreqOffset.load(std::memory_order_acquire); },
             nullptr));
     }
 
@@ -100,7 +107,7 @@ public:
             +[]() FREEDV_NONBLOCKING { return &g_rxState; },
             +[]() FREEDV_NONBLOCKING { return 0; },
             +[]() FREEDV_NONBLOCKING { return 0; },
-            +[]() FREEDV_NONBLOCKING { return 0.0f; },
+            +[]() FREEDV_NONBLOCKING { return g_rxFreqOffset.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return &g_sigPwrAvg; },
             nullptr));
     }
@@ -212,6 +219,64 @@ bool transmitToSelf(Interface& iface, double seconds)
     feed(*rx, onAir);
 
     return iface.dv.getSync() != 0;
+}
+
+// Returns the power in each of 256 evenly spaced frequency bands (up to
+// half the sample rate), averaged over the signal in blocks of 512 samples.
+std::vector<double> powerSpectrum(std::vector<short> const& samples)
+{
+    const size_t blockSize = 512;
+    std::vector<double> power(blockSize / 2, 0.0);
+
+    for (size_t start = 0; start + blockSize <= samples.size(); start += blockSize)
+    {
+        for (size_t bin = 1; bin < blockSize / 2; bin++)
+        {
+            double re = 0.0;
+            double im = 0.0;
+            for (size_t i = 0; i < blockSize; i++)
+            {
+                double angle = 2.0 * M_PI * bin * i / blockSize;
+                re += samples[start + i] * std::cos(angle);
+                im -= samples[start + i] * std::sin(angle);
+            }
+            power[bin] += re * re + im * im;
+        }
+    }
+
+    return power;
+}
+
+// Returns the frequency around which a signal's energy is centered.
+double centerFrequency(std::vector<short> const& samples, int sampleRate)
+{
+    auto power = powerSpectrum(samples);
+    double weighted = 0.0;
+    double total = 0.0;
+
+    for (size_t bin = 0; bin < power.size(); bin++)
+    {
+        weighted += power[bin] * bin * sampleRate / (2.0 * power.size());
+        total += power[bin];
+    }
+
+    return total > 0.0 ? weighted / total : 0.0;
+}
+
+// Returns how much of a signal's energy is above the given frequency (0 to 1).
+double shareOfEnergyAbove(std::vector<short> const& samples, int sampleRate, double cutoffHz)
+{
+    auto power = powerSpectrum(samples);
+    double above = 0.0;
+    double total = 0.0;
+
+    for (size_t bin = 0; bin < power.size(); bin++)
+    {
+        if (bin * sampleRate / (2.0 * power.size()) > cutoffHz) above += power[bin];
+        total += power[bin];
+    }
+
+    return total > 0.0 ? above / total : 0.0;
 }
 
 std::string takeReliableText(FreeDVInterface& dv)
@@ -500,6 +565,62 @@ bool doesNotSwitchToSignalBelowSquelch()
     return result;
 }
 
+bool transmitFrequencyOffsetShiftsWhatGoesOnAir()
+{
+    const float OFFSET_HZ = 300.0f;
+    auto speech = tone(LEGACY_SPEECH_SAMPLE_RATE, 1.0);
+
+    double centered = 0.0;
+    double shifted = 0.0;
+    {
+        Interface iface({ FREEDV_MODE_1600 }, FREEDV_MODE_1600);
+        centered = centerFrequency(feed(*iface.transmitPipeline(), speech), MODEM_SAMPLE_RATE);
+    }
+    {
+        Interface iface({ FREEDV_MODE_1600 }, FREEDV_MODE_1600);
+        g_txFreqOffset = OFFSET_HZ;
+        shifted = centerFrequency(feed(*iface.transmitPipeline(), speech), MODEM_SAMPLE_RATE);
+    }
+
+    bool result = true;
+    result &= checkTrue("signal without offset was not centered near 1500 Hz", centered > 1300.0 && centered < 1700.0);
+    if (std::fabs((shifted - centered) - OFFSET_HZ) > 30.0)
+    {
+        std::cout << "[signal moved by " << (shifted - centered) << " Hz, expected " << OFFSET_HZ << "] ";
+        result = false;
+    }
+    return result;
+}
+
+bool receiveFrequencyOffsetMovesSignalBeforeDemodulating()
+{
+    const float OFFSET_HZ = 40.0f;
+    auto onAir = signalFromOtherStation(FREEDV_MODE_1600, 3.0);
+
+    // The demodulator reports how far off frequency it finds the signal,
+    // which shows whether it was moved before reaching it.
+    auto offsetSeenByDemodulator = [&](float requestedOffset) {
+        Interface iface({ FREEDV_MODE_1600 }, FREEDV_MODE_1600);
+        g_rxFreqOffset = requestedOffset;
+        auto rx = iface.receivePipeline();
+        feed(*rx, onAir);
+        return iface.dv.getSync() != 0 ? iface.dv.getCurrentRxModemOffset() : 1000.0f;
+    };
+
+    float without = offsetSeenByDemodulator(0.0f);
+    float with = offsetSeenByDemodulator(OFFSET_HZ);
+
+    bool result = true;
+    result &= checkTrue("did not sync without an offset", without != 1000.0f);
+    result &= checkTrue("did not sync with an offset", with != 1000.0f);
+    if (std::fabs(std::fabs(with - without) - OFFSET_HZ) > 5.0f)
+    {
+        std::cout << "[demodulator saw the signal move by " << (with - without) << " Hz, expected " << OFFSET_HZ << " either way] ";
+        result = false;
+    }
+    return result;
+}
+
 bool clippingAndFilteringChangeTransmittedSignal()
 {
     auto speech = tone(LEGACY_SPEECH_SAMPLE_RATE, 1.0);
@@ -640,6 +761,42 @@ bool radeReceivesItsOwnTransmissionAndCallsign()
     return result;
 }
 
+bool radeBandwidthExpansionAddsHighFrequencies()
+{
+    constexpr int SPEAKER_SAMPLE_RATE = 48000;
+
+    // RADE produces speech sampled at 16 kHz, which has nothing above 8 kHz
+    // unless bandwidth expansion puts something there.
+    auto shareAbove8kHz = [](bool expand) {
+        Interface iface({ FREEDV_MODE_RADE }, FREEDV_MODE_RADE);
+        g_bwExpandEnabled = expand;
+
+        auto tx = iface.transmitPipeline(RADE_SPEECH_RATE);
+        auto rx = iface.receivePipeline(SPEAKER_SAMPLE_RATE);
+
+        auto heard = feed(*rx, feed(*tx, noisyTone(RADE_SPEECH_RATE, 4.0)));
+        return heard.empty() ? -1.0 : shareOfEnergyAbove(heard, SPEAKER_SAMPLE_RATE, 9000.0);
+    };
+
+    double without = shareAbove8kHz(false);
+    double with = shareAbove8kHz(true);
+
+    bool result = true;
+    result &= checkTrue("nothing was heard without expansion", without >= 0.0);
+    result &= checkTrue("nothing was heard with expansion", with >= 0.0);
+    if (without > 0.001)
+    {
+        std::cout << "[share of energy above 9 kHz without expansion was " << without << "] ";
+        result = false;
+    }
+    if (with < without * 10.0 || with < 0.001)
+    {
+        std::cout << "[share of energy above 9 kHz was " << with << " with expansion and " << without << " without] ";
+        result = false;
+    }
+    return result;
+}
+
 } // namespace
 
 int main()
@@ -655,10 +812,13 @@ int main()
     executeTestCase("switchesToModeOfReceivedSignal", switchesToModeOfReceivedSignal);
     executeTestCase("staysOnTransmitModeWhenNothingIsReceived", staysOnTransmitModeWhenNothingIsReceived);
     executeTestCase("doesNotSwitchToSignalBelowSquelch", doesNotSwitchToSignalBelowSquelch);
+    executeTestCase("transmitFrequencyOffsetShiftsWhatGoesOnAir", transmitFrequencyOffsetShiftsWhatGoesOnAir);
+    executeTestCase("receiveFrequencyOffsetMovesSignalBeforeDemodulating", receiveFrequencyOffsetMovesSignalBeforeDemodulating);
     executeTestCase("clippingAndFilteringChangeTransmittedSignal", clippingAndFilteringChangeTransmittedSignal);
     executeTestCase("remainingSettingsDoNotDisturbReception", remainingSettingsDoNotDisturbReception);
     executeTestCase("radeReportsItsOwnNamesAndSizes", radeReportsItsOwnNamesAndSizes);
     executeTestCase("radeReceivesItsOwnTransmissionAndCallsign", radeReceivesItsOwnTransmissionAndCallsign);
+    executeTestCase("radeBandwidthExpansionAddsHighFrequencies", radeBandwidthExpansionAddsHighFrequencies);
 
     return testResult();
 }
