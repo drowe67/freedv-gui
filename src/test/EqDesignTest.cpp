@@ -121,6 +121,38 @@ bool zeroVolumeIsNoOp()
     return designAnEQFilter("vol", 0, 0, 0, 48000) == nullptr;
 }
 
+// The app's Equalizer asserts that band filters exist even at 0 dB gain; the
+// tiny gain offset in designEQBandFilters is what keeps sox from reporting a
+// flat response as "no filter".
+bool zeroBandGainsStillProduceFilters()
+{
+    EQBandSettings settings = {
+        .bassFreqHz = 100,
+        .bassGaindB = 0,
+        .trebleFreqHz = 3000,
+        .trebleGaindB = 0,
+        .midFreqHz = 1500,
+        .midGaindB = 0,
+        .midQ = 1.0,
+    };
+
+    void* bass = nullptr;
+    void* treble = nullptr;
+    void* mid = nullptr;
+    designEQBandFilters(settings, 48000, &bass, &treble, &mid);
+
+    bool result = true;
+    if (bass == nullptr)   { std::cout << "[bass: no filter at 0 dB] "; result = false; }
+    if (treble == nullptr) { std::cout << "[treble: no filter at 0 dB] "; result = false; }
+    if (mid == nullptr)    { std::cout << "[mid: no filter at 0 dB] "; result = false; }
+
+    if (bass != nullptr) sox_biquad_destroy(bass);
+    if (treble != nullptr) sox_biquad_destroy(treble);
+    if (mid != nullptr) sox_biquad_destroy(mid);
+
+    return result;
+}
+
 }
 
 int main()
@@ -134,6 +166,7 @@ int main()
         executeTestCase("volumeFilterAppliesGain" + suffix, [sampleRate]() { return volumeFilterAppliesGain(sampleRate); });
     }
     executeTestCase("zeroVolumeIsNoOp", zeroVolumeIsNoOp);
+    executeTestCase("zeroBandGainsStillProduceFilters", zeroBandGainsStillProduceFilters);
 
     sox_biquad_finish();
     return testResult();

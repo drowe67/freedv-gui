@@ -30,7 +30,7 @@ constexpr auto TIMEOUT = 10s;
 class TestFile
 {
 public:
-    TestFile(std::vector<short> const& samples, int sampleRate)
+    TestFile(std::vector<short> const& samples, int sampleRate, int channels = 1)
         : sampleRate_(sampleRate)
     {
         const char* tmpDir = getenv("TMPDIR");
@@ -39,7 +39,7 @@ public:
 
         SF_INFO info = {};
         info.samplerate = sampleRate;
-        info.channels = 1;
+        info.channels = channels;
         info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
 
         SNDFILE* file = sf_open(path_.c_str(), SFM_WRITE, &info);
@@ -453,6 +453,43 @@ bool destroysCleanlyDuringPlayback()
     return true;
 }
 
+// PlaybackStep reads one sample per frame, so a multi-channel file plays at
+// the wrong speed with its channels interleaved. The UI file picker rejects
+// such files (playrec.cpp), but the --rxfile CLI path reaches the step
+// without that guard; this pins what the step actually does.
+bool stereoFileIsConsumedAsInterleavedSamples()
+{
+    const int NUM_FRAMES = 100;
+    std::vector<short> interleaved(NUM_FRAMES * 2);
+    for (int i = 0; i < NUM_FRAMES; i++)
+    {
+        interleaved[2*i] = (short)(i % 30000 + 1); // left: ramp, never zero
+        interleaved[2*i+1] = 0;                    // right: silence
+    }
+    TestFile file(interleaved, SAMPLE_RATE, 2);
+
+    Fixture f;
+    f.currentFile = &file;
+
+    auto output = f.collect(NUM_FRAMES * 2);
+    if (output.size() != (size_t)(NUM_FRAMES * 2))
+    {
+        std::cout << "[got " << output.size() << " samples for a 2-channel file] ";
+        return false;
+    }
+
+    for (int i = 0; i < NUM_FRAMES; i++)
+    {
+        if (output[2*i] != interleaved[2*i] || output[2*i+1] != 0)
+        {
+            std::cout << "[frame " << i << ": got (" << output[2*i] << ", "
+                      << output[2*i+1] << "], expected (" << interleaved[2*i] << ", 0)] ";
+            return false;
+        }
+    }
+    return true;
+}
+
 }
 
 int main()
@@ -472,5 +509,6 @@ int main()
     executeTestCase("playsFilesWithDifferentSampleRatesInTurn", playsFilesWithDifferentSampleRatesInTurn);
     executeTestCase("resetDiscardsBufferedAudio", resetDiscardsBufferedAudio);
     executeTestCase("destroysCleanlyDuringPlayback", destroysCleanlyDuringPlayback);
+    executeTestCase("stereoFileIsConsumedAsInterleavedSamples", stereoFileIsConsumedAsInterleavedSamples);
     return testResult();
 }

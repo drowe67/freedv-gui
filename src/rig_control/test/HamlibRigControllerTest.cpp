@@ -450,22 +450,36 @@ bool restoresOriginalSettingsEachTimeItConnects()
 {
     Fixture f(DUMMY_RIG_NAME, HamlibRigController::PTT_VIA_CAT, true, false);
     if (!f.connect() || !f.waitFor([&]() { return !f.frequencies.empty(); })) return false;
-    uint64_t origFreq = f.frequencies[0];
+    uint64_t origFreq;
+    IRigFrequencyController::Mode origMode;
+    {
+        std::unique_lock<std::mutex> lk(f.mtx);
+        origFreq = f.frequencies[0];
+        origMode = f.modes[0];
+    }
+    if (origMode == IRigFrequencyController::UNKNOWN)
+    {
+        std::cout << "[simulated radio starts in mode " << origMode << "] ";
+        return false;
+    }
+    auto newMode = origMode == IRigFrequencyController::DIGU ? IRigFrequencyController::LSB : IRigFrequencyController::DIGU;
 
     for (uint64_t freq : { (uint64_t)14236000, (uint64_t)7177000 })
     {
         f.controller.setFrequency(freq);
+        f.controller.setMode(newMode);
         f.controller.requestCurrentFrequencyMode();
-        if (!f.waitFor([&]() { return f.frequencies.back() == freq; })) return false;
+        if (!f.waitFor([&]() { return f.frequencies.back() == freq && f.modes.back() == newMode; })) return false;
 
         int disconnectsSoFar = f.numDisconnects;
         f.controller.disconnect();
         if (!f.waitFor([&]() { return f.numDisconnects == disconnectsSoFar + 1; })) return false;
         {
             std::unique_lock<std::mutex> lk(f.mtx);
-            if (f.frequencies.back() != origFreq)
+            if (f.frequencies.back() != origFreq || f.modes.back() != origMode)
             {
-                std::cout << "[radio left on " << f.frequencies.back() << " Hz, expected " << origFreq << "] ";
+                std::cout << "[radio left on " << f.frequencies.back() << " Hz, mode " << f.modes.back()
+                          << "; expected " << origFreq << " Hz, mode " << origMode << "] ";
                 return false;
             }
         }
@@ -473,16 +487,26 @@ bool restoresOriginalSettingsEachTimeItConnects()
         f.controller.connect();
         if (!f.waitFor([&]() { return f.numConnects == disconnectsSoFar + 2; })) return false;
         f.waitUntilIdle();
+
+        // The new connection must not reapply the previous session's mode.
+        {
+            std::unique_lock<std::mutex> lk(f.mtx);
+            if (f.frequencies.back() != origFreq || f.modes.back() != origMode)
+            {
+                std::cout << "[reconnect reported " << f.frequencies.back() << " Hz, mode " << f.modes.back()
+                          << "; expected " << origFreq << " Hz, mode " << origMode << "] ";
+                return false;
+            }
+        }
     }
 
-    // Reconnecting doesn't reapply anything from the previous connection.
     std::unique_lock<std::mutex> lk(f.mtx);
     if (!f.errors.empty())
     {
         std::cout << "[error: " << f.errors[0] << "] ";
         return false;
     }
-    return f.frequencies.back() == origFreq;
+    return f.frequencies.back() == origFreq && f.modes.back() == origMode;
 }
 
 bool reportsErrorWhenRadioCannotBeOpened()

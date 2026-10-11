@@ -44,6 +44,7 @@ extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float
 FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     : dv_(dv)
     , inputSampleFifo_(nullptr)
+    , sigPwrAvg_(0.0f)
     , channelNoiseEnabled_(false)
     , channelNoiseSnr_(0)
     , freqOffsetHz_(0)
@@ -64,13 +65,13 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
-    inputBuf_ = new short[freedv_get_n_max_modem_samples(dv_)];
+    inputBuf_ = new short[freedv_get_n_max_modem_samples(dv_)]();
     assert(inputBuf_ != nullptr);
 
-    rxFdm_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    rxFdm_ = new COMP[freedv_get_n_max_modem_samples(dv_)]();
     assert(rxFdm_ != nullptr);
 
-    rxFdmOffset_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    rxFdmOffset_ = new COMP[freedv_get_n_max_modem_samples(dv_)]();
     assert(rxFdmOffset_ != nullptr);
 }
 

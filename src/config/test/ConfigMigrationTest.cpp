@@ -1,5 +1,8 @@
 #include <wx/init.h>
 #include <wx/stdpaths.h>
+#include <wx/dir.h>
+
+#include <cstdlib>
 
 #include "../FreeDVConfiguration.h"
 #include "ConfigTestCommon.h"
@@ -291,6 +294,74 @@ bool reportingDefaultsWithNothingConfigured()
     return result;
 }
 
+// The default CSV log path is computed from XDG_DATA_HOME during load(),
+// and the folder is created as a side effect. Point XDG_DATA_HOME at a temp
+// directory so both can be observed without touching the real one.
+bool csvLogPathDefaultsToXdgDataHome()
+{
+    char dirTemplate[] = "/tmp/freedv-config-test-XXXXXX";
+    char* made = mkdtemp(dirTemplate);
+    if (made == nullptr) return false;
+    wxString tmpDir(made);
+
+    wxString savedXdg;
+    bool hadXdg = wxGetEnv("XDG_DATA_HOME", &savedXdg);
+    wxSetEnv("XDG_DATA_HOME", tmpDir);
+
+    auto config = makeConfig("");
+    ReportingConfiguration reporting;
+    reporting.load(config.get());
+
+    bool result = true;
+    result &= check("CSV log path", reporting.csvLogFilePath.get(),
+                    tmpDir + "/freedv/freedv_rx_log.csv");
+    if (!wxDirExists(tmpDir + "/freedv"))
+    {
+        std::cout << "[load() did not create the freedv folder] ";
+        result = false;
+    }
+
+    if (hadXdg) wxSetEnv("XDG_DATA_HOME", savedXdg); else wxUnsetEnv("XDG_DATA_HOME");
+    wxFileName::Rmdir(tmpDir + "/freedv", wxPATH_RMDIR_RECURSIVE);
+    wxFileName::Rmdir(tmpDir);
+    return result;
+}
+
+// With XDG_DATA_HOME unset, the XDG fallback is $HOME/.local/share. HOME is
+// redirected to a temp directory so the fallback is observed without creating
+// directories in the real home.
+bool csvLogPathFallsBackToHomeLocalShare()
+{
+    char dirTemplate[] = "/tmp/freedv-config-test-XXXXXX";
+    char* made = mkdtemp(dirTemplate);
+    if (made == nullptr) return false;
+    wxString tmpDir(made);
+
+    wxString savedXdg, savedHome;
+    bool hadXdg = wxGetEnv("XDG_DATA_HOME", &savedXdg);
+    bool hadHome = wxGetEnv("HOME", &savedHome);
+    if (hadXdg) wxUnsetEnv("XDG_DATA_HOME");
+    wxSetEnv("HOME", tmpDir);
+
+    auto config = makeConfig("");
+    ReportingConfiguration reporting;
+    reporting.load(config.get());
+
+    bool result = true;
+    result &= check("CSV log path", reporting.csvLogFilePath.get(),
+                    tmpDir + "/.local/share/freedv/freedv_rx_log.csv");
+    if (!wxDirExists(tmpDir + "/.local/share/freedv"))
+    {
+        std::cout << "[load() did not create the .local/share/freedv folder] ";
+        result = false;
+    }
+
+    if (hadXdg) wxSetEnv("XDG_DATA_HOME", savedXdg);
+    if (hadHome) wxSetEnv("HOME", savedHome); else wxUnsetEnv("HOME");
+    wxFileName::Rmdir(tmpDir, wxPATH_RMDIR_RECURSIVE);
+    return result;
+}
+
 bool reportingFrequencySurvivesRestart()
 {
     // Includes one that doesn't fit in 32 bits (QO-100).
@@ -566,6 +637,8 @@ int main()
     executeTestCase("reportingMigratesFromPskReporterSettings", reportingMigratesFromPskReporterSettings);
     executeTestCase("reportingCurrentSettingsTakePrecedence", reportingCurrentSettingsTakePrecedence);
     executeTestCase("reportingDefaultsWithNothingConfigured", reportingDefaultsWithNothingConfigured);
+    executeTestCase("csvLogPathDefaultsToXdgDataHome", csvLogPathDefaultsToXdgDataHome);
+    executeTestCase("csvLogPathFallsBackToHomeLocalShare", csvLogPathFallsBackToHomeLocalShare);
     executeTestCase("reportingFrequencySurvivesRestart", reportingFrequencySurvivesRestart);
     executeTestCase("frequencyListLoadsInConfiguredUnits", frequencyListLoadsInConfiguredUnits);
     executeTestCase("frequencyListSurvivesRestart", frequencyListSurvivesRestart);

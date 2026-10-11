@@ -41,4 +41,19 @@ DefinePipelineUnitTest(RecordStepTest)
 DefinePipelineUnitTest(EqualizerStepTest)
 target_sources(EqualizerStepTest PRIVATE ../eq_design.cpp ../sox_biquad.c)
 target_link_libraries(EqualizerStepTest PRIVATE fdv_sox)
+
+# FreeDVTransmitStep/FreeDVReceiveStep/ResampleForPlotStep call freq_shift_coh()
+# and resample_for_plot(), which live in ../util.cpp; compile it in to test the
+# real implementations (test/UtilStubs.h provides what util.cpp needs from the
+# application's main.cpp/topFrame.cpp, and fdv_rig_control what it needs from
+# the rig controllers).
+macro(DefineUtilBackedPipelineUnitTest utName)
+    DefinePipelineUnitTest(${utName})
+    target_sources(${utName} PRIVATE ../util.cpp)
+    target_link_libraries(${utName} PRIVATE fdv_rig_control)
+endmacro()
+
+DefineUtilBackedPipelineUnitTest(FreeDVTransmitStepTest)
+DefineUtilBackedPipelineUnitTest(FreeDVReceiveStepTest)
+DefineUtilBackedPipelineUnitTest(ResamplePlotStepTest)
 endif(UNITTEST)
