@@ -142,6 +142,11 @@ void OmniRigController::connectImpl_()
 
         onRigConnected(this);
 
+        // Anything requested prior to connect is held in currFreq_/currMode_.
+        // Save it off as retrieving the radio's current state overwrites both.
+        auto pendingFreq = currFreq_;
+        auto pendingMode = currMode_;
+
         origFreq_ = 0;
         origMode_ = PM_UNKNOWN;
         currFreq_ = 0;
@@ -158,18 +163,15 @@ void OmniRigController::connectImpl_()
         requestCurrentFrequencyModeImpl_();
         
         // If a freq/mode was set prior to connect, push those changes now.
-        if (currFreq_ > 0)
+        // (These do nothing if the radio's already there.)
+        if (pendingFreq > 0)
         {
-            auto tmpFreq = currFreq_;
-            currFreq_ = 0; // to make setFrequencyImpl_ actually run
-            setFrequencyImpl_(tmpFreq);
+            setFrequencyImpl_(pendingFreq);
         }
         
-        if (currMode_ != UNKNOWN)
+        if (pendingMode != UNKNOWN)
         {
-            auto tmpMode = currMode_;
-            currMode_ = UNKNOWN; // to make setModeImpl_ actually run
-            setModeImpl_(tmpMode);
+            setModeImpl_(pendingMode);
         }
     }
     else
@@ -198,6 +200,10 @@ void OmniRigController::disconnectImpl_()
         omniRig_->Release();
         omniRig_ = nullptr;
         rig_ = nullptr;
+
+        // Only requests made from here on should be pushed on the next connect.
+        currFreq_ = 0;
+        currMode_ = UNKNOWN;
 
         onRigDisconnected(this);
     }

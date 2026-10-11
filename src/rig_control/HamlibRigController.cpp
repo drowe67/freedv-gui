@@ -116,6 +116,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , pttSet_(false)
     , currFreq_(0)
     , currMode_(RIG_MODE_NONE)
+    , pendingMode_(UNKNOWN)
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
@@ -549,6 +550,11 @@ void HamlibRigController::disconnectImpl_()
         
         origFreq_ = 0;
         origMode_ = RIG_MODE_NONE;
+
+        // Only requests made from here on should be pushed on the next connect.
+        currFreq_ = 0;
+        currMode_ = RIG_MODE_NONE;
+        pendingMode_ = UNKNOWN;
         
         rig_.store(nullptr, std::memory_order_release);
         rig_close(tmpRig);
@@ -582,7 +588,7 @@ void HamlibRigController::pttImpl_(bool state)
     }
     auto newTime = std::chrono::steady_clock::now();
     auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
-    rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+    rigResponseTime_ = std::max(rigResponseTime_.load(), totalTimeMicroseconds);
     
     if (result != RIG_OK) 
     {
@@ -618,6 +624,8 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
     auto tmpRig = rig_.load(std::memory_order_acquire);
     if (tmpRig == nullptr)
     {
+        // Not connected yet; this will be pushed to the radio on connect.
+        currFreq_ = frequencyHz;
         return;
     }
 

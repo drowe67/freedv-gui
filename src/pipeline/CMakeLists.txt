@@ -21,3 +21,24 @@ if(BOOTSTRAP_WXWIDGETS)
     target_compile_definitions(fdv_audio_pipeline_extra PRIVATE ${WXBUILD_BUILD_DEFS})
     target_include_directories(fdv_audio_pipeline_extra PRIVATE ${WXBUILD_INCLUDES})
 endif(BOOTSTRAP_WXWIDGETS)
+
+if(UNITTEST)
+macro(DefinePipelineUnitTest utName)
+    DefineFreeDVUnitTest(pipeline ${utName} fdv_audio_pipeline_extra fdv_audio_pipeline fdv_util codec2 ${FREEDV_LINK_LIBS})
+    target_include_directories(${utName} PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+
+    # Some of the steps in fdv_audio_pipeline_extra use wxWidgets.
+    FreeDVUnitTestUsesWxWidgets(${utName})
+endmacro()
+
+DefinePipelineUnitTest(BeepStepTest)
+DefinePipelineUnitTest(ComputeRfSpectrumStepTest)
+DefinePipelineUnitTest(MixStepTest)
+DefinePipelineUnitTest(ParallelStepTest)
+DefinePipelineUnitTest(PlaybackStepTest)
+DefinePipelineUnitTest(RecordStepTest)
+
+DefinePipelineUnitTest(EqualizerStepTest)
+target_sources(EqualizerStepTest PRIVATE ../eq_design.cpp ../sox_biquad.c)
+target_link_libraries(EqualizerStepTest PRIVATE fdv_sox)
+endif(UNITTEST)

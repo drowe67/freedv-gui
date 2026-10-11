@@ -70,6 +70,9 @@ void WxWidgetsConfigStore::save_(wxConfigBase* config, ConfigurationDataElement<
 template<>
 void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, ConfigurationDataElement<unsigned int>& configElement);
 
+template<>
+void WxWidgetsConfigStore::load_<wxString>(wxConfigBase* config, ConfigurationDataElement<wxString>& configElement);
+
 // Special handling for loading and saving string arrays.
 template<>
 void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement);

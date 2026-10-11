@@ -137,7 +137,11 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n) FREEDV_NONBLOC
 
     clips = 0;
     for(i=0; i<n; i++)
-        ibuf[i] = SOX_SIGNED_16BIT_TO_SAMPLE(in[i], clips);
+    {
+        // Same as SOX_SIGNED_16BIT_TO_SAMPLE(), but without left shifting
+        // negative values (which is undefined behavior).
+        ibuf[i] = (sox_sample_t)in[i] * 65536;
+    }
     isamp = osamp = (unsigned int)n;
     e->handler.flow(e, ibuf, obuf, &isamp, &osamp);
     for(i=0; i<n; i++)
