@@ -3046,6 +3046,16 @@ static TxRxThreadUiHooks MakeTxRxUiHooks()
         FREEDV_END_VERIFIED_SAFE
         return value;
     };
+
+    auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
+    hooks.levelerGainDb = filterConfig.levelerGainDb.getWithoutProcessing();
+    hooks.levelerIntegralErrorDb = filterConfig.levelerIntegralErrorDb.getWithoutProcessing();
+    hooks.levelerTargetLufs = filterConfig.levelerTargetLufs.getWithoutProcessing();
+    hooks.saveLevelerState = [](float gainDb, float integralErrorDb) {
+        auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
+        filterConfig.levelerGainDb.setWithoutProcessing(gainDb);
+        filterConfig.levelerIntegralErrorDb.setWithoutProcessing(integralErrorDb);
+    };
     return hooks;
 }
 

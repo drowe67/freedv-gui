@@ -77,6 +77,7 @@ std::atomic<int>    g_sfTxFs(8000);
 std::atomic<int64_t> g_rxMutedUntilNs(0);
 std::atomic<float>  g_txLevelScale(1.0f);
 std::atomic<float>  g_monitorTxAudioVol(0.0f);
+std::atomic<float>  g_agcAppliedGainDb(0.0f);
 std::atomic<float>  g_monitorVoiceKeyerAudioVol(0.0f);
 std::atomic<float>  g_tone_phase(0.0f);
 
@@ -333,10 +334,18 @@ double rms(std::vector<short> const& samples)
 // Returns the frequency of a tone from how often it crosses zero.
 double toneFrequency(std::vector<short> const& samples, int sampleRate)
 {
+    // Samples within a few counts of zero are ignored: the leveler/limiter's
+    // look-ahead delay starts the output with a few ms of near-silence that
+    // resampling leaves wobbling between -1 and +1.
+    constexpr int NEAR_ZERO = 16;
     int crossings = 0;
-    for (size_t i = 1; i < samples.size(); i++)
+    int lastSign = 0;
+    for (auto sample : samples)
     {
-        if ((samples[i - 1] < 0) != (samples[i] < 0)) crossings++;
+        if (std::abs(sample) < NEAR_ZERO) continue;
+        int sign = sample < 0 ? -1 : 1;
+        if (lastSign != 0 && sign != lastSign) crossings++;
+        lastSign = sign;
     }
     return samples.empty() ? 0.0 : crossings / 2.0 * sampleRate / samples.size();
 }
@@ -1408,7 +1417,10 @@ public:
 
     static bool automaticGainControlRaisesQuietMicrophone()
     {
-        auto quietSpeech = sine(TEST_SAMPLE_RATE, 440.0, 300.0);
+        // About -30 LUFS: quiet, but above the leveler's pause threshold
+        // (anything at or below that is treated as a pause and the gain is
+        // held), and below its target.
+        auto quietSpeech = sine(TEST_SAMPLE_RATE, 440.0, 1500.0);
 
         resetGlobals();
         g_tx = true;
@@ -1422,7 +1434,7 @@ public:
         double with = rms(lastSecondSentToRadio(quietSpeech));
 
         bool result = true;
-        result &= checkBetween("level sent without gain control", (int)without, 400, 450); // 300 peak, doubled
+        result &= checkBetween("level sent without gain control", (int)without, 2000, 2250); // 1500 peak, doubled
         if (with < without * 1.15)
         {
             std::cout << "[level sent with gain control was " << with << ", expected well above " << without << "] ";

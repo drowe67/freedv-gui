@@ -222,13 +222,12 @@ void TxRxThread::initializePipeline_()
         // The DiagnosticCsvLogger is a no-op unless the backend is built
         // with -DENABLE_AUDIO_DIAG_LOGGING=ON. Gain state is restored from
         // the previous session (saved at the end of Entry()).
-        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
         levelerLimiterStep_ = new LevelerLimiterStep(
             inputSampleRate_,
             std::make_shared<DiagnosticCsvLogger>(),
-            filterConfig.levelerGainDb.getWithoutProcessing(),
-            filterConfig.levelerIntegralErrorDb.getWithoutProcessing(),
-            filterConfig.levelerTargetLufs.getWithoutProcessing(),
+            uiHooks_.levelerGainDb,
+            uiHooks_.levelerIntegralErrorDb,
+            uiHooks_.levelerTargetLufs,
             +[]() FREEDV_NONBLOCKING { return g_noiseReductionEnabled.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); });
         pipeline_->appendPipelineStep(levelerLimiterStep_);
@@ -631,9 +630,10 @@ void* TxRxThread::Entry() noexcept
     // config to disk once this thread has been joined.
     if (levelerLimiterStep_ != nullptr)
     {
-        auto& filterConfig = NonblockingWxGetApp().appConfiguration.filterConfiguration;
-        filterConfig.levelerGainDb.setWithoutProcessing(levelerLimiterStep_->getCurrentGainDb());
-        filterConfig.levelerIntegralErrorDb.setWithoutProcessing(levelerLimiterStep_->getIntegralErrorDb());
+        if (uiHooks_.saveLevelerState)
+        {
+            uiHooks_.saveLevelerState(levelerLimiterStep_->getCurrentGainDb(), levelerLimiterStep_->getIntegralErrorDb());
+        }
         levelerLimiterStep_ = nullptr;
     }
 

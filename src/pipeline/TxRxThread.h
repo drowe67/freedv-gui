@@ -77,6 +77,14 @@ struct TxRxThreadUiHooks
     realtime_fp<float()> toneFreqHz;
     realtime_fp<float()> toneAmplitude;
     realtime_fp<bool()> toneEnabled;
+
+    // Leveler state from the previous session and the loudness target,
+    // read when the thread is created. saveLevelerState is called at the
+    // end of Entry() so the next session resumes from the current gain.
+    float levelerGainDb = 0.0f;
+    float levelerIntegralErrorDb = 0.0f;
+    float levelerTargetLufs = -26.0f;
+    std::function<void(float gainDb, float integralErrorDb)> saveLevelerState;
 };
 
 class TxRxThread
