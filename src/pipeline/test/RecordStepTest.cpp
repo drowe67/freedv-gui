@@ -337,6 +337,12 @@ int main()
 
     ulog_set_quiet(true);
 
+    // RecordStep::execute() logs when its queue fills up. The first log call on a
+    // thread can allocate that thread's local storage (it does on macOS), which
+    // RealtimeSanitizer rejects inside a real-time function. Log once from here so
+    // that's already done by the time execute() runs on this thread.
+    log_info("Starting RecordStepTest");
+
     executeTestCase("sampleRatesMatchConstructor", sampleRatesMatchConstructor);
     executeTestCase("producesNoOutput", producesNoOutput);
     executeTestCase("recordsSamplesInOrder", recordsSamplesInOrder);
