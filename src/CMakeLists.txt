@@ -57,6 +57,11 @@ macro(FreeDVUnitTestUsesWxWidgets utName)
         target_include_directories(${utName} PRIVATE ${WXBUILD_INCLUDES})
         target_link_libraries(${utName} PRIVATE wx::core wx::base ${ARGN})
     endif(BOOTSTRAP_WXWIDGETS)
+
+    if(WIN32)
+        # Provides the manifest that wxWidgets needs (see the file for why).
+        target_sources(${utName} PRIVATE ${CMAKE_SOURCE_DIR}/src/test/UnitTest.rc)
+    endif(WIN32)
 endmacro()
 
 # Compile FreeDV components
