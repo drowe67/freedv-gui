@@ -1,0 +1,7 @@
+// Resources for unit tests that use wxWidgets on Windows.
+//
+// wxWidgets needs version 6 of the common controls library, which Windows
+// only provides to programs that ask for it in their manifest. Without one,
+// such a test fails to start ("entry point not found").
+#define wxUSE_RC_MANIFEST 1
+#include "wx/msw/wx.rc"

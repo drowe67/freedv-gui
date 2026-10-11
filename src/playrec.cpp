@@ -159,14 +159,25 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
                 sfInfo.samplerate = freedvInterface.getRxModemSampleRate();
             }
         }
-        g_sfPlayFileFromRadio.store(sf_open(soundFile.c_str(), SFM_READ, &sfInfo), std::memory_order_release);
-        g_sfFs.store(sfInfo.samplerate, std::memory_order_release);
-        if(g_sfPlayFileFromRadio.load(std::memory_order_acquire) == NULL)
+        SNDFILE* tmpPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
+        if(tmpPlayFile == NULL)
         {
             wxString strErr = sf_strerror(NULL);
             wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
             return;
         }
+
+        // Files with more than one channel would otherwise be played back at
+        // the wrong speed, as playback assumes one sample per frame.
+        if (sfInfo.channels != 1)
+        {
+            wxMessageBox(wxT("The selected file must only contain a single channel. Please use an audio editor to convert the file to a mono file."), wxT("Too Many Channels"), wxOK);
+            sf_close(tmpPlayFile);
+            return;
+        }
+
+        g_sfPlayFileFromRadio.store(tmpPlayFile, std::memory_order_release);
+        g_sfFs.store(sfInfo.samplerate, std::memory_order_release);
         
         // Save path for future use
         wxGetApp().appConfiguration.playFileFromRadioPath = tmpString;

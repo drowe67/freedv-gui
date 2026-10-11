@@ -23,6 +23,39 @@
 #include <wx/numformatter.h>
 #include "WxWidgetsConfigStore.h"
 
+// wxWidgets by default expands anything that looks like an environment variable
+// (e.g. $HOME) when reading strings. Settings should instead come back exactly as 
+// they were saved, so this turns that off while a string is being read.
+class DisableEnvVarExpansion
+{
+public:
+    explicit DisableEnvVarExpansion(wxConfigBase* config)
+        : config_(config)
+        , wasExpanding_(config->IsExpandingEnvVars())
+    {
+        config_->SetExpandEnvVars(false);
+    }
+
+    ~DisableEnvVarExpansion()
+    {
+        config_->SetExpandEnvVars(wasExpanding_);
+    }
+
+private:
+    wxConfigBase* config_;
+    bool wasExpanding_;
+};
+
+template<>
+void WxWidgetsConfigStore::load_<wxString>(wxConfigBase* config, ConfigurationDataElement<wxString>& configElement)
+{
+    DisableEnvVarExpansion disableExpansion(config);
+
+    wxString val;
+    config->Read(configElement.getElementName(), &val, configElement.getDefaultVal());
+    configElement.setWithoutProcessing(val);
+}
+
 template<>
 void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, ConfigurationDataElement<unsigned int>& configElement)
 {
@@ -70,6 +103,8 @@ void WxWidgetsConfigStore::save_<std::vector<bool> >(wxConfigBase* config, Confi
 template<>
 void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement)
 {
+    DisableEnvVarExpansion disableExpansion(config);
+
     wxString val;
     wxString defaultVal = generateStringFromArray_(configElement.getDefaultVal());
     

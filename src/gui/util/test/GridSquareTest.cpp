@@ -1,0 +1,242 @@
+#include <cmath>
+#include <string>
+
+#include <wx/init.h>
+
+#include "../GridSquare.h"
+#include "../../../test/UnitTestCommon.h"
+
+// Maidenhead grid squares divide the world into 20 by 10 degree fields
+// (two letters), each into 2 by 1 degree squares (two digits), each of
+// those into 5 by 2.5 minute subsquares (two more letters). Expected
+// values here were worked out by hand or with an independent calculation.
+
+namespace {
+
+bool isNear(const char* description, double actual, double expected, double tolerance)
+{
+    if (std::fabs(actual - expected) <= tolerance) return true;
+    std::cout << "[" << description << " was " << actual << ", expected " << expected << " +/- " << tolerance << "] ";
+    return false;
+}
+
+bool locationIs(const char* gridSquare, double expectedLat, double expectedLon)
+{
+    double lat = 0;
+    double lon = 0;
+    GridSquare::ToLatLon(gridSquare, lat, lon);
+
+    bool result = true;
+    result &= isNear((std::string("latitude of ") + gridSquare).c_str(), lat, expectedLat, 0.00001);
+    result &= isNear((std::string("longitude of ") + gridSquare).c_str(), lon, expectedLon, 0.00001);
+    return result;
+}
+
+bool validityIs(const char* gridSquare, bool expected)
+{
+    if (GridSquare::IsValid(gridSquare) == expected) return true;
+    std::cout << "[\"" << gridSquare << "\" was " << (expected ? "rejected" : "accepted") << "] ";
+    return false;
+}
+
+bool directionIs(int degrees, const char* expected)
+{
+    auto actual = GridSquare::CardinalDirection(degrees);
+    if (actual == expected) return true;
+    std::cout << "[" << degrees << " degrees was " << actual.ToStdString() << ", expected " << expected << "] ";
+    return false;
+}
+
+bool acceptsGridSquaresStartingWithTwoLettersAndTwoDigits()
+{
+    bool result = true;
+    result &= validityIs("FN31", true);
+    result &= validityIs("fn31", true);
+    result &= validityIs("FN31pr", true);
+    result &= validityIs("FN31pr25", true);
+    return result;
+}
+
+bool rejectsIncompleteOrMalformedGridSquares()
+{
+    bool result = true;
+    result &= validityIs("", false);
+    result &= validityIs("F", false);
+    result &= validityIs("FN", false);
+    result &= validityIs("FN3", false);
+    result &= validityIs("1234", false);
+    result &= validityIs("F3N1", false);
+    result &= validityIs(" FN31", false);
+    return result;
+}
+
+bool fourCharacterGridSquareIsLocatedAtItsMiddle()
+{
+    bool result = true;
+    result &= locationIs("FN31", 41.5, -73.0);
+    result &= locationIs("JO01", 51.5, 1.0);
+    result &= locationIs("QF56", -33.5, 151.0);
+
+    // The corners of the world.
+    result &= locationIs("AA00", -89.5, -179.0);
+    result &= locationIs("RR99", 89.5, 179.0);
+    return result;
+}
+
+bool sixCharacterGridSquareIsLocatedMorePrecisely()
+{
+    bool result = true;
+
+    // W1AW in Newington, Connecticut is at about 41.71N, 72.73W.
+    result &= locationIs("FN31pr", 41.729167, -72.708333);
+    result &= locationIs("FN31aa", 41.020833, -73.958333);
+    result &= locationIs("FN31xx", 41.979167, -72.041667);
+    return result;
+}
+
+bool gridSquaresAreNotCaseSensitive()
+{
+    bool result = true;
+    result &= locationIs("fn31", 41.5, -73.0);
+    result &= locationIs("fn31PR", 41.729167, -72.708333);
+    result &= locationIs("Fn31Pr", 41.729167, -72.708333);
+    return result;
+}
+
+bool anythingAfterFourCharactersThatIsNotASubsquareIsIgnored()
+{
+    bool result = true;
+    result &= locationIs("FN31p", 41.5, -73.0);
+    result &= locationIs("FN3112", 41.5, -73.0);
+    result &= locationIs("FN31p1", 41.5, -73.0);
+
+    // Extended (eight character) grid squares are only used to six.
+    result &= locationIs("FN31pr25", 41.729167, -72.708333);
+    return result;
+}
+
+bool distanceIsZeroToSameGridSquare()
+{
+    return isNear("distance", GridSquare::DistanceInKm("FN31pr", "FN31pr"), 0.0, 0.0001);
+}
+
+bool distanceFollowsGreatCircle()
+{
+    bool result = true;
+
+    // One degree of latitude is about 111.2 km everywhere.
+    result &= isNear("JJ00 to JJ01", GridSquare::DistanceInKm("JJ00", "JJ01"), 111.19, 0.01);
+
+    // Connecticut to south east England, and to Sydney.
+    result &= isNear("FN31 to JO01", GridSquare::DistanceInKm("FN31", "JO01"), 5523.9, 0.1);
+    result &= isNear("QF56 to FN31", GridSquare::DistanceInKm("QF56", "FN31"), 16077.2, 0.1);
+    return result;
+}
+
+bool distanceIsSameInBothDirections()
+{
+    return isNear("difference between directions",
+        GridSquare::DistanceInKm("FN31", "JO01") - GridSquare::DistanceInKm("JO01", "FN31"), 0.0, 0.0001);
+}
+
+bool bearingIsMeasuredClockwiseFromNorth()
+{
+    bool result = true;
+
+    // JJ00 is just north of the equator, where a degree east or west is
+    // almost exactly east or west.
+    result &= isNear("bearing north", GridSquare::BearingInDegrees("JJ00", "JJ01"), 0.0, 0.0001);
+    result &= isNear("bearing east", GridSquare::BearingInDegrees("JJ00", "JJ10"), 89.99, 0.01);
+    result &= isNear("bearing south", GridSquare::BearingInDegrees("JJ01", "JJ00"), 180.0, 0.0001);
+    result &= isNear("bearing west", GridSquare::BearingInDegrees("JJ10", "JJ00"), 270.01, 0.01);
+    return result;
+}
+
+bool bearingFollowsGreatCircle()
+{
+    bool result = true;
+
+    // England is north east of Connecticut by the shortest route even
+    // though it's at a similar latitude, and the way back is north west.
+    result &= isNear("FN31 to JO01", GridSquare::BearingInDegrees("FN31", "JO01"), 51.71, 0.01);
+    result &= isNear("JO01 to FN31", GridSquare::BearingInDegrees("JO01", "FN31"), 289.22, 0.01);
+    return result;
+}
+
+bool bearingStaysBelow360()
+{
+    bool result = true;
+
+    // Due north could come out as either 0 or 360; it's always reported as 0.
+    for (const char* destination : { "JJ01", "JJ05", "JO01", "JR01" })
+    {
+        double bearing = GridSquare::BearingInDegrees("JJ00", destination);
+        if (bearing < 0.0 || bearing >= 360.0)
+        {
+            std::cout << "[bearing to " << destination << " was " << bearing << "] ";
+            result = false;
+        }
+    }
+    return result;
+}
+
+bool namesCompassPoints()
+{
+    bool result = true;
+    result &= directionIs(0, "N");
+    result &= directionIs(45, "NE");
+    result &= directionIs(90, "E");
+    result &= directionIs(135, "SE");
+    result &= directionIs(180, "S");
+    result &= directionIs(225, "SW");
+    result &= directionIs(270, "W");
+    result &= directionIs(315, "NW");
+    result &= directionIs(23, "NNE");
+    result &= directionIs(338, "NNW");
+    return result;
+}
+
+bool compassPointChangesHalfwayBetweenNeighbors()
+{
+    bool result = true;
+
+    // Each point covers 22.5 degrees centered on itself.
+    result &= directionIs(11, "N");
+    result &= directionIs(12, "NNE");
+    result &= directionIs(33, "NNE");
+    result &= directionIs(34, "NE");
+    result &= directionIs(348, "NNW");
+    result &= directionIs(349, "N");
+    result &= directionIs(359, "N");
+    result &= directionIs(360, "N");
+    return result;
+}
+
+} // namespace
+
+int main()
+{
+    wxInitializer initializer;
+    if (!initializer.IsOk())
+    {
+        std::cout << "Could not initialize wxWidgets" << std::endl;
+        return -1;
+    }
+
+    executeTestCase("acceptsGridSquaresStartingWithTwoLettersAndTwoDigits", acceptsGridSquaresStartingWithTwoLettersAndTwoDigits);
+    executeTestCase("rejectsIncompleteOrMalformedGridSquares", rejectsIncompleteOrMalformedGridSquares);
+    executeTestCase("fourCharacterGridSquareIsLocatedAtItsMiddle", fourCharacterGridSquareIsLocatedAtItsMiddle);
+    executeTestCase("sixCharacterGridSquareIsLocatedMorePrecisely", sixCharacterGridSquareIsLocatedMorePrecisely);
+    executeTestCase("gridSquaresAreNotCaseSensitive", gridSquaresAreNotCaseSensitive);
+    executeTestCase("anythingAfterFourCharactersThatIsNotASubsquareIsIgnored", anythingAfterFourCharactersThatIsNotASubsquareIsIgnored);
+    executeTestCase("distanceIsZeroToSameGridSquare", distanceIsZeroToSameGridSquare);
+    executeTestCase("distanceFollowsGreatCircle", distanceFollowsGreatCircle);
+    executeTestCase("distanceIsSameInBothDirections", distanceIsSameInBothDirections);
+    executeTestCase("bearingIsMeasuredClockwiseFromNorth", bearingIsMeasuredClockwiseFromNorth);
+    executeTestCase("bearingFollowsGreatCircle", bearingFollowsGreatCircle);
+    executeTestCase("bearingStaysBelow360", bearingStaysBelow360);
+    executeTestCase("namesCompassPoints", namesCompassPoints);
+    executeTestCase("compassPointChangesHalfwayBetweenNeighbors", compassPointChangesHalfwayBetweenNeighbors);
+
+    return testResult();
+}

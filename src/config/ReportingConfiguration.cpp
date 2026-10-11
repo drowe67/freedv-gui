@@ -24,6 +24,7 @@
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
 #include <inttypes.h>
+#include <cmath>
 
 #include "../defines.h"
 #include "reporting/FreeDVReporter.h"
@@ -152,16 +153,13 @@ ReportingConfiguration::ReportingConfiguration()
         {
             // Frequencies are unfortunately saved in US format (legacy behavior). We need 
             // to manually parse and convert to Hz, then output MHz values in US format.
-            double mhz = 0.0;
-            wxNumberFormatter::FromString(val, &mhz);
+            double displayedFreq = 0.0;
+            wxNumberFormatter::FromString(val, &displayedFreq);
             
-            if (reportingFrequencyAsKhz)
-            {
-                // Frequencies are in kHz, so divide one more time to get MHz.
-                mhz /= 1000.0;
-            }
-
-            uint64_t hz = mhz * 1000000;
+            // Round to the nearest Hz; most decimal values can't be exactly represented 
+            // in floating point, so truncating can leave us 1 Hz below what was entered.
+            double hzFloat = displayedFreq * (reportingFrequencyAsKhz ? 1000.0 : 1000000.0);
+            uint64_t hz = hzFloat > 0 ? std::llround(hzFloat) : 0;
             uint64_t mhzInt = hz / 1000000;
             hz = hz % 1000000;
 

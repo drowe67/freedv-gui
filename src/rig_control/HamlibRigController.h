@@ -71,6 +71,9 @@ public:
     virtual int getRigResponseTimeMicroseconds() override;
 
 private:
+    // Lets unit tests reach the (simulated) radio behind the controller.
+    friend struct HamlibRigControllerTestAccess;
+
     using RigList = std::vector<const struct rig_caps *>;
     using RigNameList = std::vector<std::string>;
     
@@ -93,9 +96,9 @@ private:
     uint64_t origFreq_;
     rmode_t origMode_;
     bool freqOnly_;
-    bool destroying_;
+    std::atomic<bool> destroying_;
     
-    int rigResponseTime_;
+    std::atomic<int> rigResponseTime_;
   
     // Tracks errors encountered during/after rig_open() so that
     // we only display the error box once.

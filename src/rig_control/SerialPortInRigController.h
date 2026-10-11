@@ -23,6 +23,7 @@
 #ifndef SERIAL_PORT_IN_RIG_CONTROLLER_H
 #define SERIAL_PORT_IN_RIG_CONTROLLER_H
 
+#include <atomic>
 #include <thread>
 #include "IRigPttController.h"
 #include "SerialPortRigController.h"
@@ -41,7 +42,7 @@ public:
 private:
     std::thread pollThread_;
 
-    bool threadExiting_;
+    std::atomic<bool> threadExiting_;
     bool ctsPos_;
     bool currentPttInputState_;
     bool firstPoll_;
