@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/drowe67/freedv-gui/issues\n"
-"POT-Creation-Date: 2026-09-29 09:21-0700\n"
+"POT-Creation-Date: 2026-10-11 15:56-0700\n"
 "PO-Revision-Date: 2026-10-06 14:00+ZONE\n"
 "Last-Translator: manotroll <manotroll@gmail.com>\n"
 "Language-Team: pt-br <LL@li.org>\n"
@@ -68,7 +68,9 @@ msgstr "Supressão de ruído TX"
 
 #: src/gui/dialogs/dlg_filter.cpp
 msgid "Enable noise suppression, dereverberation, AGC of mic signal"
-msgstr "Ative a supressão de ruído, a desreverberação e o CAG (Controle Automático de Ganho) do sinal do microfone."
+msgstr ""
+"Ative a supressão de ruído, a desreverberação e o CAG (Controle Automático "
+"de Ganho) do sinal do microfone."
 
 #: src/gui/dialogs/dlg_filter.cpp
 msgid "AGC"
@@ -91,8 +93,9 @@ msgid ""
 "Expands RADE RX audio to 24kHz. Requires speaker or headset capable of "
 ">16kHz sample rate."
 msgstr ""
-"Expande o áudio RADE RX para 24kHz. Requer alto-falante ou fone de ouvido compatível com "
-">Taxa de amostragem de 16kHz."
+"Expande o áudio RADE RX para 24kHz. Requer alto-falante ou fone de ouvido "
+"compatível com >Taxa de amostragem de 16kHz."
+
 #: src/gui/dialogs/dlg_filter.cpp
 msgid "Enable"
 msgstr "Habilitar"
@@ -297,16 +300,22 @@ msgid "CAT via Data port"
 msgstr "CAT via porta de dados"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"
-msgstr "Sempre ative o sinal RTS na porta serial do Hamlib (por exemplo, para alimentar uma interface de rádio)."
+msgid ""
+"Always assert RTS on the Hamlib serial port (e.g. to power a radio interface)"
+msgstr ""
+"Sempre ative o sinal RTS na porta serial do Hamlib (por exemplo, para "
+"alimentar uma interface de rádio)."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Force RTS"
 msgstr "Força RTS"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"
-msgstr "Sempre ative o sinal DTR na porta serial do Hamlib (por exemplo, para alimentar uma interface de rádio)."
+msgid ""
+"Always assert DTR on the Hamlib serial port (e.g. to power a radio interface)"
+msgstr ""
+"Sempre ative o sinal DTR na porta serial do Hamlib (por exemplo, para "
+"alimentar uma interface de rádio)."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Force DTR"
@@ -421,8 +430,12 @@ msgid "Enable QSO Logging"
 msgstr "Ativar registro de QSOs"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Enables QSO logging using the WSJT-X support in your preferred logging program."
-msgstr "Habilita o registro de QSOs usando o suporte WSJT-X no seu programa de registro preferido."
+msgid ""
+"Enables QSO logging using the WSJT-X support in your preferred logging "
+"program."
+msgstr ""
+"Habilita o registro de QSOs usando o suporte WSJT-X no seu programa de "
+"registro preferido."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "IP Address:"
@@ -437,8 +450,13 @@ msgid "Enable UDP Broadcast"
 msgstr "Habilitar transmissão UDP"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Broadcasts received callsign/frequency data as JSON UDP datagrams (e.g. to a multicast group or a local listener)."
-msgstr "As transmissões receberam dados de indicativo de chamada/frequência como datagramas JSON UDP (por exemplo, para um grupo multicast ou um ouvinte local)."
+msgid ""
+"Broadcasts received callsign/frequency data as JSON UDP datagrams (e.g. to a "
+"multicast group or a local listener)."
+msgstr ""
+"As transmissões receberam dados de indicativo de chamada/frequência como "
+"datagramas JSON UDP (por exemplo, para um grupo multicast ou um ouvinte "
+"local)."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Stations Heard Log File:"
@@ -502,28 +520,45 @@ msgid "Momentary PTT (hold key to transmit)"
 msgstr "PTT momentâneo (mantenha a tecla pressionada para transmitir)"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "When enabled, you must hold the PTT button or key to keep transmitting. Releasing it returns to receive. "
-msgstr "Quando ativado, você deve manter pressionado o botão ou tecla PTT para continuar transmitindo. Soltá-lo retorna ao modo de recepção."
+#, fuzzy
+msgid ""
+"When enabled, you must hold the PTT button or key to keep transmitting. "
+"Releasing it returns to receive."
+msgstr ""
+"Quando ativado, você deve manter pressionado o botão ou tecla PTT para "
+"continuar transmitindo. Soltá-lo retorna ao modo de recepção."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "TX/RX Delay (milliseconds): "
 msgstr "Atraso de transmissão/recepção (milissegundos):"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."
-msgstr "Tempo de espera entre ativar/desativar o PTT e interromper/iniciar a transmissão de áudio, em milissegundos."
+msgid ""
+"The amount of time to wait between toggling PTT and stopping/starting TX "
+"audio in milliseconds."
+msgstr ""
+"Tempo de espera entre ativar/desativar o PTT e interromper/iniciar a "
+"transmissão de áudio, em milissegundos."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Enable Time-Out Timer (TOT):"
 msgstr "Ativar o temporizador de tempo limite (TOT):"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "When enabled, FreeDV will automatically stop transmitting after the configured time period has elapsed."
-msgstr "Quando ativado, o FreeDV interromperá automaticamente a transmissão após o período de tempo configurado."
+msgid ""
+"When enabled, FreeDV will automatically stop transmitting after the "
+"configured time period has elapsed."
+msgstr ""
+"Quando ativado, o FreeDV interromperá automaticamente a transmissão após o "
+"período de tempo configurado."
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "The number of seconds FreeDV will transmit before automatically dropping back to receive."
-msgstr "O número de segundos que o FreeDV irá transmitir antes de voltar automaticamente a receber."
+msgid ""
+"The number of seconds FreeDV will transmit before automatically dropping "
+"back to receive."
+msgstr ""
+"O número de segundos que o FreeDV irá transmitir antes de voltar "
+"automaticamente a receber."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "seconds"
@@ -694,16 +729,24 @@ msgid "Location to save raw recordings: "
 msgstr "Local para salvar as gravações brutas:"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Location which to save raw recordings started via the Record button in the main window."
-msgstr "O local onde deseja salvar as gravações brutas é selecionado através do botão Gravar na janela principal."
+msgid ""
+"Location which to save raw recordings started via the Record button in the "
+"main window."
+msgstr ""
+"O local onde deseja salvar as gravações brutas é selecionado através do "
+"botão Gravar na janela principal."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Location to save decoded recordings: "
 msgstr "Local para salvar as gravações decodificadas:"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Location which to save decoded recordings started via the Record button in the main window."
-msgstr "O local onde deseja salvar as gravações decodificadas é selecionado através do botão Gravar na janela principal."
+msgid ""
+"Location which to save decoded recordings started via the Record button in "
+"the main window."
+msgstr ""
+"O local onde deseja salvar as gravações decodificadas é selecionado através "
+"do botão Gravar na janela principal."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Modem Options"
@@ -812,8 +855,12 @@ msgid "Cancel"
 msgstr "Cancelar"
 
 #: src/gui/dialogs/dlg_options.cpp
-msgid "Testing of tone based PTT not supported; try PTT after pressing Start on main window"
-msgstr "O teste de PTT baseado em tons não é compatível; tente usar o PTT após pressionar Iniciar na janela principal."
+msgid ""
+"Testing of tone based PTT not supported; try PTT after pressing Start on "
+"main window"
+msgstr ""
+"O teste de PTT baseado em tons não é compatível; tente usar o PTT após "
+"pressionar Iniciar na janela principal."
 
 #: src/gui/dialogs/dlg_options.cpp src/gui/dialogs/log_entry.cpp src/main.cpp
 #: src/ongui.cpp src/util.cpp
@@ -823,20 +870,33 @@ msgstr "Erro"
 #. TRANSLATORS: %s is the error message returned by Hamlib.
 #: src/gui/dialogs/dlg_options.cpp
 #, c-format
-msgid "Couldn't connect to Radio with Hamlib (%s). Make sure the Hamlib serial Device, Rate, and Params match your radio"
-msgstr "Não foi possível conectar ao rádio com o Hamlib (%s). Certifique-se de que o dispositivo serial, a taxa e os parâmetros do Hamlib correspondam ao seu rádio."
+msgid ""
+"Couldn't connect to Radio with Hamlib (%s). Make sure the Hamlib serial "
+"Device, Rate, and Params match your radio"
+msgstr ""
+"Não foi possível conectar ao rádio com o Hamlib (%s). Certifique-se de que o "
+"dispositivo serial, a taxa e os parâmetros do Hamlib correspondam ao seu "
+"rádio."
 
 #. TRANSLATORS: The first %s is the serial port and the second is the error message returned by the operating system.
 #: src/gui/dialogs/dlg_options.cpp
 #, c-format
-msgid "Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port."
-msgstr "Não foi possível abrir a porta serial %s (%s). Isso provavelmente ocorre porque você não tem permissão para acessar a porta escolhida."
+msgid ""
+"Couldn't open serial port %s (%s). This is likely due to not having "
+"permission to access the chosen port."
+msgstr ""
+"Não foi possível abrir a porta serial %s (%s). Isso provavelmente ocorre "
+"porque você não tem permissão para acessar a porta escolhida."
 
 #. TRANSLATORS: %s is the error message returned by OmniRig.
 #: src/gui/dialogs/dlg_options.cpp
 #, c-format
-msgid "Couldn't connect to Radio with OmniRig (%s). Make sure the rig ID and OmniRig configuration is correct."
-msgstr "Não foi possível conectar ao rádio com o OmniRig (%s). Verifique se o ID do equipamento e a configuração do OmniRig estão corretos."
+msgid ""
+"Couldn't connect to Radio with OmniRig (%s). Make sure the rig ID and "
+"OmniRig configuration is correct."
+msgstr ""
+"Não foi possível conectar ao rádio com o OmniRig (%s). Verifique se o ID do "
+"equipamento e a configuração do OmniRig estão corretos."
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Device"
@@ -908,8 +968,14 @@ msgid "Import From Another Program"
 msgstr "Importar de outro programa"
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
-msgid "Copy radio audio devices, rig control and callsign/grid square settings\n from another program installed on this computer."
-msgstr "Copiar dispositivos de áudio de rádio, controle de equipamento e configurações de indicativo/quadrado de grade\n de outro programa instalado neste computador."
+#, fuzzy
+msgid ""
+"Copy radio audio devices, rig control and callsign/grid square settings\n"
+"from another program installed on this computer."
+msgstr ""
+"Copiar dispositivos de áudio de rádio, controle de equipamento e "
+"configurações de indicativo/quadrado de grade\n"
+" de outro programa instalado neste computador."
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
 msgid "Import"
@@ -920,16 +986,26 @@ msgid "Step 2 of 4: Transmit Audio"
 msgstr "Etapa 2 de 4: Transmitir áudio"
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
-msgid "Select the audio devices used for transmitting. Skip if you\n only want to receive."
-msgstr "Selecione os dispositivos de áudio usados ​​para transmissão.\n Ignore se você quiser apenas receber."
+#, fuzzy
+msgid ""
+"Select the audio devices used for transmitting. Skip if you\n"
+"only want to receive."
+msgstr ""
+"Selecione os dispositivos de áudio usados ​​para transmissão.\n"
+" Ignore se você quiser apenas receber."
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
 msgid "Step 3 of 4: Radio Control"
 msgstr "Etapa 3 de 4: Controle Remoto"
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
-msgid "Configure PTT (Push-To-Talk) control for your radio.\n Leave all options unchecked if you do not need PTT control."
-msgstr "Configure o controle PTT (Push-To-Talk) para o seu rádio. \n Deixe todas as opções desmarcadas se você não precisar do controle PTT."
+#, fuzzy
+msgid ""
+"Configure PTT (Push-To-Talk) control for your radio.\n"
+"Leave all options unchecked if you do not need PTT control."
+msgstr ""
+"Configure o controle PTT (Push-To-Talk) para o seu rádio. \n"
+" Deixe todas as opções desmarcadas se você não precisar do controle PTT."
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
 msgid "CAT Control via Hamlib"
@@ -984,8 +1060,13 @@ msgid "Step 4 of 4: Reporting"
 msgstr "Etapa 4 de 4: Relatório"
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
-msgid "Optionally report your station to FreeDV Reporter and PSK Reporter.\n A valid callsign and grid square are required."
-msgstr "Opcionalmente, reporte sua estação ao FreeDV Reporter e ao PSK Reporter. \n É necessário um indicativo de chamada e um quadrado de grade válidos."
+#, fuzzy
+msgid ""
+"Optionally report your station to FreeDV Reporter and PSK Reporter.\n"
+"A valid callsign and grid square are required."
+msgstr ""
+"Opcionalmente, reporte sua estação ao FreeDV Reporter e ao PSK Reporter. \n"
+" É necessário um indicativo de chamada e um quadrado de grade válidos."
 
 #: src/gui/dialogs/dlg_setup_wizard.cpp
 msgid "Enable station reporting"
@@ -1192,8 +1273,11 @@ msgid "Track:"
 msgstr "Rastrear:"
 
 #: src/gui/dialogs/freedv_reporter.cpp
-msgid "Filters FreeDV Reporter list based on radio's current frequency or band."
-msgstr "Filtra a lista do FreeDV Reporter com base na frequência ou banda atual do rádio."
+msgid ""
+"Filters FreeDV Reporter list based on radio's current frequency or band."
+msgstr ""
+"Filtra a lista do FreeDV Reporter com base na frequência ou banda atual do "
+"rádio."
 
 #: src/gui/dialogs/freedv_reporter.cpp
 msgid "band"
@@ -1217,15 +1301,20 @@ msgstr "Enviar:"
 
 #: src/gui/dialogs/freedv_reporter.cpp
 msgid "Sends message to FreeDV Reporter. Right-click for additional options."
-msgstr "Envia mensagem para o FreeDV Reporter. Clique com o botão direito para opções adicionais."
+msgstr ""
+"Envia mensagem para o FreeDV Reporter. Clique com o botão direito para "
+"opções adicionais."
 
 #: src/gui/dialogs/freedv_reporter.cpp
 msgid "Clear"
 msgstr "Limpar"
 
 #: src/gui/dialogs/freedv_reporter.cpp
-msgid "Clears message from FreeDV Reporter. Right-click for additional options."
-msgstr "Limpa a mensagem do FreeDV Reporter. Clique com o botão direito para opções adicionais."
+msgid ""
+"Clears message from FreeDV Reporter. Right-click for additional options."
+msgstr ""
+"Limpa a mensagem do FreeDV Reporter. Clique com o botão direito para opções "
+"adicionais."
 
 #: src/gui/dialogs/freedv_reporter.cpp
 msgid "Show"
@@ -1395,70 +1484,6 @@ msgstr "Adicionar mensagem"
 msgid "Enter new message:"
 msgstr "Digite uma nova mensagem:"
 
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "ENE"
-msgstr "ENE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "N"
-msgstr "N"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NE"
-msgstr "NE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NNE"
-msgstr "NNE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "E"
-msgstr "E"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "ESE"
-msgstr "ESE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SE"
-msgstr "SE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SSE"
-msgstr "SSE"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "S"
-msgstr "S"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SSW"
-msgstr "SSW"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "SW"
-msgstr "SW"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "WSW"
-msgstr "WSW"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NNW"
-msgstr "NNW"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "NW"
-msgstr "NW"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "W"
-msgstr "W"
-
-#: src/gui/dialogs/freedv_reporter.cpp
-msgid "WNW"
-msgstr "WNW"
-
 #: src/gui/dialogs/log_entry.cpp
 msgid "Log Entry"
 msgstr "Registro de entrada"
@@ -1517,7 +1542,9 @@ msgstr "Frequência (MHz):"
 
 #: src/gui/dialogs/log_entry.cpp
 msgid "Frequency and DX Call must be filled in in order to log the contact."
-msgstr "A frequência e o indicativo DX devem ser preenchidos para registrar o contato."
+msgstr ""
+"A frequência e o indicativo DX devem ser preenchidos para registrar o "
+"contato."
 
 #: src/gui/dialogs/log_entry.h
 msgid "Confirm Log Entry"
@@ -1550,6 +1577,70 @@ msgid_plural "%d seconds remaining"
 msgstr[0] "%d segundo restante"
 msgstr[1] "%d segundos restantes"
 
+#: src/gui/util/GridSquare.cpp
+msgid "ENE"
+msgstr "ENE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "N"
+msgstr "N"
+
+#: src/gui/util/GridSquare.cpp
+msgid "NE"
+msgstr "NE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "NNE"
+msgstr "NNE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "E"
+msgstr "E"
+
+#: src/gui/util/GridSquare.cpp
+msgid "ESE"
+msgstr "ESE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "SE"
+msgstr "SE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "SSE"
+msgstr "SSE"
+
+#: src/gui/util/GridSquare.cpp
+msgid "S"
+msgstr "S"
+
+#: src/gui/util/GridSquare.cpp
+msgid "SSW"
+msgstr "SSW"
+
+#: src/gui/util/GridSquare.cpp
+msgid "SW"
+msgstr "SW"
+
+#: src/gui/util/GridSquare.cpp
+msgid "WSW"
+msgstr "WSW"
+
+#: src/gui/util/GridSquare.cpp
+msgid "NNW"
+msgstr "NNW"
+
+#: src/gui/util/GridSquare.cpp
+msgid "NW"
+msgstr "NW"
+
+#: src/gui/util/GridSquare.cpp
+msgid "W"
+msgstr "W"
+
+#: src/gui/util/GridSquare.cpp
+msgid "WNW"
+msgstr "WNW"
+
 #: src/main.cpp
 msgid "Use different configuration file instead of the default."
 msgstr "Utilize um arquivo de configuração diferente em vez do padrão."
@@ -1559,8 +1650,12 @@ msgid "Application Expired"
 msgstr "Aplicação Expirada"
 
 #: src/main.cpp
-msgid "This version of FreeDV has expired. Please download a new version from freedv.org."
-msgstr "Esta versão do FreeDV expirou. Faça o download de uma nova versão em freedv.org."
+msgid ""
+"This version of FreeDV has expired. Please download a new version from "
+"freedv.org."
+msgstr ""
+"Esta versão do FreeDV expirou. Faça o download de uma nova versão em "
+"freedv.org."
 
 #: src/main.cpp src/ongui.cpp
 msgid "Radio Freq. (kHz)"
@@ -1589,7 +1684,9 @@ msgstr "Desligado"
 #: src/main.cpp src/voicekeyer.cpp
 #, c-format
 msgid "Toggle Voice Keyer using file %s. Right-click for additional options."
-msgstr "Alternar Voice Keyer usando arquivo %s. Clique com o botão direito para ver opções adicionais."
+msgstr ""
+"Alternar Voice Keyer usando arquivo %s. Clique com o botão direito para ver "
+"opções adicionais."
 
 #. TRANSLATORS: %s is the name of the FreeDV mode (e.g. RADEV1, 700D).
 #: src/main.cpp src/topFrame.cpp
@@ -1681,7 +1778,8 @@ msgstr "Exclua o arquivo/chaves de configuração e restaure os padrões."
 
 #: src/main.cpp
 msgid "Double click to tune, middle click to re-center"
-msgstr "Clique duas vezes para ajustar, clique com o botão do meio para recentralizar"
+msgstr ""
+"Clique duas vezes para ajustar, clique com o botão do meio para recentralizar"
 
 #: src/main.cpp
 msgid "Waterfall"
@@ -1720,12 +1818,20 @@ msgid "Adjust Monitor Volume..."
 msgstr "Ajustar o volume do monitor..."
 
 #: src/main.cpp
-msgid "Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will be disabled."
-msgstr "Para gerar relatórios, é necessário um indicativo de chamada e uma localização válidos em Ferramentas->Configurações. A geração de relatórios será desativada."
+msgid ""
+"Reporting requires a valid callsign and grid square in Tools->Settings. "
+"Reporting will be disabled."
+msgstr ""
+"Para gerar relatórios, é necessário um indicativo de chamada e uma "
+"localização válidos em Ferramentas->Configurações. A geração de relatórios "
+"será desativada."
 
 #: src/main.cpp
-msgid "Microphone permissions must be granted to FreeDV for it to function properly."
-msgstr "Para que o FreeDV funcione corretamente, é necessário conceder permissões de microfone."
+msgid ""
+"Microphone permissions must be granted to FreeDV for it to function properly."
+msgstr ""
+"Para que o FreeDV funcione corretamente, é necessário conceder permissões de "
+"microfone."
 
 #: src/main.cpp
 msgid "&Stop Modem"
@@ -1737,27 +1843,45 @@ msgstr "&Iniciar o modem"
 
 #: src/main.cpp
 msgid "No Sound Cards configured, use Tools->Settings to configure"
-msgstr "Nenhuma placa de som configurada. Use Ferramentas -> Configurações para configurar."
+msgstr ""
+"Nenhuma placa de som configurada. Use Ferramentas -> Configurações para "
+"configurar."
 
 #: src/main.cpp
 #, c-format
-msgid "Could not find RX input sound device '%s'. Please check settings and try again."
-msgstr "Não foi possível encontrar o dispositivo de entrada de áudio RX '%s'. Verifique as configurações e tente novamente."
+msgid ""
+"Could not find RX input sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+"Não foi possível encontrar o dispositivo de entrada de áudio RX '%s'. "
+"Verifique as configurações e tente novamente."
 
 #: src/main.cpp
 #, c-format
-msgid "Could not find RX output sound device '%s'. Please check settings and try again."
-msgstr "Não foi possível encontrar o dispositivo de saída de áudio RX '%s'. Verifique as configurações e tente novamente."
+msgid ""
+"Could not find RX output sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+"Não foi possível encontrar o dispositivo de saída de áudio RX '%s'. "
+"Verifique as configurações e tente novamente."
 
 #: src/main.cpp
 #, c-format
-msgid "Could not find TX input sound device '%s'. Please check settings and try again."
-msgstr "Não foi possível encontrar o dispositivo de entrada de áudio TX '%s'. Verifique as configurações e tente novamente."
+msgid ""
+"Could not find TX input sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+"Não foi possível encontrar o dispositivo de entrada de áudio TX '%s'. "
+"Verifique as configurações e tente novamente."
 
 #: src/main.cpp
 #, c-format
-msgid "Could not find TX output sound device '%s'. Please check settings and try again."
-msgstr "Não foi possível encontrar o dispositivo de saída de áudio TX '%s'. Verifique as configurações e tente novamente."
+msgid ""
+"Could not find TX output sound device '%s'. Please check settings and try "
+"again."
+msgstr ""
+"Não foi possível encontrar o dispositivo de saída de áudio TX '%s'. "
+"Verifique as configurações e tente novamente."
 
 #: src/main.cpp
 #, c-format
@@ -1771,9 +1895,11 @@ msgid ""
 "Please reattach this device, close this message box and retry. If this "
 "fails, go to Tools->Settings to check your settings."
 msgstr ""
-"Seu dispositivo %s não foi encontrado e pode ter sido removido do seu sistema."
-"Por favor, reconecte este dispositivo, feche esta caixa de mensagem e tente novamente. Se isso"
-"Se o problema ocorrer, acesse Ferramentas -> Configurações para verificar suas configurações."
+"Seu dispositivo %s não foi encontrado e pode ter sido removido do seu "
+"sistema.Por favor, reconecte este dispositivo, feche esta caixa de mensagem "
+"e tente novamente. Se issoSe o problema ocorrer, acesse Ferramentas -> "
+"Configurações para verificar suas configurações."
+
 #: src/main.cpp
 msgid "Sound Device Not Found"
 msgstr "Dispositivo de som não encontrado"
@@ -1784,8 +1910,10 @@ msgid ""
 "Your %s device is set to use a sample rate of %d, which is less than the "
 "minimum of %d. Please go to Tools->Settings to check your settings."
 msgstr ""
-"Seu dispositivo %s está configurado para usar uma taxa de amostragem de %d, que é menor que a"
-"mínimo de %d. Por favor, acesse Ferramentas->Configurações para verificar suas configurações."
+"Seu dispositivo %s está configurado para usar uma taxa de amostragem de %d, "
+"que é menor que amínimo de %d. Por favor, acesse Ferramentas->Configurações "
+"para verificar suas configurações."
+
 #: src/main.cpp src/voicekeyer.cpp
 msgid "Sample Rate Too Low"
 msgstr "Taxa de amostragem muito baixa"
@@ -1851,9 +1979,11 @@ msgid ""
 "FreeDV releases. Please click Stop Modem, double-check your CAT settings and "
 "push Start Modem again."
 msgstr ""
-"O modelo do rádio está vazio. Isso provavelmente se deve a alterações no Hamlib entre"
-"Lançamentos do FreeDV. Por favor, clique em Parar Modem, verifique novamente suas configurações CAT e"
-"Pressione Iniciar Modem novamente."
+"O modelo do rádio está vazio. Isso provavelmente se deve a alterações no "
+"Hamlib entreLançamentos do FreeDV. Por favor, clique em Parar Modem, "
+"verifique novamente suas configurações CAT ePressione Iniciar Modem "
+"novamente."
+
 #. TRANSLATORS: %s is the error message returned by Hamlib.
 #: src/ongui.cpp
 #, c-format
@@ -1962,7 +2092,8 @@ msgstr "O arquivo selecionado não existe."
 
 #: src/ongui.cpp
 msgid "The selected file could not be parsed as a FreeDV configuration."
-msgstr "O arquivo selecionado não pôde ser analisado como uma configuração do FreeDV."
+msgstr ""
+"O arquivo selecionado não pôde ser analisado como uma configuração do FreeDV."
 
 #: src/ongui.cpp
 msgid "This will load the default FreeDV configuration. Are you sure?"
@@ -1999,7 +2130,8 @@ msgstr "Não foi possível abrir o arquivo de som."
 #: src/playrec.cpp
 #, c-format
 msgid "Playing raw file %s as radio input (assuming Fs=%d)"
-msgstr "Reproduzindo o arquivo bruto %s como entrada de rádio (assumindo Fs=%d)"
+msgstr ""
+"Reproduzindo o arquivo bruto %s como entrada de rádio (assumindo Fs=%d)"
 
 #: src/playrec.cpp
 #, c-format
@@ -2179,16 +2311,20 @@ msgid "Level"
 msgstr "Nivel"
 
 #: src/topFrame.cpp
-msgid "Acceptable level range (amber = too low, green = target, red = too high)"
-msgstr "Faixa de níveis aceitáveis ​​(amarelo = muito baixo, verde = dentro da meta, vermelho = muito alto)"
+msgid ""
+"Acceptable level range (amber = too low, green = target, red = too high)"
+msgstr ""
+"Faixa de níveis aceitáveis ​​(amarelo = muito baixo, verde = dentro da meta, "
+"vermelho = muito alto)"
 
 #: src/topFrame.cpp
 msgid ""
 "RX: Peak level of radio's audio output, TX: Peak level of microphone audio "
 "as recorded by FreeDV (before AGC/level settings)."
 msgstr ""
-"RX: Nível máximo de saída de áudio do rádio, TX: Nível máximo de áudio do microfone"
-"Conforme gravado pelo FreeDV (antes das configurações de AGC/nível)."
+"RX: Nível máximo de saída de áudio do rádio, TX: Nível máximo de áudio do "
+"microfoneConforme gravado pelo FreeDV (antes das configurações de AGC/nível)."
+
 #: src/topFrame.cpp
 msgid "Sync"
 msgstr "Sincronizar"
@@ -2207,7 +2343,8 @@ msgstr "Gravação"
 
 #: src/topFrame.cpp
 msgid "Records incoming over the air signals as well as anything transmitted."
-msgstr "Registra os sinais recebidos via rádio, bem como tudo o que for transmitido."
+msgstr ""
+"Registra os sinais recebidos via rádio, bem como tudo o que for transmitido."
 
 #: src/topFrame.cpp
 msgid "Logging"
@@ -2230,8 +2367,9 @@ msgid ""
 "Quick ON/OFF for FreeDV Reporting, when enabled in Tools->Settings-"
 ">Reporting."
 msgstr ""
-"Ativação/desativação rápida para relatórios FreeDV, quando habilitada em Ferramentas->Configurações-"
-"Relatórios."
+"Ativação/desativação rápida para relatórios FreeDV, quando habilitada em "
+"Ferramentas->Configurações-Relatórios."
+
 #: src/topFrame.cpp
 msgid "Stats"
 msgstr "Estatísticas"
@@ -2275,6 +2413,7 @@ msgid ""
 msgstr ""
 "Use a roda de rolagem do mouse para ajustar para cima ou para baixo\n"
 "Clique com o botão direito para ver mais opções"
+
 #: src/topFrame.cpp
 msgid "Speaker &Level"
 msgstr "Alto-falante e nível"
@@ -2300,19 +2439,25 @@ msgid ""
 "Emits 1500 Hz carrier to enable rig/antenna tuning.\n"
 "Right click for more options"
 msgstr ""
-"Emite uma portadora de 1500 Hz para permitir o ajuste do rádio/antena."
-"Clique com o botão direito para ver mais opções"
+"Emite uma portadora de 1500 Hz para permitir o ajuste do rádio/antena.Clique "
+"com o botão direito para ver mais opções"
+
 #: src/topFrame.cpp src/voicekeyer.cpp
 msgid "Start Voice &Keyer"
 msgstr "Iniciar o Voice Keyer"
 
 #: src/topFrame.cpp
 msgid "Toggle Voice Keyer. Right-click for additional options."
-msgstr "Ative/desative o Voice Keyer. Clique com o botão direito para ver opções adicionais."
+msgstr ""
+"Ative/desative o Voice Keyer. Clique com o botão direito para ver opções "
+"adicionais."
 
 #: src/topFrame.cpp
-msgid "Switch between Receive and Transmit. Right-click for additional options."
-msgstr "Alterne entre receber e transmitir. Clique com o botão direito para opções adicionais."
+msgid ""
+"Switch between Receive and Transmit. Right-click for additional options."
+msgstr ""
+"Alterne entre receber e transmitir. Clique com o botão direito para opções "
+"adicionais."
 
 #: src/topFrame.h
 msgid "FreeDV "
@@ -2333,9 +2478,10 @@ msgid ""
 "to the 'dialout' group (and logging out/back in) along with reattaching your "
 "radio to your PC will typically ensure this."
 msgstr ""
-"Certifique-se de que você tem permissão para acessar a porta. Adicionando você mesmo"
-"para o grupo 'dialout' (e sair/entrar novamente), juntamente com a reconexão do seu "
-"Conectar o rádio ao seu PC geralmente garante isso."
+"Certifique-se de que você tem permissão para acessar a porta. Adicionando "
+"você mesmopara o grupo 'dialout' (e sair/entrar novamente), juntamente com a "
+"reconexão do seu Conectar o rádio ao seu PC geralmente garante isso."
+
 #: src/util.cpp
 msgid "Please ensure that you have permission to access the port."
 msgstr "Certifique-se de que possui permissão para acessar a porta."
@@ -2392,16 +2538,18 @@ msgid ""
 "guarantee acceptable audio quality. Please ensure that your file's sample "
 "rate is 16 kHz or greater."
 msgstr ""
-"O arquivo de keyer de voz selecionado não possui uma taxa de amostragem suficientemente alta para"
-"Garantir uma qualidade de áudio aceitável. Certifique-se de que a amostra do seu arquivo"
-"A taxa é de 16 kHz ou superior."
+"O arquivo de keyer de voz selecionado não possui uma taxa de amostragem "
+"suficientemente alta paraGarantir uma qualidade de áudio aceitável. "
+"Certifique-se de que a amostra do seu arquivoA taxa é de 16 kHz ou superior."
+
 #: src/voicekeyer.cpp
 msgid ""
 "The selected voice keyer file must only contain a single channel. Please use "
 "an audio editor to convert the file to a mono file."
 msgstr ""
-"O arquivo de keyer de voz selecionado deve conter apenas um canal. Por favor, use "
-"Um editor de áudio para converter o arquivo em um arquivo mono."
+"O arquivo de keyer de voz selecionado deve conter apenas um canal. Por "
+"favor, use Um editor de áudio para converter o arquivo em um arquivo mono."
+
 #: src/voicekeyer.cpp
 msgid "Too Many Channels"
 msgstr "Canais demais"
