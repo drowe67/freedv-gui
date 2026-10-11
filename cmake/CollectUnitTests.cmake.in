@@ -2,6 +2,10 @@
 # part of Windows, into a single folder so that they can be run on a machine
 # other than the one they were built on. Run via the collect_unit_tests target.
 #
+# A script run on its own gets no policies set for it, which older versions
+# of CMake need in order for if(... IN_LIST ...) to work.
+cmake_minimum_required(VERSION 3.20)
+
 # As this script is run in a new cmake instance, it does not have access to
 # the existing cache variables. Pass them in via the configure_file command.
 set(CMAKE_BINARY_DIR @CMAKE_BINARY_DIR@)
