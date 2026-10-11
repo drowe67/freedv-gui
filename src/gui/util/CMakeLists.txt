@@ -1,6 +1,8 @@
 add_library(fdv_gui_util STATIC
+    GridSquare.cpp
     LabelOverrideAccessible.cpp
     NameOverrideAccessible.cpp
+    SerialPortList.cpp
     TabLayoutSerializer.cpp
     wxListViewComboPopup.cpp
     WindowPositionRestore.cpp)
@@ -20,6 +22,15 @@ DefineFreeDVUnitTest(gui_util FrequencyOpsTest fdv_util)
 if(HAMLIB_ADD_DEPENDENCY)
     add_dependencies(FrequencyOpsTest hamlib)
 endif(HAMLIB_ADD_DEPENDENCY)
+
+# Header-only.
+DefineFreeDVUnitTest(gui_util FilterFrequencyTest fdv_util)
+
+DefineFreeDVUnitTest(gui_util GridSquareTest fdv_gui_util ${FREEDV_LINK_LIBS})
+FreeDVUnitTestUsesWxWidgets(GridSquareTest)
+
+DefineFreeDVUnitTest(gui_util SerialPortListTest fdv_gui_util ${FREEDV_LINK_LIBS})
+FreeDVUnitTestUsesWxWidgets(SerialPortListTest)
 
 DefineFreeDVUnitTest(gui_util TabLayoutSerializerTest fdv_gui_util ${FREEDV_LINK_LIBS})
 target_include_directories(TabLayoutSerializerTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../..)
