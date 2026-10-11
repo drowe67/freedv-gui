@@ -32,6 +32,7 @@
 //
 //=========================================================================
 
+#include <algorithm>
 #include <cmath>
 #include <cassert>
 
@@ -97,18 +98,15 @@ short* BeepStep::execute(short*, int numInputSamples, int* numOutputSamples) FRE
             {
                 // First phase: actually generate the sine wave.
                 // Beginning and end of beep should be ramped up and down.
-                double env;
+                // (Both can apply at once if the beep's shorter than the two ramps.)
+                double env = 1.0;
                 if (sampleCtr_ < rampLength_)
                 {
                     env = 0.5 * (1.0 - cosf(M_PI * sampleCtr_ / rampLength_));
                 }
-                else if (sampleCtr_ >= (samplesToGenerate_ - rampLength_))
+                if (sampleCtr_ >= (samplesToGenerate_ - rampLength_))
                 {
-                    env = 0.5 * (1.0 + cosf(M_PI * (sampleCtr_ - (samplesToGenerate_ - rampLength_)) / rampLength_));
-                }
-                else
-                {
-                    env = 1.0;
+                    env = std::min(env, 0.5 * (1.0 + cosf(M_PI * (sampleCtr_ - (samplesToGenerate_ - rampLength_)) / rampLength_)));
                 }
                 outPtr[index] = (short)(TONE_AMPLITUDE * env * cosf((2.0 * M_PI * frequency_ * sampleCtr_) / sampleRate_));
                 sampleCtr_++;

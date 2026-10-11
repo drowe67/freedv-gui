@@ -23,6 +23,8 @@ USE_CCACHE=${USE_CCACHE:-0}
 export FREEDVGUIDIR=${PWD}
 
 if [ $USE_CCACHE == 1 ]; then
+    # Needed for ccache to cache compiles that use precompiled headers.
+    export CCACHE_SLOPPINESS=${CCACHE_SLOPPINESS:-pch_defines,time_macros}
     CCACHE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
 else
     CCACHE_ARGS=""

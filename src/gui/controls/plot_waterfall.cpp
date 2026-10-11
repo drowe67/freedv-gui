@@ -27,8 +27,8 @@
 #include <wx/wx.h>
 #include "os/os_interface.h"
 
+#include "defines.h"
 #include "plot_waterfall.h"
-#include "defines.h" // for FDMDV_FCENTRE
 
 #if defined(__APPLE__)
 wxGraphicsBitmap CreateWaterfallBitmapInWindowColorSpace(wxGraphicsContext* gc, wxWindow* window, const wxImage& image);
@@ -73,9 +73,7 @@ END_EVENT_TABLE()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotWaterfall::PlotWaterfall(wxWindow* parent, float* magDb, bool graticule, int colour): PlotPanel(parent)
 {
-    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
-    // for e.g. numbers. Thus, we only need to override layout direction.
-    SetLayoutDirection(wxLayout_LeftToRight);
+    WXWIDGETS_SET_LAYOUT_DIRECTION;
     
     // Note the bound: plotPixelData() clamps intensity to 255 and reaches it whenever a
     // bin sits at the top of the current range, which happens on essentially every frame

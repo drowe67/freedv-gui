@@ -67,7 +67,7 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int fifoSizeMs, bool usingReliableText);
+    void start(int fifoSizeMs, bool usingReliableText, bool verbose = false);
     void stop();
     bool isRunning() const { return rade_ != nullptr; }
     

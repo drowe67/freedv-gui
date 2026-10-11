@@ -111,7 +111,11 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
-add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
+# Written to a generated source file rather than passed as a compile
+# definition: a definition would change every compile command each day,
+# forcing a full rebuild (wxWidgets included) and defeating ccache.
+# configure_file() only rewrites the file when the date changes.
+configure_file(cmake/build_date.cpp.in ${CMAKE_BINARY_DIR}/generated/build_date.cpp @ONLY)
 
 # Generate custom CTest config
 configure_file(cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
@@ -139,6 +143,12 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -g")
 endif(APPLE)
+
+# Clang otherwise embeds header timestamps in precompiled headers, which
+# makes every fresh checkout produce a different PCH and miss in ccache.
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options("SHELL:-Xclang -fno-pch-timestamp")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -649,6 +659,11 @@ enable_testing()
 endif(UNITTEST)
 
 #
+# Translations (needs to come before src so the app bundle can include them)
+#
+add_subdirectory(po)
+
+#
 # Freedv
 #
 add_subdirectory(src)
@@ -790,6 +805,26 @@ elseif(UNIX AND NOT APPLE)
     include(CPack)
 
 endif(WIN32)
+
+if(UNITTEST AND WIN32)
+    # The unit tests can't be run where they're cross-compiled, so provide a
+    # way of gathering them and the DLLs they need for running elsewhere:
+    # "make collect_unit_tests" fills the unit_tests folder of the build.
+    get_property(_unit_test_targets GLOBAL PROPERTY FREEDV_UNIT_TEST_TARGETS)
+    set(_unit_test_files)
+    foreach(_target ${_unit_test_targets})
+        list(APPEND _unit_test_files "$<TARGET_FILE:${_target}>")
+    endforeach()
+
+    set(FREEDV_UNIT_TEST_LIST_FILE ${CMAKE_BINARY_DIR}/unit_tests.txt)
+    set(FREEDV_UNIT_TEST_OUTPUT_DIR ${CMAKE_BINARY_DIR}/unit_tests)
+    file(GENERATE OUTPUT ${FREEDV_UNIT_TEST_LIST_FILE} CONTENT "$<JOIN:${_unit_test_files},\n>\n")
+
+    configure_file(cmake/CollectUnitTests.cmake.in cmake/CollectUnitTests.cmake @ONLY)
+    add_custom_target(collect_unit_tests
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/cmake/CollectUnitTests.cmake
+        DEPENDS unit_tests)
+endif(UNITTEST AND WIN32)
 
 if(UNITTEST)
 # The below tests are currently Linux/macOS-only. A PowerShell version of fullduplex_* 
