@@ -1,0 +1,73 @@
+# Copies the unit test executables, along with the DLLs they need that aren't
+# part of Windows, into a single folder so that they can be run on a machine
+# other than the one they were built on. Run via the collect_unit_tests target.
+#
+# A script run on its own gets no policies set for it, which older versions
+# of CMake need in order for if(... IN_LIST ...) to work.
+cmake_minimum_required(VERSION 3.20)
+
+# As this script is run in a new cmake instance, it does not have access to
+# the existing cache variables. Pass them in via the configure_file command.
+set(CMAKE_BINARY_DIR @CMAKE_BINARY_DIR@)
+set(CMAKE_OBJDUMP @CMAKE_OBJDUMP@)
+set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
+set(UNIT_TEST_LIST_FILE @FREEDV_UNIT_TEST_LIST_FILE@)
+set(UNIT_TEST_OUTPUT_DIR @FREEDV_UNIT_TEST_OUTPUT_DIR@)
+
+set(DLL_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@;@rade_BINARY_DIR@/src)
+list(APPEND DLL_SEARCH_PATHS ${CMAKE_BINARY_DIR}/external/dist/bin)
+
+if(FREEDV_USING_LLVM_MINGW)
+    # The compiler's own runtime DLLs (libc++ etc.) live in the bin/ folder
+    # for the platform being built for.
+    find_program(OBJDUMP_PATH ${CMAKE_OBJDUMP})
+    string(REPLACE "-objdump" "" LLVM_ARCH_TRIPLE ${CMAKE_OBJDUMP})
+    string(REPLACE ${CMAKE_OBJDUMP} "" OBJDUMP_PATH ${OBJDUMP_PATH})
+    string(APPEND LLVM_ADDITIONAL_LIB_PATH ${OBJDUMP_PATH} "../" ${LLVM_ARCH_TRIPLE} "/bin")
+    cmake_path(NORMAL_PATH LLVM_ADDITIONAL_LIB_PATH)
+    list(APPEND DLL_SEARCH_PATHS ${LLVM_ADDITIONAL_LIB_PATH})
+endif(FREEDV_USING_LLVM_MINGW)
+
+macro(freedv_get_dependencies OUTPUT_VAR FILENAME)
+    execute_process(
+        COMMAND ${CMAKE_OBJDUMP} -p ${FILENAME}
+        COMMAND grep "DLL Name:"
+        COMMAND awk "{ printf \"%s;\", \$3; }"
+        COMMAND sed "s/;$//"
+        OUTPUT_VARIABLE ${OUTPUT_VAR})
+endmacro()
+
+file(REMOVE_RECURSE ${UNIT_TEST_OUTPUT_DIR})
+file(MAKE_DIRECTORY ${UNIT_TEST_OUTPUT_DIR})
+
+file(STRINGS ${UNIT_TEST_LIST_FILE} _tests)
+set(_pending)
+foreach(_test ${_tests})
+    file(COPY ${_test} DESTINATION ${UNIT_TEST_OUTPUT_DIR})
+    freedv_get_dependencies(_deps ${_test})
+    list(APPEND _pending ${_deps})
+endforeach()
+
+# A DLL that isn't in any of the search paths is taken to be part of Windows.
+set(_seen)
+while(_pending)
+    list(POP_FRONT _pending _dll)
+    string(TOLOWER ${_dll} _dll_lower)
+    if(_dll_lower IN_LIST _seen)
+        continue()
+    endif()
+    list(APPEND _seen ${_dll_lower})
+
+    unset(_dll_path CACHE)
+    unset(_dll_path)
+    find_file(_dll_path NAMES ${_dll} PATHS ${DLL_SEARCH_PATHS} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+    if(_dll_path)
+        message("Including ${_dll_path}")
+        file(COPY ${_dll_path} DESTINATION ${UNIT_TEST_OUTPUT_DIR})
+        freedv_get_dependencies(_deps ${_dll_path})
+        list(APPEND _pending ${_deps})
+    endif()
+endwhile()
+
+list(LENGTH _tests _num_tests)
+message("Collected ${_num_tests} unit tests into ${UNIT_TEST_OUTPUT_DIR}")

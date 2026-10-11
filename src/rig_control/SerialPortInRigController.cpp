@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <future>
+
 #include "SerialPortInRigController.h"
 #include "../os/os_interface.h"
 
@@ -48,19 +50,31 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
 
     onRigDisconnected = [&](IRigController*) {
         threadExiting_ = true;
-        pollThread_.join();
+        if (pollThread_.joinable())
+        {
+            pollThread_.join();
+        }
     };
 }
 
 SerialPortInRigController::~SerialPortInRigController()
 {
-    onRigDisconnected.clear();
-    
-    if (pollThread_.joinable())
-    {
+    // Stop polling from the controller's own thread. A disconnect requested
+    // just before destruction may still be in progress there, and that uses
+    // both the disconnection handlers and the polling thread.
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([this, prom]() {
+        onRigDisconnected.clear();
+
         threadExiting_ = true;
-        pollThread_.join();
-    }
+        if (pollThread_.joinable())
+        {
+            pollThread_.join();
+        }
+        prom->set_value();
+    });
+    fut.wait();
     
     waitForAllTasksComplete_();
 }
