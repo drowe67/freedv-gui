@@ -1777,6 +1777,20 @@ MainFrame::~MainFrame()
     fclose(ftest);
     #endif
 
+    // If the modem was stopped just before closing, the rig may still be
+    // disconnecting on the threads started by performFreeDVOff_(), and will
+    // call back into this object when it's done. Give that a bounded chance
+    // to finish first, as OnTogBtnOnOff() does when closing while running.
+    auto rigDisconnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    if (rigPttDisconnectFuture_.valid())
+    {
+        rigPttDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
+    if (rigFreqDisconnectFuture_.valid())
+    {
+        rigFreqDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
+
     wxGetApp().rigPttController = nullptr;
     wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().m_pttInSerialPort = nullptr;
