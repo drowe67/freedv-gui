@@ -2308,13 +2308,20 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // wxConfigBase::Create() just hands back the configuration already in
     // use if there is one, so let go of that first.
     wxConfigBase::Set(nullptr);
-#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
-    // As at startup, wxWidgets needs telling to use a subdirectory here.
-    wxString defaultLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
-    wxConfigBase* defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
-#else
-    wxConfigBase* defaultConfig = wxConfigBase::Create();
-#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    wxConfigBase* defaultConfig = nullptr;
+    if (!wxGetApp().defaultConfigFile.IsEmpty())
+    {
+        // Startup had to say where the default configuration is (see
+        // MainApp::OnCmdLineParsed()), so the same goes here. That place is
+        // remembered rather than worked out again, as wxWidgets gives a
+        // different answer once it's been set up to use it.
+        wxString defaultLocation = wxGetApp().defaultConfigFile;
+        defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+    }
+    else
+    {
+        defaultConfig = wxConfigBase::Create();
+    }
     
     setConfiguration_(defaultConfig);
 

@@ -1,7 +1,6 @@
 add_library(fdv_gui_controls STATIC
     plot.cpp
     plot_scalar.cpp
-    plot_scatter.cpp
     plot_spectrum.cpp
     plot_waterfall.cpp
     ReportMessageRenderer.cpp

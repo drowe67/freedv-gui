@@ -947,6 +947,183 @@ def start_modem_only(app):
     check(app.state()["running"], "FreeDV is not running after pressing Start")
 
 
+def test_sort_every_column():
+    """Each column can be sorted by, in both directions."""
+    with ReporterServer() as server:
+        # Three stations that differ in every column.
+        k1abc = server.station("K1ABC", "FN42", version="alpha 3")
+        k1abc.set_frequency(14236000)
+        k1abc.set_message("Third")
+        vk5dgr = server.station("VK5DGR", "PF95", version="alpha 1", rx_only=True)
+        vk5dgr.set_frequency(7177000)
+        vk5dgr.set_message("First")
+        w6xyz = server.station("W6XYZ", "DM13", version="alpha 2")
+        w6xyz.set_frequency(28330000)
+        w6xyz.set_message("Second")
+
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ"])
+            k1abc.transmit("RADEV1", True)
+            wait_for_cell(app, "K1ABC", STATUS, "TX")
+            k1abc.transmit("RADEV1", False)
+            wait_for_cell(app, "K1ABC", STATUS, "RX")
+            vk5dgr.receive("K1ABC", "RADEV1", 12)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
+            w6xyz.receive("AB1CD", "RADEV1", 3)
+            wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "AB1CD")
+
+            # Where sorting by a column is known to put them.
+            expected = {
+                CALLSIGN: ["K1ABC", "VK5DGR", "W6XYZ"],
+                LOCATOR: ["W6XYZ", "K1ABC", "VK5DGR"],        # DM13, FN42, PF95
+                DISTANCE: ["W6XYZ", "K1ABC", "VK5DGR"],
+                VERSION: ["VK5DGR", "W6XYZ", "K1ABC"],
+                FREQUENCY: ["VK5DGR", "K1ABC", "W6XYZ"],
+                MESSAGE: ["VK5DGR", "W6XYZ", "K1ABC"],        # First, Second, Third
+            }
+            for column in app.columns(LIST):
+                if column["title"].strip() == "":
+                    continue  # what fills the space to the right of the last column
+                column_id = column["id"]
+                app.click_column(LIST, column_id)
+                check_equal(sort_order(app), (column_id, True), "Sort order after clicking %r" % column["title"])
+                ascending = callsigns(app)
+                check_equal(sorted(ascending), ["K1ABC", "VK5DGR", "W6XYZ"], "Callsigns listed")
+                if column_id in expected:
+                    wait_for_callsigns(app, expected[column_id])
+
+                app.click_column(LIST, column_id)
+                check_equal(sort_order(app), (column_id, False), "Sort order after clicking %r again"
+                            % column["title"])
+                descending = callsigns(app)
+                check_equal(sorted(descending), ["K1ABC", "VK5DGR", "W6XYZ"], "Callsigns listed")
+                if column_id in expected:
+                    wait_for_callsigns(app, list(reversed(expected[column_id])))
+
+            quit_and_check_log(app)
+
+
+def test_numeric_filters():
+    """Filtering by the columns that hold numbers, with each comparison."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
+        vk5dgr = server.station("VK5DGR", "PF95")
+        vk5dgr.set_frequency(7177000)
+        w6xyz = server.station("W6XYZ", "DM13")
+        w6xyz.set_frequency(28330000)
+        everyone = ["VK5DGR", "K1ABC", "W6XYZ"]
+
+        def set_filter(app, column, operator, value):
+            app.column_context_menu(LIST, column, choose=operator)
+            app.wait_for_window("@Set Column Filter")
+            app.set_value("@Set Column Filter/wxTextCtrl", value)
+            app.click("@Set Column Filter/OK")
+            app.wait_for_window_closed("@Set Column Filter")
+            app.activate("reporter")
+
+        def clear_filter(app, column):
+            app.column_context_menu(LIST, column, choose="Clear Column Filter")
+            wait_for_callsigns(app, everyone)
+
+        for as_khz in [False, True]:
+            settings = reporter_settings(server.hostname, **{"/Reporting/FrequencyAsKHz": as_khz})
+            with freedvtest.start(settings=settings) as app:
+                open_reporter(app)
+                wait_for_callsigns(app, everyone)
+                k1abc.receive("W6XYZ", "RADEV1", 12)
+                vk5dgr.receive("W6XYZ", "RADEV1", -2)
+                w6xyz.receive("K1ABC", "RADEV1", 5)
+                wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "K1ABC")
+                wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "W6XYZ")
+
+                # Frequency, in the units that it's displayed in.
+                twenty = "14236" if as_khz else "14.236"
+                for operator, listed in [(">= (Greater or equal to)", ["K1ABC", "W6XYZ"]),
+                                         (">  (Greater than)", ["W6XYZ"]),
+                                         ("=  (Equal to)", ["K1ABC"]),
+                                         ("!= (Not equal to)", ["VK5DGR", "W6XYZ"]),
+                                         ("<  (Less than)", ["VK5DGR"]),
+                                         ("<= (Less or equal to)", ["VK5DGR", "K1ABC"])]:
+                    set_filter(app, FREQUENCY, operator, twenty)
+                    wait_for_callsigns(app, listed)
+                clear_filter(app, FREQUENCY)
+
+                # Signal report
+                set_filter(app, SNR, ">  (Greater than)", "4")
+                wait_for_callsigns(app, ["K1ABC", "W6XYZ"])
+                set_filter(app, SNR, "<  (Less than)", "0")
+                wait_for_callsigns(app, ["VK5DGR"])
+                clear_filter(app, SNR)
+
+                # Heading, split between the two that are furthest round the
+                # compass. (What's displayed is rounded, so not right on one.)
+                headings = {row[CALLSIGN]: int(row[HEADING]) for row in app.rows(LIST)}
+                lowest, middle, highest = sorted(headings.values())
+                check(highest - middle > 2, "Headings are %r" % headings)
+                threshold = (middle + highest) // 2
+                set_filter(app, HEADING, ">= (Greater or equal to)", str(threshold))
+                wait_for_callsigns(app, [callsign for callsign in everyone if headings[callsign] > threshold])
+                set_filter(app, HEADING, "<  (Less than)", str(threshold))
+                wait_for_callsigns(app, [callsign for callsign in everyone if headings[callsign] < threshold])
+                clear_filter(app, HEADING)
+
+                # A filter that isn't a number is ignored.
+                set_filter(app, DISTANCE, ">  (Greater than)", "far")
+                time.sleep(1)
+                check_equal(callsigns(app), everyone, "Callsigns listed with a distance filter that isn't a number")
+                clear_filter(app, DISTANCE)
+
+                # A station that's selected and then filtered out isn't selected any more.
+                app.select_row(LIST, (CALLSIGN, "K1ABC"))
+                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], ["K1ABC"],
+                            "Selected station")
+                set_filter(app, CALLSIGN, "!= (Not equal to)", "K1ABC")
+                wait_for_callsigns(app, ["VK5DGR", "W6XYZ"])
+                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
+                            "Selected station once it's filtered out")
+                clear_filter(app, CALLSIGN)
+                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
+                            "Selected station once it's listed again")
+
+                quit_and_check_log(app)
+
+
+def test_status_message_flags():
+    """Regional flags in a status message are several characters that have
+    to be removed together, or what's left of one isn't a flag any more."""
+    black_flag = "\U0001F3F4"
+    scotland = black_flag + "".join(chr(0xE0000 + ord(letter)) for letter in "gbsct") + "\U000E007F"
+
+    with ReporterServer() as server:
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+
+            # A whole flag is left alone, wherever it is.
+            for message in [scotland, "Hello from " + scotland, scotland + " and " + scotland]:
+                app.set_value("reporter.cbStatusMessage", message)
+                check_equal(app.get("reporter.cbStatusMessage")["value"], message, "Status message with a flag")
+
+            # One that's lost its end (as backspacing over it does) goes entirely.
+            app.set_value("reporter.cbStatusMessage", "Hello from " + scotland[:-1] + "!")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "Hello from !",
+                        "Status message after part of a flag was removed")
+            app.set_value("reporter.cbStatusMessage", scotland[:-2])
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "", "Status message that was only part of a flag")
+
+            # As do parts of one that are left over.
+            app.set_value("reporter.cbStatusMessage", "Hello" + scotland[2:4] + " there")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "Hello there",
+                        "Status message after the start of a flag was removed")
+
+            # A plain black flag is a flag in its own right.
+            app.set_value("reporter.cbStatusMessage", black_flag + " ahoy")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], black_flag + " ahoy", "Status message")
+
+            quit_and_check_log(app)
+
+
 def test_window():
     """Opening and closing the window, and it remembering how it was left."""
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
@@ -1133,6 +1310,9 @@ SCENARIOS = {
     "qsy": test_qsy,
     "row_actions": test_row_actions,
     "turn_off": test_turn_off,
+    "sort_every_column": test_sort_every_column,
+    "numeric_filters": test_numeric_filters,
+    "status_message_flags": test_status_message_flags,
     "window": test_window,
     "connection_burst": test_connection_burst,
 }

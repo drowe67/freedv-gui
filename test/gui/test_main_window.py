@@ -1098,6 +1098,223 @@ def test_help_and_restore():
         check_equal(app.quit(), 0, "FreeDV's exit code")
 
 
+def test_tune_level_per_band():
+    """Tune's own attenuation can be kept separately for each band, like TX
+    attenuation can."""
+    def tx_level(app):
+        return label(app, "main.textTxLevel")
+
+    with audio_devices():
+        with freedvtest.start(settings=settings(Reporting__Frequency=14236000)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnTune")
+            check_equal(tx_level(app), "0.0dB", "Tune attenuation")
+            app.click("main.btnTxLevelDecrBig")
+            check_equal(tx_level(app), "-1.0dB", "Tune attenuation")
+
+            enable, disable, restore = ("Enable auto-save of tune atten for 20m", "Disable auto-save of tune atten for 20m",
+                                        "Restore tune atten level for 20m")
+            items = app.context_menu("main.btnTune", choose=enable)
+            check_equal([(item["label"], item["enabled"]) for item in items][1:], [(enable, True), (restore, False)],
+                        "Tune button's menu")
+
+            # Having wandered off, there's a way back to what it was.
+            app.click("main.btnTxLevelDecrBig")
+            app.click("main.btnTxLevelDecrBig")
+            check_equal(tx_level(app), "-3.0dB", "Tune attenuation")
+            items = app.context_menu("main.btnTune", choose=restore)
+            check_equal([(item["label"], item["enabled"]) for item in items][1:], [(disable, True), (restore, True)],
+                        "Tune button's menu with auto-save on")
+            check_equal(tx_level(app), "-1.0dB", "Tune attenuation after restoring")
+
+            # Off and on again
+            app.context_menu("main.btnTune", choose=disable)
+            items = app.context_menu("main.btnTune", choose=enable)
+            check_equal([(item["label"], item["enabled"]) for item in items][1:], [(enable, True), (restore, False)],
+                        "Tune button's menu after turning auto-save off")
+
+            app.click("main.btnTune")
+            stop_modem(app)
+            quit_and_check_log(app)
+            saved = freedvtest.read_config(app.config_path)
+            check_equal(saved.get("/Audio/tuneLevelByBand/20m"), "-10", "Saved tune attenuation for 20m")
+
+
+def test_exit_menu():
+    """File > Exit, which has to stop everything first."""
+    with audio_devices():
+        # With nothing going on
+        with freedvtest.start(settings=settings()) as app:
+            app.wait_for_window("main")
+            app.menu("File/Exit")
+            check_equal(app.wait_for_exit(), 0, "FreeDV's exit code")
+
+        # While transmitting
+        with freedvtest.start(settings=settings()) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            app.menu("File/Exit")
+            check_equal(app.wait_for_exit(), 0, "FreeDV's exit code having been transmitting")
+            errors = [line for line in app.log().splitlines() if " ERROR " in line or " FATAL " in line]
+            check_equal(errors, [], "Errors logged by FreeDV")
+        check_silent(RADIO_TX_MONITOR, "Something is still being sent to the radio")
+
+
+def test_frequency_units():
+    """Changing between MHz and kHz changes what's already displayed."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        csv_log = os.path.join(folder, "heard.csv")
+        with open(csv_log, "w") as f:
+            f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
+            f.write("2026-03-04,05:06:07,K1ABC,RADEV1,14236000,7\n")
+            f.write("2026-03-04,05:16:07,VK5DGR,RADEV1,7177500,3\n")
+        extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                     Reporting__CSV__LogFilePath=csv_log, Reporting__Frequency=14236000)
+
+        def heard(app):
+            return [(item["columns"][0], item["columns"][1].replace(",", ""))
+                    for item in app.get("main.listLastReportedCallsigns")["items"]]
+
+        def set_units(app, as_khz):
+            app.menu("Settings/Edit Settings...")
+            app.wait_for_window("settings")
+            app.set_value("settings.notebook", "Rig Control")
+            app.set_value("settings.ckboxFrequencyEntryAsKHz", as_khz)
+            app.click("settings.sdbSizer5OK")
+            app.wait_for_window_closed("settings")
+
+        with freedvtest.start(settings=settings(**extra)) as app:
+            app.wait_for_window("main")
+            check_equal(heard(app), [("VK5DGR", "7.1775"), ("K1ABC", "14.2360")], "Callsigns heard")
+            check_equal(app.get("main.cboReportFrequency")["value"].replace(",", ""), "14.2360", "Report frequency")
+
+            set_units(app, True)
+            check_equal(heard(app), [("VK5DGR", "7177.5"), ("K1ABC", "14236.0")], "Callsigns heard, in kHz")
+            check_equal(app.get("main.cboReportFrequency")["value"].replace(",", ""), "14236.0",
+                        "Report frequency, in kHz")
+
+            set_units(app, False)
+            check_equal(heard(app), [("VK5DGR", "7.1775"), ("K1ABC", "14.2360")], "Callsigns heard, back in MHz")
+            check_equal(app.get("main.cboReportFrequency")["value"].replace(",", ""), "14.2360",
+                        "Report frequency, back in MHz")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_default_config():
+    """Started without being told which configuration to use, as it is for
+    a user: FreeDV finds its own, and goes back to whichever other one was
+    last chosen."""
+    home = tempfile.mkdtemp(prefix="freedvtest-home-")
+    try:
+        other = os.path.join(home, "other.conf")
+        quiet = {"/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
+        # Where FreeDV has always kept its configuration. (Built with newer
+        # versions of wxWidgets, it moves it to where such things now go.)
+        freedvtest.write_config(os.path.join(home, ".freedv"), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
+        freedvtest.write_config(other, dict(quiet, **{"/Reporting/Callsign": "VK5DGR"}))
+
+        def callsign(app):
+            return app.state()["config"]["reporting"]["reportingCallsign"]
+
+        def launch():
+            return freedvtest.start(home=home, default_config=True)
+
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "K1ABC", "Callsign from the default configuration")
+            check(".conf)" not in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
+
+            # Changes are kept there.
+            app.menu("Settings/Edit Settings...")
+            app.wait_for_window("settings")
+            app.set_value("settings.notebook", "Reporting")
+            app.set_value("settings.ckboxReportingEnable", True)
+            app.set_value("settings.txt_callsign", "K1ABC/P")
+            app.set_value("settings.txt_grid_square", "FN42")
+            app.click("settings.sdbSizer5OK")
+            app.wait_for_window_closed("settings")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "K1ABC/P", "Callsign the next time")
+
+            # Another configuration is remembered as the one in use...
+            app.choose_next_path(other)
+            app.menu("Settings/Use Configuration...")
+            app.wait_until(lambda: callsign(app) == "VK5DGR", timeout=10,
+                           description="the other configuration to be in use")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "VK5DGR", "Callsign the next time")
+            check("(other.conf)" in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        # ...for as long as it exists.
+        os.rename(other, other + ".gone")
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "K1ABC/P", "Callsign with the other configuration gone")
+            check(".conf)" not in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+        os.rename(other + ".gone", other)
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "K1ABC/P", "Callsign with the other configuration back but forgotten")
+
+            # Loading the default configuration forgets it as well.
+            app.choose_next_path(other)
+            app.menu("Settings/Use Configuration...")
+            app.wait_until(lambda: callsign(app) == "VK5DGR", timeout=10,
+                           description="the other configuration to be in use")
+            app.answer_next_message_box("yes")
+            app.menu("Settings/Load Default Configuration")
+            try:
+                app.wait_until(lambda: callsign(app) == "K1ABC/P", timeout=10)
+            except freedvtest.FreeDVError:
+                check_equal(callsign(app), "K1ABC/P", "Callsign after loading the default configuration (messages: %r)"
+                            % app.message_boxes())
+            app.message_boxes(clear=True)
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        with launch() as app:
+            app.wait_for_window("main")
+            check_equal(callsign(app), "K1ABC/P", "Callsign after loading the default configuration")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def test_appearance_change():
+    """The desktop switching between light and dark while FreeDV is running."""
+    with audio_devices():
+        with freedvtest.start(settings=settings()) as app:
+            app.wait_for_window("main")
+            app.menu("Tools/FreeDV Reporter")
+            app.wait_for_window("reporter")
+            app.menu("Tools/Filter Audio...")
+            app.wait_for_window("filter")
+            start_modem(app)
+            for tab in TABS:
+                app.set_value("main.notebook", tab)
+                app.system_colours_changed()
+                time.sleep(0.3)
+            check_equal(sorted(window["name"] for window in app.windows() if window["shown"]),
+                        ["filter", "main", "reporter"], "Windows displayed")
+            check_equal(app.state()["running"], True, "Running")
+            stop_modem(app)
+            app.system_colours_changed()
+            quit_and_check_log(app)
+
+
 def test_time_out_timer():
     """The time-out timer, which stops a transmission that's gone on too long."""
     with audio_devices():
@@ -1250,6 +1467,11 @@ SCENARIOS = {
     "mouse_controls": test_mouse_controls,
     "play_file_loop": test_play_file_loop,
     "help_and_restore": test_help_and_restore,
+    "tune_level_per_band": test_tune_level_per_band,
+    "exit_menu": test_exit_menu,
+    "frequency_units": test_frequency_units,
+    "default_config": test_default_config,
+    "appearance_change": test_appearance_change,
     "time_out_timer": test_time_out_timer,
     "menus": test_menus,
 }

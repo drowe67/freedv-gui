@@ -1588,6 +1588,11 @@ public:
 
 int main()
 {
+    // Logging allocates memory the first time it's used on a thread, which
+    // isn't allowed on the real-time paths that some of these tests then log
+    // from (with g_dump_fifo_state set). Get that over with here.
+    log_info("Starting TxRxThread tests");
+
     freedvInterface.start(100, false);
 
     executeTestCase("txProcessingSkippedWhenHalfDuplexPttOff", &TxRxThreadTest::txProcessingSkippedWhenHalfDuplexPttOff);

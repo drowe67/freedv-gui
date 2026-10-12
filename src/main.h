@@ -74,8 +74,8 @@
 #include "gui/dialogs/tot_warning.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
-#include "gui/controls/plot_scatter.h"
 #include "gui/controls/plot_waterfall.h"
+#include "comp.h"
 #include "gui/controls/plot_spectrum.h"
 #include "sndfile.h"
 #include "sox_biquad.h"
@@ -206,6 +206,10 @@ class MainApp : public wxApp
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         wxString defaultConfigFilePath;
+
+        // Where the default configuration is, if FreeDV has to say (rather
+        // than leaving it to wxWidgets). See MainApp::OnCmdLineParsed().
+        wxString defaultConfigFile;
         
         // PTT -----------------------------------    
         int        m_intHamlibRig;

@@ -91,7 +91,8 @@ def read_config(path):
     return settings
 
 
-def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60):
+def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60,
+          home=None, default_config=False):
     """Launches FreeDV and returns once it's ready to take commands.
 
     config is the configuration file to use. If not given, FreeDV starts
@@ -101,14 +102,22 @@ def start(binary=None, config=None, settings=None, args=(), env=None, user_confi
     user_config_files maps names to contents of files to place where FreeDV
     looks for other programs' settings (see FreeDV.user_config_dir). FreeDV
     never sees the real ones.
+
+    home is a folder to stand in for the user's home folder (Linux only),
+    for when what FreeDV keeps there needs to last from one launch to the
+    next; otherwise each launch gets an empty one of its own. With
+    default_config, FreeDV isn't told which configuration file to use and so
+    finds its own, as it does for a user: in that home folder.
     """
-    return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout)
+    return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout, home,
+                  default_config)
 
 
 class FreeDV:
     """A running copy of FreeDV. Create with start()."""
 
-    def __init__(self, binary, config, settings, args, env, user_config_files, timeout):
+    def __init__(self, binary, config, settings, args, env, user_config_files, timeout, home=None,
+                 default_config=False):
         self._temp_dir = tempfile.mkdtemp(prefix="freedvtest-")
         self._next_id = 1
         self._received = b""
@@ -122,7 +131,7 @@ class FreeDV:
         self.log_path = os.path.join(self._temp_dir, "freedv.log")
         #: Stands in for the user's ~/.config (Linux only), which is where
         #: FreeDV looks for other programs' settings.
-        self.user_config_dir = os.path.join(self._temp_dir, "config")
+        self.user_config_dir = os.path.join(home, ".config") if home else os.path.join(self._temp_dir, "config")
         #: Stands in for the user's home folder (Linux only).
         self.home_dir = None
 
@@ -146,10 +155,10 @@ class FreeDV:
             xauthority = os.path.expanduser("~/.Xauthority")
             if "XAUTHORITY" not in process_env and os.path.exists(xauthority):
                 process_env["XAUTHORITY"] = xauthority
-            self.home_dir = os.path.join(self._temp_dir, "home")
-            os.mkdir(self.home_dir)
+            self.home_dir = home or os.path.join(self._temp_dir, "home")
+            os.makedirs(self.home_dir, exist_ok=True)
             process_env["HOME"] = self.home_dir
-        os.mkdir(self.user_config_dir)
+        os.makedirs(self.user_config_dir, exist_ok=True)
         for name, contents in (user_config_files or {}).items():
             with open(os.path.join(self.user_config_dir, name), "w") as f:
                 f.write(contents)
@@ -165,7 +174,8 @@ class FreeDV:
 
             self._log_file = open(self.log_path, "wb")
             self._process = subprocess.Popen(
-                [binary, "-f", self.config_path, "-testport", str(port)] + list(args),
+                [binary] + ([] if default_config else ["-f", self.config_path]) +
+                ["-testport", str(port)] + list(args),
                 stdin=subprocess.DEVNULL, stdout=self._log_file, stderr=subprocess.STDOUT,
                 env=process_env)
 
@@ -475,6 +485,19 @@ class FreeDV:
                 return f.read()
         except OSError:
             return ""
+
+    def wait_for_exit(self, timeout=60):
+        """Waits for FreeDV to exit of its own accord (e.g. after File > Exit
+        was chosen) and returns its exit code."""
+        try:
+            return self._process.wait(timeout)
+        except subprocess.TimeoutExpired:
+            raise FreeDVError("FreeDV did not exit within %d seconds%s" % (timeout, self._stacks()))
+
+    def system_colours_changed(self):
+        """Tells FreeDV's windows that the system's colours have changed, as
+        happens when the desktop switches between light and dark themes."""
+        self.command("system_colours_changed")
 
     def quit(self, timeout=60):
         """Closes FreeDV's main window, waits for FreeDV to exit and returns

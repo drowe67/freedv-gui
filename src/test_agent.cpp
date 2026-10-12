@@ -404,6 +404,18 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandClipboard_(id);
     }
+    else if (cmd == "system_colours_changed")
+    {
+        // As when the desktop switches between its light and dark themes.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        std::vector<wxWindow*> topLevels(wxTopLevelWindows.begin(), wxTopLevelWindows.end());
+        for (auto window : topLevels)
+        {
+            wxSysColourChangedEvent event;
+            event.SetEventObject(window);
+            window->ProcessWindowEvent(event);
+        }
+    }
     else if (cmd == "message_boxes")
     {
         commandMessageBoxes_(id, request);

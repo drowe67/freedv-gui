@@ -855,7 +855,7 @@ endforeach(scenario)
 # These also need a window manager to be running and, other than live_view
 # (which is skipped if the public FreeDV Reporter server can't be reached), the
 # Python packages listed in test/gui/freedvtest/reporter.py.
-foreach(scenario live_view stations sorting band_filter column_filters idle_filter columns status_message qsy row_actions turn_off window connection_burst)
+foreach(scenario live_view stations sorting sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message status_message_flags qsy row_actions turn_off window connection_burst)
     add_test(NAME gui_reporter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
@@ -869,7 +869,7 @@ endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
 # alongside anything else.
-foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls time_out_timer menus help_and_restore)
+foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer menus help_and_restore default_config exit_menu appearance_change)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
