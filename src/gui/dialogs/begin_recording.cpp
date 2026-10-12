@@ -151,6 +151,12 @@ BeginRecordingDialog::~BeginRecordingDialog()
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
 }
 
+wxString BeginRecordingDialog::getRecordingSuffix() const
+{
+    // Only typing is filtered as it happens; pasting isn't.
+    return SanitizeRecordingSuffix(recordingSuffix_->GetValue());
+}
+
 void BeginRecordingDialog::OnInitDialog(wxInitDialogEvent&)
 {
     // empty

@@ -2025,6 +2025,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     // Show log contact dialog 
     auto logDialog = new LogEntryDialog(this);
     logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz, (int)snr);
+    logDialog->Destroy();
 }
 
 // Force manual resync, just in case demod gets stuck on false sync
