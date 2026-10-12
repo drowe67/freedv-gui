@@ -94,7 +94,13 @@ private:
     wxString popupChoice_;
     PopupRecord lastPopup_;
 
+    // Titles of the file and folder choosers that would have been displayed,
+    // and what to choose from the next ones (false to cancel).
+    std::vector<wxString> pathDialogs_;
+    std::deque<std::pair<bool, wxString>> pathDialogAnswers_;
+
     int onMessageBox_(const wxString& message, const wxString& caption, int style);
+    bool onPathDialog_(const wxString& title, wxString& path);
     void onPopupMenu_(wxWindow* window, wxMenu* menu);
     void expectPopupMenu_(yyjson_val* request);
     void popupMenuExpected_();
@@ -120,6 +126,8 @@ private:
     void commandComboPopup_(yyjson_val* id, yyjson_val* request);
     void commandDataView_(yyjson_val* id, yyjson_val* request);
     void commandGetState_(yyjson_val* id);
+    void commandKey_(yyjson_val* id, yyjson_val* request);
+    void commandPathDialogs_(yyjson_val* id, yyjson_val* request);
     void commandMessageBoxes_(yyjson_val* id, yyjson_val* request);
     void commandQuit_(yyjson_val* id);
 };

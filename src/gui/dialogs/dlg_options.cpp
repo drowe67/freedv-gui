@@ -1147,6 +1147,127 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(OptionsDlg::OnInitDialog));
 
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("settings");
+    m_notebook->SetName("settings.notebook");
+    m_ckHalfDuplex->SetName("settings.ckHalfDuplex");
+    m_ckLeftChannelVoxTone->SetName("settings.ckLeftChannelVoxTone");
+    m_ckUseHamlibPTT->SetName("settings.ckUseHamlibPTT");
+    m_cbRigName->SetName("settings.cbRigName");
+    m_cbSerialPort->SetName("settings.cbSerialPort");
+    m_cbPttSerialPort->SetName("settings.cbPttSerialPort");
+    m_cbSerialRate->SetName("settings.cbSerialRate");
+    m_tcIcomCIVHex->SetName("settings.tcIcomCIVHex");
+    m_cbPttMethod->SetName("settings.cbPttMethod");
+    m_ckForceRTSOn->SetName("settings.ckForceRTSOn");
+    m_ckForceDTROn->SetName("settings.ckForceDTROn");
+    m_ckUseSerialPTT->SetName("settings.ckUseSerialPTT");
+    m_cbCtlDevicePath->SetName("settings.cbCtlDevicePath");
+    m_rbUseDTR->SetName("settings.rbUseDTR");
+    m_ckRTSPos->SetName("settings.ckRTSPos");
+    m_rbUseRTS->SetName("settings.rbUseRTS");
+    m_ckDTRPos->SetName("settings.ckDTRPos");
+    m_ckUsePTTInput->SetName("settings.ckUsePTTInput");
+    m_ckCTSPos->SetName("settings.ckCTSPos");
+    m_cbCtlDevicePathPttIn->SetName("settings.cbCtlDevicePathPttIn");
+    m_buttonTestPTT->SetName("settings.buttonTestPTT");
+    m_ckboxUseAnalogModes->SetName("settings.ckboxUseAnalogModes");
+    m_ckboxEnableFreqModeChanges->SetName("settings.ckboxEnableFreqModeChanges");
+    m_ckboxEnableFreqChangesOnly->SetName("settings.ckboxEnableFreqChangesOnly");
+    m_ckboxNoFreqModeChanges->SetName("settings.ckboxNoFreqModeChanges");
+    m_ckboxEnableSpacebarForPTT->SetName("settings.ckboxEnableSpacebarForPTT");
+    m_ckboxPTTMomentaryMode->SetName("settings.ckboxPTTMomentaryMode");
+    m_txtPTTKeyName->SetName("settings.txtPTTKeyName");
+    m_btnSetPTTKey->SetName("settings.btnSetPTTKey");
+    m_txtTxRxDelayMilliseconds->SetName("settings.txtTxRxDelayMilliseconds");
+    m_ckboxFrequencyEntryAsKHz->SetName("settings.ckboxFrequencyEntryAsKHz");
+    m_ckboxTOTTimerEnabled->SetName("settings.ckboxTOTTimerEnabled");
+    m_txtTOTTimerSecs->SetName("settings.txtTOTTimerSecs");
+    m_waterfallColorScheme1->SetName("settings.waterfallColorScheme1");
+    m_waterfallColorScheme2->SetName("settings.waterfallColorScheme2");
+    m_waterfallColorScheme3->SetName("settings.waterfallColorScheme3");
+    m_freedvReporterTxBackgroundColor->SetName("settings.freedvReporterTxBackgroundColor");
+    m_freedvReporterTxForegroundColor->SetName("settings.freedvReporterTxForegroundColor");
+    m_freedvReporterRxBackgroundColor->SetName("settings.freedvReporterRxBackgroundColor");
+    m_freedvReporterRxForegroundColor->SetName("settings.freedvReporterRxForegroundColor");
+    m_freedvReporterMsgBackgroundColor->SetName("settings.freedvReporterMsgBackgroundColor");
+    m_freedvReporterMsgForegroundColor->SetName("settings.freedvReporterMsgForegroundColor");
+    m_cbxNumSpectrumAveraging->SetName("settings.cbxNumSpectrumAveraging");
+    m_buttonChooseVoiceKeyerWaveFilePath->SetName("settings.buttonChooseVoiceKeyerWaveFilePath");
+    m_txtCtrlVoiceKeyerWaveFilePath->SetName("settings.txtCtrlVoiceKeyerWaveFilePath");
+    m_txtCtrlVoiceKeyerRxPause->SetName("settings.txtCtrlVoiceKeyerRxPause");
+    m_txtCtrlVoiceKeyerRepeats->SetName("settings.txtCtrlVoiceKeyerRepeats");
+    m_buttonChooseQuickRecordRawPath->SetName("settings.buttonChooseQuickRecordRawPath");
+    m_txtCtrlQuickRecordRawPath->SetName("settings.txtCtrlQuickRecordRawPath");
+    m_buttonChooseQuickRecordDecodedPath->SetName("settings.buttonChooseQuickRecordDecodedPath");
+    m_txtCtrlQuickRecordDecodedPath->SetName("settings.txtCtrlQuickRecordDecodedPath");
+    m_lcSoundCard1InDevice->SetName("settings.lcSoundCard1InDevice");
+    m_lcSoundCard1OutDevice->SetName("settings.lcSoundCard1OutDevice");
+    m_lcSoundCard2InDevice->SetName("settings.lcSoundCard2InDevice");
+    m_lcSoundCard2OutDevice->SetName("settings.lcSoundCard2OutDevice");
+    m_tcSoundCard1InDevice->SetName("settings.tcSoundCard1InDevice");
+    m_tcSoundCard1OutDevice->SetName("settings.tcSoundCard1OutDevice");
+    m_tcSoundCard2InDevice->SetName("settings.tcSoundCard2InDevice");
+    m_tcSoundCard2OutDevice->SetName("settings.tcSoundCard2OutDevice");
+    m_btnSoundCard1InTest->SetName("settings.btnSoundCard1InTest");
+    m_btnSoundCard1OutTest->SetName("settings.btnSoundCard1OutTest");
+    m_btnSoundCard2InTest->SetName("settings.btnSoundCard2InTest");
+    m_btnSoundCard2OutTest->SetName("settings.btnSoundCard2OutTest");
+    m_btnRefreshRxAudio->SetName("settings.btnRefreshRxAudio");
+    m_btnRefreshTxAudio->SetName("settings.btnRefreshTxAudio");
+    m_ckTxReceiveOnly->SetName("settings.ckTxReceiveOnly");
+    m_ckboxTone->SetName("settings.ckboxTone");
+    m_txtToneFreqHz->SetName("settings.txtToneFreqHz");
+    m_txtToneAmplitude->SetName("settings.txtToneAmplitude");
+    m_ckboxAutoStartOnLaunch->SetName("settings.ckboxAutoStartOnLaunch");
+    m_ckboxReportingEnable->SetName("settings.ckboxReportingEnable");
+    m_txt_callsign->SetName("settings.txt_callsign");
+    m_txt_grid_square->SetName("settings.txt_grid_square");
+    m_ckboxManualFrequencyReporting->SetName("settings.ckboxManualFrequencyReporting");
+    m_ckboxPskReporterEnable->SetName("settings.ckboxPskReporterEnable");
+    m_ckboxFreeDVReporterEnable->SetName("settings.ckboxFreeDVReporterEnable");
+    m_freedvReporterHostname->SetName("settings.freedvReporterHostname");
+    m_ckboxFreeDVReporterUseTls->SetName("settings.ckboxFreeDVReporterUseTls");
+    m_useMetricDistances->SetName("settings.useMetricDistances");
+    m_useCardinalDirections->SetName("settings.useCardinalDirections");
+    m_ckboxFreeDVReporterForceReceiveOnly->SetName("settings.ckboxFreeDVReporterForceReceiveOnly");
+    m_ckboxUDPReportingEnable->SetName("settings.ckboxUDPReportingEnable");
+    m_udpHostname->SetName("settings.udpHostname");
+    m_udpPort->SetName("settings.udpPort");
+    m_ckboxUDPBroadcastEnable->SetName("settings.ckboxUDPBroadcastEnable");
+    m_udpBroadcastAddress->SetName("settings.udpBroadcastAddress");
+    m_udpBroadcastPort->SetName("settings.udpBroadcastPort");
+    m_txtCtrlCsvLogFilePath->SetName("settings.txtCtrlCsvLogFilePath");
+    m_buttonChooseCsvLogFilePath->SetName("settings.buttonChooseCsvLogFilePath");
+    m_BtnFifoReset->SetName("settings.BtnFifoReset");
+    m_txtCtrlFifoSize->SetName("settings.txtCtrlFifoSize");
+    m_ckboxTxRxThreadPriority->SetName("settings.ckboxTxRxThreadPriority");
+    m_ckboxTxRxDumpTiming->SetName("settings.ckboxTxRxDumpTiming");
+    m_ckboxTxRxDumpFifoState->SetName("settings.ckboxTxRxDumpFifoState");
+    m_ckboxVerbose->SetName("settings.ckboxVerbose");
+    m_ckboxFreeDVAPIVerbose->SetName("settings.ckboxFreeDVAPIVerbose");
+    m_experimentalFeatures->SetName("settings.experimentalFeatures");
+    m_showDecodeStats->SetName("settings.showDecodeStats");
+    m_sdbSizer5OK->SetName("settings.sdbSizer5OK");
+    m_sdbSizer5Cancel->SetName("settings.sdbSizer5Cancel");
+    m_sdbSizer5Apply->SetName("settings.sdbSizer5Apply");
+    m_statsResetTime->SetName("settings.statsResetTime");
+    m_ckbox_use_utc_time->SetName("settings.ckbox_use_utc_time");
+    m_freqList->SetName("settings.freqList");
+    m_txtCtrlNewFrequency->SetName("settings.txtCtrlNewFrequency");
+    m_freqListAdd->SetName("settings.freqListAdd");
+    m_freqListRemove->SetName("settings.freqListRemove");
+    m_freqListMoveUp->SetName("settings.freqListMoveUp");
+    m_freqListMoveDown->SetName("settings.freqListMoveDown");
+    m_textFifos->SetName("settings.textFifos");
+    m_labelEnterFreq->SetName("settings.labelEnterFreq");
+    m_stIcomCIVHex->SetName("settings.stIcomCIVHex");
+#if defined(WIN32)
+    m_ckboxDebugConsole->SetName("settings.ckboxDebugConsole");
+    m_ckUseOmniRig->SetName("settings.ckUseOmniRig");
+    m_cbOmniRigRigId->SetName("settings.cbOmniRigRigId");
+#endif // defined(WIN32)
+
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
     m_sdbSizer5Apply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnApply), NULL, this);
@@ -1898,11 +2019,12 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent&) {
                                 wxGetApp().appConfiguration.voiceKeyerWaveFilePath
                                 );
                                 
-    if(pathDialog.ShowModal() == wxID_CANCEL) {
+    wxString path;
+    if(ShowPathDialog(pathDialog, path) == wxID_CANCEL) {
         return;     // the user changed their mind...
     }
     
-    m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
+    m_txtCtrlVoiceKeyerWaveFilePath->SetValue(path);
 }
 
 void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
@@ -1915,17 +2037,18 @@ void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
                                  _("Choose Quick Record save location"),
                                  defaultLocation
                                  );
-     if(pathDialog.ShowModal() == wxID_CANCEL) {
+     wxString path;
+     if(ShowPathDialog(pathDialog, path) == wxID_CANCEL) {
          return;     // the user changed their mind...
      }
 
      if (event.GetEventObject() == m_buttonChooseQuickRecordRawPath)
      {
-        m_txtCtrlQuickRecordRawPath->SetValue(pathDialog.GetPath());
+        m_txtCtrlQuickRecordRawPath->SetValue(path);
      }
      else
      {
-        m_txtCtrlQuickRecordDecodedPath->SetValue(pathDialog.GetPath());
+        m_txtCtrlQuickRecordDecodedPath->SetValue(path);
      }
 }
 
@@ -1939,11 +2062,12 @@ void OptionsDlg::OnChooseCsvLogFilePath(wxCommandEvent&) {
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
     );
 
-    if (fileDialog.ShowModal() == wxID_CANCEL) {
+    wxString path;
+    if (ShowPathDialog(fileDialog, path) == wxID_CANCEL) {
         return;
     }
 
-    m_txtCtrlCsvLogFilePath->SetValue(fileDialog.GetPath());
+    m_txtCtrlCsvLogFilePath->SetValue(path);
 }
 
 void OptionsDlg::OnDebugConsole(wxScrollEvent&) {
@@ -3037,10 +3161,9 @@ void OptionsDlg::testAudioInput(const wxString& inDevName, const wxString& outDe
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard1InTest(wxCommandEvent&)
 {
-    wxString outDev = getSelectedAudioDeviceName(m_tcSoundCard2OutDevice);
-    if (outDev.IsEmpty() || outDev == "none")
-        outDev = getSelectedAudioDeviceName(m_tcSoundCard1OutDevice);
-    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard1InDevice), outDev, m_btnSoundCard1InTest);
+    // What's recorded is played back through the speaker/headphones (which,
+    // in this window, is always the first output device) so that it can be heard.
+    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard1InDevice), getSelectedAudioDeviceName(m_tcSoundCard1OutDevice), m_btnSoundCard1InTest);
 }
 
 //-------------------------------------------------------------------------
@@ -3056,7 +3179,8 @@ void OptionsDlg::OnSoundCard1OutTest(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnSoundCard2InTest(wxCommandEvent&)
 {
-    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard2InDevice), getSelectedAudioDeviceName(m_tcSoundCard2OutDevice), m_btnSoundCard2InTest);
+    // Played back through the speaker/headphones, not the radio.
+    testAudioInput(getSelectedAudioDeviceName(m_tcSoundCard2InDevice), getSelectedAudioDeviceName(m_tcSoundCard1OutDevice), m_btnSoundCard2InTest);
 }
 
 //-------------------------------------------------------------------------

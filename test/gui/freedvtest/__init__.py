@@ -74,6 +74,23 @@ def write_config(path, settings):
                 f.write("%s=%s\n" % (key, value))
 
 
+def read_config(path):
+    """Returns the settings in a FreeDV configuration file, by the names
+    they have in FreeDV's source code (e.g. "/Reporting/Callsign"). Values
+    are returned as text."""
+    settings = {}
+    group = ""
+    with open(path, "r") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if line.startswith("[") and line.endswith("]"):
+                group = "/" + line[1:-1]
+            elif "=" in line:
+                key, _, value = line.partition("=")
+                settings["%s/%s" % (group, key)] = value
+    return settings
+
+
 def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60):
     """Launches FreeDV and returns once it's ready to take commands.
 
@@ -357,6 +374,29 @@ class FreeDV:
         They aren't actually displayed; FreeDV carries on as if their default
         button had been pressed (but see answer_next_message_box())."""
         return self.command("message_boxes", clear=clear)
+
+    def path_dialogs(self, clear=False):
+        """Returns the titles of the file and folder choosers that FreeDV has
+        tried to display so far. They aren't actually displayed; FreeDV
+        carries on as if they had been cancelled, unless choose_next_path()
+        said otherwise."""
+        return self.command("path_dialogs", clear=clear)
+
+    def choose_next_path(self, path):
+        """Has FreeDV carry on from its next file or folder chooser as if the
+        given path had been chosen (or, if None, as if it had been
+        cancelled)."""
+        if path is None:
+            self.command("path_dialogs", cancel=True)
+        else:
+            self.command("path_dialogs", choose=path)
+
+    def key(self, name, key, hold=False):
+        """Presses (and, unless hold is true, releases) a key while the given
+        control has the keyboard focus. key is a single character or one of
+        Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control and F1
+        to F12."""
+        self.command("key", name=name, key=key, hold=hold or None)
 
     def answer_next_message_box(self, answer):
         """Has FreeDV carry on from its next message box as if the given
