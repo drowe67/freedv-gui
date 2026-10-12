@@ -167,6 +167,7 @@ void      clearLastUsedConfigPath();
 class MainFrame;
 class FilterDlg;
 class FreeDVReporterDialog;
+class TestAgent;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -253,6 +254,9 @@ class MainApp : public wxApp
         int m_reportCounter;
     protected:
     private:
+        // Lets a GUI test script drive FreeDV (see test_agent.h).
+        std::shared_ptr<TestAgent> testAgent_;
+
         void UnitTest_();
 };
 

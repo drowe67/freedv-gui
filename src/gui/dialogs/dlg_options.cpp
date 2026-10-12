@@ -2502,7 +2502,8 @@ void OptionsDlg::updateRadioControlState()
     m_sdbSizer5Cancel->Enable(!isTesting_);
     m_sdbSizer5Apply->Enable(!isTesting_);
 
-    if (m_cbPttMethod->GetSelection() == HamlibRigController::PTT_VIA_CAT || m_cbPttMethod->GetSelection() == HamlibRigController::PTT_VIA_NONE)
+    // A separate serial device for PTT only applies when keying with RTS or DTR.
+    if (m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_RTS && m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_DTR)
         m_cbPttSerialPort->Enable(false);
 }
 

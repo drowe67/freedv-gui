@@ -1,0 +1,95 @@
+//==========================================================================
+// Name:            test_agent.h
+//
+// Purpose:         Lets a GUI test script drive FreeDV over a local socket.
+//
+// License:
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU Lesser General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//==========================================================================
+#ifndef TEST_AGENT_H
+#define TEST_AGENT_H
+
+#include <atomic>
+#include <mutex>
+#include <string>
+#include <vector>
+
+#include <wx/wx.h>
+
+#include "util/TcpConnectionHandler.h"
+#include "yyjson.h"
+
+// Connects to a test script (see test/gui/freedvtest) listening on localhost
+// and executes the commands it sends. Each command and each reply is a single
+// line of JSON:
+//
+//     {"id": 1, "cmd": "click", "name": "main.btnOnOff"}
+//     {"id": 1, "ok": true, "result": null}
+//
+// Widgets are addressed by the name given to them with wxWindow::SetName().
+// Commands are executed on the UI thread. Those that perform an action reply
+// before performing it, as the action may not return for some time (e.g. a
+// button that opens a modal dialog); commands sent in the meantime are
+// executed by that dialog's event loop.
+class TestAgent : public TcpConnectionHandler
+{
+public:
+    explicit TestAgent(int port);
+    virtual ~TestAgent();
+
+protected:
+    virtual void onConnect_() override;
+    virtual void onDisconnect_() override;
+    virtual void onReceive_(char* buf, int length) override;
+
+private:
+    struct MessageBoxRecord
+    {
+        wxString message;
+        wxString caption;
+        int style;
+    };
+
+    // Only touched by the UI thread.
+    static TestAgent* Instance_;
+
+    std::atomic<bool> closing_;
+    std::string lineBuffer_; // only touched by the connection's thread
+
+    std::mutex messageBoxMutex_;
+    std::vector<MessageBoxRecord> messageBoxes_;
+
+    int onMessageBox_(const wxString& message, const wxString& caption, int style);
+
+    void handleLine_(std::string const& line);
+    void reply_(yyjson_mut_doc* doc);
+    void replyOk_(yyjson_val* id, yyjson_mut_doc* doc, yyjson_mut_val* result = nullptr);
+    void replyError_(yyjson_val* id, wxString const& error);
+
+    wxWindow* findWindow_(yyjson_val* id, yyjson_val* request);
+    yyjson_mut_val* describeWindow_(yyjson_mut_doc* doc, wxWindow* window, bool includeItems);
+
+    void commandListWindows_(yyjson_val* id);
+    void commandListWidgets_(yyjson_val* id, yyjson_val* request);
+    void commandGet_(yyjson_val* id, yyjson_val* request);
+    void commandClick_(yyjson_val* id, yyjson_val* request);
+    void commandSetValue_(yyjson_val* id, yyjson_val* request);
+    void commandClose_(yyjson_val* id, yyjson_val* request);
+    void commandMenu_(yyjson_val* id, yyjson_val* request);
+    void commandGetState_(yyjson_val* id);
+    void commandMessageBoxes_(yyjson_val* id, yyjson_val* request);
+    void commandQuit_(yyjson_val* id);
+};
+
+#endif // TEST_AGENT_H

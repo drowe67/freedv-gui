@@ -874,8 +874,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR #1513, #1539)
     * Add dark mode support for Windows. (PR #1518, #1529)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
+    * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
+    * Add automated tests of the user interface, starting with the Setup Wizard. (PR #1544)
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 
