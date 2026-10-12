@@ -936,6 +936,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogTune->SetName("main.btnTune");
     m_togBtnVoiceKeyer->SetName("main.btnVoiceKeyer");
     m_btnTogPTT->SetName("main.btnPTT");
+    m_txLevelBox->SetName("main.boxTxLevel");
+    micSpeakerBox->SetName("main.boxMicSpkrLevel");
+    m_freqBox->SetName("main.boxReportFrequency");
 
     //-------------------
     // Tab ordering for accessibility

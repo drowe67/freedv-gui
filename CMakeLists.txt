@@ -866,6 +866,14 @@ foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
     set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui)
 endforeach(scenario)
+
+# These measure what FreeDV plays and records, so they're kept from running
+# alongside anything else.
+foreach(scenario transmit ptt_key tx_level receive analog play_file voice_keyer voice_keyer_files recording time_out_timer menus)
+    add_test(NAME gui_main_window_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
+    set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+endforeach(scenario)
 endif(LINUX)
 
 endif(UNITTEST)

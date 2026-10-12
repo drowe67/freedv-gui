@@ -35,6 +35,7 @@
 #include "freedv_interface.h"
 
 extern std::atomic<bool> g_tx;
+extern std::atomic<int> g_analog;
 extern std::atomic<bool> isModemRunning;
 extern FreeDVInterface freedvInterface;
 
@@ -592,6 +593,12 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
         auto dialog = wxDynamicCast(window, wxDialog);
         yyjson_mut_obj_add_bool(doc, obj, "modal", dialog != nullptr && dialog->IsModal());
         yyjson_mut_obj_add_bool(doc, obj, "active", topLevel->IsActive());
+
+        auto frame = wxDynamicCast(window, wxFrame);
+        if (frame != nullptr && frame->GetStatusBar() != nullptr)
+        {
+            AddString_(doc, obj, "status", frame->GetStatusBar()->GetStatusText());
+        }
         return obj;
     }
 
@@ -1097,6 +1104,26 @@ void TestAgent::commandSetValue_(yyjson_val* id, yyjson_val* request)
 
         replyOk_(id, yyjson_mut_doc_new(nullptr));
         book->SetSelection(page);
+    }
+    else if (auto slider = wxDynamicCast(window, wxSlider))
+    {
+        if (!yyjson_is_int(value) || yyjson_get_int(value) < slider->GetMin() || yyjson_get_int(value) > slider->GetMax())
+        {
+            replyError_(id, wxString::Format(
+                "'%s' needs a value from %d to %d", window->GetName(), slider->GetMin(), slider->GetMax()));
+            return;
+        }
+
+        // As if dragged there.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        slider->SetValue(yyjson_get_int(value));
+        for (auto type : { wxEVT_SCROLL_THUMBTRACK, wxEVT_SCROLL_THUMBRELEASE, wxEVT_SCROLL_CHANGED })
+        {
+            wxScrollEvent event(type, slider->GetId(), slider->GetValue());
+            event.SetEventObject(slider);
+            slider->ProcessWindowEvent(event);
+        }
+        SendCommandEvent_(window, wxEVT_SLIDER, slider->GetValue());
     }
     else if (auto colourPicker = wxDynamicCast(window, wxColourPickerCtrl))
     {
@@ -1637,6 +1664,7 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_bool(doc, state, "transmitting", g_tx.load(std::memory_order_acquire));
     yyjson_mut_obj_add_int(doc, state, "numSoundCards", g_nSoundCards);
     yyjson_mut_obj_add_int(doc, state, "sync", running ? freedvInterface.getSync() : 0);
+    yyjson_mut_obj_add_bool(doc, state, "analog", g_analog.load(std::memory_order_relaxed) != 0);
 
     yyjson_mut_val* audio = yyjson_mut_obj(doc);
     yyjson_mut_obj_add_val(doc, audio, "soundCard1In", DescribeSoundDevice_(doc, config.audioConfiguration.soundCard1In));
@@ -1767,8 +1795,10 @@ void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
     // The window (and those that it's inside) get a chance to act on the
     // key before it's treated as input, and anything that does so stops
     // there.
+    // A key can also be held down, to be released later.
     bool heldDownOnly = yyjson_get_bool(yyjson_obj_get(request, "hold"));
-    if (!sendKeyEvent(wxEVT_CHAR_HOOK) && !sendKeyEvent(wxEVT_KEY_DOWN))
+    bool releaseOnly = yyjson_get_bool(yyjson_obj_get(request, "release"));
+    if (!releaseOnly && !sendKeyEvent(wxEVT_CHAR_HOOK) && !sendKeyEvent(wxEVT_KEY_DOWN))
     {
         sendKeyEvent(wxEVT_CHAR);
     }
