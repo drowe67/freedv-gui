@@ -186,3 +186,26 @@ class VirtualAudioDevices:
             if time.monotonic() > deadline:
                 raise RuntimeError("Audio device %s did not appear" % name)
             time.sleep(0.5)
+
+
+def streams(pid):
+    """Returns the audio streams that a program has open: for each, whether
+    it's a "playback" or "record" stream, its "index" and the name of the
+    "device" it's connected to."""
+    import json
+
+    found = []
+    for kind, listing, devices, key in [("playback", "sink-inputs", "sinks", "sink"),
+                                        ("record", "source-outputs", "sources", "source")]:
+        names = {device["index"]: device["name"] for device in json.loads(_pactl("--format=json", "list", devices))}
+        for stream in json.loads(_pactl("--format=json", "list", listing)):
+            if str(stream.get("properties", {}).get("application.process.id")) == str(pid):
+                found.append({"kind": kind, "index": stream["index"], "device": names.get(stream[key])})
+    return found
+
+
+def move_stream(stream, device):
+    """Connects one of streams() to a different device, as the system's
+    sound settings (or the device it was using going away) would."""
+    command = "move-sink-input" if stream["kind"] == "playback" else "move-source-output"
+    _pactl(command, str(stream["index"]), device)

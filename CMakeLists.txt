@@ -887,6 +887,20 @@ foreach(scenario controls volume equalizer noise_suppression)
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
     set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
 endforeach(scenario)
+
+# These need a C compiler when run, for what stands in for a serial port's
+# control lines (see test/gui/freedvtest/serial.py).
+foreach(scenario rts polarity ptt_input errors settings_ptt_test)
+    add_test(NAME gui_serial_ptt_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_serial_ptt.py ${scenario})
+    set_tests_properties(gui_serial_ptt_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
+
+foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved)
+    add_test(NAME gui_audio_errors_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_audio_errors.py ${scenario})
+    set_tests_properties(gui_audio_errors_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+endforeach(scenario)
 endif(LINUX)
 
 endif(UNITTEST)

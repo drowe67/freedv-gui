@@ -1051,7 +1051,10 @@ def test_auto_start():
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
     try:
         config = os.path.join(config_dir, "freedv.conf")
-        freedvtest.write_config(config, audio_settings())
+        # (Once running, FreeDV looks for its FreeDV Reporter server; keep it
+        # away from the public one.)
+        freedvtest.write_config(config, dict(audio_settings(), **{"/Reporting/FreeDV/Hostname": NOWHERE,
+                                                                  "/Reporting/FreeDV/UseTls": False}))
         with audio_devices():
             with freedvtest.start(config=config) as app:
                 app.wait_for_window("main")
