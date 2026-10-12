@@ -811,6 +811,142 @@ def test_qsy():
             quit_and_check_log(app)
 
 
+def test_row_actions():
+    """What can be done to a station in the list with the mouse, other than
+    selecting it: looking it up, copying its message and tuning to it."""
+    with audio_devices(), ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(7177000)
+        k1abc.set_message("Calling CQ on 40m")
+        vk5dgr = server.station("VK5DGR", "PF95", rx_only=True)
+        vk5dgr.set_frequency(14240000)
+
+        # With a radio that FreeDV can tune: Hamlib's "Dummy" rig.
+        settings = reporter_settings(server.hostname)
+        settings.update(audio_settings())
+        settings.update({"/Reporting/ManualFrequencyReporting": False, "/Hamlib/UseForPTT": True,
+                         "/Hamlib/RigNameStr": "Hamlib Dummy"})
+        with freedvtest.start(settings=settings) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, ["K1ABC", "VK5DGR"])
+            wait_for_cell(app, "K1ABC", MESSAGE, "Calling CQ on 40m")
+            vk5dgr.receive("K1ABC", "RADEV1", 5)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
+
+            lookups = ["Lookup via QRZ", "Lookup via HamQTH", "Lookup via HamCall"]
+
+            def menu(callsign, column, choose=None):
+                app.activate("reporter")
+                return [item["label"] for item in app.row_context_menu(LIST, (CALLSIGN, callsign), column, choose)]
+
+            # Right-clicking a callsign offers places to look it up...
+            check_equal(menu("K1ABC", CALLSIGN), lookups, "Menu for K1ABC's callsign")
+            check_equal(app.browser_urls(), [], "Web pages opened by just looking at the menu")
+            for item, url in zip(lookups, ["https://www.qrz.com/db/K1ABC", "https://www.hamqth.com/K1ABC",
+                                           "https://hamcall.net/call?callsign=K1ABC"]):
+                menu("K1ABC", CALLSIGN, choose=item)
+                check_equal(app.browser_urls(clear=True), [url], "Web pages opened by " + item)
+
+            # ...including the callsign of whoever a station is hearing.
+            check_equal(menu("VK5DGR", RX_CALLSIGN, choose="Lookup via QRZ"), lookups, "Menu for who VK5DGR hears")
+            check_equal(app.browser_urls(clear=True), ["https://www.qrz.com/db/K1ABC"], "Web pages opened")
+            menu("VK5DGR", CALLSIGN, choose="Lookup via HamQTH")
+            check_equal(app.browser_urls(clear=True), ["https://www.hamqth.com/VK5DGR"], "Web pages opened")
+
+            # Right-clicking a message offers to copy it.
+            check_equal(menu("K1ABC", MESSAGE, choose="Copy message"), ["Copy message"], "Menu for K1ABC's message")
+            check_equal(app.clipboard(), "Calling CQ on 40m", "What's on the clipboard")
+            check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
+                        "Selected station after right-clicking")
+
+            # Anywhere else, there's no menu.
+            for callsign, column in [("K1ABC", FREQUENCY), ("VK5DGR", MESSAGE), ("K1ABC", RX_CALLSIGN)]:
+                try:
+                    items = menu(callsign, column)
+                    check(False, "Right-clicking column %d for %s gave a menu: %r" % (column, callsign, items))
+                except freedvtest.CommandError as e:
+                    check("no popup menu appeared" in str(e), "Right-clicking column %d failed: %s" % (column, e))
+
+            # The website button opens the server's own page.
+            app.click("reporter.btnWebsite")
+            check_equal(app.browser_urls(clear=True), ["https://%s/" % server.hostname], "Web pages opened")
+            check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
+                        "Selected station after opening the website")
+
+            # Double-clicking a station does nothing without a radio to tune...
+            app.activate_row(LIST, (CALLSIGN, "K1ABC"))
+            time.sleep(0.5)
+            check_equal(app.message_boxes(), [], "Messages displayed")
+
+            # ...and with one, takes it to where that station is.
+            start_modem(app)
+            app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+            app.select_row(LIST, (CALLSIGN, "K1ABC"))
+            app.activate_row(LIST, (CALLSIGN, "K1ABC"))
+            app.wait_until(lambda: app.get("main.cboReportFrequency")["value"] == "7.1770", timeout=15,
+                           description="FreeDV's radio to be tuned to K1ABC's frequency")
+            wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, "7.1770")
+            check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
+                        "Selected station after double-clicking")
+            app.activate_row(LIST, (CALLSIGN, "VK5DGR"))
+            app.wait_until(lambda: app.get("main.cboReportFrequency")["value"] == "14.2400", timeout=15,
+                           description="FreeDV's radio to be tuned to VK5DGR's frequency")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
+def test_turn_off():
+    """The main window's button for going off FreeDV Reporter for a while."""
+    with audio_devices(), ReporterServer() as server:
+        watcher = server.viewer()
+        settings = reporter_settings(server.hostname)
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            app.wait_for_window("main")
+            button = "main.btnReporterHidden"
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button to begin with")
+
+            def listed():
+                return CALLSIGN_OF_FREEDV in watcher.callsigns()
+
+            start_modem_only(app)
+            app.wait_until(listed, timeout=15, description="FreeDV to be listed on the server")
+            check_equal(app.get(button)["enabled"], True, "Button enabled while reporting")
+
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn On", True), "Button once turned off")
+            app.wait_until(lambda: not listed(), timeout=15, description="FreeDV to leave the server's list")
+            check_equal(app.state()["config"]["reporting"]["freedvReporterForcedOff"], True, "Turned off")
+
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button once back on")
+            app.wait_until(listed, timeout=15, description="FreeDV to be listed on the server again")
+
+            # Left off, it stays off through a stop and start...
+            app.click(button)
+            app.wait_until(lambda: not listed(), timeout=15, description="FreeDV to leave the server's list")
+            stop_modem(app)
+            check_equal(label(app, button), "Turn On", "Button's label after stopping")
+            start_modem_only(app)
+            time.sleep(3)
+            check_equal(listed(), False, "Listed on the server after starting while turned off")
+
+            # ...until it's turned back on.
+            app.click(button)
+            app.wait_until(listed, timeout=15, description="FreeDV to be listed on the server once turned on")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
+def start_modem_only(app):
+    """start_modem() for when the FreeDV Reporter window isn't open."""
+    app.click("main.btnOnOff")
+    app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+    check_equal(app.message_boxes(), [], "Errors displayed on start")
+    check(app.state()["running"], "FreeDV is not running after pressing Start")
+
+
 def test_window():
     """Opening and closing the window, and it remembering how it was left."""
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
@@ -995,6 +1131,8 @@ SCENARIOS = {
     "columns": test_columns,
     "status_message": test_status_message,
     "qsy": test_qsy,
+    "row_actions": test_row_actions,
+    "turn_off": test_turn_off,
     "window": test_window,
     "connection_burst": test_connection_burst,
 }

@@ -26,7 +26,10 @@
 #include <wx/clrpicker.h>
 #include <wx/combo.h>
 #include <wx/dataview.h>
+#include <wx/clipbrd.h>
+#include <wx/evtloop.h>
 #include <wx/listctrl.h>
+#include <wx/popupwin.h>
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 
@@ -36,6 +39,9 @@
 
 extern std::atomic<bool> g_tx;
 extern std::atomic<int> g_analog;
+extern std::atomic<float> g_RxFreqOffsetHz;
+extern std::atomic<float> g_TxFreqOffsetHz;
+extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<bool> isModemRunning;
 extern FreeDVInterface freedvInterface;
 
@@ -73,6 +79,7 @@ static bool GetItemData_(wxItemContainer* container, unsigned int index, wxStrin
 TestAgent::TestAgent(int port)
     : closing_(false)
     , popupChoiceArmed_(false)
+    , quitAttemptsLeft_(0)
 {
     Instance_ = this;
 
@@ -85,6 +92,10 @@ TestAgent::TestAgent(int port)
     g_pathDialogTestHook = [this](const wxString& title, wxString& path) {
         return onPathDialog_(title, path);
     };
+    g_browserTestHook = [this](const wxString& url) {
+        log_info("Web page not opened for GUI test: %s", (const char*)url.ToUTF8());
+        browserUrls_.push_back(url);
+    };
 
     log_info("Connecting to GUI test controller on port %d", port);
     connect("127.0.0.1", port, false);
@@ -95,6 +106,7 @@ TestAgent::~TestAgent()
     g_wxMessageBoxTestHook = nullptr;
     g_popupMenuTestHook = nullptr;
     g_pathDialogTestHook = nullptr;
+    g_browserTestHook = nullptr;
     Instance_ = nullptr;
 
     // Must be done here rather than in the base class, which can no longer
@@ -174,6 +186,7 @@ bool TestAgent::onPathDialog_(const wxString& title, wxString& path)
     pathDialogs_.push_back(title);
 
     // Unless the script has said what to choose, it's as if the user cancelled.
+    g_pathDialogTestOptions.clear();
     if (pathDialogAnswers_.empty())
     {
         return false;
@@ -181,8 +194,9 @@ bool TestAgent::onPathDialog_(const wxString& title, wxString& path)
 
     auto answer = pathDialogAnswers_.front();
     pathDialogAnswers_.pop_front();
-    path = answer.second;
-    return answer.first;
+    path = answer.path;
+    g_pathDialogTestOptions = answer.options;
+    return answer.choose;
 }
 
 void TestAgent::onPopupMenu_(wxWindow* window, wxMenu* menu)
@@ -378,6 +392,18 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandPathDialogs_(id, request);
     }
+    else if (cmd == "browser_urls")
+    {
+        commandBrowserUrls_(id, request);
+    }
+    else if (cmd == "mouse")
+    {
+        commandMouse_(id, request);
+    }
+    else if (cmd == "clipboard")
+    {
+        commandClipboard_(id);
+    }
     else if (cmd == "message_boxes")
     {
         commandMessageBoxes_(id, request);
@@ -494,9 +520,26 @@ static std::vector<wxDataViewItem> GetDisplayedRows_(wxDataViewCtrl* dataView)
     {
         unsigned int column = (sortColumn != nullptr) ? sortColumn->GetModelColumn() : (unsigned int)wxNOT_FOUND;
         bool ascending = (sortColumn != nullptr) ? sortColumn->IsSortOrderAscending() : true;
-        std::stable_sort(rows.begin(), rows.end(), [&](wxDataViewItem const& first, wxDataViewItem const& second) {
-            return model->Compare(first, second, column, ascending) < 0;
+        // Rows that compare as equal stay in the order that the model gave
+        // them. (Not std::stable_sort: with some standard libraries, that
+        // uses something deprecated and so doesn't build without warnings.)
+        std::vector<size_t> order(rows.size());
+        for (size_t index = 0; index < order.size(); index++)
+        {
+            order[index] = index;
+        }
+        std::sort(order.begin(), order.end(), [&](size_t first, size_t second) {
+            int result = model->Compare(rows[first], rows[second], column, ascending);
+            return (result != 0) ? (result < 0) : (first < second);
         });
+
+        std::vector<wxDataViewItem> sorted;
+        sorted.reserve(rows.size());
+        for (auto index : order)
+        {
+            sorted.push_back(rows[index]);
+        }
+        rows = std::move(sorted);
     }
 
     return rows;
@@ -1221,6 +1264,20 @@ void TestAgent::commandClose_(yyjson_val* id, yyjson_val* request)
     if (window == nullptr) return;
 
     wxString error;
+
+    // Something that pops up until the user clicks elsewhere.
+    if (auto popup = wxDynamicCast(window, wxPopupTransientWindow))
+    {
+        // A click outside it, which is seen by whatever in it has the mouse.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        wxWindow* target = (popup->GetChildren().GetCount() == 1) ? popup->GetChildren().GetFirst()->GetData() : popup;
+        wxMouseEvent event(wxEVT_LEFT_DOWN);
+        event.SetEventObject(target);
+        event.SetPosition(wxPoint(-10, -10));
+        target->ProcessWindowEvent(event);
+        return;
+    }
+
     if (wxDynamicCast(window, wxTopLevelWindow) == nullptr)
     {
         replyError_(id, wxString::Format("'%s' is not a top-level window", window->GetName()));
@@ -1709,6 +1766,11 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_int(doc, state, "numSoundCards", g_nSoundCards);
     yyjson_mut_obj_add_int(doc, state, "sync", running ? freedvInterface.getSync() : 0);
     yyjson_mut_obj_add_bool(doc, state, "analog", g_analog.load(std::memory_order_relaxed) != 0);
+    yyjson_mut_obj_add_real(doc, state, "rxFreqOffsetHz", g_RxFreqOffsetHz.load(std::memory_order_relaxed));
+    yyjson_mut_obj_add_real(doc, state, "txFreqOffsetHz", g_TxFreqOffsetHz.load(std::memory_order_relaxed));
+    yyjson_mut_obj_add_bool(doc, state, "loopPlayFileFromRadio", g_loopPlayFileFromRadio.load(std::memory_order_relaxed));
+    yyjson_mut_obj_add_real(doc, state, "monitorTxAudioVol", config.monitorTxAudioVol.get());
+    yyjson_mut_obj_add_real(doc, state, "monitorVoiceKeyerAudioVol", config.monitorVoiceKeyerAudioVol.get());
 
     yyjson_mut_val* audio = yyjson_mut_obj(doc);
     yyjson_mut_obj_add_val(doc, audio, "soundCard1In", DescribeSoundDevice_(doc, config.audioConfiguration.soundCard1In));
@@ -1739,6 +1801,7 @@ void TestAgent::commandGetState_(yyjson_val* id)
     AddString_(doc, reporting, "reportingGridSquare", reportingConfig.reportingGridSquare.get());
     yyjson_mut_obj_add_bool(doc, reporting, "freedvReporterEnabled", reportingConfig.freedvReporterEnabled.get());
     yyjson_mut_obj_add_bool(doc, reporting, "pskReporterEnabled", reportingConfig.pskReporterEnabled.get());
+    yyjson_mut_obj_add_bool(doc, reporting, "freedvReporterForcedOff", reportingConfig.freedvReporterForcedOff.get());
 
     yyjson_mut_val* configObj = yyjson_mut_obj(doc);
     yyjson_mut_obj_add_val(doc, configObj, "audio", audio);
@@ -1822,6 +1885,7 @@ void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
     static const std::map<wxString, int> namedKeys = {
         { "Escape", WXK_ESCAPE }, { "Space", WXK_SPACE }, { "Tab", WXK_TAB }, { "Enter", WXK_RETURN },
         { "Backspace", WXK_BACK }, { "Delete", WXK_DELETE }, { "Shift", WXK_SHIFT }, { "Control", WXK_CONTROL },
+        { "Up", WXK_UP }, { "Down", WXK_DOWN }, { "Left", WXK_LEFT }, { "Right", WXK_RIGHT },
         { "F1", WXK_F1 }, { "F2", WXK_F2 }, { "F3", WXK_F3 }, { "F4", WXK_F4 }, { "F5", WXK_F5 }, { "F6", WXK_F6 },
         { "F7", WXK_F7 }, { "F8", WXK_F8 }, { "F9", WXK_F9 }, { "F10", WXK_F10 }, { "F11", WXK_F11 },
         { "F12", WXK_F12 },
@@ -1892,23 +1956,132 @@ void TestAgent::commandPathDialogs_(yyjson_val* id, yyjson_val* request)
     const char* choose = yyjson_get_str(yyjson_obj_get(request, "choose"));
     if (choose != nullptr)
     {
-        pathDialogAnswers_.push_back({ true, wxString::FromUTF8(choose) });
+        // Along with whatever else the chooser offers, e.g. { "loop": true }.
+        PathDialogAnswer answer { true, wxString::FromUTF8(choose), {} };
+        yyjson_val* options = yyjson_obj_get(request, "options");
+        if (yyjson_is_obj(options))
+        {
+            yyjson_obj_iter iter = yyjson_obj_iter_with(options);
+            yyjson_val* key = nullptr;
+            while ((key = yyjson_obj_iter_next(&iter)) != nullptr)
+            {
+                answer.options[wxString::FromUTF8(yyjson_get_str(key))] = yyjson_get_bool(yyjson_obj_iter_get_val(key));
+            }
+        }
+        pathDialogAnswers_.push_back(answer);
     }
     else if (yyjson_get_bool(yyjson_obj_get(request, "cancel")))
     {
-        pathDialogAnswers_.push_back({ false, wxString() });
+        pathDialogAnswers_.push_back({ false, wxString(), {} });
     }
 
     replyOk_(id, doc, list);
+}
+
+void TestAgent::commandBrowserUrls_(yyjson_val* id, yyjson_val* request)
+{
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* list = yyjson_mut_arr(doc);
+    for (auto& url : browserUrls_)
+    {
+        yyjson_mut_arr_add_strcpy(doc, list, ToUtf8_(url).c_str());
+    }
+    if (yyjson_get_bool(yyjson_obj_get(request, "clear")))
+    {
+        browserUrls_.clear();
+    }
+    replyOk_(id, doc, list);
+}
+
+void TestAgent::commandClipboard_(yyjson_val* id)
+{
+    wxString text;
+    if (wxTheClipboard->Open())
+    {
+        if (wxTheClipboard->IsSupported(wxDF_UNICODETEXT) || wxTheClipboard->IsSupported(wxDF_TEXT))
+        {
+            wxTextDataObject data;
+            wxTheClipboard->GetData(data);
+            text = data.GetText();
+        }
+        wxTheClipboard->Close();
+    }
+
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* result = yyjson_mut_obj(doc);
+    AddString_(doc, result, "text", text);
+    replyOk_(id, doc, result);
+}
+
+void TestAgent::commandMouse_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    static const std::map<std::string, wxEventType> eventTypes = {
+        { "motion", wxEVT_MOTION }, { "enter", wxEVT_ENTER_WINDOW }, { "leave", wxEVT_LEAVE_WINDOW },
+        { "left_down", wxEVT_LEFT_DOWN }, { "left_up", wxEVT_LEFT_UP }, { "left_dclick", wxEVT_LEFT_DCLICK },
+        { "right_down", wxEVT_RIGHT_DOWN }, { "right_up", wxEVT_RIGHT_UP }, { "right_dclick", wxEVT_RIGHT_DCLICK },
+        { "middle_down", wxEVT_MIDDLE_DOWN }, { "middle_up", wxEVT_MIDDLE_UP }, { "wheel", wxEVT_MOUSEWHEEL },
+    };
+    const char* eventName = yyjson_get_str(yyjson_obj_get(request, "event"));
+    auto found = eventTypes.find(eventName != nullptr ? eventName : "");
+    if (found == eventTypes.end())
+    {
+        replyError_(id, wxString::Format("unknown mouse event '%s'", wxString::FromUTF8(eventName != nullptr ? eventName : "")));
+        return;
+    }
+
+    // Where in the window it happens, as fractions of its width and height
+    // (its middle unless said otherwise).
+    yyjson_val* x = yyjson_obj_get(request, "x");
+    yyjson_val* y = yyjson_obj_get(request, "y");
+    wxSize size = window->GetClientSize();
+    wxPoint position(
+        (int)((yyjson_is_num(x) ? yyjson_get_num(x) : 0.5) * size.GetWidth()),
+        (int)((yyjson_is_num(y) ? yyjson_get_num(y) : 0.5) * size.GetHeight()));
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+
+    wxMouseEvent event(found->second);
+    event.SetEventObject(window);
+    event.SetId(window->GetId());
+    event.SetPosition(position);
+    if (found->second == wxEVT_MOUSEWHEEL)
+    {
+        // Notches: positive is away from the user.
+        yyjson_val* rotation = yyjson_obj_get(request, "rotation");
+        event.m_wheelDelta = 120;
+        event.m_wheelRotation = 120 * (yyjson_is_int(rotation) ? yyjson_get_int(rotation) : 1);
+        event.m_linesPerAction = 3;
+    }
+    window->ProcessWindowEvent(event);
 }
 
 void TestAgent::commandQuit_(yyjson_val* id)
 {
     replyOk_(id, yyjson_mut_doc_new(nullptr));
 
-    wxWindow* topWindow = wxTheApp->GetTopWindow();
-    if (topWindow != nullptr)
-    {
-        topWindow->Close();
-    }
+    // The main window can't be closed from inside a dialog's own event loop,
+    // and one that's only just been dismissed can still be finishing up
+    // when the script's next command arrives (which is then run by that
+    // loop). So keep asking, from the event loop each time, until it has
+    // closed. (This can't happen to a user: the main window can't be used
+    // while such a dialog is open.)
+    quitAttemptsLeft_ = 500;
+    quitTimer_.Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
+        wxWindow* topWindow = wxTheApp->GetTopWindow();
+        if (topWindow == nullptr || topWindow->Close() || --quitAttemptsLeft_ <= 0)
+        {
+            quitTimer_.Stop();
+        }
+    });
+    quitTimer_.Start(20);
 }

@@ -368,6 +368,12 @@ class Station:
     def _callsign_of(self, data):
         return data.get("callsign") or self._users.get(data.get("sid"))
 
+    def callsigns(self):
+        """Returns the callsigns of the stations that the server currently
+        lists (which doesn't include any that are hiding)."""
+        with self._lock:
+            return sorted(self._users.values())
+
     def sid_of(self, callsign):
         """Returns the server's identifier for a station that's connected."""
         with self._lock:

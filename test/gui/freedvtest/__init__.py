@@ -282,7 +282,8 @@ class FreeDV:
                 pass
 
     def close(self, name):
-        """Closes a top-level window as its title bar's close button would."""
+        """Closes a top-level window as its title bar's close button would,
+        or something that's popped up as clicking elsewhere would."""
         self.command("close", name=name)
 
     def menu(self, path, window=None):
@@ -396,21 +397,40 @@ class FreeDV:
         said otherwise."""
         return self.command("path_dialogs", clear=clear)
 
-    def choose_next_path(self, path):
+    def choose_next_path(self, path, **options):
         """Has FreeDV carry on from its next file or folder chooser as if the
         given path had been chosen (or, if None, as if it had been
-        cancelled)."""
+        cancelled). options are for whatever else the chooser offers, e.g.
+        loop=True when choosing a file to play."""
         if path is None:
             self.command("path_dialogs", cancel=True)
         else:
-            self.command("path_dialogs", choose=path)
+            self.command("path_dialogs", choose=path, options=options or None)
+
+    def browser_urls(self, clear=False):
+        """Returns the addresses of the web pages that FreeDV has tried to
+        open so far. They aren't actually opened."""
+        return self.command("browser_urls", clear=clear)
+
+    def clipboard(self):
+        """Returns the text that's on the clipboard, as FreeDV sees it."""
+        return self.command("clipboard")["text"]
+
+    def mouse(self, name, event, x=None, y=None, rotation=None):
+        """Sends a mouse event to a control: "motion", "enter", "leave",
+        "left_down", "left_up", "left_dclick", "right_down", "right_up",
+        "right_dclick", "middle_down", "middle_up" or "wheel". x and y say
+        where, as fractions of the control's width and height (its middle if
+        not given); rotation is how many notches the wheel is turned, with
+        positive being away from the user."""
+        self.command("mouse", name=name, event=event, x=x, y=y, rotation=rotation)
 
     def key(self, name, key, hold=False, release=False):
         """Presses and releases a key while the given control has the
         keyboard focus. With hold, the key is only pressed; with release, a
         key that's being held is released. key is a single character or one
-        of Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control and
-        F1 to F12."""
+        of Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control, Up,
+        Down, Left, Right and F1 to F12."""
         self.command("key", name=name, key=key, hold=hold or None, release=release or None)
 
     def answer_next_message_box(self, answer):

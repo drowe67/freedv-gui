@@ -187,7 +187,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         // (There's no extra control if the dialog was never displayed, i.e.
         // while a GUI test script is choosing the file.)
         g_loopPlayFileFromRadio.store(
-            ctrl != nullptr && static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn(), std::memory_order_relaxed);
+            ctrl != nullptr ?
+                static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn() :
+                (g_pathDialogTestHook && g_pathDialogTestOptions[wxT("loop")]),
+            std::memory_order_relaxed);
 
         wxString statusText = "";
         if(extension == wxT("raw")) {

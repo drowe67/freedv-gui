@@ -297,7 +297,7 @@ void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
-    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/releases");
+    LaunchBrowser("https://github.com/drowe67/freedv-gui/releases");
 }
 
 //-------------------------------------------------------------------------
@@ -313,7 +313,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpManual( wxCommandEvent& )
 {
-    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
+    LaunchBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
 
 //-------------------------------------------------------------------------
@@ -321,7 +321,7 @@ void MainFrame::OnHelpManual( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnHelp( wxCommandEvent& )
 {
-    wxLaunchDefaultBrowser("https://freedv.org/#getting-help");
+    LaunchBrowser("https://freedv.org/#getting-help");
 }
 
 //-------------------------------------------------------------------------
@@ -688,8 +688,6 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
     {
         if(pConfig->DeleteAll())
         {
-            wxLogMessage(_("Config file/registry key successfully deleted."));
-            
             if (wxGetApp().m_sharedReporterObject)
             {
                 wxGetApp().m_sharedReporterObject = nullptr;
@@ -706,10 +704,12 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
             
             // Resets all configuration to defaults.
             loadConfiguration_();
+
+            wxMessageBox(_("Config file/registry key successfully deleted."), _("Restore Defaults"), wxOK | wxICON_INFORMATION, this);
         }
         else
         {
-            wxLogError(_("Deleting config file/registry key failed."));
+            wxMessageBox(_("Deleting config file/registry key failed."), _("Restore Defaults"), wxOK | wxICON_ERROR, this);
         }
     }
 }

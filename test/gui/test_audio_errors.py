@@ -19,7 +19,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone, VirtualAudioDevices, move_stream, streams
+from freedvtest.audio import PrivateAudioServer, Tone, VirtualAudioDevices, move_stream, streams
 from test_main_window import (AUDIBLE, MICROPHONE, RADIO_RX, RADIO_TX, RADIO_TX_MONITOR, SPEAKER, SPEAKER_MONITOR,
                               audio_devices, check, check_equal, check_silent, level, quit_and_check_log, settings,
                               start_modem, stop_modem, wait_for_transmit)
@@ -31,6 +31,8 @@ CARDS = {
     "soundCard2In": VirtualAudioDevices.input_name(MICROPHONE),
     "soundCard2Out": SPEAKER,
 }
+
+SKIPPED = 77
 
 OTHER_OUTPUT = "FreeDVGuiTest_Other_Output"
 OTHER_INPUT = VirtualAudioDevices.input_name("FreeDVGuiTest_Other_Input")
@@ -301,12 +303,89 @@ def test_device_moved():
             quit_and_check_log(app)
 
 
+def test_device_removed():
+    """A device going away while FreeDV is using it, and then all of them
+    at once. This is done with a sound server of the test's own: what was
+    using a device that's removed is moved to the system's default device,
+    which mustn't be someone's real one."""
+    if not PrivateAudioServer.available():
+        print("SKIPPED: PipeWire and what's needed to run it separately were not all found")
+        sys.exit(SKIPPED)
+
+    with PrivateAudioServer() as server:
+        with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE):
+            speaker = VirtualAudioDevices(SPEAKER)
+            speaker.__enter__()
+            try:
+                with freedvtest.start(settings=settings()) as app:
+                    app.wait_for_window("main")
+                    start_modem(app)
+                    app.click("main.btnAnalog")
+                    time.sleep(2)
+
+                    with Tone(RADIO_RX):
+                        time.sleep(0.75)
+                        heard = level(SPEAKER_MONITOR)
+                        check(heard > AUDIBLE, "The radio isn't being played through the speaker (level %d)" % heard)
+
+                        # The speaker's unplugged. FreeDV carries on with
+                        # where the system sends its sound instead.
+                        speaker.__exit__(None, None, None)
+                        expected = dict(CARDS, soundCard2Out=PrivateAudioServer.DEFAULT_OUTPUT)
+                        try:
+                            app.wait_until(lambda: configured_devices(app) == expected, timeout=15)
+                        except freedvtest.FreeDVError:
+                            check_equal(configured_devices(app), expected, "Devices after the speaker was unplugged")
+                        check_equal(app.state()["running"], True, "Running after the speaker was unplugged")
+                        check_equal(app.message_boxes(), [], "Messages displayed after the speaker was unplugged")
+                        time.sleep(1)
+                        heard = level(VirtualAudioDevices.input_name(PrivateAudioServer.DEFAULT_OUTPUT))
+                        check(heard > AUDIBLE,
+                              "The radio isn't being played through the default device instead (level %d)" % heard)
+
+                    # The sound server itself goes away, and everything with
+                    # it. FreeDV says so, rather than carrying on in silence
+                    # or falling over, and can still be stopped and closed.
+                    server.stop()
+                    app.wait_until(lambda: app.message_boxes(), timeout=30,
+                                   description="FreeDV to say that something's wrong with its audio")
+                    time.sleep(2)
+                    boxes = app.message_boxes(clear=True)
+                    print("Messages after losing the sound server: %r" % [box["message"] for box in boxes], flush=True)
+                    check(all(box["message"].startswith("Error encountered while") for box in boxes),
+                          "Messages displayed are %r" % boxes)
+
+                    app.click("main.btnOnOff")
+                    app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], timeout=60,
+                                   description="FreeDV to stop")
+                    check_equal(app.state()["running"], False, "Running after pressing Stop")
+                    app.message_boxes(clear=True)
+
+                    # Starting again without one gets an explanation as well.
+                    app.click("main.btnOnOff")
+                    app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], timeout=60,
+                                   description="FreeDV to give up starting")
+                    time.sleep(1)
+                    boxes = app.message_boxes(clear=True)
+                    print("Messages on starting without a sound server: %r" % [box["message"] for box in boxes],
+                          flush=True)
+                    check(len(boxes) > 0, "Nothing was said about there being no sound server to start with")
+                    check_equal(app.state()["running"], False, "Running without a sound server")
+                    check_equal(app.quit(), 0, "FreeDV's exit code")
+            finally:
+                try:
+                    speaker.__exit__(None, None, None)
+                except Exception:
+                    pass
+
+
 SCENARIOS = {
     "missing_device": test_missing_device,
     "low_sample_rate": test_low_sample_rate,
     "no_devices": test_no_devices,
     "receive_only": test_receive_only,
     "device_moved": test_device_moved,
+    "device_removed": test_device_removed,
 }
 
 
