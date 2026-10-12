@@ -929,9 +929,10 @@ void FilterDlg::adjRunTimeMicInFilter(void) {
 
     g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
-    if (m_running) {
-        *m_newMicInFilter = true;
-    }
+
+    // Asked for whether or not FreeDV was running when this window was
+    // opened, as it may have been started since.
+    *m_newMicInFilter = true;
     wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable = m_MicInEnable->GetValue();
     g_mutexProtectingCallbackData.Unlock();
 
@@ -943,9 +944,7 @@ void FilterDlg::adjRunTimeSpkOutFilter(void) {
 
     g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
-    if (m_running) {
-        *m_newSpkOutFilter = true;
-    }
+    *m_newSpkOutFilter = true;
     wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable = m_SpkOutEnable->GetValue();
     g_mutexProtectingCallbackData.Unlock();
 

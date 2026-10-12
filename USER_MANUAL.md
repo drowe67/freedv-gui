@@ -981,6 +981,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix possible crashes when stopping while using a serial port for PTT input. (PR #1542)
     * Hamlib: fix limit on time spent waiting for the radio not always being applied. (PR #1542)
     * FreeDV Reporter: fix incorrect distances/headings when one's own grid square is incomplete. (PR #1542)
+    * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
+    * Filter: fix equaliser changes being ignored if the window was opened before pressing Start. (PR #1552)
+    * Fix each use of Log QSO leaving a hidden window behind. (PR #1552)
+    * Recording: restrict a pasted recording suffix to the same characters as a typed one. (PR #1552)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
