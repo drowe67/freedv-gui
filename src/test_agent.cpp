@@ -520,9 +520,26 @@ static std::vector<wxDataViewItem> GetDisplayedRows_(wxDataViewCtrl* dataView)
     {
         unsigned int column = (sortColumn != nullptr) ? sortColumn->GetModelColumn() : (unsigned int)wxNOT_FOUND;
         bool ascending = (sortColumn != nullptr) ? sortColumn->IsSortOrderAscending() : true;
-        std::stable_sort(rows.begin(), rows.end(), [&](wxDataViewItem const& first, wxDataViewItem const& second) {
-            return model->Compare(first, second, column, ascending) < 0;
+        // Rows that compare as equal stay in the order that the model gave
+        // them. (Not std::stable_sort: with some standard libraries, that
+        // uses something deprecated and so doesn't build without warnings.)
+        std::vector<size_t> order(rows.size());
+        for (size_t index = 0; index < order.size(); index++)
+        {
+            order[index] = index;
+        }
+        std::sort(order.begin(), order.end(), [&](size_t first, size_t second) {
+            int result = model->Compare(rows[first], rows[second], column, ascending);
+            return (result != 0) ? (result < 0) : (first < second);
         });
+
+        std::vector<wxDataViewItem> sorted;
+        sorted.reserve(rows.size());
+        for (auto index : order)
+        {
+            sorted.push_back(rows[index]);
+        }
+        rows = std::move(sorted);
     }
 
     return rows;
