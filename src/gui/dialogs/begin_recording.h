@@ -36,7 +36,7 @@ class BeginRecordingDialog : public wxDialog
         virtual ~BeginRecordingDialog();
 
         bool isRawRecording() const { return rawRecording_->GetValue(); }
-        wxString getRecordingSuffix() const { return recordingSuffix_->GetValue(); }
+        wxString getRecordingSuffix() const;
         bool isMp3Format() const { return formatMp3_->GetValue(); }
         
     protected:

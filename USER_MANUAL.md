@@ -984,6 +984,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Voice keyer: fix button not showing "Stop Voice Keyer" while the voice keyer is running. (PR #1549)
     * Voice keyer: fix newly recorded file being forgotten the next time FreeDV starts. (PR #1549)
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
+    * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
+    * Filter: fix equaliser changes being ignored if the window was opened before pressing Start. (PR #1552)
+    * Fix each use of Log QSO leaving a hidden window behind. (PR #1552)
+    * Recording: restrict a pasted recording suffix to the same characters as a typed one. (PR #1552)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
