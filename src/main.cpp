@@ -647,6 +647,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         wxFileName fn(configPath);        
         customConfigFileName = fn.GetFullName();
         defaultConfigFilePath = fn.GetPath();
+
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+        // For Load Default Configuration (see below for why it's this).
+        defaultConfigFile = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
     else
     {
@@ -699,6 +704,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 
             wxConfigBase::Set(pConfig);
             defaultConfigFilePath = tempNewFile.GetPath();
+            defaultConfigFile = newFileLocation;
         }
 #else
         defaultConfigFilePath = tempOldFile.GetPath();

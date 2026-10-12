@@ -204,6 +204,10 @@ class MainApp : public wxApp
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         wxString defaultConfigFilePath;
+
+        // Where the default configuration is, if FreeDV has to say (rather
+        // than leaving it to wxWidgets). See MainApp::OnCmdLineParsed().
+        wxString defaultConfigFile;
         
         // PTT -----------------------------------    
         int        m_intHamlibRig;
