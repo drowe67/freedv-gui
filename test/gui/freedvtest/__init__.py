@@ -14,8 +14,13 @@ clicking a button) and retrieves the state of the UI and of FreeDV itself:
         app.quit()
 
 Controls are referred to by the names given to them in FreeDV's source code
-with SetName(); widgets() lists those in a window. A failed check or action
-raises an exception, so a script that runs to completion has passed.
+with SetName(); widgets() lists those in a window. Windows that have no name
+of their own (e.g. dialogs provided by wxWidgets) can be referred to by
+"@<window title>", and the controls in them by "@<window title>/<label>" or
+"@<window title>/<class>", e.g. "@Add Message/OK".
+
+A failed check or action raises an exception, so a script that runs to
+completion has passed.
 
 FreeDV must have been built with -DUNITTEST=1.
 """
@@ -49,23 +54,44 @@ def default_binary():
     return "src/freedv"
 
 
-def start(binary=None, config=None, args=(), env=None, user_config_files=None, timeout=60):
+def write_config(path, settings):
+    """Creates a FreeDV configuration file. settings maps the names of
+    settings as they appear in FreeDV's source code (e.g.
+    "/Reporting/Callsign") to their values. Anything not given has its
+    default value, other than the Setup Wizard not being shown on startup."""
+    groups = {"": {"FirstTimeUse": 0}}
+    for name, value in settings.items():
+        group, _, key = name.strip("/").rpartition("/")
+        if isinstance(value, bool):
+            value = int(value)
+        groups.setdefault(group, {})[key] = value
+
+    with open(path, "w") as f:
+        for group in sorted(groups):
+            if group:
+                f.write("[%s]\n" % group)
+            for key, value in groups[group].items():
+                f.write("%s=%s\n" % (key, value))
+
+
+def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60):
     """Launches FreeDV and returns once it's ready to take commands.
 
     config is the configuration file to use. If not given, FreeDV starts
-    without one, as it does when run for the first time.
+    without one, as it does when run for the first time, unless settings
+    (see write_config()) are given to create one from.
 
     user_config_files maps names to contents of files to place where FreeDV
     looks for other programs' settings (see FreeDV.user_config_dir). FreeDV
     never sees the real ones.
     """
-    return FreeDV(binary or default_binary(), config, args, env, user_config_files, timeout)
+    return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout)
 
 
 class FreeDV:
     """A running copy of FreeDV. Create with start()."""
 
-    def __init__(self, binary, config, args, env, user_config_files, timeout):
+    def __init__(self, binary, config, settings, args, env, user_config_files, timeout):
         self._temp_dir = tempfile.mkdtemp(prefix="freedvtest-")
         self._next_id = 1
         self._received = b""
@@ -81,9 +107,17 @@ class FreeDV:
         #: FreeDV looks for other programs' settings.
         self.user_config_dir = os.path.join(self._temp_dir, "config")
 
+        if settings is not None:
+            write_config(self.config_path, settings)
+
         process_env = dict(os.environ)
         # Labels checked by test scripts are the English ones.
         process_env.update({"LANGUAGE": "en", "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"})
+        # Use the X display that the test was run on (e.g. Xvfb) even if a
+        # Wayland session also exists, which GTK would otherwise prefer.
+        # Moving the mouse pointer and activating windows also need X.
+        if sys.platform.startswith("linux"):
+            process_env["GDK_BACKEND"] = "x11"
         # Keep FreeDV away from settings belonging to whoever is running the
         # test, e.g. those of other programs that the Setup Wizard can import.
         os.mkdir(self.user_config_dir)
@@ -170,7 +204,9 @@ class FreeDV:
 
     def window_exists(self, name):
         """Returns whether the given top-level window is currently displayed."""
-        return any(window["name"] == name and window["shown"] for window in self.windows())
+        return any(
+            window["shown"] and name in (window["name"], "@" + window["label"])
+            for window in self.windows())
 
     def widgets(self, window, named_only=True):
         """Returns the controls inside the given window. Useful for finding
@@ -187,9 +223,10 @@ class FreeDV:
         value, selection and items."""
         return self.command("get", name=name)
 
-    def click(self, name):
-        """Clicks a button, toggle button, checkbox or radio button."""
-        self.command("click", name=name)
+    def click(self, name, item=None):
+        """Clicks a button, toggle button, checkbox or radio button, or the
+        given item (counting from 0) of a list box."""
+        self.command("click", name=name, item=item)
 
     def set_value(self, name, value=None, data=None, index=None):
         """Sets a control's value: True/False for checkboxes and toggle
@@ -198,14 +235,117 @@ class FreeDV:
         (data), e.g. an audio device's internal name."""
         self.command("set_value", name=name, value=value, data=data, index=index)
 
+    def activate(self, name, timeout=10):
+        """Brings a top-level window to the front, as clicking on it would,
+        and waits for that to have happened."""
+        # Window managers are wary of windows asking for attention (e.g.
+        # just after another window has been given it), so keep asking.
+        deadline = time.monotonic() + timeout
+        while not self.get(name)["active"]:
+            if time.monotonic() > deadline:
+                raise FreeDVError("Timed out waiting for window '%s' to become active" % name)
+            self.command("activate", name=name)
+            try:
+                self.wait_until(lambda: self.get(name)["active"], 1)
+            except FreeDVError:
+                pass
+
     def close(self, name):
         """Closes a top-level window as its title bar's close button would."""
         self.command("close", name=name)
 
-    def menu(self, path):
-        """Selects a menu item in the main window, e.g. "Settings/Setup
-        Wizard..."."""
-        self.command("menu", path=path)
+    def menu(self, path, window=None):
+        """Selects a menu item, e.g. "Settings/Setup Wizard...", from the
+        main window's menu bar or that of the named window."""
+        self.command("menu", path=path, name=window)
+
+    def menu_checked(self, path, window=None):
+        """Returns whether a menu item has a check mark."""
+        return self.command("menu", path=path, name=window, query=True)["checked"]
+
+    def context_menu(self, name, choose=None, item=None):
+        """Right-clicks a control (or the given item of a list box) and
+        returns the items of the popup menu that results, each with a
+        "label" and whether it's "enabled" and "checked". The menu itself
+        isn't displayed; if choose is the label of one of its items, that
+        item is selected from it."""
+        self.command("context_menu", name=name, choose=choose, item=item)
+        return self.command("get_popup_menu")["items"]
+
+    def combo_popup(self, name, open=True):
+        """Opens or closes the list of a control that has its own kind of
+        drop-down list, e.g. FreeDV Reporter's status message."""
+        self.command("combo_popup", name=name, open=open)
+
+    # -- Lists with columns -------------------------------------------------
+
+    def columns(self, name):
+        """Returns a list's columns from left to right, each with its "id",
+        "title", whether it's "shown" and how it's sorted ("sort")."""
+        return sorted(self.get(name)["columns"], key=lambda column: column["position"])
+
+    def rows(self, name):
+        """Returns the rows of a list from top to bottom. Each is a dict of
+        the text in each column, keyed by the column's ID, plus the row's
+        "background" and "foreground" colors if it has its own and whether
+        it's "selected"."""
+        state = self.get(name)
+        rows = []
+        for position, row in enumerate(state["rows"]):
+            cells = {int(column): text for column, text in row["cells"].items()}
+            cells["background"] = row.get("background")
+            cells["foreground"] = row.get("foreground")
+            cells["selected"] = (position == state["selection"])
+            rows.append(cells)
+        return rows
+
+    def _row_action(self, name, action, row, column, choose=None):
+        # A row is its position (counting from 0) or, as that can change at
+        # any moment in a list that's kept sorted, a (column ID, text) pair
+        # identifying it by what's in one of its columns.
+        params = {"row": row}
+        if isinstance(row, tuple):
+            params = {"match_column": row[0], "match_text": row[1]}
+
+        # A row that had to be scrolled into view isn't there straight away.
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                self.command("data_view", name=name, action=action, column=column, choose=choose, **params)
+                return
+            except CommandError as e:
+                scrolling = "is not being displayed" in str(e) or "could not move the mouse pointer" in str(e)
+                if not scrolling or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.1)
+
+    def hover_row(self, name, row, column=None):
+        """Moves the mouse pointer over a row of a list: either its position
+        (counting from 0) or a (column ID, text) pair to find it by. The
+        window that the list is in needs to be active (see activate())."""
+        self._row_action(name, "hover", row, column)
+
+    def select_row(self, name, row, column=None):
+        """Clicks on a row of a list."""
+        self._row_action(name, "select", row, column)
+
+    def activate_row(self, name, row, column=None):
+        """Double-clicks on a row of a list."""
+        self._row_action(name, "activate", row, column)
+
+    def row_context_menu(self, name, row, column=None, choose=None):
+        """Right-clicks on a row of a list. See context_menu()."""
+        self._row_action(name, "context_menu", row, column, choose)
+        return self.command("get_popup_menu")["items"]
+
+    def click_column(self, name, column):
+        """Clicks on a column's heading, which sorts the list by it."""
+        self.command("data_view", name=name, action="header_click", column=column)
+
+    def column_context_menu(self, name, column, choose=None):
+        """Right-clicks on a column's heading. See context_menu()."""
+        self.command("data_view", name=name, action="header_context_menu", column=column, choose=choose)
+        return self.command("get_popup_menu")["items"]
 
     def state(self):
         """Returns FreeDV's own state (e.g. whether the modem is running)
@@ -215,8 +355,13 @@ class FreeDV:
     def message_boxes(self, clear=False):
         """Returns the message boxes FreeDV has tried to display so far.
         They aren't actually displayed; FreeDV carries on as if their default
-        button had been pressed."""
+        button had been pressed (but see answer_next_message_box())."""
         return self.command("message_boxes", clear=clear)
+
+    def answer_next_message_box(self, answer):
+        """Has FreeDV carry on from its next message box as if the given
+        button ("yes", "no", "ok" or "cancel") had been pressed."""
+        self.command("message_boxes", answer=answer)
 
     # -- Waiting ----------------------------------------------------------
 

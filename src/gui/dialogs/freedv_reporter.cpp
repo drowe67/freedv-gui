@@ -656,6 +656,22 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_trackFreqBand->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackExactFreq->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("reporter");
+    m_listSpots->SetName("reporter.listSpots");
+    m_buttonOK->SetName("reporter.btnClose");
+    m_buttonSendQSY->SetName("reporter.btnSendQSY");
+    m_buttonDisplayWebpage->SetName("reporter.btnWebsite");
+    m_bandFilter->SetName("reporter.cbBandFilter");
+    m_trackFrequency->SetName("reporter.ckTrackFrequency");
+    m_trackFreqBand->SetName("reporter.rbTrackFreqBand");
+    m_trackExactFreq->SetName("reporter.rbTrackExactFreq");
+    m_filterStatus->SetName("reporter.stFilterStatus");
+    m_statusMessage->SetName("reporter.cbStatusMessage");
+    getMsgPopup()->SetName("reporter.lbSavedMessages");
+    m_buttonSend->SetName("reporter.btnSend");
+    m_buttonClear->SetName("reporter.btnClear");
+
     // Update status message and MRU list
     m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
     for (auto& msg : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts.get())
@@ -875,8 +891,12 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     auto newColValue =
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
 
-    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
-    menuItem->Check(newColValue);
+    // Note: the event's object is the menu, not the item that was chosen.
+    wxMenuItem* menuItem = showMenu_->FindItem(event.GetId());
+    if (menuItem != nullptr)
+    {
+        menuItem->Check(newColValue);
+    }
 
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
@@ -925,21 +945,22 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
             }
             else
             {
-                // No changes needed.
-                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                // No changes needed, other than putting the check marks back to
+                // reflect what's in effect (selecting "Custom..." changed them).
+                bool filterEnabled = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
+                auto currentMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
                 auto menuItems = idleLongerThanMenu_->GetMenuItems();
                 bool found = false;
                 for (auto& item : menuItems)
                 {
-                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
-                    {
-                        item->Check(true);
-                    }
-                    else
-                    {
-                        item->Check(false);
-                    }
+                    // "Disabled" is the only item without an ID of our own choosing.
+                    bool isCurrent = filterEnabled ?
+                        (item->GetId() == (wxID_HIGHEST + 200 + currentMinutes)) :
+                        (item->GetId() < (wxID_HIGHEST + 200));
+                    found |= isCurrent;
+                    item->Check(isCurrent);
                 }
+
                 if (!found)
                 {
                     auto item = idleLongerThanMenu_->FindItem(event.GetId());
@@ -1009,6 +1030,10 @@ void FreeDVReporterDialog::DeselectItem()
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_listSpots->Unselect(item);
     }
+
+    // Deselecting from here isn't reported as a selection change, so the
+    // button that depends on there being a selection has to be told.
+    m_buttonSendQSY->Enable(false);
 }
 
 void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
@@ -1116,7 +1141,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
         wxMessageBox(fullMessage, _("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
 
-        m_listSpots->Unselect(selected);
+        DeselectItem();
     }
 }
 
@@ -1976,7 +2001,7 @@ void FreeDVReporterDialog::OnColumnHeaderRightClick(wxDataViewEvent& event)
         m->refreshAllRows();
     }, clearItem->GetId());
 
-    m_listSpots->PopupMenu(&menu);
+    ShowPopupMenu(m_listSpots, &menu);
     event.Skip();
 }
 
@@ -2029,11 +2054,11 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
         // on some KDE installations where the popup menu immediately closes after
         // right-clicking. This in effect causes the popup to open to the left of
         // the mouse pointer.
-        m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
+        ShowPopupMenu(m_listSpots, spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
     }
     else if (tempCallsign_ != wxT(""))
     {
-        m_listSpots->PopupMenu(callsignPopupMenu_, wxPoint(mouseX, mouseY));
+        ShowPopupMenu(m_listSpots, callsignPopupMenu_, wxPoint(mouseX, mouseY));
     }
 }
 
@@ -2188,7 +2213,7 @@ void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent&)
                    && (int)popup->GetCount() < STATUS_MESSAGE_MRU_MAX_SIZE;
     setPopupMenu_->Enable(setSaveMenuItem_->GetId(), canSave);
     setPopupMenu_->Enable(saveMenuItem_->GetId(), canSave);
-    m_buttonSend->PopupMenu(setPopupMenu_);
+    ShowPopupMenu(m_buttonSend, setPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusTextSendAndSaveMessage(wxCommandEvent& event)
@@ -2234,7 +2259,7 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent&)
 {
-    m_buttonClear->PopupMenu(clearPopupMenu_);
+    ShowPopupMenu(m_buttonClear, clearPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent&)
@@ -2274,7 +2299,7 @@ void FreeDVReporterDialog::ShowMsgItemContextMenu(int itemIdx)
     contextMenuSelectedIndex_ = itemIdx;
     msgItemPopupMenu_->Enable(addMsgMenuItem_->GetId(),
         getMsgPopup()->GetCount() < STATUS_MESSAGE_MRU_MAX_SIZE);
-    m_statusMessage->PopupMenu(msgItemPopupMenu_);
+    ShowPopupMenu(m_statusMessage, msgItemPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusMessageContextMenuEdit(wxCommandEvent&)
