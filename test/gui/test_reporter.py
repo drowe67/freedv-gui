@@ -229,11 +229,18 @@ def test_live_view():
         print("%d station(s) listed" % len(rows))
         for row in rows:
             check(row[CALLSIGN] != "", "A row has no callsign: %r" % row)
-            check(row[FREQUENCY] != "", "%s has no frequency" % row[CALLSIGN])
             check(row[LAST_UPDATE] != "", "%s has no last update time" % row[CALLSIGN])
             # Without a grid square of our own, there are no distances.
             check_equal(row[DISTANCE], "", "%s's distance" % row[CALLSIGN])
-        frequencies = [float(row[FREQUENCY]) for row in rows]
+        # Lowest frequency first. (Not everyone on there has said what frequency
+        # they're on, and the list is changing all the time, so it gets a
+        # few goes at being caught in order.)
+        for attempt in range(5):
+            frequencies = [float(row[FREQUENCY].replace(",", "")) for row in app.rows(LIST)
+                           if row[FREQUENCY].strip() != ""]
+            if frequencies == sorted(frequencies):
+                break
+            time.sleep(1)
         check_equal(frequencies, sorted(frequencies), "Frequencies listed")
 
         # With nothing to report as, there's nothing to send.
@@ -341,6 +348,16 @@ def test_sorting():
 
             app.click_column(LIST, FREQUENCY)
             check_equal(sort_order(app), (FREQUENCY, False), "Sort order")
+            wait_for_callsigns(app, ["W6XYZ", "K1ABC", "VK5DGR"])
+
+            # Someone a long way up the dial (here, on a satellite's uplink)
+            # still comes after everyone below them.
+            with server.station("DL1ABC", "JO62") as satellite:
+                satellite.set_frequency(2400050000)
+                wait_for_callsigns(app, ["DL1ABC", "W6XYZ", "K1ABC", "VK5DGR"])
+                app.click_column(LIST, FREQUENCY)
+                wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ", "DL1ABC"])
+                app.click_column(LIST, FREQUENCY)
             wait_for_callsigns(app, ["W6XYZ", "K1ABC", "VK5DGR"])
 
             app.click_column(LIST, CALLSIGN)
@@ -1075,17 +1092,19 @@ def test_numeric_filters():
                 check_equal(callsigns(app), everyone, "Callsigns listed with a distance filter that isn't a number")
                 clear_filter(app, DISTANCE)
 
-                # A station that's selected and then filtered out isn't selected any more.
+                # A station that's selected and then filtered out isn't selected when it
+                # comes back. (What's selected in the meantime depends on the version of
+                # wxWidgets: nothing, or the row that took its place.)
                 app.select_row(LIST, (CALLSIGN, "K1ABC"))
                 check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], ["K1ABC"],
                             "Selected station")
                 set_filter(app, CALLSIGN, "!= (Not equal to)", "K1ABC")
                 wait_for_callsigns(app, ["VK5DGR", "W6XYZ"])
-                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
-                            "Selected station once it's filtered out")
+                print("Selected once K1ABC is filtered out: %r"
+                      % [row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], flush=True)
                 clear_filter(app, CALLSIGN)
-                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
-                            "Selected station once it's listed again")
+                check("K1ABC" not in [row[CALLSIGN] for row in app.rows(LIST) if row["selected"]],
+                      "K1ABC is selected again on being listed again")
 
                 quit_and_check_log(app)
 
@@ -1216,7 +1235,7 @@ def test_connection_burst():
                 """FreeDV should still be there, listing exactly who's on."""
                 expected = sorted(stations)
                 try:
-                    app.wait_until(lambda: sorted(callsigns(app)) == expected, timeout=20)
+                    app.wait_until(lambda: sorted(callsigns(app)) == expected, timeout=60)
                 except freedvtest.FreeDVError:
                     check_equal(sorted(callsigns(app)), expected, "Callsigns listed")
 

@@ -408,7 +408,11 @@ void TestAgent::handleLine_(std::string const& line)
     {
         // As when the desktop switches between its light and dark themes.
         replyOk_(id, yyjson_mut_doc_new(nullptr));
-        std::vector<wxWindow*> topLevels(wxTopLevelWindows.begin(), wxTopLevelWindows.end());
+        std::vector<wxWindow*> topLevels;
+        for (auto window : wxTopLevelWindows)
+        {
+            topLevels.push_back(window);
+        }
         for (auto window : topLevels)
         {
             wxSysColourChangedEvent event;
@@ -1678,6 +1682,17 @@ void TestAgent::commandDataView_(yyjson_val* id, yyjson_val* request)
                 if (column->IsSortKey())
                 {
                     column->UnsetAsSortKey();
+                }
+
+                // Only one column is sorted by at a time, which not every
+                // version of wxWidgets sees to itself when asked like this.
+                for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+                {
+                    auto other = dataView->GetColumn(index);
+                    if (other != column && other->IsSortKey())
+                    {
+                        other->UnsetAsSortKey();
+                    }
                 }
                 column->SetSortOrder(ascending);
                 if (dataView->GetModel() != nullptr)

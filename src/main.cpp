@@ -617,6 +617,13 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #if wxCHECK_VERSION(3,3,0) && defined(__linux__)
         // For Load Default Configuration (see below for why it's this).
         defaultConfigFile = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+#else
+        // Likewise: open the default configuration now, while wxWidgets
+        // would find the same one as it does when FreeDV is started
+        // without being given a configuration to use.
+        wxConfigBase::Set(nullptr);
+        defaultConfig = wxConfigBase::Create();
+        wxConfigBase::Set(pConfig);
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
     else
@@ -675,6 +682,9 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+
+        // Whichever it is, this is the default configuration.
+        defaultConfig = wxConfigBase::Get();
 
         // If a config file was previously loaded via "Use Configuration...",
         // restore it now so the user's last session is preserved.

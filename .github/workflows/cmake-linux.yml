@@ -473,7 +473,9 @@ jobs:
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -LE gui --repeat until-pass:$MAX_EXECUTION_TIMES
 
     # Tests that drive FreeDV's user interface (see test/gui). Only on one
-    # version of Ubuntu for now, as they take a while.
+    # version of Ubuntu for now, as they take a while. (All but the one that
+    # looks at who's on the public FreeDV Reporter server, which depends on
+    # who that is at the time.)
     - name: Install what the GUI tests need
       shell: bash
       if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
@@ -496,7 +498,7 @@ jobs:
               export MAX_EXECUTION_TIMES=1
           fi
           . ../rade-venv/bin/activate
-          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 ctest --output-on-failure -L gui --timeout 900 --repeat until-pass:$MAX_EXECUTION_TIMES
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 ctest --output-on-failure -L gui -E gui_reporter_live_view --timeout 900 --repeat until-pass:$MAX_EXECUTION_TIMES
 
   # Reports how much of the code the unit and GUI tests exercise.
   coverage:
@@ -547,39 +549,26 @@ jobs:
       run: |
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest --output-on-failure --timeout 900 || echo "::warning::Some tests failed, so coverage may be understated"
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest --output-on-failure -E gui_reporter_live_view --timeout 900 || echo "::warning::Some tests failed, so coverage may be understated"
 
     - name: Report coverage
+      if: ${{ !cancelled() }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          COMMON=(-j "$(nproc)" --root . --object-directory build_linux --filter 'src/' --exclude '.*/test/.*' --exclude 'build_linux/.*' --gcov-ignore-errors=all --gcov-ignore-parse-errors=all --merge-mode-functions=merge-use-line-min)
-          mkdir -p coverage_html
-          {
-            echo "## Code coverage"
-            echo
-            echo "### FreeDV's own code"
-            echo
-            echo "Everything under src/ other than code from elsewhere (sox, kiss_fft, rtkit) and the GUI test agent."
-            echo
-            echo '```'
-            gcovr "${COMMON[@]}" --exclude 'src/sox/.*' --exclude '.*kiss_fft.*' --exclude 'src/audio/rtkit.c' --exclude 'src/test_agent.cpp' --txt-summary --html-details coverage_html/index.html --txt coverage.txt 2>/dev/null | grep -E "^(lines|functions|branches):"
-            echo '```'
-            echo
-            echo "### All of src/"
-            echo
-            echo '```'
-            gcovr "${COMMON[@]}" --txt-summary 2>/dev/null | grep -E "^(lines|functions|branches):"
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          mkdir -p coverage-html
+          # (Branches that only exist for an exception being thrown part way
+          # through a line aren't counted: nearly every line that touches a
+          # wxString has some, and no test could take them.)
+          gcovr -j "$(nproc)" --root . --object-directory build_linux --filter 'src/' --exclude '.*/test/.*' --exclude 'build_linux/.*' --gcov-ignore-errors=all --gcov-ignore-parse-errors=all --merge-mode-functions=merge-use-line-min --exclude-throw-branches --json-summary coverage-summary.json --html-details coverage-html/index.html
+          python3 .github/scripts/coverage_summary.py coverage-summary.json coverage-html
 
     - name: Upload coverage report
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
       with:
-        name: coverage-report
-        path: |
-          ${{github.workspace}}/coverage_html
-          ${{github.workspace}}/coverage.txt
+        name: coverage-html
+        path: ${{github.workspace}}/coverage-html
 
 
