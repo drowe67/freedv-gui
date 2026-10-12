@@ -441,6 +441,11 @@ class FreeDV:
 
     # -- Lifetime ---------------------------------------------------------
 
+    @property
+    def pid(self):
+        """FreeDV's process ID."""
+        return self._process.pid
+
     def log(self):
         """Returns everything that FreeDV has printed so far."""
         if self._log_file is not None:
@@ -458,7 +463,21 @@ class FreeDV:
         try:
             return self._process.wait(timeout)
         except subprocess.TimeoutExpired:
-            raise FreeDVError("FreeDV did not exit within %d seconds" % timeout)
+            raise FreeDVError("FreeDV did not exit within %d seconds%s" % (timeout, self._stacks()))
+
+    def _stacks(self):
+        """Returns what each of FreeDV's threads is doing, for working out
+        why it's stuck, if there's something installed that can tell."""
+        for tool in (["eu-stack", "-p"], ["pstack"]):
+            try:
+                result = subprocess.run(tool + [str(self._process.pid)], stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, timeout=60)
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            output = result.stdout.decode("utf-8", errors="replace")
+            if result.returncode == 0 and output.strip():
+                return "\n\nThreads:\n" + output
+        return ""
 
     def stop(self):
         """Makes sure FreeDV is no longer running and cleans up after it.
