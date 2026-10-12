@@ -2948,6 +2948,13 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     auto leftData = (ReporterData*)item1.GetID();
     auto rightData = (ReporterData*)item2.GetID();
 
+    // Numbers are compared rather than subtracted: the difference between
+    // two of them needn't fit in (or survive being rounded to) an int.
+    // Frequencies more than 2^31 Hz apart came out in the wrong order.
+    auto compareNumbers = [](auto left, auto right) {
+        return (left < right) ? -1 : ((left > right) ? 1 : 0);
+    };
+
     int result = 0;
     switch(column)
     {
@@ -2958,16 +2965,16 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
             break;
         case DISTANCE_COL:
-            result = leftData->distanceVal - rightData->distanceVal;
+            result = compareNumbers(leftData->distanceVal, rightData->distanceVal);
             break;
         case HEADING_COL:
-            result = leftData->headingVal - rightData->headingVal;
+            result = compareNumbers(leftData->headingVal, rightData->headingVal);
             break;
         case VERSION_COL:
             result = leftData->version.CmpNoCase(rightData->version);
             break;
         case FREQUENCY_COL:
-            result = leftData->frequency - rightData->frequency;
+            result = compareNumbers(leftData->frequency, rightData->frequency);
             break;
         case TX_MODE_COL:
             result = leftData->txMode.CmpNoCase(rightData->txMode);
@@ -3032,7 +3039,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
         case SNR_COL:
-            result = leftData->snrVal - rightData->snrVal;
+            result = compareNumbers(leftData->snrVal, rightData->snrVal);
             break;
         case LAST_UPDATE_DATE_COL:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())

@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/app.h>
 #include <wx/stattext.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>

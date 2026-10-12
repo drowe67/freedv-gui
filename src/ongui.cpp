@@ -2301,20 +2301,32 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     if (ShowMessageDialog(messageDialog) != wxID_YES)
         return;
 
-    // Create a platform-appropriate default config:
-    // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
-    // uses the default file location (wxFileConfig).  This becomes the
-    // active pConfig going forward — no need to restore the old one.
-    // wxConfigBase::Create() just hands back the configuration already in
-    // use if there is one, so let go of that first.
-    wxConfigBase::Set(nullptr);
+    // The default configuration is platform-appropriate: on Windows it's in
+    // the registry (wxRegConfig); on macOS/Linux, a file in the default
+    // location (wxFileConfig). It becomes the active pConfig going forward.
+    //
+    // The default configuration is the one that was opened at startup, if
+    // it was (see MainApp::OnCmdLineParsed()). Finding it again from here
+    // isn't reliable: wxConfigBase::Create() just hands back whichever
+    // configuration is in use and, with that out of the way, looks under the
+    // application's name as it is now rather than as it was at startup.
+    wxConfigBase* defaultConfig = wxGetApp().defaultConfig;
 #if wxCHECK_VERSION(3,3,0) && defined(__linux__)
-    // As at startup, wxWidgets needs telling to use a subdirectory here.
-    wxString defaultLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
-    wxConfigBase* defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
-#else
-    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    if (defaultConfig == nullptr && !wxGetApp().defaultConfigFile.IsEmpty())
+    {
+        // Startup would have had to say where the default configuration is,
+        // so the same goes here. That place was worked out then, as
+        // wxWidgets gives a different answer once it's been set up to use it.
+        wxString defaultLocation = wxGetApp().defaultConfigFile;
+        defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+    }
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    if (defaultConfig == nullptr)
+    {
+        wxConfigBase::Set(nullptr);
+        defaultConfig = wxConfigBase::Create();
+    }
+    wxGetApp().defaultConfig = defaultConfig;
     
     setConfiguration_(defaultConfig);
 
