@@ -208,6 +208,11 @@ class MainApp : public wxApp
         // Where the default configuration is, if FreeDV has to say (rather
         // than leaving it to wxWidgets). See MainApp::OnCmdLineParsed().
         wxString defaultConfigFile;
+
+        // The default configuration itself, if it's been opened. It can't
+        // reliably be found again later: wxWidgets looks for it by the
+        // application's name, which isn't the same at startup as afterwards.
+        wxConfigBase* defaultConfig = nullptr;
         
         // PTT -----------------------------------    
         int        m_intHamlibRig;
