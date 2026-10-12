@@ -869,10 +869,23 @@ endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
 # alongside anything else.
-foreach(scenario transmit ptt_key tx_level receive analog play_file voice_keyer voice_keyer_files recording time_out_timer menus)
+foreach(scenario transmit ptt_key tx_level receive analog play_file voice_keyer voice_keyer_files recording recording_options time_out_timer menus)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+endforeach(scenario)
+
+# The reporter scenario needs what the FreeDV Reporter tests do.
+foreach(scenario manual frequency_in_khz callsign_list reporter)
+    add_test(NAME gui_log_qso_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_log_qso.py ${scenario})
+    set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
+
+foreach(scenario controls volume equalizer noise_suppression)
+    add_test(NAME gui_filter_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
+    set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
 endforeach(scenario)
 endif(LINUX)
 

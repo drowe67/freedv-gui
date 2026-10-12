@@ -1959,16 +1959,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
              if (m_filterDialog->haveVolumesBeenChanged())
              {
-                auto sliderVal = 0.0;
-                sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-
-                if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
-                {
-                    m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-                    m_sliderMicSpkrLevel->Refresh();
-                    wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
-                    m_txtMicSpkrLevelNum->SetLabel(fmt);
-                }
+                syncSpeakerLevelWithConfiguration();
             }
          }
 

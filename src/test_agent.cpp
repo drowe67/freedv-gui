@@ -891,6 +891,50 @@ void TestAgent::commandClick_(yyjson_val* id, yyjson_val* request)
 
     // An item in a list box.
     yyjson_val* itemIndex = yyjson_obj_get(request, "item");
+    yyjson_val* button = yyjson_obj_get(request, "button");
+    bool rightButton = yyjson_is_str(button) && std::string(yyjson_get_str(button)) == "right";
+    if (auto listCtrl = wxDynamicCast(window, wxListCtrl))
+    {
+        // A row of a list with columns, or (without an item) below its rows.
+        // The mouse is moved there first, as lists that follow the mouse
+        // rely on that.
+        wxPoint position(10, std::max(1, listCtrl->GetClientSize().GetHeight() - 2));
+        if (yyjson_is_int(itemIndex))
+        {
+            long item = yyjson_get_int(itemIndex);
+            bool found = false;
+            if (item >= 0 && item < listCtrl->GetItemCount())
+            {
+                listCtrl->EnsureVisible(item);
+                for (int y = 1; y < listCtrl->GetClientSize().GetHeight() && !found; y += 2)
+                {
+                    int flags = 0;
+                    wxPoint candidate(10, y);
+                    if (listCtrl->HitTest(candidate, flags) == item)
+                    {
+                        position = candidate;
+                        found = true;
+                    }
+                }
+            }
+            if (!found)
+            {
+                replyError_(id, wxString::Format("could not find item %ld of '%s'", item, window->GetName()));
+                return;
+            }
+        }
+
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        for (auto type : { wxEVT_MOTION, rightButton ? wxEVT_RIGHT_DOWN : wxEVT_LEFT_DOWN,
+                           rightButton ? wxEVT_RIGHT_UP : wxEVT_LEFT_UP })
+        {
+            wxMouseEvent event(type);
+            event.SetEventObject(window);
+            event.SetPosition(position);
+            window->ProcessWindowEvent(event);
+        }
+        return;
+    }
     if (yyjson_is_int(itemIndex))
     {
         auto listBox = wxDynamicCast(window, wxListBox);
@@ -1700,6 +1744,29 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_val(doc, configObj, "audio", audio);
     yyjson_mut_obj_add_val(doc, configObj, "rigControl", rigControl);
     yyjson_mut_obj_add_val(doc, configObj, "reporting", reporting);
+
+    auto& filterConfig = config.filterConfiguration;
+    yyjson_mut_val* filter = yyjson_mut_obj(doc);
+    yyjson_mut_obj_add_bool(doc, filter, "noiseReductionEnable", filterConfig.noiseReductionEnable.get());
+    yyjson_mut_obj_add_bool(doc, filter, "agcEnabled", filterConfig.agcEnabled.get());
+    yyjson_mut_obj_add_bool(doc, filter, "bwExpandEnabled", filterConfig.bwExpandEnabled.get());
+    auto describeChannel = [&](auto& channel) {
+        yyjson_mut_val* obj = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_bool(doc, obj, "eqEnable", channel.eqEnable.get());
+        yyjson_mut_obj_add_real(doc, obj, "volInDB", channel.volInDB.get());
+        yyjson_mut_obj_add_real(doc, obj, "bassFreqHz", channel.bassFreqHz.get());
+        yyjson_mut_obj_add_real(doc, obj, "bassGaindB", channel.bassGaindB.get());
+        yyjson_mut_obj_add_real(doc, obj, "midFreqHz", channel.midFreqHz.get());
+        yyjson_mut_obj_add_real(doc, obj, "midGainDB", channel.midGainDB.get());
+        yyjson_mut_obj_add_real(doc, obj, "midQ", channel.midQ.get());
+        yyjson_mut_obj_add_real(doc, obj, "trebleFreqHz", channel.trebleFreqHz.get());
+        yyjson_mut_obj_add_real(doc, obj, "trebleGaindB", channel.trebleGaindB.get());
+        return obj;
+    };
+    yyjson_mut_obj_add_val(doc, filter, "micIn", describeChannel(filterConfig.micInChannel));
+    yyjson_mut_obj_add_val(doc, filter, "spkOut", describeChannel(filterConfig.spkOutChannel));
+    yyjson_mut_obj_add_val(doc, configObj, "filter", filter);
+
     yyjson_mut_obj_add_val(doc, state, "config", configObj);
 
     replyOk_(id, doc, state);

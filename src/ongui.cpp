@@ -964,6 +964,19 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
 
+void MainFrame::syncSpeakerLevelWithConfiguration()
+{
+    double sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+
+    if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
+    {
+        m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+        m_sliderMicSpkrLevel->Refresh();
+        wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString(sliderVal, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmt);
+    }
+}
+
 void MainFrame::setsnrBeta(bool snrSlow)
 {
     if(snrSlow)
@@ -1886,6 +1899,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     // Show log contact dialog 
     auto logDialog = new LogEntryDialog(this);
     logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz, (int)snr);
+    logDialog->Destroy();
 }
 
 // Force manual resync, just in case demod gets stuck on false sync

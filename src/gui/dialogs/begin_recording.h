@@ -38,7 +38,7 @@ class BeginRecordingDialog : public wxDialog
         bool isRawRecording() const { return rawRecording_->GetValue() || bothRecording_->GetValue(); }
         bool isDecodedRecording() const { return decodedRecording_->GetValue() || bothRecording_->GetValue(); }
         bool isBothRecording() const { return bothRecording_->GetValue(); }
-        wxString getRecordingSuffix() const { return recordingSuffix_->GetValue(); }
+        wxString getRecordingSuffix() const;
         bool isMp3Format() const { return formatMp3_->GetValue(); }
         
     protected:
