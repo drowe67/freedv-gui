@@ -40,6 +40,47 @@ def record_level(device, seconds=1.0):
     return math.sqrt(sum(sample * sample for sample in samples) / len(samples))
 
 
+def write_tone(path, seconds=2.0, rate=16000, frequency=1000.0, channels=1, amplitude=16000):
+    """Creates a WAV file containing a tone."""
+    samples = array.array("h")
+    for n in range(int(rate * seconds)):
+        samples.extend([int(amplitude * math.sin(2 * math.pi * frequency * n / rate))] * channels)
+    with wave.open(path, "wb") as f:
+        f.setnchannels(channels)
+        f.setsampwidth(2)
+        f.setframerate(rate)
+        f.writeframes(samples.tobytes())
+
+
+def file_level(path):
+    """Returns how loud a 16 bit WAV file is (see record_level()) and how
+    long it is in seconds."""
+    with wave.open(path, "rb") as f:
+        rate = f.getframerate()
+        samples = array.array("h", f.readframes(f.getnframes()))
+    if not samples:
+        return (0.0, 0.0)
+    return (math.sqrt(sum(sample * sample for sample in samples) / len(samples)), len(samples) / float(rate))
+
+
+class Loopback:
+    """Feeds what's played into one output device to another for the
+    duration of a "with" block, e.g. so that FreeDV hears what it transmits."""
+
+    def __init__(self, from_device, to_device):
+        self._args = ["source=" + VirtualAudioDevices.input_name(from_device), "sink=" + to_device, "latency_msec=20"]
+        self._module = None
+
+    def __enter__(self):
+        self._module = _pactl("load-module", "module-loopback", *self._args).strip()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._module is not None:
+            subprocess.call(["pactl", "unload-module", self._module])
+        return False
+
+
 class Tone:
     """Plays a tone into an output device for the duration of a "with" block
     (at most max_seconds)."""

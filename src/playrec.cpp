@@ -138,13 +138,12 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         // add the loop check box
         openFileDialog.SetExtraControlCreator(&createMyExtraPlayFilePanel);
 
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
+        if(ShowPathDialog(openFileDialog, soundFile) == wxID_CANCEL)
         {
             return;     // the user changed their mind...
         }
 
         wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
         wxString tmpString = wxGetApp().appConfiguration.playFileFromRadioPath;
         wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
         sfInfo.format = 0;
@@ -185,7 +184,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         wxWindow * const ctrl = openFileDialog.GetExtraControl();
 
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
-        g_loopPlayFileFromRadio.store(static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn(), std::memory_order_relaxed);
+        // (There's no extra control if the dialog was never displayed, i.e.
+        // while a GUI test script is choosing the file.)
+        g_loopPlayFileFromRadio.store(
+            ctrl != nullptr && static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn(), std::memory_order_relaxed);
 
         wxString statusText = "";
         if(extension == wxT("raw")) {

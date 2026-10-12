@@ -2209,10 +2209,10 @@ void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
     );
 
-    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+    wxString path;
+    if (ShowPathDialog(saveFileDialog, path) == wxID_CANCEL)
         return;
 
-    wxString path = saveFileDialog.GetPath();
     wxFileConfig* exportConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), path, path, wxCONFIG_USE_LOCAL_FILE);
     exportConfiguration_(exportConfig);
     exportConfig->Flush();
@@ -2232,10 +2232,10 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
     );
 
-    if (openFileDialog.ShowModal() == wxID_CANCEL)
+    wxString path;
+    if (ShowPathDialog(openFileDialog, path) == wxID_CANCEL)
         return;
 
-    wxString path = openFileDialog.GetPath();
 
     if (!wxFileExists(path))
     {
@@ -2291,7 +2291,16 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
     // uses the default file location (wxFileConfig).  This becomes the
     // active pConfig going forward — no need to restore the old one.
+    // wxConfigBase::Create() just hands back the configuration already in
+    // use if there is one, so let go of that first.
+    wxConfigBase::Set(nullptr);
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    // As at startup, wxWidgets needs telling to use a subdirectory here.
+    wxString defaultLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+    wxConfigBase* defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+#else
     wxConfigBase* defaultConfig = wxConfigBase::Create();
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     
     setConfiguration_(defaultConfig);
 

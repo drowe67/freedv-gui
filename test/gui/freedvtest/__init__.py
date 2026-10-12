@@ -123,6 +123,8 @@ class FreeDV:
         #: Stands in for the user's ~/.config (Linux only), which is where
         #: FreeDV looks for other programs' settings.
         self.user_config_dir = os.path.join(self._temp_dir, "config")
+        #: Stands in for the user's home folder (Linux only).
+        self.home_dir = None
 
         if settings is not None:
             write_config(self.config_path, settings)
@@ -137,6 +139,16 @@ class FreeDV:
             process_env["GDK_BACKEND"] = "x11"
         # Keep FreeDV away from settings belonging to whoever is running the
         # test, e.g. those of other programs that the Setup Wizard can import.
+        # The same goes for their home folder, which is where FreeDV keeps
+        # (among other things) its default configuration. The display may
+        # need what's in the real one to be connected to, though.
+        if sys.platform.startswith("linux"):
+            xauthority = os.path.expanduser("~/.Xauthority")
+            if "XAUTHORITY" not in process_env and os.path.exists(xauthority):
+                process_env["XAUTHORITY"] = xauthority
+            self.home_dir = os.path.join(self._temp_dir, "home")
+            os.mkdir(self.home_dir)
+            process_env["HOME"] = self.home_dir
         os.mkdir(self.user_config_dir)
         for name, contents in (user_config_files or {}).items():
             with open(os.path.join(self.user_config_dir, name), "w") as f:
@@ -391,12 +403,13 @@ class FreeDV:
         else:
             self.command("path_dialogs", choose=path)
 
-    def key(self, name, key, hold=False):
-        """Presses (and, unless hold is true, releases) a key while the given
-        control has the keyboard focus. key is a single character or one of
-        Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control and F1
-        to F12."""
-        self.command("key", name=name, key=key, hold=hold or None)
+    def key(self, name, key, hold=False, release=False):
+        """Presses and releases a key while the given control has the
+        keyboard focus. With hold, the key is only pressed; with release, a
+        key that's being held is released. key is a single character or one
+        of Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control and
+        F1 to F12."""
+        self.command("key", name=name, key=key, hold=hold or None, release=release or None)
 
     def answer_next_message_box(self, answer):
         """Has FreeDV carry on from its next message box as if the given
