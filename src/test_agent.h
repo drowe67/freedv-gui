@@ -21,6 +21,7 @@
 #define TEST_AGENT_H
 
 #include <atomic>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -67,10 +68,36 @@ private:
     std::atomic<bool> closing_;
     std::string lineBuffer_; // only touched by the connection's thread
 
+    struct PopupItem
+    {
+        wxString label;
+        bool enabled;
+        bool checked;
+    };
+
+    // What became of the last attempt to display a popup menu.
+    struct PopupRecord
+    {
+        bool shown = false;
+        wxString window;
+        std::vector<PopupItem> items;
+        wxString chosen;
+        wxString error;
+    };
+
     std::mutex messageBoxMutex_;
     std::vector<MessageBoxRecord> messageBoxes_;
+    std::deque<int> messageBoxAnswers_;
+
+    // Only touched by the UI thread.
+    bool popupChoiceArmed_;
+    wxString popupChoice_;
+    PopupRecord lastPopup_;
 
     int onMessageBox_(const wxString& message, const wxString& caption, int style);
+    void onPopupMenu_(wxWindow* window, wxMenu* menu);
+    void expectPopupMenu_(yyjson_val* request);
+    void popupMenuExpected_();
 
     void handleLine_(std::string const& line);
     void reply_(yyjson_mut_doc* doc);
@@ -86,7 +113,12 @@ private:
     void commandClick_(yyjson_val* id, yyjson_val* request);
     void commandSetValue_(yyjson_val* id, yyjson_val* request);
     void commandClose_(yyjson_val* id, yyjson_val* request);
+    void commandActivate_(yyjson_val* id, yyjson_val* request);
     void commandMenu_(yyjson_val* id, yyjson_val* request);
+    void commandContextMenu_(yyjson_val* id, yyjson_val* request);
+    void commandGetPopupMenu_(yyjson_val* id);
+    void commandComboPopup_(yyjson_val* id, yyjson_val* request);
+    void commandDataView_(yyjson_val* id, yyjson_val* request);
     void commandGetState_(yyjson_val* id);
     void commandMessageBoxes_(yyjson_val* id, yyjson_val* request);
     void commandQuit_(yyjson_val* id);

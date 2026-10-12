@@ -217,7 +217,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 
     // Trigger right-click menu popup in a location that will prevent it from
     // ending up off the screen.
-    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
+    ShowPopupMenu(m_togBtnVoiceKeyer, voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )

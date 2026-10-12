@@ -3855,7 +3855,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
         messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
     }
 
-    auto answer = messageDialog.ShowModal();
+    auto answer = ShowMessageDialog(messageDialog);
     if (answer == wxID_YES)
     {
         // This will implicitly cause Hamlib to change the frequency and mode.

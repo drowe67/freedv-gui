@@ -25,6 +25,7 @@
 #include <functional>
 
 #include "wx/wx.h"
+#include "wx/msgdlg.h"
 #include "util/logging/ulog.h"
 
 extern wxString testName;
@@ -59,5 +60,26 @@ inline int wxMessageBoxWrapper(const wxString& message,
 }
 
 #define wxMessageBox wxMessageBoxWrapper
+
+// Displays a wxMessageDialog as dialog.ShowModal() would, unless a test
+// script is driving FreeDV (see g_wxMessageBoxTestHook).
+inline int ShowMessageDialog(wxMessageDialog& dialog)
+{
+    if (g_wxMessageBoxTestHook)
+    {
+        switch (g_wxMessageBoxTestHook(dialog.GetMessage(), dialog.GetCaption(), dialog.GetMessageDialogStyle()))
+        {
+            case wxYES:
+                return wxID_YES;
+            case wxNO:
+                return wxID_NO;
+            case wxCANCEL:
+                return wxID_CANCEL;
+            default:
+                return wxID_OK;
+        }
+    }
+    return dialog.ShowModal();
+}
 
 #endif // __WX_MESSAGE_BOX_WRAPPER__

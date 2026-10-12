@@ -683,7 +683,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
         this, _("Would you like to restore configuration to defaults?"), _("Restore Defaults"),
         wxYES_NO | wxICON_QUESTION | wxCENTRE);
 
-    auto answer = messageDialog.ShowModal();
+    auto answer = ShowMessageDialog(messageDialog);
     if (answer == wxID_YES)
     {
         if(pConfig->DeleteAll())
@@ -902,7 +902,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
         applyTxLevel();
     }, restoreItem->GetId());
 
-    PopupMenu(&menu);
+    ShowPopupMenu(this, &menu);
 }
 
 void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
@@ -948,7 +948,7 @@ void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
         }, restoreItem->GetId());
     }
 
-    PopupMenu(&menu);
+    ShowPopupMenu(this, &menu);
 }
 
 //-------------------------------------------------------------------------
@@ -1091,7 +1091,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
-    m_btnTogPTT->PopupMenu(pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
+    ShowPopupMenu(m_btnTogPTT, pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
 }
 
 //-------------------------------------------------------------------------
@@ -2284,7 +2284,7 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
         _("Load Default Configuration"),
         wxYES_NO | wxICON_QUESTION | wxCENTRE);
 
-    if (messageDialog.ShowModal() != wxID_YES)
+    if (ShowMessageDialog(messageDialog) != wxID_YES)
         return;
 
     // Create a platform-appropriate default config:

@@ -18,9 +18,13 @@
 //
 //==========================================================================
 
+#include <algorithm>
 #include <cstdlib>
 
 #include <wx/bookctrl.h>
+#include <wx/combo.h>
+#include <wx/dataview.h>
+#include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 
 #include "test_agent.h"
@@ -64,11 +68,15 @@ static bool GetItemData_(wxItemContainer* container, unsigned int index, wxStrin
 
 TestAgent::TestAgent(int port)
     : closing_(false)
+    , popupChoiceArmed_(false)
 {
     Instance_ = this;
 
     g_wxMessageBoxTestHook = [this](const wxString& message, const wxString& caption, int style) {
         return onMessageBox_(message, caption, style);
+    };
+    g_popupMenuTestHook = [this](wxWindow* window, wxMenu* menu) {
+        onPopupMenu_(window, menu);
     };
 
     log_info("Connecting to GUI test controller on port %d", port);
@@ -78,6 +86,7 @@ TestAgent::TestAgent(int port)
 TestAgent::~TestAgent()
 {
     g_wxMessageBoxTestHook = nullptr;
+    g_popupMenuTestHook = nullptr;
     Instance_ = nullptr;
 
     // Must be done here rather than in the base class, which can no longer
@@ -127,17 +136,107 @@ int TestAgent::onMessageBox_(const wxString& message, const wxString& caption, i
 {
     log_info("Message box suppressed for GUI test: %s", (const char*)message.ToUTF8());
 
+    int answer = 0;
     {
         std::unique_lock<std::mutex> lk(messageBoxMutex_);
         messageBoxes_.push_back({ message, caption, style });
+        if (!messageBoxAnswers_.empty())
+        {
+            answer = messageBoxAnswers_.front();
+            messageBoxAnswers_.pop_front();
+        }
     }
 
-    // Answer as if the user had pressed the default button.
+    // Unless the script has said otherwise, answer as if the user had pressed
+    // the default button.
+    if (answer != 0)
+    {
+        return answer;
+    }
     if (style & wxYES_NO)
     {
         return (style & wxNO_DEFAULT) ? wxNO : wxYES;
     }
     return wxOK;
+}
+
+void TestAgent::onPopupMenu_(wxWindow* window, wxMenu* menu)
+{
+    PopupRecord record;
+    record.shown = true;
+    record.window = window->GetName();
+
+    wxMenuItem* chosenItem = nullptr;
+    for (auto item : menu->GetMenuItems())
+    {
+        if (item->IsSeparator())
+        {
+            continue;
+        }
+
+        wxString label = item->GetItemLabelText();
+        record.items.push_back({ label, item->IsEnabled(), item->IsCheckable() && item->IsChecked() });
+        if (popupChoiceArmed_ && chosenItem == nullptr && label == popupChoice_)
+        {
+            chosenItem = item;
+        }
+    }
+
+    if (popupChoiceArmed_)
+    {
+        if (chosenItem == nullptr)
+        {
+            record.error = wxString::Format("the popup menu has no item '%s'", popupChoice_);
+        }
+        else if (!chosenItem->IsEnabled())
+        {
+            record.error = wxString::Format("popup menu item '%s' is disabled", popupChoice_);
+            chosenItem = nullptr;
+        }
+        else
+        {
+            record.chosen = popupChoice_;
+        }
+    }
+    popupChoiceArmed_ = false;
+
+    // Recorded before making the choice, which may not return for some time
+    // (e.g. if it opens a dialog).
+    lastPopup_ = record;
+
+    if (chosenItem != nullptr)
+    {
+        if (chosenItem->IsCheckable())
+        {
+            chosenItem->Check(!chosenItem->IsChecked());
+        }
+
+        // As wxWindow::PopupMenu() does, so that the event reaches the window.
+        menu->SetInvokingWindow(window);
+        menu->SendEvent(chosenItem->GetId(), chosenItem->IsCheckable() ? chosenItem->IsChecked() : -1);
+        menu->SetInvokingWindow(nullptr);
+    }
+}
+
+// Call before doing something that's expected to display a popup menu. If
+// `choose` is given, that item will be selected from it.
+void TestAgent::expectPopupMenu_(yyjson_val* request)
+{
+    lastPopup_ = PopupRecord();
+
+    const char* choice = yyjson_get_str(yyjson_obj_get(request, "choose"));
+    popupChoiceArmed_ = (choice != nullptr);
+    popupChoice_ = popupChoiceArmed_ ? wxString::FromUTF8(choice) : wxString();
+}
+
+// Call once whatever was expected to display a popup menu has been done.
+void TestAgent::popupMenuExpected_()
+{
+    if (!lastPopup_.shown)
+    {
+        lastPopup_.error = "no popup menu appeared";
+    }
+    popupChoiceArmed_ = false;
 }
 
 void TestAgent::reply_(yyjson_mut_doc* doc)
@@ -218,6 +317,26 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandClose_(id, request);
     }
+    else if (cmd == "context_menu")
+    {
+        commandContextMenu_(id, request);
+    }
+    else if (cmd == "get_popup_menu")
+    {
+        commandGetPopupMenu_(id);
+    }
+    else if (cmd == "combo_popup")
+    {
+        commandComboPopup_(id, request);
+    }
+    else if (cmd == "data_view")
+    {
+        commandDataView_(id, request);
+    }
+    else if (cmd == "activate")
+    {
+        commandActivate_(id, request);
+    }
     else if (cmd == "menu")
     {
         commandMenu_(id, request);
@@ -242,6 +361,62 @@ void TestAgent::handleLine_(std::string const& line)
     yyjson_doc_free(requestDoc);
 }
 
+static void AppendDescendants_(std::vector<wxWindow*>& list, wxWindow* window)
+{
+    for (auto child : window->GetChildren())
+    {
+        list.push_back(child);
+        AppendDescendants_(list, child);
+    }
+}
+
+// Finds a window by the name given to it with SetName(). Windows that have
+// none (e.g. dialogs provided by wxWidgets) can be found with
+// "@<window title>", and the controls inside them with
+// "@<window title>/<label>" or "@<window title>/<class>".
+static wxWindow* FindWindow_(wxString const& name)
+{
+    if (!name.StartsWith("@"))
+    {
+        return wxWindow::FindWindowByName(name);
+    }
+
+    wxString selector;
+    wxString title = name.Mid(1).BeforeFirst('/', &selector);
+
+    wxWindow* topLevel = nullptr;
+    for (auto window : wxTopLevelWindows)
+    {
+        auto candidate = wxDynamicCast(window, wxTopLevelWindow);
+        if (candidate != nullptr && candidate->IsShown() && candidate->GetTitle() == title)
+        {
+            topLevel = candidate;
+        }
+    }
+    if (topLevel == nullptr || selector.empty())
+    {
+        return topLevel;
+    }
+
+    std::vector<wxWindow*> descendants;
+    AppendDescendants_(descendants, topLevel);
+    for (auto window : descendants)
+    {
+        if (wxControl::RemoveMnemonics(window->GetLabel()) == selector)
+        {
+            return window;
+        }
+    }
+    for (auto window : descendants)
+    {
+        if (selector == window->GetClassInfo()->GetClassName())
+        {
+            return window;
+        }
+    }
+    return nullptr;
+}
+
 // Looks up the window named by the request, replying with an error if there
 // isn't one.
 wxWindow* TestAgent::findWindow_(yyjson_val* id, yyjson_val* request)
@@ -253,12 +428,121 @@ wxWindow* TestAgent::findWindow_(yyjson_val* id, yyjson_val* request)
         return nullptr;
     }
 
-    wxWindow* window = wxWindow::FindWindowByName(wxString::FromUTF8(name));
+    wxWindow* window = FindWindow_(wxString::FromUTF8(name));
     if (window == nullptr)
     {
         replyError_(id, wxString::Format("no window named '%s'", wxString::FromUTF8(name)));
     }
     return window;
+}
+
+// Returns the rows of a list in the order in which they're displayed.
+static std::vector<wxDataViewItem> GetDisplayedRows_(wxDataViewCtrl* dataView)
+{
+    std::vector<wxDataViewItem> rows;
+
+    wxDataViewModel* model = dataView->GetModel();
+    if (model == nullptr)
+    {
+        return rows;
+    }
+
+    wxDataViewItemArray children;
+    model->GetChildren(wxDataViewItem(), children);
+    for (auto& child : children)
+    {
+        rows.push_back(child);
+    }
+
+    // The control doesn't say what order it's displaying rows in, but it
+    // gets that order from the model in the same way.
+    wxDataViewColumn* sortColumn = dataView->GetSortingColumn();
+    if (sortColumn != nullptr || model->HasDefaultCompare())
+    {
+        unsigned int column = (sortColumn != nullptr) ? sortColumn->GetModelColumn() : (unsigned int)wxNOT_FOUND;
+        bool ascending = (sortColumn != nullptr) ? sortColumn->IsSortOrderAscending() : true;
+        std::stable_sort(rows.begin(), rows.end(), [&](wxDataViewItem const& first, wxDataViewItem const& second) {
+            return model->Compare(first, second, column, ascending) < 0;
+        });
+    }
+
+    return rows;
+}
+
+static void DescribeDataView_(yyjson_mut_doc* doc, yyjson_mut_val* obj, wxDataViewCtrl* dataView, bool includeRows)
+{
+    wxDataViewModel* model = dataView->GetModel();
+
+    yyjson_mut_val* columns = yyjson_mut_arr(doc);
+    for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+    {
+        wxDataViewColumn* column = dataView->GetColumn(index);
+        yyjson_mut_val* columnObj = yyjson_mut_obj(doc);
+        AddString_(doc, columnObj, "title", column->GetTitle());
+        yyjson_mut_obj_add_int(doc, columnObj, "id", column->GetModelColumn());
+        yyjson_mut_obj_add_int(doc, columnObj, "position", dataView->GetColumnPosition(column));
+        yyjson_mut_obj_add_bool(doc, columnObj, "shown", !column->IsHidden());
+        yyjson_mut_obj_add_str(
+            doc, columnObj, "sort",
+            !column->IsSortKey() ? "none" : (column->IsSortOrderAscending() ? "ascending" : "descending"));
+        yyjson_mut_arr_append(columns, columnObj);
+    }
+    yyjson_mut_obj_add_val(doc, obj, "columns", columns);
+
+    auto rows = GetDisplayedRows_(dataView);
+    wxDataViewItem selection = dataView->GetSelection();
+    int selectedRow = wxNOT_FOUND;
+    for (size_t row = 0; row < rows.size(); row++)
+    {
+        if (rows[row] == selection)
+        {
+            selectedRow = (int)row;
+        }
+    }
+    yyjson_mut_obj_add_int(doc, obj, "selection", selectedRow);
+    yyjson_mut_obj_add_int(doc, obj, "rowCount", (int)rows.size());
+
+    if (!includeRows || model == nullptr)
+    {
+        return;
+    }
+
+    yyjson_mut_val* rowsArr = yyjson_mut_arr(doc);
+    for (auto& row : rows)
+    {
+        yyjson_mut_val* rowObj = yyjson_mut_obj(doc);
+
+        // Keyed by column ID, as columns can be reordered.
+        yyjson_mut_val* cells = yyjson_mut_obj(doc);
+        for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+        {
+            unsigned int columnId = dataView->GetColumn(index)->GetModelColumn();
+            wxVariant value;
+            model->GetValue(value, row, columnId);
+
+            std::string key = std::to_string(columnId);
+            yyjson_mut_obj_add(
+                cells, yyjson_mut_strcpy(doc, key.c_str()),
+                yyjson_mut_strcpy(doc, ToUtf8_(value.IsNull() ? wxString() : value.MakeString()).c_str()));
+        }
+        yyjson_mut_obj_add_val(doc, rowObj, "cells", cells);
+
+        wxDataViewItemAttr attr;
+        if (model->GetAttr(row, 0, attr))
+        {
+            if (attr.HasBackgroundColour())
+            {
+                AddString_(doc, rowObj, "background", attr.GetBackgroundColour().GetAsString(wxC2S_HTML_SYNTAX));
+            }
+            if (attr.HasColour())
+            {
+                AddString_(doc, rowObj, "foreground", attr.GetColour().GetAsString(wxC2S_HTML_SYNTAX));
+            }
+        }
+
+        yyjson_mut_arr_append(rowsArr, rowObj);
+    }
+    yyjson_mut_obj_add_val(doc, obj, "rows", rowsArr);
 }
 
 yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window, bool includeItems)
@@ -275,6 +559,7 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
 
         auto dialog = wxDynamicCast(window, wxDialog);
         yyjson_mut_obj_add_bool(doc, obj, "modal", dialog != nullptr && dialog->IsModal());
+        yyjson_mut_obj_add_bool(doc, obj, "active", topLevel->IsActive());
         return obj;
     }
 
@@ -308,6 +593,23 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     {
         AddString_(doc, obj, "value", choice->GetStringSelection());
         container = choice;
+    }
+    else if (auto comboCtrl = wxDynamicCast(window, wxComboCtrl))
+    {
+        AddString_(doc, obj, "value", comboCtrl->GetValue());
+    }
+    else if (auto listBox = wxDynamicCast(window, wxListBox))
+    {
+        AddString_(doc, obj, "value", listBox->GetStringSelection());
+        container = listBox;
+    }
+    else if (auto spinCtrl = wxDynamicCast(window, wxSpinCtrl))
+    {
+        yyjson_mut_obj_add_int(doc, obj, "value", spinCtrl->GetValue());
+    }
+    else if (auto dataView = wxDynamicCast(window, wxDataViewCtrl))
+    {
+        DescribeDataView_(doc, obj, dataView, includeItems);
     }
     else if (auto book = wxDynamicCast(window, wxBookCtrlBase))
     {
@@ -362,15 +664,6 @@ void TestAgent::commandListWindows_(yyjson_val* id)
         yyjson_mut_arr_append(windows, describeWindow_(doc, window, false));
     }
     replyOk_(id, doc, windows);
-}
-
-static void AppendDescendants_(std::vector<wxWindow*>& list, wxWindow* window)
-{
-    for (auto child : window->GetChildren())
-    {
-        list.push_back(child);
-        AppendDescendants_(list, child);
-    }
 }
 
 void TestAgent::commandListWidgets_(yyjson_val* id, yyjson_val* request)
@@ -492,6 +785,22 @@ static bool IsClickable_(wxWindow* window)
         wxDynamicCast(window, wxButton) != nullptr;
 }
 
+// Finds somewhere inside the given item of a list box.
+static bool FindListBoxItem_(wxListBox* listBox, int item, wxPoint& position)
+{
+    wxSize size = listBox->GetClientSize();
+    for (int y = 1; y < size.GetHeight(); y += 2)
+    {
+        wxPoint candidate(std::min(10, size.GetWidth() / 2), y);
+        if (listBox->HitTest(candidate) == item)
+        {
+            position = candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
 void TestAgent::commandClick_(yyjson_val* id, yyjson_val* request)
 {
     wxWindow* window = findWindow_(id, request);
@@ -503,6 +812,31 @@ void TestAgent::commandClick_(yyjson_val* id, yyjson_val* request)
         replyError_(id, error);
         return;
     }
+
+    // An item in a list box.
+    yyjson_val* itemIndex = yyjson_obj_get(request, "item");
+    if (yyjson_is_int(itemIndex))
+    {
+        auto listBox = wxDynamicCast(window, wxListBox);
+        wxPoint position;
+        if (listBox == nullptr || !FindListBoxItem_(listBox, yyjson_get_int(itemIndex), position))
+        {
+            replyError_(id, wxString::Format(
+                "could not find item %d of '%s'", yyjson_get_int(itemIndex), window->GetName()));
+            return;
+        }
+
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        for (auto type : { wxEVT_MOTION, wxEVT_LEFT_DOWN, wxEVT_LEFT_UP })
+        {
+            wxMouseEvent event(type);
+            event.SetEventObject(window);
+            event.SetPosition(position);
+            window->ProcessWindowEvent(event);
+        }
+        return;
+    }
+
     if (!IsClickable_(window))
     {
         replyError_(id, wxString::Format("'%s' cannot be clicked", window->GetName()));
@@ -535,7 +869,10 @@ void TestAgent::commandSetValue_(yyjson_val* id, yyjson_val* request)
         wxDynamicCast(window, wxRadioButton) != nullptr;
     auto comboBox = wxDynamicCast(window, wxComboBox);
     auto choice = wxDynamicCast(window, wxChoice);
-    wxItemContainer* container = (comboBox != nullptr) ? (wxItemContainer*)comboBox : (wxItemContainer*)choice;
+    auto listBox = wxDynamicCast(window, wxListBox);
+    wxItemContainer* container = comboBox;
+    if (container == nullptr) container = choice;
+    if (container == nullptr) container = listBox;
 
     if (isBoolControl)
     {
@@ -614,9 +951,39 @@ void TestAgent::commandSetValue_(yyjson_val* id, yyjson_val* request)
 
         replyOk_(id, yyjson_mut_doc_new(nullptr));
         container->SetSelection(selection);
+        if (comboBox != nullptr)
+        {
+            // Choosing an item also changes the text.
+            SendCommandEvent_(window, wxEVT_TEXT, 0, container->GetString(selection));
+        }
         SendCommandEvent_(
-            window, (comboBox != nullptr) ? wxEVT_COMBOBOX : wxEVT_CHOICE,
+            window,
+            (comboBox != nullptr) ? wxEVT_COMBOBOX : ((listBox != nullptr) ? wxEVT_LISTBOX : wxEVT_CHOICE),
             selection, container->GetString(selection));
+    }
+    else if (auto comboCtrl = wxDynamicCast(window, wxComboCtrl))
+    {
+        if (!yyjson_is_str(value))
+        {
+            replyError_(id, wxString::Format("'%s' needs a string value", window->GetName()));
+            return;
+        }
+
+        // Generates the same event that typing does.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        comboCtrl->SetValue(wxString::FromUTF8(yyjson_get_str(value)));
+    }
+    else if (auto spinCtrl = wxDynamicCast(window, wxSpinCtrl))
+    {
+        if (!yyjson_is_int(value))
+        {
+            replyError_(id, wxString::Format("'%s' needs an integer value", window->GetName()));
+            return;
+        }
+
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        spinCtrl->SetValue(yyjson_get_int(value));
+        SendCommandEvent_(window, wxEVT_SPINCTRL, spinCtrl->GetValue());
     }
     else if (auto textCtrl = wxDynamicCast(window, wxTextCtrl))
     {
@@ -663,26 +1030,88 @@ void TestAgent::commandClose_(yyjson_val* id, yyjson_val* request)
     window->Close();
 }
 
-void TestAgent::commandMenu_(yyjson_val* id, yyjson_val* request)
+// Brings a window to the front, as clicking on it would.
+void TestAgent::commandActivate_(yyjson_val* id, yyjson_val* request)
 {
-    // Menu items are given as "<menu>/<item>" using their labels without
-    // mnemonics or shortcuts, e.g. "Settings/Setup Wizard...".
-    const char* pathStr = yyjson_get_str(yyjson_obj_get(request, "path"));
-    wxString path = (pathStr != nullptr) ? wxString::FromUTF8(pathStr) : wxString();
-    wxString itemLabel;
-    wxString menuLabel = path.BeforeFirst('/', &itemLabel);
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
 
-    auto frame = wxDynamicCast(wxTheApp->GetTopWindow(), wxFrame);
-    wxMenuBar* menuBar = (frame != nullptr) ? frame->GetMenuBar() : nullptr;
-    if (menuBar == nullptr)
+    wxString error;
+    if (wxDynamicCast(window, wxTopLevelWindow) == nullptr)
     {
-        replyError_(id, "the main window has no menu bar");
+        replyError_(id, wxString::Format("'%s' is not a top-level window", window->GetName()));
+        return;
+    }
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
         return;
     }
 
-    int itemId = menuBar->FindMenuItem(menuLabel, itemLabel);
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+
+    // Not by clicking somewhere in particular, though: keep the mouse pointer
+    // out of the way so that nothing in the window reacts to it being there.
+    wxPoint corner = window->ScreenToClient(wxPoint(0, 0));
+    window->WarpPointer(corner.x, corner.y);
+
+    window->Raise();
+    window->SetFocus();
+}
+
+void TestAgent::commandMenu_(yyjson_val* id, yyjson_val* request)
+{
+    // Menu items are given as "<menu>/<item>" (or ".../<submenu>/<item>")
+    // using their labels without mnemonics or shortcuts, e.g.
+    // "Settings/Setup Wizard...". They're those of the main window unless
+    // another window is named.
+    const char* pathStr = yyjson_get_str(yyjson_obj_get(request, "path"));
+    wxString path = (pathStr != nullptr) ? wxString::FromUTF8(pathStr) : wxString();
+
+    wxWindow* window = wxTheApp->GetTopWindow();
+    if (yyjson_obj_get(request, "name") != nullptr)
+    {
+        window = findWindow_(id, request);
+        if (window == nullptr) return;
+    }
+
+    auto frame = wxDynamicCast(window, wxFrame);
+    wxMenuBar* menuBar = (frame != nullptr) ? frame->GetMenuBar() : nullptr;
+    if (menuBar == nullptr)
+    {
+        replyError_(id, "that window has no menu bar");
+        return;
+    }
+
+    wxArrayString labels = wxSplit(path, '/', '\0');
     wxMenu* menu = nullptr;
-    wxMenuItem* item = (itemId != wxNOT_FOUND) ? menuBar->FindItem(itemId, &menu) : nullptr;
+    wxMenuItem* item = nullptr;
+    if (labels.size() >= 2)
+    {
+        int menuIndex = menuBar->FindMenu(labels[0]);
+        menu = (menuIndex != wxNOT_FOUND) ? menuBar->GetMenu(menuIndex) : nullptr;
+        for (size_t index = 1; menu != nullptr && index < labels.size(); index++)
+        {
+            item = nullptr;
+            for (auto candidate : menu->GetMenuItems())
+            {
+                if (!candidate->IsSeparator() && candidate->GetItemLabelText() == labels[index])
+                {
+                    item = candidate;
+                    break;
+                }
+            }
+            if (item == nullptr)
+            {
+                break;
+            }
+            if (index + 1 < labels.size())
+            {
+                menu = item->GetSubMenu();
+                item = nullptr;
+            }
+        }
+    }
     if (item == nullptr || menu == nullptr)
     {
         replyError_(id, wxString::Format("no menu item '%s'", path));
@@ -704,16 +1133,350 @@ void TestAgent::commandMenu_(yyjson_val* id, yyjson_val* request)
         return;
     }
 
+    if (yyjson_get_bool(yyjson_obj_get(request, "query")))
+    {
+        // Only asked about the item, not to select it.
+        yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+        yyjson_mut_val* result = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_bool(doc, result, "checked", item->IsCheckable() && item->IsChecked());
+        replyOk_(id, doc, result);
+        return;
+    }
+
     replyOk_(id, yyjson_mut_doc_new(nullptr));
 
-    wxCommandEvent event(wxEVT_MENU, itemId);
-    event.SetEventObject(menu);
     if (item->IsCheckable())
     {
         item->Check(!item->IsChecked());
-        event.SetInt(item->IsChecked());
     }
-    frame->ProcessWindowEvent(event);
+    menu->SendEvent(item->GetId(), item->IsCheckable() ? item->IsChecked() : -1);
+}
+
+// Right-clicks a window, optionally choosing an item from the popup menu
+// that results.
+void TestAgent::commandContextMenu_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    // Lists handle right-clicks on their items themselves, so those need to
+    // be told which one.
+    wxPoint position = wxDefaultPosition;
+    yyjson_val* itemIndex = yyjson_obj_get(request, "item");
+    auto listBox = wxDynamicCast(window, wxListBox);
+    if (yyjson_is_int(itemIndex))
+    {
+        if (listBox == nullptr || !FindListBoxItem_(listBox, yyjson_get_int(itemIndex), position))
+        {
+            replyError_(id, wxString::Format(
+                "could not find item %d of '%s'", yyjson_get_int(itemIndex), window->GetName()));
+            return;
+        }
+    }
+
+    expectPopupMenu_(request);
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+
+    // The pointer has to get there first, which some controls wait for.
+    wxMouseEvent motion(wxEVT_MOTION);
+    motion.SetEventObject(window);
+    motion.SetPosition(position);
+    window->ProcessWindowEvent(motion);
+
+    // Which event brings up the menu differs by platform and by control, so
+    // send what a right-click does until something takes it.
+    wxMouseEvent down(wxEVT_RIGHT_DOWN);
+    down.SetEventObject(window);
+    down.SetPosition(position);
+    window->ProcessWindowEvent(down);
+
+    wxMouseEvent up(wxEVT_RIGHT_UP);
+    up.SetEventObject(window);
+    up.SetPosition(position);
+    if (!window->ProcessWindowEvent(up) && !lastPopup_.shown)
+    {
+        wxContextMenuEvent contextMenu(wxEVT_CONTEXT_MENU, window->GetId(), wxGetMousePosition());
+        contextMenu.SetEventObject(window);
+        window->ProcessWindowEvent(contextMenu);
+    }
+
+    popupMenuExpected_();
+}
+
+void TestAgent::commandGetPopupMenu_(yyjson_val* id)
+{
+    if (!lastPopup_.error.empty())
+    {
+        replyError_(id, lastPopup_.error);
+        return;
+    }
+
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* result = yyjson_mut_obj(doc);
+    yyjson_mut_obj_add_bool(doc, result, "shown", lastPopup_.shown);
+    AddString_(doc, result, "window", lastPopup_.window);
+    AddString_(doc, result, "chosen", lastPopup_.chosen);
+
+    yyjson_mut_val* items = yyjson_mut_arr(doc);
+    for (auto& item : lastPopup_.items)
+    {
+        yyjson_mut_val* itemObj = yyjson_mut_obj(doc);
+        AddString_(doc, itemObj, "label", item.label);
+        yyjson_mut_obj_add_bool(doc, itemObj, "enabled", item.enabled);
+        yyjson_mut_obj_add_bool(doc, itemObj, "checked", item.checked);
+        yyjson_mut_arr_append(items, itemObj);
+    }
+    yyjson_mut_obj_add_val(doc, result, "items", items);
+
+    replyOk_(id, doc, result);
+}
+
+// Opens or closes the list belonging to a combo control.
+void TestAgent::commandComboPopup_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    auto comboCtrl = wxDynamicCast(window, wxComboCtrl);
+    wxString error;
+    if (comboCtrl == nullptr)
+    {
+        replyError_(id, wxString::Format("'%s' has no list to open", window->GetName()));
+        return;
+    }
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+    if (yyjson_get_bool(yyjson_obj_get(request, "open")))
+    {
+        comboCtrl->Popup();
+    }
+    else
+    {
+        comboCtrl->Dismiss();
+    }
+}
+
+static bool SendDataViewEvent_(
+    wxDataViewCtrl* dataView, wxEventType type, wxDataViewItem const& item, wxDataViewColumn* column)
+{
+#if wxCHECK_VERSION(3,1,1)
+    wxDataViewEvent event(type, dataView, column, item);
+#else
+    wxDataViewEvent event(type, dataView->GetId());
+    event.SetEventObject(dataView);
+    event.SetModel(dataView->GetModel());
+    event.SetItem(item);
+    event.SetDataViewColumn(column);
+    if (column != nullptr)
+    {
+        event.SetColumn(column->GetModelColumn());
+    }
+#endif // wxCHECK_VERSION(3,1,1)
+    return dataView->ProcessWindowEvent(event);
+}
+
+// Moves the mouse pointer over a cell, as some of what lists do depends on
+// what the pointer is over.
+static bool HoverOverCell_(
+    wxDataViewCtrl* dataView, wxDataViewItem const& item, wxDataViewColumn* column, wxString& error)
+{
+    dataView->EnsureVisible(item, column);
+
+    wxRect rect = dataView->GetItemRect(item, column);
+    if (rect.IsEmpty())
+    {
+        error = wxString::Format("the requested cell of '%s' is not being displayed", dataView->GetName());
+        return false;
+    }
+    // Where the pointer ends up isn't always where it was sent (e.g. with no
+    // window manager running), so correct for any difference.
+    wxPoint target(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    wxPoint position;
+    wxPoint correction(0, 0);
+    for (int attempt = 0; attempt < 4; attempt++)
+    {
+        dataView->WarpPointer(target.x + correction.x, target.y + correction.y);
+        position = wxGetMousePosition() - dataView->GetScreenPosition();
+        if (position == target)
+        {
+            break;
+        }
+        correction += target - position;
+    }
+
+    wxDataViewItem itemUnderPointer;
+    wxDataViewColumn* columnUnderPointer = nullptr;
+    dataView->HitTest(position, itemUnderPointer, columnUnderPointer);
+    if (itemUnderPointer != item || columnUnderPointer != column)
+    {
+        error = wxString::Format(
+            "could not move the mouse pointer over the requested cell of '%s' (cell at %d,%d %dx%d, pointer at %d,%d)",
+            dataView->GetName(), rect.x, rect.y, rect.width, rect.height, position.x, position.y);
+        return false;
+    }
+
+    wxMouseEvent motion(wxEVT_MOTION);
+    motion.SetEventObject(dataView);
+    motion.SetPosition(position);
+    dataView->ProcessWindowEvent(motion);
+    return true;
+}
+
+// Acts on a list of rows and columns. Rows are numbered from the top as
+// displayed, and columns are referred to by ID (see "columns" in the list's
+// state), as they can be reordered.
+void TestAgent::commandDataView_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    auto dataView = wxDynamicCast(window, wxDataViewCtrl);
+    wxString error;
+    if (dataView == nullptr)
+    {
+        replyError_(id, wxString::Format("'%s' is not a list with columns", window->GetName()));
+        return;
+    }
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    const char* actionStr = yyjson_get_str(yyjson_obj_get(request, "action"));
+    std::string action = (actionStr != nullptr) ? actionStr : "";
+    bool isHeaderAction = (action == "header_click" || action == "header_context_menu");
+    bool isRowAction = (action == "hover" || action == "select" || action == "activate" || action == "context_menu");
+    if (!isHeaderAction && !isRowAction)
+    {
+        replyError_(id, wxString::Format("unknown list action '%s'", wxString::FromUTF8(action.c_str())));
+        return;
+    }
+
+    // Defaults to the first column displayed.
+    wxDataViewColumn* column = nullptr;
+    yyjson_val* columnId = yyjson_obj_get(request, "column");
+    for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+    {
+        wxDataViewColumn* candidate = dataView->GetColumn(index);
+        if (candidate->IsHidden())
+        {
+            continue;
+        }
+        if (yyjson_is_int(columnId)
+                ? (int)candidate->GetModelColumn() == yyjson_get_int(columnId)
+                : (column == nullptr || dataView->GetColumnPosition(candidate) < dataView->GetColumnPosition(column)))
+        {
+            column = candidate;
+        }
+    }
+    if (column == nullptr)
+    {
+        replyError_(id, wxString::Format("'%s' is not displaying the requested column", window->GetName()));
+        return;
+    }
+
+    if (isHeaderAction)
+    {
+        if (action == "header_click")
+        {
+            replyOk_(id, yyjson_mut_doc_new(nullptr));
+            if (!SendDataViewEvent_(dataView, wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewItem(), column) &&
+                column->IsSortable())
+            {
+                // Left alone, the list sorts by the column, reversing the
+                // order if it already was. (The column is unset first as
+                // wxGTK otherwise loses track of it being the sort column.)
+                bool ascending = column->IsSortKey() ? !column->IsSortOrderAscending() : true;
+                if (column->IsSortKey())
+                {
+                    column->UnsetAsSortKey();
+                }
+                column->SetSortOrder(ascending);
+                if (dataView->GetModel() != nullptr)
+                {
+                    dataView->GetModel()->Resort();
+                }
+            }
+        }
+        else
+        {
+            expectPopupMenu_(request);
+            replyOk_(id, yyjson_mut_doc_new(nullptr));
+            SendDataViewEvent_(dataView, wxEVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK, wxDataViewItem(), column);
+            popupMenuExpected_();
+        }
+        return;
+    }
+
+    // The row is given by its position or, as that can change at any moment
+    // in a list that's kept sorted, by the text in one of its columns.
+    auto rows = GetDisplayedRows_(dataView);
+    int row = wxNOT_FOUND;
+    yyjson_val* matchColumn = yyjson_obj_get(request, "match_column");
+    const char* matchText = yyjson_get_str(yyjson_obj_get(request, "match_text"));
+    if (yyjson_is_int(matchColumn) && matchText != nullptr && dataView->GetModel() != nullptr)
+    {
+        for (size_t index = 0; index < rows.size() && row == wxNOT_FOUND; index++)
+        {
+            wxVariant value;
+            dataView->GetModel()->GetValue(value, rows[index], yyjson_get_int(matchColumn));
+            if (!value.IsNull() && value.MakeString() == wxString::FromUTF8(matchText))
+            {
+                row = (int)index;
+            }
+        }
+    }
+    else if (yyjson_is_int(yyjson_obj_get(request, "row")))
+    {
+        row = yyjson_get_int(yyjson_obj_get(request, "row"));
+    }
+    if (row < 0 || row >= (int)rows.size())
+    {
+        replyError_(id, wxString::Format("'%s' has no such row", window->GetName()));
+        return;
+    }
+    wxDataViewItem item = rows[row];
+
+    // Whatever's done to a row with the mouse is done with the pointer over it.
+    if (!HoverOverCell_(dataView, item, column, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    if (action == "context_menu")
+    {
+        expectPopupMenu_(request);
+    }
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+
+    if (action == "select")
+    {
+        dataView->Select(item);
+        SendDataViewEvent_(dataView, wxEVT_DATAVIEW_SELECTION_CHANGED, item, column);
+    }
+    else if (action == "activate")
+    {
+        SendDataViewEvent_(dataView, wxEVT_DATAVIEW_ITEM_ACTIVATED, item, column);
+    }
+    else if (action == "context_menu")
+    {
+        SendDataViewEvent_(dataView, wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, item, column);
+        popupMenuExpected_();
+    }
 }
 
 template<typename SoundDeviceType>
@@ -788,6 +1551,15 @@ void TestAgent::commandMessageBoxes_(yyjson_val* id, yyjson_val* request)
         if (yyjson_get_bool(yyjson_obj_get(request, "clear")))
         {
             messageBoxes_.clear();
+        }
+
+        // How to answer the next message box, in place of its default button.
+        const char* answer = yyjson_get_str(yyjson_obj_get(request, "answer"));
+        if (answer != nullptr)
+        {
+            std::string answerStr = answer;
+            messageBoxAnswers_.push_back(
+                (answerStr == "yes") ? wxYES : (answerStr == "no") ? wxNO : (answerStr == "cancel") ? wxCANCEL : wxOK);
         }
     }
 

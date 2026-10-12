@@ -851,6 +851,15 @@ foreach(scenario first_run second_run receive_only cancel auto_select radio_cont
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
     set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)
 endforeach(scenario)
+
+# These also need a window manager to be running and, other than live_view
+# (which is skipped if the public FreeDV Reporter server can't be reached), the
+# Python packages listed in test/gui/freedvtest/reporter.py.
+foreach(scenario live_view stations sorting band_filter column_filters idle_filter columns status_message qsy window connection_burst)
+    add_test(NAME gui_reporter_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
+    set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+endforeach(scenario)
 endif(LINUX)
 
 endif(UNITTEST)
