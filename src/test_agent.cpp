@@ -19,11 +19,14 @@
 //==========================================================================
 
 #include <algorithm>
+#include <map>
 #include <cstdlib>
 
 #include <wx/bookctrl.h>
+#include <wx/clrpicker.h>
 #include <wx/combo.h>
 #include <wx/dataview.h>
+#include <wx/listctrl.h>
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 
@@ -78,6 +81,9 @@ TestAgent::TestAgent(int port)
     g_popupMenuTestHook = [this](wxWindow* window, wxMenu* menu) {
         onPopupMenu_(window, menu);
     };
+    g_pathDialogTestHook = [this](const wxString& title, wxString& path) {
+        return onPathDialog_(title, path);
+    };
 
     log_info("Connecting to GUI test controller on port %d", port);
     connect("127.0.0.1", port, false);
@@ -87,6 +93,7 @@ TestAgent::~TestAgent()
 {
     g_wxMessageBoxTestHook = nullptr;
     g_popupMenuTestHook = nullptr;
+    g_pathDialogTestHook = nullptr;
     Instance_ = nullptr;
 
     // Must be done here rather than in the base class, which can no longer
@@ -158,6 +165,23 @@ int TestAgent::onMessageBox_(const wxString& message, const wxString& caption, i
         return (style & wxNO_DEFAULT) ? wxNO : wxYES;
     }
     return wxOK;
+}
+
+bool TestAgent::onPathDialog_(const wxString& title, wxString& path)
+{
+    log_info("File chooser suppressed for GUI test: %s", (const char*)title.ToUTF8());
+    pathDialogs_.push_back(title);
+
+    // Unless the script has said what to choose, it's as if the user cancelled.
+    if (pathDialogAnswers_.empty())
+    {
+        return false;
+    }
+
+    auto answer = pathDialogAnswers_.front();
+    pathDialogAnswers_.pop_front();
+    path = answer.second;
+    return answer.first;
 }
 
 void TestAgent::onPopupMenu_(wxWindow* window, wxMenu* menu)
@@ -344,6 +368,14 @@ void TestAgent::handleLine_(std::string const& line)
     else if (cmd == "get_state")
     {
         commandGetState_(id);
+    }
+    else if (cmd == "key")
+    {
+        commandKey_(id, request);
+    }
+    else if (cmd == "path_dialogs")
+    {
+        commandPathDialogs_(id, request);
     }
     else if (cmd == "message_boxes")
     {
@@ -614,6 +646,43 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     else if (auto book = wxDynamicCast(window, wxBookCtrlBase))
     {
         yyjson_mut_obj_add_int(doc, obj, "value", book->GetSelection());
+
+        yyjson_mut_val* pages = yyjson_mut_arr(doc);
+        for (size_t page = 0; page < book->GetPageCount(); page++)
+        {
+            yyjson_mut_arr_add_strcpy(doc, pages, ToUtf8_(book->GetPageText(page)).c_str());
+        }
+        yyjson_mut_obj_add_val(doc, obj, "pages", pages);
+    }
+    else if (auto colourPicker = wxDynamicCast(window, wxColourPickerCtrl))
+    {
+        AddString_(doc, obj, "value", colourPicker->GetColour().GetAsString(wxC2S_HTML_SYNTAX));
+    }
+    else if (auto listCtrl = wxDynamicCast(window, wxListCtrl))
+    {
+        long selection = listCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        yyjson_mut_obj_add_int(doc, obj, "selection", selection);
+        AddString_(doc, obj, "value", (selection >= 0) ? listCtrl->GetItemText(selection, 0) : wxString());
+
+        if (includeItems)
+        {
+            // Each item's label is what's in its first column.
+            yyjson_mut_val* items = yyjson_mut_arr(doc);
+            for (long item = 0; item < listCtrl->GetItemCount(); item++)
+            {
+                yyjson_mut_val* itemObj = yyjson_mut_obj(doc);
+                AddString_(doc, itemObj, "label", listCtrl->GetItemText(item, 0));
+
+                yyjson_mut_val* columns = yyjson_mut_arr(doc);
+                for (int column = 0; column < listCtrl->GetColumnCount(); column++)
+                {
+                    yyjson_mut_arr_add_strcpy(doc, columns, ToUtf8_(listCtrl->GetItemText(item, column)).c_str());
+                }
+                yyjson_mut_obj_add_val(doc, itemObj, "columns", columns);
+                yyjson_mut_arr_append(items, itemObj);
+            }
+            yyjson_mut_obj_add_val(doc, obj, "items", items);
+        }
     }
     else if (auto gauge = wxDynamicCast(window, wxGauge))
     {
@@ -1001,6 +1070,72 @@ void TestAgent::commandSetValue_(yyjson_val* id, yyjson_val* request)
         // Generates the same event that typing does.
         replyOk_(id, yyjson_mut_doc_new(nullptr));
         textCtrl->SetValue(wxString::FromUTF8(yyjson_get_str(value)));
+    }
+    else if (auto book = wxDynamicCast(window, wxBookCtrlBase))
+    {
+        // A page (tab), by position or by title.
+        int page = wxNOT_FOUND;
+        if (yyjson_is_int(value))
+        {
+            page = yyjson_get_int(value);
+        }
+        else if (yyjson_is_str(value))
+        {
+            for (size_t candidate = 0; candidate < book->GetPageCount(); candidate++)
+            {
+                if (book->GetPageText(candidate) == wxString::FromUTF8(yyjson_get_str(value)))
+                {
+                    page = (int)candidate;
+                }
+            }
+        }
+        if (page < 0 || page >= (int)book->GetPageCount())
+        {
+            replyError_(id, wxString::Format("'%s' has no such page", window->GetName()));
+            return;
+        }
+
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        book->SetSelection(page);
+    }
+    else if (auto colourPicker = wxDynamicCast(window, wxColourPickerCtrl))
+    {
+        wxColour colour(yyjson_is_str(value) ? wxString::FromUTF8(yyjson_get_str(value)) : wxString());
+        if (!colour.IsOk())
+        {
+            replyError_(id, wxString::Format("'%s' needs a color such as \"#FF0000\"", window->GetName()));
+            return;
+        }
+
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        colourPicker->SetColour(colour);
+        wxColourPickerEvent event(colourPicker, colourPicker->GetId(), colour);
+        colourPicker->ProcessWindowEvent(event);
+    }
+    else if (auto listCtrl = wxDynamicCast(window, wxListCtrl))
+    {
+        // An item, by position or by what's in its first column.
+        long item = wxNOT_FOUND;
+        if (yyjson_is_int(index))
+        {
+            item = yyjson_get_int(index);
+        }
+        else if (yyjson_is_str(value))
+        {
+            item = listCtrl->FindItem(-1, wxString::FromUTF8(yyjson_get_str(value)));
+        }
+        if (item < 0 || item >= listCtrl->GetItemCount())
+        {
+            replyError_(id, wxString::Format("'%s' has no such item", window->GetName()));
+            return;
+        }
+
+        // Selecting an item this way is reported in the same way as the user
+        // doing so.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        listCtrl->EnsureVisible(item);
+        listCtrl->SetItemState(
+            item, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
     }
     else
     {
@@ -1573,6 +1708,100 @@ void TestAgent::commandMessageBoxes_(yyjson_val* id, yyjson_val* request)
         yyjson_mut_obj_add_int(doc, obj, "style", record.style);
         yyjson_mut_arr_append(list, obj);
     }
+    replyOk_(id, doc, list);
+}
+
+// Presses a key while the given window has the keyboard focus.
+void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    static const std::map<wxString, int> namedKeys = {
+        { "Escape", WXK_ESCAPE }, { "Space", WXK_SPACE }, { "Tab", WXK_TAB }, { "Enter", WXK_RETURN },
+        { "Backspace", WXK_BACK }, { "Delete", WXK_DELETE }, { "Shift", WXK_SHIFT }, { "Control", WXK_CONTROL },
+        { "F1", WXK_F1 }, { "F2", WXK_F2 }, { "F3", WXK_F3 }, { "F4", WXK_F4 }, { "F5", WXK_F5 }, { "F6", WXK_F6 },
+        { "F7", WXK_F7 }, { "F8", WXK_F8 }, { "F9", WXK_F9 }, { "F10", WXK_F10 }, { "F11", WXK_F11 },
+        { "F12", WXK_F12 },
+    };
+
+    const char* keyStr = yyjson_get_str(yyjson_obj_get(request, "key"));
+    wxString key = (keyStr != nullptr) ? wxString::FromUTF8(keyStr) : wxString();
+    int keyCode = 0;
+    auto namedKey = namedKeys.find(key);
+    if (namedKey != namedKeys.end())
+    {
+        keyCode = namedKey->second;
+    }
+    else if (key.length() == 1)
+    {
+        // Letters are reported as capitals when a key goes down or up.
+        keyCode = wxToupper(key[0]);
+    }
+    else
+    {
+        replyError_(id, wxString::Format("unknown key '%s'", key));
+        return;
+    }
+
+    auto sendKeyEvent = [&](wxEventType type) {
+        wxKeyEvent event(type);
+        event.SetEventObject(window);
+        event.SetId(window->GetId());
+        event.m_keyCode = keyCode;
+#if wxUSE_UNICODE
+        event.m_uniChar = keyCode;
+#endif // wxUSE_UNICODE
+        return window->ProcessWindowEvent(event);
+    };
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+
+    // The window (and those that it's inside) get a chance to act on the
+    // key before it's treated as input, and anything that does so stops
+    // there.
+    bool heldDownOnly = yyjson_get_bool(yyjson_obj_get(request, "hold"));
+    if (!sendKeyEvent(wxEVT_CHAR_HOOK) && !sendKeyEvent(wxEVT_KEY_DOWN))
+    {
+        sendKeyEvent(wxEVT_CHAR);
+    }
+    if (!heldDownOnly)
+    {
+        sendKeyEvent(wxEVT_KEY_UP);
+    }
+}
+
+void TestAgent::commandPathDialogs_(yyjson_val* id, yyjson_val* request)
+{
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* list = yyjson_mut_arr(doc);
+    for (auto& title : pathDialogs_)
+    {
+        yyjson_mut_arr_add_strcpy(doc, list, ToUtf8_(title).c_str());
+    }
+    if (yyjson_get_bool(yyjson_obj_get(request, "clear")))
+    {
+        pathDialogs_.clear();
+    }
+
+    // What to choose from the next file or folder chooser, or to cancel it.
+    const char* choose = yyjson_get_str(yyjson_obj_get(request, "choose"));
+    if (choose != nullptr)
+    {
+        pathDialogAnswers_.push_back({ true, wxString::FromUTF8(choose) });
+    }
+    else if (yyjson_get_bool(yyjson_obj_get(request, "cancel")))
+    {
+        pathDialogAnswers_.push_back({ false, wxString() });
+    }
+
     replyOk_(id, doc, list);
 }
 

@@ -95,6 +95,7 @@
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
 #include "gui/util/PopupMenuWrapper.h"
+#include "gui/util/PathDialogWrapper.h"
 #include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1

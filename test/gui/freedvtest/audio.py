@@ -1,7 +1,12 @@
 """Virtual audio devices for FreeDV to use during tests (Linux only)."""
 
+import array
+import math
+import os
 import subprocess
+import tempfile
 import time
+import wave
 
 
 def _pactl(*args):
@@ -11,6 +16,61 @@ def _pactl(*args):
 def default_output():
     """Returns the name of the system's default output device."""
     return _pactl("get-default-sink").strip()
+
+
+def record_level(device, seconds=1.0):
+    """Listens to an input device (or input_name() of an output device) and
+    returns how loud what it hears is, as the RMS of 16 bit samples: 0 for
+    silence, around 23000 for a full-scale tone."""
+    with tempfile.TemporaryDirectory(prefix="freedvtest-audio-") as folder:
+        path = os.path.join(folder, "recording.wav")
+        recorder = subprocess.Popen([
+            "parecord", "--device=" + device, "--file-format=wav", "--channels=1", "--rate=8000",
+            "--format=s16le", "--latency-msec=20", path])
+        time.sleep(seconds)
+        recorder.terminate()
+        recorder.wait()
+
+        # The recorder doesn't get to fill in the file's length, so don't rely on it.
+        with open(path, "rb") as f:
+            data = f.read()[44:]
+    samples = array.array("h", data[:len(data) // 2 * 2])
+    if not samples:
+        return 0.0
+    return math.sqrt(sum(sample * sample for sample in samples) / len(samples))
+
+
+class Tone:
+    """Plays a tone into an output device for the duration of a "with" block
+    (at most max_seconds)."""
+
+    def __init__(self, device, frequency=1000.0, max_seconds=30):
+        self._device = device
+        self._frequency = frequency
+        self._seconds = max_seconds
+        self._folder = None
+        self._player = None
+
+    def __enter__(self):
+        self._folder = tempfile.TemporaryDirectory(prefix="freedvtest-audio-")
+        path = os.path.join(self._folder.name, "tone.wav")
+        rate = 8000
+        samples = array.array("h", (
+            int(16000 * math.sin(2 * math.pi * self._frequency * n / rate)) for n in range(rate * self._seconds)))
+        with wave.open(path, "wb") as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(rate)
+            f.writeframes(samples.tobytes())
+        self._player = subprocess.Popen(["paplay", "--device=" + self._device, path])
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._player is not None:
+            self._player.terminate()
+            self._player.wait()
+        self._folder.cleanup()
+        return False
 
 
 class VirtualAudioDevices:

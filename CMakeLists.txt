@@ -860,6 +860,12 @@ foreach(scenario live_view stations sorting band_filter column_filters idle_filt
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
+
+foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging auto_start while_running)
+    add_test(NAME gui_settings_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
+    set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
 endif(LINUX)
 
 endif(UNITTEST)
