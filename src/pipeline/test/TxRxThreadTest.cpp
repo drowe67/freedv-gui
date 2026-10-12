@@ -1076,8 +1076,16 @@ public:
         // Recording is done at RECORD_FILE_SAMPLE_RATE, so receive at that
         // rate to have what arrives from the radio end up in the file as is.
         constexpr int RADIO_SAMPLE_RATE = RECORD_FILE_SAMPLE_RATE;
-        constexpr int SAMPLES_PER_ROUND = 14400; // 0.3s
-        constexpr int ROUNDS = 2;
+
+        // What's received reaches the file by way of a buffer with room for a
+        // quarter of a second, anything beyond which is discarded, and up to
+        // a tenth of a second is held back in it until more arrives. Audio
+        // arrives here far faster than it would from a radio, so it has to
+        // be handed over a little at a time, each round only once there's
+        // little more than that tenth of a second still waiting.
+        constexpr int SAMPLES_PER_ROUND = RADIO_SAMPLE_RATE / 10; // 0.1s
+        constexpr int ROUNDS = 6;
+        constexpr int MAX_SAMPLES_WAITING = RADIO_SAMPLE_RATE * 13 / 100;
         constexpr unsigned int UNTIL_STOPPED = UINT32_MAX; // what the application asks for
 
         resetGlobals();
@@ -1109,14 +1117,15 @@ public:
                 seedSine(g_rxUserdata->infifo1, SAMPLES_PER_ROUND);
                 thread.rxProcessing_(&helper);
                 drain(g_rxUserdata->outfifo2);
-            }
 
-            // Recording happens on other threads; give them time to catch up.
-            auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-            while (UNTIL_STOPPED - g_recFromRadioSamples.load() < (unsigned)(SAMPLES_PER_ROUND * ROUNDS * 3 / 4) &&
-                   std::chrono::steady_clock::now() < deadline)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                // Recording happens on other threads; give them time to catch up.
+                int expectedSoFar = SAMPLES_PER_ROUND * (round + 1) - MAX_SAMPLES_WAITING;
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+                while ((int)(UNTIL_STOPPED - g_recFromRadioSamples.load()) < expectedSoFar &&
+                       std::chrono::steady_clock::now() < deadline)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                }
             }
         }
 
@@ -1132,8 +1141,8 @@ public:
 
         bool result = true;
 
-        // The last few tens of milliseconds may still be waiting to be recorded.
-        result &= checkBetween("samples in recorded file", recordedSamples, SAMPLES_PER_ROUND * ROUNDS * 3 / 4, SAMPLES_PER_ROUND * ROUNDS);
+        // The last tenth of a second or so may still have been waiting to be recorded.
+        result &= checkBetween("samples in recorded file", recordedSamples, SAMPLES_PER_ROUND * ROUNDS - MAX_SAMPLES_WAITING, SAMPLES_PER_ROUND * ROUNDS);
         result &= check("samples counted as recorded", (int)(UNTIL_STOPPED - g_recFromRadioSamples.load()), recordedSamples);
         result &= check("times recording was reported finished", recRadioDone.load(), 0);
         return result;
