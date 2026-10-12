@@ -877,7 +877,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
 2. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
-    * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, audio device errors and serial port PTT. (PR #1544, #1546, #1548, #1550, #1551, #1553)
+    * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
