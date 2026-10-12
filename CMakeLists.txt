@@ -841,4 +841,16 @@ if(NOT SANITIZERS_ENABLED)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT SANITIZERS_ENABLED)
 
+# GUI tests: Python scripts that drive FreeDV's user interface (see test/gui).
+# These are labeled so that they can be run (ctest -L gui) or skipped
+# (ctest -LE gui) as a group. Currently Linux-only as they rely on
+# PulseAudio/PipeWire for their audio devices.
+if(LINUX)
+foreach(scenario first_run second_run receive_only cancel auto_select radio_control hamlib_start reporting import)
+    add_test(NAME gui_setup_wizard_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
+    set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
+endif(LINUX)
+
 endif(UNITTEST)

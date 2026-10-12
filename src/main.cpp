@@ -49,6 +49,9 @@
 #include "main.h"
 #include "os/os_interface.h"
 #include "freedv_interface.h"
+#if defined(ENABLE_TEST_AGENT)
+#include "test_agent.h"
+#endif // defined(ENABLE_TEST_AGENT)
 #include "audio/AudioEngineFactory.h"
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
@@ -277,6 +280,9 @@ std::string utTxFeatureFile;
 std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
+
+// GUI test management
+long guiTestPort = 0;
 
 // WxWidgets - initialize the application
 
@@ -576,6 +582,9 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
     parser.AddOption("txattempts", "1", "In UT mode, the number of times to transmit (default 1)", wxCMD_LINE_VAL_NUMBER);
+#if defined(ENABLE_TEST_AGENT)
+    parser.AddOption("testport", wxEmptyString, "Take commands from the GUI test script listening on the given local port.", wxCMD_LINE_VAL_NUMBER);
+#endif // defined(ENABLE_TEST_AGENT)
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -737,6 +746,13 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
+#if defined(ENABLE_TEST_AGENT)
+    if (parser.Found("testport", &guiTestPort))
+    {
+        log_info("Taking commands from GUI test script on port %d", (int)guiTestPort);
+    }
+#endif // defined(ENABLE_TEST_AGENT)
+
     wxString utRxFeatureFileTmp; 
     if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
@@ -912,6 +928,13 @@ bool MainApp::OnInit()
         std::thread utThread(std::bind(&MainApp::UnitTest_, this));
         utThread.detach();
     }
+
+#if defined(ENABLE_TEST_AGENT)
+    if (guiTestPort > 0)
+    {
+        testAgent_ = std::make_shared<TestAgent>((int)guiTestPort);
+    }
+#endif // defined(ENABLE_TEST_AGENT)
     
     return true;
 }
@@ -921,6 +944,7 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    testAgent_ = nullptr;
     return 0;
 }
 
@@ -1674,6 +1698,20 @@ MainFrame::~MainFrame()
 #ifdef FTEST
     fclose(ftest);
     #endif
+
+    // If the modem was stopped just before closing, the rig may still be
+    // disconnecting on the threads started by performFreeDVOff_(), and will
+    // call back into this object when it's done. Give that a bounded chance
+    // to finish first, as OnTogBtnOnOff() does when closing while running.
+    auto rigDisconnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    if (rigPttDisconnectFuture_.valid())
+    {
+        rigPttDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
+    if (rigFreqDisconnectFuture_.valid())
+    {
+        rigFreqDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
 
     wxGetApp().rigPttController = nullptr;
     wxGetApp().rigFrequencyController = nullptr;

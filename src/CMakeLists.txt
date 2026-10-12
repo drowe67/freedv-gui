@@ -15,6 +15,11 @@ set(FREEDV_SOURCES
     ${CMAKE_BINARY_DIR}/generated/build_date.cpp
 )
 
+# Lets GUI test scripts (test/gui) drive FreeDV. Not for release builds.
+if(UNITTEST)
+    list(APPEND FREEDV_SOURCES test_agent.cpp)
+endif(UNITTEST)
+
 set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
@@ -119,6 +124,14 @@ if(APPLE)
 else()
     add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
 endif(APPLE)
+
+if(UNITTEST)
+    if(APPLE)
+        target_compile_definitions(FreeDV PRIVATE ENABLE_TEST_AGENT)
+    else(APPLE)
+        target_compile_definitions(freedv PRIVATE ENABLE_TEST_AGENT)
+    endif(APPLE)
+endif(UNITTEST)
 
 if(TARGET freedv_translations)
     if(APPLE)
