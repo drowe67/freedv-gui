@@ -981,6 +981,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix possible crashes when stopping while using a serial port for PTT input. (PR #1542)
     * Hamlib: fix limit on time spent waiting for the radio not always being applied. (PR #1542)
     * FreeDV Reporter: fix incorrect distances/headings when one's own grid square is incomplete. (PR #1542)
+    * FreeDV Reporter: fix idle filter menu check marks after cancelling a custom idle time. (PR #1547)
+    * FreeDV Reporter: disable Request QSY once a request has been sent. (PR #1547)
     * Voice keyer: fix button not showing "Stop Voice Keyer" while the voice keyer is running. (PR #1549)
     * Voice keyer: fix newly recorded file being forgotten the next time FreeDV starts. (PR #1549)
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
