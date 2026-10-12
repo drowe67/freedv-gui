@@ -2309,6 +2309,7 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // use if there is one, so let go of that first.
     wxConfigBase::Set(nullptr);
     wxConfigBase* defaultConfig = nullptr;
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
     if (!wxGetApp().defaultConfigFile.IsEmpty())
     {
         // Startup had to say where the default configuration is (see
@@ -2318,7 +2319,8 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
         wxString defaultLocation = wxGetApp().defaultConfigFile;
         defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
     }
-    else
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    if (defaultConfig == nullptr)
     {
         defaultConfig = wxConfigBase::Create();
     }
