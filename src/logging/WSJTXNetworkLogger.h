@@ -123,6 +123,9 @@ private:
     int reportPort_;
     
     void sendHeartbeat_();
+
+    // Splits a date into what's sent for it: the day and the time of day.
+    static void splitJulianDate_(jdate_clock::time_point const& julianDate, int64_t& julianDay, uint32_t& msSinceMidnight);
 };
 
 template<typename T> 
