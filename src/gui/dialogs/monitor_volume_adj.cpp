@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/app.h>
 #include <wx/stattext.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>
@@ -56,6 +57,15 @@ MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
 MonitorVolumeAdjPopup::~MonitorVolumeAdjPopup()
 {
     volumeSlider_->Disconnect(wxEVT_SLIDER, wxCommandEventHandler(MonitorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
+}
+
+void MonitorVolumeAdjPopup::OnDismiss()
+{
+    // A new one is created each time it's asked for, so this one's done
+    // with (but is still in use by whatever's dismissing it).
+    wxTheApp->CallAfter([this]() {
+        Destroy();
+    });
 }
 
 void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent&)

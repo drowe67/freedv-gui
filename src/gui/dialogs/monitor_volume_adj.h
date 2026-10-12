@@ -39,6 +39,9 @@ class MonitorVolumeAdjPopup : public wxPopupTransientWindow
         
     protected:
         void OnSliderAdjusted(wxCommandEvent& event);
+
+        // Called once the user has clicked elsewhere.
+        void OnDismiss() override;
         
     private:
         wxSlider* volumeSlider_;
