@@ -988,9 +988,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Voice keyer: fix newly recorded file being forgotten the next time FreeDV starts. (PR #1549)
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
     * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
-    * Linux: fix crash on pressing Start with no sound server (PipeWire/PulseAudio) running.
-    * Linux: report losing the sound server while running, and fix Stop getting stuck afterwards.
-    * Fix each use of Adjust Monitor Volume leaving a hidden popup behind.
+    * Linux: fix crash on pressing Start with no sound server (PipeWire/PulseAudio) running. (PR #1555)
+    * Linux: report losing the sound server while running, and fix Stop getting stuck afterwards. (PR #1555)
+    * Fix each use of Adjust Monitor Volume leaving a hidden popup behind. (PR #1555)
     * Filter: fix equaliser changes being ignored if the window was opened before pressing Start. (PR #1552)
     * Fix each use of Log QSO leaving a hidden window behind. (PR #1552)
     * Recording: restrict a pasted recording suffix to the same characters as a typed one. (PR #1552)
