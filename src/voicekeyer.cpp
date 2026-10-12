@@ -63,10 +63,13 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
             m_togBtnVoiceKeyer->SetValue(true);
 
             auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
-            currentLabel.Replace(_("Start Voice Keyer"), _("Stop Voice Keyer"), false);
+            currentLabel.Replace(_("Start Voice &Keyer"), _("Stop Voice &Keyer"), false);
             m_togBtnVoiceKeyer->SetLabel(currentLabel);
 
             VoiceKeyerProcessEvent(VK_START);
+
+            // Nothing's being sent if the file turned out to be unusable.
+            updateVoiceKeyerButtonLabel_();
         }
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
@@ -103,13 +106,12 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &extension);
     wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
     
-    fileName = fileNameWithoutExt;
     // Append .wav extension to the end if needed.
     if (extension.Lower() != _("wav"))
     {
-        fileName += ".wav";
         soundFile += ".wav";
     }
+    fileName = wxFileName(soundFile).GetFullName();
     wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;

@@ -981,6 +981,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix possible crashes when stopping while using a serial port for PTT input. (PR #1542)
     * Hamlib: fix limit on time spent waiting for the radio not always being applied. (PR #1542)
     * FreeDV Reporter: fix incorrect distances/headings when one's own grid square is incomplete. (PR #1542)
+    * Voice keyer: fix button not showing "Stop Voice Keyer" while the voice keyer is running.
+    * Voice keyer: fix newly recorded file being forgotten the next time FreeDV starts.
+    * Fix Load Default Configuration reloading the configuration in use instead of the default one.
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))

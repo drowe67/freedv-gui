@@ -2452,7 +2452,16 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
     // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
     // uses the default file location (wxFileConfig).  This becomes the
     // active pConfig going forward — no need to restore the old one.
+    // wxConfigBase::Create() just hands back the configuration already in
+    // use if there is one, so let go of that first.
+    wxConfigBase::Set(nullptr);
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    // As at startup, wxWidgets needs telling to use a subdirectory here.
+    wxString defaultLocation = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+    wxConfigBase* defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+#else
     wxConfigBase* defaultConfig = wxConfigBase::Create();
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     
     setConfiguration_(defaultConfig);
 
