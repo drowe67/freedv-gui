@@ -897,8 +897,12 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     auto newColValue =
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
 
-    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
-    menuItem->Check(newColValue);
+    // Note: the event's object is the menu, not the item that was chosen.
+    wxMenuItem* menuItem = showMenu_->FindItem(event.GetId());
+    if (menuItem != nullptr)
+    {
+        menuItem->Check(newColValue);
+    }
 
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
@@ -947,21 +951,22 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
             }
             else
             {
-                // No changes needed.
-                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                // No changes needed, other than putting the check marks back to
+                // reflect what's in effect (selecting "Custom..." changed them).
+                bool filterEnabled = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
+                auto currentMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
                 auto menuItems = idleLongerThanMenu_->GetMenuItems();
                 bool found = false;
                 for (auto& item : menuItems)
                 {
-                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
-                    {
-                        item->Check(true);
-                    }
-                    else
-                    {
-                        item->Check(false);
-                    }
+                    // "Disabled" is the only item without an ID of our own choosing.
+                    bool isCurrent = filterEnabled ?
+                        (item->GetId() == (wxID_HIGHEST + 200 + currentMinutes)) :
+                        (item->GetId() < (wxID_HIGHEST + 200));
+                    found |= isCurrent;
+                    item->Check(isCurrent);
                 }
+
                 if (!found)
                 {
                     auto item = idleLongerThanMenu_->FindItem(event.GetId());
@@ -1031,6 +1036,10 @@ void FreeDVReporterDialog::DeselectItem()
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_listSpots->Unselect(item);
     }
+
+    // Deselecting from here isn't reported as a selection change, so the
+    // button that depends on there being a selection has to be told.
+    m_buttonSendQSY->Enable(false);
 }
 
 void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
@@ -1138,7 +1147,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
 
-        m_listSpots->Unselect(selected);
+        DeselectItem();
     }
 }
 
