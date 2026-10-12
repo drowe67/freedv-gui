@@ -1141,6 +1141,78 @@ def test_tune_level_per_band():
             check_equal(saved.get("/Audio/tuneLevelByBand/20m"), "-10", "Saved tune attenuation for 20m")
 
 
+def test_reporting_without_callsign():
+    """Reporting turned on without saying who's reporting."""
+    for missing in ["Callsign", "GridSquare"]:
+        who = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12")
+        who["Reporting__" + missing] = ""
+        with audio_devices():
+            with freedvtest.start(settings=settings(**who)) as app:
+                app.wait_for_window("main")
+                app.click("main.btnOnOff")
+                app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+                app.wait_until(lambda: app.message_boxes(), timeout=10, description="FreeDV to say what's missing")
+                check_equal([box["message"] for box in app.message_boxes(clear=True)],
+                            ["Reporting requires a valid callsign and grid square in Tools->Settings. Reporting will "
+                             "be disabled."], "Messages displayed without a %s" % missing)
+
+                # It's only reporting that's given up on.
+                check_equal(app.state()["running"], True, "Running without a %s" % missing)
+                app.click("main.btnPTT")
+                wait_for_transmit(app)
+                app.click("main.btnPTT")
+                wait_for_transmit(app, False)
+                stop_modem(app)
+                check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
+def test_band_names():
+    """What's kept for each band goes by the band that FreeDV is on."""
+    extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                 Reporting__ManualFrequencyReporting=True, Reporting__Frequency=14236000)
+    with audio_devices():
+        with freedvtest.start(settings=settings(**extra)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            for frequency, band in [("1.8700", "160m"), ("3.6250", "80m"), ("5.4035", "60m"), ("7.1770", "40m"),
+                                    ("10.1300", "30m"), ("14.2360", "20m"), ("18.1180", "17m"), ("21.3130", "15m"),
+                                    ("24.9330", "12m"), ("28.3300", "10m"), ("144.2000", "vhfuhf")]:
+                app.set_value("main.cboReportFrequency", frequency)
+                items = app.context_menu("main.textTxLevel")
+                check_equal([item["label"] for item in items],
+                            ["Enable auto-save of TX atten for " + band, "Restore TX atten level for " + band],
+                            "TX attenuation's menu on " + frequency)
+
+            # Each band's is kept apart from the others'.
+            app.set_value("main.cboReportFrequency", "7.1770")
+            app.click("main.btnTxLevelDecrBig")
+            app.context_menu("main.textTxLevel", choose="Enable auto-save of TX atten for 40m")
+            app.set_value("main.cboReportFrequency", "14.2360")
+            app.click("main.btnTxLevelDecrBig")
+            app.context_menu("main.textTxLevel", choose="Enable auto-save of TX atten for 20m")
+            check_equal(label(app, "main.textTxLevel"), "-2.0dB", "TX attenuation on 20m")
+            app.set_value("main.cboReportFrequency", "7.1770")
+            app.wait_until(lambda: label(app, "main.textTxLevel") == "-1.0dB", timeout=5,
+                           description="40m's TX attenuation to come back")
+            app.set_value("main.cboReportFrequency", "14.2360")
+            app.wait_until(lambda: label(app, "main.textTxLevel") == "-2.0dB", timeout=5,
+                           description="20m's TX attenuation to come back")
+
+            # Somewhere that isn't in any band has nothing kept for it.
+            app.set_value("main.cboReportFrequency", "0.5000")
+            try:
+                items = app.context_menu("main.textTxLevel")
+                check(False, "TX attenuation has a menu outside the bands: %r" % items)
+            except freedvtest.CommandError as e:
+                check("no popup menu appeared" in str(e), "Right-clicking TX attenuation failed: %s" % e)
+
+            stop_modem(app)
+            quit_and_check_log(app)
+            saved = freedvtest.read_config(app.config_path)
+            check_equal((saved.get("/Audio/transmitLevelByBand/40m"), saved.get("/Audio/transmitLevelByBand/20m")),
+                        ("-10", "-20"), "Saved TX attenuation for 40m and 20m")
+
+
 def test_exit_menu():
     """File > Exit, which has to stop everything first."""
     with audio_devices():
@@ -1469,6 +1541,8 @@ SCENARIOS = {
     "help_and_restore": test_help_and_restore,
     "tune_level_per_band": test_tune_level_per_band,
     "exit_menu": test_exit_menu,
+    "reporting_without_callsign": test_reporting_without_callsign,
+    "band_names": test_band_names,
     "frequency_units": test_frequency_units,
     "default_config": test_default_config,
     "appearance_change": test_appearance_change,

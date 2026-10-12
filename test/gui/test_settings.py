@@ -1046,6 +1046,54 @@ def test_modem_and_debugging():
         quit_and_check_log(app)
 
 
+def test_ptt_key_names():
+    """Choosing the key used for PTT: what each kind of key is called, and
+    the keys that can't be chosen."""
+    with freedvtest.start(settings={}) as app:
+        open_settings(app, "Rig Control")
+        check_values(app, {"txtPTTKeyName": "Space"})
+
+        def choose(key):
+            app.click(name("btnSetPTTKey"))
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            app.key(name("txtPTTKeyName"), key)
+
+        for key, called in [("5", "5"), ("0", "0"), ("q", "Q"), ("Z", "Z"), ("F1", "F1"), ("F12", "F12"),
+                            ("Enter", "Enter"), ("Backspace", "Backspace"),
+                            ("Delete", "Delete"), ("Space", "Space")]:
+            choose(key)
+            check_values(app, {"txtPTTKeyName": called})
+            check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after choosing %s" % key)
+
+        # Keys that only modify others aren't a choice; FreeDV keeps waiting.
+        app.click(name("btnSetPTTKey"))
+        for modifier in ["Shift", "Control"]:
+            app.key(name("txtPTTKeyName"), modifier)
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button after pressing %s" % modifier)
+        app.key(name("txtPTTKeyName"), "F7")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Tab moves on, leaving the key as it was...
+        choose("Tab")
+        check_values(app, {"txtPTTKeyName": "F7"})
+        check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after pressing Tab")
+
+        # ...as does thinking better of it.
+        app.click(name("btnSetPTTKey"))
+        check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button while choosing")
+        app.click(name("btnSetPTTKey"))
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Keys pressed when FreeDV isn't waiting for one are just keys.
+        app.key(name("txtPTTKeyName"), "F9")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        press_ok(app)
+        check_saved(app, {"/Rig/PttKeyCode": 340 + 6})  # F7
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_auto_start():
     """The Modem tab's Start Automatically on Launch."""
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
@@ -1150,6 +1198,7 @@ SCENARIOS = {
     "voice_keyer": test_voice_keyer,
     "display": test_display,
     "modem_and_debugging": test_modem_and_debugging,
+    "ptt_key_names": test_ptt_key_names,
     "auto_start": test_auto_start,
     "while_running": test_while_running,
 }

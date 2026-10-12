@@ -145,6 +145,7 @@ private:
     void commandPathDialogs_(yyjson_val* id, yyjson_val* request);
     void commandBrowserUrls_(yyjson_val* id, yyjson_val* request);
     void commandMouse_(yyjson_val* id, yyjson_val* request);
+    void commandFocus_(yyjson_val* id, yyjson_val* request);
     void commandClipboard_(yyjson_val* id);
     void commandMessageBoxes_(yyjson_val* id, yyjson_val* request);
     void commandQuit_(yyjson_val* id);

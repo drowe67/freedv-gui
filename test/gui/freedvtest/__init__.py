@@ -422,6 +422,12 @@ class FreeDV:
         open so far. They aren't actually opened."""
         return self.command("browser_urls", clear=clear)
 
+    def focus(self, name, lost=False):
+        """Tells a control that it's been given the keyboard focus (or, with
+        lost, that it's been taken away again), as clicking in it or tabbing
+        to it would."""
+        self.command("focus", name=name, lost=lost or None)
+
     def clipboard(self):
         """Returns the text that's on the clipboard, as FreeDV sees it."""
         return self.command("clipboard")["text"]

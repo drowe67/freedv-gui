@@ -379,6 +379,69 @@ def test_device_removed():
                     pass
 
 
+def test_sound_server_restarted():
+    """The sound server being restarted under FreeDV, as happens when it's
+    updated or has crashed: FreeDV says that it's lost its devices, and
+    carries on once it's been stopped and started again."""
+    if not PrivateAudioServer.available():
+        print("SKIPPED: PipeWire and what's needed to run it separately were not all found")
+        sys.exit(SKIPPED)
+
+    with PrivateAudioServer() as server:
+        devices = audio_devices()
+        devices.__enter__()
+        try:
+            with freedvtest.start(settings=settings()) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                app.click("main.btnAnalog")
+                time.sleep(2)
+
+                server.stop()
+                devices.forget()
+                app.wait_until(lambda: len(app.message_boxes()) >= 4, timeout=30,
+                               description="FreeDV to say that it's lost each of its devices")
+                lost = sorted(box["message"] for box in app.message_boxes(clear=True))
+                expected = sorted("Error encountered while processing audio: Lost connection to %s (Connection "
+                                  "terminated)" % device for device in CARDS.values())
+                check_equal(lost, expected, "Messages displayed")
+                check_equal(app.state()["running"], True, "Running, as far as FreeDV's concerned")
+
+                # Nothing works again by itself...
+                server.start()
+                devices = audio_devices()
+                devices.__enter__()
+                time.sleep(2)
+                check_equal(streams(app.pid), [], "FreeDV's streams on the new sound server")
+
+                # ...but stopping and starting does it.
+                stop_modem(app)
+                app.message_boxes(clear=True)
+                start_modem(app)
+                check_equal(configured_devices(app), CARDS, "Devices in use")
+                check_equal(len(streams(app.pid)), 4, "Number of FreeDV's streams")
+                check_equal(app.state()["analog"], True, "Still in analog mode")
+                with Tone(RADIO_RX):
+                    time.sleep(0.75)
+                    heard = level(SPEAKER_MONITOR)
+                    check(heard > AUDIBLE, "The radio isn't being played through the speaker (level %d)" % heard)
+                stop_modem(app)
+                quit_and_check_log_without_lost_devices(app)
+        finally:
+            try:
+                devices.__exit__(None, None, None)
+            except Exception:
+                pass
+
+
+def quit_and_check_log_without_lost_devices(app):
+    check_equal(app.message_boxes(), [], "Errors displayed")
+    check_equal(app.quit(), 0, "FreeDV's exit code")
+    errors = [line for line in app.log().splitlines()
+              if (" ERROR " in line or " FATAL " in line) and "Lost connection to" not in line]
+    check_equal(errors, [], "Errors logged by FreeDV, other than about losing the sound server")
+
+
 SCENARIOS = {
     "missing_device": test_missing_device,
     "low_sample_rate": test_low_sample_rate,
@@ -386,6 +449,7 @@ SCENARIOS = {
     "receive_only": test_receive_only,
     "device_moved": test_device_moved,
     "device_removed": test_device_removed,
+    "sound_server_restarted": test_sound_server_restarted,
 }
 
 

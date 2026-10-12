@@ -1116,6 +1116,54 @@ public:
         return result;
     }
 
+    // Fills what's left of a FIFO with a value that the pipeline wouldn't
+    // produce, and returns how much that was.
+    static int fillWithMarker(GenericFIFO<short>* fifo, short marker)
+    {
+        std::vector<short> samples(fifo->numFree(), marker);
+        if (!samples.empty())
+        {
+            fifo->write(samples.data(), (int)samples.size());
+        }
+        return (int)samples.size();
+    }
+
+    static bool onlyContains(std::vector<short> const& samples, short marker)
+    {
+        for (auto sample : samples)
+        {
+            if (sample != marker) return false;
+        }
+        return true;
+    }
+
+    static bool txProcessingDropsOutputWhenRadioFifoIsFull()
+    {
+        constexpr short MARKER = 12345;
+
+        resetGlobals();
+        g_tx = true;
+        FifoGuard fifos;
+        seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE); // 1s of speech
+        int queued = fillWithMarker(g_rxUserdata->outfifo1, MARKER);
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        FakeRealtimeHelper helper;
+        thread.txProcessing_(&helper);
+
+        // There's nowhere for anything new to go, so it's dropped rather than
+        // waited for (this is the audio path) or written over what's queued.
+        auto radioOut = drain(g_rxUserdata->outfifo1);
+
+        bool result = true;
+        result &= check("samples still queued for the radio", (int)radioOut.size(), queued);
+        result &= onlyContains(radioOut, MARKER) ? true : (std::cout << "[what was queued for the radio was overwritten] ", false);
+        return result;
+    }
+
     static bool timeOutWarningBeepsThenTurnsItselfOff()
     {
         resetGlobals();
@@ -1613,6 +1661,7 @@ int main()
     executeTestCase("playFileFromRadioFinishedHookFiresWhenFileEnds", &TxRxThreadTest::playFileFromRadioFinishedHookFiresWhenFileEnds);
     executeTestCase("playFileFromRadioStartsOverWhenLooping", &TxRxThreadTest::playFileFromRadioStartsOverWhenLooping);
     executeTestCase("recordingFromRadioContinuesUntilStopped", &TxRxThreadTest::recordingFromRadioContinuesUntilStopped);
+    executeTestCase("txProcessingDropsOutputWhenRadioFifoIsFull", &TxRxThreadTest::txProcessingDropsOutputWhenRadioFifoIsFull);
     executeTestCase("timeOutWarningBeepsThenTurnsItselfOff", &TxRxThreadTest::timeOutWarningBeepsThenTurnsItselfOff);
     executeTestCase("interferingToneIsAddedToReceivedAudio", &TxRxThreadTest::interferingToneIsAddedToReceivedAudio);
     executeTestCase("interferingToneFollowsItsFrequencyAndAmplitudeSettings", &TxRxThreadTest::interferingToneFollowsItsFrequencyAndAmplitudeSettings);

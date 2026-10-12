@@ -404,6 +404,10 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandClipboard_(id);
     }
+    else if (cmd == "focus")
+    {
+        commandFocus_(id, request);
+    }
     else if (cmd == "system_colours_changed")
     {
         // As when the desktop switches between its light and dark themes.
@@ -2038,6 +2042,26 @@ void TestAgent::commandClipboard_(yyjson_val* id)
     yyjson_mut_val* result = yyjson_mut_obj(doc);
     AddString_(doc, result, "text", text);
     replyOk_(id, doc, result);
+}
+
+// The keyboard focus arriving at, or (with "lost") leaving, a control.
+void TestAgent::commandFocus_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+    bool lost = yyjson_get_bool(yyjson_obj_get(request, "lost"));
+    wxFocusEvent event(lost ? wxEVT_KILL_FOCUS : wxEVT_SET_FOCUS, window->GetId());
+    event.SetEventObject(window);
+    window->ProcessWindowEvent(event);
 }
 
 void TestAgent::commandMouse_(yyjson_val* id, yyjson_val* request)

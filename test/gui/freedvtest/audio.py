@@ -169,6 +169,11 @@ class VirtualAudioDevices:
         self._modules = []
         return False
 
+    def forget(self):
+        """For when the sound server itself has gone, and the devices with
+        it: there's nothing left to remove at the end of the "with" block."""
+        self._modules = []
+
     def _load(self, *args):
         self._modules.append(_pactl("load-module", *args).strip())
 
@@ -238,50 +243,52 @@ class PrivateAudioServer:
         return all(shutil.which(program) for program in cls.PROGRAMS + ["pactl"])
 
     def __enter__(self):
-        import shutil
-        import signal
-
         self._folder = tempfile.mkdtemp(prefix="freedvtest-sound-")
+        self._previous = os.environ.get("PULSE_SERVER")
+        os.environ["PULSE_SERVER"] = "unix:" + os.path.join(self._folder, "pulse", "native")
+        try:
+            self.start()
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+        return self
+
+    def start(self):
+        """Starts the sound server (again, after stop()). It comes back
+        without any of the devices that tests had created."""
         # (Without the last two, the desktop's file services get started as
         # well, and mount something in the folder.)
         env = dict(os.environ, XDG_RUNTIME_DIR=self._folder, GIO_USE_VFS="local", GVFS_DISABLE_FUSE="1")
         for name in ("PULSE_SERVER", "PIPEWIRE_REMOTE", "PIPEWIRE_RUNTIME_DIR", "PULSE_RUNTIME_PATH",
                      "DBUS_SESSION_BUS_ADDRESS"):
             env.pop(name, None)
-        with open(os.path.join(self._folder, "server.log"), "wb") as log:
+        with open(os.path.join(self._folder, "server.log"), "ab") as log:
             self._server = subprocess.Popen(
                 ["dbus-run-session", "--", "sh", "-c",
                  "pipewire & sleep 1; wireplumber & sleep 1; pipewire-pulse & wait"],
                 env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 
-        self._previous = os.environ.get("PULSE_SERVER")
-        os.environ["PULSE_SERVER"] = "unix:" + os.path.join(self._folder, "pulse", "native")
-        try:
-            deadline = time.monotonic() + 30
-            while True:
-                if subprocess.call(["pactl", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
-                    break
-                if self._server.poll() is not None or time.monotonic() > deadline:
-                    raise RuntimeError("Could not start a sound server for the test")
-                time.sleep(0.5)
+        deadline = time.monotonic() + 30
+        while True:
+            if subprocess.call(["pactl", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
+                break
+            if self._server.poll() is not None or time.monotonic() > deadline:
+                raise RuntimeError("Could not start a sound server for the test")
+            time.sleep(0.5)
 
-            # Whatever it's found of the real world, nothing goes there
-            # unless it's asked to.
-            _pactl("load-module", "module-null-sink", "sink_name=" + self.DEFAULT_OUTPUT)
-            _pactl("load-module", "module-null-sink", "sink_name=FreeDVGuiTest_Default_Input_Source")
-            VirtualAudioDevices._wait_for("sinks", self.DEFAULT_OUTPUT)
-            VirtualAudioDevices._wait_for("sinks", "FreeDVGuiTest_Default_Input_Source")
-            _pactl("set-default-sink", self.DEFAULT_OUTPUT)
-            _pactl("set-default-source", "FreeDVGuiTest_Default_Input_Source.monitor")
-            deadline = time.monotonic() + 15
-            while default_output() != self.DEFAULT_OUTPUT:
-                if time.monotonic() > deadline:
-                    raise RuntimeError("Could not set the test sound server's default device")
-                time.sleep(0.25)
-        except BaseException:
-            self.__exit__(None, None, None)
-            raise
-        return self
+        # Whatever it's found of the real world, nothing goes there
+        # unless it's asked to.
+        _pactl("load-module", "module-null-sink", "sink_name=" + self.DEFAULT_OUTPUT)
+        _pactl("load-module", "module-null-sink", "sink_name=FreeDVGuiTest_Default_Input_Source")
+        VirtualAudioDevices._wait_for("sinks", self.DEFAULT_OUTPUT)
+        VirtualAudioDevices._wait_for("sinks", "FreeDVGuiTest_Default_Input_Source")
+        _pactl("set-default-sink", self.DEFAULT_OUTPUT)
+        _pactl("set-default-source", "FreeDVGuiTest_Default_Input_Source.monitor")
+        deadline = time.monotonic() + 15
+        while default_output() != self.DEFAULT_OUTPUT:
+            if time.monotonic() > deadline:
+                raise RuntimeError("Could not set the test sound server's default device")
+            time.sleep(0.25)
 
     def stop(self):
         """Stops the sound server, as if it had crashed."""

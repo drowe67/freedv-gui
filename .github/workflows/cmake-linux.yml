@@ -558,10 +558,13 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           mkdir -p coverage-html
-          # (Branches that only exist for an exception being thrown part way
-          # through a line aren't counted: nearly every line that touches a
-          # wxString has some, and no test could take them.)
-          gcovr -j "$(nproc)" --root . --object-directory build_linux --filter 'src/' --exclude '.*/test/.*' --exclude 'build_linux/.*' --gcov-ignore-errors=all --gcov-ignore-parse-errors=all --merge-mode-functions=merge-use-line-min --exclude-throw-branches --json-summary coverage-summary.json --html-details coverage-html/index.html
+          # Branches that the compiler adds, rather than ones in the code,
+          # aren't counted, as no test could take them: those for an exception
+          # being thrown part way through a line (nearly every line that
+          # touches a wxString has some), for cleaning up if a constructor
+          # throws ("new Something(...)"), and for an assert failing.
+          BRANCH_EXCLUSIONS='.*(\bnew\s+[A-Za-z_:<>]+\s*[\(\[\{;]|\bassert\s*\(|\bwxASSERT|\bwxCHECK|GCOVR?_EXCL_BR_LINE).*'
+          gcovr -j "$(nproc)" --root . --object-directory build_linux --filter 'src/' --exclude '.*/test/.*' --exclude 'build_linux/.*' --gcov-ignore-errors=all --gcov-ignore-parse-errors=all --merge-mode-functions=merge-use-line-min --exclude-throw-branches --exclude-branches-by-pattern "$BRANCH_EXCLUSIONS" --json-summary coverage-summary.json --html-details coverage-html/index.html
           python3 .github/scripts/coverage_summary.py coverage-summary.json coverage-html
 
     - name: Upload coverage report

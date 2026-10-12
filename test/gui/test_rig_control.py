@@ -169,6 +169,71 @@ def test_frequency_only():
             quit_and_check_log(app)
 
 
+def test_mode_display():
+    """FreeDV shows the mode that the radio's in."""
+    def label(app):
+        return app.get("main.textModeStatus")["label"]
+
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        # (Left to itself, FreeDV would put the radio back in its own mode.)
+        extra = dict(Hamlib__EnableFreqModeChanges=False, Hamlib__EnableFreqChangesOnly=True)
+        with freedvtest.start(settings=rig_settings(radio.address, **extra)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+
+            for mode, displayed in [("USB", "USB"), ("PKTUSB", "USB-D"), ("LSB", "LSB"), ("PKTLSB", "LSB-D"),
+                                    ("FM", "FM"), ("PKTFM", "FM-D"), ("AM", "AM"), ("CW", "unk")]:
+                radio.command("M %s 0" % mode)
+                try:
+                    app.wait_until(lambda: label(app) == displayed, timeout=15)
+                except freedvtest.FreeDVError:
+                    check_equal(label(app), displayed, "Mode displayed with the radio in " + mode)
+                check_equal(app.get("main.textModeStatus")["enabled"], displayed != "unk",
+                            "Mode's display enabled with the radio in " + mode)
+
+            # Stopped, it doesn't know.
+            radio.command("M USB 0")
+            app.wait_until(lambda: label(app) == "USB", timeout=15, description="the radio's mode to be displayed")
+            stop_modem(app)
+            app.wait_until(lambda: label(app) == "unk", timeout=10,
+                           description="the mode's display to be cleared on stopping")
+            quit_and_check_log(app)
+
+
+def test_editing_frequency():
+    """While the frequency's being typed in, the radio doesn't change what's
+    there; once it's been left alone, it goes back to showing where the
+    radio is."""
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        with freedvtest.start(settings=rig_settings(radio.address)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+
+            app.focus("main.cboReportFrequency")
+            radio.set_frequency(7177000)
+            time.sleep(4)
+            check_equal(displayed_frequency(app), "14.2360", "Frequency displayed while it's being edited")
+
+            # Left as it was, nothing's sent to the radio...
+            app.focus("main.cboReportFrequency", lost=True)
+            wait_for_frequency(app, "7.1770", "Frequency displayed once it's no longer being edited")
+            check_equal(radio.frequency(), 7177000, "Radio's frequency")
+
+            # ...and typing one in sends it there.
+            app.focus("main.cboReportFrequency")
+            app.set_value("main.cboReportFrequency", "21.3130")
+            app.focus("main.cboReportFrequency", lost=True)
+            wait_for(lambda: radio.frequency() == 21313000, "The radio is on %d Hz, not 21313000" % radio.frequency())
+            wait_for_frequency(app, "21.3130", "Frequency displayed after typing one in")
+            check_equal(errors(app), [], "Errors displayed")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
 def test_unreachable():
     """Starting without the radio there to be controlled."""
     with Rigctld() as radio, audio_devices():
@@ -263,6 +328,8 @@ def test_lost():
 SCENARIOS = {
     "control": test_control,
     "frequency_only": test_frequency_only,
+    "mode_display": test_mode_display,
+    "editing_frequency": test_editing_frequency,
     "unreachable": test_unreachable,
     "lost": test_lost,
 }

@@ -861,7 +861,7 @@ foreach(scenario live_view stations sorting sort_every_column band_filter column
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
-foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging auto_start while_running)
+foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging ptt_key_names auto_start while_running)
     add_test(NAME gui_settings_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
     set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui)
@@ -869,7 +869,7 @@ endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
 # alongside anything else.
-foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer menus help_and_restore default_config exit_menu appearance_change)
+foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
@@ -896,9 +896,9 @@ foreach(scenario rts polarity ptt_input errors settings_ptt_test)
     set_tests_properties(gui_serial_ptt_${scenario} PROPERTIES LABELS gui)
 endforeach(scenario)
 
-# device_removed runs a sound server of its own (PipeWire), and is skipped if
-# it can't.
-foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved device_removed)
+# device_removed and sound_server_restarted run a sound server of their own
+# (PipeWire), and are skipped if they can't.
+foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved device_removed sound_server_restarted)
     add_test(NAME gui_audio_errors_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_audio_errors.py ${scenario})
     set_tests_properties(gui_audio_errors_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
@@ -911,7 +911,7 @@ foreach(scenario tuning tuned_away drawing)
 endforeach(scenario)
 
 # These use Hamlib's rigctld as the radio, and are skipped without it.
-foreach(scenario control frequency_only unreachable lost)
+foreach(scenario control frequency_only mode_display editing_frequency unreachable lost)
     add_test(NAME gui_rig_control_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
