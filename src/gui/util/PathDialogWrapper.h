@@ -22,6 +22,7 @@
 #define __PATH_DIALOG_WRAPPER__
 
 #include <functional>
+#include <map>
 
 #include "wx/wx.h"
 
@@ -30,6 +31,11 @@
 // of it being displayed. Returns false if the script wants it cancelled;
 // otherwise, provides what the script wants chosen.
 inline std::function<bool(const wxString&, wxString&)> g_pathDialogTestHook;
+
+// What the test script wants for whatever else the last file or folder
+// chooser offered besides a path (e.g. "loop" when choosing a file to play),
+// as controls added to a chooser don't exist unless it's displayed.
+inline std::map<wxString, bool> g_pathDialogTestOptions;
 
 // Displays a wxFileDialog or wxDirDialog as dialog.ShowModal() would. If
 // something was chosen (i.e. this doesn't return wxID_CANCEL), path is set

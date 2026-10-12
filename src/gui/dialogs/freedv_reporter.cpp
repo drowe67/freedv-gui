@@ -1148,7 +1148,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
 void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent&)
 {
     std::string url = std::string("https://") + (const char*)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_str() + "/";
-    wxLaunchDefaultBrowser(url);
+    LaunchBrowser(url);
     DeselectItem();
 }
 
@@ -2078,7 +2078,7 @@ void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
     }
 }
 
@@ -2086,7 +2086,7 @@ void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
     }
 }
 
@@ -2094,7 +2094,7 @@ void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
     }
 }
 

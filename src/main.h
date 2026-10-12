@@ -96,6 +96,7 @@
 #include "gui/util/wxMessageBoxWrapper.h"
 #include "gui/util/PopupMenuWrapper.h"
 #include "gui/util/PathDialogWrapper.h"
+#include "gui/util/BrowserWrapper.h"
 #include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1

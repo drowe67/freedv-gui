@@ -13,6 +13,7 @@ that FreeDV is set up with, and for listening to what it does with them.
 """
 
 import glob
+import math
 import os
 import re
 import shutil
@@ -866,6 +867,237 @@ def test_recording_options():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_monitor_volume():
+    """How loudly what's transmitted is played back, for the microphone and
+    for the voice keyer."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        message = os.path.join(folder, "message.wav")
+        write_tone(message, seconds=20, rate=16000)
+        voice_keyer = dict(VoiceKeyer__WaveFilePath=folder, VoiceKeyer__WaveFile="message.wav", VoiceKeyer__Repeats=0)
+
+        def decibels(before, after):
+            return 20 * math.log10(after / before)
+
+        def popped_up(app):
+            try:
+                return app.get("monitorVolume")["shown"]
+            except freedvtest.CommandError:
+                return False  # there isn't one
+
+        def adjust(app, button, setting, to):
+            app.context_menu(button, choose="Adjust Monitor Volume...")
+            app.wait_until(lambda: popped_up(app), description="the volume to pop up")
+            check_equal(app.get("monitorVolume.slider")["value"], int(app.state()[setting]), "Volume shown")
+            app.set_value("monitorVolume.slider", to)
+            check_equal(app.state()[setting], to, setting)
+            # Clicking elsewhere puts it away.
+            app.close("monitorVolume")
+            app.wait_until(lambda: not popped_up(app), description="the volume to go away")
+
+        def monitored(app, button):
+            """Returns how loud what's transmitted is when played back."""
+            app.click(button)
+            wait_for_transmit(app)
+            time.sleep(0.75)
+            heard = level(SPEAKER_MONITOR)
+            app.click(button)
+            wait_for_transmit(app, False)
+            return heard
+
+        with audio_devices():
+            with freedvtest.start(settings=settings(**voice_keyer)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                check_equal((app.state()["monitorTxAudioVol"], app.state()["monitorVoiceKeyerAudioVol"]), (0, 0),
+                            "Volumes to begin with")
+
+                # The microphone
+                app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
+                with Tone(MICROPHONE):
+                    loud = monitored(app, "main.btnPTT")
+                    check(loud > AUDIBLE, "Transmitted audio isn't being monitored (level %d)" % loud)
+                    adjust(app, "main.btnPTT", "monitorTxAudioVol", -20)
+                    quiet = monitored(app, "main.btnPTT")
+                    check(-23 < decibels(loud, quiet) < -17,
+                          "Turning the monitor down 20 dB took it from %d to %d" % (loud, quiet))
+                    adjust(app, "main.btnPTT", "monitorTxAudioVol", -6)
+                    half = monitored(app, "main.btnPTT")
+                    check(-8.5 < decibels(loud, half) < -3.5, "The monitor at -6 dB took it from %d to %d" % (loud, half))
+                app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
+
+                # The voice keyer, which has a volume of its own
+                app.context_menu("main.btnVoiceKeyer", choose="Monitor transmitted audio")
+                check_equal(app.state()["monitorVoiceKeyerAudioVol"], 0, "Voice keyer's volume")
+                loud = monitored(app, "main.btnVoiceKeyer")
+                check(loud > AUDIBLE, "The voice keyer isn't being monitored (level %d)" % loud)
+                adjust(app, "main.btnVoiceKeyer", "monitorVoiceKeyerAudioVol", -20)
+                quiet = monitored(app, "main.btnVoiceKeyer")
+                check(-23 < decibels(loud, quiet) < -17,
+                      "Turning the voice keyer's monitor down 20 dB took it from %d to %d" % (loud, quiet))
+                check_equal(app.state()["monitorTxAudioVol"], -6, "Microphone's monitor volume")
+
+                stop_modem(app)
+                quit_and_check_log(app)
+                saved = freedvtest.read_config(app.config_path)
+                check_equal((float(saved.get("/Monitor/TransmitAudioVol")), float(saved.get("/Monitor/VoiceKeyerAudioVol"))),
+                            (-6.0, -20.0), "Saved volumes")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_mouse_controls():
+    """Things that are done with the mouse wheel and its other buttons."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        csv_log = os.path.join(folder, "heard.csv")
+        with open(csv_log, "w") as f:
+            f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
+            f.write("2026-03-04,05:06:07,K1ABC,RADEV1,14236000,7\n")
+        extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                     Reporting__CSV__LogFilePath=csv_log)
+
+        def tx_level(app):
+            return label(app, "main.textTxLevel")
+
+        with audio_devices():
+            with freedvtest.start(settings=settings(**extra)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+
+                # The wheel over anything to do with TX attenuation is a small
+                # step up or down.
+                app.click("main.btnTxLevelDecrBig")
+                start = tx_level(app)
+                app.click("main.btnTxLevelDecr")
+                one_down = tx_level(app)
+                app.click("main.btnTxLevelIncr")
+                check_equal(tx_level(app), start, "TX attenuation")
+                for control in ["main.textTxLevel", "main.btnTxLevelDecr", "main.btnTxLevelIncrBig", "main.btnTune",
+                                "main.boxTxLevel"]:
+                    app.mouse(control, "wheel", rotation=-1)
+                    check_equal(tx_level(app), one_down, "TX attenuation after wheeling down over " + control)
+                    app.mouse(control, "wheel", rotation=1)
+                    check_equal(tx_level(app), start, "TX attenuation after wheeling up over " + control)
+
+                # While tuning, it's Tune's level that changes.
+                app.click("main.btnTune")
+                check_equal(tx_level(app), "0.0dB", "Tune attenuation")
+                app.mouse("main.textTxLevel", "wheel", rotation=-1)
+                check(tx_level(app) != "0.0dB", "The wheel didn't change Tune's attenuation")
+                app.mouse("main.textTxLevel", "wheel", rotation=1)
+                check_equal(tx_level(app), "0.0dB", "Tune attenuation")
+                app.click("main.btnTune")
+                check_equal(tx_level(app), start, "TX attenuation after tuning")
+
+                # The middle button puts the speaker level back to normal.
+                for control in ["main.sliderMicSpkrLevel", "main.textMicSpkrLevel"]:
+                    app.set_value("main.sliderMicSpkrLevel", -80)
+                    check_equal(label(app, "main.textMicSpkrLevel"), "-8.0dB", "Speaker level")
+                    app.mouse(control, "middle_down")
+                    check_equal((label(app, "main.textMicSpkrLevel"), app.get("main.sliderMicSpkrLevel")["value"]),
+                                ("0.0dB", 0), "Speaker level after middle-clicking " + control)
+
+                # Pressing on PTT and thinking better of it isn't transmitting.
+                app.mouse("main.btnPTT", "left_down")
+                app.mouse("main.btnPTT", "leave")
+                time.sleep(0.5)
+                check_equal((transmitting(app), app.get("main.btnPTT")["value"]), (False, False),
+                            "Transmitting and PTT pressed")
+
+                # Right-clicking the callsign that's been chosen unchooses it.
+                app.combo_popup("main.cboLastReportedCallsigns", open=True)
+                app.wait_until(lambda: app.get("main.listLastReportedCallsigns")["shown"])
+                app.click("main.listLastReportedCallsigns", item=0)
+                app.wait_until(lambda: not app.get("main.listLastReportedCallsigns")["shown"])
+                check_equal(app.get("main.listLastReportedCallsigns")["selection"], 0, "Callsign selected")
+                app.mouse("main.cboLastReportedCallsigns", "right_down")
+                app.wait_until(lambda: app.get("main.listLastReportedCallsigns")["selection"] == -1,
+                               description="the callsign to be unchosen")
+
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_play_file_loop():
+    """Tools > Play File - From Radio with its Loop option."""
+    start_item = "Tools/Start Play File - From Radio..."
+    stop_item = "Tools/Stop Play File - From Radio..."
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        tone = os.path.join(folder, "tone.wav")
+        write_tone(tone, seconds=1, rate=8000)
+
+        with audio_devices():
+            with freedvtest.start(settings=settings()) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                app.click("main.btnAnalog")
+
+                # A second of sound, over and over.
+                app.choose_next_path(tone, loop=True)
+                app.menu(start_item)
+                check_equal(app.state()["loopPlayFileFromRadio"], True, "Looping")
+                check_equal(app.get("main")["status"], "Playing file %s as radio input" % tone, "Status while playing")
+                time.sleep(4)
+                check_equal(app.get("main")["status"], "Playing file %s as radio input" % tone,
+                            "Status well after the file's end")
+                check_audible(SPEAKER_MONITOR, "The file isn't still being played")
+
+                # Until it's stopped.
+                app.menu(stop_item)
+                check_equal(app.get("main")["status"], "", "Status after stopping")
+                time.sleep(1.5)
+                check_silent(SPEAKER_MONITOR, "Something is still being played through the speaker")
+
+                # The next file isn't looped just because the last one was.
+                app.choose_next_path(tone)
+                app.menu(start_item)
+                check_equal(app.state()["loopPlayFileFromRadio"], False, "Looping")
+                app.wait_until(lambda: app.get("main")["status"] == "", timeout=15, description="the file to finish")
+
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_help_and_restore():
+    """The Help menu's web pages and Tools > Restore defaults."""
+    start = {"/Reporting/Callsign": CALLSIGN, "/Reporting/GridSquare": "DM12",
+             "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
+    with freedvtest.start(settings=start) as app:
+        app.wait_for_window("main")
+
+        for item, url in [("Help/Check for Updates", "https://github.com/drowe67/freedv-gui/releases"),
+                          ("Help/User Manual...", "https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf"),
+                          ("Help/Get Assistance", "https://freedv.org/#getting-help")]:
+            app.menu(item)
+            check_equal(app.browser_urls(clear=True), [url], "Web pages opened by " + item)
+
+        def callsign():
+            return app.state()["config"]["reporting"]["reportingCallsign"]
+
+        # Restoring defaults asks first.
+        app.answer_next_message_box("no")
+        app.menu("Tools/Restore defaults")
+        check_equal([(box["caption"], box["message"]) for box in app.message_boxes(clear=True)],
+                    [("Restore Defaults", "Would you like to restore configuration to defaults?")], "Message displayed")
+        check_equal(callsign(), CALLSIGN, "Callsign after declining")
+
+        app.answer_next_message_box("yes")
+        app.menu("Tools/Restore defaults")
+        app.wait_until(lambda: callsign() == "", timeout=10, description="the configuration to be restored")
+        app.wait_until(lambda: len(app.message_boxes()) == 2, timeout=10, description="FreeDV to say that it's done")
+        check_equal([box["message"] for box in app.message_boxes(clear=True)],
+                    ["Would you like to restore configuration to defaults?",
+                     "Config file/registry key successfully deleted."], "Messages displayed")
+        check_equal(app.state()["config"]["reporting"]["reportingGridSquare"], "", "Grid square after restoring")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_time_out_timer():
     """The time-out timer, which stops a transmission that's gone on too long."""
     with audio_devices():
@@ -1014,6 +1246,10 @@ SCENARIOS = {
     "voice_keyer_files": test_voice_keyer_files,
     "recording": test_recording,
     "recording_options": test_recording_options,
+    "monitor_volume": test_monitor_volume,
+    "mouse_controls": test_mouse_controls,
+    "play_file_loop": test_play_file_loop,
+    "help_and_restore": test_help_and_restore,
     "time_out_timer": test_time_out_timer,
     "menus": test_menus,
 }
