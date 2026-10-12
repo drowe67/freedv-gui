@@ -252,10 +252,12 @@ class FreeDV:
         value, selection and items."""
         return self.command("get", name=name)
 
-    def click(self, name, item=None):
+    def click(self, name, item=None, button=None):
         """Clicks a button, toggle button, checkbox or radio button, or the
-        given item (counting from 0) of a list box."""
-        self.command("click", name=name, item=item)
+        given item (counting from 0) of a list. Lists with columns can also
+        be clicked with the "right" button, and below their items (by not
+        giving one)."""
+        self.command("click", name=name, item=item, button=button)
 
     def set_value(self, name, value=None, data=None, index=None):
         """Sets a control's value: True/False for checkboxes and toggle

@@ -498,12 +498,13 @@ bool logTimeIs(int64_t unixMs, int64_t expectedJulianDay, uint32_t expectedMsSin
         return false;
     }
 
-    // The time is converted using floating point, so allow it to be a
-    // millisecond out (but compare absolute times so that an error which
-    // crosses midnight is still seen as a millisecond and not a day).
+    // The time is converted using floating point but has to come out to the
+    // millisecond: one short is the previous second as far as a logging
+    // program is concerned. (Absolute times are compared so that an error
+    // which crosses midnight is seen as a millisecond and not a day.)
     int64_t expectedMs = (expectedJulianDay - UNIX_EPOCH_JULIAN_DAY) * MS_PER_DAY + expectedMsSinceMidnight;
     int64_t errorMs = timeOff.msSinceUnixEpoch() - expectedMs;
-    if (std::llabs(errorMs) > 1)
+    if (errorMs != 0)
     {
         std::cout << "[logged Julian day " << timeOff.julianDay << " + " << timeOff.msSinceMidnight
                   << " ms, expected " << expectedJulianDay << " + " << expectedMsSinceMidnight << " ms] ";

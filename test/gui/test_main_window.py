@@ -777,6 +777,95 @@ def test_recording():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_recording_options():
+    """The rest of what can be chosen when starting a recording."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        raw_folder = os.path.join(folder, "raw")
+        decoded_folder = os.path.join(folder, "decoded")
+        os.mkdir(raw_folder)
+        os.mkdir(decoded_folder)
+
+        def recordings():
+            return (sorted(os.listdir(raw_folder)), sorted(os.listdir(decoded_folder)))
+
+        # Someone that's been heard before, for FreeDV to list.
+        csv_log = os.path.join(folder, "heard.csv")
+        with open(csv_log, "w") as f:
+            f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
+            f.write("2026-03-04,05:06:07,K1ABC/P,RADEV1,14236000,7\n")
+
+        extra = dict(QuickRecord__SavePath=raw_folder, QuickRecord__SaveDecodedPath=decoded_folder,
+                     Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                     Reporting__CSV__LogFilePath=csv_log)
+        with audio_devices():
+            with freedvtest.start(settings=settings(**extra)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+
+                # With someone chosen, the recording is named after them, as
+                # far as a file's name allows.
+                app.combo_popup("main.cboLastReportedCallsigns", open=True)
+                app.wait_until(lambda: app.get("main.listLastReportedCallsigns")["shown"])
+                app.click("main.listLastReportedCallsigns", item=0)
+                app.wait_until(lambda: not app.get("main.listLastReportedCallsigns")["shown"])
+                check_equal(app.get("main.cboLastReportedCallsigns")["value"], "K1ABC/P", "Callsign chosen")
+
+                app.click("main.btnRecord")
+                app.wait_for_window("beginRecording")
+                check_equal(app.get("beginRecording.recordingSuffix")["value"], "K1ABC_P", "Recording suffix")
+
+                # MP3 is only for what's decoded.
+                mp3 = app.get("beginRecording.formatMp3")["shown"]
+                app.click("beginRecording.decodedRecording")
+                if mp3:
+                    check_equal(app.get("beginRecording.formatMp3")["enabled"], True, "MP3 available for decoded")
+                    app.click("beginRecording.formatMp3")
+                    app.click("beginRecording.rawRecording")
+                    check_equal((app.get("beginRecording.formatMp3")["enabled"],
+                                 app.get("beginRecording.formatWav")["value"]), (False, True),
+                                "MP3 available and WAV chosen off air")
+                    app.click("beginRecording.decodedRecording")
+                    app.click("beginRecording.formatMp3")
+                extension = "mp3" if mp3 else "wav"
+
+                app.click("beginRecording.btnStart")
+                app.wait_for_window_closed("beginRecording")
+                check_equal(app.message_boxes(), [], "Errors displayed")
+                raw, decoded = recordings()
+                check(raw == [] and len(decoded) == 1 and
+                      re.match(r"^FDV_FromDecoder_\d{8}-\d{6}_K1ABC_P\.%s$" % extension, decoded[0]),
+                      "Recordings are %r and %r" % (raw, decoded))
+                check_equal(app.get("main")["status"],
+                            "Recording file %s from decoder" % os.path.join(decoded_folder, decoded[0]), "Status")
+                time.sleep(2)
+                app.click("main.btnRecord")
+                check_equal(app.get("main.btnRecord")["value"], False, "Record button pressed after stopping")
+                check_equal(app.get("main")["status"], "", "Status after stopping")
+                check(os.path.getsize(os.path.join(decoded_folder, decoded[0])) >= 0, "The recording has gone")
+
+                # Whatever ends up in the suffix, the recording stays where
+                # recordings go.
+                time.sleep(1.1)  # for a different time in the file's name
+                app.click("main.btnRecord")
+                app.wait_for_window("beginRecording")
+                app.set_value("beginRecording.recordingSuffix", "../up one/K1ABC")
+                app.click("beginRecording.btnStart")
+                app.wait_for_window_closed("beginRecording")
+                check_equal(app.message_boxes(), [], "Errors displayed")
+                check_equal(app.get("main.btnRecord")["value"], True, "Record button pressed")
+                raw, decoded = recordings()
+                check(len(raw) == 1 and re.match(r"^FDV_FromRadio_\d{8}-\d{6}____up_one_K1ABC\.wav$", raw[0]),
+                      "Off air recordings are %r" % raw)
+                check_equal(sorted(os.listdir(folder)), ["decoded", "heard.csv", "raw"], "What's been created")
+                app.click("main.btnRecord")
+
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def test_time_out_timer():
     """The time-out timer, which stops a transmission that's gone on too long."""
     with audio_devices():
@@ -924,6 +1013,7 @@ SCENARIOS = {
     "voice_keyer": test_voice_keyer,
     "voice_keyer_files": test_voice_keyer_files,
     "recording": test_recording,
+    "recording_options": test_recording_options,
     "time_out_timer": test_time_out_timer,
     "menus": test_menus,
 }

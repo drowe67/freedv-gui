@@ -923,6 +923,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_BtnCallSignReset->SetName("main.btnCallSignReset");
     m_txtCtrlCallSign->SetName("main.textCallSign");
     m_cboLastReportedCallsigns->SetName("main.cboLastReportedCallsigns");
+    m_lastReportedCallsignListView->SetName("main.listLastReportedCallsigns");
     m_btnTxLevelMM->SetName("main.btnTxLevelDecrBig");
     m_btnTxLevelM->SetName("main.btnTxLevelDecr");
     m_btnTxLevelP->SetName("main.btnTxLevelIncr");

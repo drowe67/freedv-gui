@@ -297,6 +297,10 @@ class MainFrame : public TopFrame
         virtual ~MainFrame();
 
         FilterDlg*              m_filterDialog;
+
+        // Updates the speaker level control to match the configuration.
+        void syncSpeakerLevelWithConfiguration();
+
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
