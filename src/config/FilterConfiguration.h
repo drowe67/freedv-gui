@@ -91,8 +91,11 @@ public:
     // the start of the next so it doesn't re-climb from 0dB.
     ConfigurationDataElement<float> levelerGainDb;
     ConfigurationDataElement<float> levelerIntegralErrorDb;
-    // TX input (microphone) device the state above was saved with. If the
-    // device has changed since, the leveler starts from 0dB instead.
+    // TX input device (as selected in FreeDV's audio settings) the state
+    // above was saved with. If a different device is selected since, the
+    // leveler starts from 0dB instead. A different microphone on the same
+    // device, or a mixer gain change, can't be detected this way; the
+    // leveler corrects for those within a few seconds of speech.
     ConfigurationDataElement<wxString> levelerMicDeviceName;
 
     // Leveler loudness target. -26 LUFS rather than EBU R128's -23 leaves

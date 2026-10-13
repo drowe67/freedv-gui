@@ -3106,9 +3106,9 @@ static TxRxThreadUiHooks MakeTxRxUiHooks()
         return value;
     };
 
-    // The saved leveler state only applies to the microphone it was saved
-    // with. (No device name saved means state from before this was
-    // recorded, which is kept.)
+    // The saved leveler state only applies to the TX input device it was
+    // saved with (see FilterConfiguration::levelerMicDeviceName). No device
+    // name saved means state from before this was recorded, which is kept.
     auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
     wxString micDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
     wxString savedMicDeviceName = filterConfig.levelerMicDeviceName.get();
