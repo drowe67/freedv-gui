@@ -3,8 +3,10 @@
 import array
 import math
 import os
+import socket
 import subprocess
 import tempfile
+import threading
 import time
 import wave
 
@@ -312,3 +314,123 @@ class PrivateAudioServer:
             os.environ["PULSE_SERVER"] = self._previous
         shutil.rmtree(self._folder, ignore_errors=True)
         return False
+
+
+def _sound_server_socket():
+    """The address of the sound server that this process is using."""
+    configured = os.environ.get("PULSE_SERVER", "")
+    if configured.startswith("unix:"):
+        return configured[len("unix:"):]
+    if configured.startswith("tcp:"):
+        return configured[len("tcp:"):]
+    if configured.startswith("/") or ":" in configured:
+        return configured
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
+    return os.path.join(runtime, "pulse", "native")
+
+
+class AudioServerGateway:
+    """Stands between FreeDV and the sound server, so that a test can choose
+    when FreeDV stops being able to reach it: as when the sound server goes
+    away part way through FreeDV starting up.
+
+    Every connection is relayed to the sound server, until
+    refuse_next_connections() is called: the next connection that FreeDV
+    closes is then the last one that gets through, and every connection after
+    that is closed as soon as it's made, which is what a server that has just
+    gone does.
+
+    FreeDV is pointed at the gateway with env(); the test's own audio calls
+    (see _pactl) keep going to the sound server directly.
+    """
+
+    def __init__(self):
+        self._folder = None
+        self._socket = None
+        self._refusing = False
+        self._refuse_after_close = False
+
+    def __enter__(self):
+        self._folder = tempfile.mkdtemp(prefix="freedvtest-gateway-")
+        self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._socket.bind(os.path.join(self._folder, "native"))
+        self._socket.listen(8)
+        threading.Thread(target=self._accept, daemon=True).start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import shutil
+
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
+        shutil.rmtree(self._folder, ignore_errors=True)
+        return False
+
+    def env(self):
+        """What to start FreeDV with (see freedvtest.start(env=...)) so that
+        it reaches the sound server through the gateway."""
+        return {"PULSE_SERVER": "unix:" + self._socket.getsockname()}
+
+    def refuse_next_connections(self):
+        """Refuses every connection from the next one that FreeDV closes
+        onwards. FreeDV closes the connection it made while checking its
+        sound cards before it opens any streams, so this is what going away
+        in between looks like to it."""
+        self._refuse_after_close = True
+
+    def _accept(self):
+        while True:
+            try:
+                client, _ = self._socket.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._serve, args=(client,), daemon=True).start()
+
+    def _serve(self, client):
+        if self._refusing:
+            client.close()
+            return
+        try:
+            server = _connect_to_sound_server()
+        except OSError:
+            client.close()
+            return
+        pairs = []
+        for source, sink in ((client, server), (server, client)):
+            pair = threading.Thread(target=_relay, args=(source, sink), daemon=True)
+            pair.start()
+            pairs.append(pair)
+        for pair in pairs:
+            pair.join()
+        client.close()
+        server.close()
+        if self._refuse_after_close:
+            self._refuse_after_close = False
+            self._refusing = True
+
+
+def _connect_to_sound_server():
+    target = _sound_server_socket()
+    if ":" in target and not target.startswith("/"):
+        host, port = target.rsplit(":", 1)
+        return socket.create_connection((host, int(port)), timeout=10)
+    connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    connection.connect(target)
+    return connection
+
+
+def _relay(source, sink):
+    try:
+        while True:
+            data = source.recv(65536)
+            if not data:
+                break
+            sink.sendall(data)
+    except OSError:
+        pass
+    finally:
+        try:
+            sink.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass

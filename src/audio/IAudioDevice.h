@@ -115,20 +115,22 @@ public:
 protected:
     std::string description;
 
-    AudioDataCallbackFn onAudioDataFunction;
-    void* onAudioDataState;
-    
-    AudioOverflowCallbackFn onAudioOverflowFunction;
-    void* onAudioOverflowState;
-    
-    AudioUnderflowCallbackFn onAudioUnderflowFunction;
-    void* onAudioUnderflowState;
-    
-    AudioErrorCallbackFn onAudioErrorFunction;
-    void* onAudioErrorState;
-    
-    AudioDeviceChangedCallbackFn onAudioDeviceChangedFunction;
-    void* onAudioDeviceChangedState;
+    // Nothing is reported to the application until it registers a handler
+    // for it, so each one starts out as having none.
+    AudioDataCallbackFn onAudioDataFunction = nullptr;
+    void* onAudioDataState = nullptr;
+
+    AudioOverflowCallbackFn onAudioOverflowFunction = nullptr;
+    void* onAudioOverflowState = nullptr;
+
+    AudioUnderflowCallbackFn onAudioUnderflowFunction = nullptr;
+    void* onAudioUnderflowState = nullptr;
+
+    AudioErrorCallbackFn onAudioErrorFunction = nullptr;
+    void* onAudioErrorState = nullptr;
+
+    AudioDeviceChangedCallbackFn onAudioDeviceChangedFunction = nullptr;
+    void* onAudioDeviceChangedState = nullptr;
 };
 
 #endif // I_AUDIO_DEVICE_H

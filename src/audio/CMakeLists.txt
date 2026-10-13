@@ -57,3 +57,11 @@ if(BOOTSTRAP_WXWIDGETS)
     target_compile_definitions(fdv_audio PRIVATE ${WXBUILD_BUILD_DEFS})
     target_include_directories(fdv_audio PRIVATE ${WXBUILD_INCLUDES})
 endif(BOOTSTRAP_WXWIDGETS)
+
+if(UNITTEST AND LINUX AND NATIVE_AUDIO_AVAILABLE)
+    # PulseAudioDevice and PulseAudioEngine are only built (and only used)
+    # on Linux.
+    DefineFreeDVUnitTest(audio PulseAudioDeviceTest fdv_audio fdv_util ${FREEDV_LINK_LIBS})
+    target_include_directories(PulseAudioDeviceTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+    FreeDVUnitTestUsesWxWidgets(PulseAudioDeviceTest)
+endif()

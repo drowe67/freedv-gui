@@ -898,7 +898,7 @@ endforeach(scenario)
 
 # device_removed and sound_server_restarted run a sound server of their own
 # (PipeWire), and are skipped if they can't.
-foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved device_removed sound_server_restarted)
+foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved device_removed sound_server_restarted sound_server_gone_while_starting)
     add_test(NAME gui_audio_errors_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_audio_errors.py ${scenario})
     set_tests_properties(gui_audio_errors_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)

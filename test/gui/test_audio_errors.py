@@ -19,7 +19,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import PrivateAudioServer, Tone, VirtualAudioDevices, move_stream, streams
+from freedvtest.audio import AudioServerGateway, PrivateAudioServer, Tone, VirtualAudioDevices, move_stream, streams
 from test_main_window import (AUDIBLE, MICROPHONE, RADIO_RX, RADIO_TX, RADIO_TX_MONITOR, SPEAKER, SPEAKER_MONITOR,
                               audio_devices, check, check_equal, check_silent, level, quit_and_check_log, settings,
                               start_modem, stop_modem, wait_for_transmit)
@@ -434,6 +434,32 @@ def test_sound_server_restarted():
                 pass
 
 
+def test_sound_server_gone_while_starting():
+    """The sound server going away part way through FreeDV starting: the
+    sound cards check out, and then there's nothing to connect to when it
+    comes to opening the streams."""
+    with audio_devices(), AudioServerGateway() as gateway:
+        with freedvtest.start(settings=settings(), env=gateway.env()) as app:
+            app.wait_for_window("main")
+
+            # FreeDV connects to the sound server to check its sound cards,
+            # and closes that connection before opening any streams. From
+            # then on, there's nothing on the other end of the gateway.
+            gateway.refuse_next_connections()
+            try_to_start(app)
+
+            boxes = sorted((box["caption"], box["message"]) for box in app.message_boxes(clear=True))
+            expected = sorted([
+                ("Error", "Error encountered while initializing the audio engine: Could not connect PulseAudio "
+                          "context.."),
+                ("Error", "Could not find TX input sound device '%s'. Please check settings and try again."
+                          % CARDS["soundCard2In"]),
+            ])
+            check_equal(boxes, expected, "Messages displayed when the sound server went while starting")
+            check_not_started(app, "with the sound server gone while starting")
+            quit_and_check_log(app)
+
+
 def quit_and_check_log_without_lost_devices(app):
     check_equal(app.message_boxes(), [], "Errors displayed")
     check_equal(app.quit(), 0, "FreeDV's exit code")
@@ -450,6 +476,7 @@ SCENARIOS = {
     "device_moved": test_device_moved,
     "device_removed": test_device_removed,
     "sound_server_restarted": test_sound_server_restarted,
+    "sound_server_gone_while_starting": test_sound_server_gone_while_starting,
 }
 
 
