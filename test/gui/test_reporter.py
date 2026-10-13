@@ -899,6 +899,11 @@ def test_row_actions():
             # ...and with one, takes it to where that station is.
             start_modem(app)
             app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+            # Once FreeDV has the radio, that is: on connecting to it, FreeDV
+            # tunes it to the frequency chosen in the main window, which would
+            # undo a double-click from before then.
+            app.wait_until(lambda: app.get("main.textModeStatus")["label"] != "unk",
+                           description="FreeDV to connect to the radio")
             app.select_row(LIST, (CALLSIGN, "K1ABC"))
             app.activate_row(LIST, (CALLSIGN, "K1ABC"))
             app.wait_until(lambda: app.get("main.cboReportFrequency")["value"] == "7.1770", timeout=15,
