@@ -54,6 +54,15 @@ class LevelMeterLed : public wxWindow
         // true: green/amber/red zones. false (default): all segments blue.
         void SetZoneColours(bool enabled);
 
+        // For automated testing: the level last set (after clamping), the
+        // meter's range and where its amber and red zones start, all in dB.
+        float GetLevelDb() const { return currentDb_; }
+        float GetMinDb() const { return minDb_; }
+        float GetMaxDb() const { return maxDb_; }
+        float GetAmberStartDb() const { return amberStartDb_; }
+        float GetRedStartDb() const { return redStartDb_; }
+        bool GetZoneColours() const { return zoneColours_; }
+
         virtual wxSize DoGetBestSize() const override;
 
     private:
