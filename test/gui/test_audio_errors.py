@@ -542,7 +542,9 @@ def test_sound_server_gone_while_starting():
             # FreeDV connects to the sound server to check its sound cards,
             # and closes that connection before opening any streams. From
             # then on, there's nothing on the other end of the gateway.
-            gateway.refuse_next_connections()
+            # (Counted rather than waiting to see the first one close, which
+            # the gateway can find out about after FreeDV has made the next.)
+            gateway.refuse_connections_after(1)
             try_to_start(app)
 
             boxes = sorted((box["caption"], box["message"]) for box in app.message_boxes(clear=True))

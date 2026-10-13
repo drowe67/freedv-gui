@@ -1085,16 +1085,26 @@ def test_recording_options():
                 app.wait_for_window("beginRecording")
                 # Typed in, anything that a file's name can't have is
                 # replaced as it's typed; the rest is left to go in as usual.
+                # (Some keys never get as far as being typed, depending on
+                # the version of wxWidgets: those leave the suffix as it was.)
                 suffix = "beginRecording.recordingSuffix"
                 app.set_value(suffix, "")
-                for typed in ["/", " ", "."]:
+                replaced = 0
+                for typed in ["/", "+", ".", " "]:
+                    before = app.get(suffix)["value"]
                     app.key(suffix, typed)
-                app.wait_until(lambda: app.get(suffix)["value"] == "___", timeout=5,
-                               description="what was typed to be replaced (the suffix is %r)" % app.get(suffix)["value"])
+                    time.sleep(0.3)
+                    after = app.get(suffix)["value"]
+                    check(after in (before, before + "_"),
+                          "Typing %r changed the recording suffix from %r to %r" % (typed, before, after))
+                    replaced += len(after) - len(before)
+                check(replaced >= 2, "Only %d of the characters typed were replaced" % replaced)
                 for typed in ["K", "5", "_", "Backspace", "Left"]:
+                    before = app.get(suffix)["value"]
                     app.key(suffix, typed)
-                time.sleep(0.3)
-                check_equal(app.get(suffix)["value"], "___", "Recording suffix after keys that are left alone")
+                    time.sleep(0.2)
+                    check_equal(app.get(suffix)["value"], before,
+                                "Recording suffix after %r, which is left to go in as usual" % typed)
 
                 app.set_value("beginRecording.recordingSuffix", "../up one/K1ABC")
                 app.click("beginRecording.btnStart")
