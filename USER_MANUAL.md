@@ -872,10 +872,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to record both the raw and decoded RX audio. (PR #1501)
     * Linux/PulseAudio: Show friendlier device names in configuration windows. (PR #1508)
     * Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR #1513, #1539)
-    * Add dark mode support for Windows. (PR #1518, #1529)
+    * Add dark mode support for Windows. (PR #1518, #1529, #1560)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
-2. Other:
+2. Build system:
+    * Update wxWidgets to 3.3.4. (PR #1560)
+3. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
