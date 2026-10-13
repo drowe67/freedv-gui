@@ -360,7 +360,8 @@ class AudioServerGateway:
     refuse_next_connections() is called: the next connection that FreeDV
     closes is then the last one that gets through, and every connection after
     that is closed as soon as it's made, which is what a server that has just
-    gone does.
+    gone does. refuse_connections_after(count) instead lets a test say how
+    far FreeDV gets before the server stops answering.
 
     after_next_connection_close(action) instead lets a test do something of
     its own (take a sound card away, say) when the next connection closes,
@@ -375,6 +376,7 @@ class AudioServerGateway:
         self._socket = None
         self._refusing = False
         self._refuse_after_close = False
+        self._refuse_after = None    # connections still allowed, then None
         self._trigger = None    # (action, barrier) for the next connection
         self._barrier = None    # set once that action has run
 
@@ -407,6 +409,14 @@ class AudioServerGateway:
         in between looks like to it."""
         self._refuse_after_close = True
 
+    def refuse_connections_after(self, count):
+        """Refuses every connection after the next count of them. FreeDV
+        makes one connection to check its sound cards, one to list the
+        devices it's about to use, and one for each stream it opens, so a
+        test can say which stream the sound server stops being reachable
+        for."""
+        self._refuse_after = count
+
     def after_next_connection_close(self, action):
         """Runs action() when the next connection that FreeDV makes has
         closed, and before anything is relayed on the connections after it.
@@ -422,6 +432,11 @@ class AudioServerGateway:
                 client, _ = self._socket.accept()
             except OSError:
                 return
+            if self._refuse_after is not None:
+                if self._refuse_after > 0:
+                    self._refuse_after -= 1
+                else:
+                    self._refusing = True
             # Only the first connection after after_next_connection_close()
             # is the one that triggers it.
             trigger, self._trigger = self._trigger, None

@@ -70,6 +70,41 @@ def configured_devices(app):
     return {card: audio[card]["deviceName"] for card in CARDS}
 
 
+def stream_on(app, device):
+    """FreeDV's one stream on the given device."""
+    found = [stream for stream in streams(app.pid) if stream["device"] == device]
+    check_equal(len(found), 1, "Number of FreeDV's streams on %s (it has %r)" % (device, streams(app.pid)))
+    return found[0]
+
+
+def move_to(app, device, to):
+    """Moves FreeDV's stream on one device to another, and waits for the
+    sound server to have done it."""
+    # The sound server doesn't always do as it's asked the first time, so
+    # make sure of it before expecting anything of FreeDV.
+    for attempt in range(5):
+        time.sleep(1)
+        move_stream(stream_on(app, device), to)
+        deadline = time.time() + 3
+        while time.time() < deadline:
+            if any(stream["device"] == to for stream in streams(app.pid)):
+                return
+            time.sleep(0.25)
+    check(False, "FreeDV's stream on %s couldn't be moved to %s" % (device, to))
+
+
+def wait_for_devices(app, expected, what):
+    """Waits for FreeDV's settings to say it's using the given devices."""
+    try:
+        app.wait_until(lambda: configured_devices(app) == expected, timeout=10)
+    except freedvtest.FreeDVError:
+        told = [line.split("PulseAudioDevice.cpp")[-1] for line in app.log().splitlines()
+                if "has been moved" in line]
+        check_equal(configured_devices(app), expected,
+                    "%s (streams: %r; FreeDV was told: %r)" % (what, streams(app.pid), told))
+
+
+
 # ---------------------------------------------------------------------------
 # Scenarios
 # ---------------------------------------------------------------------------
@@ -226,51 +261,25 @@ def test_device_moved():
             app.wait_for_window("main")
             start_modem(app)
             check_equal(configured_devices(app), CARDS, "Devices to begin with")
-            def stream_on(device):
-                found = [stream for stream in streams(app.pid) if stream["device"] == device]
-                check_equal(len(found), 1, "Number of FreeDV's streams on %s (it has %r)" % (device, streams(app.pid)))
-                return found[0]
-
-            def move(device, to):
-                # The sound server doesn't always do as it's asked the first
-                # time, so make sure of it before expecting anything of FreeDV.
-                for attempt in range(5):
-                    time.sleep(1)
-                    move_stream(stream_on(device), to)
-                    deadline = time.time() + 3
-                    while time.time() < deadline:
-                        if any(stream["device"] == to for stream in streams(app.pid)):
-                            return
-                        time.sleep(0.25)
-                check(False, "FreeDV's stream on %s couldn't be moved to %s" % (device, to))
-
-            def wait_for_devices(expected, what):
-                try:
-                    app.wait_until(lambda: configured_devices(app) == expected, timeout=10)
-                except freedvtest.FreeDVError:
-                    told = [line.split("PulseAudioDevice.cpp")[-1] for line in app.log().splitlines()
-                            if "has been moved" in line]
-                    check_equal(configured_devices(app), expected,
-                                "%s (streams: %r; FreeDV was told: %r)" % (what, streams(app.pid), told))
 
             # Each of the four in turn, and back again.
             for card, device in CARDS.items():
                 other = OTHER_INPUT if card.endswith("In") else OTHER_OUTPUT
-                move(device, other)
-                wait_for_devices(dict(CARDS, **{card: other}), "Devices after moving " + card)
+                move_to(app, device, other)
+                wait_for_devices(app, dict(CARDS, **{card: other}), "Devices after moving " + card)
                 check_equal(freedvtest.read_config(app.config_path).get("/Audio/%sDeviceName" % card), other,
                             "Saved device for " + card)
                 check_equal(app.message_boxes(), [], "Messages displayed after moving " + card)
                 check_equal(app.state()["running"], True, "Running after moving " + card)
 
-                move(other, device)
-                wait_for_devices(CARDS, "Devices after moving %s back" % card)
+                move_to(app, other, device)
+                wait_for_devices(app, CARDS, "Devices after moving %s back" % card)
 
             # It's the new device that's then used: the speaker's stream,
             # with what's coming from the radio played through it.
             app.click("main.btnAnalog")
-            move(SPEAKER, OTHER_OUTPUT)
-            wait_for_devices(dict(CARDS, soundCard2Out=OTHER_OUTPUT), "Devices after moving the speaker")
+            move_to(app, SPEAKER, OTHER_OUTPUT)
+            wait_for_devices(app, dict(CARDS, soundCard2Out=OTHER_OUTPUT), "Devices after moving the speaker")
             with Tone(RADIO_RX):
                 time.sleep(0.75)
                 heard = level(VirtualAudioDevices.input_name(OTHER_OUTPUT))
@@ -278,8 +287,8 @@ def test_device_moved():
                 check_silent(SPEAKER_MONITOR, "Something is still being played through the old speaker")
 
             # Likewise for what's sent to the radio.
-            move(RADIO_TX, SPEAKER)
-            wait_for_devices(dict(CARDS, soundCard1Out=SPEAKER, soundCard2Out=OTHER_OUTPUT),
+            move_to(app, RADIO_TX, SPEAKER)
+            wait_for_devices(app, dict(CARDS, soundCard1Out=SPEAKER, soundCard2Out=OTHER_OUTPUT),
                              "Devices after moving the radio's output")
             app.click("main.btnPTT")
             wait_for_transmit(app)
@@ -301,6 +310,49 @@ def test_device_moved():
                         "What FreeDV's streams are connected to after starting again")
             stop_modem(app)
             quit_and_check_log(app)
+
+
+def test_receive_only_device_moved():
+    """Streams being moved to other devices while FreeDV is receiving with
+    only one pair of devices: it carries on with, and remembers, where each
+    ended up."""
+    receive_only = card_settings(soundCard1Out=SPEAKER, soundCard2In="none", soundCard2Out="none")
+    with audio_devices(), VirtualAudioDevices(OTHER_OUTPUT, "FreeDVGuiTest_Other_Input"):
+        with freedvtest.start(settings=receive_only) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            check_equal(app.state()["numSoundCards"], 1, "Pairs of devices in use")
+            before = configured_devices(app)
+            check_equal([before["soundCard1In"], before["soundCard1Out"]], [CARDS["soundCard1In"], SPEAKER],
+                        "Devices to begin with")
+
+            # The one input and the one output, in turn.
+            move_to(app, CARDS["soundCard1In"], OTHER_INPUT)
+            wait_for_devices(app, dict(before, soundCard1In=OTHER_INPUT), "Devices after moving the radio's input")
+            check_equal(freedvtest.read_config(app.config_path).get("/Audio/soundCard1InDeviceName"), OTHER_INPUT,
+                        "Saved device for the radio's input")
+
+            move_to(app, SPEAKER, OTHER_OUTPUT)
+            wait_for_devices(app, dict(before, soundCard1In=OTHER_INPUT, soundCard1Out=OTHER_OUTPUT),
+                             "Devices after moving the speaker")
+            check_equal(freedvtest.read_config(app.config_path).get("/Audio/soundCard1OutDeviceName"), OTHER_OUTPUT,
+                        "Saved device for the speaker")
+            check_equal(app.message_boxes(), [], "Messages displayed after moving the devices")
+            check_equal(app.state()["running"], True, "Running after moving the devices")
+
+            # It's the new devices that are then used: what comes in through
+            # the one that the radio's stream moved to is heard out of the
+            # one that the speaker's stream moved to.
+            app.click("main.btnAnalog")
+            with Tone("FreeDVGuiTest_Other_Input"):
+                time.sleep(0.75)
+                heard = level(VirtualAudioDevices.input_name(OTHER_OUTPUT))
+                check(heard > AUDIBLE, "The radio isn't being played through the other output (level %d)" % heard)
+                check_silent(SPEAKER_MONITOR, "Something is still being played through the old speaker")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
 
 
 def test_device_removed():
@@ -426,7 +478,7 @@ def test_sound_server_restarted():
                     heard = level(SPEAKER_MONITOR)
                     check(heard > AUDIBLE, "The radio isn't being played through the speaker (level %d)" % heard)
                 stop_modem(app)
-                quit_and_check_log_without_lost_devices(app)
+                quit_and_check_log_ignoring(app, "Lost connection to")
         finally:
             try:
                 devices.__exit__(None, None, None)
@@ -496,12 +548,58 @@ def test_sound_card_gone_while_starting():
                     quit_and_check_log(app)
 
 
-def quit_and_check_log_without_lost_devices(app):
+def test_sound_server_gone_while_opening_streams():
+    """The sound server going away as FreeDV opens its streams: each of the
+    four in turn finds nothing on the other end of the connection. FreeDV
+    names the ones it couldn't reach, closes the ones it had opened, and
+    starts none of them."""
+    # FreeDV makes one connection to check its sound cards, one to list the
+    # devices it's about to use, and then one for each stream: the TX pair
+    # first (both of them, before it looks at whether either worked), then
+    # the RX pair. Refusing every connection from the (2 + n)th onwards is
+    # what the server going away as FreeDV opens its (n + 1)th stream looks
+    # like to it.
+    cases = [
+        # (the stream that first fails, the devices FreeDV is told it
+        # couldn't reach)
+        ("TX input", [CARDS["soundCard2In"], CARDS["soundCard1Out"]]),
+        ("TX output", [CARDS["soundCard1Out"]]),
+        ("RX input", [CARDS["soundCard1In"]]),
+        ("RX output", [CARDS["soundCard2Out"]]),
+    ]
+    for n, (role, unreachable) in enumerate(cases):
+        why = "while opening the %s stream" % role
+        expected = sorted(("Error", "Error encountered while processing audio: Could not connect PulseAudio "
+                                    "context. (%s)" % device) for device in unreachable)
+        with audio_devices(), AudioServerGateway() as gateway:
+            with freedvtest.start(settings=settings(), env=gateway.env()) as app:
+                app.wait_for_window("main")
+
+                gateway.refuse_connections_after(2 + n)
+                try_to_start(app)
+
+                boxes = sorted((box["caption"], box["message"]) for box in app.message_boxes(clear=True))
+                check_equal(boxes, expected, "Messages displayed " + why)
+                check_not_started(app, "with the sound server gone " + why)
+
+                # None of the streams it had opened is left connected.
+                try:
+                    app.wait_until(lambda: not streams(app.pid), timeout=5)
+                except freedvtest.FreeDVError:
+                    pass
+                check_equal(streams(app.pid), [], "FreeDV's streams left " + why)
+
+                quit_and_check_log_ignoring(app, "Could not connect PulseAudio context")
+
+
+def quit_and_check_log_ignoring(app, *expected):
+    """Quits FreeDV and checks what it logged, allowing through the errors
+    that the scenario meant it to report."""
     check_equal(app.message_boxes(), [], "Errors displayed")
     check_equal(app.quit(), 0, "FreeDV's exit code")
     errors = [line for line in app.log().splitlines()
-              if (" ERROR " in line or " FATAL " in line) and "Lost connection to" not in line]
-    check_equal(errors, [], "Errors logged by FreeDV, other than about losing the sound server")
+              if (" ERROR " in line or " FATAL " in line) and not any(text in line for text in expected)]
+    check_equal(errors, [], "Errors logged by FreeDV, other than the expected ones")
 
 
 SCENARIOS = {
@@ -510,10 +608,12 @@ SCENARIOS = {
     "no_devices": test_no_devices,
     "receive_only": test_receive_only,
     "device_moved": test_device_moved,
+    "receive_only_device_moved": test_receive_only_device_moved,
     "device_removed": test_device_removed,
     "sound_server_restarted": test_sound_server_restarted,
     "sound_server_gone_while_starting": test_sound_server_gone_while_starting,
     "sound_card_gone_while_starting": test_sound_card_gone_while_starting,
+    "sound_server_gone_while_opening_streams": test_sound_server_gone_while_opening_streams,
 }
 
 
