@@ -129,6 +129,7 @@ float g_snr;
 std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 std::atomic<bool>  g_agcEnabled;
+std::atomic<float> g_agcAppliedGainDb;
 
 // In half duplex, RX (including the waterfall/spectrum) stays muted until this
 // steady_clock time (in ns) after TX ends, so that we don't display or decode
@@ -160,8 +161,11 @@ time_t              g_sync_time;
 constexpr int PLOT_BUF_MULTIPLIER=8;
 GenericFIFO<short>  g_plotDemodInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
-GenericFIFO<short>  g_plotSpeechInFifoBeforeEQ(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifoAfterAGC(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
+
+// Raw mic samples for the TX level meter, written directly from the sound
+// card callback (OnTxInAudioData_()) alongside the TX pipeline's own input.
+GenericFIFO<short>  g_levelMeterTxRawFifo(8*LEVEL_METER_TX_RAW_BUF_MAX);
 
 // Soundcard config
 int                 g_nSoundCards;
@@ -1364,6 +1368,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_panelSNR = new PlotScalar(m_auiNbookCtrl, SNR_PLOT_SECONDS, DT, NO_SNR_VAL, MAX_SNR_VAL, SNR_PLOT_SECONDS / SNR_PLOT_SECOND_SEGMENTS, 5, "%.0f", 0, "", true, NO_SNR_VAL, false);
     m_auiNbookCtrl->AddPage(m_panelSNR, _("SNR"), false, wxNullBitmap);
 
+    // AGC gain plot -- evaluation aid only, see AGC_GAIN_PLOT_* in defines.h.
+    m_panelAgcGain = new PlotScalar(m_auiNbookCtrl, AGC_GAIN_PLOT_SECONDS, LEVEL_METER_TX_REFRESH_PERIOD_SEC, MIN_AGC_GAIN_PLOT_VAL, MAX_AGC_GAIN_PLOT_VAL, AGC_GAIN_PLOT_SECONDS / AGC_GAIN_PLOT_SECOND_SEGMENTS, 3, "%.1f", 0, "", true, 0, false);
+    m_auiNbookCtrl->AddPage(m_panelAgcGain, _("AGC dB"), false, wxNullBitmap);
+
     // Names for automated GUI testing.
     m_panelWaterfall->SetName("main.plotWaterfall");
     m_panelSpectrum->SetName("main.plotSpectrum");
@@ -1371,6 +1379,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_panelSpeechIn->SetName("main.plotFromMic");
     m_panelSpeechOut->SetName("main.plotFromDecoder");
     m_panelSNR->SetName("main.plotSNR");
+    m_panelAgcGain->SetName("main.plotAgcGain");
 
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1385,6 +1394,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_plotWaterfallTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_plotSpectrumTimer.SetOwner(this, ID_TIMER_SPECTRUM);
     m_plotSpeechInTimer.SetOwner(this, ID_TIMER_SPEECH_IN);
+    m_levelMeterTxTimer.SetOwner(this, ID_TIMER_LEVEL_METER_TX);
     m_plotSpeechOutTimer.SetOwner(this, ID_TIMER_SPEECH_OUT);
     m_plotDemodInTimer.SetOwner(this, ID_TIMER_DEMOD_IN);
     m_plotSNRTimer.SetOwner(this, ID_TIMER_SNR);
@@ -1794,6 +1804,7 @@ MainFrame::~MainFrame()
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
         m_plotSpeechInTimer.Stop();
+        m_levelMeterTxTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
         m_plotSNRTimer.Stop();
@@ -1853,7 +1864,7 @@ int MainFrame::getIdealStationsHeardColumnLength_(int col)
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
-    short speechInPlotSamplesBeforeEQ[WAVEFORM_PLOT_BUF];
+    short speechInRawSamplesTxLevel[LEVEL_METER_TX_RAW_BUF_MAX];
     short speechInPlotSamplesAfterAGC[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
@@ -1869,7 +1880,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     
     // Most plots don't need TX/sync state.
-    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR || timerId == ID_TIMER_DEMOD_IN)
+    if (timerId == ID_TIMER_UPDATE_OTHER || timerId == ID_TIMER_SNR || timerId == ID_TIMER_DEMOD_IN ||
+        timerId == ID_TIMER_LEVEL_METER_TX)
     {
         txState = g_tx.load(std::memory_order_relaxed);
         halfDuplexState = g_half_duplex.load(std::memory_order_relaxed);
@@ -1924,11 +1936,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           }
           m_panelSpeechIn->add_new_short_samples(speechInPlotSamplesAfterAGC, WAVEFORM_PLOT_BUF, 32767);
           m_panelSpeechIn->refreshData();
-          
-          if (g_plotSpeechInFifoBeforeEQ.read(speechInPlotSamplesBeforeEQ, WAVEFORM_PLOT_BUF))
-          {
-              memset(speechInPlotSamplesBeforeEQ, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-          }
       }
       else if (timerId == ID_TIMER_SPEECH_OUT)
       {
@@ -1944,6 +1951,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           }
           m_panelDemodIn->add_new_short_samples(demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
+      }
+      else if (timerId == ID_TIMER_LEVEL_METER_TX)
+      {
+          // Level meter only, handled below. Kept out of the branch below,
+          // which (e.g. the voice keyer) expects to run once per DT.
       }
       else
       {
@@ -2296,59 +2308,73 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         VoiceKeyerProcessEvent(VK_DT);
     }
     
-    if (timerId == ID_TIMER_SPEECH_IN ||
-        timerId == ID_TIMER_DEMOD_IN)
+    if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
     {
-        // Level Gauge -----------------------------------------------------------------------
-
-        bool updated = false;
-        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        // Level meter, RX: peak level of the radio's audio. Peak reading,
+        // instant attack, then decays the linear peak by LEVEL_BETA per tick.
+        int maxDemodIn = 0;
+        for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
         {
-            // receive mode - display From Radio peaks
-            // peak from this DT sampling period
-            int maxDemodIn = 0;
-            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+            if (maxDemodIn < abs(demodInPlotSamples[i]))
             {
-                if (maxDemodIn < abs(demodInPlotSamples[i]))
+                maxDemodIn = abs(demodInPlotSamples[i]);
+            }
+        }
+
+        if (maxDemodIn > m_maxLevel)
+            m_maxLevel = maxDemodIn;
+
+        float maxScaled = m_maxLevel == 0 ? -LEVEL_GAUGE_MIN_DB : 20.0f * std::log10((float)m_maxLevel/32767.0f); // log(0) is undefined
+        m_gaugeLevel->SetZoneColours(false);
+        m_gaugeLevel->SetLevelDb(maxScaled);
+        m_maxLevel *= LEVEL_BETA;
+    }
+    else if (timerId == ID_TIMER_LEVEL_METER_TX && txState)
+    {
+        // Level meter, TX: peak level of the raw mic audio, read from the
+        // sound card callback rather than the TX pipeline (whose input
+        // arrives in bursts paced by the modem's frame size). PPM-style
+        // ballistics: instant attack, constant dB/sec decay.
+        int available = g_levelMeterTxRawFifo.numUsed();
+        int toRead = std::min(available, LEVEL_METER_TX_RAW_BUF_MAX);
+        int maxSpeechIn = 0;
+        if (toRead > 0 && g_levelMeterTxRawFifo.read(speechInRawSamplesTxLevel, toRead) == 0)
+        {
+            for (int i = 0; i < toRead; i++)
+            {
+                if (maxSpeechIn < abs(speechInRawSamplesTxLevel[i]))
                 {
-                    maxDemodIn = abs(demodInPlotSamples[i]);
+                    maxSpeechIn = abs(speechInRawSamplesTxLevel[i]);
                 }
             }
-
-            // peak from last second
-            if (maxDemodIn > m_maxLevel)
-                m_maxLevel = maxDemodIn;
-
-            updated = true;
         }
-        else if (timerId == ID_TIMER_SPEECH_IN)
-        {
-            // transmit mode - display From Mic peaks
 
-            // peak from this DT sampling period
-            int maxSpeechIn = 0;
-            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+        float instantDb = maxSpeechIn == 0 ? -LEVEL_GAUGE_MIN_DB : 20.0f * std::log10((float)maxSpeechIn/32767.0f); // log(0) is undefined
+        if (instantDb > m_maxLevelDbTx)
+        {
+            m_maxLevelDbTx = instantDb;
+        }
+        else
+        {
+            m_maxLevelDbTx -= LEVEL_METER_TX_DECAY_DB_PER_SEC * LEVEL_METER_TX_REFRESH_PERIOD_SEC;
+            if (m_maxLevelDbTx < -LEVEL_GAUGE_MIN_DB)
             {
-                if (maxSpeechIn < abs(speechInPlotSamplesBeforeEQ[i]))
-                {
-                    maxSpeechIn = abs(speechInPlotSamplesBeforeEQ[i]);
-                }
+                m_maxLevelDbTx = -LEVEL_GAUGE_MIN_DB;
             }
-
-            // peak from last second
-            if (maxSpeechIn > m_maxLevel)
-                m_maxLevel = maxSpeechIn;
-
-           updated = true;
         }
 
-        if (updated)
-        {
-            // Peak Reading meter: updates peaks immediately, then slowly decays
-            int maxScaled = m_maxLevel == 0 ? -LEVEL_GAUGE_MIN_DB : 20 * std::log10((float)m_maxLevel/32767.0); // log(0) is undefined
-            m_gaugeLevel->SetValue(std::max(-LEVEL_GAUGE_MIN_DB, maxScaled) + LEVEL_GAUGE_MIN_DB); // 1/32767 -> -30dB
-            m_maxLevel *= LEVEL_BETA;
-        }
+        m_gaugeLevel->SetZoneColours(true);
+        m_gaugeLevel->SetLevelDb(m_maxLevelDbTx);
+
+        // AGC gain plot (evaluation aid, see AGC_GAIN_PLOT_* in defines.h).
+        m_panelAgcGain->add_new_sample(g_agcAppliedGainDb.load(std::memory_order_relaxed));
+        m_panelAgcGain->refreshData();
+    }
+    else if (timerId == ID_TIMER_LEVEL_METER_TX)
+    {
+        // Not transmitting: discard what the mic callback captured so the
+        // next transmission doesn't start by displaying stale audio.
+        g_levelMeterTxRawFifo.reset();
     }
 }
 #endif
@@ -2462,7 +2488,7 @@ void MainFrame::performFreeDVOn_()
         // Reset plot FIFOs
         g_plotDemodInFifo.reset();
         g_plotSpeechOutFifo.reset();
-        g_plotSpeechInFifoBeforeEQ.reset();
+        g_levelMeterTxRawFifo.reset();
         g_plotSpeechInFifoAfterAGC.reset();
 
         m_txtCtrlCallSign->SetValue(wxT(""));
@@ -2540,9 +2566,10 @@ void MainFrame::performFreeDVOn_()
     memset(m_callsign, 0, sizeof(m_callsign));
 
     m_maxLevel = 0;
+    m_maxLevelDbTx = -LEVEL_GAUGE_MIN_DB;
     executeOnUiThreadAndWait_([&]() 
     {
-        m_gaugeLevel->SetValue(0);
+        m_gaugeLevel->Reset();
         
         if (wxGetApp().logger != nullptr)
         {
@@ -2708,6 +2735,7 @@ void MainFrame::performFreeDVOn_()
                     m_plotWaterfallTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpectrumTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_levelMeterTxTimer.Start(LEVEL_METER_TX_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSpeechOutTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotDemodInTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_plotSNRTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
@@ -2759,6 +2787,7 @@ void MainFrame::performFreeDVOff_()
         m_plotWaterfallTimer.Stop();
         m_plotSpectrumTimer.Stop();
         m_plotSpeechInTimer.Stop();
+        m_levelMeterTxTimer.Stop();
         m_plotSpeechOutTimer.Stop();
         m_plotDemodInTimer.Stop();
         m_plotSNRTimer.Stop();
@@ -2991,6 +3020,12 @@ void MainFrame::stopRxStream()
             }
             
             m_txThread = nullptr;
+
+            // The TX thread saved the leveler's final gain state into the
+            // in-memory config as it exited; write it out now. Flush() so
+            // it reaches disk on every Stop, not only at app exit.
+            wxGetApp().appConfiguration.save(pConfig);
+            pConfig->Flush();
         }
 
         if (m_rxThread)
@@ -3069,6 +3104,29 @@ static TxRxThreadUiHooks MakeTxRxUiHooks()
         auto value = wxGetApp().m_tone.load(std::memory_order_acquire);
         FREEDV_END_VERIFIED_SAFE
         return value;
+    };
+
+    // The saved leveler state only applies to the TX input device it was
+    // saved with (see FilterConfiguration::levelerMicDeviceName). No device
+    // name saved means state from before this was recorded, which is kept.
+    auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
+    wxString micDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
+    wxString savedMicDeviceName = filterConfig.levelerMicDeviceName.get();
+    if (savedMicDeviceName.IsEmpty() || savedMicDeviceName == micDeviceName)
+    {
+        hooks.levelerGainDb = filterConfig.levelerGainDb.getWithoutProcessing();
+        hooks.levelerIntegralErrorDb = filterConfig.levelerIntegralErrorDb.getWithoutProcessing();
+    }
+    else
+    {
+        log_info("TX input device changed from %s, leveler starting from 0dB", (const char*)savedMicDeviceName.ToUTF8());
+    }
+    hooks.levelerTargetLufs = filterConfig.levelerTargetLufs.getWithoutProcessing();
+    hooks.saveLevelerState = [micDeviceName](float gainDb, float integralErrorDb) {
+        auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
+        filterConfig.levelerGainDb.setWithoutProcessing(gainDb);
+        filterConfig.levelerIntegralErrorDb.setWithoutProcessing(integralErrorDb);
+        filterConfig.levelerMicDeviceName.setWithoutProcessing(micDeviceName);
     };
     return hooks;
 }
@@ -3930,6 +3988,9 @@ void MainFrame::OnTxInAudioData_(IAudioDevice& dev, void* data, size_t size, voi
         {
             g_infifo2_full.fetch_add(1, std::memory_order_relaxed);
         }
+
+        // Separate copy for the TX level meter (see g_levelMeterTxRawFifo).
+        g_levelMeterTxRawFifo.write(tmpInput, size);
     }
 }
 

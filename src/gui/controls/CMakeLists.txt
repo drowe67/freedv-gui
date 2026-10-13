@@ -5,7 +5,8 @@ add_library(fdv_gui_controls STATIC
     plot_spectrum.cpp
     plot_waterfall.cpp
     ReportMessageRenderer.cpp
-    MsgListPopup.cpp)
+    MsgListPopup.cpp
+    LevelMeterLed.cpp)
 
 if(APPLE)
     target_sources(fdv_gui_controls PRIVATE plot_osx.mm plot_waterfall_osx.mm)

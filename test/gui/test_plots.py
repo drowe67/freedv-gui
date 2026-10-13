@@ -36,6 +36,7 @@ PLOTS = {
     "Frm Mic": "main.plotFromMic",
     "Frm Decoder": "main.plotFromDecoder",
     "SNR": "main.plotSNR",
+    "AGC dB": "main.plotAgcGain",
 }
 
 
