@@ -990,8 +990,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
     * Linux: fix Load Default Configuration loading an empty configuration rather than the default one. (PR #1557)
     * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
-    * Fix FreeDV being unable to exit after pressing Start with a sound device that couldn't be opened.
-    * Fix possible crash when an audio device fails to open before FreeDV has asked to be told of its errors.
+    * Fix FreeDV being unable to exit after pressing Start with a sound device that couldn't be opened. (PR #1559)
+    * Fix possible crash when an audio device fails to open before FreeDV has asked to be told of its errors. (PR #1559)
     * Linux: fix crash on pressing Start with no sound server (PipeWire/PulseAudio) running. (PR #1555)
     * Linux: report losing the sound server while running, and fix Stop getting stuck afterwards. (PR #1555)
     * Fix each use of Adjust Monitor Volume leaving a hidden popup behind. (PR #1555)
