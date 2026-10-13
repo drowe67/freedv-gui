@@ -1125,7 +1125,9 @@ def test_ptt_key_names():
 
         # Keys that only modify others aren't a choice; FreeDV keeps waiting.
         app.click(name("btnSetPTTKey"))
-        for modifier in ["Shift", "Control"]:
+        # (By number: Alt, Caps Lock, Num Lock, Scroll Lock, both Windows keys
+        # and the menu key.)
+        for modifier in ["Shift", "Control", 307, 311, 364, 365, 393, 394, 395]:
             app.key(name("txtPTTKeyName"), modifier)
             check_values(app, {"txtPTTKeyName": "Press any key..."})
             check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button after pressing %s" % modifier)

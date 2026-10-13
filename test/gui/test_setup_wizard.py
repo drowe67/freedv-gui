@@ -327,6 +327,70 @@ def test_receive_only():
             quit_and_check_log(app)
 
 
+def test_odd_starting_points():
+    """Opened on settings that it wouldn't have made itself: devices that
+    have since gone, and only some of what transmitting needs."""
+    def audio(radio_in, radio_out, microphone, speaker):
+        settings = {}
+        for card, device in [("soundCard1In", radio_in), ("soundCard1Out", radio_out),
+                             ("soundCard2In", microphone), ("soundCard2Out", speaker)]:
+            settings["/Audio/%sDeviceName" % card] = device
+            settings["/Audio/%sSampleRate" % card] = 48000
+        return settings
+
+    def choose_everything_and_finish(app):
+        go_to_page(app, 0)
+        app.set_value("wizard.cbRadioIn", data=RADIO_RX_IN)
+        app.set_value("wizard.cbSpeakerOut", data=SPEAKER)
+        go_to_page(app, 1)
+        app.set_value("wizard.ckReceiveOnly", False)
+        app.set_value("wizard.cbMicIn", data=MICROPHONE_IN)
+        app.set_value("wizard.cbRadioOut", data=RADIO_TX)
+        finish_wizard(app)
+        check_audio_config(app, TWO_SOUND_CARDS)
+
+    gone = "FreeDVGuiTest_Gone"
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER):
+        # Every device has gone. Finishing without choosing others leaves
+        # nothing that's there to be chosen in their place.
+        with freedvtest.start(settings=audio(gone + ".monitor", gone, gone + "2.monitor", gone + "2")) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": False})
+            finish_wizard(app)
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            reopen_wizard(app)
+            choose_everything_and_finish(app)
+            start_and_stop_modem(app)
+            quit_and_check_log(app)
+
+        # Receive only, without a speaker having been chosen: one's suggested.
+        with freedvtest.start(settings=audio(RADIO_RX_IN, "none", "none", "none")) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            speaker = app.get("wizard.cbSpeakerOut")
+            if any(item.get("data") == default_output() for item in speaker["items"]):
+                check_equal(speaker["data"], default_output(), "Suggested speaker")
+            check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": True})
+            choose_everything_and_finish(app)
+            quit_and_check_log(app)
+
+        # A speaker but no microphone isn't receive only.
+        with freedvtest.start(settings=audio(RADIO_RX_IN, RADIO_TX, "none", SPEAKER)) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            check_equal(app.get("wizard.cbSpeakerOut")["data"], SPEAKER, "Speaker")
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": False})
+            check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
+            choose_everything_and_finish(app)
+            start_and_stop_modem(app)
+            quit_and_check_log(app)
+
+
 def test_cancel():
     """Leaving the wizard without finishing it changes nothing."""
     unconfigured = {
@@ -922,6 +986,7 @@ SCENARIOS = {
     "first_run": test_first_run,
     "second_run": test_second_run,
     "receive_only": test_receive_only,
+    "odd_starting_points": test_odd_starting_points,
     "cancel": test_cancel,
     "auto_select": test_auto_select,
     "radio_control": test_radio_control,

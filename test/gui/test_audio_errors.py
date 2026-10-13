@@ -223,6 +223,51 @@ def test_no_devices():
             check_equal(app.quit(), 0, "FreeDV's exit code")
 
 
+def test_partly_configured():
+    """Starting with some devices chosen and others not, where what is
+    chosen is and isn't usable."""
+    missing = "FreeDVGuiTest_Missing"
+    with audio_devices():
+        for changes, outcome in [
+                # Without both of the radio's devices there's nothing to run with.
+                (dict(soundCard1In="none"), "settings"),
+                (dict(soundCard1Out="none"), "settings"),
+                # Only one of the other pair is the same as neither: receive only.
+                (dict(soundCard2In="none"), "started"),
+                (dict(soundCard2Out="none"), "started"),
+                # What is chosen is still checked, whatever else isn't.
+                (dict(soundCard1In="none", soundCard1Out=missing), "Sound Device Not Found"),
+                (dict(soundCard2In="none", soundCard2Out=missing), "Sound Device Not Found"),
+                (dict(soundCard2Out="none", soundCard2In=missing + ".monitor"), "Sound Device Not Found"),
+                (dict(soundCard2In="none", soundCard2Out_rate=8000), "Sample Rate Too Low"),
+                (dict(soundCard2Out="none", soundCard2In_rate=8000), "Sample Rate Too Low"),
+                (dict(soundCard2In="none", soundCard2Out="none", soundCard1Out_rate=8000), "Sample Rate Too Low"),
+                (dict(soundCard2In="none", soundCard2Out="none", soundCard1Out_rate=16000), "started")]:
+            what = "with %s" % ", ".join("%s as %s" % item for item in sorted(changes.items()))
+            with freedvtest.start(settings=card_settings(**changes)) as app:
+                app.wait_for_window("main")
+                app.click("main.btnOnOff")
+                if outcome == "settings":
+                    app.wait_for_window("settings")
+                    check_equal(app.message_boxes(), [], "Messages displayed " + what)
+                    app.click("settings.sdbSizer5Cancel")
+                    app.wait_for_window_closed("settings")
+                app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to finish starting")
+                time.sleep(0.5)
+                if outcome == "started":
+                    check_equal(app.message_boxes(), [], "Messages displayed " + what)
+                    check_equal(app.state()["running"], True, "Running " + what)
+                    check_equal(app.get("main.btnPTT")["enabled"], False, "PTT button enabled " + what)
+                    stop_modem(app)
+                else:
+                    if outcome != "settings":
+                        check_equal([box["caption"] for box in app.message_boxes(clear=True)], [outcome],
+                                    "Messages displayed " + what)
+                    check(not app.window_exists("settings"), "The Settings window is open " + what)
+                    check_not_started(app, what)
+                check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_receive_only():
     """Starting with only the first pair of devices, which is enough to
     receive with."""
@@ -606,6 +651,7 @@ SCENARIOS = {
     "missing_device": test_missing_device,
     "low_sample_rate": test_low_sample_rate,
     "no_devices": test_no_devices,
+    "partly_configured": test_partly_configured,
     "receive_only": test_receive_only,
     "device_moved": test_device_moved,
     "receive_only_device_moved": test_receive_only_device_moved,

@@ -846,7 +846,7 @@ endif(NOT SANITIZERS_ENABLED)
 # (ctest -LE gui) as a group. Currently Linux-only as they rely on
 # PulseAudio/PipeWire for their audio devices.
 if(LINUX)
-foreach(scenario first_run second_run receive_only cancel auto_select radio_control hamlib_start reporting import import_more)
+foreach(scenario first_run second_run receive_only odd_starting_points cancel auto_select radio_control hamlib_start reporting import import_more)
     add_test(NAME gui_setup_wizard_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
     set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)
@@ -855,7 +855,7 @@ endforeach(scenario)
 # These also need a window manager to be running and, other than live_view
 # (which is skipped if the public FreeDV Reporter server can't be reached), the
 # Python packages listed in test/gui/freedvtest/reporter.py.
-foreach(scenario live_view stations sorting sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message status_message_flags text_filters saved_filters selection qsy qsy_with_radio row_actions turn_off off_at_start new_callsign window connection_burst)
+foreach(scenario live_view stations sorting sorted_updates display_options damaged_layout sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message status_message_flags text_filters saved_filters selection qsy qsy_with_radio row_actions turn_off off_at_start new_callsign window connection_burst)
     add_test(NAME gui_reporter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
@@ -869,7 +869,7 @@ endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
 # alongside anything else.
-foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options unwritable_files monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer ptt_key_time_out menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change tab_layout heard_list receive_reports test_tone exit_while_tuning old_settings bad_command_line)
+foreach(scenario transmit ptt_key ptt_key_elsewhere tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_reply voice_keyer_files recording recording_options unwritable_files monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer voice_keyer_time_out ptt_key_time_out menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change tab_layout heard_list window_geometry receive_reports test_tone exit_while_tuning old_settings bad_command_line)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
@@ -882,7 +882,7 @@ foreach(scenario manual frequency_in_khz callsign_list reporter)
     set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui)
 endforeach(scenario)
 
-foreach(scenario controls volume equalizer equalizer_receive_only noise_suppression)
+foreach(scenario controls out_of_range volume equalizer equalizer_receive_only noise_suppression)
     add_test(NAME gui_filter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
     set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
@@ -898,7 +898,7 @@ endforeach(scenario)
 
 # device_removed and sound_server_restarted run a sound server of their own
 # (PipeWire), and are skipped if they can't.
-foreach(scenario missing_device low_sample_rate no_devices receive_only device_moved receive_only_device_moved
+foreach(scenario missing_device low_sample_rate no_devices partly_configured receive_only device_moved receive_only_device_moved
          device_removed sound_server_restarted sound_server_gone_while_starting
          sound_card_gone_while_starting sound_server_gone_while_opening_streams)
     add_test(NAME gui_audio_errors_${scenario}
@@ -906,14 +906,14 @@ foreach(scenario missing_device low_sample_rate no_devices receive_only device_m
     set_tests_properties(gui_audio_errors_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
-foreach(scenario tuning tuned_away drawing)
+foreach(scenario tuning tuned_away drawing waterfall_colours)
     add_test(NAME gui_plots_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_plots.py ${scenario})
     set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
 endforeach(scenario)
 
 # These use Hamlib's rigctld as the radio, and are skipped without it.
-foreach(scenario control frequency_only mode_display editing_frequency unreachable lost)
+foreach(scenario control frequency_only mode_display analog_sideband editing_frequency unreachable lost)
     add_test(NAME gui_rig_control_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)

@@ -318,12 +318,17 @@ def test_reporter():
     """Logging someone chosen in the FreeDV Reporter window."""
     from freedvtest.reporter import ReporterServer
 
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
     with ReporterServer() as server, WsjtxListener() as logger, audio_devices():
         k1abc = server.station("K1ABC", "FN42")
         k1abc.set_frequency(7177000)
 
+        # Two who were heard earlier, only one of whom is on FreeDV Reporter.
+        csv_log = os.path.join(folder, "heard.csv")
+        write_csv_log(csv_log, [("2026-03-04 05:06:07", "K1ABC", 7177000, 4),
+                                ("2026-03-04 21:43:02", "ZL9ZZ", 14236000, 11)])
         extra = dict(Reporting__FreeDV__Enable=True, Reporting__FreeDV__Hostname=server.hostname,
-                     Reporting__FreeDV__UseTls=False)
+                     Reporting__FreeDV__UseTls=False, Reporting__CSV__LogFilePath=csv_log)
         with freedvtest.start(settings=logging_settings(logger, **extra)) as app:
             app.wait_for_window("main")
             app.menu("Tools/FreeDV Reporter")
@@ -350,6 +355,20 @@ def test_reporter():
                         "Contact logged")
             check(abs(contact["time_on"] - time.time()) < 60, "The contact is logged at %s" % utc(contact["time_on"]))
 
+            # Someone chosen from the list of callsigns heard instead has
+            # their locator looked up there, if that's where they are.
+            for row, callsign, locator in [(1, "K1ABC", "FN42"), (0, "ZL9ZZ", "")]:
+                app.activate("main")
+                choose_callsign(app, row)
+                check_equal(app.get("main.cboLastReportedCallsigns")["value"], callsign, "Callsign chosen")
+                open_log_entry(app)
+                entry = log_entry(app)
+                check_equal((entry["dxCall"], entry["dxLocator"]), (callsign, locator), "Who's being logged")
+                app.click("logEntry.btnCancel")
+                app.wait_for_window_closed("logEntry")
+            app.activate("reporter")
+            app.select_row("reporter.listSpots", callsigns().index("K1ABC"))
+
             # They're also who a recording started now is named after.
             app.click("main.btnRecord")
             app.wait_for_window("beginRecording")
@@ -359,6 +378,7 @@ def test_reporter():
 
             stop_modem(app)
             quit_and_check_log(app)
+    shutil.rmtree(folder, ignore_errors=True)
 
 
 SCENARIOS = {

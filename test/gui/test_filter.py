@@ -236,6 +236,26 @@ def test_controls():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_out_of_range():
+    """Saved settings beyond what the sliders allow are brought back within
+    it when the window's opened."""
+    extra = {"/Filter/MicIn/BassGaindB": 99, "/Filter/MicIn/TrebleGaindB": -99, "/Filter/MicIn/BassFreqHz": 5000,
+             "/Filter/MicIn/MidFreqHz": 0.1, "/Filter/MicIn/EQEnable": True,
+             "/Filter/SpkOut/BassGaindB": -99, "/Filter/SpkOut/TrebleGaindB": 99, "/Filter/SpkOut/EQEnable": True,
+             "/Reporting/FreeDV/Hostname": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False}
+    with freedvtest.start(settings=extra) as app:
+        app.wait_for_window("main")
+        open_filter(app)
+        microphone = values(app, MIC)
+        check_equal((microphone["bassGain"], microphone["trebleGain"], microphone["bassFreq"], microphone["midFreq"]),
+                    ("20.0", "-20.0", "600", "1"), "Microphone bass gain, treble gain, bass and mid frequencies")
+        speaker = values(app, SPEAKER)
+        check_equal((speaker["bassGain"], speaker["trebleGain"]), ("-20.0", "20.0"), "Speaker bass and treble gains")
+        close_filter(app)
+        check_equal(app.message_boxes(), [], "Messages displayed")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_volume():
     """The two volume sliders, and the speaker's twin in the main window."""
     with audio_devices():
@@ -445,6 +465,7 @@ def test_noise_suppression():
 
 
 SCENARIOS = {
+    "out_of_range": test_out_of_range,
     "controls": test_controls,
     "volume": test_volume,
     "equalizer": test_equalizer,

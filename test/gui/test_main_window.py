@@ -12,6 +12,7 @@ Linux only for now, as it relies on PulseAudio/PipeWire for the audio devices
 that FreeDV is set up with, and for listening to what it does with them.
 """
 
+import array
 import datetime
 import glob
 import json
@@ -276,6 +277,91 @@ def test_ptt_key():
             quit_and_check_log(app)
 
 
+def test_ptt_key_elsewhere():
+    """Where the PTT key works other than the main window, and when it
+    doesn't work at all."""
+    reporting = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                     Reporting__FreeDV__Enable=True)
+
+    def open_reporter(app):
+        app.menu("Tools/FreeDV Reporter")
+        app.wait_for_window("reporter")
+        app.activate("reporter")
+
+    def press_and_stay_receiving(app, widget, what):
+        app.key(widget, "Space")
+        time.sleep(1)
+        check_equal(transmitting(app), False, "Transmitting after pressing the PTT key %s" % what)
+        check_equal(app.get("main.btnPTT")["value"], False, "PTT button pressed after the PTT key %s" % what)
+
+    with audio_devices():
+        with freedvtest.start(settings=settings(**reporting)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+
+            # In the FreeDV Reporter window it works as in the main one...
+            open_reporter(app)
+            app.key("reporter.listSpots", "Space")
+            wait_for_transmit(app)
+            app.key("reporter.listSpots", "Space")
+            wait_for_transmit(app, False)
+
+            # ...other than while typing a message, when it's a space.
+            app.focus("reporter.cbStatusMessage")
+            time.sleep(1.5)  # for the window system to have moved the focus there
+            press_and_stay_receiving(app, "reporter.cbStatusMessage", "in the status message")
+            app.focus("reporter.cbStatusMessage", lost=True)
+
+            # It does nothing while tuning.
+            app.activate("main")
+            app.click("main.btnTune")
+            app.wait_until(lambda: app.get("main.btnTune")["value"], timeout=10, description="tuning to start")
+            time.sleep(1)
+            app.key("main.notebook", "Space")
+            time.sleep(1)
+            check_equal((app.get("main.btnTune")["value"], app.get("main.btnPTT")["value"]), (True, False),
+                        "Tuning and PTT pressed after the PTT key while tuning")
+            app.click("main.btnTune")
+            app.wait_until(lambda: not app.get("main.btnTune")["value"] and app.get("main.btnOnOff")["enabled"],
+                           timeout=15, description="tuning to stop")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # Held down in the FreeDV Reporter window, for those who have it that way.
+        with freedvtest.start(settings=settings(Rig__PttMomentaryMode=True, **reporting)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            open_reporter(app)
+            app.key("reporter.listSpots", "Space", hold=True)
+            wait_for_transmit(app)
+            app.key("reporter.listSpots", "Space", hold=True)  # as a held key repeats
+            time.sleep(0.5)
+            check_equal(transmitting(app), True, "Transmitting while the PTT key is held")
+            app.key("reporter.listSpots", "Space", release=True)
+            wait_for_transmit(app, False)
+            app.key("reporter.listSpots", "Space", release=True)  # released with nothing to stop
+            time.sleep(0.5)
+            check_equal(transmitting(app), False, "Transmitting after the PTT key was released twice")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # Receiving only, there's nothing for it to do.
+        for extra in [dict(Reporting__FreeDV__ForceReceiveOnly=True),
+                      {"Audio__soundCard2InDeviceName": "none", "Audio__soundCard2OutDeviceName": "none"}]:
+            with freedvtest.start(settings=settings(Rig__PttMomentaryMode=("Audio__soundCard2InDeviceName" in extra),
+                                                    **reporting, **extra)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                app.activate("main")
+                app.key("main.notebook", "Space", hold=True)
+                time.sleep(1)
+                check_equal(transmitting(app), False, "Transmitting after pressing the PTT key while receive only")
+                app.key("main.notebook", "Space", release=True)
+                stop_modem(app)
+                quit_and_check_log(app)
+
+
 def test_tx_level():
     """TX attenuation and Tune."""
     def tx_level(app):
@@ -518,6 +604,16 @@ def test_play_file():
                 check_silent(SPEAKER_MONITOR, "Something is still being played through the speaker")
                 app.menu(start_item)  # back to its original name; cancelled this time
 
+                # A sound file doesn't have to be called one.
+                unnamed = os.path.join(folder, "tone")
+                shutil.copyfile(tone, unnamed)
+                app.choose_next_path(unnamed)
+                app.menu(start_item)
+                check_equal(app.get("main")["status"], "Playing file %s as radio input" % unnamed,
+                            "Status while playing a file with no extension")
+                app.menu(stop_item)
+                app.menu(start_item)
+
                 # A file of nothing but samples is taken to be at the rate
                 # that FreeDV receives at.
                 raw = os.path.join(folder, "tone.raw")
@@ -612,6 +708,94 @@ def test_voice_keyer():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_voice_keyer_reply():
+    """The voice keyer stops calling once someone answers: a few seconds of
+    a FreeDV signal while it's listening."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        write_tone(os.path.join(folder, "cq.wav"), seconds=2, rate=16000)
+        reply = os.path.join(folder, "reply.wav")
+        keyer = dict(VoiceKeyer__WaveFilePath=folder, VoiceKeyer__WaveFile="cq.wav", VoiceKeyer__Repeats=5,
+                     VoiceKeyer__RxPause=12)
+
+        def answer(seconds):
+            """Plays the start of the reply to FreeDV as if from the radio."""
+            player = subprocess.Popen(["paplay", "--device=" + RADIO_RX, reply])
+            try:
+                app.wait_until(lambda: app.state()["sync"] == 1, timeout=15, description="FreeDV to sync on the reply")
+                time.sleep(seconds)
+            finally:
+                player.terminate()
+                player.wait()
+
+        def call():
+            app.activate("main")
+            app.click("main.btnVoiceKeyer")
+            wait_for_transmit(app)
+            wait_for_transmit(app, False)
+            check_equal(app.get("main.btnVoiceKeyer")["value"], True, "Voice keyer button pressed while listening")
+
+        def wait_for_keyer_to_stop(what):
+            app.wait_until(lambda: not app.get("main.btnVoiceKeyer")["value"], timeout=15,
+                           description="the voice keyer to stop after %s" % what)
+            check_equal(transmitting(app), False, "Transmitting after %s" % what)
+            check_equal(label(app, "main.btnVoiceKeyer"), "Start Voice Keyer\ncq", "Voice keyer button's label")
+
+        with audio_devices():
+            with freedvtest.start(settings=settings(**keyer)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+
+                # Someone to answer: FreeDV's own transmission, kept for later.
+                with Tone(MICROPHONE):
+                    app.click("main.btnPTT")
+                    wait_for_transmit(app)
+                    time.sleep(1)
+                    samples = record(VirtualAudioDevices.input_name(RADIO_TX), 12, rate=48000)[0]
+                    app.click("main.btnPTT")
+                    wait_for_transmit(app, False)
+                with wave.open(reply, "wb") as f:
+                    f.setnchannels(1)
+                    f.setsampwidth(2)
+                    f.setframerate(48000)
+                    f.writeframes(array.array("h", samples).tobytes())
+
+                # Answered for long enough, it stops calling.
+                call()
+                answer(8)
+                wait_for_keyer_to_stop("being answered")
+                check_equal(count_transmissions(app, 14), 0, "Transmissions after being answered")
+
+                # A burst of something that comes to nothing doesn't stop it.
+                call()
+                answer(1)
+                app.wait_until(lambda: app.state()["sync"] == 0, timeout=15, description="FreeDV to lose sync")
+                check_equal(app.get("main.btnVoiceKeyer")["value"], True, "Voice keyer button pressed after a burst")
+                wait_for_transmit(app, timeout=20)
+                wait_for_transmit(app, False)
+
+                # The PTT key stops it while it's listening, answered or not.
+                app.key("main.notebook", "Space")
+                wait_for_keyer_to_stop("the PTT key while listening")
+                call()
+                player = subprocess.Popen(["paplay", "--device=" + RADIO_RX, reply])
+                try:
+                    app.wait_until(lambda: app.state()["sync"] == 1, timeout=15,
+                                   description="FreeDV to sync on the reply")
+                    time.sleep(1)
+                    app.key("main.notebook", "Space")
+                    wait_for_keyer_to_stop("the PTT key while being answered")
+                finally:
+                    player.terminate()
+                    player.wait()
+                check_equal(count_transmissions(app, 14), 0, "Transmissions after the PTT key stopped the keyer")
+
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def test_voice_keyer_files():
     """Choosing and recording the voice keyer's file."""
     folder = tempfile.mkdtemp(prefix="freedvtest-files-")
@@ -623,6 +807,8 @@ def test_voice_keyer_files():
         write_tone(good, seconds=2, rate=16000)
         write_tone(low_rate, seconds=1, rate=4000)
         write_tone(stereo, seconds=1, rate=16000, channels=2)
+        long_name = os.path.join(folder, "calling_cq_on_twenty_metres_with_a_very_long_file_name_indeed_" * 3 + ".wav")
+        write_tone(long_name, seconds=1, rate=16000)
 
         with audio_devices():
             # No file's been chosen yet (the default one doesn't exist).
@@ -674,6 +860,17 @@ def test_voice_keyer_files():
                 wait_for_transmit(app)
                 app.click("main.btnVoiceKeyer")
                 wait_for_transmit(app, False)
+
+                # A file whose name is too long for the button is cut short.
+                app.choose_next_path(long_name)
+                app.context_menu("main.btnVoiceKeyer", choose="Use another voice keyer file...")
+                first_line, shown = label(app, "main.btnVoiceKeyer").split("\n")
+                check(first_line == "Start Voice Keyer" and shown.endswith("...") and len(shown) > 5 and
+                      os.path.basename(long_name).startswith(shown[:-3]),
+                      "Voice keyer button's label for a long file name is %r" % label(app, "main.btnVoiceKeyer"))
+                app.choose_next_path(good)
+                app.context_menu("main.btnVoiceKeyer", choose="Use another voice keyer file...")
+                check_equal(label(app, "main.btnVoiceKeyer"), "Start Voice Keyer\ngood", "Voice keyer button's label")
 
                 # Recording a new one from the microphone, which carries on
                 # until the button's pressed.
@@ -783,6 +980,22 @@ def test_recording():
                       "Recordings are %r and %r" % (raw, decoded))
                 check_equal(app.get("main.btnRecord")["value"], False, "Record button pressed after stopping")
 
+                # Started while transmitting, what's recorded is what's sent.
+                time.sleep(1.1)
+                app.click("main.btnPTT")
+                wait_for_transmit(app)
+                app.click("main.btnRecord")
+                app.wait_for_window("beginRecording")
+                app.click("beginRecording.rawRecording")
+                app.click("beginRecording.btnStart")
+                app.wait_for_window_closed("beginRecording")
+                check_equal(app.get("main.btnRecord")["value"], True, "Record button pressed while transmitting")
+                time.sleep(2)
+                app.click("main.btnRecord")
+                app.click("main.btnPTT")
+                wait_for_transmit(app, False)
+                check_equal(len(recordings()[0]), 3, "Off air recordings after recording while transmitting")
+
                 # Recording stops with FreeDV.
                 app.click("main.btnRecord")
                 app.wait_for_window("beginRecording")
@@ -878,7 +1091,7 @@ def test_recording_options():
                     app.key(suffix, typed)
                 app.wait_until(lambda: app.get(suffix)["value"] == "___", timeout=5,
                                description="what was typed to be replaced (the suffix is %r)" % app.get(suffix)["value"])
-                for typed in ["K", "Backspace", "Left"]:
+                for typed in ["K", "5", "_", "Backspace", "Left"]:
                     app.key(suffix, typed)
                 time.sleep(0.3)
                 check_equal(app.get(suffix)["value"], "___", "Recording suffix after keys that are left alone")
@@ -1509,6 +1722,20 @@ def test_appearance_change():
             app.system_colours_changed()
             quit_and_check_log(app)
 
+        # With a frequency chosen, which is drawn in the new colours too. One
+        # that's typed in to more places than FreeDV works in is rounded to
+        # the nearest 100 Hz.
+        with freedvtest.start(settings=settings(Reporting__Frequency=14236000)) as app:
+            app.wait_for_window("main")
+            app.system_colours_changed()
+            check_equal(app.get("main.cboReportFrequency")["value"], "14.2360", "Frequency displayed")
+            app.set_value("main.cboReportFrequency", "14.23606")
+            app.focus("main.cboReportFrequency", lost=True)
+            app.system_colours_changed()
+            quit_and_check_log(app)
+            check_equal(int(freedvtest.read_config(app.config_path)["/Reporting/Frequency"]), 14236100,
+                        "Frequency saved after typing in 14.23606")
+
 
 def test_time_out_timer():
     """The time-out timer, which stops a transmission that's gone on too long."""
@@ -1566,6 +1793,33 @@ def test_time_out_timer():
             wait_for_transmit(app, False)
             stop_modem(app)
             quit_and_check_log(app)
+
+
+def test_voice_keyer_time_out():
+    """The time-out timer stops the voice keyer too, when what it's sending
+    goes on for too long."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        write_tone(os.path.join(folder, "long.wav"), seconds=20, rate=16000)
+        extra = dict(VoiceKeyer__WaveFilePath=folder, VoiceKeyer__WaveFile="long.wav", VoiceKeyer__Repeats=3,
+                     VoiceKeyer__RxPause=2, Rig__TotTimerSecs=6)
+        with audio_devices():
+            with freedvtest.start(settings=settings(**extra)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                app.click("main.btnVoiceKeyer")
+                wait_for_transmit(app)
+                app.wait_for_window("totWarning", timeout=10)
+                wait_for_transmit(app, False, timeout=15)
+                check(not app.window_exists("totWarning"), "The time-out warning is still there")
+                app.wait_until(lambda: not app.get("main.btnVoiceKeyer")["value"], timeout=10,
+                               description="the voice keyer to stop")
+                check_equal(label(app, "main.btnVoiceKeyer"), "Start Voice Keyer\nlong", "Voice keyer button's label")
+                check_equal(count_transmissions(app, 5), 0, "Transmissions after the voice keyer timed out")
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
 
 def test_ptt_key_time_out():
@@ -1758,6 +2012,11 @@ def test_heard_list():
                     f.write("\n")
                     f.write("2026-03-04,06:00:00,NOFREQ\n")
                     f.write("2026-03-04,06:00:01,BADFREQ,RADEV1,somewhere,3\n")
+                    f.write("2026-03-04\n")
+                    f.write("2026-03-04,06:00:02\n")
+                    f.write("2026-03-04,06:00:03,NOFREQ,RADEV1\n")
+                    f.write("2026-03-04,06:00:04,NOSNR,RADEV1,14236000\n")
+                    f.write("2026-03-04,06:00:05,BADSNR,RADEV1,14236000,loud\n")
 
         def heard(app):
             return [(item["columns"][0], item["columns"][1].replace(",", ""))
@@ -1766,7 +2025,7 @@ def test_heard_list():
         # Only what's in the last hundred lines, the latest first.
         extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
                      Reporting__CSV__LogFilePath=csv_log)
-        expected = [(callsign, 14236000 + n * 500) for n, callsign in enumerate(callsigns)][-98:][::-1]
+        expected = [(callsign, 14236000 + n * 500) for n, callsign in enumerate(callsigns)][-93:][::-1]
         with freedvtest.start(settings=settings(**extra)) as app:
             app.wait_for_window("main")
             check_equal(heard(app), [(callsign, "%.4f" % (frequency / 1e6)) for callsign, frequency in expected],
@@ -1789,6 +2048,36 @@ def test_heard_list():
             check_equal(app.quit(), 0, "FreeDV's exit code")
     finally:
         shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_window_geometry():
+    """A saved window position or size that makes no sense isn't used."""
+    def saved_geometry(left, top, width, height):
+        extra = dict(MainFrame__left=left, MainFrame__top=top, MainFrame__width=width, MainFrame__height=height)
+        with freedvtest.start(settings=settings(**extra)) as app:
+            app.wait_for_window("main")
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            quit_and_check_log(app)
+            saved = freedvtest.read_config(app.config_path)
+        return tuple(int(saved["/MainFrame/" + name]) for name in ("left", "top", "width", "height"))
+
+    def check_sensible(geometry, what, smallest=200):
+        left, top, width, height = geometry
+        # (Where it's put is reported from inside its title bar and border,
+        # which can be a little off the edge of where it was asked to go.)
+        check(-100 <= left <= 2048 and -100 <= top <= 2048 and
+              smallest <= width <= 2048 and smallest <= height <= 2048,
+              "With %s, the window ended up at %d,%d and %dx%d" % (what, left, top, width, height))
+
+    check_sensible(saved_geometry(-500, -500, -800, -600), "everything negative")
+    check_sensible(saved_geometry(50000, 50000, 50000, 50000), "everything enormous")
+    # Too small is made bigger, though not always by enough to be of use: it
+    # can come out as small as 195x64.
+    check_sensible(saved_geometry(30, 40, 10, 10), "a size that nothing fits in", smallest=11)
+
+    # One that does make sense is kept.
+    left, top, width, height = saved_geometry(30, 40, 900, 800)
+    check((width, height) == (900, 800), "A 900x800 window was saved as %dx%d" % (width, height))
 
 
 def test_receive_reports():
@@ -1988,11 +2277,13 @@ def test_bad_command_line():
 SCENARIOS = {
     "transmit": test_transmit,
     "ptt_key": test_ptt_key,
+    "ptt_key_elsewhere": test_ptt_key_elsewhere,
     "tx_level": test_tx_level,
     "receive": test_receive,
     "analog": test_analog,
     "play_file": test_play_file,
     "voice_keyer": test_voice_keyer,
+    "voice_keyer_reply": test_voice_keyer_reply,
     "voice_keyer_files": test_voice_keyer_files,
     "recording": test_recording,
     "recording_options": test_recording_options,
@@ -2009,10 +2300,12 @@ SCENARIOS = {
     "default_config": test_default_config,
     "appearance_change": test_appearance_change,
     "time_out_timer": test_time_out_timer,
+    "voice_keyer_time_out": test_voice_keyer_time_out,
     "ptt_key_time_out": test_ptt_key_time_out,
     "menus": test_menus,
     "tab_layout": test_tab_layout,
     "heard_list": test_heard_list,
+    "window_geometry": test_window_geometry,
     "receive_reports": test_receive_reports,
     "test_tone": test_test_tone,
     "exit_while_tuning": test_exit_while_tuning,

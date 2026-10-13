@@ -749,6 +749,30 @@ def test_status_message():
             saved_message_menu(0, "Delete message")
             check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"], "Saved messages after deleting one")
 
+            # Changing one's mind, changing nothing or leaving nothing leaves
+            # the list as it was, as does adding what's already there.
+            def answer(title, text, button):
+                app.wait_for_window("@" + title)
+                if text is not None:
+                    app.set_value("@%s/wxTextCtrl" % title, text)
+                app.click("@%s/%s" % (title, button))
+                app.wait_for_window_closed("@" + title)
+                app.activate("reporter")
+
+            for text, button in [("Something else", "Cancel"), (None, "OK"), ("", "OK"), ("   ", "OK")]:
+                saved_message_menu(0, "Edit message")
+                answer("Edit Message", text, button)
+                check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"],
+                            "Saved messages after editing one to %r and pressing %s" % (text, button))
+            for text, button in [("Something else", "Cancel"), ("", "OK"), ("QRV 40 m", "OK"), ("qrv 40 m ", "OK")]:
+                saved_message_menu(0, "Add new message")
+                answer("Add Message", text, button)
+                expected = ["Back in 10 minutes", "QRV 40 m"] + (["qrv 40 m"] if text == "qrv 40 m " else [])
+                check_equal(sorted(saved(app)), sorted(expected),
+                            "Saved messages after adding %r and pressing %s" % (text, button))
+            saved_message_menu(saved(app).index("qrv 40 m"), "Delete message")
+            check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"], "Saved messages after deleting one")
+
             # The Clear button's menu removes saved messages: the one in the
             # box, or all of them.
             app.activate("reporter")
@@ -932,6 +956,12 @@ def test_turn_off():
 
             def listed():
                 return CALLSIGN_OF_FREEDV in watcher.callsigns()
+
+            # Pressed before starting, it's only a note of what's wanted.
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn On", True), "Button while stopped")
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button while stopped")
 
             start_modem_only(app)
             app.wait_until(listed, timeout=15, description="FreeDV to be listed on the server")
@@ -1150,6 +1180,172 @@ def test_sort_every_column():
                 check_equal(sorted(descending), ["K1ABC", "VK5DGR", "W6XYZ"], "Callsigns listed")
                 if column_id in expected:
                     wait_for_callsigns(app, list(reversed(expected[column_id])))
+
+            quit_and_check_log(app)
+
+
+def test_display_options():
+    """Distances in miles, directions as compass points and times in UTC,
+    and what's shown when where someone is can't be worked out."""
+    def number(text):
+        return float(text.replace(",", ""))
+
+    with ReporterServer() as server:
+        server.station("K1ABC", "FN42").set_frequency(14236000)
+        server.station("W6XYZ", "DM12").set_frequency(14236000)    # the same square as FreeDV
+        server.station("N0WHR", "!!").set_frequency(14236000)      # nowhere there is
+        everyone = ["K1ABC", "N0WHR", "W6XYZ"]
+
+        def listed(app):
+            open_reporter(app)
+            app.click_column(LIST, CALLSIGN)
+            app.wait_until(lambda: callsigns(app) == everyone, timeout=15, description="everyone to be listed")
+            return {row[CALLSIGN]: row for row in app.rows(LIST)}
+
+        # As it comes: kilometres and degrees.
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            rows = listed(app)
+            check(4000 < number(rows["K1ABC"][DISTANCE]) < 4300, "K1ABC is %s km away" % rows["K1ABC"][DISTANCE])
+            check(50 < number(rows["K1ABC"][HEADING]) < 75, "K1ABC is at %s degrees" % rows["K1ABC"][HEADING])
+            check_equal((rows["W6XYZ"][DISTANCE].strip(), rows["W6XYZ"][HEADING].strip()), ("0", ""),
+                        "Distance and direction to the same square")
+            check_equal((rows["N0WHR"][DISTANCE].strip(), rows["N0WHR"][HEADING].strip()), ("", ""),
+                        "Distance and direction to nowhere")
+            local_time = rows["K1ABC"][LAST_UPDATE]
+            quit_and_check_log(app)
+
+        # Miles, compass points and UTC.
+        options = {"/Reporting/FreeDV/UseMetricDistances": False, "/Reporting/DirectionAsCardinal": True,
+                   "/CallsignList/UseUTCTime": True}
+        with freedvtest.start(settings=reporter_settings(server.hostname, **options)) as app:
+            rows = listed(app)
+            check(2500 < number(rows["K1ABC"][DISTANCE]) < 2700, "K1ABC is %s miles away" % rows["K1ABC"][DISTANCE])
+            check_equal(rows["K1ABC"][HEADING].strip(), "ENE", "Direction to K1ABC")
+            check_equal((rows["W6XYZ"][DISTANCE].strip(), rows["W6XYZ"][HEADING].strip()), ("0", ""),
+                        "Distance and direction to the same square")
+            check(rows["K1ABC"][LAST_UPDATE] != "", "K1ABC has no last update time")
+            check("UTC" in rows["K1ABC"][LAST_UPDATE] or rows["K1ABC"][LAST_UPDATE] != local_time or time.timezone == 0,
+                  "K1ABC's last update is %r in UTC and %r in local time" % (rows["K1ABC"][LAST_UPDATE], local_time))
+            quit_and_check_log(app)
+
+        # Without knowing where FreeDV is, nobody's distance is known.
+        with freedvtest.start(settings=reporter_settings(server.hostname, **{"/Reporting/GridSquare": "??"})) as app:
+            rows = listed(app)
+            for callsign in everyone:
+                check_equal((rows[callsign][DISTANCE].strip(), rows[callsign][HEADING].strip()), ("", ""),
+                            "Distance and direction to %s" % callsign)
+            quit_and_check_log(app)
+
+
+def test_sorted_updates():
+    """The list re-sorts itself as what it's sorted by changes, for each of
+    the columns that change while a station's connected."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
+        vk5dgr = server.station("VK5DGR", "PF95")
+        vk5dgr.set_frequency(14236000)
+
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+            app.wait_until(lambda: sorted(callsigns(app)) == ["K1ABC", "VK5DGR"], timeout=15,
+                           description="both stations to be listed")
+
+            def sort_by(column):
+                app.click_column(LIST, column)
+                check_equal(sort_order(app), (column, True), "Sort order")
+
+            def wait_for_order(first, second, what):
+                try:
+                    app.wait_until(lambda: callsigns(app) == [first, second], timeout=15)
+                except freedvtest.FreeDVError:
+                    check_equal(callsigns(app), [first, second], "Callsigns listed after %s" % what)
+
+            def transmit(station, mode):
+                station.transmit(mode, True)
+                wait_for_cell(app, station.callsign, STATUS, "TX")
+                station.transmit(mode, False)
+                wait_for_cell(app, station.callsign, STATUS, "RX")
+
+            # Who's transmitting
+            sort_by(STATUS)
+            k1abc.transmit("RADEV1", True)
+            wait_for_cell(app, "K1ABC", STATUS, "TX")
+            wait_for_order("VK5DGR", "K1ABC", "K1ABC began transmitting")       # RX, TX
+            vk5dgr.transmit("RADEV1", True)
+            wait_for_cell(app, "VK5DGR", STATUS, "TX")
+            k1abc.transmit("RADEV1", False)
+            wait_for_cell(app, "K1ABC", STATUS, "RX")
+            wait_for_order("K1ABC", "VK5DGR", "they swapped over")
+            vk5dgr.transmit("RADEV1", False)
+            wait_for_cell(app, "VK5DGR", STATUS, "RX")
+
+            # The mode last transmitted in
+            sort_by(TX_MODE)
+            transmit(k1abc, "RADEV1")
+            transmit(vk5dgr, "700D")
+            wait_for_order("VK5DGR", "K1ABC", "transmitting in 700D and RADEV1")
+            transmit(vk5dgr, "RADEV2")
+            wait_for_cell(app, "VK5DGR", TX_MODE, "RADEV2")
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR changed to RADEV2")
+            transmit(vk5dgr, "RADEV2")  # nothing that's sorted by changes
+            check_equal(callsigns(app), ["K1ABC", "VK5DGR"], "Callsigns listed after transmitting again")
+
+            # When they last transmitted
+            sort_by(LAST_TX)
+            wait_for_order("K1ABC", "VK5DGR", "sorting by last transmission")
+            time.sleep(1.1)
+            transmit(k1abc, "RADEV1")
+            wait_for_order("VK5DGR", "K1ABC", "K1ABC transmitted again")
+
+            # Who they last received, and how well
+            sort_by(RX_CALLSIGN)
+            k1abc.receive("ZL1ZZ", "RADEV1", 20)
+            wait_for_cell(app, "K1ABC", RX_CALLSIGN, "ZL1ZZ")
+            vk5dgr.receive("AA1AA", "RADEV1", -3)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "AA1AA")
+            wait_for_order("VK5DGR", "K1ABC", "receiving AA1AA and ZL1ZZ")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "ZZ9ZZ")
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR received ZZ9ZZ")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)  # the same again
+
+            sort_by(SNR)
+            wait_for_order("VK5DGR", "K1ABC", "sorting by SNR")                 # -3, 20
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+            wait_for_cell(app, "VK5DGR", SNR, lambda text: text.strip() in ("25", "25.0"))
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR's SNR rose to 25")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+
+            # Receiving nothing in particular (as after changing frequency)
+            # clears who and how well, sorted by either.
+            k1abc.receive("", "", 0)
+            wait_for_cell(app, "K1ABC", RX_CALLSIGN, lambda text: text.strip() != "ZL1ZZ")
+            check(row_for(app, "K1ABC")[SNR].strip() not in ("20", "20.0"),
+                  "K1ABC's SNR is still %r" % row_for(app, "K1ABC")[SNR])
+            k1abc.receive("", "", 0)  # with nothing left to clear
+            sort_by(RX_CALLSIGN)
+            vk5dgr.receive("", "", 0)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, lambda text: text.strip() != "ZZ9ZZ")
+            check_equal(sorted(callsigns(app)), ["K1ABC", "VK5DGR"], "Callsigns listed")
+
+            # Their messages
+            sort_by(MESSAGE)
+            k1abc.set_message("zebra")
+            wait_for_cell(app, "K1ABC", MESSAGE, "zebra")
+            vk5dgr.set_message("aardvark")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "aardvark")
+            wait_for_order("VK5DGR", "K1ABC", "messages of aardvark and zebra")
+            k1abc.set_message("Aardvark 1")
+            wait_for_cell(app, "K1ABC", MESSAGE, "Aardvark 1")
+            vk5dgr.set_message("zulu")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "zulu")
+            wait_for_order("K1ABC", "VK5DGR", "messages of Aardvark 1 and zulu")
+            vk5dgr.set_message("zulu")
+            vk5dgr.set_message("")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "")
+            vk5dgr.set_message("")
+            check_equal(sorted(callsigns(app)), ["K1ABC", "VK5DGR"], "Callsigns listed")
 
             quit_and_check_log(app)
 
@@ -1502,6 +1698,49 @@ def test_window():
         shutil.rmtree(config_dir, ignore_errors=True)
 
 
+def test_damaged_layout():
+    """Saved column orders and window positions that make no sense (as from
+    another version of FreeDV, or a screen that's no longer there)."""
+    config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
+    try:
+        config = os.path.join(config_dir, "freedv.conf")
+        with ReporterServer() as server:
+            server.station("K1ABC", "FN42").set_frequency(14236000)
+
+            freedvtest.write_config(config, reporter_settings(server.hostname))
+            with freedvtest.start(config=config) as app:
+                open_reporter(app)
+                wait_for_callsigns(app, ["K1ABC"])
+                titles = column_titles(app, shown_only=False)
+                quit_and_check_log(app)
+            saved = freedvtest.read_config(config)
+            order = [entry for entry in str(saved["/Reporting/FreeDV/ColumnOrder"]).split(",") if entry != ""]
+            check_equal(len(order), len(titles), "Columns in the saved order (%r)" % saved["/Reporting/FreeDV/ColumnOrder"])
+
+            # Columns that don't exist, one that's there twice and so one
+            # that's missing; and then only a few of them.
+            for damaged, where in [(order[:3] + ["99", order[3]] + order[3:-1], (30000, 30000)),
+                                   (order[5:8], (-30000, -500)),
+                                   (list(reversed(order)), (40, 50))]:
+                saved["/Reporting/FreeDV/ColumnOrder"] = ",".join(damaged)
+                saved["/Windows/FreeDVReporter/left"], saved["/Windows/FreeDVReporter/top"] = where
+                freedvtest.write_config(config, saved)
+                with freedvtest.start(config=config) as app:
+                    app.wait_for_window("reporter")
+                    app.activate("reporter")
+                    wait_for_callsigns(app, ["K1ABC"])
+                    check_equal(sorted(column_titles(app, shown_only=False)), sorted(titles),
+                                "Columns with a saved order of %s" % ",".join(damaged))
+                    check_equal(row_for(app, "K1ABC")[LOCATOR], "FN42", "K1ABC's locator")
+                    quit_and_check_log(app)
+                saved = freedvtest.read_config(config)
+                left, top = int(saved["/Windows/FreeDVReporter/left"]), int(saved["/Windows/FreeDVReporter/top"])
+                check(-100 <= left <= 4096 and -100 <= top <= 4096,
+                      "Asked to be at %r, the window was left at %d,%d" % (where, left, top))
+    finally:
+        shutil.rmtree(config_dir, ignore_errors=True)
+
+
 def test_connection_burst():
     """Attempts to reproduce issue #1495: FreeDV crashing in this window
     while a lot of stations come and go (including going and coming straight
@@ -1619,6 +1858,9 @@ SCENARIOS = {
     "live_view": test_live_view,
     "stations": test_stations,
     "sorting": test_sorting,
+    "sorted_updates": test_sorted_updates,
+    "damaged_layout": test_damaged_layout,
+    "display_options": test_display_options,
     "band_filter": test_band_filter,
     "column_filters": test_column_filters,
     "idle_filter": test_idle_filter,

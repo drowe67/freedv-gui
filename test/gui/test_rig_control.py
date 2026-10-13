@@ -202,6 +202,81 @@ def test_mode_display():
             quit_and_check_log(app)
 
 
+def test_analog_sideband():
+    """Analog mode uses the sideband that's usual for the band, and stays on
+    the same audio when that means changing sideband."""
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        with freedvtest.start(settings=rig_settings(radio.address)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+
+            def tune(displayed, frequency):
+                app.set_value("main.cboReportFrequency", displayed)
+                wait_for(lambda: radio.frequency() == frequency,
+                         "The radio is on %d Hz, not %d" % (radio.frequency(), frequency))
+
+            def analog(expected_mode, expected_frequency, what):
+                app.click("main.btnAnalog")
+                wait_for(lambda: expected_mode == radio.mode(),
+                         "The radio's mode %s is %s, not %s" % (what, radio.mode(), expected_mode))
+                wait_for(lambda: radio.frequency() == expected_frequency,
+                         "The radio %s is on %d Hz, not %d" % (what, radio.frequency(), expected_frequency))
+
+            tune("14.2400", 14240000)
+            wait_for(lambda: "USB" in radio.mode(), "The radio's mode for FreeDV is %s" % radio.mode())
+            digital = radio.mode()
+
+            # 20m: upper sideband either way, so the radio stays put.
+            analog("USB", 14240000, "in analog mode on 20m")
+            analog(digital, 14240000, "back in digital mode on 20m")
+
+            # 40m: lower sideband for analog, 3 kHz up so that the same
+            # stretch of the band is heard.
+            tune("7.1770", 7177000)
+            analog("LSB", 7180000, "in analog mode on 40m")
+            wait_for_frequency(app, "7.1800", "Frequency displayed in analog mode on 40m")
+            analog(digital, 7177000, "back in digital mode on 40m")
+            wait_for_frequency(app, "7.1770", "Frequency displayed back in digital mode on 40m")
+
+            # 60m is the exception below 10 MHz: upper sideband.
+            tune("5.3715", 5371500)
+            analog("USB", 5371500, "in analog mode on 60m")
+            analog(digital, 5371500, "back in digital mode on 60m")
+
+            # A radio that's between the 100 Hz steps FreeDV displays is
+            # shown at the nearest one.
+            radio.set_frequency(14236060)
+            wait_for_frequency(app, "14.2361", "Frequency displayed with the radio on 14.236060")
+            radio.set_frequency(14236040)
+            wait_for_frequency(app, "14.2360", "Frequency displayed with the radio on 14.236040")
+            check_equal(errors(app), [], "Errors displayed")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # Left to choose its own mode in analog, the radio's shown as being
+        # in the right one or not for where it is.
+        extra = dict(Hamlib__EnableFreqModeChanges=False, Hamlib__EnableFreqChangesOnly=True)
+        with freedvtest.start(settings=rig_settings(radio.address, **extra)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnAnalog")
+            for frequency in [14236000, 7177000, 5371500]:
+                radio.set_frequency(frequency)
+                wait_for_frequency(app, "%.4f" % (frequency / 1e6), "Frequency displayed")
+                for mode, displayed in [("USB", "USB"), ("LSB", "LSB"), ("PKTUSB", "USB-D")]:
+                    radio.command("M %s 0" % mode)
+                    try:
+                        app.wait_until(lambda: app.get("main.textModeStatus")["label"] == displayed, timeout=15)
+                    except freedvtest.FreeDVError:
+                        check_equal(app.get("main.textModeStatus")["label"], displayed,
+                                    "Mode displayed with the radio in %s on %d" % (mode, frequency))
+            check_equal(errors(app), [], "Errors displayed")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
 def test_editing_frequency():
     """While the frequency's being typed in, the radio doesn't change what's
     there; once it's been left alone, it goes back to showing where the
@@ -329,6 +404,7 @@ SCENARIOS = {
     "control": test_control,
     "frequency_only": test_frequency_only,
     "mode_display": test_mode_display,
+    "analog_sideband": test_analog_sideband,
     "editing_frequency": test_editing_frequency,
     "unreachable": test_unreachable,
     "lost": test_lost,
