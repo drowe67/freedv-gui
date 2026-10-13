@@ -398,7 +398,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime_).count() - nsec;
-    extraTimeNs_ = std::max((long)0, duration); // cap extra time to >= 0.
+    extraTimeNs_ = std::max((int64_t)0, (int64_t)duration); // cap extra time to >= 0.
 
     if (rv == -1 && errno != ETIMEDOUT)
     {
