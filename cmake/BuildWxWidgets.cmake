@@ -1,4 +1,4 @@
-set(WXWIDGETS_VERSION "9515455a9b247820f3ca17ffd9e6590e6dcfdd96")
+set(WXWIDGETS_VERSION "3.3.4")
 
 # Ensure that the wxWidgets library is staticly built.
 set(wxBUILD_SHARED OFF CACHE BOOL "Build wx libraries as shared libs" FORCE)
@@ -42,21 +42,14 @@ include(FetchContent)
 # the enclosing repository (e.g. when building in freedv-gui/build) and
 # silently skip every hunk.
 set(WXWIDGETS_URL "https://github.com/wxWidgets/wxWidgets/releases/download/v${WXWIDGETS_VERSION}/wxWidgets-${WXWIDGETS_VERSION}.tar.bz2")
-set(WXWIDGETS_SHA256 "81b09d6dd9f1ed9301f8c55a968a488d0491f264dc2bab19a7e407ac67009482")
+set(WXWIDGETS_SHA256 "815c16cafa4fcbfcf25c5c0a3418309c62257b8a3b6f91d85a1367a134f98c98")
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28.0")
     FetchContent_Declare(
         wxWidgets
-        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-        GIT_SHALLOW    FALSE
-        GIT_PROGRESS   TRUE
-        GIT_TAG        ${WXWIDGETS_VERSION}
-        PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
-        UPDATE_DISCONNECTED 1
-	# NOTE: GIT_ lines above should be removed and the below uncommented once 3.3.4 is released.
-#        URL            ${WXWIDGETS_URL}
-#        URL_HASH       SHA256=${WXWIDGETS_SHA256}
-#        PATCH_COMMAND  patch -p1 -i ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
+        URL            ${WXWIDGETS_URL}
+        URL_HASH       SHA256=${WXWIDGETS_SHA256}
+        PATCH_COMMAND  patch -p1 -i ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
         EXCLUDE_FROM_ALL
     )
 
@@ -64,16 +57,9 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28.0")
 else()
     FetchContent_Declare(
         wxWidgets
-        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-        GIT_SHALLOW    FALSE
-        GIT_PROGRESS   TRUE
-        GIT_TAG        ${WXWIDGETS_VERSION}
-        PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
-        UPDATE_DISCONNECTED 1
-	# NOTE: GIT_ lines above should be removed and the below uncommented once 3.3.4 is released.
-        #URL            ${WXWIDGETS_URL}
-	#URL_HASH       SHA256=${WXWIDGETS_SHA256}
-	#PATCH_COMMAND  patch -p1 -i ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
+        URL            ${WXWIDGETS_URL}
+        URL_HASH       SHA256=${WXWIDGETS_SHA256}
+        PATCH_COMMAND  patch -p1 -i ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
     )
     FetchContent_GetProperties(wxWidgets)
     if(NOT wxwidgets_POPULATED)
