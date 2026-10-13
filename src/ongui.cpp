@@ -159,6 +159,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
 
     wxUnusedVar(event);
+
+    // The same dialog is shown each time, and still has the return code it
+    // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
+    // already set to mean that the dialog closed itself while being set up,
+    // and so wouldn't show it a second time.
+    optionsDlg->SetReturnCode(0);
+
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
