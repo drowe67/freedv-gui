@@ -136,7 +136,6 @@ class FreeDVReporterDialog : public wxFrame
         void    OnSendQSY(wxCommandEvent& event);
         void    OnOpenWebsite(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
-        void    OnInitDialog(wxInitDialogEvent& event);
         void    OnSize(wxSizeEvent& event);
         void    OnMove(wxMoveEvent& event);
         void    OnShow(wxShowEvent& event);

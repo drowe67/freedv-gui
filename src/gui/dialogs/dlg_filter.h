@@ -77,8 +77,6 @@ class FilterDlg : public wxDialog
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
 
-        void    OnEnable(wxScrollEvent& event);
-        void    OnBassBoost(wxScrollEvent& event);
 
         void    OnNoiseReductionEnable(wxScrollEvent& event);
         void    OnAgcEnable(wxScrollEvent& event);

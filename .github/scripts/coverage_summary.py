@@ -49,7 +49,7 @@ def main():
     out.append('')
     out.append(f'{platform.system()}, gcov, unit and GUI tests. Third-party code, the tests themselves and the '
                'GUI test agent are excluded, as are the branches that compilers add for exceptions, object '
-               'construction and asserts. The '
+               'construction, cleaning up and asserts. The '
                f'line-by-line report is in the `{artifact}` artifact of this run.')
     out.append('')
     out.append('| | Covered |')

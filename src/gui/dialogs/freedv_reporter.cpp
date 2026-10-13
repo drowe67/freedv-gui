@@ -1054,11 +1054,6 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
     event.Skip();
 }
 
-void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent&)
-{
-    // TBD
-}
-
 void FreeDVReporterDialog::OnShow(wxShowEvent&)
 {
     wxGetApp().appConfiguration.reporterWindowVisible = true;
