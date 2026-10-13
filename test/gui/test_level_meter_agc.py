@@ -21,7 +21,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone
+from freedvtest.audio import Tone, VirtualAudioDevices
 from test_main_window import (MICROPHONE, RADIO_RX, RADIO_TX_MONITOR, audio_devices, check, check_equal, level,
                               quit_and_check_log, settings, start_modem, stop_modem, wait_for_transmit)
 
@@ -204,10 +204,37 @@ def test_agc_off():
             quit_and_check_log(app)
 
 
+def test_saved_gain():
+    """The AGC carries on from the gain it had last time, unless the
+    microphone has changed since."""
+    microphone = VirtualAudioDevices.input_name(MICROPHONE)
+    saved = 8.0
+    for saved_with, expected in [(microphone, saved), ("Some other microphone", 0.0), (None, saved)]:
+        what = "saved with %s" % (saved_with or "no microphone recorded")
+        extra = dict(Filter__agcEnable=True, Filter__levelerGainDb=saved)
+        if saved_with is not None:
+            extra["Filter__levelerMicDeviceName"] = saved_with
+        with audio_devices():
+            with freedvtest.start(settings=settings(**extra)) as app:
+                app.wait_for_window("main")
+                start_analog_transmit(app)
+                # Nothing's being said, so the gain stays where it starts.
+                time.sleep(2)
+                check_near(gain(app), expected, 0.3, "AGC gain at the start (%s)" % what)
+                stop_transmit(app)
+                quit_and_check_log(app)
+
+                config = freedvtest.read_config(app.config_path)
+                check_equal(config.get("/Filter/levelerMicDeviceName"), microphone,
+                            "Microphone saved with the AGC's gain (%s)" % what)
+                check_near(float(config["/Filter/levelerGainDb"]), expected, 0.3, "AGC gain saved (%s)" % what)
+
+
 SCENARIOS = {
     "meter": test_meter,
     "agc": test_agc,
     "agc_off": test_agc_off,
+    "saved_gain": test_saved_gain,
 }
 
 

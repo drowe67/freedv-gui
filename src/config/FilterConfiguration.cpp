@@ -32,6 +32,7 @@ FilterConfiguration::FilterConfiguration()
     , bwExpandEnabled("/Filter/bwExpandEnable", true)
     , levelerGainDb("/Filter/levelerGainDb", 0.0f)
     , levelerIntegralErrorDb("/Filter/levelerIntegralErrorDb", 0.0f)
+    , levelerMicDeviceName("/Filter/levelerMicDeviceName", "")
     , levelerTargetLufs("/Filter/levelerTargetLufs", -26.0f)
 {
     // empty
@@ -47,6 +48,7 @@ void FilterConfiguration::load(wxConfigBase* config)
     load_(config, bwExpandEnabled);
     load_(config, levelerGainDb);
     load_(config, levelerIntegralErrorDb);
+    load_(config, levelerMicDeviceName);
     load_(config, levelerTargetLufs);
 }
 
@@ -60,5 +62,6 @@ void FilterConfiguration::save(wxConfigBase* config)
     save_(config, bwExpandEnabled);
     save_(config, levelerGainDb);
     save_(config, levelerIntegralErrorDb);
+    save_(config, levelerMicDeviceName);
     save_(config, levelerTargetLufs);
 }

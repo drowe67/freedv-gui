@@ -91,6 +91,9 @@ public:
     // the start of the next so it doesn't re-climb from 0dB.
     ConfigurationDataElement<float> levelerGainDb;
     ConfigurationDataElement<float> levelerIntegralErrorDb;
+    // TX input (microphone) device the state above was saved with. If the
+    // device has changed since, the leveler starts from 0dB instead.
+    ConfigurationDataElement<wxString> levelerMicDeviceName;
 
     // Leveler loudness target. -26 LUFS rather than EBU R128's -23 leaves
     // more headroom ahead of the limiter. Not exposed in the UI.

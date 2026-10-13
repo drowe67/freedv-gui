@@ -910,7 +910,7 @@ foreach(scenario tuning tuned_away drawing)
     set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
 endforeach(scenario)
 
-foreach(scenario meter agc agc_off)
+foreach(scenario meter agc agc_off saved_gain)
     add_test(NAME gui_level_meter_agc_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_level_meter_agc.py ${scenario})
     set_tests_properties(gui_level_meter_agc_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)

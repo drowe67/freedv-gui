@@ -3101,14 +3101,27 @@ static TxRxThreadUiHooks MakeTxRxUiHooks()
         return value;
     };
 
+    // The saved leveler state only applies to the microphone it was saved
+    // with. (No device name saved means state from before this was
+    // recorded, which is kept.)
     auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
-    hooks.levelerGainDb = filterConfig.levelerGainDb.getWithoutProcessing();
-    hooks.levelerIntegralErrorDb = filterConfig.levelerIntegralErrorDb.getWithoutProcessing();
+    wxString micDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
+    wxString savedMicDeviceName = filterConfig.levelerMicDeviceName.get();
+    if (savedMicDeviceName.IsEmpty() || savedMicDeviceName == micDeviceName)
+    {
+        hooks.levelerGainDb = filterConfig.levelerGainDb.getWithoutProcessing();
+        hooks.levelerIntegralErrorDb = filterConfig.levelerIntegralErrorDb.getWithoutProcessing();
+    }
+    else
+    {
+        log_info("TX input device changed from %s, leveler starting from 0dB", (const char*)savedMicDeviceName.ToUTF8());
+    }
     hooks.levelerTargetLufs = filterConfig.levelerTargetLufs.getWithoutProcessing();
-    hooks.saveLevelerState = [](float gainDb, float integralErrorDb) {
+    hooks.saveLevelerState = [micDeviceName](float gainDb, float integralErrorDb) {
         auto& filterConfig = wxGetApp().appConfiguration.filterConfiguration;
         filterConfig.levelerGainDb.setWithoutProcessing(gainDb);
         filterConfig.levelerIntegralErrorDb.setWithoutProcessing(integralErrorDb);
+        filterConfig.levelerMicDeviceName.setWithoutProcessing(micDeviceName);
     };
     return hooks;
 }
