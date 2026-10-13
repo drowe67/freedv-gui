@@ -99,7 +99,7 @@ private:
     struct timespec ts_;
     bool sleepFallback_;
 
-    int extraTimeNs_;
+    int64_t extraTimeNs_;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();
