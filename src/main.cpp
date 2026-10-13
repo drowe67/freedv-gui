@@ -3526,6 +3526,13 @@ void MainFrame::startRxStream()
         // Create link to allow monitoring TX/VK audio
         wxGetApp().linkStep = std::make_shared<LinkStep>(rxOutSoundDevice->getSampleRate());
         
+        // Nothing's left over from an earlier start that got no further
+        // than this (below, when a device couldn't be opened): its
+        // processing threads were never started, and mustn't be mistaken
+        // for this start's, e.g. on changing to receiving only.
+        m_txThread = nullptr;
+        m_rxThread = nullptr;
+
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
