@@ -12,11 +12,15 @@ Linux only for now, as it relies on PulseAudio/PipeWire for the audio devices
 that FreeDV is set up with, and for listening to what it does with them.
 """
 
+import datetime
 import glob
+import json
 import math
 import os
 import re
 import shutil
+import socket
+import subprocess
 import sys
 import tempfile
 import time
@@ -24,7 +28,8 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Loopback, Tone, VirtualAudioDevices, file_level, record_level, write_tone
+from freedvtest.audio import (Loopback, Tone, VirtualAudioDevices, file_level, record, record_level, tone_share,
+                              write_tone)
 
 RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
 RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
@@ -1587,6 +1592,281 @@ def test_menus():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_tab_layout():
+    """With experimental features on, how the tabs are laid out is kept from
+    one run to the next."""
+    with freedvtest.start(settings=settings(ExperimentalFeatures=True)) as app:
+        app.wait_for_window("main")
+        check_equal(app.get("main.notebook")["pages"], TABS, "Tabs")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+        config = app.config_path
+        saved = freedvtest.read_config(config)
+        check(saved.get("/MainFrame/TabLayout"), "No tab layout was saved: %r" % saved.get("/MainFrame/TabLayout"))
+
+        # Along with the layout comes the tab that was being looked at before
+        # the last transmission.
+        saved["/MainFrame/rxNbookCtrl"] = TABS.index("SNR")
+        freedvtest.write_config(config, saved)
+        with freedvtest.start(config=config) as again:
+            again.wait_for_window("main")
+            check_equal(sorted(again.get("main.notebook")["pages"]), sorted(TABS), "Tabs the second time")
+            check_equal(again.get("main.notebook")["value"], TABS.index("SNR"), "Tab displayed the second time")
+            check_equal(again.message_boxes(), [], "Messages displayed")
+            check_equal(again.quit(), 0, "FreeDV's exit code the second time")
+        check(freedvtest.read_config(config).get("/MainFrame/TabLayout"), "No tab layout was saved the second time")
+
+    # Without them, it isn't.
+    with freedvtest.start(settings=settings()) as app:
+        app.wait_for_window("main")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+        check(not freedvtest.read_config(app.config_path).get("/MainFrame/TabLayout"),
+              "A tab layout was saved without experimental features")
+
+
+def test_heard_list():
+    """The list of stations heard starts out with the most recent ones in
+    the log of them."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        csv_log = os.path.join(folder, "heard.csv")
+        callsigns = ["K%d%s" % (n % 10, "ABCDEFGHIJKL"[n // 10] * 3) for n in range(120)]
+        with open(csv_log, "w") as f:
+            f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
+            for n, callsign in enumerate(callsigns):
+                f.write("2026-03-04,05:%02d:%02d,%s,RADEV1,%d,%d\n"
+                        % (n // 60, n % 60, callsign, 14236000 + n * 500, n % 20))
+                if n == 110:
+                    # Things that aren't stations heard are passed over.
+                    f.write("\n")
+                    f.write("2026-03-04,06:00:00,NOFREQ\n")
+                    f.write("2026-03-04,06:00:01,BADFREQ,RADEV1,somewhere,3\n")
+
+        def heard(app):
+            return [(item["columns"][0], item["columns"][1].replace(",", ""))
+                    for item in app.get("main.listLastReportedCallsigns")["items"]]
+
+        # Only what's in the last hundred lines, the latest first.
+        extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                     Reporting__CSV__LogFilePath=csv_log)
+        expected = [(callsign, 14236000 + n * 500) for n, callsign in enumerate(callsigns)][-98:][::-1]
+        with freedvtest.start(settings=settings(**extra)) as app:
+            app.wait_for_window("main")
+            check_equal(heard(app), [(callsign, "%.4f" % (frequency / 1e6)) for callsign, frequency in expected],
+                        "Stations heard")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        # In kHz, for those who have frequencies that way.
+        with freedvtest.start(settings=settings(Reporting__FrequencyAsKHz=True, **extra)) as app:
+            app.wait_for_window("main")
+            check_equal(heard(app), [(callsign, "%.1f" % (frequency / 1e3)) for callsign, frequency in expected],
+                        "Stations heard, in kHz")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        # A log that isn't there (yet) is nothing to complain about.
+        extra["Reporting__CSV__LogFilePath"] = os.path.join(folder, "missing", "heard.csv")
+        with freedvtest.start(settings=settings(**extra)) as app:
+            app.wait_for_window("main")
+            check_equal(heard(app), [], "Stations heard without a log")
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_receive_reports():
+    """Where a callsign that's been received goes other than FreeDV Reporter:
+    the list of stations heard, the log of them and to other programs
+    listening for them. As in test_receive(), FreeDV receives itself."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        listener.bind(("127.0.0.1", 0))
+        listener.settimeout(20)
+        csv_log = os.path.join(folder, "heard.csv")
+        extra = dict(Rig__HalfDuplex=False, Reporting__Enable=True, Reporting__Callsign=CALLSIGN,
+                     Reporting__GridSquare="DM12", Reporting__Frequency=14236000, Reporting__FrequencyAsKHz=True,
+                     Reporting__ManualFrequencyReporting=True, Reporting__FreeDV__Enable=False,
+                     Reporting__CSV__LogFilePath=csv_log, CallsignList__UseUTCTime=True,
+                     Reporting__UDPBroadcast__Enable=True, Reporting__UDPBroadcast__Address="127.0.0.1",
+                     Reporting__UDPBroadcast__Port=listener.getsockname()[1])
+        with audio_devices(), Loopback(RADIO_TX, RADIO_RX):
+            with freedvtest.start(settings=settings(**extra)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                app.click("main.btnPTT")
+                wait_for_transmit(app)
+                app.wait_until(lambda: app.state()["sync"] == 1, timeout=20, description="FreeDV to sync")
+                time.sleep(3)
+                app.click("main.btnPTT")
+                wait_for_transmit(app, False)
+                app.wait_until(lambda: app.get("main.cboLastReportedCallsigns")["value"] == CALLSIGN, timeout=15,
+                               description="the callsign to be received")
+
+                # The list of stations heard, in kHz and UTC as asked.
+                items = app.get("main.listLastReportedCallsigns")["items"]
+                check_equal([(item["columns"][0], item["columns"][1].replace(",", "")) for item in items],
+                            [(CALLSIGN, "14236.0")], "Stations heard")
+                when = re.match(r"^(\d{4}-\d\d-\d\d)\D(\d\d:\d\d:\d\d)$", items[0]["columns"][2])
+                check(when, "Time heard is %r" % items[0]["columns"][2])
+                heard_at = datetime.datetime.strptime(" ".join(when.groups()), "%Y-%m-%d %H:%M:%S")
+                now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+                check(abs((now - heard_at).total_seconds()) < 120,
+                      "Time heard is %s, at %s UTC" % (items[0]["columns"][2], now))
+
+                # Other programs are told...
+                try:
+                    told = json.loads(listener.recv(65536).decode("utf-8"))
+                except socket.timeout:
+                    check(False, "Nothing was sent to other programs about the callsign received")
+                check_equal((told.get("type"), told.get("callsign"), told.get("mode"), told.get("frequency_hz")),
+                            ("fdv_callsign", CALLSIGN, "RADEV1", 14236000), "What other programs were told")
+
+                # ...and it's logged.
+                stop_modem(app)
+                quit_and_check_log(app)
+                with open(csv_log, "r") as f:
+                    logged = [line.strip().split(",") for line in f if line.strip()]
+                check(len(logged) >= 2 and logged[-1][2:5] == [CALLSIGN, "RADEV1", "14236000"],
+                      "The log of stations heard is %r" % logged)
+
+                # Which is where the list comes from the next time.
+                with freedvtest.start(config=app.config_path) as again:
+                    again.wait_for_window("main")
+                    items = again.get("main.listLastReportedCallsigns")["items"]
+                    check_equal([(item["columns"][0], item["columns"][1].replace(",", "")) for item in items],
+                                [(CALLSIGN, "14236.0")], "Stations heard the next time")
+                    check_equal(again.quit(), 0, "FreeDV's exit code the next time")
+    finally:
+        listener.close()
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def set_debugging(app, **values):
+    app.menu("Settings/Edit Settings...")
+    app.wait_for_window("settings")
+    app.set_value("settings.notebook", "Debugging")
+    for name, value in values.items():
+        app.set_value("settings." + name, value)
+    app.click("settings.sdbSizer5OK")
+    app.wait_for_window_closed("settings")
+
+
+def test_test_tone():
+    """The tone that can be added to what's received (Settings > Debugging),
+    to see how FreeDV copes with interference, and the one that can be put on
+    the left channel of what's transmitted to key a radio by VOX."""
+    def heard(device):
+        return record(device, 1.0, channels=2)
+
+    with audio_devices():
+        with freedvtest.start(settings=settings()) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+
+            # In analog mode, what comes from the radio goes to the speaker:
+            # nothing here, until the tone's added to it.
+            app.click("main.btnAnalog")
+            check_silent(SPEAKER_MONITOR, "Something is being played with nothing being received")
+            set_debugging(app, ckboxTone=True, txtToneFreqHz="1500", txtToneAmplitude="8000")
+            left, right = heard(SPEAKER_MONITOR)
+            for name, channel in [("left", left), ("right", right)]:
+                check(tone_share(channel, 1500) > 0.8, "What's played on the %s is only %.2f the tone (level %d)"
+                      % (name, tone_share(channel, 1500), math.sqrt(sum(x * x for x in channel) / len(channel))))
+
+            # Another frequency
+            set_debugging(app, txtToneFreqHz="700")
+            left, right = heard(SPEAKER_MONITOR)
+            check(tone_share(left, 700) > 0.8 and tone_share(left, 1500) < 0.1,
+                  "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
+                  % (tone_share(left, 700), tone_share(left, 1500)))
+
+            # And it goes away again.
+            set_debugging(app, ckboxTone=False)
+            try:
+                app.wait_until(lambda: level(SPEAKER_MONITOR, 0.5) < SILENT, timeout=10)
+            except freedvtest.FreeDVError:
+                check(False, "The tone is still being played after turning it off")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # The VOX tone: 1000 Hz on the left, the signal on the right.
+        with freedvtest.start(settings=settings(Rig__leftChannelVoxTone=True)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio while receiving")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            left, right = heard(RADIO_TX_MONITOR)
+            check(tone_share(left, 1000) > 0.8, "The left channel is only %.2f VOX tone" % tone_share(left, 1000))
+            check(tone_share(right, 1000) < 0.2, "The right channel is mostly VOX tone (%.2f)"
+                  % tone_share(right, 1000))
+            check(math.sqrt(sum(sample * sample for sample in right) / len(right)) > AUDIBLE,
+                  "Nothing but the VOX tone is being sent to the radio")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            check_silent(RADIO_TX_MONITOR, "Something is still being sent to the radio after transmitting")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
+def test_exit_while_tuning():
+    """File > Exit with Tune on stops the tone first."""
+    with audio_devices():
+        with freedvtest.start(settings=settings()) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnTune")
+            check_audible(RADIO_TX_MONITOR, "Nothing is being sent to the radio while tuning")
+            app.menu("File/Exit")
+            check_equal(app.wait_for_exit(), 0, "FreeDV's exit code having been tuning")
+            errors = [line for line in app.log().splitlines() if " ERROR " in line or " FATAL " in line]
+            check_equal(errors, [], "Errors logged by FreeDV")
+        check_silent(RADIO_TX_MONITOR, "Something is still being sent to the radio")
+
+
+def test_old_settings():
+    """Settings from before they were kept the way they are now."""
+    # The radio used to be kept as its place in Hamlib's list.
+    with freedvtest.start(settings=settings(Hamlib__RigName=1, Debug__verbose=True)) as app:
+        app.wait_for_window("main")
+        radio = app.state()["config"]["rigControl"]["hamlibRigName"]
+        check(radio, "No radio was brought over from the old setting")
+
+        app.menu("Settings/Edit Settings...")
+        app.wait_for_window("settings")
+        app.set_value("settings.notebook", "Rig Control")
+        check_equal(app.get("settings.cbRigName")["value"], radio, "Radio displayed in Settings")
+        app.click("settings.sdbSizer5OK")
+        app.wait_for_window_closed("settings")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+        check_equal(freedvtest.read_config(app.config_path).get("/Hamlib/RigNameStr"), radio, "Saved radio")
+
+        # And is found by its name from then on.
+        with freedvtest.start(config=app.config_path) as again:
+            again.wait_for_window("main")
+            check_equal(again.state()["config"]["rigControl"]["hamlibRigName"], radio, "Radio the next time")
+            check_equal(again.quit(), 0, "FreeDV's exit code the next time")
+
+
+def test_bad_command_line():
+    """Started with something it doesn't understand, FreeDV says how it's
+    meant to be started rather than carrying on regardless."""
+    folder = tempfile.mkdtemp(prefix="freedvtest-home-")
+    try:
+        env = dict(os.environ)
+        env.update({"HOME": folder, "XDG_CONFIG_HOME": os.path.join(folder, ".config"), "LANGUAGE": "en",
+                    "LC_ALL": "C.UTF-8", "GDK_BACKEND": "x11"})
+        for arguments in [["--no-such-option"], ["--help"]]:
+            result = subprocess.run([freedvtest.default_binary()] + arguments, env=env, timeout=60,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = result.stdout.decode("utf-8", "replace")
+            check("Usage: freedv " in output, "Given %s, FreeDV said %r" % (arguments, output))
+            check(result.returncode != 0, "Given %s, FreeDV's exit code was 0" % arguments)
+            check_equal(os.listdir(folder), [], "Left behind when given %s" % arguments)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 SCENARIOS = {
     "transmit": test_transmit,
     "ptt_key": test_ptt_key,
@@ -1612,6 +1892,13 @@ SCENARIOS = {
     "time_out_timer": test_time_out_timer,
     "ptt_key_time_out": test_ptt_key_time_out,
     "menus": test_menus,
+    "tab_layout": test_tab_layout,
+    "heard_list": test_heard_list,
+    "receive_reports": test_receive_reports,
+    "test_tone": test_test_tone,
+    "exit_while_tuning": test_exit_while_tuning,
+    "old_settings": test_old_settings,
+    "bad_command_line": test_bad_command_line,
 }
 
 

@@ -82,14 +82,6 @@ void MainFrame::topFrame_OnSize( wxSizeEvent& event )
     TopFrame::topFrame_OnSize(event);
 }
 
-//-------------------------------------------------------------------------
-// OnExitClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnExitClick(wxCommandEvent& event)
-{
-    OnExit(event);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -644,18 +636,6 @@ void MainFrame::OpenOmniRig()
 #endif // defined(WIN32)
 
 //-------------------------------------------------------------------------
-// OnCloseFrame()
-//-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent&)
-{
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
-    
-    Destroy();
-}
-
-//-------------------------------------------------------------------------
 // OnTop()
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
@@ -720,20 +700,6 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
     event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// Paint()
-//-------------------------------------------------------------------------
-void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
-{
-    wxPaintDC dc(this);
-
-    if(GetMenuBar()->IsChecked(ID_PAINT_BG))
-    {
-        dc.Clear();
-    }
-    dc.SetUserScale(m_zoom, m_zoom);
 }
 
 //-------------------------------------------------------------------------

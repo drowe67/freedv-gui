@@ -20,14 +20,13 @@ def default_output():
     return _pactl("get-default-sink").strip()
 
 
-def record_level(device, seconds=1.0):
+def record(device, seconds=1.0, channels=1, rate=8000):
     """Listens to an input device (or input_name() of an output device) and
-    returns how loud what it hears is, as the RMS of 16 bit samples: 0 for
-    silence, around 23000 for a full-scale tone."""
+    returns what it hears: a list of 16 bit samples for each channel."""
     with tempfile.TemporaryDirectory(prefix="freedvtest-audio-") as folder:
         path = os.path.join(folder, "recording.wav")
         recorder = subprocess.Popen([
-            "parecord", "--device=" + device, "--file-format=wav", "--channels=1", "--rate=8000",
+            "parecord", "--device=" + device, "--file-format=wav", "--channels=%d" % channels, "--rate=%d" % rate,
             "--format=s16le", "--latency-msec=20", path])
         time.sleep(seconds)
         recorder.terminate()
@@ -36,10 +35,35 @@ def record_level(device, seconds=1.0):
         # The recorder doesn't get to fill in the file's length, so don't rely on it.
         with open(path, "rb") as f:
             data = f.read()[44:]
-    samples = array.array("h", data[:len(data) // 2 * 2])
+    frame = 2 * channels
+    samples = array.array("h", data[:len(data) // frame * frame])
+    return [list(samples[channel::channels]) for channel in range(channels)]
+
+
+def _rms(samples):
     if not samples:
         return 0.0
     return math.sqrt(sum(sample * sample for sample in samples) / len(samples))
+
+
+def record_level(device, seconds=1.0):
+    """Listens to an input device (or input_name() of an output device) and
+    returns how loud what it hears is, as the RMS of 16 bit samples: 0 for
+    silence, around 23000 for a full-scale tone."""
+    return _rms(record(device, seconds)[0])
+
+
+def tone_share(samples, frequency, rate=8000):
+    """Returns how much of what's in some samples (see record()) is a tone
+    of the given frequency: close to 1 if that's all there is, close to 0 if
+    it isn't there or is lost among everything else."""
+    total = sum(sample * sample for sample in samples)
+    if not total:
+        return 0.0
+    step = 2 * math.pi * frequency / rate
+    real = sum(sample * math.cos(step * n) for n, sample in enumerate(samples))
+    imaginary = sum(sample * math.sin(step * n) for n, sample in enumerate(samples))
+    return 2 * (real * real + imaginary * imaginary) / (len(samples) * total)
 
 
 def write_tone(path, seconds=2.0, rate=16000, frequency=1000.0, channels=1, amplitude=16000):
@@ -62,7 +86,7 @@ def file_level(path):
         samples = array.array("h", f.readframes(f.getnframes()))
     if not samples:
         return (0.0, 0.0)
-    return (math.sqrt(sum(sample * sample for sample in samples) / len(samples)), len(samples) / float(rate))
+    return (_rms(samples), len(samples) / float(rate))
 
 
 class Loopback:

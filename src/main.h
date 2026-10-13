@@ -386,7 +386,6 @@ class MainFrame : public TopFrame
 
     void togglePTT(void);
 
-    bool                    m_schedule_restore;
 
     // Voice Keyer state machine
 
@@ -407,9 +406,7 @@ class MainFrame : public TopFrame
         // protected event handlers
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
-        virtual void OnCloseFrame(wxCloseEvent& event);
         virtual void OnActivateWindow(wxActivateEvent& event) override;
-        void OnExitClick(wxCommandEvent& event);
 
         void startTxStream();
         void startRxStream();
@@ -470,7 +467,6 @@ class MainFrame : public TopFrame
         void OnBerReset( wxCommandEvent& event ) override;
 
         //System Events
-        void OnPaint(wxPaintEvent& event);
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
@@ -570,7 +566,6 @@ class MainFrame : public TopFrame
         unsigned int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
-        int         m_zoom;
         float       m_snrBeta;
 
         // Callsign/text messaging

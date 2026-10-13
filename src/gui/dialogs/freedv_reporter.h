@@ -339,12 +339,9 @@ class FreeDVReporterDialog : public wxFrame
                  return false;
              }
 
-             bool filtersEnabled() const;
-
              void setColumnFilter(int col, int op, const wxString& val);
              void clearColumnFilter(int col);
              bool getColumnFilter(int col, int& op, wxString& val) const;
-             bool hasAnyColumnFilter() const;
              
              bool getSelectedCallsignInfo(wxDataViewItem& item, wxString& callsign)
              {
