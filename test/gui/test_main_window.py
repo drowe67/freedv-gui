@@ -1445,6 +1445,69 @@ def test_time_out_timer():
             quit_and_check_log(app)
 
 
+def test_ptt_key_time_out():
+    """A PTT key held through the time-out timer, and one let go too early."""
+    with audio_devices():
+        # A key that's still being held when the time-out timer stops TX must
+        # not key the rig again until it's actually released -- a finger
+        # resting on the key would otherwise defeat the time-out completely.
+        with freedvtest.start(settings=settings(Rig__PttMomentaryMode=True, Rig__PttKeyCode=WXK_F5,
+                                                Rig__TotTimerSecs=8)) as app:
+            app.wait_for_window("main")
+            app.activate("main")
+            start_modem(app)
+
+            app.key("main.notebook", "F5", hold=True)
+            wait_for_transmit(app)
+            wait_for_transmit(app, False, timeout=25)
+            check_equal(app.get("main.btnPTT")["value"], False, "PTT button pressed after timing out")
+
+            # The key is still being held, so pressing it again must not
+            # restart TX.  The warning window that the time-out put up is
+            # gone by now, so take the keyboard back first.
+            app.activate("main")
+            app.key("main.notebook", "F5", hold=True)
+            time.sleep(2)
+            check_equal(transmitting(app), False,
+                        "Transmitting after pressing the PTT key again while it was still held")
+
+            # Letting go re-arms it, and the next press works as it always did.
+            app.key("main.notebook", "F5", release=True)
+            time.sleep(1)
+            app.key("main.notebook", "F5", hold=True)
+            wait_for_transmit(app)
+            app.key("main.notebook", "F5", release=True)
+            wait_for_transmit(app, False)
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # Letting go of the key while TX is still starting must not leave the
+        # rig keyed. A delay before TX begins makes that window easy to hit.
+        with freedvtest.start(settings=settings(Rig__PttMomentaryMode=True, Rig__PttKeyCode=WXK_F5,
+                                                Audio__TxRxDelayMilliseconds=2000)) as app:
+            app.wait_for_window("main")
+            app.activate("main")
+            start_modem(app)
+
+            app.key("main.notebook", "F5", hold=True)
+            # The button goes down as soon as the key is pressed, but TX
+            # itself is still waiting out the delay before it starts.
+            app.wait_until(lambda: app.get("main.btnPTT")["value"], description="the PTT button to go down")
+            check(not transmitting(app), "TX started before the delay for it to start had passed")
+
+            app.key("main.notebook", "F5", release=True)
+
+            # TX starts anyway, and then stops by itself because the key went
+            # up while it was starting.
+            wait_for_transmit(app)
+            wait_for_transmit(app, False, timeout=25)
+            check_equal(app.get("main.btnPTT")["value"], False, "PTT button pressed after letting go early")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
 def test_menus():
     """The Settings and Help menus, other than what opens other windows.
     (File > Keep On Top isn't offered on Linux.)"""
@@ -1547,6 +1610,7 @@ SCENARIOS = {
     "default_config": test_default_config,
     "appearance_change": test_appearance_change,
     "time_out_timer": test_time_out_timer,
+    "ptt_key_time_out": test_ptt_key_time_out,
     "menus": test_menus,
 }
 

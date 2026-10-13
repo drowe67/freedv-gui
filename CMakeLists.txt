@@ -869,7 +869,7 @@ endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
 # alongside anything else.
-foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change)
+foreach(scenario transmit ptt_key tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_files recording recording_options monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer ptt_key_time_out menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
