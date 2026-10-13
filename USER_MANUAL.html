@@ -1344,6 +1344,14 @@ instead of the default one. (PR #1549)</li>
 rather than the default one. (PR #1557)</li>
 <li>Logging: fix logged contacts sometimes being timed a second early.
 (PR #1552)</li>
+<li>Fix FreeDV being unable to exit after pressing Start with a sound
+device that couldn’t be opened. (PR #1559)</li>
+<li>Fix possible crash when an audio device fails to open before FreeDV
+has asked to be told of its errors. (PR #1559)</li>
+<li>Linux: fix audio pausing for up to two more seconds after FreeDV’s
+audio processing has been held up for more than two. (PR #1559)</li>
+<li>Settings: fix a typed-in frequency losing its last three digits when
+switching from kHz to MHz and pressing Apply. (PR #1559)</li>
 <li>Linux: fix crash on pressing Start with no sound server
 (PipeWire/PulseAudio) running. (PR #1555)</li>
 <li>Linux: report losing the sound server while running, and fix Stop
