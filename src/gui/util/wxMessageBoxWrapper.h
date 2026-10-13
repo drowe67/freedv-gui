@@ -2,7 +2,8 @@
 // Name:            wxMessageBoxWrapper.h
 //
 // Purpose:         Wraps wxMessageBox to fail tests when called during a
-//                  test run (i.e. testName is non-empty).
+//                  test run (i.e. testName is non-empty), or to hand the
+//                  message to the GUI test agent instead of displaying it.
 //
 // License:
 //
@@ -21,10 +22,18 @@
 #ifndef __WX_MESSAGE_BOX_WRAPPER__
 #define __WX_MESSAGE_BOX_WRAPPER__
 
+#include <functional>
+
 #include "wx/wx.h"
+#include "wx/msgdlg.h"
 #include "util/logging/ulog.h"
 
 extern wxString testName;
+
+// Set by the GUI test agent (see test_agent.cpp) while a test script is
+// driving FreeDV. Receives the message, caption and style of each message box
+// in place of it being displayed, and returns the button to report as pressed.
+inline std::function<int(const wxString&, const wxString&, int)> g_wxMessageBoxTestHook;
 
 // NOTE: This function is defined before the #define below so that the call to
 // wxMessageBox inside its body resolves to the real wx function, not this
@@ -43,9 +52,34 @@ inline int wxMessageBoxWrapper(const wxString& message,
                   (const char*)message.ToUTF8());
         exit(1); // NOLINT
     }
+    if (g_wxMessageBoxTestHook)
+    {
+        return g_wxMessageBoxTestHook(message, caption, style);
+    }
     return wxMessageBox(message, caption, style, parent, x, y);
 }
 
 #define wxMessageBox wxMessageBoxWrapper
+
+// Displays a wxMessageDialog as dialog.ShowModal() would, unless a test
+// script is driving FreeDV (see g_wxMessageBoxTestHook).
+inline int ShowMessageDialog(wxMessageDialog& dialog)
+{
+    if (g_wxMessageBoxTestHook)
+    {
+        switch (g_wxMessageBoxTestHook(dialog.GetMessage(), dialog.GetCaption(), dialog.GetMessageDialogStyle()))
+        {
+            case wxYES:
+                return wxID_YES;
+            case wxNO:
+                return wxID_NO;
+            case wxCANCEL:
+                return wxID_CANCEL;
+            default:
+                return wxID_OK;
+        }
+    }
+    return dialog.ShowModal();
+}
 
 #endif // __WX_MESSAGE_BOX_WRAPPER__

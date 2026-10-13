@@ -124,6 +124,17 @@ BeginRecordingDialog::BeginRecordingDialog(wxWindow* parent, wxString const& def
     this->Centre(wxBOTH);
     this->SetMinSize(GetBestSize());
     
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("beginRecording");
+    recordingSuffix_->SetName("beginRecording.recordingSuffix");
+    rawRecording_->SetName("beginRecording.rawRecording");
+    decodedRecording_->SetName("beginRecording.decodedRecording");
+    bothRecording_->SetName("beginRecording.bothRecording");
+    formatWav_->SetName("beginRecording.formatWav");
+    formatMp3_->SetName("beginRecording.formatMp3");
+    m_buttonOK->SetName("beginRecording.btnStart");
+    m_buttonCancel->SetName("beginRecording.btnCancel");
+
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(BeginRecordingDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(BeginRecordingDialog::OnClose));
@@ -151,6 +162,12 @@ BeginRecordingDialog::~BeginRecordingDialog()
 
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BeginRecordingDialog::OnCancel), NULL, this);
+}
+
+wxString BeginRecordingDialog::getRecordingSuffix() const
+{
+    // Only typing is filtered as it happens; pasting isn't.
+    return SanitizeRecordingSuffix(recordingSuffix_->GetValue());
 }
 
 void BeginRecordingDialog::OnInitDialog(wxInitDialogEvent&)

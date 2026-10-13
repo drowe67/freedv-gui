@@ -49,6 +49,9 @@
 #include "main.h"
 #include "os/os_interface.h"
 #include "freedv_interface.h"
+#if defined(ENABLE_TEST_AGENT)
+#include "test_agent.h"
+#endif // defined(ENABLE_TEST_AGENT)
 #include "audio/AudioEngineFactory.h"
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
@@ -281,6 +284,9 @@ std::string utTxFeatureFile;
 std::string utRxFeatureFile;
 long utTxTimeSeconds;
 long utTxAttempts;
+
+// GUI test management
+long guiTestPort = 0;
 
 // WxWidgets - initialize the application
 
@@ -580,6 +586,9 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
     parser.AddOption("txattempts", "1", "In UT mode, the number of times to transmit (default 1)", wxCMD_LINE_VAL_NUMBER);
+#if defined(ENABLE_TEST_AGENT)
+    parser.AddOption("testport", wxEmptyString, "Take commands from the GUI test script listening on the given local port.", wxCMD_LINE_VAL_NUMBER);
+#endif // defined(ENABLE_TEST_AGENT)
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -608,6 +617,18 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         wxFileName fn(configPath);        
         customConfigFileName = fn.GetFullName();
         defaultConfigFilePath = fn.GetPath();
+
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+        // For Load Default Configuration (see below for why it's this).
+        defaultConfigFile = wxFileConfig::GetLocalFile("freedv", wxCONFIG_USE_XDG | wxCONFIG_USE_SUBDIR).GetFullPath();
+#else
+        // Likewise: open the default configuration now, while wxWidgets
+        // would find the same one as it does when FreeDV is started
+        // without being given a configuration to use.
+        wxConfigBase::Set(nullptr);
+        defaultConfig = wxConfigBase::Create();
+        wxConfigBase::Set(pConfig);
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
     else
     {
@@ -660,10 +681,14 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 
             wxConfigBase::Set(pConfig);
             defaultConfigFilePath = tempNewFile.GetPath();
+            defaultConfigFile = newFileLocation;
         }
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+
+        // Whichever it is, this is the default configuration.
+        defaultConfig = wxConfigBase::Get();
 
         // If a config file was previously loaded via "Use Configuration...",
         // restore it now so the user's last session is preserved.
@@ -741,6 +766,13 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
     }
     
+#if defined(ENABLE_TEST_AGENT)
+    if (parser.Found("testport", &guiTestPort))
+    {
+        log_info("Taking commands from GUI test script on port %d", (int)guiTestPort);
+    }
+#endif // defined(ENABLE_TEST_AGENT)
+
     wxString utRxFeatureFileTmp; 
     if (parser.Found("rxfeaturefile", &utRxFeatureFileTmp))
     {
@@ -916,6 +948,13 @@ bool MainApp::OnInit()
         std::thread utThread(std::bind(&MainApp::UnitTest_, this));
         utThread.detach();
     }
+
+#if defined(ENABLE_TEST_AGENT)
+    if (guiTestPort > 0)
+    {
+        testAgent_ = std::make_shared<TestAgent>((int)guiTestPort);
+    }
+#endif // defined(ENABLE_TEST_AGENT)
     
     return true;
 }
@@ -925,6 +964,7 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    testAgent_ = nullptr;
     return 0;
 }
 
@@ -1332,6 +1372,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_panelAgcGain = new PlotScalar(m_auiNbookCtrl, AGC_GAIN_PLOT_SECONDS, LEVEL_METER_TX_REFRESH_PERIOD_SEC, MIN_AGC_GAIN_PLOT_VAL, MAX_AGC_GAIN_PLOT_VAL, AGC_GAIN_PLOT_SECONDS / AGC_GAIN_PLOT_SECOND_SEGMENTS, 3, "%.1f", 0, "", true, 0, false);
     m_auiNbookCtrl->AddPage(m_panelAgcGain, _("AGC dB"), false, wxNullBitmap);
 
+    // Names for automated GUI testing.
+    m_panelWaterfall->SetName("main.plotWaterfall");
+    m_panelSpectrum->SetName("main.plotSpectrum");
+    m_panelDemodIn->SetName("main.plotFromRadio");
+    m_panelSpeechIn->SetName("main.plotFromMic");
+    m_panelSpeechOut->SetName("main.plotFromDecoder");
+    m_panelSNR->SetName("main.plotSNR");
+    m_panelAgcGain->SetName("main.plotAgcGain");
+
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
     m_btnTogPTT->Bind(wxEVT_LEFT_DOWN, &MainFrame::OnTogBtnPTTMouseDown, this);
@@ -1684,6 +1733,20 @@ MainFrame::~MainFrame()
     fclose(ftest);
     #endif
 
+    // If the modem was stopped just before closing, the rig may still be
+    // disconnecting on the threads started by performFreeDVOff_(), and will
+    // call back into this object when it's done. Give that a bounded chance
+    // to finish first, as OnTogBtnOnOff() does when closing while running.
+    auto rigDisconnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    if (rigPttDisconnectFuture_.valid())
+    {
+        rigPttDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
+    if (rigFreqDisconnectFuture_.valid())
+    {
+        rigFreqDisconnectFuture_.wait_until(rigDisconnectDeadline);
+    }
+
     wxGetApp().rigPttController = nullptr;
     wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().m_pttInSerialPort = nullptr;
@@ -1927,16 +1990,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
              if (m_filterDialog->haveVolumesBeenChanged())
              {
-                auto sliderVal = 0.0;
-                sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
-
-                if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
-                {
-                    m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-                    m_sliderMicSpkrLevel->Refresh();
-                    wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderVal, 1), DECIBEL_STR);
-                    m_txtMicSpkrLevelNum->SetLabel(fmt);
-                }
+                syncSpeakerLevelWithConfiguration();
             }
          }
 
@@ -3856,7 +3910,7 @@ void MainFrame::onQsyRequestUIThread_(QsyRequestArgs* args)
         messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
     }
 
-    auto answer = messageDialog.ShowModal();
+    auto answer = ShowMessageDialog(messageDialog);
     if (answer == wxID_YES)
     {
         // This will implicitly cause Hamlib to change the frequency and mode.

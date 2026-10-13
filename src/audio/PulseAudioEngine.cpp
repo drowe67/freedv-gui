@@ -270,6 +270,12 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     tempObj.thisPtr = this;
     
     pa_operation* op = nullptr;
+
+    // Without a sound server to ask (see start()), there are no devices.
+    if (mainloop_ == nullptr || context_ == nullptr)
+    {
+        return tempObj.result;
+    }
     
     pa_threaded_mainloop_lock(mainloop_);
     if (direction == AUDIO_ENGINE_OUT)
@@ -429,6 +435,12 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
 {
     PaDefaultAudioDeviceTemp tempData;
     tempData.mainloop = mainloop_;
+
+    // Without a sound server to ask (see start()), there's no default.
+    if (mainloop_ == nullptr || context_ == nullptr)
+    {
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
     
     pa_threaded_mainloop_lock(mainloop_);
     auto op = pa_context_get_server_info(context_, [](pa_context *, const pa_server_info *i, void *userdata) {

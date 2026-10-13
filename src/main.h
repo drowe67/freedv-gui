@@ -94,6 +94,9 @@
 #include "pipeline/LinkStep.h"
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
+#include "gui/util/PopupMenuWrapper.h"
+#include "gui/util/PathDialogWrapper.h"
+#include "gui/util/BrowserWrapper.h"
 #include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1
@@ -168,6 +171,7 @@ void      clearLastUsedConfigPath();
 class MainFrame;
 class FilterDlg;
 class FreeDVReporterDialog;
+class TestAgent;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -203,6 +207,15 @@ class MainApp : public wxApp
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         wxString defaultConfigFilePath;
+
+        // Where the default configuration is, if FreeDV has to say (rather
+        // than leaving it to wxWidgets). See MainApp::OnCmdLineParsed().
+        wxString defaultConfigFile;
+
+        // The default configuration itself, if it's been opened. It can't
+        // reliably be found again later: wxWidgets looks for it by the
+        // application's name, which isn't the same at startup as afterwards.
+        wxConfigBase* defaultConfig = nullptr;
         
         // PTT -----------------------------------    
         int        m_intHamlibRig;
@@ -254,6 +267,9 @@ class MainApp : public wxApp
         int m_reportCounter;
     protected:
     private:
+        // Lets a GUI test script drive FreeDV (see test_agent.h).
+        std::shared_ptr<TestAgent> testAgent_;
+
         void UnitTest_();
 };
 
@@ -292,6 +308,10 @@ class MainFrame : public TopFrame
         virtual ~MainFrame();
 
         FilterDlg*              m_filterDialog;
+
+        // Updates the speaker level control to match the configuration.
+        void syncSpeakerLevelWithConfiguration();
+
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;

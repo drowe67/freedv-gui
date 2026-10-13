@@ -213,6 +213,41 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     this->Centre(wxBOTH);
 
+    // Names for automated GUI testing.
+    SetName("filter");
+    m_ckboxNoiseReduction->SetName("filter.ckboxNoiseReduction");
+    m_ckboxAgcEnabled->SetName("filter.ckboxAgc");
+    m_ckboxBwExpandEnabled->SetName("filter.ckboxBwExpand");
+    m_auiNotebook->SetName("filter.notebook");
+    m_MicInEnable->SetName("filter.micIn.ckboxEnable");
+    m_MicInDefault->SetName("filter.micIn.btnDefault");
+    m_SpkOutEnable->SetName("filter.spkOut.ckboxEnable");
+    m_SpkOutDefault->SetName("filter.spkOut.btnDefault");
+    m_sdbSizer5OK->SetName("filter.btnClose");
+
+    auto nameEQ = [](EQ& eq, wxString const& prefix) {
+        if (eq.sliderFreq != nullptr)
+        {
+            eq.sliderFreq->SetName(prefix + "Freq");
+            eq.valueFreq->SetName(prefix + "FreqValue");
+        }
+        eq.sliderGain->SetName(prefix + "Gain");
+        eq.valueGain->SetName(prefix + "GainValue");
+        if (eq.sliderQ != nullptr)
+        {
+            eq.sliderQ->SetName(prefix + "Q");
+            eq.valueQ->SetName(prefix + "QValue");
+        }
+    };
+    nameEQ(m_MicInVol, "filter.micIn.vol");
+    nameEQ(m_MicInBass, "filter.micIn.bass");
+    nameEQ(m_MicInMid, "filter.micIn.mid");
+    nameEQ(m_MicInTreble, "filter.micIn.treble");
+    nameEQ(m_SpkOutVol, "filter.spkOut.vol");
+    nameEQ(m_SpkOutBass, "filter.spkOut.bass");
+    nameEQ(m_SpkOutMid, "filter.spkOut.mid");
+    nameEQ(m_SpkOutTreble, "filter.spkOut.treble");
+
     // Workaround to prevent Default button from jumping around
     // when selecting different tabs.
     wxSize curSize = this->GetSize();
@@ -538,6 +573,14 @@ void FilterDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.save(pConfig);
 
         volsChanged_ = true;
+
+        // The main window has a speaker volume control of its own, which
+        // only looks here for changes while FreeDV is running.
+        auto mainFrame = (MainFrame*)wxGetApp().GetTopWindow();
+        if (mainFrame != nullptr)
+        {
+            mainFrame->syncSpeakerLevelWithConfiguration();
+        }
     }
 }
 
@@ -791,9 +834,10 @@ void FilterDlg::adjRunTimeMicInFilter(void) {
 
     g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
-    if (m_running) {
-        *m_newMicInFilter = true;
-    }
+
+    // Asked for whether or not FreeDV was running when this window was
+    // opened, as it may have been started since.
+    *m_newMicInFilter = true;
     wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable = m_MicInEnable->GetValue();
     g_mutexProtectingCallbackData.Unlock();
 
@@ -805,9 +849,7 @@ void FilterDlg::adjRunTimeSpkOutFilter(void) {
 
     g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
-    if (m_running) {
-        *m_newSpkOutFilter = true;
-    }
+    *m_newSpkOutFilter = true;
     wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable = m_SpkOutEnable->GetValue();
     g_mutexProtectingCallbackData.Unlock();
 

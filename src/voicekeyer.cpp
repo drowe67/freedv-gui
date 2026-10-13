@@ -63,10 +63,13 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
             m_togBtnVoiceKeyer->SetValue(true);
 
             auto currentLabel = m_togBtnVoiceKeyer->GetLabel();
-            currentLabel.Replace(_("Start Voice Keyer"), _("Stop Voice Keyer"), false);
+            currentLabel.Replace(_("Start Voice &Keyer"), _("Stop Voice &Keyer"), false);
             m_togBtnVoiceKeyer->SetLabel(currentLabel);
 
             VoiceKeyerProcessEvent(VK_START);
+
+            // Nothing's being sent if the file turned out to be unusable.
+            updateVoiceKeyerButtonLabel_();
         }
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
@@ -88,14 +91,14 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
         );
         
-    if(saveFileDialog.ShowModal() == wxID_CANCEL)
+    wxString soundFile;
+    if(ShowPathDialog(saveFileDialog, soundFile) == wxID_CANCEL)
     {
         return;     // the user changed their mind...
     }
     
     // The below code ensures that the last folder the above dialog was
     // navigated to persists across executions.
-    wxString soundFile = saveFileDialog.GetPath();
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
     wxString fileName;
     wxString fileNameWithoutExt;
@@ -103,13 +106,12 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& )
     wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &extension);
     wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
     
-    fileName = fileNameWithoutExt;
     // Append .wav extension to the end if needed.
     if (extension.Lower() != wxT("wav"))
     {
-        fileName += ".wav";
         soundFile += ".wav";
     }
+    fileName = wxFileName(soundFile).GetFullName();
     wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
@@ -176,7 +178,8 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
         );
 
-    if(openFileDialog.ShowModal() == wxID_CANCEL)
+    wxString soundFile;
+    if(ShowPathDialog(openFileDialog, soundFile) == wxID_CANCEL)
     {
         return;     // the user changed their mind...
     }
@@ -184,7 +187,6 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& )
     // The below code ensures that the last folder the above dialog was
     // navigated to persists across executions.
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
-    wxString soundFile = openFileDialog.GetPath();
     wxString fileName;
     wxString fileNameWithoutExt;
     wxString fileExt;
@@ -217,7 +219,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& )
 
     // Trigger right-click menu popup in a location that will prevent it from
     // ending up off the screen.
-    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
+    ShowPopupMenu(m_togBtnVoiceKeyer, voiceKeyerPopupMenu_, LeftOffsetContextMenuPosition(m_togBtnVoiceKeyer));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )

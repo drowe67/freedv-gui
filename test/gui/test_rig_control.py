@@ -1,0 +1,286 @@
+#!/usr/bin/env python3
+"""Tests FreeDV controlling a radio through Hamlib while it's running:
+following and setting its frequency, keying it, and what happens when the
+radio can't be reached or goes away.
+
+Each scenario below launches its own copy of FreeDV. With no arguments all of
+them are run; otherwise, only those named:
+
+    python3 test_rig_control.py [scenario...]
+
+Run from the build folder (or set FREEDV_BINARY) with a window manager
+running. Linux only for now. Hamlib's rigctld stands in for the radio; without
+it ($RIGCTLD, the PATH or the build folder's copy), these are skipped.
+"""
+
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import freedvtest
+from freedvtest.rigctld import Rigctld, find_rigctld
+from test_main_window import (CALLSIGN, audio_devices, check, check_equal, settings, start_modem, stop_modem,
+                              transmitting, wait_for_transmit)
+
+SKIPPED = 77
+
+
+def rig_settings(address, **extra):
+    """Returns settings for FreeDV to control the radio at the given address."""
+    result = dict(Hamlib__UseForPTT=True, Hamlib__RigNameStr=Rigctld.RIG_NAME, Hamlib__SerialPort=address,
+                  Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                  Reporting__ManualFrequencyReporting=False)
+    result.update(extra)
+    return settings(**result)
+
+
+def quit_and_check_log(app):
+    check_equal(app.message_boxes(), [], "Errors displayed")
+    check_equal(app.quit(), 0, "FreeDV's exit code")
+    # (Hamlib has its own idea of what's worth calling an error.)
+    errors = [line for line in app.log().splitlines()
+              if (" ERROR " in line or " FATAL " in line) and "HamlibRigController.cpp" not in line]
+    check_equal(errors, [], "Errors logged by FreeDV")
+
+
+def displayed_frequency(app):
+    return app.get("main.cboReportFrequency")["value"].replace(",", "")
+
+
+def wait_for_frequency(app, expected, what):
+    try:
+        app.wait_until(lambda: displayed_frequency(app) == expected, timeout=15)
+    except freedvtest.FreeDVError:
+        check_equal(displayed_frequency(app), expected, what)
+
+
+def wait_for(condition, what, timeout=10):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if condition():
+            return
+        time.sleep(0.2)
+    check(False, what)
+
+
+def errors(app):
+    return [box["message"] for box in app.message_boxes()]
+
+
+# ---------------------------------------------------------------------------
+# Scenarios
+# ---------------------------------------------------------------------------
+
+def test_control():
+    """Frequency, mode and PTT, in both directions."""
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        with freedvtest.start(settings=rig_settings(radio.address)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+
+            # FreeDV shows where the radio is, and follows it.
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+            radio.set_frequency(7177000)
+            wait_for_frequency(app, "7.1770", "Frequency displayed after turning the radio's dial")
+
+            # Changing it in FreeDV changes the radio, mode included.
+            app.set_value("main.cboReportFrequency", "14.2400")
+            wait_for(lambda: radio.frequency() == 14240000, "The radio is on %d Hz, not 14240000" % radio.frequency())
+            wait_for(lambda: "USB" in radio.mode(), "The radio's mode on 20m is %s" % radio.mode())
+            app.set_value("main.cboReportFrequency", "3.6250")
+            wait_for(lambda: radio.frequency() == 3625000, "The radio is on %d Hz, not 3625000" % radio.frequency())
+            # (FreeDV uses upper sideband whatever the band.)
+            wait_for(lambda: "USB" in radio.mode(), "The radio's mode on 80m is %s" % radio.mode())
+            check_equal(errors(app), [], "Errors displayed")
+
+            # Transmitting keys it.
+            check_equal(radio.transmitting(), False, "Radio transmitting while FreeDV receives")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            wait_for(radio.transmitting, "The radio wasn't keyed")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            wait_for(lambda: not radio.transmitting(), "The radio was left keyed")
+
+            # Analog mode is a different mode on the radio, too.
+            digital = radio.mode()
+            app.click("main.btnAnalog")
+            time.sleep(2)
+            check_equal(errors(app), [], "Errors displayed in analog mode")
+            app.click("main.btnAnalog")
+
+            # Stopping lets go of the radio, with it not transmitting.
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            wait_for(radio.transmitting, "The radio wasn't keyed")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            stop_modem(app)
+            check_equal(radio.transmitting(), False, "Radio transmitting after stopping")
+            radio.set_frequency(21313000)
+            time.sleep(2)
+            check_equal(displayed_frequency(app), "3.6250", "Frequency displayed after the radio moved while stopped")
+
+            # On the next start, the radio's put back where FreeDV was.
+            start_modem(app)
+            wait_for(lambda: radio.frequency() == 3625000,
+                     "The radio is on %d Hz after starting again, not 3625000" % radio.frequency())
+            check_equal(displayed_frequency(app), "3.6250", "Frequency displayed after starting again")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
+def test_frequency_only():
+    """Told to leave the radio's mode alone, FreeDV does."""
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        radio.command("M AM 6000")
+        extra = dict(Hamlib__EnableFreqModeChanges=False, Hamlib__EnableFreqChangesOnly=True)
+        with freedvtest.start(settings=rig_settings(radio.address, **extra)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+            app.set_value("main.cboReportFrequency", "7.1770")
+            wait_for(lambda: radio.frequency() == 7177000, "The radio is on %d Hz, not 7177000" % radio.frequency())
+            time.sleep(1)
+            check_equal(radio.mode(), "AM", "Radio's mode")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # Told to leave both alone, it only keys the radio.
+        radio.set_frequency(14236000)
+        extra = dict(Hamlib__EnableFreqModeChanges=False, Hamlib__EnableFreqChangesOnly=False,
+                     Reporting__ManualFrequencyReporting=True, Reporting__Frequency=7177000)
+        with freedvtest.start(settings=rig_settings(radio.address, **extra)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            time.sleep(3)
+            check_equal((radio.frequency(), radio.mode()), (14236000, "AM"), "Radio's frequency and mode")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            wait_for(radio.transmitting, "The radio wasn't keyed")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            wait_for(lambda: not radio.transmitting(), "The radio was left keyed")
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
+def test_unreachable():
+    """Starting without the radio there to be controlled."""
+    with Rigctld() as radio, audio_devices():
+        radio.stop()
+        with freedvtest.start(settings=rig_settings(radio.address)) as app:
+            app.wait_for_window("main")
+            app.click("main.btnOnOff")
+            app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+            app.wait_until(lambda: errors(app), timeout=30, description="FreeDV to say that it can't reach the radio")
+            messages = errors(app)
+            check(all(message.startswith("Couldn't connect to Radio with hamlib") for message in messages),
+                  "Messages displayed are %r" % messages)
+            app.message_boxes(clear=True)
+
+            # It carries on without.
+            check_equal(app.state()["running"], True, "Running without the radio")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            stop_modem(app)
+            app.message_boxes(clear=True)
+
+            # With the radio back, so is control of it.
+            radio.start()
+            radio.set_frequency(7177000)
+            start_modem(app)
+            wait_for_frequency(app, "7.1770", "Frequency displayed once the radio's back")
+            check_equal(errors(app), [], "Errors displayed with the radio back")
+            stop_modem(app)
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+        # A radio that FreeDV doesn't know about (any more).
+        with freedvtest.start(settings=rig_settings(radio.address, Hamlib__RigNameStr="No Such Radio")) as app:
+            app.wait_for_window("main")
+            app.click("main.btnOnOff")
+            app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+            app.wait_until(lambda: errors(app), timeout=10, description="FreeDV to say that there's no such radio")
+            check(errors(app)[0].startswith("The radio's model is empty."), "Messages displayed are %r" % errors(app))
+            app.message_boxes(clear=True)
+            check_equal(app.state()["running"], True, "Running without a radio")
+            stop_modem(app)
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
+def test_lost():
+    """The radio going away while FreeDV is running."""
+    with Rigctld() as radio, audio_devices():
+        radio.set_frequency(14236000)
+        with freedvtest.start(settings=rig_settings(radio.address)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
+
+            radio.stop()
+            time.sleep(3)
+
+            # FreeDV keeps going. Transmitting still works as far as it's
+            # concerned, with or without complaint about the radio.
+            check_equal(app.state()["running"], True, "Running after the radio went away")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            time.sleep(2)
+            messages = errors(app)
+            print("Messages after losing the radio: %r" % messages, flush=True)
+            check(all("hamlib" in message.lower() for message in messages), "Messages displayed are %r" % messages)
+            app.message_boxes(clear=True)
+
+            # Nor does stopping get stuck on it.
+            stop_modem(app)
+            app.message_boxes(clear=True)
+
+            # Once it's back, the next start finds it and puts it where
+            # FreeDV was.
+            radio.start()
+            radio.set_frequency(7177000)
+            start_modem(app)
+            wait_for(lambda: radio.frequency() == 14236000,
+                     "The radio is on %d Hz once it's back, not 14236000" % radio.frequency())
+            check_equal(displayed_frequency(app), "14.2360", "Frequency displayed once the radio's back")
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            wait_for(radio.transmitting, "The radio wasn't keyed")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            stop_modem(app)
+            check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
+SCENARIOS = {
+    "control": test_control,
+    "frequency_only": test_frequency_only,
+    "unreachable": test_unreachable,
+    "lost": test_lost,
+}
+
+
+def main():
+    names = sys.argv[1:] or list(SCENARIOS)
+    for scenario in names:
+        if scenario not in SCENARIOS:
+            sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
+    if find_rigctld() is None:
+        print("SKIPPED: rigctld was not found")
+        sys.exit(SKIPPED)
+    for scenario in names:
+        print("=== %s ===" % scenario, flush=True)
+        SCENARIOS[scenario]()
+        print("PASS: %s" % scenario, flush=True)
+
+
+if __name__ == "__main__":
+    main()
