@@ -35,7 +35,7 @@ SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
 RADIO_TX_MONITOR = VirtualAudioDevices.input_name(RADIO_TX)
 SPEAKER_MONITOR = VirtualAudioDevices.input_name(SPEAKER)
 
-TABS = ["Waterfall", "Spectrum", "Frm Radio", "Frm Mic", "Frm Decoder", "SNR"]
+TABS = ["Waterfall", "Spectrum", "Frm Radio", "Frm Mic", "Frm Decoder", "SNR", "AGC dB"]
 
 # Somewhere for FreeDV to report to that isn't the public FreeDV Reporter
 # server (nothing's listening there).
