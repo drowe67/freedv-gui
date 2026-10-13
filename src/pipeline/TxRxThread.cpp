@@ -50,7 +50,7 @@ using namespace std::chrono_literals;
 #include "EitherOrStep.h"
 #include "RNNoiseStep.h"
 #include "EqualizerStep.h"
-#include "LevelerLimiterStep.h"
+#include "AgcStep.h"
 #include "ResamplePlotStep.h"
 #include "ResampleStep.h"
 #include "TapStep.h"
@@ -222,7 +222,7 @@ void TxRxThread::initializePipeline_()
         // The DiagnosticCsvLogger is a no-op unless the backend is built
         // with -DENABLE_AUDIO_DIAG_LOGGING=ON. Gain state is restored from
         // the previous session (saved at the end of Entry()).
-        levelerLimiterStep_ = new LevelerLimiterStep(
+        agcStep_ = new AgcStep(
             inputSampleRate_,
             std::make_shared<DiagnosticCsvLogger>(),
             uiHooks_.levelerGainDb,
@@ -230,7 +230,7 @@ void TxRxThread::initializePipeline_()
             uiHooks_.levelerTargetLufs,
             +[]() FREEDV_NONBLOCKING { return g_noiseReductionEnabled.load(std::memory_order_acquire); },
             +[]() FREEDV_NONBLOCKING { return g_agcEnabled.load(std::memory_order_acquire); });
-        pipeline_->appendPipelineStep(levelerLimiterStep_);
+        pipeline_->appendPipelineStep(agcStep_);
 
         // Resample for plot step (after AGC)
         auto resampleForPlotStepAfterAGC = new ResampleForPlotStep(&g_plotSpeechInFifoAfterAGC);
@@ -628,13 +628,13 @@ void* TxRxThread::Entry() noexcept
     // rather than from 0dB. Safe without synchronization: execute() ran on
     // this thread and has stopped. MainFrame::stopRxStream() writes the
     // config to disk once this thread has been joined.
-    if (levelerLimiterStep_ != nullptr)
+    if (agcStep_ != nullptr)
     {
         if (uiHooks_.saveLevelerState)
         {
-            uiHooks_.saveLevelerState(levelerLimiterStep_->getCurrentGainDb(), levelerLimiterStep_->getIntegralErrorDb());
+            uiHooks_.saveLevelerState(agcStep_->getCurrentGainDb(), agcStep_->getIntegralErrorDb());
         }
-        levelerLimiterStep_ = nullptr;
+        agcStep_ = nullptr;
     }
 
     // Force pipeline to delete itself when we're done with the thread.
@@ -934,9 +934,9 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
 
             // For the AGC gain plot (polled by the GUI thread).
-            if (levelerLimiterStep_ != nullptr)
+            if (agcStep_ != nullptr)
             {
-                g_agcAppliedGainDb.store(levelerLimiterStep_->getLiveAppliedGainDb(), std::memory_order_relaxed);
+                g_agcAppliedGainDb.store(agcStep_->getLiveAppliedGainDb(), std::memory_order_relaxed);
             }
             
             if (g_dump_fifo_state) {

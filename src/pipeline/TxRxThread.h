@@ -53,7 +53,7 @@
 // Forward declarations
 class LinkStep;
 class BeepStep;
-class LevelerLimiterStep;
+class AgcStep;
 
 //#define ENABLE_PROCESSING_STATS
 
@@ -99,7 +99,7 @@ public:
         , equalizedMicAudioLink_(std::move(micAudioLink))
         , uiHooks_(std::move(uiHooks))
         , beepStep_(nullptr)
-        , levelerLimiterStep_(nullptr)
+        , agcStep_(nullptr)
         , hasEooBeenSent_(false)
         , pendingEooCount_(0)
         , helper_(std::move(helper))
@@ -164,7 +164,7 @@ private:
     // Non-owning (pipeline_ owns it), TX side only. Polled for the AGC
     // gain plot, and used at the end of Entry() to save the leveler's gain
     // state to config.
-    LevelerLimiterStep* levelerLimiterStep_;
+    AgcStep* agcStep_;
     bool hasEooBeenSent_;
     std::unique_ptr<short[]> pendingEooSamples_;
     int pendingEooCount_;
