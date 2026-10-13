@@ -872,10 +872,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to record both the raw and decoded RX audio. (PR #1501)
     * Linux/PulseAudio: Show friendlier device names in configuration windows. (PR #1508)
     * Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR #1513, #1539)
-    * Add dark mode support for Windows. (PR #1518, #1529)
+    * Add dark mode support for Windows. (PR #1518, #1529, #1560)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
-2. Other:
+2. Build system:
+    * Update wxWidgets to 3.3.4. (PR #1560)
+3. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
     * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
@@ -926,6 +928,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
     * Linux: fix Load Default Configuration loading an empty configuration rather than the default one. (PR #1557)
     * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
+    * Fix FreeDV being unable to exit after pressing Start with a sound device that couldn't be opened. (PR #1559)
+    * Fix possible crash when an audio device fails to open before FreeDV has asked to be told of its errors. (PR #1559)
+    * Linux: fix audio pausing for up to two more seconds after FreeDV's audio processing has been held up for more than two. (PR #1559)
+    * Settings: fix a typed-in frequency losing its last three digits when switching from kHz to MHz and pressing Apply. (PR #1559)
     * Linux: fix crash on pressing Start with no sound server (PipeWire/PulseAudio) running. (PR #1555)
     * Linux: report losing the sound server while running, and fix Stop getting stuck afterwards. (PR #1555)
     * Fix each use of Adjust Monitor Volume leaving a hidden popup behind. (PR #1555)

@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
@@ -13,6 +16,12 @@ env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
   # FreeDV's GUI targets) unless these are set.
   CCACHE_SLOPPINESS: pch_defines,time_macros
+
+  # What's cached is uploaded again after every run and counts towards the
+  # repository's 10 GB of Actions caches, so trade some time on a cache miss
+  # (ccache's default is zstd level 1) for smaller caches. Reading a cached
+  # result isn't slowed down by this.
+  CCACHE_COMPRESSLEVEL: 10
 
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
@@ -109,7 +118,9 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
-        key: ${{ github.job }}-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
+        # Shared with build-unit-tests below, which compiles the same
+        # things with the same flags (plus the tests themselves).
+        key: windows-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
         max-size: "5G"
         verbose: 2
 
@@ -193,7 +204,8 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
-        key: ${{ github.job }}-${{ matrix.variant }}-${{ matrix.arch }}
+        # Shared with build-sanitizer above for the sanitizer variants.
+        key: windows-${{ matrix.variant }}-${{ matrix.arch }}
         max-size: "5G"
         verbose: 2
 
