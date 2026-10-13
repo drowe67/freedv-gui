@@ -826,6 +826,98 @@ def test_import():
             quit_and_check_log(app)
 
 
+def test_import_more():
+    """The less usual things that WSJT-X's settings can say."""
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, SPEAKER):
+        with freedvtest.start(user_config_files={"WSJT-X.ini": ""}) as app:
+            def import_wsjtx(**settings):
+                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                    f.write(wsjtx_settings(**settings))
+                app.click("wizard.btnImport")
+                return import_status(app)
+
+            app.wait_for_window("wizard")
+            rig = find_rig(app, "Icom IC-7300")
+            rigs = [item["label"].strip() for item in app.get("wizard.cbRigName")["items"]]
+
+            # Device names cut short (as Qt once did on Windows) still find
+            # their devices...
+            radio_in_shown = [item["label"] for item in app.get("wizard.cbRadioIn")["items"]
+                              if item.get("data") == RADIO_RX_IN][0]
+            check(len(radio_in_shown) > 24 and len(RADIO_TX) > 24,
+                  "Device names are too short for this: %r, %r" % (radio_in_shown, RADIO_TX))
+            check_equal(import_wsjtx(SoundInName=radio_in_shown[:24], SoundOutName=RADIO_TX[:24]),
+                        "Imported: radio audio devices. Review each page before clicking Finish.", "Import result")
+            check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
+            check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
+
+            # ...unless there's too little left to go by.
+            check_equal(import_wsjtx(SoundInName=radio_in_shown[:7], SoundOutName=RADIO_TX[:7]),
+                        "No usable settings were found in WSJT-X. Not imported: radio audio devices (not currently "
+                        "connected). Review each page before clicking Finish.", "Import result")
+
+            # Only one of the two found: that much is imported, and the rest
+            # is said to be missing.
+            check_equal(import_wsjtx(SoundInName=radio_in_shown, SoundOutName="FreeDVGuiTest Nonexistent Device"),
+                        "Imported: radio audio devices. Not imported: radio audio devices (not currently "
+                        "connected). Review each page before clicking Finish.", "Import result")
+
+            # A radio keyed by DTR on its own port, with no word on modes.
+            check_equal(import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", PTTMethod="PTT_method_DTR",
+                                     PTTport="/dev/ttyFreeDVTest1"),
+                        "Imported: Hamlib rig control (%s). Review each page before clicking Finish." % rig,
+                        "Import result")
+            check_values(app, {"ckHamlib": True, "cbRigName": rig, "cbSerialPort": "/dev/ttyFreeDVTest0",
+                               "cbSerialRate": "default", "cbPttMethod": "DTR",
+                               "cbPttSerialPort": "/dev/ttyFreeDVTest1"})
+
+            # Keyed by DTR on the port it's controlled through.
+            import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", CATSerialRate="9600",
+                         PTTMethod="PTT_method_DTR", PTTport="/dev/ttyFreeDVTest0")
+            check_values(app, {"cbSerialRate": "9600", "cbPttMethod": "DTR", "cbPttSerialPort": ""})
+
+            # Keyed by its own VOX: FreeDV has nothing to do.
+            import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", PTTMethod="PTT_method_VOX", PTTport="CAT")
+            check_values(app, {"ckHamlib": True, "cbPttMethod": "None", "cbPttSerialPort": ""})
+
+            # A radio that plugs straight into USB has a setting of its own
+            # for where it is.
+            usb_rigs = [name for name in rigs if "FUNcube Dongle" in name or "Si570 AVR-USB" in name]
+            if usb_rigs:
+                check_equal(import_wsjtx(Rig=usb_rigs[0], CATUSBPort="1-2.3", CATSerialPort="/dev/ttyFreeDVTest0",
+                                         CATSerialRate="19200"),
+                            "Imported: Hamlib rig control (%s). Review each page before clicking Finish."
+                            % usb_rigs[0], "Import result")
+                check_values(app, {"ckHamlib": True, "cbRigName": usb_rigs[0], "cbSerialPort": "1-2.3",
+                                   "cbSerialRate": "default"})
+
+            # No radio to control, keyed by RTS.
+            check_equal(import_wsjtx(PTTMethod="PTT_method_RTS", PTTport="/dev/ttyFreeDVTest2"),
+                        "Imported: serial port PTT (/dev/ttyFreeDVTest2). Review each page before clicking Finish.",
+                        "Import result")
+            check_values(app, {"ckHamlib": False, "ckSerialPTT": True, "cbCtlDevicePath": "/dev/ttyFreeDVTest2",
+                               "rbUseRTS": True, "rbUseDTR": False})
+
+            # No radio to control and nothing to key it with either.
+            for nothing in [dict(Rig="None", PTTMethod="PTT_method_CAT", PTTport="CAT"),
+                            dict(Rig="None", PTTMethod="PTT_method_DTR", PTTport=""),
+                            dict(MyCall="", MyGrid="", PSKReporter="false")]:
+                check_equal(import_wsjtx(**nothing),
+                            "No usable settings were found in WSJT-X. Review each page before clicking Finish.",
+                            "Import result for %r" % nothing)
+
+            # Who and where, without the rest.
+            check_equal(import_wsjtx(MyCall="ZZ0ZZZ", PSKReporter="TRUE"),
+                        "Imported: callsign, reporting enabled. Review each page before clicking Finish.",
+                        "Import result")
+            check_equal(import_wsjtx(MyGrid="AA00"),
+                        "Imported: grid square. Review each page before clicking Finish.", "Import result")
+
+            app.click("wizard.btnCancel")
+            app.wait_for_window_closed("wizard")
+            quit_and_check_log(app)
+
+
 SCENARIOS = {
     "first_run": test_first_run,
     "second_run": test_second_run,
@@ -836,6 +928,7 @@ SCENARIOS = {
     "hamlib_start": test_hamlib_start,
     "reporting": test_reporting,
     "import": test_import,
+    "import_more": test_import_more,
 }
 
 

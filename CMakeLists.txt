@@ -846,7 +846,7 @@ endif(NOT SANITIZERS_ENABLED)
 # (ctest -LE gui) as a group. Currently Linux-only as they rely on
 # PulseAudio/PipeWire for their audio devices.
 if(LINUX)
-foreach(scenario first_run second_run receive_only cancel auto_select radio_control hamlib_start reporting import)
+foreach(scenario first_run second_run receive_only cancel auto_select radio_control hamlib_start reporting import import_more)
     add_test(NAME gui_setup_wizard_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
     set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)

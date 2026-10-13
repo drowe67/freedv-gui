@@ -1,8 +1,12 @@
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
+
+#include <semaphore.h>
 
 #include <wx/init.h>
 
@@ -31,6 +35,18 @@ struct PulseAudioDeviceTestAccess
     static void overflow(IAudioDevice& device)
     {
         PulseAudioDevice::StreamOverflowCallback_(nullptr, &device);
+    }
+
+    // What starting a device does, once its stream is connected, for the
+    // thread that works to the stream's timing to wait on.
+    static void prepareToPaceWork(PulseAudioDevice& device)
+    {
+        sem_init(&device.sem_, 0, 0);
+    }
+
+    static void finishedPacingWork(PulseAudioDevice& device)
+    {
+        sem_destroy(&device.sem_);
     }
 };
 
@@ -253,6 +269,104 @@ bool xrunsAreReportedToTheDeviceTheyBelongTo()
     return reported;
 }
 
+// A device that nobody's asked to hear about underflows and overflows from
+// (the microphone and speaker tests in Settings, for one) has nothing to call
+// when they happen.
+bool xrunsWithNobodyListeningAreIgnored()
+{
+    auto device = PulseAudioDeviceTestAccess::create("FreeDVTestSpeaker", IAudioEngine::AUDIO_ENGINE_OUT, 48000, 2);
+    PulseAudioDeviceTestAccess::underflow(*device);
+    PulseAudioDeviceTestAccess::overflow(*device);
+
+    // The same once a handler has been taken away again.
+    XrunReport report;
+    device->setOnAudioUnderflow(&recordXrun, &report);
+    device->setOnAudioUnderflow(nullptr, nullptr);
+    PulseAudioDeviceTestAccess::underflow(*device);
+    return report.numTimes == 0;
+}
+
+// How long one round of work takes, from starting it to having waited for
+// the next: the work itself (if any), then stopRealTimeWork().
+double millisecondsForRoundOfWork(PulseAudioDevice& device, int millisecondsWorking, bool fastMode = false)
+{
+    auto begin = std::chrono::steady_clock::now();
+    device.startRealTimeWork();
+    if (millisecondsWorking > 0)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(millisecondsWorking));
+    }
+    device.stopRealTimeWork(fastMode);
+    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+}
+
+// The thread that feeds a device does a round of work every 20 ms, the
+// latency FreeDV asks PulseAudio for (10 ms when it's catching up): however
+// long the work took, the wait afterwards makes the round up to that.
+bool workIsPacedToTheStreamsLatency()
+{
+    auto device = PulseAudioDeviceTestAccess::create("FreeDVTestRadio", IAudioEngine::AUDIO_ENGINE_OUT, 48000, 2);
+    PulseAudioDeviceTestAccess::prepareToPaceWork(*device);
+
+    double idle = millisecondsForRoundOfWork(*device, 0);
+    double busy = millisecondsForRoundOfWork(*device, 5);
+    double fast = millisecondsForRoundOfWork(*device, 0, true);
+
+    PulseAudioDeviceTestAccess::finishedPacingWork(*device);
+
+    // Generous at the top end: the machine may be busy with other things.
+    bool paced = idle >= 19 && idle < 200 && busy >= 19 && busy < 200 && fast >= 9 && fast < 200;
+    if (!paced)
+    {
+        std::cout << "[idle: " << idle << " ms, busy: " << busy << " ms, fast: " << fast << " ms] ";
+    }
+    return paced;
+}
+
+// Work that overruns isn't waited after, and what it overran by comes out
+// of the next wait too, so that the thread catches up rather than falling
+// further and further behind what the device needs.
+bool overrunningWorkIsNotWaitedAfter()
+{
+    auto device = PulseAudioDeviceTestAccess::create("FreeDVTestRadio", IAudioEngine::AUDIO_ENGINE_OUT, 48000, 2);
+    PulseAudioDeviceTestAccess::prepareToPaceWork(*device);
+
+    double overrun = millisecondsForRoundOfWork(*device, 60);   // 40 ms over
+    double catchingUp = millisecondsForRoundOfWork(*device, 0); // no wait at all
+    double caughtUp = millisecondsForRoundOfWork(*device, 0);   // back to normal
+
+    PulseAudioDeviceTestAccess::finishedPacingWork(*device);
+
+    bool caught = overrun >= 60 && overrun < 75 + 100 && catchingUp < 10 && caughtUp >= 19 && caughtUp < 200;
+    if (!caught)
+    {
+        std::cout << "[overrun: " << overrun << " ms, catching up: " << catchingUp << " ms, caught up: " << caughtUp
+                  << " ms] ";
+    }
+    return caught;
+}
+
+// The same goes for work that's held up for seconds, as when the machine
+// is too busy to run it: the next round isn't made to wait even longer.
+bool workHeldUpForSecondsIsNotWaitedAfter()
+{
+    auto device = PulseAudioDeviceTestAccess::create("FreeDVTestRadio", IAudioEngine::AUDIO_ENGINE_OUT, 48000, 2);
+    PulseAudioDeviceTestAccess::prepareToPaceWork(*device);
+
+    millisecondsForRoundOfWork(*device, 2300);
+    double catchingUp = millisecondsForRoundOfWork(*device, 0);
+    double caughtUp = millisecondsForRoundOfWork(*device, 0);
+
+    PulseAudioDeviceTestAccess::finishedPacingWork(*device);
+
+    bool caught = catchingUp < 10 && caughtUp >= 19 && caughtUp < 200;
+    if (!caught)
+    {
+        std::cout << "[catching up: " << catchingUp << " ms, caught up: " << caughtUp << " ms] ";
+    }
+    return caught;
+}
+
 } // namespace
 
 int main()
@@ -271,6 +385,10 @@ int main()
     executeTestCase("deviceStartReportsTheFailureAndWhichDeviceItWas", deviceStartReportsTheFailureAndWhichDeviceItWas);
     executeTestCase("failedDeviceStartLeavesNothingToStop", failedDeviceStartLeavesNothingToStop);
     executeTestCase("xrunsAreReportedToTheDeviceTheyBelongTo", xrunsAreReportedToTheDeviceTheyBelongTo);
+    executeTestCase("xrunsWithNobodyListeningAreIgnored", xrunsWithNobodyListeningAreIgnored);
+    executeTestCase("workIsPacedToTheStreamsLatency", workIsPacedToTheStreamsLatency);
+    executeTestCase("overrunningWorkIsNotWaitedAfter", overrunningWorkIsNotWaitedAfter);
+    executeTestCase("workHeldUpForSecondsIsNotWaitedAfter", workHeldUpForSecondsIsNotWaitedAfter);
 
     return testResult();
 }
