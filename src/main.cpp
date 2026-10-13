@@ -3526,6 +3526,13 @@ void MainFrame::startRxStream()
         // Create link to allow monitoring TX/VK audio
         wxGetApp().linkStep = std::make_shared<LinkStep>(rxOutSoundDevice->getSampleRate());
         
+        // Nothing's left over from an earlier start that got no further
+        // than this (below, when a device couldn't be opened): its
+        // processing threads were never started, and mustn't be mistaken
+        // for this start's, e.g. on changing to receiving only.
+        m_txThread = nullptr;
+        m_rxThread = nullptr;
+
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
@@ -3552,8 +3559,6 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-
-            m_txThread->start();
         }
 
         m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice, MakeTxRxUiHooks());
@@ -3585,6 +3590,15 @@ void MainFrame::startRxStream()
             txOutSoundDevice.reset();
             m_RxRunning = false;
             return;
+        }
+
+        // Both processing threads are only started now, once every device
+        // is open: a thread that was started but never signalled to start
+        // (what the failures above would leave behind) can't be stopped,
+        // and FreeDV then hangs when it exits.
+        if (m_txThread != nullptr)
+        {
+            m_txThread->start();
         }
 
         m_rxThread->start();

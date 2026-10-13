@@ -1993,7 +1993,7 @@ void OptionsDlg::OnApply(wxCommandEvent&)
         else
         {
             freqDouble /= 1000.0;
-            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 1));
+            m_txtCtrlNewFrequency->SetValue(wxNumberFormatter::ToString(freqDouble, 4));
         }
     }
         
