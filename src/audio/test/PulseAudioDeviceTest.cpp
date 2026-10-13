@@ -315,7 +315,10 @@ bool workIsPacedToTheStreamsLatency()
     PulseAudioDeviceTestAccess::finishedPacingWork(*device);
 
     // Generous at the top end: the machine may be busy with other things.
-    bool paced = idle >= 19 && idle < 200 && busy >= 19 && busy < 200 && fast >= 9 && fast < 200;
+    // At the bottom end it's the rounds so far that are checked rather than
+    // each by itself, as a wait that ends late is made up for by shortening
+    // the one after.
+    bool paced = idle >= 19 && idle < 200 && idle + busy >= 39 && busy < 200 && idle + busy + fast >= 49 && fast < 200;
     if (!paced)
     {
         std::cout << "[idle: " << idle << " ms, busy: " << busy << " ms, fast: " << fast << " ms] ";
