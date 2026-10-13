@@ -1086,11 +1086,14 @@ def test_recording_options():
                 # Typed in, anything that a file's name can't have is
                 # replaced as it's typed; the rest is left to go in as usual.
                 # (Some keys never get as far as being typed, depending on
-                # the version of wxWidgets: those leave the suffix as it was.)
+                # the version of wxWidgets: those leave the suffix as it was.
+                # A space isn't among them: it's the PTT key, and in CI, where
+                # the main window still counts as the active one, it keys
+                # the transmitter instead.)
                 suffix = "beginRecording.recordingSuffix"
                 app.set_value(suffix, "")
                 replaced = 0
-                for typed in ["/", "+", ".", " "]:
+                for typed in ["/", "+", ".", "*"]:
                     before = app.get(suffix)["value"]
                     app.key(suffix, typed)
                     time.sleep(0.3)
