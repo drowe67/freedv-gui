@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import wave
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -517,6 +518,20 @@ def test_play_file():
                 check_silent(SPEAKER_MONITOR, "Something is still being played through the speaker")
                 app.menu(start_item)  # back to its original name; cancelled this time
 
+                # A file of nothing but samples is taken to be at the rate
+                # that FreeDV receives at.
+                raw = os.path.join(folder, "tone.raw")
+                with wave.open(tone, "rb") as f, open(raw, "wb") as out:
+                    out.write(f.readframes(f.getnframes()))
+                app.choose_next_path(raw)
+                app.menu(start_item)
+                check(app.get("main")["status"].startswith("Playing raw file %s as radio input (assuming Fs=" % raw),
+                      "Status while playing a raw file is %r" % app.get("main")["status"])
+                check_audible(SPEAKER_MONITOR, "The raw file isn't being played")
+                app.menu(stop_item)
+                check_equal(app.get("main")["status"], "", "Status after stopping")
+                app.menu(start_item)
+
                 stop_modem(app)
                 quit_and_check_log(app)
     finally:
@@ -855,6 +870,19 @@ def test_recording_options():
                 time.sleep(1.1)  # for a different time in the file's name
                 app.click("main.btnRecord")
                 app.wait_for_window("beginRecording")
+                # Typed in, anything that a file's name can't have is
+                # replaced as it's typed; the rest is left to go in as usual.
+                suffix = "beginRecording.recordingSuffix"
+                app.set_value(suffix, "")
+                for typed in ["/", " ", "."]:
+                    app.key(suffix, typed)
+                app.wait_until(lambda: app.get(suffix)["value"] == "___", timeout=5,
+                               description="what was typed to be replaced (the suffix is %r)" % app.get(suffix)["value"])
+                for typed in ["K", "Backspace", "Left"]:
+                    app.key(suffix, typed)
+                time.sleep(0.3)
+                check_equal(app.get(suffix)["value"], "___", "Recording suffix after keys that are left alone")
+
                 app.set_value("beginRecording.recordingSuffix", "../up one/K1ABC")
                 app.click("beginRecording.btnStart")
                 app.wait_for_window_closed("beginRecording")
@@ -869,6 +897,96 @@ def test_recording_options():
                 stop_modem(app)
                 quit_and_check_log(app)
     finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def test_unwritable_files():
+    """Recordings and voice keyer files that can't be written or read."""
+    if os.geteuid() == 0:
+        print("Skipped: nothing is unwritable for root", flush=True)
+        return
+
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
+    try:
+        writable = os.path.join(folder, "writable")
+        read_only = os.path.join(folder, "read_only")
+        os.mkdir(writable)
+        os.mkdir(read_only)
+        not_sound = os.path.join(writable, "not_sound.wav")
+        with open(not_sound, "w") as f:
+            f.write("This is not a sound file.\n")
+        os.chmod(read_only, 0o555)
+
+        def start_recording(what):
+            app.click("main.btnRecord")
+            app.wait_for_window("beginRecording")
+            app.click("beginRecording.%sRecording" % what)
+            app.click("beginRecording.btnStart")
+            app.wait_for_window_closed("beginRecording")
+
+        def check_not_recording(what):
+            check_equal([box["caption"] for box in app.message_boxes(clear=True)], ["Couldn't open sound file"],
+                        "Messages displayed for %s" % what)
+            check_equal(app.get("main.btnRecord")["value"], False, "Record button pressed after %s" % what)
+            check_equal(os.listdir(read_only), [], "Files in the folder that can't be written to")
+
+        with audio_devices():
+            # Nowhere to put what comes from the radio.
+            paths = dict(QuickRecord__SavePath=read_only, QuickRecord__SaveDecodedPath=writable,
+                         VoiceKeyer__WaveFilePath=writable, VoiceKeyer__WaveFile="not_sound.wav")
+            with freedvtest.start(settings=settings(**paths)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                start_recording("raw")
+                check_not_recording("an off air recording")
+                start_recording("both")
+                check_not_recording("both recordings")
+                check_equal([name for name in os.listdir(writable) if name != "not_sound.wav"], [],
+                            "Decoded recordings started")
+
+                # A new voice keyer file can't go there either.
+                app.choose_next_path(os.path.join(read_only, "new.wav"))
+                app.context_menu("main.btnVoiceKeyer", choose="Record new voice keyer file...")
+                check_equal([box["caption"] for box in app.message_boxes(clear=True)], ["Couldn't open sound file"],
+                            "Messages displayed for a new voice keyer file")
+                check_equal(app.get("main.btnVoiceKeyer")["value"], False, "Voice keyer button pressed")
+                check_equal(app.get("main")["status"], "", "Status")
+                stop_modem(app)
+                quit_and_check_log(app)
+
+            # Nowhere to put what's decoded from it. What comes from the
+            # radio had somewhere to go, but isn't recorded by itself.
+            paths = dict(QuickRecord__SavePath=writable, QuickRecord__SaveDecodedPath=read_only,
+                         VoiceKeyer__WaveFilePath=writable, VoiceKeyer__WaveFile="not_sound.wav")
+            with freedvtest.start(settings=settings(**paths)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                start_recording("decoded")
+                check_not_recording("a decoded recording")
+                start_recording("both")
+                check_not_recording("both recordings")
+                check_equal(app.get("main")["status"], "", "Status")
+
+                # A voice keyer file that isn't a sound file isn't transmitted.
+                app.click("main.btnVoiceKeyer")
+                app.wait_until(lambda: app.message_boxes(), timeout=10, description="a message to be displayed")
+                check_equal([box["caption"] for box in app.message_boxes(clear=True)],
+                            ["Couldn't open: %s" % not_sound], "Messages displayed for the voice keyer's file")
+                app.wait_until(lambda: not app.get("main.btnVoiceKeyer")["value"], timeout=10,
+                               description="the voice keyer button to be released")
+                check_equal(transmitting(app), False, "Transmitting a file that isn't a sound file")
+
+                # Recording still works once there's somewhere to put it.
+                os.chmod(read_only, 0o755)
+                start_recording("both")
+                check_equal(app.message_boxes(), [], "Errors displayed")
+                check_equal(app.get("main.btnRecord")["value"], True, "Record button pressed")
+                app.click("main.btnRecord")
+                check_equal(len(os.listdir(read_only)), 1, "Decoded recordings")
+                stop_modem(app)
+                quit_and_check_log(app)
+    finally:
+        os.chmod(os.path.join(folder, "read_only"), 0o755)
         shutil.rmtree(folder, ignore_errors=True)
 
 
@@ -1878,6 +1996,7 @@ SCENARIOS = {
     "voice_keyer_files": test_voice_keyer_files,
     "recording": test_recording,
     "recording_options": test_recording_options,
+    "unwritable_files": test_unwritable_files,
     "monitor_volume": test_monitor_volume,
     "mouse_controls": test_mouse_controls,
     "play_file_loop": test_play_file_loop,

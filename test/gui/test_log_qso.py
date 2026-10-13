@@ -350,6 +350,13 @@ def test_reporter():
                         "Contact logged")
             check(abs(contact["time_on"] - time.time()) < 60, "The contact is logged at %s" % utc(contact["time_on"]))
 
+            # They're also who a recording started now is named after.
+            app.click("main.btnRecord")
+            app.wait_for_window("beginRecording")
+            check_equal(app.get("beginRecording.recordingSuffix")["value"], "K1ABC", "Recording suffix")
+            app.click("beginRecording.btnCancel")
+            app.wait_for_window_closed("beginRecording")
+
             stop_modem(app)
             quit_and_check_log(app)
 

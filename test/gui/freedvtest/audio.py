@@ -151,12 +151,16 @@ class VirtualAudioDevices:
     radio's or microphone's would be, and outputs does the same for further
     output devices. The description is what a device is displayed as, which
     is otherwise its name.
+
+    rates maps the names of output devices to the sample rate each is to run
+    at, for those that aren't to run at the sound server's usual one.
     """
 
-    def __init__(self, *names, outputs=None, inputs=None):
+    def __init__(self, *names, outputs=None, inputs=None, rates=None):
         self._outputs = {name: name for name in names}
         self._outputs.update(outputs or {})
         self._inputs = dict(inputs or {})
+        self._rates = dict(rates or {})
         self._modules = []  # (device name, module index), in the order loaded
 
     @staticmethod
@@ -166,7 +170,9 @@ class VirtualAudioDevices:
     def __enter__(self):
         try:
             for name, description in self._outputs.items():
-                self._load(name, "module-null-sink", "sink_name=" + name, self._properties("sink", description))
+                rate = ["rate=%d" % self._rates[name]] if name in self._rates else []
+                self._load(name, "module-null-sink", "sink_name=" + name, self._properties("sink", description),
+                           *rate)
             if self._inputs:
                 # PipeWire has no module-null-source, but can make a null
                 # sink behave as a source instead.

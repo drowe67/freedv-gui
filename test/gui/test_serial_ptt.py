@@ -238,6 +238,25 @@ def test_errors():
                 stop_modem(app)
                 check_equal(app.quit(), 0, "FreeDV's exit code")
 
+            # Something that can be opened but isn't a serial port: FreeDV
+            # finds that out when it comes to set it up, and carries on
+            # without.
+            not_serial = "/dev/null"
+            config = settings(Rig__UseSerialPTT=True, Rig__Port=not_serial)
+            with freedvtest.start(settings=config, env=ports.env) as app:
+                app.wait_for_window("main")
+                app.click("main.btnOnOff")
+                app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+                app.wait_until(lambda: app.message_boxes(), timeout=10, description="a message to be displayed")
+                check_equal([(box["caption"], box["message"]) for box in app.message_boxes(clear=True)],
+                            [("Error", "Couldn't open serial port for PTT output: Could not open serial port %s"
+                              % not_serial)], "Messages displayed")
+                check_equal(app.state()["running"], True, "Running without %s" % not_serial)
+                key(app)
+                unkey(app)
+                stop_modem(app)
+                check_equal(app.quit(), 0, "FreeDV's exit code")
+
             # No port chosen at all is the same as not using one.
             with freedvtest.start(settings=settings(Rig__UseSerialPTT=True, Rig__Port=""), env=ports.env) as app:
                 app.wait_for_window("main")

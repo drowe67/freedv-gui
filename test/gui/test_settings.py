@@ -20,7 +20,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone, VirtualAudioDevices, record_level
+from freedvtest.audio import Tone, VirtualAudioDevices, record, record_level, tone_share
 
 RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
 RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
@@ -385,6 +385,23 @@ def test_audio_tests():
             check_equal(label(app, "btnSoundCard1OutTest"), "Test", "Test button's label")
             press_cancel(app)
 
+            quit_and_check_log(app)
+
+    # A speaker that runs at a different sample rate from what's recorded:
+    # the recording still comes back through it, at the pitch it went in at.
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 22050}):
+        with freedvtest.start(settings=audio_settings()) as app:
+            open_settings(app, "RX Audio")
+            with Tone(RADIO_RX):
+                app.click(name("btnSoundCard1InTest"))
+                app.wait_until(lambda: label(app, "btnSoundCard1InTest") == "Playing", timeout=15,
+                               description="the recording to be played back")
+            share = tone_share(record(VirtualAudioDevices.input_name(SPEAKER), 1.5)[0], 1000)
+            check(share > 0.5, "The recording played back isn't the 1000 Hz tone that was recorded (%d%% of it is)"
+                  % (100 * share))
+            wait_for_test_to_finish(app, "btnSoundCard1InTest")
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            press_cancel(app)
             quit_and_check_log(app)
 
 

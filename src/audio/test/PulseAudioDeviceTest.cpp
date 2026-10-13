@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -59,9 +60,25 @@ const char* const NO_SOUND_SERVER = "unix:/nonexistent/freedv-test-pulse-socket"
 
 const char* const MISSING_DEVICE = "FreeDVTestMissingDevice";
 
+// Where this was told to find the sound server when it was run, if anywhere.
+const char* const originalSoundServer = getenv("PULSE_SERVER") != nullptr ? strdup(getenv("PULSE_SERVER")) : nullptr;
+
 void useNoSoundServer()
 {
     setenv("PULSE_SERVER", NO_SOUND_SERVER, 1);
+}
+
+// The one that FreeDV itself would use, if there is one.
+void useUsualSoundServer()
+{
+    if (originalSoundServer != nullptr)
+    {
+        setenv("PULSE_SERVER", originalSoundServer, 1);
+    }
+    else
+    {
+        unsetenv("PULSE_SERVER");
+    }
 }
 
 // What PulseAudioEngine::start() and PulseAudioDevice::start() report when
@@ -184,6 +201,64 @@ bool deviceStartReportsTheFailureAndWhichDeviceItWas()
         std::cout << "] ";
     }
     return namedTheDevice;
+}
+
+// What a device reports when it's started with a sound server running (the
+// one that FreeDV would use), or nothing if there isn't one to try it with.
+bool startAgainstSoundServer(const char* deviceName, IAudioEngine::AudioDirection direction, int sampleRate,
+                             int numChannels, std::vector<std::string>& reported)
+{
+    useUsualSoundServer();
+
+    auto device = PulseAudioDeviceTestAccess::create(deviceName, direction, sampleRate, numChannels);
+    device->setOnAudioError(&recordDeviceError, &reported);
+    device->start();
+    device->stop();
+
+    if (reported.size() == 1 && saysThereIsNoSoundServer(reported[0]))
+    {
+        std::cout << "[no sound server to try this with] ";
+        reported.clear();
+        useNoSoundServer();
+        return false;
+    }
+
+    // It copes with having nobody to report to as well, and is left with
+    // nothing running either way.
+    auto unheard = PulseAudioDeviceTestAccess::create(deviceName, direction, sampleRate, numChannels);
+    unheard->start();
+    unheard->stop();
+
+    useNoSoundServer();
+    if (device->isRunning() || unheard->isRunning())
+    {
+        reported.push_back("still running after stop()");
+    }
+    return true;
+}
+
+bool reportedOnly(std::vector<std::string> const& reported, std::string const& expected)
+{
+    bool matches = reported.size() == 1 && reported[0] == expected;
+    if (!matches)
+    {
+        std::cout << "[start() reported " << reported.size() << " error(s) ";
+        printErrors(reported);
+        std::cout << "] ";
+    }
+    return matches;
+}
+
+// The sound server won't make a stream of something that has no channels.
+// That's reported rather than left for whatever uses the stream to find out.
+bool streamThatCannotBeCreatedIsReported()
+{
+    std::vector<std::string> reported;
+    if (!startAgainstSoundServer("FreeDVTestRadio", IAudioEngine::AUDIO_ENGINE_OUT, 48000, 0, reported))
+    {
+        return reported.empty();
+    }
+    return reportedOnly(reported, "Could not create PulseAudio stream for FreeDVTestRadio");
 }
 
 // A device whose start() failed is left with nothing to stop: FreeDV stops
@@ -387,6 +462,7 @@ int main()
     executeTestCase("engineWithoutASoundServerHasNoDevices", engineWithoutASoundServerHasNoDevices);
     executeTestCase("deviceStartReportsTheFailureAndWhichDeviceItWas", deviceStartReportsTheFailureAndWhichDeviceItWas);
     executeTestCase("failedDeviceStartLeavesNothingToStop", failedDeviceStartLeavesNothingToStop);
+    executeTestCase("streamThatCannotBeCreatedIsReported", streamThatCannotBeCreatedIsReported);
     executeTestCase("xrunsAreReportedToTheDeviceTheyBelongTo", xrunsAreReportedToTheDeviceTheyBelongTo);
     executeTestCase("xrunsWithNobodyListeningAreIgnored", xrunsWithNobodyListeningAreIgnored);
     executeTestCase("workIsPacedToTheStreamsLatency", workIsPacedToTheStreamsLatency);

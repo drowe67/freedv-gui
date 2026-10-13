@@ -1111,6 +1111,12 @@ def test_sort_every_column():
             wait_for_cell(app, "K1ABC", STATUS, "TX")
             k1abc.transmit("RADEV1", False)
             wait_for_cell(app, "K1ABC", STATUS, "RX")
+            # (W6XYZ a moment later, so that when each last transmitted differs.)
+            time.sleep(1.1)
+            w6xyz.transmit("RADEV1", True)
+            wait_for_cell(app, "W6XYZ", STATUS, "TX")
+            w6xyz.transmit("RADEV1", False)
+            wait_for_cell(app, "W6XYZ", STATUS, "RX")
             vk5dgr.receive("K1ABC", "RADEV1", 12)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
             w6xyz.receive("AB1CD", "RADEV1", 3)
@@ -1124,6 +1130,7 @@ def test_sort_every_column():
                 VERSION: ["VK5DGR", "W6XYZ", "K1ABC"],
                 FREQUENCY: ["VK5DGR", "K1ABC", "W6XYZ"],
                 MESSAGE: ["VK5DGR", "W6XYZ", "K1ABC"],        # First, Second, Third
+                LAST_TX: ["VK5DGR", "K1ABC", "W6XYZ"],        # never, then the order they did
             }
             for column in app.columns(LIST):
                 if column["title"].strip() == "":
