@@ -1952,6 +1952,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
+      else if (timerId == ID_TIMER_LEVEL_METER_TX)
+      {
+          // Level meter only, handled below. Kept out of the branch below,
+          // which (e.g. the voice keyer) expects to run once per DT.
+      }
       else
       {
          // Update average magnitudes
