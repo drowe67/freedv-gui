@@ -341,7 +341,7 @@ def test_reporter():
                 return [row[0] for row in app.rows("reporter.listSpots")]
 
             app.wait_until(lambda: "K1ABC" in callsigns(), timeout=15, description="K1ABC to be listed")
-            app.select_row("reporter.listSpots", callsigns().index("K1ABC"))
+            app.select_row("reporter.listSpots", (0, "K1ABC"))
 
             open_log_entry(app)
             check_equal(log_entry(app), dict(dxCall="K1ABC", dxLocator="FN42", frequency="7.1770", txReport="59",
@@ -367,7 +367,7 @@ def test_reporter():
                 app.click("logEntry.btnCancel")
                 app.wait_for_window_closed("logEntry")
             app.activate("reporter")
-            app.select_row("reporter.listSpots", callsigns().index("K1ABC"))
+            app.select_row("reporter.listSpots", (0, "K1ABC"))
 
             # They're also who a recording started now is named after.
             app.click("main.btnRecord")
