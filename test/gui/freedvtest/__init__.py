@@ -54,11 +54,26 @@ def default_binary():
     return "src/freedv"
 
 
+# Somewhere for FreeDV to look for a FreeDV Reporter server and not find one.
+NO_REPORTER_SERVER = "127.0.0.1:9"
+
+
 def write_config(path, settings):
     """Creates a FreeDV configuration file. settings maps the names of
     settings as they appear in FreeDV's source code (e.g.
     "/Reporting/Callsign") to their values. Anything not given has its
-    default value, other than the Setup Wizard not being shown on startup."""
+    default value, other than:
+
+    - the Setup Wizard isn't shown on startup ("/FirstTimeUse": True for it
+      to be);
+    - FreeDV doesn't connect to the public FreeDV Reporter server, which it
+      otherwise does as soon as it's launched. It looks for one at
+      NO_REPORTER_SERVER instead (give "/Reporting/FreeDV/Hostname" and
+      "/Reporting/FreeDV/UseTls" for somewhere else)."""
+    settings = dict(settings)
+    if "/Reporting/FreeDV/Hostname" not in settings:
+        settings["/Reporting/FreeDV/Hostname"] = NO_REPORTER_SERVER
+        settings.setdefault("/Reporting/FreeDV/UseTls", False)
     groups = {"": {"FirstTimeUse": 0}}
     for name, value in settings.items():
         group, _, key = name.strip("/").rpartition("/")
@@ -137,6 +152,9 @@ class FreeDV:
 
         if settings is not None:
             write_config(self.config_path, settings)
+        elif config is None:
+            # As when run for the first time, other than keeping to itself.
+            write_config(self.config_path, {"/FirstTimeUse": True})
 
         process_env = dict(os.environ)
         # Labels checked by test scripts are the English ones.
@@ -473,7 +491,18 @@ class FreeDV:
         return self.get(name)
 
     def wait_for_window_closed(self, name, timeout=30):
+        """Waits for a top-level window to go away and, if it was a dialog
+        that FreeDV was waiting on, for FreeDV to have carried on from it
+        (e.g. to have acted on what was chosen)."""
         self.wait_until(lambda: not self.window_exists(name), timeout, "window '%s' to close" % name)
+
+        def carried_on():
+            if not self.state().get("inNestedEventLoop"):
+                return True
+            # Unless another such dialog is still open, which is fine.
+            return any(window["shown"] and window.get("modal") for window in self.windows())
+
+        self.wait_until(carried_on, timeout, "FreeDV to carry on after window '%s' closed" % name)
 
     # -- Lifetime ---------------------------------------------------------
 

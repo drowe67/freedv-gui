@@ -209,7 +209,8 @@ def test_live_view():
         print("Skipping: the public FreeDV Reporter server can't be reached (%s)" % e)
         sys.exit(SKIPPED)
 
-    with freedvtest.start(settings={}) as app:
+    public_server = {"/Reporting/FreeDV/Hostname": "qso.freedv.org", "/Reporting/FreeDV/UseTls": True}
+    with freedvtest.start(settings=public_server) as app:
         open_reporter(app)
         check_equal(app.get("reporter")["label"], "FreeDV Reporter (freedv.conf)", "Window title")
         check_equal(column_titles(app), ["Callsign", "Locator", "km", "Hdg", "Version", "MHz", "Mode", "Status",

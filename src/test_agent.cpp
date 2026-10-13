@@ -1797,6 +1797,14 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_int(doc, state, "numSoundCards", g_nSoundCards);
     yyjson_mut_obj_add_int(doc, state, "sync", running ? freedvInterface.getSync() : 0);
     yyjson_mut_obj_add_bool(doc, state, "analog", g_analog.load(std::memory_order_relaxed) != 0);
+
+    // Whether this is being answered from inside an event loop other than
+    // the application's own, i.e. a dialog's. One that's just been dismissed
+    // can still be finishing up, with whatever FreeDV does once it has closed
+    // yet to happen.
+    auto mainLoop = wxTheApp->GetMainLoop();
+    yyjson_mut_obj_add_bool(
+        doc, state, "inNestedEventLoop", mainLoop != nullptr && wxEventLoopBase::GetActive() != mainLoop);
     yyjson_mut_obj_add_real(doc, state, "rxFreqOffsetHz", g_RxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_real(doc, state, "txFreqOffsetHz", g_TxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_bool(doc, state, "loopPlayFileFromRadio", g_loopPlayFileFromRadio.load(std::memory_order_relaxed));
