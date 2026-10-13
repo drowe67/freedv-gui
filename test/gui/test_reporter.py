@@ -962,6 +962,126 @@ def test_turn_off():
             quit_and_check_log(app)
 
 
+def test_off_at_start():
+    """Left off FreeDV Reporter the last time, FreeDV starts out that way."""
+    with audio_devices(), ReporterServer() as server:
+        watcher = server.viewer()
+        settings = reporter_settings(server.hostname, **{"/Reporting/FreeDV/ForcedOff": True})
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            app.wait_for_window("main")
+            button = "main.btnReporterHidden"
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn On", True), "Button to begin with")
+
+            start_modem_only(app)
+            time.sleep(3)
+            check_equal(CALLSIGN_OF_FREEDV in watcher.callsigns(), False, "Listed on the server while turned off")
+
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button once turned on")
+            app.wait_until(lambda: CALLSIGN_OF_FREEDV in watcher.callsigns(), timeout=15,
+                           description="FreeDV to be listed on the server once turned on")
+            stop_modem(app)
+            quit_and_check_log(app)
+            check_equal(freedvtest.read_config(app.config_path).get("/Reporting/FreeDV/ForcedOff"), "0",
+                        "Saved as turned off")
+
+
+def test_qsy_with_radio():
+    """Being asked to change frequency with a radio that FreeDV can retune:
+    it offers to."""
+    for as_khz, asked, declined, accepted in [(False, "14.2400 MHz", "14.2360", "14.2400"),
+                                              (True, "14240.0 kHz", "14236.0", "14240.0")]:
+        with audio_devices(), ReporterServer() as server:
+            k1abc = server.station("K1ABC", "FN42")
+            k1abc.set_frequency(14240000)
+
+            settings = reporter_settings(server.hostname)
+            settings.update(audio_settings())
+            settings.update({"/Reporting/ManualFrequencyReporting": False, "/Hamlib/UseForPTT": True,
+                             "/Hamlib/RigNameStr": "Hamlib Dummy", "/Reporting/FrequencyAsKHz": as_khz})
+            with freedvtest.start(settings=settings) as app:
+                open_reporter(app)
+                start_modem(app)
+                app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+                app.wait_until(lambda: app.get("main.textModeStatus")["label"] != "unk",
+                               description="FreeDV to connect to the radio")
+
+                def frequency():
+                    return app.get("main.cboReportFrequency")["value"].replace(",", "")
+
+                question = "K1ABC has requested that you QSY to %s. Would you like to change to that frequency now?" \
+                    % asked
+
+                # Declined
+                app.answer_next_message_box("no")
+                k1abc.request_qsy(CALLSIGN_OF_FREEDV, 14240000)
+                app.wait_until(lambda: app.message_boxes(), description="the QSY request to be displayed")
+                check_equal([box["message"].replace(",", "") for box in app.message_boxes(clear=True)], [question],
+                            "Messages displayed")
+                time.sleep(1)
+                check_equal(frequency(), declined, "FreeDV's frequency after declining")
+
+                # Accepted
+                app.answer_next_message_box("yes")
+                k1abc.request_qsy(CALLSIGN_OF_FREEDV, 14240000)
+                app.wait_until(lambda: app.message_boxes(), description="the QSY request to be displayed")
+                check_equal([box["message"].replace(",", "") for box in app.message_boxes(clear=True)], [question],
+                            "Messages displayed")
+                app.wait_until(lambda: frequency() == accepted, timeout=15,
+                               description="FreeDV to change frequency (it's on %s)" % frequency())
+                wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, accepted, timeout=45)
+
+                stop_modem(app)
+                quit_and_check_log(app)
+
+
+def test_new_callsign():
+    """Changing who FreeDV reports as, which can only be done while it's
+    stopped: it's listed under the new callsign from then on."""
+    with audio_devices(), ReporterServer() as server:
+        watcher = server.viewer()
+        settings = reporter_settings(server.hostname)
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            open_reporter(app)
+            start_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == [CALLSIGN_OF_FREEDV], timeout=15,
+                           description="FreeDV to be listed on the server")
+
+            def open_settings():
+                app.menu("Settings/Edit Settings...")
+                app.wait_for_window("settings")
+                app.set_value("settings.notebook", "Reporting")
+
+            def close_settings():
+                app.click("settings.sdbSizer5OK")
+                app.wait_for_window_closed("settings")
+                check_equal(app.message_boxes(), [], "Messages displayed")
+
+            open_settings()
+            for control in ["txt_callsign", "txt_grid_square", "freedvReporterHostname"]:
+                check_equal(app.get("settings." + control)["enabled"], False, control + " enabled while running")
+            close_settings()
+            check_equal(watcher.callsigns(), [CALLSIGN_OF_FREEDV], "Listed on the server after closing Settings")
+
+            stop_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == [], timeout=20,
+                           description="FreeDV to leave the server's list")
+            open_settings()
+            app.set_value("settings.txt_callsign", "ZZ9ZZZ")
+            close_settings()
+
+            start_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == ["ZZ9ZZZ"], timeout=20,
+                           description="only ZZ9ZZZ to be listed on the server (%r is)" % watcher.callsigns())
+            wait_for_callsigns(app, ["ZZ9ZZZ"])
+            wait_for_cell(app, "ZZ9ZZZ", FREQUENCY, "14.2360")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
 def start_modem_only(app):
     """start_modem() for when the FreeDV Reporter window isn't open."""
     app.click("main.btnOnOff")
@@ -1500,6 +1620,9 @@ SCENARIOS = {
     "qsy": test_qsy,
     "row_actions": test_row_actions,
     "turn_off": test_turn_off,
+    "off_at_start": test_off_at_start,
+    "qsy_with_radio": test_qsy_with_radio,
+    "new_callsign": test_new_callsign,
     "sort_every_column": test_sort_every_column,
     "numeric_filters": test_numeric_filters,
     "status_message_flags": test_status_message_flags,

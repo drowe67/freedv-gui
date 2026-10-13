@@ -462,9 +462,10 @@ class FreeDV:
     def key(self, name, key, hold=False, release=False):
         """Presses and releases a key while the given control has the
         keyboard focus. With hold, the key is only pressed; with release, a
-        key that's being held is released. key is a single character or one
-        of Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control, Up,
-        Down, Left, Right and F1 to F12."""
+        key that's being held is released. key is a single character, one of
+        Escape, Space, Tab, Enter, Backspace, Delete, Insert, Home, End,
+        PageUp, PageDown, Shift, Control, Up, Down, Left, Right and F1 to F12,
+        or (as a number) wxWidgets' code for any other key."""
         self.command("key", name=name, key=key, hold=hold or None, release=release or None)
 
     def answer_next_message_box(self, answer):

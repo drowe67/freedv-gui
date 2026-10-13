@@ -1927,14 +1927,21 @@ void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
         { "Up", WXK_UP }, { "Down", WXK_DOWN }, { "Left", WXK_LEFT }, { "Right", WXK_RIGHT },
         { "F1", WXK_F1 }, { "F2", WXK_F2 }, { "F3", WXK_F3 }, { "F4", WXK_F4 }, { "F5", WXK_F5 }, { "F6", WXK_F6 },
         { "F7", WXK_F7 }, { "F8", WXK_F8 }, { "F9", WXK_F9 }, { "F10", WXK_F10 }, { "F11", WXK_F11 },
-        { "F12", WXK_F12 },
+        { "F12", WXK_F12 }, { "Insert", WXK_INSERT }, { "Home", WXK_HOME }, { "End", WXK_END },
+        { "PageUp", WXK_PAGEUP }, { "PageDown", WXK_PAGEDOWN },
     };
 
-    const char* keyStr = yyjson_get_str(yyjson_obj_get(request, "key"));
+    yyjson_val* keyVal = yyjson_obj_get(request, "key");
+    const char* keyStr = yyjson_get_str(keyVal);
     wxString key = (keyStr != nullptr) ? wxString::FromUTF8(keyStr) : wxString();
     int keyCode = 0;
     auto namedKey = namedKeys.find(key);
-    if (namedKey != namedKeys.end())
+    if (yyjson_is_int(keyVal))
+    {
+        // A key code as wxWidgets has it, for keys without a name here.
+        keyCode = (int)yyjson_get_int(keyVal);
+    }
+    else if (namedKey != namedKeys.end())
     {
         keyCode = namedKey->second;
     }

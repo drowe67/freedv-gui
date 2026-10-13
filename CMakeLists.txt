@@ -855,7 +855,7 @@ endforeach(scenario)
 # These also need a window manager to be running and, other than live_view
 # (which is skipped if the public FreeDV Reporter server can't be reached), the
 # Python packages listed in test/gui/freedvtest/reporter.py.
-foreach(scenario live_view stations sorting sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message status_message_flags text_filters saved_filters selection qsy row_actions turn_off window connection_burst)
+foreach(scenario live_view stations sorting sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message status_message_flags text_filters saved_filters selection qsy qsy_with_radio row_actions turn_off off_at_start new_callsign window connection_burst)
     add_test(NAME gui_reporter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
@@ -882,7 +882,7 @@ foreach(scenario manual frequency_in_khz callsign_list reporter)
     set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui)
 endforeach(scenario)
 
-foreach(scenario controls volume equalizer noise_suppression)
+foreach(scenario controls volume equalizer equalizer_receive_only noise_suppression)
     add_test(NAME gui_filter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
     set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
