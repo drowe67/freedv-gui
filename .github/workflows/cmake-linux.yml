@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
