@@ -460,6 +460,42 @@ def test_sound_server_gone_while_starting():
             quit_and_check_log(app)
 
 
+def test_sound_card_gone_while_starting():
+    """One sound card going away part way through FreeDV starting: the sound
+    cards check out, and then one of them isn't there when it comes to
+    opening the streams. FreeDV names the one that's gone, and starts none
+    of them. Which card plays which part depends on whether the second pair
+    is set up at all, so both ways round are covered here."""
+    receive_only = dict(soundCard1Out=SPEAKER, soundCard2In="none", soundCard2Out="none")
+    cases = [
+        # (settings changes, the part the card plays, the device that goes,
+        # how FreeDV's settings name it, the devices that stay)
+        ({}, "TX output", RADIO_TX, RADIO_TX, (RADIO_RX, MICROPHONE, SPEAKER)),
+        ({}, "RX input", RADIO_RX, CARDS["soundCard1In"], (RADIO_TX, MICROPHONE, SPEAKER)),
+        ({}, "RX output", SPEAKER, SPEAKER, (RADIO_RX, RADIO_TX, MICROPHONE)),
+        (receive_only, "RX input", RADIO_RX, CARDS["soundCard1In"], (SPEAKER,)),
+        (receive_only, "RX output", SPEAKER, SPEAKER, (RADIO_RX,)),
+    ]
+    for changes, role, gone, named, kept in cases:
+        with AudioServerGateway() as gateway:
+            with VirtualAudioDevices(*kept), VirtualAudioDevices(gone) as removable:
+                with freedvtest.start(settings=card_settings(**changes), env=gateway.env()) as app:
+                    app.wait_for_window("main")
+
+                    # FreeDV connects to the sound server to check its sound
+                    # cards, and closes that connection before opening any
+                    # streams. That's when the card is unplugged.
+                    gateway.after_next_connection_close(lambda: removable.remove(gone))
+                    try_to_start(app)
+
+                    boxes = sorted((box["caption"], box["message"]) for box in app.message_boxes(clear=True))
+                    check_equal(boxes, [("Error", "Could not find %s sound device '%s'. Please check settings and "
+                                                  "try again." % (role, named))],
+                                "Messages displayed when %s went while starting" % named)
+                    check_not_started(app, "with %s gone while starting" % named)
+                    quit_and_check_log(app)
+
+
 def quit_and_check_log_without_lost_devices(app):
     check_equal(app.message_boxes(), [], "Errors displayed")
     check_equal(app.quit(), 0, "FreeDV's exit code")
@@ -477,6 +513,7 @@ SCENARIOS = {
     "device_removed": test_device_removed,
     "sound_server_restarted": test_sound_server_restarted,
     "sound_server_gone_while_starting": test_sound_server_gone_while_starting,
+    "sound_card_gone_while_starting": test_sound_card_gone_while_starting,
 }
 
 

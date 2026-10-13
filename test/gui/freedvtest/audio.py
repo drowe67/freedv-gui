@@ -133,7 +133,7 @@ class VirtualAudioDevices:
         self._outputs = {name: name for name in names}
         self._outputs.update(outputs or {})
         self._inputs = dict(inputs or {})
-        self._modules = []
+        self._modules = []  # (device name, module index), in the order loaded
 
     @staticmethod
     def input_name(name):
@@ -142,7 +142,7 @@ class VirtualAudioDevices:
     def __enter__(self):
         try:
             for name, description in self._outputs.items():
-                self._load("module-null-sink", "sink_name=" + name, self._properties("sink", description))
+                self._load(name, "module-null-sink", "sink_name=" + name, self._properties("sink", description))
             if self._inputs:
                 # PipeWire has no module-null-source, but can make a null
                 # sink behave as a source instead.
@@ -150,11 +150,11 @@ class VirtualAudioDevices:
                 for name, description in self._inputs.items():
                     if pipewire:
                         self._load(
-                            "module-null-sink", "media.class=Audio/Source/Virtual",
+                            name, "module-null-sink", "media.class=Audio/Source/Virtual",
                             "sink_name=" + name, self._properties("sink", description))
                     else:
                         self._load(
-                            "module-null-source", "source_name=" + name,
+                            name, "module-null-source", "source_name=" + name,
                             self._properties("source", description))
             for name in self._outputs:
                 self._wait_for("sinks", name)
@@ -166,7 +166,7 @@ class VirtualAudioDevices:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        for module in reversed(self._modules):
+        for _, module in reversed(self._modules):
             subprocess.call(["pactl", "unload-module", module])
         self._modules = []
         return False
@@ -176,8 +176,30 @@ class VirtualAudioDevices:
         it: there's nothing left to remove at the end of the "with" block."""
         self._modules = []
 
-    def _load(self, *args):
-        self._modules.append(_pactl("load-module", *args).strip())
+    def remove(self, *names):
+        """Unloads the named devices now, and waits until the sound server
+        stops listing them (and, for outputs, their monitors)."""
+        for name in names:
+            for entry in [entry for entry in self._modules if entry[0] == name]:
+                subprocess.call(["pactl", "unload-module", entry[1]])
+                self._modules.remove(entry)
+        gone = [name for name in names for name in (name, self.input_name(name))]
+        deadline = time.monotonic() + 10
+        while True:
+            listed = set()
+            for kind in ("sinks", "sources"):
+                for line in _pactl("list", "short", kind).splitlines():
+                    fields = line.split("\t")
+                    if len(fields) > 1:
+                        listed.add(fields[1])
+            if not any(name in listed for name in gone):
+                return
+            if time.monotonic() > deadline:
+                raise RuntimeError("Audio device %s was still listed after being removed" % ", ".join(gone))
+            time.sleep(0.1)
+
+    def _load(self, name, *args):
+        self._modules.append((name, _pactl("load-module", *args).strip()))
 
     @staticmethod
     def _properties(kind, description):
@@ -340,6 +362,10 @@ class AudioServerGateway:
     that is closed as soon as it's made, which is what a server that has just
     gone does.
 
+    after_next_connection_close(action) instead lets a test do something of
+    its own (take a sound card away, say) when the next connection closes,
+    holding back the connections after it until that's done.
+
     FreeDV is pointed at the gateway with env(); the test's own audio calls
     (see _pactl) keep going to the sound server directly.
     """
@@ -349,6 +375,8 @@ class AudioServerGateway:
         self._socket = None
         self._refusing = False
         self._refuse_after_close = False
+        self._trigger = None    # (action, barrier) for the next connection
+        self._barrier = None    # set once that action has run
 
     def __enter__(self):
         self._folder = tempfile.mkdtemp(prefix="freedvtest-gateway-")
@@ -379,32 +407,55 @@ class AudioServerGateway:
         in between looks like to it."""
         self._refuse_after_close = True
 
+    def after_next_connection_close(self, action):
+        """Runs action() when the next connection that FreeDV makes has
+        closed, and before anything is relayed on the connections after it.
+        FreeDV closes the connection it made while checking its sound cards
+        before it opens any streams, so this is what a sound card going away
+        in between looks like to it."""
+        self._barrier = threading.Event()
+        self._trigger = (action, self._barrier)
+
     def _accept(self):
         while True:
             try:
                 client, _ = self._socket.accept()
             except OSError:
                 return
-            threading.Thread(target=self._serve, args=(client,), daemon=True).start()
+            # Only the first connection after after_next_connection_close()
+            # is the one that triggers it.
+            trigger, self._trigger = self._trigger, None
+            threading.Thread(target=self._serve, args=(client, trigger), daemon=True).start()
 
-    def _serve(self, client):
-        if self._refusing:
-            client.close()
-            return
+    def _serve(self, client, trigger=None):
+        if trigger is None and self._barrier is not None:
+            # What the connection before this one was asked to do (taking a
+            # sound card away, say) is finished before this one carries
+            # anything.
+            self._barrier.wait()
         try:
-            server = _connect_to_sound_server()
-        except OSError:
+            if self._refusing:
+                client.close()
+                return
+            try:
+                server = _connect_to_sound_server()
+            except OSError:
+                client.close()
+                return
+            pairs = []
+            for source, sink in ((client, server), (server, client)):
+                pair = threading.Thread(target=_relay, args=(source, sink), daemon=True)
+                pair.start()
+                pairs.append(pair)
+            for pair in pairs:
+                pair.join()
             client.close()
-            return
-        pairs = []
-        for source, sink in ((client, server), (server, client)):
-            pair = threading.Thread(target=_relay, args=(source, sink), daemon=True)
-            pair.start()
-            pairs.append(pair)
-        for pair in pairs:
-            pair.join()
-        client.close()
-        server.close()
+            server.close()
+        finally:
+            if trigger is not None:
+                action, barrier = trigger
+                action()
+                barrier.set()
         if self._refuse_after_close:
             self._refuse_after_close = False
             self._refusing = True
