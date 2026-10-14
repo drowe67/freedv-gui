@@ -119,7 +119,8 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         # Shared with build-unit-tests below, which compiles the same
-        # things with the same flags (plus the tests themselves).
+        # things with the same flags (plus the tests themselves). This job
+        # is the one that saves it, as it builds the whole application.
         key: windows-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
         max-size: "1G"
         verbose: 2
@@ -204,8 +205,13 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
-        # Shared with build-sanitizer above for the sanitizer variants.
+        # Shared with build-sanitizer above for the sanitizer variants, and
+        # left for that job to save: saved from here as well, there'd be two
+        # copies of nearly the same thing from every run, only the newer of
+        # which is ever used. Only the tests themselves are compiled afresh
+        # each time as a result. The plain variants have no such twin.
         key: windows-${{ matrix.variant }}-${{ matrix.arch }}
+        save: ${{ matrix.variant == 'plain' }}
         max-size: "1G"
         verbose: 2
 
