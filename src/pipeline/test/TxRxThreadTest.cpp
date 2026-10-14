@@ -29,6 +29,7 @@
 #include <sndfile.h>
 
 #include "../TxRxThread.h"
+#include "../TxOutputStart.h"
 #include "pipeline/LinkStep.h"
 #include "pipeline/ResampleStep.h"
 #include "pipeline/test/SpeechSample.h"
@@ -62,6 +63,7 @@ std::atomic<bool>   g_monitorTxAudio(false);
 std::atomic<bool>   g_monitorVoiceKeyerAudio(false);
 std::atomic<bool>   g_totBeepActive(false);
 std::atomic<bool>   g_eoo_enqueued(false);
+std::atomic<bool>   g_txOutputStarted(false);
 std::atomic<bool>   g_recFileFromModulator(false);
 std::atomic<bool>   g_recFileFromMic(false);
 std::atomic<bool>   g_recVoiceKeyerFile(false);
@@ -142,6 +144,7 @@ void resetGlobals()
     g_monitorVoiceKeyerAudioVol = 0.0f;
     g_totBeepActive = false;
     g_eoo_enqueued = false;
+    g_txOutputStarted = false;
     g_analog = 0;
     g_State = 0;
     g_channel_noise = 0;
@@ -528,10 +531,12 @@ struct SoundCardCounts
 // One turn of a pair of sound cards running off the same clock, as the
 // application's callbacks do it: so many samples arrive from one, the thread
 // gets to run, and the other takes the same number away (silence, if they
-// aren't there to take).
+// aren't there to take). toRadio is for the pair that a transmission goes
+// through, whose output is the radio's sound card: that one isn't given
+// anything until enough is ready, and then gets a whole block or nothing.
 template<typename ProcessFn>
 std::vector<short> soundCardsTurn(
-    GenericFIFO<short>* in, GenericFIFO<short>* out, const short* samples, int numSamples, bool allOrNothing,
+    GenericFIFO<short>* in, GenericFIFO<short>* out, const short* samples, int numSamples, int sampleRate, bool toRadio,
     ProcessFn process, SoundCardCounts& counts, bool outputTaken = true)
 {
     if (numSamples > 0 && in->write(const_cast<short*>(samples), numSamples) != 0)
@@ -545,12 +550,17 @@ std::vector<short> soundCardsTurn(
     if (outputTaken && numSamples > 0)
     {
         int available = std::min(out->numUsed(), numSamples);
-        if (available < numSamples)
+        if (toRadio)
         {
+            // (What MainFrame::OnTxOutAudioData_() goes by.)
+            auto output = txOutputFor(out->numUsed(), out->capacity(), numSamples, sampleRate, false, g_txOutputStarted);
+            if (output == TxOutput::Short) counts.outputUnderruns++;
+            if (output != TxOutput::Ready) available = 0;
+        }
+        else if (available < numSamples)
+        {
+            // The speaker's gets whatever there is.
             counts.outputUnderruns++;
-            // The radio's sound card gets a whole block or nothing; the
-            // speaker's gets whatever there is.
-            if (allOrNothing) available = 0;
         }
         if (available > 0)
         {
@@ -2024,7 +2034,7 @@ public:
                 }
 
                 auto sent = soundCardsTurn(
-                    g_rxUserdata->infifo2, g_rxUserdata->outfifo1, samples, block, true,
+                    g_rxUserdata->infifo2, g_rxUserdata->outfifo1, samples, block, sampleRate, true,
                     [&]() { thread.txProcessing_(&helper); }, result.tx);
                 signal.insert(signal.end(), sent.begin(), sent.end());
 
@@ -2090,7 +2100,7 @@ public:
             auto process = [&]() { thread.rxProcessing_(&helper); };
             for (int quiet = 0; quiet < sampleRate / 2; quiet += sampleRate / 50)
             {
-                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, silence.data(), sampleRate / 50, false, process, result.rx);
+                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, silence.data(), sampleRate / 50, sampleRate, false, process, result.rx);
             }
             result.rx = SoundCardCounts();
 
@@ -2119,7 +2129,7 @@ public:
                 }
                 received += block;
 
-                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, samples, block, false, process, result.rx);
+                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, samples, block, sampleRate, false, process, result.rx);
 
                 bool nowInSync = freedvInterface.getSync() != 0;
                 if (nowInSync && result.secondsToSync < 0)
@@ -2181,11 +2191,8 @@ public:
     }
 
     // mostLoss is what's allowed between what was sent and what came back:
-    // rade_loss allows 0.15. With fromFiles it's for all of it, as there;
-    // otherwise for all but the first two seconds received, as speech from
-    // a microphone starts off interleaved with silence while the thread
-    // builds up what it keeps ready for the radio's sound card.
-    static bool checkRoundTrip(const char* what, RoundTrip const& roundTrip, bool fromFiles, double mostLoss = 0.15)
+    // rade_loss allows 0.15.
+    static bool checkRoundTrip(const char* what, RoundTrip const& roundTrip, double mostLoss = 0.15)
     {
         if (!roundTrip.ran)
         {
@@ -2207,20 +2214,17 @@ public:
         bool result = true;
         auto fail = [&]() -> std::ostream& { result = false; return std::cout << "[" << what << ": "; };
 
-        // Nothing was lost on the way in, and the signal has no holes in it
-        // once it's going. (Right at the start it can: the thread has nothing
-        // in hand yet for the radio's sound card, which gets silence if it
-        // asks for more than has been made.)
+        // Nothing was lost on the way in, the radio's sound card never asked
+        // for more than was ready, and the signal has no holes in it.
         if (roundTrip.tx.inputOverflows != 0) fail() << roundTrip.tx.inputOverflows << " blocks from the microphone had nowhere to go] ";
         if (roundTrip.rx.inputOverflows != 0) fail() << roundTrip.rx.inputOverflows << " blocks from the radio had nowhere to go] ";
-        if (roundTrip.silentSamplesSentOnceGoing != 0) fail() << roundTrip.silentSamplesSentOnceGoing << " samples of silence within the signal sent, the last " << roundTrip.lastSilenceAt << " s into it] ";
+        if (roundTrip.tx.outputUnderruns != 0) fail() << "the radio's sound card went short " << roundTrip.tx.outputUnderruns << " times] ";
+        if (roundTrip.silentSamplesSent != 0) fail() << roundTrip.silentSamplesSent << " samples of silence within the signal sent, the last " << roundTrip.lastSilenceAt << " s into it] ";
 
-        // What's sent is the speech and no more: from a file, exactly; from
-        // the microphone, with no more silence put in than it takes to fill
-        // what's kept ready for the radio's sound card (640 ms).
+        // What's sent is the speech and no more: nothing's put in to make up
+        // for the microphone being behind.
         int extraFrames = roundTrip.framesSent - roundTrip.framesOfSpeech;
-        int mostExtraFrames = fromFiles ? 1 : 64 + 4;
-        if (extraFrames < -1 || extraFrames > mostExtraFrames)
+        if (extraFrames < -4 || extraFrames > 1)
         {
             fail() << roundTrip.framesSent << " frames sent for " << roundTrip.framesOfSpeech << " of speech] ";
         }
@@ -2232,8 +2236,7 @@ public:
         // Most of what was sent comes back (the receiver takes a moment to
         // find the signal), and as what was sent.
         if (roundTrip.framesReceived < roundTrip.framesOfSpeech - 300) fail() << roundTrip.framesReceived << " frames received of " << roundTrip.framesOfSpeech << " of speech] ";
-        double loss = fromFiles ? roundTrip.loss : roundTrip.lossOnceGoing;
-        if (loss < 0 || loss > mostLoss) fail() << "loss " << loss << ", expected " << mostLoss << " at most] ";
+        if (roundTrip.loss < 0 || roundTrip.loss > mostLoss) fail() << "loss " << roundTrip.loss << ", expected " << mostLoss << " at most] ";
         return result;
     }
 
@@ -2244,7 +2247,7 @@ public:
 
     static bool speechSurvivesRoundTrip()
     {
-        return checkRoundTrip("48 kHz, 20 ms blocks", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 0, 0, false, false), false);
+        return checkRoundTrip("48 kHz, 20 ms blocks", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 0, 0, false, false));
     }
 
     // However the sound cards happen to chop it up: it's the same samples in
@@ -2252,14 +2255,14 @@ public:
     static bool speechSurvivesRoundTripInBlocksOfAnySize()
     {
         bool result = true;
-        result &= checkRoundTrip("48 kHz, uneven blocks sent", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 1, 0, false, false), false);
-        result &= checkRoundTrip("48 kHz, uneven blocks received", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 0, 2, false, false), false);
-        result &= checkRoundTrip("48 kHz, uneven blocks both ways", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 3, 4, false, false), false);
-        result &= checkRoundTrip("44.1 kHz, uneven blocks both ways", sendAndReceiveSpeech(44100, ROUND_TRIP_SECONDS, 5, 6, false, false), false);
+        result &= checkRoundTrip("48 kHz, uneven blocks sent", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 1, 0, false, false));
+        result &= checkRoundTrip("48 kHz, uneven blocks received", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 0, 2, false, false));
+        result &= checkRoundTrip("48 kHz, uneven blocks both ways", sendAndReceiveSpeech(48000, ROUND_TRIP_SECONDS, 3, 4, false, false));
+        result &= checkRoundTrip("44.1 kHz, uneven blocks both ways", sendAndReceiveSpeech(44100, ROUND_TRIP_SECONDS, 5, 6, false, false));
         // (Sound cards that only do telephone quality cost some of the speech
         // before FreeDV sees it, and what's sent is that much further from
         // what the vocoder was made for.)
-        result &= checkRoundTrip("8 kHz, uneven blocks both ways", sendAndReceiveSpeech(8000, ROUND_TRIP_SECONDS, 7, 8, false, false), false, 0.3);
+        result &= checkRoundTrip("8 kHz, uneven blocks both ways", sendAndReceiveSpeech(8000, ROUND_TRIP_SECONDS, 7, 8, false, false), 0.3);
         return result;
     }
 
@@ -2268,8 +2271,8 @@ public:
     static bool speechSurvivesRoundTripThroughFiles()
     {
         bool result = true;
-        result &= checkRoundTrip("files, 20 ms blocks", sendAndReceiveSpeech(48000, WHOLE_RECORDING_SECONDS, 0, 0, true, true), true);
-        result &= checkRoundTrip("files, uneven blocks", sendAndReceiveSpeech(48000, WHOLE_RECORDING_SECONDS, 9, 10, true, true), true);
+        result &= checkRoundTrip("files, 20 ms blocks", sendAndReceiveSpeech(48000, WHOLE_RECORDING_SECONDS, 0, 0, true, true));
+        result &= checkRoundTrip("files, uneven blocks", sendAndReceiveSpeech(48000, WHOLE_RECORDING_SECONDS, 9, 10, true, true));
         return result;
     }
 
@@ -2283,7 +2286,6 @@ public:
         long delivered = 0;         // samples of tone that came out
         long breaks = 0;            // places where it wasn't the same tone carrying on
         long unexplainedBreaks = 0; // ...with nothing just before to account for it
-        long microphoneShort = 0;   // turns when there wasn't a frame from the microphone to send
         long lateEvents = 0;        // things that account for breaks, once it had got going
         SoundCardCounts counts;
     };
@@ -2294,10 +2296,8 @@ public:
     //
     // A break in the tone is accounted for if, no longer before it than it
     // takes to get through everything waiting either side of the thread, a
-    // block from a sound card had nowhere to go, a sound card wanted more
-    // than was there or had stopped taking any, or (transmitting) the
-    // microphone hadn't delivered a frame's worth when the thread had room
-    // to send one, which it fills with silence.
+    // block from a sound card had nowhere to go, or a sound card wanted more
+    // than was there or had stopped taking any.
     static Continuity toneThrough(bool tx, unsigned int seed, bool stalls)
     {
         Continuity result;
@@ -2317,7 +2317,6 @@ public:
         constexpr double TONE_HZ = 500.0;
         constexpr long TOTAL = 60L * TEST_SAMPLE_RATE;
         constexpr long GOING = 10L * TEST_SAMPLE_RATE;
-        constexpr int FRAME = TEST_SAMPLE_RATE / 50;
         // Everything the FIFOs either side of the thread can hold, and a second.
         const long WITHIN = in->capacity() + out->capacity() + TEST_SAMPLE_RATE;
         const double step = 2.0 * M_PI * TONE_HZ / TEST_SAMPLE_RATE;
@@ -2355,29 +2354,10 @@ public:
             if (stalledFor > 0) stalledFor--;
 
             bool event = !taken;
-            auto process = [&]()
-            {
-                if (tx)
-                {
-                    // (While there's room for a frame of the modem's, it
-                    // sends 20 ms at a time.)
-                    int room = out->numFree();
-                    int modemFrame = (freedvInterface.getTxNNomModemSamples() * TEST_SAMPLE_RATE) / freedvInterface.getTxModemSampleRate();
-                    if (room >= modemFrame && in->numUsed() / FRAME < (room - modemFrame) / FRAME + 1)
-                    {
-                        result.microphoneShort++;
-                        event = true;
-                    }
-                    thread.txProcessing_(&helper);
-                }
-                else
-                {
-                    thread.rxProcessing_(&helper);
-                }
-            };
+            auto process = [&]() { if (tx) thread.txProcessing_(&helper); else thread.rxProcessing_(&helper); };
 
             auto countsBefore = result.counts;
-            auto turn = soundCardsTurn(in, out, block.data(), numSamples, tx, process, result.counts, taken);
+            auto turn = soundCardsTurn(in, out, block.data(), numSamples, TEST_SAMPLE_RATE, tx, process, result.counts, taken);
             event |= result.counts.inputOverflows != countsBefore.inputOverflows ||
                      result.counts.outputUnderruns != countsBefore.outputUnderruns;
             if (event)
@@ -2414,9 +2394,8 @@ public:
         {
             std::cout << std::endl << "    " << what << ": " << continuity.delivered << " samples of tone out; " << continuity.breaks
                       << " breaks (" << continuity.unexplainedBreaks << " unexplained); " << continuity.counts.inputOverflows
-                      << " input overflows, " << continuity.counts.outputUnderruns << " output underruns, "
-                      << continuity.microphoneShort << " turns short of microphone; " << continuity.lateEvents
-                      << " such things after the first 10 s ";
+                      << " input overflows, " << continuity.counts.outputUnderruns << " output underruns; "
+                      << continuity.lateEvents << " such things after the first 10 s ";
         }
 
         bool result = true;
@@ -2441,20 +2420,19 @@ public:
 
         // Receiving, the speaker gets silence when it asks for more than has
         // been decoded, which leaves that much more in hand for the next
-        // time: it soon stops happening. Transmitting, a frame of silence
-        // goes out whenever the microphone is a frame behind the radio, each
-        // of which leaves that much more in hand as well: no more than the
-        // 32 frames (640 ms) that are kept ready for the radio altogether.
+        // time: it soon stops happening. Transmitting, the radio's sound
+        // card isn't given anything until there's enough in hand, so the
+        // tone goes out in one piece.
         if (!stalls && !transmitting && continuity.counts.outputUnderruns > 16)
         {
             std::cout << "[" << what << ": the speaker went short " << continuity.counts.outputUnderruns
                       << " times, expected 16 at most] ";
             result = false;
         }
-        if (!stalls && transmitting && continuity.microphoneShort > 32 + 2)
+        if (!stalls && transmitting && (continuity.breaks != 0 || continuity.counts.outputUnderruns != 0))
         {
-            std::cout << "[" << what << ": silence sent in place of the microphone " << continuity.microphoneShort
-                      << " times, expected 32 at most] ";
+            std::cout << "[" << what << ": the tone was broken in " << continuity.breaks << " places and the radio's sound card went short "
+                      << continuity.counts.outputUnderruns << " times] ";
             result = false;
         }
         return result;
