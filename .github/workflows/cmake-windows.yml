@@ -45,7 +45,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
-        max-size: "5G"
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages
@@ -121,7 +121,7 @@ jobs:
         # Shared with build-unit-tests below, which compiles the same
         # things with the same flags (plus the tests themselves).
         key: windows-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        max-size: "5G"
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages
@@ -206,7 +206,7 @@ jobs:
       with:
         # Shared with build-sanitizer above for the sanitizer variants.
         key: windows-${{ matrix.variant }}-${{ matrix.arch }}
-        max-size: "5G"
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages
