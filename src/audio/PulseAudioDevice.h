@@ -73,7 +73,11 @@ public:
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
-    
+
+    // Lets the unit tests create one directly, and call the callbacks that
+    // PulseAudio calls on a stream's thread.
+    friend struct PulseAudioDeviceTestAccess;
+
     PulseAudioDevice(wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:

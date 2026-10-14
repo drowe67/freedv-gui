@@ -209,7 +209,8 @@ def test_live_view():
         print("Skipping: the public FreeDV Reporter server can't be reached (%s)" % e)
         sys.exit(SKIPPED)
 
-    with freedvtest.start(settings={}) as app:
+    public_server = {"/Reporting/FreeDV/Hostname": "qso.freedv.org", "/Reporting/FreeDV/UseTls": True}
+    with freedvtest.start(settings=public_server) as app:
         open_reporter(app)
         check_equal(app.get("reporter")["label"], "FreeDV Reporter (freedv.conf)", "Window title")
         check_equal(column_titles(app), ["Callsign", "Locator", "km", "Hdg", "Version", "MHz", "Mode", "Status",
@@ -229,11 +230,18 @@ def test_live_view():
         print("%d station(s) listed" % len(rows))
         for row in rows:
             check(row[CALLSIGN] != "", "A row has no callsign: %r" % row)
-            check(row[FREQUENCY] != "", "%s has no frequency" % row[CALLSIGN])
             check(row[LAST_UPDATE] != "", "%s has no last update time" % row[CALLSIGN])
             # Without a grid square of our own, there are no distances.
             check_equal(row[DISTANCE], "", "%s's distance" % row[CALLSIGN])
-        frequencies = [float(row[FREQUENCY]) for row in rows]
+        # Lowest frequency first. (Not everyone on there has said what frequency
+        # they're on, and the list is changing all the time, so it gets a
+        # few goes at being caught in order.)
+        for attempt in range(5):
+            frequencies = [float(row[FREQUENCY].replace(",", "")) for row in app.rows(LIST)
+                           if row[FREQUENCY].strip() != ""]
+            if frequencies == sorted(frequencies):
+                break
+            time.sleep(1)
         check_equal(frequencies, sorted(frequencies), "Frequencies listed")
 
         # With nothing to report as, there's nothing to send.
@@ -341,6 +349,16 @@ def test_sorting():
 
             app.click_column(LIST, FREQUENCY)
             check_equal(sort_order(app), (FREQUENCY, False), "Sort order")
+            wait_for_callsigns(app, ["W6XYZ", "K1ABC", "VK5DGR"])
+
+            # Someone a long way up the dial (here, on a satellite's uplink)
+            # still comes after everyone below them.
+            with server.station("DL1ABC", "JO62") as satellite:
+                satellite.set_frequency(2400050000)
+                wait_for_callsigns(app, ["DL1ABC", "W6XYZ", "K1ABC", "VK5DGR"])
+                app.click_column(LIST, FREQUENCY)
+                wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ", "DL1ABC"])
+                app.click_column(LIST, FREQUENCY)
             wait_for_callsigns(app, ["W6XYZ", "K1ABC", "VK5DGR"])
 
             app.click_column(LIST, CALLSIGN)
@@ -731,6 +749,30 @@ def test_status_message():
             saved_message_menu(0, "Delete message")
             check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"], "Saved messages after deleting one")
 
+            # Changing one's mind, changing nothing or leaving nothing leaves
+            # the list as it was, as does adding what's already there.
+            def answer(title, text, button):
+                app.wait_for_window("@" + title)
+                if text is not None:
+                    app.set_value("@%s/wxTextCtrl" % title, text)
+                app.click("@%s/%s" % (title, button))
+                app.wait_for_window_closed("@" + title)
+                app.activate("reporter")
+
+            for text, button in [("Something else", "Cancel"), (None, "OK"), ("", "OK"), ("   ", "OK")]:
+                saved_message_menu(0, "Edit message")
+                answer("Edit Message", text, button)
+                check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"],
+                            "Saved messages after editing one to %r and pressing %s" % (text, button))
+            for text, button in [("Something else", "Cancel"), ("", "OK"), ("QRV 40 m", "OK"), ("qrv 40 m ", "OK")]:
+                saved_message_menu(0, "Add new message")
+                answer("Add Message", text, button)
+                expected = ["Back in 10 minutes", "QRV 40 m"] + (["qrv 40 m"] if text == "qrv 40 m " else [])
+                check_equal(sorted(saved(app)), sorted(expected),
+                            "Saved messages after adding %r and pressing %s" % (text, button))
+            saved_message_menu(saved(app).index("qrv 40 m"), "Delete message")
+            check_equal(saved(app), ["Back in 10 minutes", "QRV 40 m"], "Saved messages after deleting one")
+
             # The Clear button's menu removes saved messages: the one in the
             # box, or all of them.
             app.activate("reporter")
@@ -881,11 +923,16 @@ def test_row_actions():
             # ...and with one, takes it to where that station is.
             start_modem(app)
             app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+            # Once FreeDV has the radio, that is: on connecting to it, FreeDV
+            # tunes it to the frequency chosen in the main window, which would
+            # undo a double-click from before then.
+            app.wait_until(lambda: app.get("main.textModeStatus")["label"] != "unk",
+                           description="FreeDV to connect to the radio")
             app.select_row(LIST, (CALLSIGN, "K1ABC"))
             app.activate_row(LIST, (CALLSIGN, "K1ABC"))
             app.wait_until(lambda: app.get("main.cboReportFrequency")["value"] == "7.1770", timeout=15,
                            description="FreeDV's radio to be tuned to K1ABC's frequency")
-            wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, "7.1770")
+            wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, "7.1770", timeout=45)
             check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
                         "Selected station after double-clicking")
             app.activate_row(LIST, (CALLSIGN, "VK5DGR"))
@@ -909,6 +956,12 @@ def test_turn_off():
 
             def listed():
                 return CALLSIGN_OF_FREEDV in watcher.callsigns()
+
+            # Pressed before starting, it's only a note of what's wanted.
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn On", True), "Button while stopped")
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button while stopped")
 
             start_modem_only(app)
             app.wait_until(listed, timeout=15, description="FreeDV to be listed on the server")
@@ -939,12 +992,649 @@ def test_turn_off():
             quit_and_check_log(app)
 
 
+def test_off_at_start():
+    """Left off FreeDV Reporter the last time, FreeDV starts out that way."""
+    with audio_devices(), ReporterServer() as server:
+        watcher = server.viewer()
+        settings = reporter_settings(server.hostname, **{"/Reporting/FreeDV/ForcedOff": True})
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            app.wait_for_window("main")
+            button = "main.btnReporterHidden"
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn On", True), "Button to begin with")
+
+            start_modem_only(app)
+            time.sleep(3)
+            check_equal(CALLSIGN_OF_FREEDV in watcher.callsigns(), False, "Listed on the server while turned off")
+
+            app.click(button)
+            check_equal((label(app, button), app.get(button)["value"]), ("Turn Off", False), "Button once turned on")
+            app.wait_until(lambda: CALLSIGN_OF_FREEDV in watcher.callsigns(), timeout=15,
+                           description="FreeDV to be listed on the server once turned on")
+            stop_modem(app)
+            quit_and_check_log(app)
+            check_equal(freedvtest.read_config(app.config_path).get("/Reporting/FreeDV/ForcedOff"), "0",
+                        "Saved as turned off")
+
+
+def test_qsy_with_radio():
+    """Being asked to change frequency with a radio that FreeDV can retune:
+    it offers to."""
+    for as_khz, asked, declined, accepted in [(False, "14.2400 MHz", "14.2360", "14.2400"),
+                                              (True, "14240.0 kHz", "14236.0", "14240.0")]:
+        with audio_devices(), ReporterServer() as server:
+            k1abc = server.station("K1ABC", "FN42")
+            k1abc.set_frequency(14240000)
+
+            settings = reporter_settings(server.hostname)
+            settings.update(audio_settings())
+            settings.update({"/Reporting/ManualFrequencyReporting": False, "/Hamlib/UseForPTT": True,
+                             "/Hamlib/RigNameStr": "Hamlib Dummy", "/Reporting/FrequencyAsKHz": as_khz})
+            with freedvtest.start(settings=settings) as app:
+                open_reporter(app)
+                start_modem(app)
+                app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+                app.wait_until(lambda: app.get("main.textModeStatus")["label"] != "unk",
+                               description="FreeDV to connect to the radio")
+
+                def frequency():
+                    return app.get("main.cboReportFrequency")["value"].replace(",", "")
+
+                question = "K1ABC has requested that you QSY to %s. Would you like to change to that frequency now?" \
+                    % asked
+
+                # Declined
+                app.answer_next_message_box("no")
+                k1abc.request_qsy(CALLSIGN_OF_FREEDV, 14240000)
+                app.wait_until(lambda: app.message_boxes(), description="the QSY request to be displayed")
+                check_equal([box["message"].replace(",", "") for box in app.message_boxes(clear=True)], [question],
+                            "Messages displayed")
+                time.sleep(1)
+                check_equal(frequency(), declined, "FreeDV's frequency after declining")
+
+                # Accepted
+                app.answer_next_message_box("yes")
+                k1abc.request_qsy(CALLSIGN_OF_FREEDV, 14240000)
+                app.wait_until(lambda: app.message_boxes(), description="the QSY request to be displayed")
+                check_equal([box["message"].replace(",", "") for box in app.message_boxes(clear=True)], [question],
+                            "Messages displayed")
+                app.wait_until(lambda: frequency() == accepted, timeout=15,
+                               description="FreeDV to change frequency (it's on %s)" % frequency())
+                wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, accepted, timeout=45)
+
+                stop_modem(app)
+                quit_and_check_log(app)
+
+
+def test_new_callsign():
+    """Changing who FreeDV reports as, which can only be done while it's
+    stopped: it's listed under the new callsign from then on."""
+    with audio_devices(), ReporterServer() as server:
+        watcher = server.viewer()
+        settings = reporter_settings(server.hostname)
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            open_reporter(app)
+            start_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == [CALLSIGN_OF_FREEDV], timeout=15,
+                           description="FreeDV to be listed on the server")
+
+            def open_settings():
+                app.menu("Settings/Edit Settings...")
+                app.wait_for_window("settings")
+                app.set_value("settings.notebook", "Reporting")
+
+            def close_settings():
+                app.click("settings.sdbSizer5OK")
+                app.wait_for_window_closed("settings")
+                check_equal(app.message_boxes(), [], "Messages displayed")
+
+            open_settings()
+            for control in ["txt_callsign", "txt_grid_square", "freedvReporterHostname"]:
+                check_equal(app.get("settings." + control)["enabled"], False, control + " enabled while running")
+            close_settings()
+            check_equal(watcher.callsigns(), [CALLSIGN_OF_FREEDV], "Listed on the server after closing Settings")
+
+            stop_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == [], timeout=20,
+                           description="FreeDV to leave the server's list")
+            open_settings()
+            app.set_value("settings.txt_callsign", "ZZ9ZZZ")
+            close_settings()
+
+            start_modem(app)
+            app.wait_until(lambda: watcher.callsigns() == ["ZZ9ZZZ"], timeout=20,
+                           description="only ZZ9ZZZ to be listed on the server (%r is)" % watcher.callsigns())
+            wait_for_callsigns(app, ["ZZ9ZZZ"])
+            wait_for_cell(app, "ZZ9ZZZ", FREQUENCY, "14.2360")
+
+            stop_modem(app)
+            quit_and_check_log(app)
+
+
 def start_modem_only(app):
     """start_modem() for when the FreeDV Reporter window isn't open."""
     app.click("main.btnOnOff")
     app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
     check_equal(app.message_boxes(), [], "Errors displayed on start")
     check(app.state()["running"], "FreeDV is not running after pressing Start")
+
+
+def test_sort_every_column():
+    """Each column can be sorted by, in both directions."""
+    with ReporterServer() as server:
+        # Three stations that differ in every column.
+        k1abc = server.station("K1ABC", "FN42", version="alpha 3")
+        k1abc.set_frequency(14236000)
+        k1abc.set_message("Third")
+        vk5dgr = server.station("VK5DGR", "PF95", version="alpha 1", rx_only=True)
+        vk5dgr.set_frequency(7177000)
+        vk5dgr.set_message("First")
+        w6xyz = server.station("W6XYZ", "DM13", version="alpha 2")
+        w6xyz.set_frequency(28330000)
+        w6xyz.set_message("Second")
+
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ"])
+            k1abc.transmit("RADEV1", True)
+            wait_for_cell(app, "K1ABC", STATUS, "TX")
+            k1abc.transmit("RADEV1", False)
+            wait_for_cell(app, "K1ABC", STATUS, "RX")
+            # (W6XYZ a moment later, so that when each last transmitted differs.)
+            time.sleep(1.1)
+            w6xyz.transmit("RADEV1", True)
+            wait_for_cell(app, "W6XYZ", STATUS, "TX")
+            w6xyz.transmit("RADEV1", False)
+            wait_for_cell(app, "W6XYZ", STATUS, "RX")
+            vk5dgr.receive("K1ABC", "RADEV1", 12)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
+            w6xyz.receive("AB1CD", "RADEV1", 3)
+            wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "AB1CD")
+
+            # Where sorting by a column is known to put them.
+            expected = {
+                CALLSIGN: ["K1ABC", "VK5DGR", "W6XYZ"],
+                LOCATOR: ["W6XYZ", "K1ABC", "VK5DGR"],        # DM13, FN42, PF95
+                DISTANCE: ["W6XYZ", "K1ABC", "VK5DGR"],
+                VERSION: ["VK5DGR", "W6XYZ", "K1ABC"],
+                FREQUENCY: ["VK5DGR", "K1ABC", "W6XYZ"],
+                MESSAGE: ["VK5DGR", "W6XYZ", "K1ABC"],        # First, Second, Third
+                LAST_TX: ["VK5DGR", "K1ABC", "W6XYZ"],        # never, then the order they did
+            }
+            for column in app.columns(LIST):
+                if column["title"].strip() == "":
+                    continue  # what fills the space to the right of the last column
+                column_id = column["id"]
+                app.click_column(LIST, column_id)
+                check_equal(sort_order(app), (column_id, True), "Sort order after clicking %r" % column["title"])
+                ascending = callsigns(app)
+                check_equal(sorted(ascending), ["K1ABC", "VK5DGR", "W6XYZ"], "Callsigns listed")
+                if column_id in expected:
+                    wait_for_callsigns(app, expected[column_id])
+
+                app.click_column(LIST, column_id)
+                check_equal(sort_order(app), (column_id, False), "Sort order after clicking %r again"
+                            % column["title"])
+                descending = callsigns(app)
+                check_equal(sorted(descending), ["K1ABC", "VK5DGR", "W6XYZ"], "Callsigns listed")
+                if column_id in expected:
+                    wait_for_callsigns(app, list(reversed(expected[column_id])))
+
+            quit_and_check_log(app)
+
+
+def test_display_options():
+    """Distances in miles, directions as compass points and times in UTC,
+    and what's shown when where someone is can't be worked out."""
+    def number(text):
+        return float(text.replace(",", ""))
+
+    with ReporterServer() as server:
+        server.station("K1ABC", "FN42").set_frequency(14236000)
+        server.station("W6XYZ", "DM12").set_frequency(14236000)    # the same square as FreeDV
+        server.station("N0WHR", "!!").set_frequency(14236000)      # nowhere there is
+        everyone = ["K1ABC", "N0WHR", "W6XYZ"]
+
+        def listed(app):
+            open_reporter(app)
+            app.click_column(LIST, CALLSIGN)
+            app.wait_until(lambda: callsigns(app) == everyone, timeout=15, description="everyone to be listed")
+            return {row[CALLSIGN]: row for row in app.rows(LIST)}
+
+        # As it comes: kilometres and degrees.
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            rows = listed(app)
+            check(4000 < number(rows["K1ABC"][DISTANCE]) < 4300, "K1ABC is %s km away" % rows["K1ABC"][DISTANCE])
+            check(50 < number(rows["K1ABC"][HEADING]) < 75, "K1ABC is at %s degrees" % rows["K1ABC"][HEADING])
+            check_equal((rows["W6XYZ"][DISTANCE].strip(), rows["W6XYZ"][HEADING].strip()), ("0", ""),
+                        "Distance and direction to the same square")
+            check_equal((rows["N0WHR"][DISTANCE].strip(), rows["N0WHR"][HEADING].strip()), ("", ""),
+                        "Distance and direction to nowhere")
+            local_time = rows["K1ABC"][LAST_UPDATE]
+            quit_and_check_log(app)
+
+        # Miles, compass points and UTC.
+        options = {"/Reporting/FreeDV/UseMetricDistances": False, "/Reporting/DirectionAsCardinal": True,
+                   "/CallsignList/UseUTCTime": True}
+        with freedvtest.start(settings=reporter_settings(server.hostname, **options)) as app:
+            rows = listed(app)
+            check(2500 < number(rows["K1ABC"][DISTANCE]) < 2700, "K1ABC is %s miles away" % rows["K1ABC"][DISTANCE])
+            check_equal(rows["K1ABC"][HEADING].strip(), "ENE", "Direction to K1ABC")
+            check_equal((rows["W6XYZ"][DISTANCE].strip(), rows["W6XYZ"][HEADING].strip()), ("0", ""),
+                        "Distance and direction to the same square")
+            check(rows["K1ABC"][LAST_UPDATE] != "", "K1ABC has no last update time")
+            check("UTC" in rows["K1ABC"][LAST_UPDATE] or rows["K1ABC"][LAST_UPDATE] != local_time or time.timezone == 0,
+                  "K1ABC's last update is %r in UTC and %r in local time" % (rows["K1ABC"][LAST_UPDATE], local_time))
+            quit_and_check_log(app)
+
+        # Without knowing where FreeDV is, nobody's distance is known.
+        with freedvtest.start(settings=reporter_settings(server.hostname, **{"/Reporting/GridSquare": "??"})) as app:
+            rows = listed(app)
+            for callsign in everyone:
+                check_equal((rows[callsign][DISTANCE].strip(), rows[callsign][HEADING].strip()), ("", ""),
+                            "Distance and direction to %s" % callsign)
+            quit_and_check_log(app)
+
+
+def test_sorted_updates():
+    """The list re-sorts itself as what it's sorted by changes, for each of
+    the columns that change while a station's connected."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
+        vk5dgr = server.station("VK5DGR", "PF95")
+        vk5dgr.set_frequency(14236000)
+
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+            app.wait_until(lambda: sorted(callsigns(app)) == ["K1ABC", "VK5DGR"], timeout=15,
+                           description="both stations to be listed")
+
+            def sort_by(column):
+                app.click_column(LIST, column)
+                check_equal(sort_order(app), (column, True), "Sort order")
+
+            def wait_for_order(first, second, what):
+                try:
+                    app.wait_until(lambda: callsigns(app) == [first, second], timeout=15)
+                except freedvtest.FreeDVError:
+                    check_equal(callsigns(app), [first, second], "Callsigns listed after %s" % what)
+
+            def transmit(station, mode):
+                station.transmit(mode, True)
+                wait_for_cell(app, station.callsign, STATUS, "TX")
+                station.transmit(mode, False)
+                wait_for_cell(app, station.callsign, STATUS, "RX")
+
+            # Who's transmitting
+            sort_by(STATUS)
+            k1abc.transmit("RADEV1", True)
+            wait_for_cell(app, "K1ABC", STATUS, "TX")
+            wait_for_order("VK5DGR", "K1ABC", "K1ABC began transmitting")       # RX, TX
+            vk5dgr.transmit("RADEV1", True)
+            wait_for_cell(app, "VK5DGR", STATUS, "TX")
+            k1abc.transmit("RADEV1", False)
+            wait_for_cell(app, "K1ABC", STATUS, "RX")
+            wait_for_order("K1ABC", "VK5DGR", "they swapped over")
+            vk5dgr.transmit("RADEV1", False)
+            wait_for_cell(app, "VK5DGR", STATUS, "RX")
+
+            # The mode last transmitted in
+            sort_by(TX_MODE)
+            transmit(k1abc, "RADEV1")
+            transmit(vk5dgr, "700D")
+            wait_for_order("VK5DGR", "K1ABC", "transmitting in 700D and RADEV1")
+            transmit(vk5dgr, "RADEV2")
+            wait_for_cell(app, "VK5DGR", TX_MODE, "RADEV2")
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR changed to RADEV2")
+            transmit(vk5dgr, "RADEV2")  # nothing that's sorted by changes
+            check_equal(callsigns(app), ["K1ABC", "VK5DGR"], "Callsigns listed after transmitting again")
+
+            # When they last transmitted
+            sort_by(LAST_TX)
+            wait_for_order("K1ABC", "VK5DGR", "sorting by last transmission")
+            time.sleep(1.1)
+            transmit(k1abc, "RADEV1")
+            wait_for_order("VK5DGR", "K1ABC", "K1ABC transmitted again")
+
+            # Who they last received, and how well
+            sort_by(RX_CALLSIGN)
+            k1abc.receive("ZL1ZZ", "RADEV1", 20)
+            wait_for_cell(app, "K1ABC", RX_CALLSIGN, "ZL1ZZ")
+            vk5dgr.receive("AA1AA", "RADEV1", -3)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "AA1AA")
+            wait_for_order("VK5DGR", "K1ABC", "receiving AA1AA and ZL1ZZ")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "ZZ9ZZ")
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR received ZZ9ZZ")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)  # the same again
+
+            sort_by(SNR)
+            wait_for_order("VK5DGR", "K1ABC", "sorting by SNR")                 # -3, 20
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+            wait_for_cell(app, "VK5DGR", SNR, lambda text: text.strip() in ("25", "25.0"))
+            wait_for_order("K1ABC", "VK5DGR", "VK5DGR's SNR rose to 25")
+            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+
+            # Receiving nothing in particular (as after changing frequency)
+            # clears who and how well, sorted by either.
+            k1abc.receive("", "", 0)
+            wait_for_cell(app, "K1ABC", RX_CALLSIGN, lambda text: text.strip() != "ZL1ZZ")
+            check(row_for(app, "K1ABC")[SNR].strip() not in ("20", "20.0"),
+                  "K1ABC's SNR is still %r" % row_for(app, "K1ABC")[SNR])
+            k1abc.receive("", "", 0)  # with nothing left to clear
+            sort_by(RX_CALLSIGN)
+            vk5dgr.receive("", "", 0)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, lambda text: text.strip() != "ZZ9ZZ")
+            check_equal(sorted(callsigns(app)), ["K1ABC", "VK5DGR"], "Callsigns listed")
+
+            # Their messages
+            sort_by(MESSAGE)
+            k1abc.set_message("zebra")
+            wait_for_cell(app, "K1ABC", MESSAGE, "zebra")
+            vk5dgr.set_message("aardvark")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "aardvark")
+            wait_for_order("VK5DGR", "K1ABC", "messages of aardvark and zebra")
+            k1abc.set_message("Aardvark 1")
+            wait_for_cell(app, "K1ABC", MESSAGE, "Aardvark 1")
+            vk5dgr.set_message("zulu")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "zulu")
+            wait_for_order("K1ABC", "VK5DGR", "messages of Aardvark 1 and zulu")
+            vk5dgr.set_message("zulu")
+            vk5dgr.set_message("")
+            wait_for_cell(app, "VK5DGR", MESSAGE, "")
+            vk5dgr.set_message("")
+            check_equal(sorted(callsigns(app)), ["K1ABC", "VK5DGR"], "Callsigns listed")
+
+            quit_and_check_log(app)
+
+
+def test_numeric_filters():
+    """Filtering by the columns that hold numbers, with each comparison."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
+        vk5dgr = server.station("VK5DGR", "PF95")
+        vk5dgr.set_frequency(7177000)
+        w6xyz = server.station("W6XYZ", "DM13")
+        w6xyz.set_frequency(28330000)
+        everyone = ["VK5DGR", "K1ABC", "W6XYZ"]
+
+        def set_filter(app, column, operator, value):
+            app.column_context_menu(LIST, column, choose=operator)
+            app.wait_for_window("@Set Column Filter")
+            app.set_value("@Set Column Filter/wxTextCtrl", value)
+            app.click("@Set Column Filter/OK")
+            app.wait_for_window_closed("@Set Column Filter")
+            app.activate("reporter")
+
+        def clear_filter(app, column):
+            app.column_context_menu(LIST, column, choose="Clear Column Filter")
+            wait_for_callsigns(app, everyone)
+
+        for as_khz in [False, True]:
+            settings = reporter_settings(server.hostname, **{"/Reporting/FrequencyAsKHz": as_khz})
+            with freedvtest.start(settings=settings) as app:
+                open_reporter(app)
+                wait_for_callsigns(app, everyone)
+                k1abc.receive("W6XYZ", "RADEV1", 12)
+                vk5dgr.receive("W6XYZ", "RADEV1", -2)
+                w6xyz.receive("K1ABC", "RADEV1", 5)
+                wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "K1ABC")
+                wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "W6XYZ")
+
+                # Frequency, in the units that it's displayed in.
+                twenty = "14236" if as_khz else "14.236"
+                for operator, listed in [(">= (Greater or equal to)", ["K1ABC", "W6XYZ"]),
+                                         (">  (Greater than)", ["W6XYZ"]),
+                                         ("=  (Equal to)", ["K1ABC"]),
+                                         ("!= (Not equal to)", ["VK5DGR", "W6XYZ"]),
+                                         ("<  (Less than)", ["VK5DGR"]),
+                                         ("<= (Less or equal to)", ["VK5DGR", "K1ABC"])]:
+                    set_filter(app, FREQUENCY, operator, twenty)
+                    wait_for_callsigns(app, listed)
+                clear_filter(app, FREQUENCY)
+
+                # Signal report
+                set_filter(app, SNR, ">  (Greater than)", "4")
+                wait_for_callsigns(app, ["K1ABC", "W6XYZ"])
+                set_filter(app, SNR, "<  (Less than)", "0")
+                wait_for_callsigns(app, ["VK5DGR"])
+                clear_filter(app, SNR)
+
+                # Heading, split between the two that are furthest round the
+                # compass. (What's displayed is rounded, so not right on one.)
+                headings = {row[CALLSIGN]: int(row[HEADING]) for row in app.rows(LIST)}
+                lowest, middle, highest = sorted(headings.values())
+                check(highest - middle > 2, "Headings are %r" % headings)
+                threshold = (middle + highest) // 2
+                set_filter(app, HEADING, ">= (Greater or equal to)", str(threshold))
+                wait_for_callsigns(app, [callsign for callsign in everyone if headings[callsign] > threshold])
+                set_filter(app, HEADING, "<  (Less than)", str(threshold))
+                wait_for_callsigns(app, [callsign for callsign in everyone if headings[callsign] < threshold])
+                clear_filter(app, HEADING)
+
+                # A filter that isn't a number is ignored.
+                set_filter(app, DISTANCE, ">  (Greater than)", "far")
+                time.sleep(1)
+                check_equal(callsigns(app), everyone, "Callsigns listed with a distance filter that isn't a number")
+                clear_filter(app, DISTANCE)
+
+                # A station that's selected and then filtered out isn't selected when it
+                # comes back. (What's selected in the meantime depends on the version of
+                # wxWidgets: nothing, or the row that took its place.)
+                app.select_row(LIST, (CALLSIGN, "K1ABC"))
+                check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], ["K1ABC"],
+                            "Selected station")
+                set_filter(app, CALLSIGN, "!= (Not equal to)", "K1ABC")
+                wait_for_callsigns(app, ["VK5DGR", "W6XYZ"])
+                print("Selected once K1ABC is filtered out: %r"
+                      % [row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], flush=True)
+                clear_filter(app, CALLSIGN)
+                check("K1ABC" not in [row[CALLSIGN] for row in app.rows(LIST) if row["selected"]],
+                      "K1ABC is selected again on being listed again")
+
+                quit_and_check_log(app)
+
+
+def test_status_message_flags():
+    """Regional flags in a status message are several characters that have
+    to be removed together, or what's left of one isn't a flag any more."""
+    black_flag = "\U0001F3F4"
+    scotland = black_flag + "".join(chr(0xE0000 + ord(letter)) for letter in "gbsct") + "\U000E007F"
+
+    with ReporterServer() as server:
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+
+            # A whole flag is left alone, wherever it is.
+            for message in [scotland, "Hello from " + scotland, scotland + " and " + scotland]:
+                app.set_value("reporter.cbStatusMessage", message)
+                check_equal(app.get("reporter.cbStatusMessage")["value"], message, "Status message with a flag")
+
+            # One that's lost its end (as backspacing over it does) goes entirely.
+            app.set_value("reporter.cbStatusMessage", "Hello from " + scotland[:-1] + "!")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "Hello from !",
+                        "Status message after part of a flag was removed")
+            app.set_value("reporter.cbStatusMessage", scotland[:-2])
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "", "Status message that was only part of a flag")
+
+            # As do parts of one that are left over.
+            app.set_value("reporter.cbStatusMessage", "Hello" + scotland[2:4] + " there")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], "Hello there",
+                        "Status message after the start of a flag was removed")
+
+            # A plain black flag is a flag in its own right.
+            app.set_value("reporter.cbStatusMessage", black_flag + " ahoy")
+            check_equal(app.get("reporter.cbStatusMessage")["value"], black_flag + " ahoy", "Status message")
+
+            quit_and_check_log(app)
+
+
+def test_text_filters():
+    """Filtering by each of the columns that hold text."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42", version="alpha 3")
+        k1abc.set_frequency(14236000)
+        k1abc.set_message("Calling CQ")
+        vk5dgr = server.station("VK5DGR", "PF95", version="alpha 1", rx_only=True)
+        vk5dgr.set_frequency(7177000)
+        w6xyz = server.station("W6XYZ", "DM13", version="alpha 2")
+        w6xyz.set_frequency(28330000)
+        w6xyz.set_message("Listening")
+        everyone = ["VK5DGR", "K1ABC", "W6XYZ"]
+
+        def set_filter(app, column, operator, value):
+            app.column_context_menu(LIST, column, choose=operator)
+            app.wait_for_window("@Set Column Filter")
+            app.set_value("@Set Column Filter/wxTextCtrl", value)
+            app.click("@Set Column Filter/OK")
+            app.wait_for_window_closed("@Set Column Filter")
+            app.activate("reporter")
+
+        with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, everyone)
+            k1abc.transmit("RADEV1", True)
+            wait_for_cell(app, "K1ABC", STATUS, "TX")
+            vk5dgr.receive("K1ABC", "RADEV1", 9)
+            wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
+            wait_for_cell(app, "W6XYZ", MESSAGE, "Listening")
+
+            equal, not_equal, after = "=  (Equal to)", "!= (Not equal to)", ">  (Greater than)"
+            for column, operator, value, listed in [
+                    (LOCATOR, equal, "fn42", ["K1ABC"]),                # whatever its case
+                    (LOCATOR, not_equal, "FN42", ["VK5DGR", "W6XYZ"]),
+                    (VERSION, equal, "alpha 2", ["W6XYZ"]),
+                    (VERSION, after, "alpha 1", ["K1ABC", "W6XYZ"]),    # in alphabetical order
+                    (TX_MODE, equal, "RADEV1", ["K1ABC"]),
+                    (STATUS, equal, "RX Only", ["VK5DGR"]),
+                    (STATUS, equal, "TX", ["K1ABC"]),
+                    (MESSAGE, equal, "listening", ["W6XYZ"]),
+                    (MESSAGE, not_equal, "", ["K1ABC", "W6XYZ"]),
+                    (RX_CALLSIGN, equal, "K1ABC", ["VK5DGR"]),
+                    (RX_CALLSIGN, equal, "", ["K1ABC", "W6XYZ"])]:
+                set_filter(app, column, operator, value)
+                wait_for_callsigns(app, listed)
+                app.column_context_menu(LIST, column, choose="Clear Column Filter")
+                wait_for_callsigns(app, everyone)
+
+            # The dates can be filtered by as well, as they're displayed.
+            last_update = row_for(app, "W6XYZ")[LAST_UPDATE]
+            set_filter(app, LAST_UPDATE, not_equal, last_update)
+            app.wait_until(lambda: "W6XYZ" not in callsigns(app) or row_for(app, "W6XYZ")[LAST_UPDATE] != last_update,
+                           timeout=15, description="W6XYZ to be filtered out by when it was last updated")
+            app.column_context_menu(LIST, LAST_UPDATE, choose="Clear Column Filter")
+            wait_for_callsigns(app, everyone)
+            set_filter(app, LAST_TX, equal, "")
+            wait_for_callsigns(app, ["VK5DGR", "W6XYZ"])
+            app.column_context_menu(LIST, LAST_TX, choose="Clear Column Filter")
+            wait_for_callsigns(app, everyone)
+
+            quit_and_check_log(app)
+
+
+def test_saved_filters():
+    """The window opening with filters that were left on the last time."""
+    with ReporterServer() as server:
+        server.station("K1ABC", "FN42").set_frequency(14236000)
+        server.station("VK5DGR", "PF95").set_frequency(7177000)
+        server.station("W6XYZ", "DM13").set_frequency(14240000)
+
+        saved = {"/Reporting/FreeDV/BandFilterTracksFrequency": True,
+                 "/Reporting/FreeDV/BandFilterTracking/TracksFreqBand": True,
+                 "/Reporting/FreeDV/BandFilterTracking/TracksExactFreq": False,
+                 "/Reporting/FreeDV/EnableMaxIdleFilter": True,
+                 "/Reporting/FreeDV/MaxIdleMinutes": 45,
+                 "/Windows/FreeDVReporter/msgEditDialogWidth": 520,
+                 "/Reporting/FreeDV/RecentStatusTexts": "73"}
+        with freedvtest.start(settings=reporter_settings(server.hostname, **saved)) as app:
+            open_reporter(app)
+
+            # Following FreeDV's band (20m), so only who's on it.
+            wait_for_callsigns(app, ["K1ABC", "W6XYZ"])
+            check_equal(app.get("reporter.ckTrackFrequency")["value"], True, "Track checked")
+            check_equal(app.get("reporter.cbBandFilter")["enabled"], False, "Band filter enabled while tracking")
+            check_equal((app.get("reporter.rbTrackFreqBand")["value"], app.get("reporter.rbTrackExactFreq")["value"]),
+                        (True, False), "Tracking by band and by exact frequency")
+
+            # An idle time that isn't one of those on offer counts as custom.
+            check_equal(label(app, "reporter.stFilterStatus"), "Idle 45", "Idle filter status")
+            idle_menu = "Filter/Idle more than (minutes).../"
+            for item in ["Disabled", "30", "60", "90", "120", "Custom..."]:
+                check_equal(app.menu_checked(idle_menu + item, window="reporter"), item == "Custom...",
+                            "Idle filter '%s' checked" % item)
+
+            # Following the exact frequency instead leaves just the one.
+            app.set_value("reporter.rbTrackExactFreq", True)
+            wait_for_callsigns(app, ["K1ABC"])
+            app.set_value("reporter.rbTrackFreqBand", True)
+            wait_for_callsigns(app, ["K1ABC", "W6XYZ"])
+
+            # Not following it at all gives the band filter back.
+            app.set_value("reporter.ckTrackFrequency", False)
+            check_equal(app.get("reporter.cbBandFilter")["enabled"], True, "Band filter enabled without tracking")
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ"])
+
+            # The window for a new saved message comes back as wide as it was left.
+            app.combo_popup("reporter.cbStatusMessage", True)
+            app.wait_until(lambda: app.get("reporter.lbSavedMessages")["shown"],
+                           description="the saved messages to be listed")
+            app.context_menu("reporter.lbSavedMessages", item=0, choose="Add new message")
+            dialog = app.wait_for_window("@Add Message")
+            check_equal(dialog["label"], "Add Message", "Window title")
+            app.click("@Add Message/Cancel")
+            app.wait_for_window_closed("@Add Message")
+            app.activate("reporter")
+
+            quit_and_check_log(app)
+
+
+def test_selection():
+    """What unselects a station, other than selecting another."""
+    with audio_devices(), ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14240000)
+        server.station("VK5DGR", "PF95").set_frequency(7177000)
+
+        settings = reporter_settings(server.hostname)
+        settings.update(audio_settings())
+        with freedvtest.start(settings=settings) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
+            start_modem(app)
+            app.wait_until(lambda: CALLSIGN_OF_FREEDV in callsigns(app), description="FreeDV to be listed")
+
+            def selected():
+                return [row[CALLSIGN] for row in app.rows(LIST) if row["selected"]]
+
+            def select(callsign):
+                app.select_row(LIST, (CALLSIGN, callsign))
+                check_equal(selected(), [callsign], "Selected station")
+                check_equal(app.get("reporter.btnSendQSY")["enabled"], True, "Request QSY enabled")
+
+            # Clicking somewhere else in the window
+            select("K1ABC")
+            app.mouse("reporter", "left_down", x=0.5, y=0.02)
+            app.wait_until(lambda: selected() == [], timeout=5, description="K1ABC to be unselected")
+            check_equal(app.get("reporter.btnSendQSY")["enabled"], False, "Request QSY enabled with nobody selected")
+
+            # Clicking on a column's heading
+            select("VK5DGR")
+            app.click_column(LIST, CALLSIGN)
+            app.wait_until(lambda: selected() == [], timeout=5, description="VK5DGR to be unselected")
+            check_equal(app.get("reporter.btnSendQSY")["enabled"], False, "Request QSY enabled after sorting")
+
+            # The station leaving. (What's selected afterwards depends on
+            # the version of wxWidgets, but it isn't them.)
+            select("K1ABC")
+            k1abc.disconnect()
+            app.wait_until(lambda: "K1ABC" not in callsigns(app), timeout=15, description="K1ABC to go")
+            check("K1ABC" not in selected(), "K1ABC is still selected after leaving")
+
+            stop_modem(app)
+            quit_and_check_log(app)
 
 
 def test_window():
@@ -1008,6 +1698,49 @@ def test_window():
         shutil.rmtree(config_dir, ignore_errors=True)
 
 
+def test_damaged_layout():
+    """Saved column orders and window positions that make no sense (as from
+    another version of FreeDV, or a screen that's no longer there)."""
+    config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
+    try:
+        config = os.path.join(config_dir, "freedv.conf")
+        with ReporterServer() as server:
+            server.station("K1ABC", "FN42").set_frequency(14236000)
+
+            freedvtest.write_config(config, reporter_settings(server.hostname))
+            with freedvtest.start(config=config) as app:
+                open_reporter(app)
+                wait_for_callsigns(app, ["K1ABC"])
+                titles = column_titles(app, shown_only=False)
+                quit_and_check_log(app)
+            saved = freedvtest.read_config(config)
+            order = [entry for entry in str(saved["/Reporting/FreeDV/ColumnOrder"]).split(",") if entry != ""]
+            check_equal(len(order), len(titles), "Columns in the saved order (%r)" % saved["/Reporting/FreeDV/ColumnOrder"])
+
+            # Columns that don't exist, one that's there twice and so one
+            # that's missing; and then only a few of them.
+            for damaged, where in [(order[:3] + ["99", order[3]] + order[3:-1], (30000, 30000)),
+                                   (order[5:8], (-30000, -500)),
+                                   (list(reversed(order)), (40, 50))]:
+                saved["/Reporting/FreeDV/ColumnOrder"] = ",".join(damaged)
+                saved["/Windows/FreeDVReporter/left"], saved["/Windows/FreeDVReporter/top"] = where
+                freedvtest.write_config(config, saved)
+                with freedvtest.start(config=config) as app:
+                    app.wait_for_window("reporter")
+                    app.activate("reporter")
+                    wait_for_callsigns(app, ["K1ABC"])
+                    check_equal(sorted(column_titles(app, shown_only=False)), sorted(titles),
+                                "Columns with a saved order of %s" % ",".join(damaged))
+                    check_equal(row_for(app, "K1ABC")[LOCATOR], "FN42", "K1ABC's locator")
+                    quit_and_check_log(app)
+                saved = freedvtest.read_config(config)
+                left, top = int(saved["/Windows/FreeDVReporter/left"]), int(saved["/Windows/FreeDVReporter/top"])
+                check(-100 <= left <= 4096 and -100 <= top <= 4096,
+                      "Asked to be at %r, the window was left at %d,%d" % (where, left, top))
+    finally:
+        shutil.rmtree(config_dir, ignore_errors=True)
+
+
 def test_connection_burst():
     """Attempts to reproduce issue #1495: FreeDV crashing in this window
     while a lot of stations come and go (including going and coming straight
@@ -1039,7 +1772,7 @@ def test_connection_burst():
                 """FreeDV should still be there, listing exactly who's on."""
                 expected = sorted(stations)
                 try:
-                    app.wait_until(lambda: sorted(callsigns(app)) == expected, timeout=20)
+                    app.wait_until(lambda: sorted(callsigns(app)) == expected, timeout=60)
                 except freedvtest.FreeDVError:
                     check_equal(sorted(callsigns(app)), expected, "Callsigns listed")
 
@@ -1125,6 +1858,9 @@ SCENARIOS = {
     "live_view": test_live_view,
     "stations": test_stations,
     "sorting": test_sorting,
+    "sorted_updates": test_sorted_updates,
+    "damaged_layout": test_damaged_layout,
+    "display_options": test_display_options,
     "band_filter": test_band_filter,
     "column_filters": test_column_filters,
     "idle_filter": test_idle_filter,
@@ -1133,6 +1869,15 @@ SCENARIOS = {
     "qsy": test_qsy,
     "row_actions": test_row_actions,
     "turn_off": test_turn_off,
+    "off_at_start": test_off_at_start,
+    "qsy_with_radio": test_qsy_with_radio,
+    "new_callsign": test_new_callsign,
+    "sort_every_column": test_sort_every_column,
+    "numeric_filters": test_numeric_filters,
+    "status_message_flags": test_status_message_flags,
+    "text_filters": test_text_filters,
+    "saved_filters": test_saved_filters,
+    "selection": test_selection,
     "window": test_window,
     "connection_burst": test_connection_burst,
 }

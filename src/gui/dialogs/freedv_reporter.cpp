@@ -1054,11 +1054,6 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
     event.Skip();
 }
 
-void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent&)
-{
-    // TBD
-}
-
 void FreeDVReporterDialog::OnShow(wxShowEvent&)
 {
     wxGetApp().appConfiguration.reporterWindowVisible = true;
@@ -2593,16 +2588,6 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     return GetFilterForFrequency(freq);
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
-{
-    return
-        (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
-        (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter ||
-        hasAnyColumnFilter();
-}
-
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnFilter(int col, int op, const wxString& val)
 {
     if (col >= 0 && col < NUM_COLS)
@@ -2628,18 +2613,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::getColumnFilter(int col, int
         op = columnFilterOperators_[col];
         val = columnFilterValues_[col];
         return true;
-    }
-    return false;
-}
-
-bool FreeDVReporterDialog::FreeDVReporterDataModel::hasAnyColumnFilter() const
-{
-    for (int col = 0; col < NUM_COLS; col++)
-    {
-        if (columnFilterOperators_[col] != FreeDVReporterDialog::FILTER_NONE)
-        {
-            return true;
-        }
     }
     return false;
 }

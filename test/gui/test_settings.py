@@ -20,7 +20,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone, VirtualAudioDevices, record_level
+from freedvtest.audio import Tone, VirtualAudioDevices, record, record_level, tone_share
 
 RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
 RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
@@ -387,6 +387,23 @@ def test_audio_tests():
 
             quit_and_check_log(app)
 
+    # A speaker that runs at a different sample rate from what's recorded:
+    # the recording still comes back through it, at the pitch it went in at.
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 22050}):
+        with freedvtest.start(settings=audio_settings()) as app:
+            open_settings(app, "RX Audio")
+            with Tone(RADIO_RX):
+                app.click(name("btnSoundCard1InTest"))
+                app.wait_until(lambda: label(app, "btnSoundCard1InTest") == "Playing", timeout=15,
+                               description="the recording to be played back")
+            share = tone_share(record(VirtualAudioDevices.input_name(SPEAKER), 1.5)[0], 1000)
+            check(share > 0.5, "The recording played back isn't the 1000 Hz tone that was recorded (%d%% of it is)"
+                  % (100 * share))
+            wait_for_test_to_finish(app, "btnSoundCard1InTest")
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            press_cancel(app)
+            quit_and_check_log(app)
+
 
 def find_rig(app, rig):
     rigs = [item["label"].strip() for item in app.get(name("cbRigName"))["items"]]
@@ -563,8 +580,36 @@ def test_ptt_test():
         check_equal(len(messages), 1, "Number of messages displayed for a port that isn't there (%r)" % messages)
         check("/dev/ttyFreeDVTestMissing" in messages[0], "Unexpected message: %r" % messages[0])
 
+        # Somewhere that FreeDV can't check for itself beforehand: what goes
+        # wrong is whatever Hamlib or the system says did.
+        set_value(app, "ckUseHamlibPTT", True)
+        set_value(app, "cbRigName", find_rig(app, "Hamlib NET rigctl"))
+        set_value(app, "cbSerialPort", "127.0.0.1:9")
+        set_value(app, "cbSerialRate", "9600")
+        app.click(name("buttonTestPTT"))
+        wait_for_test_to_finish(app)
+        messages = [box["message"] for box in app.message_boxes(clear=True)]
+        check_equal(len(messages), 1, "Number of messages displayed for a radio that can't be reached (%r)" % messages)
+        check(messages[0].startswith("Couldn't connect to Radio with Hamlib (")
+              and messages[0].endswith("Make sure the Hamlib serial Device, Rate, and Params match your radio"),
+              "Unexpected message: %r" % messages[0])
+
+        set_value(app, "ckUseSerialPTT", True)
+        set_value(app, "cbCtlDevicePath", "freedv-test-no-such-port")
+        app.click(name("buttonTestPTT"))
+        wait_for_test_to_finish(app)
+        messages = [box["message"] for box in app.message_boxes(clear=True)]
+        check_equal(len(messages), 1, "Number of messages displayed for a port that can't be opened (%r)" % messages)
+        check(messages[0].startswith("Couldn't open serial port freedv-test-no-such-port ("),
+              "Unexpected message: %r" % messages[0])
+
         press_cancel(app)
-        quit_and_check_log(app)
+        check_equal(app.message_boxes(), [], "Messages displayed")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+        # Hamlib has its say about the radio that couldn't be reached.
+        errors = [line for line in app.log().splitlines()
+                  if (" ERROR " in line or " FATAL " in line) and "127.0.0.1:9" not in line]
+        check_equal(errors, [], "Errors logged by FreeDV")
 
 
 def test_rig_control():
@@ -757,10 +802,15 @@ def test_frequency_list():
         check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
                     ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
 
-        # And back again.
+        # And back again, along with what's been typed in so far.
         open_settings(app, "Rig Control")
         check_values(app, {"ckboxFrequencyEntryAsKHz": True})
+        set_value(app, "txtCtrlNewFrequency", "21313.5")
         set_value(app, "ckboxFrequencyEntryAsKHz", False)
+        press_apply(app)
+        check_equal(label(app, "labelEnterFreq"), "Enter frequency (MHz):", "Frequency entry label")
+        check_values(app, {"txtCtrlNewFrequency": "21.3135"})
+        set_value(app, "txtCtrlNewFrequency", "")
         press_ok(app)
         check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
                     ["3.6250", "28.3300", "7.1770", "14.2360"], "Frequencies offered in the main window")
@@ -1046,6 +1096,64 @@ def test_modem_and_debugging():
         quit_and_check_log(app)
 
 
+def test_ptt_key_names():
+    """Choosing the key used for PTT: what each kind of key is called, and
+    the keys that can't be chosen."""
+    with freedvtest.start(settings={}) as app:
+        open_settings(app, "Rig Control")
+        check_values(app, {"txtPTTKeyName": "Space"})
+
+        def choose(key):
+            app.click(name("btnSetPTTKey"))
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            app.key(name("txtPTTKeyName"), key)
+
+        for key, called in [("5", "5"), ("0", "0"), ("q", "Q"), ("Z", "Z"), ("F1", "F1"), ("F12", "F12"),
+                            ("Enter", "Enter"), ("Backspace", "Backspace"),
+                            ("Delete", "Delete"), ("Insert", "Insert"), ("Home", "Home"), ("End", "End"),
+                            ("PageUp", "Page Up"), ("PageDown", "Page Down"), ("Up", "Up"), ("Down", "Down"),
+                            ("Left", "Left"), ("Right", "Right"), (";", ";"), ("[", "["),
+                            # A letter as some keyboards give it, in lower case
+                            (ord("q"), "Q"),
+                            # F13 and F24 as they are everywhere but Linux, and as they are there
+                            (340 + 12, "F13"), (340 + 23, "F24"), (436, "F13"), (447, "F24"),
+                            # Something FreeDV has no name for
+                            (390, "Key(390)"), ("Space", "Space")]:
+            choose(key)
+            check_values(app, {"txtPTTKeyName": called})
+            check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after choosing %s" % key)
+
+        # Keys that only modify others aren't a choice; FreeDV keeps waiting.
+        app.click(name("btnSetPTTKey"))
+        # (By number: Alt, Caps Lock, Num Lock, Scroll Lock, both Windows keys
+        # and the menu key.)
+        for modifier in ["Shift", "Control", 307, 311, 364, 365, 393, 394, 395]:
+            app.key(name("txtPTTKeyName"), modifier)
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button after pressing %s" % modifier)
+        app.key(name("txtPTTKeyName"), "F7")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Tab moves on, leaving the key as it was...
+        choose("Tab")
+        check_values(app, {"txtPTTKeyName": "F7"})
+        check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after pressing Tab")
+
+        # ...as does thinking better of it.
+        app.click(name("btnSetPTTKey"))
+        check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button while choosing")
+        app.click(name("btnSetPTTKey"))
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Keys pressed when FreeDV isn't waiting for one are just keys.
+        app.key(name("txtPTTKeyName"), "F9")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        press_ok(app)
+        check_saved(app, {"/Rig/PttKeyCode": 340 + 6})  # F7
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_auto_start():
     """The Modem tab's Start Automatically on Launch."""
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
@@ -1150,6 +1258,7 @@ SCENARIOS = {
     "voice_keyer": test_voice_keyer,
     "display": test_display,
     "modem_and_debugging": test_modem_and_debugging,
+    "ptt_key_names": test_ptt_key_names,
     "auto_start": test_auto_start,
     "while_running": test_while_running,
 }

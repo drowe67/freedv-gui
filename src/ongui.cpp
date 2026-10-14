@@ -82,14 +82,6 @@ void MainFrame::topFrame_OnSize( wxSizeEvent& event )
     TopFrame::topFrame_OnSize(event);
 }
 
-//-------------------------------------------------------------------------
-// OnExitClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnExitClick(wxCommandEvent& event)
-{
-    OnExit(event);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -167,6 +159,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
 
     wxUnusedVar(event);
+
+    // The same dialog is shown each time, and still has the return code it
+    // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
+    // already set to mean that the dialog closed itself while being set up,
+    // and so wouldn't show it a second time.
+    optionsDlg->SetReturnCode(0);
+
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
@@ -644,18 +643,6 @@ void MainFrame::OpenOmniRig()
 #endif // defined(WIN32)
 
 //-------------------------------------------------------------------------
-// OnCloseFrame()
-//-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent&)
-{
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
-    
-    Destroy();
-}
-
-//-------------------------------------------------------------------------
 // OnTop()
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
@@ -720,20 +707,6 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
     event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// Paint()
-//-------------------------------------------------------------------------
-void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
-{
-    wxPaintDC dc(this);
-
-    if(GetMenuBar()->IsChecked(ID_PAINT_BG))
-    {
-        dc.Clear();
-    }
-    dc.SetUserScale(m_zoom, m_zoom);
 }
 
 //-------------------------------------------------------------------------

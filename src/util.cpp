@@ -214,26 +214,6 @@ void MainFrame::ClosePTTInPort(void)
     }
 }
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING
-{
-    COMP  foff_rect;
-    float mag;
-    int   i;
-
-    foff_rect.real = cosf(2.0*M_PI*foff/Fs);
-    foff_rect.imag = sinf(2.0*M_PI*foff/Fs);
-    for(i=0; i<nin; i++) {
-	*foff_phase_rect = cmult(*foff_phase_rect, foff_rect);
-	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
-    }
-
-    /* normalise digital oscillator as the magnitude can drift over time */
-
-    mag = cabsolute(*foff_phase_rect);
-    foff_phase_rect->real /= mag;
-    foff_phase_rect->imag /= mag;
-}
-
 // Decimates samples using an algorithm that produces nice plots of
 // speech signals at a low sample rate.  We want a low sample rate so
 // we don't hammer the graphics system too hard.  Saves decimated data

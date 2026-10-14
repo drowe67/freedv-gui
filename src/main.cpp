@@ -1325,7 +1325,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_panelDemodIn = nullptr;
     m_panelSNR = nullptr;
 
-    m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
     lastBand_ = BAND_OTHER;
     
@@ -1505,7 +1504,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
     optionsDlg = new OptionsDlg(NULL);
-    m_schedule_restore = false;
 
     vk_state = VK_IDLE;
 
@@ -2284,13 +2282,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* FIFO and PortAudio under/overflow debug counters */
         optionsDlg->DisplayFifoPACounters();
 
-        // command from UDP thread that is best processed in main thread to avoid seg faults
-
-        if (m_schedule_restore) {
-            if (IsIconized())
-                Restore();
-            m_schedule_restore = false;
-        }
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);

@@ -404,6 +404,26 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandClipboard_(id);
     }
+    else if (cmd == "focus")
+    {
+        commandFocus_(id, request);
+    }
+    else if (cmd == "system_colours_changed")
+    {
+        // As when the desktop switches between its light and dark themes.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        std::vector<wxWindow*> topLevels;
+        for (auto window : wxTopLevelWindows)
+        {
+            topLevels.push_back(window);
+        }
+        for (auto window : topLevels)
+        {
+            wxSysColourChangedEvent event;
+            event.SetEventObject(window);
+            window->ProcessWindowEvent(event);
+        }
+    }
     else if (cmd == "message_boxes")
     {
         commandMessageBoxes_(id, request);
@@ -1667,6 +1687,17 @@ void TestAgent::commandDataView_(yyjson_val* id, yyjson_val* request)
                 {
                     column->UnsetAsSortKey();
                 }
+
+                // Only one column is sorted by at a time, which not every
+                // version of wxWidgets sees to itself when asked like this.
+                for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+                {
+                    auto other = dataView->GetColumn(index);
+                    if (other != column && other->IsSortKey())
+                    {
+                        other->UnsetAsSortKey();
+                    }
+                }
                 column->SetSortOrder(ascending);
                 if (dataView->GetModel() != nullptr)
                 {
@@ -1766,6 +1797,14 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_int(doc, state, "numSoundCards", g_nSoundCards);
     yyjson_mut_obj_add_int(doc, state, "sync", running ? freedvInterface.getSync() : 0);
     yyjson_mut_obj_add_bool(doc, state, "analog", g_analog.load(std::memory_order_relaxed) != 0);
+
+    // Whether this is being answered from inside an event loop other than
+    // the application's own, i.e. a dialog's. One that's just been dismissed
+    // can still be finishing up, with whatever FreeDV does once it has closed
+    // yet to happen.
+    auto mainLoop = wxTheApp->GetMainLoop();
+    yyjson_mut_obj_add_bool(
+        doc, state, "inNestedEventLoop", mainLoop != nullptr && wxEventLoopBase::GetActive() != mainLoop);
     yyjson_mut_obj_add_real(doc, state, "rxFreqOffsetHz", g_RxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_real(doc, state, "txFreqOffsetHz", g_TxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_bool(doc, state, "loopPlayFileFromRadio", g_loopPlayFileFromRadio.load(std::memory_order_relaxed));
@@ -1888,14 +1927,21 @@ void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
         { "Up", WXK_UP }, { "Down", WXK_DOWN }, { "Left", WXK_LEFT }, { "Right", WXK_RIGHT },
         { "F1", WXK_F1 }, { "F2", WXK_F2 }, { "F3", WXK_F3 }, { "F4", WXK_F4 }, { "F5", WXK_F5 }, { "F6", WXK_F6 },
         { "F7", WXK_F7 }, { "F8", WXK_F8 }, { "F9", WXK_F9 }, { "F10", WXK_F10 }, { "F11", WXK_F11 },
-        { "F12", WXK_F12 },
+        { "F12", WXK_F12 }, { "Insert", WXK_INSERT }, { "Home", WXK_HOME }, { "End", WXK_END },
+        { "PageUp", WXK_PAGEUP }, { "PageDown", WXK_PAGEDOWN },
     };
 
-    const char* keyStr = yyjson_get_str(yyjson_obj_get(request, "key"));
+    yyjson_val* keyVal = yyjson_obj_get(request, "key");
+    const char* keyStr = yyjson_get_str(keyVal);
     wxString key = (keyStr != nullptr) ? wxString::FromUTF8(keyStr) : wxString();
     int keyCode = 0;
     auto namedKey = namedKeys.find(key);
-    if (namedKey != namedKeys.end())
+    if (yyjson_is_int(keyVal))
+    {
+        // A key code as wxWidgets has it, for keys without a name here.
+        keyCode = (int)yyjson_get_int(keyVal);
+    }
+    else if (namedKey != namedKeys.end())
     {
         keyCode = namedKey->second;
     }
@@ -2011,6 +2057,26 @@ void TestAgent::commandClipboard_(yyjson_val* id)
     yyjson_mut_val* result = yyjson_mut_obj(doc);
     AddString_(doc, result, "text", text);
     replyOk_(id, doc, result);
+}
+
+// The keyboard focus arriving at, or (with "lost") leaving, a control.
+void TestAgent::commandFocus_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+    bool lost = yyjson_get_bool(yyjson_obj_get(request, "lost"));
+    wxFocusEvent event(lost ? wxEVT_KILL_FOCUS : wxEVT_SET_FOCUS, window->GetId());
+    event.SetEventObject(window);
+    window->ProcessWindowEvent(event);
 }
 
 void TestAgent::commandMouse_(yyjson_val* id, yyjson_val* request)

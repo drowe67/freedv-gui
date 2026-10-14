@@ -236,6 +236,26 @@ def test_controls():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_out_of_range():
+    """Saved settings beyond what the sliders allow are brought back within
+    it when the window's opened."""
+    extra = {"/Filter/MicIn/BassGaindB": 99, "/Filter/MicIn/TrebleGaindB": -99, "/Filter/MicIn/BassFreqHz": 5000,
+             "/Filter/MicIn/MidFreqHz": 0.1, "/Filter/MicIn/EQEnable": True,
+             "/Filter/SpkOut/BassGaindB": -99, "/Filter/SpkOut/TrebleGaindB": 99, "/Filter/SpkOut/EQEnable": True,
+             "/Reporting/FreeDV/Hostname": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False}
+    with freedvtest.start(settings=extra) as app:
+        app.wait_for_window("main")
+        open_filter(app)
+        microphone = values(app, MIC)
+        check_equal((microphone["bassGain"], microphone["trebleGain"], microphone["bassFreq"], microphone["midFreq"]),
+                    ("20.0", "-20.0", "600", "1"), "Microphone bass gain, treble gain, bass and mid frequencies")
+        speaker = values(app, SPEAKER)
+        check_equal((speaker["bassGain"], speaker["trebleGain"]), ("-20.0", "20.0"), "Speaker bass and treble gains")
+        close_filter(app)
+        check_equal(app.message_boxes(), [], "Messages displayed")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_volume():
     """The two volume sliders, and the speaker's twin in the main window."""
     with audio_devices():
@@ -382,6 +402,37 @@ def test_equalizer():
                 quit_and_check_log(app)
 
 
+def test_equalizer_receive_only():
+    """The speaker's equaliser when FreeDV only has the one pair of devices,
+    and so is only receiving: what it plays goes to the first pair's output."""
+    receive_only = settings(Audio__soundCard2InDeviceName="none", Audio__soundCard2OutDeviceName="none")
+    with audio_devices():
+        with freedvtest.start(settings=receive_only) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnAnalog")
+            open_filter(app)
+            app.set_value("filter.notebook", 1)
+            with Tone(RADIO_RX):
+                normal = settled_level(RADIO_TX_MONITOR)
+                check(normal > AUDIBLE, "The radio isn't being played (level %d)" % normal)
+
+                app.set_value(SPEAKER + "ckboxEnable", True)
+                app.set_value(SPEAKER + "midFreq", 1300)
+                app.set_value(SPEAKER + "midGain", gain_slider(-12))
+                check_ratio(normal, settled_level(RADIO_TX_MONITOR), -12, "Speaker mid at -12 dB")
+                app.set_value(SPEAKER + "ckboxEnable", False)
+                check_ratio(normal, settled_level(RADIO_TX_MONITOR), 0, "Speaker equaliser off")
+                app.set_value(SPEAKER + "ckboxEnable", True)
+                check_ratio(normal, settled_level(RADIO_TX_MONITOR), -12, "Speaker equaliser back on")
+                app.click(SPEAKER + "btnDefault")
+                check_ratio(normal, settled_level(RADIO_TX_MONITOR), 0, "Speaker equaliser after Default")
+
+            stop_modem(app)
+            close_filter(app)
+            quit_and_check_log(app)
+
+
 def test_noise_suppression():
     """Noise suppression, which takes a steady tone to be noise."""
     with audio_devices():
@@ -414,9 +465,11 @@ def test_noise_suppression():
 
 
 SCENARIOS = {
+    "out_of_range": test_out_of_range,
     "controls": test_controls,
     "volume": test_volume,
     "equalizer": test_equalizer,
+    "equalizer_receive_only": test_equalizer_receive_only,
     "noise_suppression": test_noise_suppression,
 }
 

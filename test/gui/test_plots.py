@@ -211,8 +211,46 @@ def test_drawing():
             quit_and_check_log(app)
 
 
+def test_waterfall_colours():
+    """The waterfall's other colour schemes, and tuning across it with the
+    arrow keys as far as it goes.
+
+    What's drawn can't be seen from here: this is FreeDV drawing a quiet
+    and a loud signal in each scheme without anything going wrong."""
+    plot = PLOTS["Waterfall"]
+    with audio_devices():
+        for scheme in (1, 2):
+            with freedvtest.start(settings=settings(Waterfall__Color=scheme)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                show(app, "Waterfall")
+                time.sleep(1)
+                with Tone(RADIO_RX):
+                    time.sleep(2)
+                    check_equal(app.state()["running"], True, "Running while drawing in colour scheme %d" % scheme)
+
+                    # The arrow keys stop at either end.
+                    for key, x, limit in [("Up", 0.95, HIGHEST), ("Down", 0.12, LOWEST)]:
+                        app.mouse(plot, "left_dclick", x=x, y=0.5)
+                        previous = None
+                        for press in range(60):
+                            app.key(plot, key)
+                            now = tuned_to(app)
+                            if now == previous:
+                                break
+                            previous = now
+                        check_equal(previous, limit, "Furthest that the %s key goes" % key)
+                    app.mouse(plot, "middle_down")
+                time.sleep(1)
+                stop_modem(app)
+                quit_and_check_log(app)
+                check_equal(int(freedvtest.read_config(app.config_path)["/Waterfall/Color"]), scheme,
+                            "Colour scheme saved")
+
+
 SCENARIOS = {
     "tuning": test_tuning,
+    "waterfall_colours": test_waterfall_colours,
     "tuned_away": test_tuned_away,
     "drawing": test_drawing,
 }

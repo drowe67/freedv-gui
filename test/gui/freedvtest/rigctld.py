@@ -58,7 +58,9 @@ class Rigctld:
     def start(self, program=None):
         """Starts rigctld (again, after stop())."""
         self._process = subprocess.Popen(
-            [program or find_rigctld(), "-m", "1", "-T", "127.0.0.1", "-t", str(self.port)],
+            # (Some versions don't answer whether the radio's transmitting
+            # unless told how it's keyed.)
+            [program or find_rigctld(), "-m", "1", "-P", "RIG", "-T", "127.0.0.1", "-t", str(self.port)],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.monotonic() + 15
         while True:

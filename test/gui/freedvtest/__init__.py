@@ -54,11 +54,26 @@ def default_binary():
     return "src/freedv"
 
 
+# Somewhere for FreeDV to look for a FreeDV Reporter server and not find one.
+NO_REPORTER_SERVER = "127.0.0.1:9"
+
+
 def write_config(path, settings):
     """Creates a FreeDV configuration file. settings maps the names of
     settings as they appear in FreeDV's source code (e.g.
     "/Reporting/Callsign") to their values. Anything not given has its
-    default value, other than the Setup Wizard not being shown on startup."""
+    default value, other than:
+
+    - the Setup Wizard isn't shown on startup ("/FirstTimeUse": True for it
+      to be);
+    - FreeDV doesn't connect to the public FreeDV Reporter server, which it
+      otherwise does as soon as it's launched. It looks for one at
+      NO_REPORTER_SERVER instead (give "/Reporting/FreeDV/Hostname" and
+      "/Reporting/FreeDV/UseTls" for somewhere else)."""
+    settings = dict(settings)
+    if "/Reporting/FreeDV/Hostname" not in settings:
+        settings["/Reporting/FreeDV/Hostname"] = NO_REPORTER_SERVER
+        settings.setdefault("/Reporting/FreeDV/UseTls", False)
     groups = {"": {"FirstTimeUse": 0}}
     for name, value in settings.items():
         group, _, key = name.strip("/").rpartition("/")
@@ -91,7 +106,8 @@ def read_config(path):
     return settings
 
 
-def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60):
+def start(binary=None, config=None, settings=None, args=(), env=None, user_config_files=None, timeout=60,
+          home=None, default_config=False):
     """Launches FreeDV and returns once it's ready to take commands.
 
     config is the configuration file to use. If not given, FreeDV starts
@@ -101,14 +117,22 @@ def start(binary=None, config=None, settings=None, args=(), env=None, user_confi
     user_config_files maps names to contents of files to place where FreeDV
     looks for other programs' settings (see FreeDV.user_config_dir). FreeDV
     never sees the real ones.
+
+    home is a folder to stand in for the user's home folder (Linux only),
+    for when what FreeDV keeps there needs to last from one launch to the
+    next; otherwise each launch gets an empty one of its own. With
+    default_config, FreeDV isn't told which configuration file to use and so
+    finds its own, as it does for a user: in that home folder.
     """
-    return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout)
+    return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout, home,
+                  default_config)
 
 
 class FreeDV:
     """A running copy of FreeDV. Create with start()."""
 
-    def __init__(self, binary, config, settings, args, env, user_config_files, timeout):
+    def __init__(self, binary, config, settings, args, env, user_config_files, timeout, home=None,
+                 default_config=False):
         self._temp_dir = tempfile.mkdtemp(prefix="freedvtest-")
         self._next_id = 1
         self._received = b""
@@ -122,12 +146,15 @@ class FreeDV:
         self.log_path = os.path.join(self._temp_dir, "freedv.log")
         #: Stands in for the user's ~/.config (Linux only), which is where
         #: FreeDV looks for other programs' settings.
-        self.user_config_dir = os.path.join(self._temp_dir, "config")
+        self.user_config_dir = os.path.join(home, ".config") if home else os.path.join(self._temp_dir, "config")
         #: Stands in for the user's home folder (Linux only).
         self.home_dir = None
 
         if settings is not None:
             write_config(self.config_path, settings)
+        elif config is None:
+            # As when run for the first time, other than keeping to itself.
+            write_config(self.config_path, {"/FirstTimeUse": True})
 
         process_env = dict(os.environ)
         # Labels checked by test scripts are the English ones.
@@ -146,10 +173,10 @@ class FreeDV:
             xauthority = os.path.expanduser("~/.Xauthority")
             if "XAUTHORITY" not in process_env and os.path.exists(xauthority):
                 process_env["XAUTHORITY"] = xauthority
-            self.home_dir = os.path.join(self._temp_dir, "home")
-            os.mkdir(self.home_dir)
+            self.home_dir = home or os.path.join(self._temp_dir, "home")
+            os.makedirs(self.home_dir, exist_ok=True)
             process_env["HOME"] = self.home_dir
-        os.mkdir(self.user_config_dir)
+        os.makedirs(self.user_config_dir, exist_ok=True)
         for name, contents in (user_config_files or {}).items():
             with open(os.path.join(self.user_config_dir, name), "w") as f:
                 f.write(contents)
@@ -165,7 +192,8 @@ class FreeDV:
 
             self._log_file = open(self.log_path, "wb")
             self._process = subprocess.Popen(
-                [binary, "-f", self.config_path, "-testport", str(port)] + list(args),
+                [binary] + ([] if default_config else ["-f", self.config_path]) +
+                ["-testport", str(port)] + list(args),
                 stdin=subprocess.DEVNULL, stdout=self._log_file, stderr=subprocess.STDOUT,
                 env=process_env)
 
@@ -412,6 +440,12 @@ class FreeDV:
         open so far. They aren't actually opened."""
         return self.command("browser_urls", clear=clear)
 
+    def focus(self, name, lost=False):
+        """Tells a control that it's been given the keyboard focus (or, with
+        lost, that it's been taken away again), as clicking in it or tabbing
+        to it would."""
+        self.command("focus", name=name, lost=lost or None)
+
     def clipboard(self):
         """Returns the text that's on the clipboard, as FreeDV sees it."""
         return self.command("clipboard")["text"]
@@ -428,9 +462,10 @@ class FreeDV:
     def key(self, name, key, hold=False, release=False):
         """Presses and releases a key while the given control has the
         keyboard focus. With hold, the key is only pressed; with release, a
-        key that's being held is released. key is a single character or one
-        of Escape, Space, Tab, Enter, Backspace, Delete, Shift, Control, Up,
-        Down, Left, Right and F1 to F12."""
+        key that's being held is released. key is a single character, one of
+        Escape, Space, Tab, Enter, Backspace, Delete, Insert, Home, End,
+        PageUp, PageDown, Shift, Control, Up, Down, Left, Right and F1 to F12,
+        or (as a number) wxWidgets' code for any other key."""
         self.command("key", name=name, key=key, hold=hold or None, release=release or None)
 
     def answer_next_message_box(self, answer):
@@ -457,7 +492,18 @@ class FreeDV:
         return self.get(name)
 
     def wait_for_window_closed(self, name, timeout=30):
+        """Waits for a top-level window to go away and, if it was a dialog
+        that FreeDV was waiting on, for FreeDV to have carried on from it
+        (e.g. to have acted on what was chosen)."""
         self.wait_until(lambda: not self.window_exists(name), timeout, "window '%s' to close" % name)
+
+        def carried_on():
+            if not self.state().get("inNestedEventLoop"):
+                return True
+            # Unless another such dialog is still open, which is fine.
+            return any(window["shown"] and window.get("modal") for window in self.windows())
+
+        self.wait_until(carried_on, timeout, "FreeDV to carry on after window '%s' closed" % name)
 
     # -- Lifetime ---------------------------------------------------------
 
@@ -475,6 +521,19 @@ class FreeDV:
                 return f.read()
         except OSError:
             return ""
+
+    def wait_for_exit(self, timeout=60):
+        """Waits for FreeDV to exit of its own accord (e.g. after File > Exit
+        was chosen) and returns its exit code."""
+        try:
+            return self._process.wait(timeout)
+        except subprocess.TimeoutExpired:
+            raise FreeDVError("FreeDV did not exit within %d seconds%s" % (timeout, self._stacks()))
+
+    def system_colours_changed(self):
+        """Tells FreeDV's windows that the system's colours have changed, as
+        happens when the desktop switches between light and dark themes."""
+        self.command("system_colours_changed")
 
     def quit(self, timeout=60):
         """Closes FreeDV's main window, waits for FreeDV to exit and returns

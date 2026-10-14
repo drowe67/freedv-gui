@@ -3,8 +3,10 @@
 import array
 import math
 import os
+import socket
 import subprocess
 import tempfile
+import threading
 import time
 import wave
 
@@ -18,14 +20,13 @@ def default_output():
     return _pactl("get-default-sink").strip()
 
 
-def record_level(device, seconds=1.0):
+def record(device, seconds=1.0, channels=1, rate=8000):
     """Listens to an input device (or input_name() of an output device) and
-    returns how loud what it hears is, as the RMS of 16 bit samples: 0 for
-    silence, around 23000 for a full-scale tone."""
+    returns what it hears: a list of 16 bit samples for each channel."""
     with tempfile.TemporaryDirectory(prefix="freedvtest-audio-") as folder:
         path = os.path.join(folder, "recording.wav")
         recorder = subprocess.Popen([
-            "parecord", "--device=" + device, "--file-format=wav", "--channels=1", "--rate=8000",
+            "parecord", "--device=" + device, "--file-format=wav", "--channels=%d" % channels, "--rate=%d" % rate,
             "--format=s16le", "--latency-msec=20", path])
         time.sleep(seconds)
         recorder.terminate()
@@ -34,10 +35,35 @@ def record_level(device, seconds=1.0):
         # The recorder doesn't get to fill in the file's length, so don't rely on it.
         with open(path, "rb") as f:
             data = f.read()[44:]
-    samples = array.array("h", data[:len(data) // 2 * 2])
+    frame = 2 * channels
+    samples = array.array("h", data[:len(data) // frame * frame])
+    return [list(samples[channel::channels]) for channel in range(channels)]
+
+
+def _rms(samples):
     if not samples:
         return 0.0
     return math.sqrt(sum(sample * sample for sample in samples) / len(samples))
+
+
+def record_level(device, seconds=1.0):
+    """Listens to an input device (or input_name() of an output device) and
+    returns how loud what it hears is, as the RMS of 16 bit samples: 0 for
+    silence, around 23000 for a full-scale tone."""
+    return _rms(record(device, seconds)[0])
+
+
+def tone_share(samples, frequency, rate=8000):
+    """Returns how much of what's in some samples (see record()) is a tone
+    of the given frequency: close to 1 if that's all there is, close to 0 if
+    it isn't there or is lost among everything else."""
+    total = sum(sample * sample for sample in samples)
+    if not total:
+        return 0.0
+    step = 2 * math.pi * frequency / rate
+    real = sum(sample * math.cos(step * n) for n, sample in enumerate(samples))
+    imaginary = sum(sample * math.sin(step * n) for n, sample in enumerate(samples))
+    return 2 * (real * real + imaginary * imaginary) / (len(samples) * total)
 
 
 def write_tone(path, seconds=2.0, rate=16000, frequency=1000.0, channels=1, amplitude=16000):
@@ -60,7 +86,7 @@ def file_level(path):
         samples = array.array("h", f.readframes(f.getnframes()))
     if not samples:
         return (0.0, 0.0)
-    return (math.sqrt(sum(sample * sample for sample in samples) / len(samples)), len(samples) / float(rate))
+    return (_rms(samples), len(samples) / float(rate))
 
 
 class Loopback:
@@ -125,13 +151,17 @@ class VirtualAudioDevices:
     radio's or microphone's would be, and outputs does the same for further
     output devices. The description is what a device is displayed as, which
     is otherwise its name.
+
+    rates maps the names of output devices to the sample rate each is to run
+    at, for those that aren't to run at the sound server's usual one.
     """
 
-    def __init__(self, *names, outputs=None, inputs=None):
+    def __init__(self, *names, outputs=None, inputs=None, rates=None):
         self._outputs = {name: name for name in names}
         self._outputs.update(outputs or {})
         self._inputs = dict(inputs or {})
-        self._modules = []
+        self._rates = dict(rates or {})
+        self._modules = []  # (device name, module index), in the order loaded
 
     @staticmethod
     def input_name(name):
@@ -140,7 +170,9 @@ class VirtualAudioDevices:
     def __enter__(self):
         try:
             for name, description in self._outputs.items():
-                self._load("module-null-sink", "sink_name=" + name, self._properties("sink", description))
+                rate = ["rate=%d" % self._rates[name]] if name in self._rates else []
+                self._load(name, "module-null-sink", "sink_name=" + name, self._properties("sink", description),
+                           *rate)
             if self._inputs:
                 # PipeWire has no module-null-source, but can make a null
                 # sink behave as a source instead.
@@ -148,11 +180,11 @@ class VirtualAudioDevices:
                 for name, description in self._inputs.items():
                     if pipewire:
                         self._load(
-                            "module-null-sink", "media.class=Audio/Source/Virtual",
+                            name, "module-null-sink", "media.class=Audio/Source/Virtual",
                             "sink_name=" + name, self._properties("sink", description))
                     else:
                         self._load(
-                            "module-null-source", "source_name=" + name,
+                            name, "module-null-source", "source_name=" + name,
                             self._properties("source", description))
             for name in self._outputs:
                 self._wait_for("sinks", name)
@@ -164,13 +196,40 @@ class VirtualAudioDevices:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        for module in reversed(self._modules):
+        for _, module in reversed(self._modules):
             subprocess.call(["pactl", "unload-module", module])
         self._modules = []
         return False
 
-    def _load(self, *args):
-        self._modules.append(_pactl("load-module", *args).strip())
+    def forget(self):
+        """For when the sound server itself has gone, and the devices with
+        it: there's nothing left to remove at the end of the "with" block."""
+        self._modules = []
+
+    def remove(self, *names):
+        """Unloads the named devices now, and waits until the sound server
+        stops listing them (and, for outputs, their monitors)."""
+        for name in names:
+            for entry in [entry for entry in self._modules if entry[0] == name]:
+                subprocess.call(["pactl", "unload-module", entry[1]])
+                self._modules.remove(entry)
+        gone = [name for name in names for name in (name, self.input_name(name))]
+        deadline = time.monotonic() + 10
+        while True:
+            listed = set()
+            for kind in ("sinks", "sources"):
+                for line in _pactl("list", "short", kind).splitlines():
+                    fields = line.split("\t")
+                    if len(fields) > 1:
+                        listed.add(fields[1])
+            if not any(name in listed for name in gone):
+                return
+            if time.monotonic() > deadline:
+                raise RuntimeError("Audio device %s was still listed after being removed" % ", ".join(gone))
+            time.sleep(0.1)
+
+    def _load(self, name, *args):
+        self._modules.append((name, _pactl("load-module", *args).strip()))
 
     @staticmethod
     def _properties(kind, description):
@@ -238,50 +297,52 @@ class PrivateAudioServer:
         return all(shutil.which(program) for program in cls.PROGRAMS + ["pactl"])
 
     def __enter__(self):
-        import shutil
-        import signal
-
         self._folder = tempfile.mkdtemp(prefix="freedvtest-sound-")
+        self._previous = os.environ.get("PULSE_SERVER")
+        os.environ["PULSE_SERVER"] = "unix:" + os.path.join(self._folder, "pulse", "native")
+        try:
+            self.start()
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+        return self
+
+    def start(self):
+        """Starts the sound server (again, after stop()). It comes back
+        without any of the devices that tests had created."""
         # (Without the last two, the desktop's file services get started as
         # well, and mount something in the folder.)
         env = dict(os.environ, XDG_RUNTIME_DIR=self._folder, GIO_USE_VFS="local", GVFS_DISABLE_FUSE="1")
         for name in ("PULSE_SERVER", "PIPEWIRE_REMOTE", "PIPEWIRE_RUNTIME_DIR", "PULSE_RUNTIME_PATH",
                      "DBUS_SESSION_BUS_ADDRESS"):
             env.pop(name, None)
-        with open(os.path.join(self._folder, "server.log"), "wb") as log:
+        with open(os.path.join(self._folder, "server.log"), "ab") as log:
             self._server = subprocess.Popen(
                 ["dbus-run-session", "--", "sh", "-c",
                  "pipewire & sleep 1; wireplumber & sleep 1; pipewire-pulse & wait"],
                 env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 
-        self._previous = os.environ.get("PULSE_SERVER")
-        os.environ["PULSE_SERVER"] = "unix:" + os.path.join(self._folder, "pulse", "native")
-        try:
-            deadline = time.monotonic() + 30
-            while True:
-                if subprocess.call(["pactl", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
-                    break
-                if self._server.poll() is not None or time.monotonic() > deadline:
-                    raise RuntimeError("Could not start a sound server for the test")
-                time.sleep(0.5)
+        deadline = time.monotonic() + 30
+        while True:
+            if subprocess.call(["pactl", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
+                break
+            if self._server.poll() is not None or time.monotonic() > deadline:
+                raise RuntimeError("Could not start a sound server for the test")
+            time.sleep(0.5)
 
-            # Whatever it's found of the real world, nothing goes there
-            # unless it's asked to.
-            _pactl("load-module", "module-null-sink", "sink_name=" + self.DEFAULT_OUTPUT)
-            _pactl("load-module", "module-null-sink", "sink_name=FreeDVGuiTest_Default_Input_Source")
-            VirtualAudioDevices._wait_for("sinks", self.DEFAULT_OUTPUT)
-            VirtualAudioDevices._wait_for("sinks", "FreeDVGuiTest_Default_Input_Source")
-            _pactl("set-default-sink", self.DEFAULT_OUTPUT)
-            _pactl("set-default-source", "FreeDVGuiTest_Default_Input_Source.monitor")
-            deadline = time.monotonic() + 15
-            while default_output() != self.DEFAULT_OUTPUT:
-                if time.monotonic() > deadline:
-                    raise RuntimeError("Could not set the test sound server's default device")
-                time.sleep(0.25)
-        except BaseException:
-            self.__exit__(None, None, None)
-            raise
-        return self
+        # Whatever it's found of the real world, nothing goes there
+        # unless it's asked to.
+        _pactl("load-module", "module-null-sink", "sink_name=" + self.DEFAULT_OUTPUT)
+        _pactl("load-module", "module-null-sink", "sink_name=FreeDVGuiTest_Default_Input_Source")
+        VirtualAudioDevices._wait_for("sinks", self.DEFAULT_OUTPUT)
+        VirtualAudioDevices._wait_for("sinks", "FreeDVGuiTest_Default_Input_Source")
+        _pactl("set-default-sink", self.DEFAULT_OUTPUT)
+        _pactl("set-default-source", "FreeDVGuiTest_Default_Input_Source.monitor")
+        deadline = time.monotonic() + 15
+        while default_output() != self.DEFAULT_OUTPUT:
+            if time.monotonic() > deadline:
+                raise RuntimeError("Could not set the test sound server's default device")
+            time.sleep(0.25)
 
     def stop(self):
         """Stops the sound server, as if it had crashed."""
@@ -305,3 +366,167 @@ class PrivateAudioServer:
             os.environ["PULSE_SERVER"] = self._previous
         shutil.rmtree(self._folder, ignore_errors=True)
         return False
+
+
+def _sound_server_socket():
+    """The address of the sound server that this process is using."""
+    configured = os.environ.get("PULSE_SERVER", "")
+    if configured.startswith("unix:"):
+        return configured[len("unix:"):]
+    if configured.startswith("tcp:"):
+        return configured[len("tcp:"):]
+    if configured.startswith("/") or ":" in configured:
+        return configured
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
+    return os.path.join(runtime, "pulse", "native")
+
+
+class AudioServerGateway:
+    """Stands between FreeDV and the sound server, so that a test can choose
+    when FreeDV stops being able to reach it: as when the sound server goes
+    away part way through FreeDV starting up.
+
+    Every connection is relayed to the sound server, until
+    refuse_next_connections() is called: the next connection that FreeDV
+    closes is then the last one that gets through, and every connection after
+    that is closed as soon as it's made, which is what a server that has just
+    gone does. refuse_connections_after(count) instead lets a test say how
+    far FreeDV gets before the server stops answering.
+
+    after_next_connection_close(action) instead lets a test do something of
+    its own (take a sound card away, say) when the next connection closes,
+    holding back the connections after it until that's done.
+
+    FreeDV is pointed at the gateway with env(); the test's own audio calls
+    (see _pactl) keep going to the sound server directly.
+    """
+
+    def __init__(self):
+        self._folder = None
+        self._socket = None
+        self._refusing = False
+        self._refuse_after_close = False
+        self._refuse_after = None    # connections still allowed, then None
+        self._trigger = None    # (action, barrier) for the next connection
+        self._barrier = None    # set once that action has run
+
+    def __enter__(self):
+        self._folder = tempfile.mkdtemp(prefix="freedvtest-gateway-")
+        self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._socket.bind(os.path.join(self._folder, "native"))
+        self._socket.listen(8)
+        threading.Thread(target=self._accept, daemon=True).start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import shutil
+
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
+        shutil.rmtree(self._folder, ignore_errors=True)
+        return False
+
+    def env(self):
+        """What to start FreeDV with (see freedvtest.start(env=...)) so that
+        it reaches the sound server through the gateway."""
+        return {"PULSE_SERVER": "unix:" + self._socket.getsockname()}
+
+    def refuse_next_connections(self):
+        """Refuses every connection from the next one that FreeDV closes
+        onwards. FreeDV closes the connection it made while checking its
+        sound cards before it opens any streams, so this is what going away
+        in between looks like to it."""
+        self._refuse_after_close = True
+
+    def refuse_connections_after(self, count):
+        """Refuses every connection after the next count of them. FreeDV
+        makes one connection to check its sound cards, one to list the
+        devices it's about to use, and one for each stream it opens, so a
+        test can say which stream the sound server stops being reachable
+        for."""
+        self._refuse_after = count
+
+    def after_next_connection_close(self, action):
+        """Runs action() when the next connection that FreeDV makes has
+        closed, and before anything is relayed on the connections after it.
+        FreeDV closes the connection it made while checking its sound cards
+        before it opens any streams, so this is what a sound card going away
+        in between looks like to it."""
+        self._barrier = threading.Event()
+        self._trigger = (action, self._barrier)
+
+    def _accept(self):
+        while True:
+            try:
+                client, _ = self._socket.accept()
+            except OSError:
+                return
+            if self._refuse_after is not None:
+                if self._refuse_after > 0:
+                    self._refuse_after -= 1
+                else:
+                    self._refusing = True
+            # Only the first connection after after_next_connection_close()
+            # is the one that triggers it.
+            trigger, self._trigger = self._trigger, None
+            threading.Thread(target=self._serve, args=(client, trigger), daemon=True).start()
+
+    def _serve(self, client, trigger=None):
+        if trigger is None and self._barrier is not None:
+            # What the connection before this one was asked to do (taking a
+            # sound card away, say) is finished before this one carries
+            # anything.
+            self._barrier.wait()
+        try:
+            if self._refusing:
+                client.close()
+                return
+            try:
+                server = _connect_to_sound_server()
+            except OSError:
+                client.close()
+                return
+            pairs = []
+            for source, sink in ((client, server), (server, client)):
+                pair = threading.Thread(target=_relay, args=(source, sink), daemon=True)
+                pair.start()
+                pairs.append(pair)
+            for pair in pairs:
+                pair.join()
+            client.close()
+            server.close()
+        finally:
+            if trigger is not None:
+                action, barrier = trigger
+                action()
+                barrier.set()
+        if self._refuse_after_close:
+            self._refuse_after_close = False
+            self._refusing = True
+
+
+def _connect_to_sound_server():
+    target = _sound_server_socket()
+    if ":" in target and not target.startswith("/"):
+        host, port = target.rsplit(":", 1)
+        return socket.create_connection((host, int(port)), timeout=10)
+    connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    connection.connect(target)
+    return connection
+
+
+def _relay(source, sink):
+    try:
+        while True:
+            data = source.recv(65536)
+            if not data:
+                break
+            sink.sendall(data)
+    except OSError:
+        pass
+    finally:
+        try:
+            sink.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass

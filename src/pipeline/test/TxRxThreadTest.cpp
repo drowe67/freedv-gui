@@ -1116,6 +1116,54 @@ public:
         return result;
     }
 
+    // Fills what's left of a FIFO with a value that the pipeline wouldn't
+    // produce, and returns how much that was.
+    static int fillWithMarker(GenericFIFO<short>* fifo, short marker)
+    {
+        std::vector<short> samples(fifo->numFree(), marker);
+        if (!samples.empty())
+        {
+            fifo->write(samples.data(), (int)samples.size());
+        }
+        return (int)samples.size();
+    }
+
+    static bool onlyContains(std::vector<short> const& samples, short marker)
+    {
+        for (auto sample : samples)
+        {
+            if (sample != marker) return false;
+        }
+        return true;
+    }
+
+    static bool txProcessingDropsOutputWhenRadioFifoIsFull()
+    {
+        constexpr short MARKER = 12345;
+
+        resetGlobals();
+        g_tx = true;
+        FifoGuard fifos;
+        seedSine(g_rxUserdata->infifo2, TEST_SAMPLE_RATE); // 1s of speech
+        int queued = fillWithMarker(g_rxUserdata->outfifo1, MARKER);
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        FakeRealtimeHelper helper;
+        thread.txProcessing_(&helper);
+
+        // There's nowhere for anything new to go, so it's dropped rather than
+        // waited for (this is the audio path) or written over what's queued.
+        auto radioOut = drain(g_rxUserdata->outfifo1);
+
+        bool result = true;
+        result &= check("samples still queued for the radio", (int)radioOut.size(), queued);
+        result &= onlyContains(radioOut, MARKER) ? true : (std::cout << "[what was queued for the radio was overwritten] ", false);
+        return result;
+    }
+
     static bool timeOutWarningBeepsThenTurnsItselfOff()
     {
         resetGlobals();
@@ -1210,6 +1258,97 @@ public:
         g_testToneAmplitude = 8000.0f;
 
         return check("loudest speaker sample", peak(speakerOutputForSilentRadio()), 0);
+    }
+
+    // Runs a second of tone from the radio through a receive thread in
+    // analog mode (where what's received is what's played) and returns the
+    // loudest of what reaches the speaker.
+    static int peakOfSpeakerOutputForToneFromRadio()
+    {
+        FifoGuard fifos;
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(false, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+        seedSine(g_rxUserdata->infifo1, TEST_SAMPLE_RATE);
+
+        FakeRealtimeHelper helper;
+        thread.rxProcessing_(&helper);
+
+        return peak(drain(g_rxUserdata->outfifo2));
+    }
+
+    static int64_t nanosecondsFromNow(int seconds)
+    {
+        auto when = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(when.time_since_epoch()).count();
+    }
+
+    static bool speakerPlaysWhatIsReceived()
+    {
+        resetGlobals();
+        g_analog = 1;
+        return checkBetween("loudest speaker sample", peakOfSpeakerOutputForToneFromRadio(), 1000, 32767);
+    }
+
+    // With one radio that can't hear while it's sending, there's nothing
+    // worth playing during a transmission.
+    static bool speakerIsMutedWhileTransmittingHalfDuplex()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_tx = true;
+        return check("loudest speaker sample", peakOfSpeakerOutputForToneFromRadio(), 0);
+    }
+
+    // In full duplex there is: the other station, on the receiver.
+    static bool speakerKeepsPlayingWhileTransmittingFullDuplex()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_half_duplex = false;
+        g_tx = true;
+        return checkBetween("loudest speaker sample", peakOfSpeakerOutputForToneFromRadio(), 1000, 32767);
+    }
+
+    // After a transmission the speaker stays off until the radio's had time
+    // to go back to receiving, so that the changeover isn't heard.
+    static bool speakerStaysMutedUntilRadioIsBackOnReceive()
+    {
+        resetGlobals();
+        g_analog = 1;
+
+        bool result = true;
+        g_rxMutedUntilNs = nanosecondsFromNow(60);
+        result &= check("loudest speaker sample while the radio changes over", peakOfSpeakerOutputForToneFromRadio(), 0);
+
+        g_rxMutedUntilNs = nanosecondsFromNow(-1);
+        result &= checkBetween("loudest speaker sample once it has", peakOfSpeakerOutputForToneFromRadio(), 1000, 32767);
+        return result;
+    }
+
+    // That wait is for one radio changing over. In full duplex nothing does.
+    static bool speakerDoesNotWaitForRadioInFullDuplex()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_half_duplex = false;
+        g_rxMutedUntilNs = nanosecondsFromNow(60);
+        return checkBetween("loudest speaker sample", peakOfSpeakerOutputForToneFromRadio(), 1000, 32767);
+    }
+
+    // While the voice keyer is sending, what's received isn't played even in
+    // full duplex, unless the voice keyer is being monitored (in which case
+    // it's the voice keyer's audio that's heard: see
+    // monitoredVoiceKeyerAudioFollowsItsOwnVolumeSetting).
+    static bool speakerIsMutedWhileVoiceKeyerTransmits()
+    {
+        resetGlobals();
+        g_analog = 1;
+        g_half_duplex = false;
+        g_tx = true;
+        g_voice_keyer_tx = true;
+        return check("loudest speaker sample", peakOfSpeakerOutputForToneFromRadio(), 0);
     }
 
     // Recordings are fed through buffers sized for audio arriving as it's
@@ -1588,6 +1727,11 @@ public:
 
 int main()
 {
+    // Logging allocates memory the first time it's used on a thread, which
+    // isn't allowed on the real-time paths that some of these tests then log
+    // from (with g_dump_fifo_state set). Get that over with here.
+    log_info("Starting TxRxThread tests");
+
     freedvInterface.start(100, false);
 
     executeTestCase("txProcessingSkippedWhenHalfDuplexPttOff", &TxRxThreadTest::txProcessingSkippedWhenHalfDuplexPttOff);
@@ -1608,10 +1752,17 @@ int main()
     executeTestCase("playFileFromRadioFinishedHookFiresWhenFileEnds", &TxRxThreadTest::playFileFromRadioFinishedHookFiresWhenFileEnds);
     executeTestCase("playFileFromRadioStartsOverWhenLooping", &TxRxThreadTest::playFileFromRadioStartsOverWhenLooping);
     executeTestCase("recordingFromRadioContinuesUntilStopped", &TxRxThreadTest::recordingFromRadioContinuesUntilStopped);
+    executeTestCase("txProcessingDropsOutputWhenRadioFifoIsFull", &TxRxThreadTest::txProcessingDropsOutputWhenRadioFifoIsFull);
     executeTestCase("timeOutWarningBeepsThenTurnsItselfOff", &TxRxThreadTest::timeOutWarningBeepsThenTurnsItselfOff);
     executeTestCase("interferingToneIsAddedToReceivedAudio", &TxRxThreadTest::interferingToneIsAddedToReceivedAudio);
     executeTestCase("interferingToneFollowsItsFrequencyAndAmplitudeSettings", &TxRxThreadTest::interferingToneFollowsItsFrequencyAndAmplitudeSettings);
     executeTestCase("noInterferingToneUnlessEnabled", &TxRxThreadTest::noInterferingToneUnlessEnabled);
+    executeTestCase("speakerPlaysWhatIsReceived", &TxRxThreadTest::speakerPlaysWhatIsReceived);
+    executeTestCase("speakerIsMutedWhileTransmittingHalfDuplex", &TxRxThreadTest::speakerIsMutedWhileTransmittingHalfDuplex);
+    executeTestCase("speakerKeepsPlayingWhileTransmittingFullDuplex", &TxRxThreadTest::speakerKeepsPlayingWhileTransmittingFullDuplex);
+    executeTestCase("speakerStaysMutedUntilRadioIsBackOnReceive", &TxRxThreadTest::speakerStaysMutedUntilRadioIsBackOnReceive);
+    executeTestCase("speakerDoesNotWaitForRadioInFullDuplex", &TxRxThreadTest::speakerDoesNotWaitForRadioInFullDuplex);
+    executeTestCase("speakerIsMutedWhileVoiceKeyerTransmits", &TxRxThreadTest::speakerIsMutedWhileVoiceKeyerTransmits);
     executeTestCase("recordsMicrophoneAudio", &TxRxThreadTest::recordsMicrophoneAudio);
     executeTestCase("recordsWhatIsSentToRadio", &TxRxThreadTest::recordsWhatIsSentToRadio);
     executeTestCase("recordsWhatIsSentToSpeaker", &TxRxThreadTest::recordsWhatIsSentToSpeaker);
