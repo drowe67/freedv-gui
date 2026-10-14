@@ -79,6 +79,93 @@ def best_lag(reference, recording, ref_start, length, centre, span):
     return lo + index - ref_start, float(score[index])
 
 
+def clock(text):
+    hours, minutes, seconds = text.split(":")
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+def radio_out_timing(log_paths):
+    """What FreeDV logged about the radio's sound card asking it for audio
+    while transmitting: (longest between asks in ms, how many times that was
+    more than twice a block, how many times it had signal but gave silence,
+    how far into sending the longest was in seconds or None), or None if no
+    log has it."""
+    for path in log_paths:
+        try:
+            text = open(path, errors="replace").read()
+        except OSError:
+            continue
+        match = re.search(r"Radio out while transmitting: blocks of ([\d.]+) ms; longest between asking for more "
+                          r"([\d.]+) ms, (\d+) times more than twice a block; .* with signal there to send (\d+) times"
+                          r"(?:; the longest ([\d.]+) s into sending)?", text)
+        if match and float(match.group(1)) > 0:
+            at = float(match.group(5)) if match.group(5) else None
+            return float(match.group(2)), int(match.group(3)), int(match.group(4)), at
+    return None
+
+
+def watchdog_timing(log_paths):
+    """What FreeDV's watchdog (a thread that does nothing but wake every 5 ms)
+    logged while transmitting: (latest it woke in ms, how far into sending
+    in seconds, how many times more than 20 ms late, whether it was real
+    time), or None."""
+    for path in log_paths:
+        try:
+            text = open(path, errors="replace").read()
+        except OSError:
+            continue
+        match = re.search(r"Watchdog while transmitting: woke at most ([\d.]+) ms late \(([\d.]+) s into sending\), "
+                          r"more than 20 ms late (\d+) times \(real-time: (\w+)\)", text)
+        if match:
+            return float(match.group(1)), float(match.group(2)), int(match.group(3)), match.group(4) == "yes"
+    return None
+
+
+def radio_out_device(log_paths):
+    """What Core Audio's timestamps said about the radio's output device, as
+    FreeDV logged it when sending stopped, or None."""
+    for path in log_paths:
+        try:
+            text = open(path, errors="replace").read()
+        except OSError:
+            continue
+        match = re.search(r"Device \d+ \(FreeDV to Radio\): (.*)", text)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def core_audio_complaints(log_paths, started):
+    """Lines from Core Audio's own log (coreaudio.log) about overloads or
+    skipped cycles, as (seconds after sending started, the line)."""
+    complaints = []
+    for path in log_paths:
+        if "coreaudio" not in path:
+            continue
+        try:
+            lines = open(path, errors="replace").read().splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            match = re.search(r"^\d{4}-\d\d-\d\d (\d+:\d+:[\d.]+) ", line)
+            if match and re.search(r"overload|skipping cycle|skipped cycle|glitch", line, re.IGNORECASE):
+                complaints.append((clock(match.group(1)) - started if started is not None else 0.0, line.strip()))
+    return complaints
+
+
+def sending_started(log_paths):
+    """When (seconds into the day) FreeDV started sending, from its TX log."""
+    for path in log_paths:
+        try:
+            for line in open(path, errors="replace"):
+                match = re.search(r"^(\d+:\d+:\d+) .*Firing PTT", line)
+                if match:
+                    return clock(match.group(1))
+        except OSError:
+            continue
+    return None
+
+
 def tap_drops(log_paths):
     """Each time FreeDV's plot taps dropped samples while it was sending or
     receiving, by log and time: as (log, time, how many taps, longest drop in
@@ -132,7 +219,7 @@ def main():
     window = RATE // 10
     lag, score = best_lag(sent, recorded, sent_start + RATE // 2, window, rec_start - sent_start, RATE)
     problems = []
-    extras = []     # (ms, description) of stretches the recording has and the copy doesn't
+    extras = []     # (ms, seconds into the signal, description) of stretches the recording has and the copy doesn't
     if lag is None or score < 0.9:
         print("Couldn't find the start of what was sent in the recording (best match %.2f)" % score)
         problems.append("the recording doesn't start with what was sent")
@@ -151,7 +238,7 @@ def main():
                 description = "%.1f ms %s between %.2f and %.2f s into the signal" % (abs(change_ms), what, where[0], where[1])
                 problems.append(description)
                 if change_ms > 0:
-                    extras.append((change_ms, description))
+                    extras.append((change_ms, (where[0] + where[1]) / 2, description))
                 lag = new_lag
             last_good = position
 
@@ -168,17 +255,47 @@ def main():
     # FreeDV's copy of what it sent is written by one of its taps too, so
     # where the taps dropped samples while sending, the copy is missing them
     # rather than the recording having anything extra.
+    # The drop's time in the log is to the second, so one within a couple of
+    # seconds of where the copy and recording part ways is taken to be it.
+    # Where the two differ in size, the recording has lost (or gained) the
+    # difference itself.
     copy_gaps = []
-    sending_drops = [samples * 1000.0 / RATE for path, when, taps, samples in drops if "tx" in path]
-    for ms, description in extras:
-        if any(abs(ms - dropped) <= 3.0 for dropped in sending_drops):
-            problems.remove(description)
-            copy_gaps.append(ms)
+    started = sending_started(sys.argv[3:])
+    sending_drops = [(clock(when), samples * 1000.0 / RATE) for path, when, taps, samples in drops if "tx" in path]
+    for ms, seconds_in, description in extras:
+        for when, dropped in sending_drops:
+            if abs(ms - dropped) <= 3.0 or (started is not None and abs(when - started - seconds_in) <= 2.5):
+                problems.remove(description)
+                copy_gaps.append(dropped)
+                sending_drops.remove((when, dropped))
+                if abs(ms - dropped) > 3.0:
+                    problems.append("%.1f ms %s %.1f s or so into the signal (FreeDV's copy is missing %.1f ms there, "
+                                    "and the recording has %.1f ms more than it)" % (
+                                        abs(dropped - ms), "missing" if ms < dropped else "extra", seconds_in, dropped, ms))
+                break
 
     for problem in problems:
         print("  " + problem)
     for ms in copy_gaps:
         print("  FreeDV's copy is missing %.1f ms, which its tap dropped (not a problem with the recording)" % ms)
+
+    timing = radio_out_timing(sys.argv[3:])
+    if timing:
+        print("  The radio's sound card asked FreeDV for audio at most %.1f ms apart while it was sending%s, more than "
+              "twice a block apart %d times; FreeDV gave silence with signal there to send %d times" % (
+                  timing[0], "" if timing[3] is None else " (%.1f s in)" % timing[3], timing[1], timing[2]))
+    watchdog = watchdog_timing(sys.argv[3:])
+    if watchdog:
+        print("  FreeDV's watchdog (%sreal time, waking every 5 ms) woke at most %.1f ms late (%.1f s into sending), "
+              "more than 20 ms late %d times" % ("" if watchdog[3] else "not ", watchdog[0], watchdog[1], watchdog[2]))
+    device = radio_out_device(sys.argv[3:])
+    if device:
+        print("  Core Audio, for the radio's output: " + device)
+    complaints = core_audio_complaints(sys.argv[3:], started)
+    for seconds_in, line in complaints[:10]:
+        print("  Core Audio's log, %.0f s after sending started: %s" % (seconds_in, line[:200]))
+    if len(complaints) > 10:
+        print("  (and %d more such lines in Core Audio's log)" % (len(complaints) - 10))
 
     for path, when, taps, samples in drops:
         print("  FreeDV's plot taps (%d of them) couldn't keep up at %s (%s): up to %.0f ms dropped"
@@ -189,6 +306,21 @@ def main():
               "%s ms that its tap dropped)" % ", ".join("%.1f" % ms for ms in copy_gaps))
     elif not problems:
         print("RECORDING CHECK: the recording is what FreeDV sent")
+    elif timing and timing[1] > 0 and timing[2] == 0 and not any("missing" in problem for problem in problems):
+        # Whether everything stalled, or only the sound system: the
+        # watchdog's being held up for much of the same time, at about the
+        # same moment, means the former.
+        if watchdog is None:
+            whose = "the sound system's or the machine's"
+        elif watchdog[0] >= timing[0] / 2 and (timing[3] is None or abs(watchdog[1] - timing[3]) < 1.0):
+            whose = ("the machine's: a real-time thread with nothing else to do was held up %.1f ms at the same time"
+                     % watchdog[0])
+        else:
+            whose = ("the sound system's: other real-time threads ran on time meanwhile (the watchdog was never more "
+                     "than %.1f ms late)" % watchdog[0])
+        print("RECORDING CHECK: the recording differs from what FreeDV sent (%s), and meanwhile the sound card went "
+              "%.1f ms without asking FreeDV for audio (%d times more than twice a block) while FreeDV had signal ready "
+              "to send: the pauses aren't FreeDV's, but %s" % ("; ".join(problems), timing[0], timing[1], whose))
     elif drops:
         print("RECORDING CHECK: the recording differs from what FreeDV sent (%s), and meanwhile FreeDV's TX/RX thread "
               "carried on while its ordinary threads were held up: most likely the machine stalled, and the recorder "

@@ -92,6 +92,7 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
+TX_STARTED_AT="$(date "+%Y-%m-%d %H:%M:%S")"
 TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 -txoutfile $(pwd)/txout.wav "
 ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log tx.log) &
 
@@ -111,6 +112,14 @@ FREEDV_EXIT_CODE=$?
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
+
+# What Core Audio itself logged meanwhile (overloads, skipped cycles), for
+# check_rade_recording.py.
+if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    /usr/bin/log show --start "$TX_STARTED_AT" --info --style compact \
+        --predicate 'process == "coreaudiod" OR subsystem BEGINSWITH "com.apple.coreaudio" OR subsystem BEGINSWITH "com.apple.audio"' \
+        > coreaudio.log 2>&1 || true
+fi
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
@@ -130,7 +139,7 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     # Whether what was recorded is what FreeDV sent (txout.wav, its own copy
     # of what it sent): see check_rade_recording.py.
     echo "----- Checking the recording against what FreeDV sent -----"
-    $PYTHON_BINARY $SCRIPTPATH/check_rade_recording.py txout.wav test.wav tx.log rx.log 2>&1 | tee recording_check.txt
+    $PYTHON_BINARY $SCRIPTPATH/check_rade_recording.py txout.wav test.wav tx.log rx.log $([ -f coreaudio.log ] && echo coreaudio.log) 2>&1 | tee recording_check.txt
 
     # On failure, decode the same recording again: if it fails the same way,
     # the damage is in the recording (the transmitting half, or what carried
