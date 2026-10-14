@@ -539,7 +539,16 @@ void MainApp::UnitTest_()
     
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
- 
+
+    // What the sound cards went through, for telling a failure that started
+    // there from one that didn't. (While receiving, the radio's output sound
+    // card counts as short all the time, there being nothing to send it.)
+    log_info(
+        "Sound card FIFOs: radio in overflowed %d times, radio out short %d times, mic in overflowed %d times, "
+        "speaker out short %d times",
+        g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed),
+        g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
+
     // Fire event to stop FreeDV
     log_info("Firing stop");
     CallAfter([this]() {

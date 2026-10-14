@@ -93,7 +93,7 @@ RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
 TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
-($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log) &
+($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log tx.log) &
 
 FDV_PID=$!
 
@@ -114,7 +114,7 @@ kill $RECORD_PID
 #cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 2>&1 | tee tmp.log) &
+    ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures.f32 2>&1 | tee tmp.log rx.log) &
     FDV_PID=$!
 
     #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
@@ -125,7 +125,20 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     #cat tmp.log
 
     # Run feature files through loss tool
-    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
+    $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 2>&1 | tee loss.txt
+
+    # On failure, decode the same recording again: if it fails the same way,
+    # the damage is in the recording (the transmitting half, or what carried
+    # it); if not, the receiving half lost something the first time. Either
+    # way, test.wav, the feature files and both halves' logs are left behind
+    # for looking at. (The result of the test is still that of the first
+    # decode.)
+    if grep -q "FAIL" loss.txt; then
+        echo "----- Decoding the same recording a second time -----"
+        $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav -rxfeaturefile $(pwd)/rxfeatures2.f32 > rx2.log 2>&1
+        grep -E "Sync changed|Sound card FIFOs" rx2.log
+        $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures2.f32 --loss_test 0.15 2>&1 | sed "s/^/second decode: /" | sed "s/PASS/OK/; s/FAIL/BAD/"
+    fi
 fi
 
 # Clean up PulseAudio virtual devices
