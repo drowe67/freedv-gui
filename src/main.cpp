@@ -171,6 +171,7 @@ int                 g_nSoundCards;
 
 std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
+std::atomic<int>    g_outfifo1_emptyWhileTransmitting; // ...the times that mattered
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
@@ -541,12 +542,14 @@ void MainApp::UnitTest_()
     std::this_thread::sleep_for(1000ms);
 
     // What the sound cards went through, for telling a failure that started
-    // there from one that didn't. (While receiving, the radio's output sound
-    // card counts as short all the time, there being nothing to send it.)
+    // there from one that didn't. (Only the radio's output going short while
+    // transmitting is of any account: otherwise there's nothing to send it.
+    // Likewise the microphone's input overflowing while receiving, when
+    // nothing's taking it.)
     log_info(
-        "Sound card FIFOs: radio in overflowed %d times, radio out short %d times, mic in overflowed %d times, "
-        "speaker out short %d times",
-        g_infifo1_full.load(std::memory_order_relaxed), g_outfifo1_empty.load(std::memory_order_relaxed),
+        "Sound card FIFOs: radio out short %d times while transmitting, radio in overflowed %d times, "
+        "mic in overflowed %d times, speaker out short %d times",
+        g_outfifo1_emptyWhileTransmitting.load(std::memory_order_relaxed), g_infifo1_full.load(std::memory_order_relaxed),
         g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
 
     // Fire event to stop FreeDV
@@ -3397,6 +3400,7 @@ void MainFrame::startRxStream()
 
         g_infifo1_full.store(0, std::memory_order_relaxed);
         g_outfifo1_empty.store(0, std::memory_order_relaxed);
+        g_outfifo1_emptyWhileTransmitting.store(0, std::memory_order_relaxed);
         g_infifo2_full.store(0, std::memory_order_relaxed);
         g_outfifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
@@ -3960,6 +3964,10 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     if (output != TxOutput::Waiting && toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
+        if (g_tx.load(std::memory_order_acquire))
+        {
+            g_outfifo1_emptyWhileTransmitting.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     else
     {

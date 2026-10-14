@@ -94,7 +94,10 @@ jobs:
           . ./rade_venv/bin/activate
           FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1 2ch" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="VB-Cable" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" FREEDV_BINARY=./FreeDV-dmg/FreeDV.app/Contents/MacOS/FreeDV ./test/test_rade_loss.sh 2>&1 | tee temp-test.txt
           echo "----- Summary -----"
-          grep -E "Sync changed|Sound card FIFOs|loss:|PASS|FAIL|second decode" temp-test.txt rx2.log 2>/dev/null || true
+          grep -E "Sync changed|Sound card FIFOs|loss:|PASS|FAIL|second decode|RECORDING CHECK|missing|extra|silence|plot taps" temp-test.txt rx2.log 2>/dev/null || true
+          if grep -q "most likely the machine stalled" recording_check.txt 2>/dev/null; then
+              echo "::warning::rade_loss: $(grep "RECORDING CHECK" recording_check.txt)"
+          fi
           grep "PASS" temp-test.txt
 
     - name: Keep what the test left behind
@@ -112,4 +115,6 @@ jobs:
           ${{github.workspace}}/rx2.log
           ${{github.workspace}}/loss.txt
           ${{github.workspace}}/temp-test.txt
+          ${{github.workspace}}/txout.wav
+          ${{github.workspace}}/recording_check.txt
         if-no-files-found: ignore

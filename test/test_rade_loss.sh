@@ -92,7 +92,7 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 -txoutfile $(pwd)/txout.wav "
 ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS 2>&1 | tee tmp.log tx.log) &
 
 FDV_PID=$!
@@ -126,6 +126,11 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
 
     # Run feature files through loss tool
     $PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 2>&1 | tee loss.txt
+
+    # Whether what was recorded is what FreeDV sent (txout.wav, its own copy
+    # of what it sent): see check_rade_recording.py.
+    echo "----- Checking the recording against what FreeDV sent -----"
+    $PYTHON_BINARY $SCRIPTPATH/check_rade_recording.py txout.wav test.wav tx.log rx.log 2>&1 | tee recording_check.txt
 
     # On failure, decode the same recording again: if it fails the same way,
     # the damage is in the recording (the transmitting half, or what carried
