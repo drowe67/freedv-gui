@@ -132,6 +132,7 @@ def main():
     window = RATE // 10
     lag, score = best_lag(sent, recorded, sent_start + RATE // 2, window, rec_start - sent_start, RATE)
     problems = []
+    extras = []     # (ms, description) of stretches the recording has and the copy doesn't
     if lag is None or score < 0.9:
         print("Couldn't find the start of what was sent in the recording (best match %.2f)" % score)
         problems.append("the recording doesn't start with what was sent")
@@ -147,7 +148,10 @@ def main():
                 change_ms = (new_lag - lag) * 1000.0 / RATE
                 where = (last_good - sent_start) / RATE, (position - sent_start) / RATE
                 what = "missing" if change_ms < 0 else "extra"
-                problems.append("%.1f ms %s between %.2f and %.2f s into the signal" % (abs(change_ms), what, where[0], where[1]))
+                description = "%.1f ms %s between %.2f and %.2f s into the signal" % (abs(change_ms), what, where[0], where[1])
+                problems.append(description)
+                if change_ms > 0:
+                    extras.append((change_ms, description))
                 lag = new_lag
             last_good = position
 
@@ -159,15 +163,31 @@ def main():
         if end - start >= RATE // 200 and end < rec_end - rec_start - RATE:
             problems.append("%.1f ms of silence %.2f s into the recorded signal" % ((end - start) * 1000.0 / RATE, start / RATE))
 
+    drops = tap_drops(sys.argv[3:])
+
+    # FreeDV's copy of what it sent is written by one of its taps too, so
+    # where the taps dropped samples while sending, the copy is missing them
+    # rather than the recording having anything extra.
+    copy_gaps = []
+    sending_drops = [samples * 1000.0 / RATE for path, when, taps, samples in drops if "tx" in path]
+    for ms, description in extras:
+        if any(abs(ms - dropped) <= 3.0 for dropped in sending_drops):
+            problems.remove(description)
+            copy_gaps.append(ms)
+
     for problem in problems:
         print("  " + problem)
+    for ms in copy_gaps:
+        print("  FreeDV's copy is missing %.1f ms, which its tap dropped (not a problem with the recording)" % ms)
 
-    drops = tap_drops(sys.argv[3:])
     for path, when, taps, samples in drops:
         print("  FreeDV's plot taps (%d of them) couldn't keep up at %s (%s): up to %.0f ms dropped"
               % (taps, when, path, samples * 1000.0 / RATE))
 
-    if not problems:
+    if not problems and copy_gaps:
+        print("RECORDING CHECK: the recording is what FreeDV sent, as far as can be told (FreeDV's own copy is missing "
+              "%s ms that its tap dropped)" % ", ".join("%.1f" % ms for ms in copy_gaps))
+    elif not problems:
         print("RECORDING CHECK: the recording is what FreeDV sent")
     elif drops:
         print("RECORDING CHECK: the recording differs from what FreeDV sent (%s), and meanwhile FreeDV's TX/RX thread "

@@ -172,6 +172,19 @@ int                 g_nSoundCards;
 std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
 std::atomic<int>    g_outfifo1_emptyWhileTransmitting; // ...the times that mattered
+
+// How the radio's output sound card was served while transmitting, for
+// telling FreeDV not keeping up from the sound card not asking: the longest
+// time between its asking for more and how many times that was well over
+// the time a block lasts, how many blocks of silence it was given while the
+// start of a transmission was building up, and how many while there was
+// signal to send but it couldn't be read.
+std::atomic<int64_t> g_txOutLastCallbackNs;
+std::atomic<int64_t> g_txOutLongestGapUs;
+std::atomic<int64_t> g_txOutBlockUs;
+std::atomic<int>    g_txOutLateCallbacks;
+std::atomic<int>    g_txOutWaitingCallbacks;
+std::atomic<int>    g_txOutReadFailures;
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
@@ -551,6 +564,12 @@ void MainApp::UnitTest_()
         "mic in overflowed %d times, speaker out short %d times",
         g_outfifo1_emptyWhileTransmitting.load(std::memory_order_relaxed), g_infifo1_full.load(std::memory_order_relaxed),
         g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
+    log_info(
+        "Radio out while transmitting: blocks of %.1f ms; longest between asking for more %.1f ms, %d times more "
+        "than twice a block; silence while starting %d times, and with signal there to send %d times",
+        g_txOutBlockUs.load(std::memory_order_relaxed) / 1000.0, g_txOutLongestGapUs.load(std::memory_order_relaxed) / 1000.0,
+        g_txOutLateCallbacks.load(std::memory_order_relaxed), g_txOutWaitingCallbacks.load(std::memory_order_relaxed),
+        g_txOutReadFailures.load(std::memory_order_relaxed));
 
     // Fire event to stop FreeDV
     log_info("Firing stop");
@@ -3401,6 +3420,12 @@ void MainFrame::startRxStream()
         g_infifo1_full.store(0, std::memory_order_relaxed);
         g_outfifo1_empty.store(0, std::memory_order_relaxed);
         g_outfifo1_emptyWhileTransmitting.store(0, std::memory_order_relaxed);
+        g_txOutLastCallbackNs.store(0, std::memory_order_relaxed);
+        g_txOutLongestGapUs.store(0, std::memory_order_relaxed);
+        g_txOutBlockUs.store(0, std::memory_order_relaxed);
+        g_txOutLateCallbacks.store(0, std::memory_order_relaxed);
+        g_txOutWaitingCallbacks.store(0, std::memory_order_relaxed);
+        g_txOutReadFailures.store(0, std::memory_order_relaxed);
         g_infifo2_full.store(0, std::memory_order_relaxed);
         g_outfifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
@@ -3950,6 +3975,28 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
+    auto transmitting = g_tx.load(std::memory_order_acquire);
+
+    // How long since the sound card last asked (see g_txOutLongestGapUs).
+    {
+        auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        auto last = g_txOutLastCallbackNs.exchange(transmitting ? now : 0, std::memory_order_relaxed);
+        if (transmitting && last != 0)
+        {
+            int64_t gapUs = (now - last) / 1000;
+            int64_t blockUs = (int64_t)size * 1000000 / std::max(1, dev.getSampleRate());
+            g_txOutBlockUs.store(blockUs, std::memory_order_relaxed);
+            if (gapUs > g_txOutLongestGapUs.load(std::memory_order_relaxed))
+            {
+                g_txOutLongestGapUs.store(gapUs, std::memory_order_relaxed);
+            }
+            if (gapUs > 2 * blockUs + 5000)
+            {
+                g_txOutLateCallbacks.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    }
 
     // A transmission isn't given to the sound card until enough of it is
     // ready that the sound card won't run out part of the way through.
@@ -3977,6 +4024,10 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
             // radio keyed by it is transmitting by the time the signal
             // arrives.
             toRead = 0;
+            if (transmitting)
+            {
+                g_txOutWaitingCallbacks.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
         if (toRead >= size && cbData->outfifo1->read(tmpOutput, size) != 0)
@@ -3985,6 +4036,10 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
             // into tmpOutput, so fall back to silence below instead of
             // replaying stale samples from the previous callback.
             toRead = 0;
+            if (transmitting)
+            {
+                g_txOutReadFailures.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
         auto numChannels = dev.getNumChannels();
