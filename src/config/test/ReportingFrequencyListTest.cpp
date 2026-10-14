@@ -136,6 +136,16 @@ bool savedThenLoadedIsUnchanged(bool asKhz)
     return listIs(config.reportingFrequencyList.get(), displayed);
 }
 
+// A frequency added to the list goes before the first one above it.
+bool sortedFrequencyIndex()
+{
+    StringList list { "3.6250", "7.1770", "14.2360" };
+    return ReportingConfiguration::SortedFrequencyIndex(list, 1.9975) == 0 &&
+           ReportingConfiguration::SortedFrequencyIndex(list, 10.136) == 2 &&
+           ReportingConfiguration::SortedFrequencyIndex(list, 28.33) == 3 &&
+           ReportingConfiguration::SortedFrequencyIndex(StringList {}, 7.0) == 0;
+}
+
 }
 
 int main()
@@ -155,5 +165,6 @@ int main()
     executeTestCase("savedFrequencyIsExact (kHz)", []() { return savedFrequencyIsExact(true); });
     executeTestCase("savedThenLoadedIsUnchanged (MHz)", []() { return savedThenLoadedIsUnchanged(false); });
     executeTestCase("savedThenLoadedIsUnchanged (kHz)", []() { return savedThenLoadedIsUnchanged(true); });
+    executeTestCase("sortedFrequencyIndex", sortedFrequencyIndex);
     return testResult();
 }

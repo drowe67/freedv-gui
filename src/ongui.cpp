@@ -2097,6 +2097,134 @@ void MainFrame::OnCenterRx(wxCommandEvent&)
     clickTune(FDMDV_FCENTRE);
 }
 
+// The frequency typed or shown in the box as the predefined list shows it
+// (rounded to 100 Hz, as it's used), or empty if it isn't a frequency.
+wxString MainFrame::reportFrequencyListString_(wxString const& text)
+{
+    double value = 0;
+    if (!wxNumberFormatter::FromString(text, &value) || value <= 0)
+    {
+        return wxEmptyString;
+    }
+
+    bool asKhz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+    uint64_t hz = round(value * (asKhz ? 1000.0 : 1000.0 * 1000.0));
+    hz = (hz + 50) / 100 * 100;
+    if (hz == 0)
+    {
+        return wxEmptyString;
+    }
+    return asKhz ? wxNumberFormatter::ToString(hz / 1000.0, 1) : wxNumberFormatter::ToString(hz / 1000.0 / 1000.0, 4);
+}
+
+// Adds a frequency (as reportFrequencyListString_() gives it) to the
+// predefined list in its place in ascending order, and saves the list.
+void MainFrame::addReportFrequencyToList_(wxString const& freq)
+{
+    double value = 0;
+    wxNumberFormatter::FromString(freq, &value);
+
+    auto list = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get();
+    if (std::find(list.begin(), list.end(), freq) != list.end())
+    {
+        return;
+    }
+    size_t index = ReportingConfiguration::SortedFrequencyIndex(list, value);
+    list.insert(list.begin() + index, freq);
+    wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = list;
+    wxGetApp().appConfiguration.save(pConfig);
+
+    m_reportFrequencyList->Insert(freq, index);
+}
+
+// Right-click on the frequency box: add what's in it to the predefined
+// list. The entry's own menu is replaced, so its editing items are here too.
+void MainFrame::OnReportFrequencyContextMenu(wxContextMenuEvent&)
+{
+    if (!m_cboReportFrequency->IsEnabled())
+    {
+        return;
+    }
+
+    wxString freq = reportFrequencyListString_(m_cboReportFrequency->GetValue());
+    auto const& list = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get();
+    bool listed = std::find(list.begin(), list.end(), freq) != list.end();
+    wxString units = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? _("kHz") : _("MHz");
+
+    wxMenu menu;
+    wxMenuItem* addItem = menu.Append(wxID_ANY,
+        freq.IsEmpty() ? _("Add frequency to list") : wxString::Format(_("Add %s %s to list"), freq, units));
+    addItem->Enable(!freq.IsEmpty() && !listed);
+    menu.Bind(wxEVT_MENU, [this, freq](wxCommandEvent&) { addReportFrequencyToList_(freq); }, addItem->GetId());
+
+    wxTextCtrl* text = m_cboReportFrequency->GetTextCtrl();
+    menu.AppendSeparator();
+    menu.Append(wxID_CUT, _("Cut"))->Enable(text->CanCut());
+    menu.Append(wxID_COPY, _("Copy"))->Enable(text->CanCopy());
+    menu.Append(wxID_PASTE, _("Paste"))->Enable(text->CanPaste());
+    menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Cut(); }, wxID_CUT);
+    menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Copy(); }, wxID_COPY);
+    menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Paste(); }, wxID_PASTE);
+
+    ShowPopupMenu(m_cboReportFrequency, &menu);
+}
+
+// Right-click on a frequency in the open list: delete it. The list closes
+// for the menu, so open it again afterwards where it was, ready for the
+// next one.
+void MainFrame::OnReportFrequencyItemMenu(int item)
+{
+    if (item < 0 || (unsigned)item >= m_reportFrequencyList->GetCount())
+    {
+        return;
+    }
+
+    wxString units = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? _("kHz") : _("MHz");
+    int top = m_reportFrequencyList->GetTopItem();
+
+    wxMenu menu;
+    wxMenuItem* deleteItem = menu.Append(wxID_ANY,
+        wxString::Format(_("Delete %s %s from list"), m_reportFrequencyList->GetString(item), units));
+    menu.Bind(wxEVT_MENU, [this, item, top](wxCommandEvent&) {
+        OnReportFrequencyItemDelete(item);
+        CallAfter([this, top]() {
+            if (m_reportFrequencyList->GetCount() == 0)
+            {
+                return;
+            }
+            m_cboReportFrequency->Popup();
+            if (top != wxNOT_FOUND)
+            {
+                m_reportFrequencyList->SetFirstItem(std::min(top, (int)m_reportFrequencyList->GetCount() - 1));
+            }
+        });
+    }, deleteItem->GetId());
+
+    ShowPopupMenu(m_cboReportFrequency, &menu);
+}
+
+// Deletes a frequency from the predefined list (Del on it in the open list,
+// or its right-click menu), and saves the list.
+void MainFrame::OnReportFrequencyItemDelete(int item)
+{
+    if (item < 0 || (unsigned)item >= m_reportFrequencyList->GetCount())
+    {
+        return;
+    }
+
+    wxString freq = m_reportFrequencyList->GetString(item);
+    auto list = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get();
+    auto it = std::find(list.begin(), list.end(), freq);
+    if (it != list.end())
+    {
+        list.erase(it);
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = list;
+        wxGetApp().appConfiguration.save(pConfig);
+    }
+
+    m_reportFrequencyList->Delete(item);
+}
+
 void MainFrame::updateReportingFreqList_()
 {
     uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -2116,18 +2244,14 @@ void MainFrame::updateReportingFreqList_()
     {
         prevSelected = wxNumberFormatter::ToString(freq, 4);
     }
-    m_cboReportFrequency->Clear();
-    
+    m_reportFrequencyList->Clear();
+
     for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
     {
-        m_cboReportFrequency->Append(item);
+        m_reportFrequencyList->Append(item);
     }
-    
-    auto idx = m_cboReportFrequency->FindString(prevSelected);
-    if (idx >= 0)
-    {
-        m_cboReportFrequency->SetSelection(idx);
-    }
+
+    m_reportFrequencyList->SetStringValue(prevSelected);
     m_cboReportFrequency->SetValue(prevSelected);
     
     // Update associated label if the units have changed

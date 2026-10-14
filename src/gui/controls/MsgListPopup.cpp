@@ -24,20 +24,27 @@
 #include <wx/textctrl.h>
 
 MsgListPopup::MsgListPopup(ContextMenuCallback onRightClick)
-    : onRightClick_(std::move(onRightClick)), deselTimer_(this)
+    : MsgListPopup(std::move(onRightClick), Options())
+{
+}
+
+MsgListPopup::MsgListPopup(ContextMenuCallback onRightClick, Options const& options)
+    : onRightClick_(std::move(onRightClick)), options_(options), deselTimer_(this)
 {
     Bind(wxEVT_TIMER, &MsgListPopup::OnDeselect, this, deselTimer_.GetId());
 }
 
 bool MsgListPopup::Create(wxWindow* parent)
 {
-    if (!wxListBox::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_SORT))
+    if (!wxListBox::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr,
+                           options_.sorted ? wxLB_SORT : 0))
         return false;
     Connect(wxEVT_LEFT_DOWN,  wxMouseEventHandler(MsgListPopup::OnLeftDown),  nullptr, this);
     Connect(wxEVT_LEFT_UP,    wxMouseEventHandler(MsgListPopup::OnLeftUp),    nullptr, this);
     Connect(wxEVT_MOTION,     wxMouseEventHandler(MsgListPopup::OnMouseMove), nullptr, this);
     Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(MsgListPopup::OnRightDown), nullptr, this);
     Connect(wxEVT_RIGHT_UP,   wxMouseEventHandler(MsgListPopup::OnRightUp),   nullptr, this);
+    Connect(wxEVT_KEY_DOWN,   wxKeyEventHandler(MsgListPopup::OnKeyDown),     nullptr, this);
     SetToolTip(_("Right click for more options"));
     return true;
 }
@@ -50,13 +57,22 @@ void MsgListPopup::SetStringValue(const wxString& s)
 
 wxString MsgListPopup::GetStringValue() const
 {
+    // The combo takes this whenever the list closes. Without hoverPicks,
+    // only an item actually clicked counts, not one just passed over.
+    if (!options_.hoverPicks && !picked_)
+        return GetComboCtrl()->GetValue();
+
     int sel = GetSelection();
     return sel != wxNOT_FOUND ? GetString(sel) : wxString();
 }
 
 void MsgListPopup::OnPopup()
 {
+    picked_ = false;
     SetStringValue(GetComboCtrl()->GetValue());
+
+    if (!options_.openAbove)
+        return;
 
     // Reposition popup above the combo: it sits near the bottom of the
     // dialog so there is more room upward.  OnPopup() is called before
@@ -104,6 +120,7 @@ void MsgListPopup::OnLeftUp(wxMouseEvent& event)
     if (item != wxNOT_FOUND)
     {
         SetSelection(item);
+        picked_ = true;
         Dismiss();
         deselTimer_.StartOnce(20);
     }
@@ -149,6 +166,19 @@ void MsgListPopup::OnRightUp(wxMouseEvent& event)
     onRightClick_(item);
 }
 
+void MsgListPopup::OnKeyDown(wxKeyEvent& event)
+{
+    int key = event.GetKeyCode();
+    int item = GetSelection();
+    if (onDeleteKey_ && (key == WXK_DELETE || key == WXK_NUMPAD_DELETE) && item != wxNOT_FOUND)
+    {
+        onDeleteKey_(item);
+        // Highlight whatever is now under the pointer, as hovering does.
+        SetSelection(HitTest(ScreenToClient(wxGetMousePosition())));
+        return;
+    }
+    event.Skip();
+}
 
 void MsgListPopup::OnDeselect(wxTimerEvent&)
 {
