@@ -572,7 +572,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
     
     m_freqList = new wxListBox(sb_freqList, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
-    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(5, 2), static_cast<int>(wxEXPAND));
+    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(2, 2), static_cast<int>(wxEXPAND));
 
     const int FREQ_LIST_BUTTON_WIDTH = 100; 
     const int FREQ_LIST_BUTTON_HEIGHT = -1;
@@ -580,10 +580,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
     m_freqListRemove = new wxButton(sb_freqList, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
-    m_freqListMoveUp = new wxButton(sb_freqList, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
-    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
-    m_freqListMoveDown = new wxButton(sb_freqList, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
-    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
     
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
@@ -593,10 +589,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     {
         m_labelEnterFreq = new wxStaticText(sb_freqList, wxID_ANY, _("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
     }
-    gridSizer->Add(m_labelEnterFreq, wxGBPosition(5, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
+    gridSizer->Add(m_labelEnterFreq, wxGBPosition(2, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(sb_freqList, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(5, 1), wxGBSpan(1, 2), static_cast<int>(wxEXPAND));
+    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(2, 1), wxGBSpan(1, 2), static_cast<int>(wxEXPAND));
     
     sbSizer_freqList->Add(gridSizer, 0, static_cast<int>(wxALL), 5);
     
@@ -1257,8 +1253,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtCtrlNewFrequency->SetName("settings.txtCtrlNewFrequency");
     m_freqListAdd->SetName("settings.freqListAdd");
     m_freqListRemove->SetName("settings.freqListRemove");
-    m_freqListMoveUp->SetName("settings.freqListMoveUp");
-    m_freqListMoveDown->SetName("settings.freqListMoveDown");
     m_textFifos->SetName("settings.textFifos");
     m_labelEnterFreq->SetName("settings.labelEnterFreq");
     m_stIcomCIVHex->SetName("settings.stIcomCIVHex");
@@ -1305,8 +1299,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
     m_freqListAdd->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
     m_freqListRemove->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
-    m_freqListMoveUp->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
-    m_freqListMoveDown->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
 
     // Radio tab events
     m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseHamLibClicked), NULL, this);
@@ -1382,8 +1374,6 @@ OptionsDlg::~OptionsDlg()
     m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
     m_freqListAdd->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
     m_freqListRemove->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
-    m_freqListMoveUp->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
-    m_freqListMoveDown->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
 
     // Radio tab events
     m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::PTTUseHamLibClicked), NULL, this);
@@ -2346,36 +2336,16 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent&)
     {
         m_freqListAdd->Enable(false);
         m_freqListRemove->Enable(true);
-        
-        if (idx == 0)
-        {
-            m_freqListMoveUp->Enable(false);
-            m_freqListMoveDown->Enable(true);
-        }
-        else if ((unsigned)idx == m_freqList->GetCount() - 1)
-        {
-            m_freqListMoveUp->Enable(true);
-            m_freqListMoveDown->Enable(false);
-        }
-        else
-        {
-            m_freqListMoveUp->Enable(true);
-            m_freqListMoveDown->Enable(true);
-        }
     }
     else if (validNumber && tmpValue > 0)
     {
         m_freqListAdd->Enable(true);
         m_freqListRemove->Enable(false);
-        m_freqListMoveUp->Enable(false);
-        m_freqListMoveDown->Enable(false);
     }
     else
     {
         m_freqListAdd->Enable(false);
         m_freqListRemove->Enable(false);
-        m_freqListMoveUp->Enable(false);
-        m_freqListMoveDown->Enable(false);
     }
 }
 
@@ -2393,7 +2363,11 @@ void OptionsDlg::OnReportingFreqAdd(wxCommandEvent&)
     {
         val = wxNumberFormatter::ToString(dVal, 4);
     }
-    m_freqList->Append(val);
+    // Keep the list in ascending order: a new entry goes straight into its
+    // place rather than at the end.
+    auto strings = m_freqList->GetStrings();
+    std::vector<wxString> list(strings.begin(), strings.end());
+    m_freqList->Insert(val, ReportingConfiguration::SortedFrequencyIndex(list, dVal));
     m_txtCtrlNewFrequency->SetValue("");
 }
 
@@ -2405,36 +2379,6 @@ void OptionsDlg::OnReportingFreqRemove(wxCommandEvent&)
         m_freqList->Delete(idx);
     }
     m_txtCtrlNewFrequency->SetValue("");
-}
-
-void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent&)
-{
-    auto prevStr = m_txtCtrlNewFrequency->GetValue();
-    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
-    if (idx != wxNOT_FOUND && idx > 0)
-    {
-        m_freqList->Delete(idx);
-        m_freqList->Insert(prevStr, idx - 1);
-        m_freqList->SetSelection(idx - 1);
-    }
-    
-    // Refresh button status
-    m_txtCtrlNewFrequency->SetValue(prevStr);
-}
-
-void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent&)
-{
-    auto prevStr = m_txtCtrlNewFrequency->GetValue();
-    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
-    if (idx != wxNOT_FOUND && (unsigned int)idx < m_freqList->GetCount() - 1)
-    {
-        m_freqList->Delete(idx);
-        m_freqList->Insert(prevStr, idx + 1);
-        m_freqList->SetSelection(idx + 1);
-    }
-
-    // Refresh button status
-    m_txtCtrlNewFrequency->SetValue(prevStr);
 }
 
 //-------------------------------------------------------------------------

@@ -330,3 +330,18 @@ void ReportingConfiguration::save(wxConfigBase* config)
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());
     config->Write(reportingFrequency.getElementName(), tempFreqStr);
 }
+
+size_t ReportingConfiguration::SortedFrequencyIndex(std::vector<wxString> const& list, double freq)
+{
+    size_t index = 0;
+    for (; index < list.size(); index++)
+    {
+        double existing = 0;
+        wxNumberFormatter::FromString(list[index], &existing);
+        if (existing > freq)
+        {
+            break;
+        }
+    }
+    return index;
+}

@@ -747,7 +747,7 @@ def test_rig_control():
 
 def test_frequency_list():
     """The Rig Control tab's list of predefined frequencies."""
-    buttons = ["freqListAdd", "freqListRemove", "freqListMoveUp", "freqListMoveDown"]
+    buttons = ["freqListAdd", "freqListRemove"]
 
     # Thousands are grouped as the user's region has them on macOS (where
     # LC_ALL doesn't apply), e.g. "3,625.0" in the US: left out here.
@@ -760,8 +760,8 @@ def test_frequency_list():
     def offered(app):
         return [ungrouped(item["label"]) for item in app.get("main.cboReportFrequency")["items"]]
 
-    def check_buttons(app, add, remove, up, down):
-        for button, expected in zip(buttons, [add, remove, up, down]):
+    def check_buttons(app, add, remove):
+        for button, expected in zip(buttons, [add, remove]):
             check_equal(app.get(name(button))["enabled"], expected, button + " enabled")
 
     settings = {"/Reporting/FrequencyList": "3.625000,7.177000,14.236000"}
@@ -770,70 +770,63 @@ def test_frequency_list():
         check_equal(frequencies(app), ["3.6250", "7.1770", "14.2360"], "Frequencies listed")
         check_equal(label(app, "labelEnterFreq"), "Enter frequency (MHz):", "Frequency entry label")
         check_values(app, {"txtCtrlNewFrequency": ""})
-        check_buttons(app, False, False, False, False)
+        check_buttons(app, False, False)
 
         # Something that isn't a frequency can't be added.
         for text in ["abc", "0", "-5"]:
             set_value(app, "txtCtrlNewFrequency", text)
-            check_buttons(app, False, False, False, False)
+            check_buttons(app, False, False)
 
-        # A new frequency
-        set_value(app, "txtCtrlNewFrequency", "28.33")
-        check_buttons(app, True, False, False, False)
+        # A new frequency goes into its place in ascending order...
+        set_value(app, "txtCtrlNewFrequency", "10.136")
+        check_buttons(app, True, False)
         app.click(name("freqListAdd"))
-        check_equal(frequencies(app), ["3.6250", "7.1770", "14.2360", "28.3300"], "Frequencies listed")
+        check_equal(frequencies(app), ["3.6250", "7.1770", "10.1360", "14.2360"], "Frequencies listed")
         check_values(app, {"txtCtrlNewFrequency": ""})
 
-        # One that's already listed can be removed or moved, depending on
-        # where it is, whether it's typed in...
+        # ...including at the end.
+        set_value(app, "txtCtrlNewFrequency", "28.33")
+        app.click(name("freqListAdd"))
+        check_equal(frequencies(app), ["3.6250", "7.1770", "10.1360", "14.2360", "28.3300"],
+                    "Frequencies listed")
+
+        # One that's already listed can be removed, whether it's typed in...
         set_value(app, "txtCtrlNewFrequency", "3.6250")
-        check_buttons(app, False, True, False, True)
-        set_value(app, "txtCtrlNewFrequency", "28.3300")
-        check_buttons(app, False, True, True, False)
+        check_buttons(app, False, True)
 
         # ...or picked from the list.
         set_value(app, "freqList", "7.1770")
         check_values(app, {"txtCtrlNewFrequency": "7.1770"})
-        check_buttons(app, False, True, True, True)
-
-        app.click(name("freqListMoveUp"))
-        check_equal(frequencies(app), ["7.1770", "3.6250", "14.2360", "28.3300"], "Frequencies listed")
-        check_values(app, {"txtCtrlNewFrequency": "7.1770", "freqList": "7.1770"})
-        check_buttons(app, False, True, False, True)
-        app.click(name("freqListMoveDown"))
-        app.click(name("freqListMoveDown"))
-        check_equal(frequencies(app), ["3.6250", "14.2360", "7.1770", "28.3300"], "Frequencies listed")
-        check_buttons(app, False, True, True, True)
-        app.click(name("freqListMoveDown"))
-        check_equal(frequencies(app), ["3.6250", "14.2360", "28.3300", "7.1770"], "Frequencies listed")
-        check_buttons(app, False, True, True, False)
+        check_buttons(app, False, True)
 
         set_value(app, "freqList", "14.2360")
         app.click(name("freqListRemove"))
-        check_equal(frequencies(app), ["3.6250", "28.3300", "7.1770"], "Frequencies listed")
+        check_equal(frequencies(app), ["3.6250", "7.1770", "10.1360", "28.3300"], "Frequencies listed")
         check_values(app, {"txtCtrlNewFrequency": ""})
-        check_buttons(app, False, False, False, False)
+        check_buttons(app, False, False)
 
         # They're what's offered in the main window once saved.
         press_ok(app)
         check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
-                    ["3.6250", "28.3300", "7.1770"], "Frequencies offered in the main window")
+                    ["3.6250", "7.1770", "10.1360", "28.3300"], "Frequencies offered in the main window")
 
         # Frequencies can be worked with in kHz instead.
         open_settings(app, "Rig Control")
-        check_equal(frequencies(app), ["3.6250", "28.3300", "7.1770"], "Frequencies listed")
+        check_equal(frequencies(app), ["3.6250", "7.1770", "10.1360", "28.3300"], "Frequencies listed")
         set_value(app, "txtCtrlNewFrequency", "14.236")
         set_value(app, "ckboxFrequencyEntryAsKHz", True)
         press_apply(app)
-        check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0"], "Frequencies listed in kHz")
+        check_equal(frequencies(app), ["3625.0", "7177.0", "10136.0", "28330.0"], "Frequencies listed in kHz")
         check_equal(label(app, "labelEnterFreq"), "Enter frequency (kHz):", "Frequency entry label")
         check_equal(ungrouped(value(app, "txtCtrlNewFrequency")), "14236.0", "txtCtrlNewFrequency")
-        check_buttons(app, True, False, False, False)
+        check_buttons(app, True, False)
         app.click(name("freqListAdd"))
-        check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies listed in kHz")
+        check_equal(frequencies(app), ["3625.0", "7177.0", "10136.0", "14236.0", "28330.0"],
+                    "Frequencies listed in kHz")
         press_ok(app)
         check_saved(app, {"/Reporting/FrequencyAsKHz": 1})
-        check_equal(offered(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
+        check_equal(offered(app), ["3625.0", "7177.0", "10136.0", "14236.0", "28330.0"],
+                    "Frequencies offered in the main window")
 
         # And back again, along with what's been typed in so far.
         open_settings(app, "Rig Control")
@@ -846,7 +839,8 @@ def test_frequency_list():
         set_value(app, "txtCtrlNewFrequency", "")
         press_ok(app)
         check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
-                    ["3.6250", "28.3300", "7.1770", "14.2360"], "Frequencies offered in the main window")
+                    ["3.6250", "7.1770", "10.1360", "14.2360", "28.3300"],
+                    "Frequencies offered in the main window")
 
         quit_and_check_log(app)
 
