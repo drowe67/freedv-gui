@@ -33,12 +33,9 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}
-        max-size: "5G"
-
+    # (No ccache here or in test below: they use Homebrew's wxWidgets, so
+    # there's little to cache, and what there is would crowd the caches of
+    # the builds that compile it out of the repository's 10 GB.)
     - name: Install needed packages
       run: |
           brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 
@@ -61,7 +58,7 @@ jobs:
       run: |
         mkdir build_osx
         cd build_osx
-        CC=clang CXX=clang++ cmake -DCMAKE_OBJCXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+        CC=clang CXX=clang++ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(sysctl -n hw.logicalcpu)
     
@@ -90,13 +87,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}
-        create-symlink: true
-        max-size: "5G"
 
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
@@ -184,7 +174,7 @@ jobs:
       if: ${{ matrix.os == 'macos-26-intel' }}
       with:
         key: ${{ github.job }}-x86_64
-        max-size: "5G"
+        max-size: "1G"
         create-symlink: true
 
     - name: ccache
@@ -192,7 +182,7 @@ jobs:
       if: ${{ matrix.os == 'macos-26' }}
       with:
         key: ${{ github.job }}-aarch64
-        max-size: "5G"
+        max-size: "1G"
         create-symlink: true
 
     - name: Install needed packages
