@@ -39,12 +39,10 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}
-        max-size: "5G"
-
+    # (No ccache here or in test-application below: they use the system's
+    # wxWidgets and OpenSSL, so there's little to cache, and what there is
+    # would crowd the caches of the builds that compile those out of the
+    # repository's 10 GB.)
     - name: Install required packages
       shell: bash
       run: |
@@ -68,7 +66,7 @@ jobs:
         cd build_linux
         # PCH is disabled because clang-tidy can't read the GCC-built .gch
         # files that compile_commands.json would otherwise reference.
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(nproc)
 
@@ -101,14 +99,14 @@ jobs:
       if: ${{ matrix.os == 'ubuntu-22.04-arm' }}
       with:
         key: ${{ github.job }}-aarch64
-        max-size: "5G"
+        max-size: "1G"
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       if: ${{ matrix.os == 'ubuntu-22.04' }}
       with:
         key: ${{ github.job }}-x86_64
-        max-size: "5G"
+        max-size: "1G"
 
     - uses: ./.github/actions/install-llvm-apt-pool
       with:
@@ -400,12 +398,6 @@ jobs:
     #  with:
     #    detached: true
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}-${{ matrix.native-audio }}
-        max-size: "5G"
-
     - name: Install LLVM/Clang >=20.0 
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
@@ -449,7 +441,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -457,7 +449,7 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - uses: ./.github/actions/run-linux-gui-test
       if: ${{ matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
