@@ -981,8 +981,10 @@ void MainFrame::loadConfiguration_()
 
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
-    if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 780;
+    // (Nor anything too small to be of use: macOS, unlike Linux's window
+    // managers, makes the window as small as it's asked to.)
+    if (w < 300 || w > 2048) w = 800;
+    if (h < 200 || h > 2048) h = 780;
     
     wxSize size = GetMinSize();
 
