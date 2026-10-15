@@ -877,13 +877,15 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
 2. Bugfixes:
     * FreeDV Reporter: fix a direction of 0 being shown for stations without a usable grid square after changing the band filter. (PR #1563)
+    * macOS: fix the last block of audio being sent to the radio over and over after transmitting, rather than silence. (PR #1563)
+    * Fix a saved main window size too small to be of use being kept. (PR #1563)
 3. Build system:
     * Update wxWidgets to 3.3.4. (PR #1560, #1556)
 4. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
     * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
-    * Run the automated user interface tests that don't need audio devices on macOS. (PR #1563)
+    * Run the automated user interface tests on macOS. (PR #1563)
     * Remove unused plot, main window and FreeDV Reporter code. (PR #1556)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
 
