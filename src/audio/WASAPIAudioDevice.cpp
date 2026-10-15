@@ -132,7 +132,7 @@ void WASAPIAudioDevice::start()
             // Non-critical error, can continue without setting properties.
             std::stringstream ss;
             ss << "Could not set AudioClient properties (hr = " << hr << ")";
-            log_warn(ss.str().c_str());
+            log_warn("%s", ss.str().c_str());
         }
         
         // Populate stream format based on requested sample
@@ -195,7 +195,7 @@ void WASAPIAudioDevice::start()
             {
                 std::stringstream ss;
                 ss << "Unknown mix format found: " << GuidToString_(&extFormat->SubFormat);
-                log_error(ss.str().c_str());
+                log_error("%s", ss.str().c_str());
                 if (onAudioErrorFunction)
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -212,7 +212,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Unknown mix format found: " << streamFormatPtr->wFormatTag;
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -246,7 +246,7 @@ void WASAPIAudioDevice::start()
             {
                 std::stringstream ss;
                 ss << "Could not initialize AudioClient (hr = " << hr << ")";
-                log_error(ss.str().c_str());
+                log_error("%s", ss.str().c_str());
                 if (onAudioErrorFunction)
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -267,7 +267,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not create event (hr = " << GetLastError() << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -282,7 +282,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not assign event handle (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -298,7 +298,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not get buffer size (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -317,7 +317,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not get latency (hr = " << hr << ")";
-            log_warn(ss.str().c_str());
+            log_warn("%s", ss.str().c_str());
         }
         else
         {
@@ -341,7 +341,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not get render/capture client (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -364,7 +364,7 @@ void WASAPIAudioDevice::start()
             {
                 std::stringstream ss;
                 ss << "Could not get render buffer (hr = " << hr << ")";
-                log_error(ss.str().c_str());
+                log_error("%s", ss.str().c_str());
                 if (onAudioErrorFunction)
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -390,7 +390,7 @@ void WASAPIAudioDevice::start()
             {
                 std::stringstream ss;
                 ss << "Could not release render buffer (hr = " << hr << ")";
-                log_error(ss.str().c_str());
+                log_error("%s", ss.str().c_str());
                 if (onAudioErrorFunction)
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -411,7 +411,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not create semaphore (err = " << GetLastError() << ")";
-            log_warn(ss.str().c_str());
+            log_warn("%s", ss.str().c_str());
         }
 
         // Create a high-resolution waitable timer for the debt-compensated
@@ -428,7 +428,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not create waitable timer (err = " << GetLastError() << ")";
-            log_warn(ss.str().c_str());
+            log_warn("%s", ss.str().c_str());
         }
 
         // Reduce Windows timer resolution to 1ms to improve WaitForSingleObject
@@ -441,7 +441,7 @@ void WASAPIAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not start audio device (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -546,7 +546,7 @@ void WASAPIAudioDevice::stop()
             {
                 std::stringstream ss;
                 ss << "Could not stop audio device (hr = " << hr << ")";
-                log_error(ss.str().c_str());
+                log_error("%s", ss.str().c_str());
                 if (onAudioErrorFunction)
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -771,7 +771,7 @@ void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
         // with popups.
         std::stringstream ss;
         ss << "Could not get current padding (hr = " << hr << ")";
-        log_error(ss.str().c_str());
+        log_error("%s", ss.str().c_str());
         return;
     }
 
@@ -783,7 +783,7 @@ void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
         // with popups.
         std::stringstream ss;
         ss << "Could not get render buffer (hr = " << hr << ")";
-        log_error(ss.str().c_str());
+        log_error("%s", ss.str().c_str());
         return;
     }
 
@@ -806,7 +806,7 @@ void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
         // with popups.
         std::stringstream ss;
         ss << "Could not release render buffer (hr = " << hr << ")";
-        log_error(ss.str().c_str());
+        log_error("%s", ss.str().c_str());
         return;
     }
 }
@@ -828,7 +828,7 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
         // with popups.
         std::stringstream ss;
         ss << "Could not get packet length (hr = " << hr << ")";
-        log_error(ss.str().c_str());
+        log_error("%s", ss.str().c_str());
         return;
     }
 
@@ -850,7 +850,7 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
             // with popups.
             std::stringstream ss;
             ss << "Could not get capture buffer (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             return;
         }
 
@@ -879,7 +879,7 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
             // with popups.
             std::stringstream ss;
             ss << "Could not release capture buffer (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             return;
         }
 
@@ -890,7 +890,7 @@ void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
             // with popups.
             std::stringstream ss;
             ss << "Could not get packet length (hr = " << hr << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             return;
         }
     }
