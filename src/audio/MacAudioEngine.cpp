@@ -62,7 +62,7 @@ void MacAudioEngine::start()
     {
         std::stringstream ss;
         ss << "Could not set device configuration listener (err " << result << ")";
-        log_warn(ss.str().c_str());
+        log_warn("%s", ss.str().c_str());
     }
 }
 

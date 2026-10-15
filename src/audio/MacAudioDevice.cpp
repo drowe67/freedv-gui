@@ -261,7 +261,7 @@ void MacAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Device " << coreAudioId_ << ": Could not find audio component. Note: should never happen!";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -307,7 +307,7 @@ void MacAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not assign device \"" << deviceName_ << "\" to AUHAL (err " << error << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -345,7 +345,7 @@ void MacAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not set stream format for device \"" << deviceName_ << "\" (err " << error << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -419,7 +419,7 @@ void MacAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not initialize audio unit for \"" << deviceName_ << "\" (err " << error << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
@@ -434,7 +434,7 @@ void MacAudioDevice::start()
         {
             std::stringstream ss;
             ss << "Could not start audio unit for \"" << deviceName_ << "\" (err " << error << ")";
-            log_error(ss.str().c_str());
+            log_error("%s", ss.str().c_str());
             if (onAudioErrorFunction)
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
