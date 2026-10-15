@@ -814,8 +814,12 @@ OSStatus MacAudioDevice::OutputProc_(
 
     if (thisObj->onAudioDataFunction)
     {
+        // Whatever the callback doesn't fill in (e.g. the radio's output
+        // with nothing to send) is silence, as on Windows, rather than the
+        // last block it did fill in over again.
+        memset(thisObj->inputFrames_, 0, sizeof(short) * inNumberFrames * thisObj->numChannels_);
         thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
-        
+
         for (UInt32 index = 0; index < inNumberFrames; index++)
         {
             for (UInt32 chan = 0; chan < ioData->mNumberBuffers; chan++)
