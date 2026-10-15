@@ -105,6 +105,9 @@ std::atomic<bool> g_recFileFromRadio(false);
 std::atomic<bool> g_recFileFromDecoder(false);
 std::atomic<unsigned int> g_recFromRadioSamples(0);
 
+std::atomic<int>    g_infifo1_empty;
+std::atomic<int>    g_infifo2_empty;
+
 namespace {
 
 constexpr int TEST_SAMPLE_RATE = 8000;
