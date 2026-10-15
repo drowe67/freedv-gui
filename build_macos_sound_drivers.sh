@@ -3,11 +3,14 @@
 git clone https://github.com/tmiw/BlackHole.git
 cd BlackHole
 
-# Four, each a separate loopback device: the GUI tests (test/gui) need one each
-# for the radio's input and output, the microphone and the speaker, and two
-# devices of the same driver ("BlackHole1 2ch" and "BlackHole1 2ch 2") share
-# what's played into them.
-for i in {1..4}; do
+# How many (BlackHole1, BlackHole2, ...): two unless told otherwise. The GUI
+# tests (test/gui) need four, each a separate loopback device, for the
+# radio's input and output, the microphone and the speaker: two devices of
+# the same driver ("BlackHole1 2ch" and "BlackHole1 2ch 2") share what's
+# played into them.
+DRIVERS=${1:-2}
+
+for i in $(seq 1 $DRIVERS); do
     git reset --hard
     rm -rf build
 

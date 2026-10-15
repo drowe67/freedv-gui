@@ -98,7 +98,10 @@ jobs:
         brew install automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile hamlib libebur128 gettext
 
     - uses: ./.github/actions/setup-macos-virtual-audio
-      timeout-minutes: 3
+      # Four drivers for the GUI tests, which take a little longer to build.
+      timeout-minutes: 6
+      with:
+        blackhole-drivers: '4'
 
     - name: Build freedv-gui
       shell: bash
