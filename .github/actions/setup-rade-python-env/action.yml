@@ -19,10 +19,22 @@ inputs:
       install torch from the default index (used on macOS).
     required: false
     default: ''
+  python-version:
+    description: >
+      Optional Python version to create the venv with (installed by
+      actions/setup-python), for runners whose own python3 is newer than
+      torch has packages for. Leave empty to use the runner's python3.
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
+    - uses: actions/setup-python@v6
+      if: ${{ inputs['python-version'] != '' }}
+      with:
+        python-version: ${{ inputs['python-version'] }}
+
     - name: Create Python venv
       shell: bash
       working-directory: ${{ inputs['working-directory'] }}

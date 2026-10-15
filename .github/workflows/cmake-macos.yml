@@ -115,6 +115,9 @@ jobs:
 
     - uses: ./.github/actions/setup-rade-python-env
       with:
+        # The runners' own python3 (3.15 from macos-26-arm64 20261013 on) is
+        # newer than torch has packages for.
+        python-version: '3.13'
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
@@ -344,6 +347,9 @@ jobs:
 
     - uses: ./.github/actions/setup-rade-python-env
       with:
+        # The runners' own python3 (3.15 from macos-26-arm64 20261013 on) is
+        # newer than torch has packages for.
+        python-version: '3.13'
         venv-path: rade_venv
 
     - name: Sanity check RADE
