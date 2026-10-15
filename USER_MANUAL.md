@@ -875,14 +875,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add dark mode support for Windows. (PR #1518, #1529, #1560)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
-2. Build system:
+2. Bugfixes:
+    * Fix silence being mixed into the first half second of each transmission, and holes in the signal at its start. (PR #1562)
+3. Build system:
     * Update wxWidgets to 3.3.4. (PR #1560, #1556)
-3. Other:
+4. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
     * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
     * Remove unused plot, main window and FreeDV Reporter code. (PR #1556)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
+    * Add tests of whole transmissions through the TX/RX threads without sound cards, and diagnostics for rade_loss test failures. (PR #1562)
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 

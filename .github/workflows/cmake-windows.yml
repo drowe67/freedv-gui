@@ -4,8 +4,6 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
-    # TEMPORARY: see macos-tx-validation.yml. To be removed before merging.
-    - 'ms-pipeline-offline-tests'
     paths-ignore:
     - "**.md"
     - "**/README"
