@@ -301,20 +301,25 @@ def main():
         print("  FreeDV's plot taps (%d of them) couldn't keep up at %s (%s): up to %.0f ms dropped"
               % (taps, when, path, samples * 1000.0 / RATE))
 
+    # The watchdog being held up for much of the same time as the sound card
+    # was late in asking, at about the same moment: the whole machine stalled.
+    machine_stalled = bool(timing and watchdog and timing[1] > 0 and watchdog[0] >= timing[0] / 2
+                           and (timing[3] is None or abs(watchdog[1] - timing[3]) < 1.0))
+
     if not problems and copy_gaps:
         print("RECORDING CHECK: the recording is what FreeDV sent, as far as can be told (FreeDV's own copy is missing "
               "%s ms that its tap dropped)" % ", ".join("%.1f" % ms for ms in copy_gaps))
     elif not problems:
         print("RECORDING CHECK: the recording is what FreeDV sent")
-    elif timing and timing[1] > 0 and timing[2] == 0 and not any("missing" in problem for problem in problems):
-        # Whether everything stalled, or only the sound system: the
-        # watchdog's being held up for much of the same time, at about the
-        # same moment, means the former.
+    elif timing and timing[1] > 0 and timing[2] == 0 and (machine_stalled or not any("missing" in problem for problem in problems)):
+        # Whether everything stalled, or only the sound system. (After the
+        # whole machine stalls the sound system may make up for lost time
+        # by skipping, so then audio can be missing as well as added.)
         if watchdog is None:
             whose = "the sound system's or the machine's"
-        elif watchdog[0] >= timing[0] / 2 and (timing[3] is None or abs(watchdog[1] - timing[3]) < 1.0):
-            whose = ("the machine's: a real-time thread with nothing else to do was held up %.1f ms at the same time"
-                     % watchdog[0])
+        elif machine_stalled:
+            whose = ("the machine's: a %sthread with nothing else to do was held up %.1f ms at the same time"
+                     % ("real-time " if watchdog[3] else "", watchdog[0]))
         else:
             whose = ("the sound system's: other real-time threads ran on time meanwhile (the watchdog was never more "
                      "than %.1f ms late)" % watchdog[0])
