@@ -1,6 +1,7 @@
 name: Build FreeDV (Windows)
 
 on:
+  workflow_dispatch:
   push:
     branches-ignore:
     - 'dr-render-manual'
@@ -27,7 +28,79 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
+  # Pushes to master and the v*-dev branches (merges, in effect) get the full
+  # set: PGO builds, tests and coverage. Other branches get lint and plain,
+  # unsigned packages to try out, unless the commit pushed says "[full ci]"
+  # or the workflow's started by hand ("Run workflow").
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+    - id: scope
+      env:
+        FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && endsWith(github.ref, '-dev')) || contains(github.event.head_commit.message, '[full ci]') }}
+      run: echo "full=$FULL" >> "$GITHUB_OUTPUT"
+
+  # Not on a merge: plain installers (no PGO), to try out. (No ccache: merges
+  # don't build these, so there'd be nothing for a branch to start from, and
+  # each branch's own cache would count towards the repository's 10 GB.)
+  build-installer:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full != 'true' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install required packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          sudo apt-get update
+          sudo apt-get install nsis autoconf automake libtool libltdl-dev pkg-config gettext
+
+    - uses: ./.github/actions/download-mingw-llvm
+
+    - name: Configure freedv-gui (unsigned)
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+
+    - name: Build freedv-gui (unsigned)
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        make -j$(nproc) package
+
+    - name: Calculate installer filename
+      shell: bash
+      id: installer-filename
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+          echo "INSTALLER_FILENAME=$(ls FreeDV*.exe)" >> "$GITHUB_OUTPUT"
+
+    - name: Upload installer
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
+        archive: false
+
   build-pgo-inst:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     outputs: 
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
@@ -96,6 +169,8 @@ jobs:
   # that a plain Release build's counters can't see, not to represent
   # production performance.
   build-sanitizer:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -177,6 +252,8 @@ jobs:
   # Unlike the audio tests, these don't depend on timing, so a sanitizer
   # finding fails the job outright.
   build-unit-tests:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -273,7 +350,8 @@ jobs:
           runner: windows-2022
 
     runs-on: ${{ matrix.runner }}
-    needs: build-unit-tests
+    needs: [build-unit-tests, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     env:
       # Only have an effect on the sanitizer builds. Bare relative filenames
       # are used for the same reason as in windows-audio-test.yml: a drive
@@ -299,6 +377,8 @@ jobs:
   # and hand the resulting threshold to the Windows RADE loss test. See
   # https://github.com/drowe67/radae/blob/dr-tx-bpf/doc/verification/verification_procedure.md
   rade-loss-baseline:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     runs-on: ubuntu-22.04
     outputs:
       baseline: ${{ steps.baseline.outputs.baseline }}
@@ -368,7 +448,8 @@ jobs:
           arch: x86_64
 
     runs-on: ${{ matrix.runner }}
-    needs: build-pgo-inst
+    needs: [build-pgo-inst, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     env:
       # The radio path is on VAC and the mic/speaker on VB-Cable, not the other way
       # around: VB-Cable occasionally inserts ~10 ms of silence into its loop early in a
@@ -429,7 +510,8 @@ jobs:
         arch: [x86_64, aarch64]
 
     runs-on: ubuntu-22.04
-    needs: collect-pgo-profile
+    needs: [collect-pgo-profile, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
 
     env:
       PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
@@ -558,7 +640,8 @@ jobs:
         archive: false
 
   test:
-    needs: [build-pgo-use-profile, rade-loss-baseline]
+    needs: [build-pgo-use-profile, rade-loss-baseline, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     uses: ./.github/workflows/windows-audio-test.yml
     with:
       matrix-json: |
@@ -577,7 +660,8 @@ jobs:
   # catches a real memory-safety/UB bug (an abort with a diagnostic in the
   # log), not whether a loss threshold was met under instrumentation overhead.
   test-sanitizer:
-    needs: [build-sanitizer, rade-loss-baseline]
+    needs: [build-sanitizer, rade-loss-baseline, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     uses: ./.github/workflows/windows-audio-test.yml
     with:
       matrix-json: |

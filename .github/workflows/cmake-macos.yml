@@ -1,6 +1,7 @@
 name: Build FreeDV (macOS)
 
 on:
+  workflow_dispatch:
   push:
     branches-ignore:
     - 'dr-render-manual'
@@ -27,6 +28,20 @@ env:
   BUILD_TYPE: RelWithDebInfo
 
 jobs:
+  # Pushes to master and the v*-dev branches (merges, in effect) get the full
+  # set: PGO builds, tests and coverage. Other branches get lint and plain,
+  # unsigned packages to try out, unless the commit pushed says "[full ci]"
+  # or the workflow's started by hand ("Run workflow").
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+    - id: scope
+      env:
+        FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && endsWith(github.ref, '-dev')) || contains(github.event.head_commit.message, '[full ci]') }}
+      run: echo "full=$FULL" >> "$GITHUB_OUTPUT"
+
   lint:
     runs-on: macos-26
 
@@ -83,7 +98,8 @@ jobs:
         sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_RTSAN=1, WITH_TSAN=1, WITH_UBSAN=1]
 
     runs-on: ${{ matrix.os }}
-    needs: ['lint']
+    needs: [lint, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
 
     steps:
     - uses: actions/checkout@v6
@@ -159,6 +175,8 @@ jobs:
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist-pgo-instrument:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -223,7 +241,8 @@ jobs:
     runs-on: macos-latest
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
-    needs: ['dist-pgo-instrument']
+    needs: [dist-pgo-instrument, scope]
+    if: ${{ !cancelled() && needs.scope.result == 'success' && (needs.dist-pgo-instrument.result == 'success' || needs.scope.outputs.full != 'true') }}
 
     steps:
     - uses: actions/checkout@v6
@@ -238,7 +257,7 @@ jobs:
         brew install automake libtool numpy sox llvm@20 lld@20 gettext # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
     - name: Initialize code signing infrastructure
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
       env:
         MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
         MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
@@ -258,6 +277,7 @@ jobs:
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Download profile data
+      if: ${{ needs.scope.outputs.full == 'true' }}
       uses: actions/download-artifact@v8
       with:
         merge-multiple: false
@@ -265,19 +285,29 @@ jobs:
         path: ${{github.workspace}}
 
     - name: Merge profile data
+      if: ${{ needs.scope.outputs.full == 'true' }}
       run: |
           $(xcrun -find llvm-profdata) merge -output ${{ github.workspace }}/code.profdata ${{github.workspace}}/profdata-macos-26-intel/code-*.profraw ${{github.workspace}}/profdata-macos-26/code-*.profraw
 
     - name: Build freedv-gui (unsigned)
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' && needs.scope.outputs.full == 'true' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           rm -rf build_osx
           BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ENABLE_LTO=1 PGO_USE_PROFILE=${{ github.workspace }}/code.profdata ./build_osx.sh 
 
+    # Not on a merge: a plain build, to try out.
+    - name: Build freedv-gui (unsigned, without PGO)
+      if: ${{ needs.scope.outputs.full != 'true' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          rm -rf build_osx
+          BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh
+
     - name: Build freedv-gui (signed)
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -290,7 +320,7 @@ jobs:
           make release
 
     - name: Validate DMG signature
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
       run: |
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg --verbose
 
@@ -317,7 +347,8 @@ jobs:
         os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: ['dist-pgo-build']
+    needs: [dist-pgo-build, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
 
     steps:
     - uses: actions/checkout@v6
