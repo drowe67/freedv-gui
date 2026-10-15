@@ -7,9 +7,10 @@
  *   $FREEDVTEST_SERIAL_DIR/<n>.history  every state they've been in, one per line
  *   $FREEDVTEST_SERIAL_DIR/<n>.cts      "1" while CTS is to read as raised
  *
- * where <n> is from the port's name (/dev/pts/<n>). Loaded into FreeDV with
- * LD_PRELOAD by freedvtest.serial; anything that isn't a terminal, or isn't
- * about control lines, is passed on untouched.
+ * where <n> is from the port's name (/dev/pts/<n>, or /dev/ttys<n> on macOS).
+ * Loaded into FreeDV with LD_PRELOAD (DYLD_INSERT_LIBRARIES on macOS) by
+ * freedvtest.serial; anything that isn't a terminal, or isn't about control
+ * lines, is passed on untouched.
  */
 
 #define _GNU_SOURCE
@@ -35,7 +36,7 @@ static int port_number(int fd)
     int number = -1;
 
     if (ttyname_r(fd, name, sizeof(name)) != 0) return -1;
-    if (sscanf(name, "/dev/pts/%d", &number) != 1) return -1;
+    if (sscanf(name, "/dev/pts/%d", &number) != 1 && sscanf(name, "/dev/ttys%d", &number) != 1) return -1;
     return (number >= 0 && number < MAX_PORTS) ? number : -1;
 }
 
@@ -80,9 +81,20 @@ static int cts(const char* directory, int port)
     return raised;
 }
 
+#if defined(__APPLE__)
+/* macOS only uses a function in place of another if it's said to be in
+ * place of it (below), and inside this library ioctl() is still the real
+ * one. */
+static int shim_ioctl(int fd, unsigned long request, ...)
+#else
 int ioctl(int fd, unsigned long request, ...)
+#endif
 {
+#if defined(__APPLE__)
+    int (*real_ioctl)(int, unsigned long, ...) = ioctl;
+#else
     static int (*real_ioctl)(int, unsigned long, ...) = NULL;
+#endif
     const char* directory = getenv("FREEDVTEST_SERIAL_DIR");
     va_list args;
     void* argument;
@@ -120,3 +132,13 @@ int ioctl(int fd, unsigned long request, ...)
     pthread_mutex_unlock(&lock);
     return 0;
 }
+
+#if defined(__APPLE__)
+__attribute__((used)) static struct
+{
+    const void* replacement;
+    const void* replaced;
+} interpose[] __attribute__((section("__DATA,__interpose"))) = {
+    { (const void*)shim_ioctl, (const void*)ioctl },
+};
+#endif

@@ -3,7 +3,11 @@
 git clone https://github.com/tmiw/BlackHole.git
 cd BlackHole
 
-for i in {1..2}; do
+# Four, each a separate loopback device: the GUI tests (test/gui) need one each
+# for the radio's input and output, the microphone and the speaker, and two
+# devices of the same driver ("BlackHole1 2ch" and "BlackHole1 2ch 2") share
+# what's played into them.
+for i in {1..4}; do
     git reset --hard
     rm -rf build
 
@@ -24,7 +28,7 @@ for i in {1..2}; do
             kDevice2_HasInput=true \
             kDevice2_HasOutput=true" \
             kLatency_Frame_Size='128' \
-        MACOSX_DEPLOYMENT_TARGET=11.0
+        MACOSX_DEPLOYMENT_TARGET=12.0
 
     sudo mv build/BlackHole.driver /Library/Audio/Plug-Ins/HAL/$driverName.driver
 done

@@ -9,8 +9,9 @@ them are run; otherwise, only those named:
     python3 test_rig_control.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now. Hamlib's rigctld stands in for the radio; without
-it ($RIGCTLD, the PATH or the build folder's copy), these are skipped.
+running, on Linux or macOS (see freedvtest/audio.py for the audio devices it
+needs). Hamlib's rigctld stands in for the radio; without it ($RIGCTLD, the
+PATH or the build folder's copy), these are skipped.
 """
 
 import os
@@ -20,6 +21,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.rigctld import Rigctld, find_rigctld
 from test_main_window import (CALLSIGN, audio_devices, check, check_equal, settings, start_modem, stop_modem,
                               transmitting, wait_for_transmit)
@@ -421,7 +423,12 @@ def main():
         sys.exit(SKIPPED)
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

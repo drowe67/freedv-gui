@@ -8,8 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_audio_errors.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs. Those to do with the sound server itself are skipped on macOS.
 """
 
 import os
@@ -19,7 +19,9 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import AudioServerGateway, PrivateAudioServer, Tone, VirtualAudioDevices, move_stream, streams
+import freedvtest.audio
+from freedvtest.audio import (AudioServerGateway, PrivateAudioServer, Tone, VirtualAudioDevices, device, move_stream,
+                              streams)
 from test_main_window import (AUDIBLE, MICROPHONE, RADIO_RX, RADIO_TX, RADIO_TX_MONITOR, SPEAKER, SPEAKER_MONITOR,
                               audio_devices, check, check_equal, check_silent, level, quit_and_check_log, settings,
                               start_modem, stop_modem, wait_for_transmit)
@@ -34,8 +36,9 @@ CARDS = {
 
 SKIPPED = 77
 
-OTHER_OUTPUT = "FreeDVGuiTest_Other_Output"
-OTHER_INPUT = VirtualAudioDevices.input_name("FreeDVGuiTest_Other_Input")
+OTHER_OUTPUT = device("FreeDVGuiTest_Other_Output")
+OTHER_INPUT_DEVICE = device("FreeDVGuiTest_Other_Input")
+OTHER_INPUT = VirtualAudioDevices.input_name(OTHER_INPUT_DEVICE)
 
 
 def card_settings(**changes):
@@ -129,6 +132,10 @@ def test_missing_device():
                 check_equal(app.quit(), 0, "FreeDV's exit code")
 
     # A device that goes away between one start and the next, and comes back.
+    # (Not on macOS, where one can't be taken away here: see
+    # freedvtest.audio.)
+    if freedvtest.audio.MACOS:
+        return
     with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE):
         speaker = VirtualAudioDevices(SPEAKER)
         speaker.__enter__()
@@ -301,7 +308,7 @@ def test_device_moved():
     """Streams being moved to other devices while FreeDV is running, as the
     system's sound settings can do. FreeDV carries on with, and remembers,
     where each ended up."""
-    with audio_devices(), VirtualAudioDevices(OTHER_OUTPUT, "FreeDVGuiTest_Other_Input"):
+    with audio_devices(), VirtualAudioDevices(OTHER_OUTPUT, OTHER_INPUT_DEVICE):
         with freedvtest.start(settings=settings()) as app:
             app.wait_for_window("main")
             start_modem(app)
@@ -362,7 +369,7 @@ def test_receive_only_device_moved():
     only one pair of devices: it carries on with, and remembers, where each
     ended up."""
     receive_only = card_settings(soundCard1Out=SPEAKER, soundCard2In="none", soundCard2Out="none")
-    with audio_devices(), VirtualAudioDevices(OTHER_OUTPUT, "FreeDVGuiTest_Other_Input"):
+    with audio_devices(), VirtualAudioDevices(OTHER_OUTPUT, OTHER_INPUT_DEVICE):
         with freedvtest.start(settings=receive_only) as app:
             app.wait_for_window("main")
             start_modem(app)
@@ -389,7 +396,7 @@ def test_receive_only_device_moved():
             # the one that the radio's stream moved to is heard out of the
             # one that the speaker's stream moved to.
             app.click("main.btnAnalog")
-            with Tone("FreeDVGuiTest_Other_Input"):
+            with Tone(OTHER_INPUT_DEVICE):
                 time.sleep(0.75)
                 heard = level(VirtualAudioDevices.input_name(OTHER_OUTPUT))
                 check(heard > AUDIBLE, "The radio isn't being played through the other output (level %d)" % heard)
@@ -672,7 +679,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

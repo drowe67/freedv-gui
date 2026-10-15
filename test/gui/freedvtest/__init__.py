@@ -156,8 +156,8 @@ class FreeDV:
         self.config_path = config or os.path.join(self._temp_dir, "freedv.conf")
         #: Everything that FreeDV has printed.
         self.log_path = os.path.join(self._temp_dir, "freedv.log")
-        #: Stands in for the user's ~/.config (Linux only), which is where
-        #: FreeDV looks for other programs' settings.
+        #: Stands in for where FreeDV looks for other programs' settings:
+        #: the user's ~/.config on Linux, ~/Library/Preferences on macOS.
         self.user_config_dir = os.path.join(home, ".config") if home else os.path.join(self._temp_dir, "config")
         #: Stands in for the user's home folder (Linux and macOS).
         self.home_dir = None
@@ -193,6 +193,7 @@ class FreeDV:
             # macOS finds the home folder (and so ~/Library/Preferences, where
             # FreeDV keeps its settings) without looking at $HOME.
             process_env["CFFIXED_USER_HOME"] = self.home_dir
+            self.user_config_dir = os.path.join(self.home_dir, "Library", "Preferences")
         os.makedirs(self.user_config_dir, exist_ok=True)
         for name, contents in (user_config_files or {}).items():
             with open(os.path.join(self.user_config_dir, name), "w") as f:

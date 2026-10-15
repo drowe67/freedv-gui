@@ -13,7 +13,8 @@ server, and is skipped (exit code 77) if that can't be reached.
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
 running, as the list in the window only reacts to the mouse when the window
-is active. Linux only for now.
+is active. Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs.
 """
 
 import os
@@ -27,7 +28,8 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import VirtualAudioDevices
+import freedvtest.audio
+from freedvtest.audio import VirtualAudioDevices, device
 from freedvtest.reporter import ReporterServer
 
 LIST = "reporter.listSpots"
@@ -47,10 +49,10 @@ TX_COLOR = "#FC4500"
 RX_COLOR = "#379BAF"
 MESSAGE_COLOR = "#E58BE5"
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 SKIPPED = 77
 
@@ -81,6 +83,10 @@ def reporter_settings(hostname, **settings):
         "/Reporting/FreeDV/Hostname": hostname,
         "/Reporting/FreeDV/UseTls": False,
     }
+    if freedvtest.audio.MACOS:
+        # Room for every column: lists there aren't scrolled sideways to
+        # show a cell that's out of view, as they are on Linux.
+        result.update({"/Windows/FreeDVReporter/width": 1500, "/Windows/FreeDVReporter/height": 500})
     result.update(settings)
     return result
 
@@ -1067,7 +1073,8 @@ def test_qsy_with_radio():
                             "Messages displayed")
                 app.wait_until(lambda: frequency() == accepted, timeout=15,
                                description="FreeDV to change frequency (it's on %s)" % frequency())
-                wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, accepted, timeout=45)
+                wait_for_cell(app, CALLSIGN_OF_FREEDV, FREQUENCY, lambda text: text.replace(",", "") == accepted,
+                              timeout=45)
 
                 stop_modem(app)
                 quit_and_check_log(app)
@@ -1902,7 +1909,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (name, ", ".join(SCENARIOS)))
     for name in names:
         print("Running %s..." % name, flush=True)
-        SCENARIOS[name]()
+        try:
+            SCENARIOS[name]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 

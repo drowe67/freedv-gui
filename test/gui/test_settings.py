@@ -6,11 +6,11 @@ of them are run; otherwise, only those named:
 
     python3 test_settings.py [scenario...]
 
-Run from the build folder (or set FREEDV_BINARY). Linux only for now, as it
-relies on PulseAudio/PipeWire for the audio devices that FreeDV is set up
-with.
+Run from the build folder (or set FREEDV_BINARY), on Linux or macOS: see
+freedvtest/audio.py for the audio devices it needs.
 """
 
+import contextlib
 import os
 import shutil
 import sys
@@ -20,12 +20,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone, VirtualAudioDevices, record, record_level, tone_share
+import freedvtest.audio
+from freedvtest.audio import Tone, VirtualAudioDevices, device, record, record_level, tone_share
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 RADIO_RX_IN = VirtualAudioDevices.input_name(RADIO_RX)
 MICROPHONE_IN = VirtualAudioDevices.input_name(MICROPHONE)
@@ -225,16 +226,17 @@ def test_audio():
             # selected to begin with.
             inputs = device_labels(app, "lcSoundCard1InDevice")
             outputs = device_labels(app, "lcSoundCard1OutDevice")
-            check("Monitor of " + RADIO_RX in inputs, "The radio's input isn't listed: %r" % inputs)
+            check(VirtualAudioDevices.input_label(RADIO_RX) in inputs, "The radio's input isn't listed: %r" % inputs)
             check(SPEAKER in outputs, "The speaker isn't listed: %r" % outputs)
             check_equal((inputs[-1], outputs[-1]), ("none", "none"), "Last devices listed")
             listed = [item for item in app.get(name("lcSoundCard1OutDevice"))["items"] if item["label"] == SPEAKER]
             check_equal(listed[0]["columns"][2], "48000 Hz", "Speaker's sample rate as listed")
             check_values(app, {"tcSoundCard1InDevice": "none", "tcSoundCard1OutDevice": "none"})
 
-            set_value(app, "lcSoundCard1InDevice", "Monitor of " + RADIO_RX)
+            set_value(app, "lcSoundCard1InDevice", VirtualAudioDevices.input_label(RADIO_RX))
             set_value(app, "lcSoundCard1OutDevice", SPEAKER)
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
 
             # Receive only until told otherwise.
             go_to_tab(app, "TX Audio")
@@ -252,11 +254,12 @@ def test_audio():
             # With transmit devices as well, the speaker becomes the second
             # sound card's output and the radio the first's.
             open_settings(app, "RX Audio")
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
             go_to_tab(app, "TX Audio")
             set_value(app, "ckTxReceiveOnly", False)
             check_enabled(app, transmit_controls, True)
-            set_value(app, "lcSoundCard2InDevice", "Monitor of " + MICROPHONE)
+            set_value(app, "lcSoundCard2InDevice", VirtualAudioDevices.input_label(MICROPHONE))
             set_value(app, "lcSoundCard2OutDevice", RADIO_TX)
             press_ok(app)
             two_cards = {
@@ -274,28 +277,35 @@ def test_audio():
 
             # It's all still there next time...
             open_settings(app, "RX Audio")
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
             go_to_tab(app, "TX Audio")
-            check_values(app, {"ckTxReceiveOnly": False, "tcSoundCard2InDevice": "Monitor of " + MICROPHONE,
+            check_values(app, {"ckTxReceiveOnly": False,
+                               "tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                "tcSoundCard2OutDevice": RADIO_TX})
 
             # ...including after the lists are refreshed, which is how a
-            # device that's just been plugged in gets to be listed.
-            with VirtualAudioDevices("FreeDVGuiTest_New_Device"):
-                check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
-                      "A new device was listed without refreshing")
+            # device that's just been plugged in gets to be listed. (Only the
+            # refreshing on macOS, where a device can't be plugged in here.)
+            with contextlib.ExitStack() as new_device:
+                if not freedvtest.audio.MACOS:
+                    new_device.enter_context(VirtualAudioDevices("FreeDVGuiTest_New_Device"))
+                    check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
+                          "A new device was listed without refreshing")
                 app.click(name("btnRefreshTxAudio"))
-                check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
-                      "A new device wasn't listed after refreshing")
-                check_values(app, {"tcSoundCard2InDevice": "Monitor of " + MICROPHONE,
+                if not freedvtest.audio.MACOS:
+                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
+                          "A new device wasn't listed after refreshing")
+                check_values(app, {"tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                    "tcSoundCard2OutDevice": RADIO_TX})
                 go_to_tab(app, "RX Audio")
-                check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
-                      "A new device wasn't listed on the other tab after refreshing")
-                check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX,
+                if not freedvtest.audio.MACOS:
+                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
+                          "A new device wasn't listed on the other tab after refreshing")
+                check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
                 app.click(name("btnRefreshRxAudio"))
-                check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX,
+                check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
 
             # Back to receive only: the speaker goes back to the first card.
@@ -1278,7 +1288,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("Running %s..." % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 
