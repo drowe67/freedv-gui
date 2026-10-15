@@ -59,12 +59,14 @@ def wait_for_frequency(app, expected, what):
 
 
 def wait_for(condition, what, timeout=10):
+    """Waits for condition() to be true. what says what went wrong if it
+    isn't: text, or a function returning it as things are by then."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         if condition():
             return
         time.sleep(0.2)
-    check(False, what)
+    check(False, what() if callable(what) else what)
 
 
 def errors(app):
@@ -90,12 +92,14 @@ def test_control():
 
             # Changing it in FreeDV changes the radio, mode included.
             app.set_value("main.cboReportFrequency", "14.2400")
-            wait_for(lambda: radio.frequency() == 14240000, "The radio is on %d Hz, not 14240000" % radio.frequency())
-            wait_for(lambda: "USB" in radio.mode(), "The radio's mode on 20m is %s" % radio.mode())
+            wait_for(lambda: radio.frequency() == 14240000,
+                     lambda: "The radio is on %d Hz, not 14240000" % radio.frequency())
+            wait_for(lambda: "USB" in radio.mode(), lambda: "The radio's mode on 20m is %s" % radio.mode())
             app.set_value("main.cboReportFrequency", "3.6250")
-            wait_for(lambda: radio.frequency() == 3625000, "The radio is on %d Hz, not 3625000" % radio.frequency())
+            wait_for(lambda: radio.frequency() == 3625000,
+                     lambda: "The radio is on %d Hz, not 3625000" % radio.frequency())
             # (FreeDV uses upper sideband whatever the band.)
-            wait_for(lambda: "USB" in radio.mode(), "The radio's mode on 80m is %s" % radio.mode())
+            wait_for(lambda: "USB" in radio.mode(), lambda: "The radio's mode on 80m is %s" % radio.mode())
             check_equal(errors(app), [], "Errors displayed")
 
             # Transmitting keys it.
@@ -129,7 +133,7 @@ def test_control():
             # On the next start, the radio's put back where FreeDV was.
             start_modem(app)
             wait_for(lambda: radio.frequency() == 3625000,
-                     "The radio is on %d Hz after starting again, not 3625000" % radio.frequency())
+                     lambda: "The radio is on %d Hz after starting again, not 3625000" % radio.frequency())
             check_equal(displayed_frequency(app), "3.6250", "Frequency displayed after starting again")
             stop_modem(app)
             quit_and_check_log(app)
@@ -146,7 +150,8 @@ def test_frequency_only():
             start_modem(app)
             wait_for_frequency(app, "14.2360", "Frequency displayed once connected")
             app.set_value("main.cboReportFrequency", "7.1770")
-            wait_for(lambda: radio.frequency() == 7177000, "The radio is on %d Hz, not 7177000" % radio.frequency())
+            wait_for(lambda: radio.frequency() == 7177000,
+                     lambda: "The radio is on %d Hz, not 7177000" % radio.frequency())
             time.sleep(1)
             check_equal(radio.mode(), "AM", "Radio's mode")
             stop_modem(app)
@@ -217,17 +222,17 @@ def test_analog_sideband():
             def tune(displayed, frequency):
                 app.set_value("main.cboReportFrequency", displayed)
                 wait_for(lambda: radio.frequency() == frequency,
-                         "The radio is on %d Hz, not %d" % (radio.frequency(), frequency))
+                         lambda: "The radio is on %d Hz, not %d" % (radio.frequency(), frequency))
 
             def analog(expected_mode, expected_frequency, what):
                 app.click("main.btnAnalog")
                 wait_for(lambda: expected_mode == radio.mode(),
-                         "The radio's mode %s is %s, not %s" % (what, radio.mode(), expected_mode))
+                         lambda: "The radio's mode %s is %s, not %s" % (what, radio.mode(), expected_mode))
                 wait_for(lambda: radio.frequency() == expected_frequency,
-                         "The radio %s is on %d Hz, not %d" % (what, radio.frequency(), expected_frequency))
+                         lambda: "The radio %s is on %d Hz, not %d" % (what, radio.frequency(), expected_frequency))
 
             tune("14.2400", 14240000)
-            wait_for(lambda: "USB" in radio.mode(), "The radio's mode for FreeDV is %s" % radio.mode())
+            wait_for(lambda: "USB" in radio.mode(), lambda: "The radio's mode for FreeDV is %s" % radio.mode())
             digital = radio.mode()
 
             # 20m: upper sideband either way, so the radio stays put.
@@ -304,7 +309,8 @@ def test_editing_frequency():
             app.focus("main.cboReportFrequency")
             app.set_value("main.cboReportFrequency", "21.3130")
             app.focus("main.cboReportFrequency", lost=True)
-            wait_for(lambda: radio.frequency() == 21313000, "The radio is on %d Hz, not 21313000" % radio.frequency())
+            wait_for(lambda: radio.frequency() == 21313000,
+                     lambda: "The radio is on %d Hz, not 21313000" % radio.frequency())
             wait_for_frequency(app, "21.3130", "Frequency displayed after typing one in")
             check_equal(errors(app), [], "Errors displayed")
             stop_modem(app)
@@ -391,7 +397,7 @@ def test_lost():
             radio.set_frequency(7177000)
             start_modem(app)
             wait_for(lambda: radio.frequency() == 14236000,
-                     "The radio is on %d Hz once it's back, not 14236000" % radio.frequency())
+                     lambda: "The radio is on %d Hz once it's back, not 14236000" % radio.frequency())
             check_equal(displayed_frequency(app), "14.2360", "Frequency displayed once the radio's back")
             app.click("main.btnPTT")
             wait_for_transmit(app)
