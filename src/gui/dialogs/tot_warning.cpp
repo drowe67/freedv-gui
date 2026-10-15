@@ -69,6 +69,11 @@ TotWarningDialog::TotWarningDialog(wxWindow* parent, int initialRemainingMs,
 
     updateRemainingTime(initialRemainingMs);
 
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("totWarning");
+    m_countdownText_->SetName("totWarning.countdownText");
+    m_extendBtn_->SetName("totWarning.btnExtend");
+
     m_extendBtn_->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
         wxCommandEventHandler(TotWarningDialog::OnExtend), nullptr, this);
 }

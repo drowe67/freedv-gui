@@ -73,7 +73,11 @@ public:
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
-    
+
+    // Lets the unit tests create one directly, and call the callbacks that
+    // PulseAudio calls on a stream's thread.
+    friend struct PulseAudioDeviceTestAccess;
+
     PulseAudioDevice(wxString const& devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
@@ -99,7 +103,7 @@ private:
     struct timespec ts_;
     bool sleepFallback_;
 
-    int extraTimeNs_;
+    int64_t extraTimeNs_;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
     void stopImpl_();

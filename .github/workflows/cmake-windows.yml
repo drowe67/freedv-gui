@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
@@ -13,6 +16,12 @@ env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
   # FreeDV's GUI targets) unless these are set.
   CCACHE_SLOPPINESS: pch_defines,time_macros
+
+  # What's cached is uploaded again after every run and counts towards the
+  # repository's 10 GB of Actions caches, so trade some time on a cache miss
+  # (ccache's default is zstd level 1) for smaller caches. Reading a cached
+  # result isn't slowed down by this.
+  CCACHE_COMPRESSLEVEL: 10
 
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
@@ -36,7 +45,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
-        max-size: "5G"
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages
@@ -109,8 +118,11 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
-        key: ${{ github.job }}-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
-        max-size: "5G"
+        # Shared with build-unit-tests below, which compiles the same
+        # things with the same flags (plus the tests themselves). This job
+        # is the one that saves it, as it builds the whole application.
+        key: windows-${{ matrix.sanitizer_name }}-${{ matrix.arch }}
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages
@@ -193,8 +205,14 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
-        key: ${{ github.job }}-${{ matrix.variant }}-${{ matrix.arch }}
-        max-size: "5G"
+        # Shared with build-sanitizer above for the sanitizer variants, and
+        # left for that job to save: saved from here as well, there'd be two
+        # copies of nearly the same thing from every run, only the newer of
+        # which is ever used. Only the tests themselves are compiled afresh
+        # each time as a result. The plain variants have no such twin.
+        key: windows-${{ matrix.variant }}-${{ matrix.arch }}
+        save: ${{ matrix.variant == 'plain' }}
+        max-size: "1G"
         verbose: 2
 
     - name: Install required packages

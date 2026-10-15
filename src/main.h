@@ -74,8 +74,8 @@
 #include "gui/dialogs/tot_warning.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
-#include "gui/controls/plot_scatter.h"
 #include "gui/controls/plot_waterfall.h"
+#include "comp.h"
 #include "gui/controls/plot_spectrum.h"
 #include "sndfile.h"
 #include "sox_biquad.h"
@@ -94,6 +94,9 @@
 #include "pipeline/LinkStep.h"
 #include "freedv_sanitizers.h"
 #include "gui/util/wxMessageBoxWrapper.h"
+#include "gui/util/PopupMenuWrapper.h"
+#include "gui/util/PathDialogWrapper.h"
+#include "gui/util/BrowserWrapper.h"
 #include "voicekeyer_cache.h"
 
 #define _USE_TIMER              1
@@ -167,6 +170,7 @@ void      clearLastUsedConfigPath();
 class MainFrame;
 class FilterDlg;
 class FreeDVReporterDialog;
+class TestAgent;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -202,6 +206,15 @@ class MainApp : public wxApp
         FreeDVConfiguration appConfiguration;
         wxString customConfigFileName;
         wxString defaultConfigFilePath;
+
+        // Where the default configuration is, if FreeDV has to say (rather
+        // than leaving it to wxWidgets). See MainApp::OnCmdLineParsed().
+        wxString defaultConfigFile;
+
+        // The default configuration itself, if it's been opened. It can't
+        // reliably be found again later: wxWidgets looks for it by the
+        // application's name, which isn't the same at startup as afterwards.
+        wxConfigBase* defaultConfig = nullptr;
         
         // PTT -----------------------------------    
         int        m_intHamlibRig;
@@ -253,6 +266,9 @@ class MainApp : public wxApp
         int m_reportCounter;
     protected:
     private:
+        // Lets a GUI test script drive FreeDV (see test_agent.h).
+        std::shared_ptr<TestAgent> testAgent_;
+
         void UnitTest_();
 };
 
@@ -291,6 +307,10 @@ class MainFrame : public TopFrame
         virtual ~MainFrame();
 
         FilterDlg*              m_filterDialog;
+
+        // Updates the speaker level control to match the configuration.
+        void syncSpeakerLevelWithConfiguration();
+
         FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
@@ -366,7 +386,6 @@ class MainFrame : public TopFrame
 
     void togglePTT(void);
 
-    bool                    m_schedule_restore;
 
     // Voice Keyer state machine
 
@@ -387,9 +406,7 @@ class MainFrame : public TopFrame
         // protected event handlers
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
-        virtual void OnCloseFrame(wxCloseEvent& event);
         virtual void OnActivateWindow(wxActivateEvent& event) override;
-        void OnExitClick(wxCommandEvent& event);
 
         void startTxStream();
         void startRxStream();
@@ -450,7 +467,6 @@ class MainFrame : public TopFrame
         void OnBerReset( wxCommandEvent& event ) override;
 
         //System Events
-        void OnPaint(wxPaintEvent& event);
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
@@ -550,7 +566,6 @@ class MainFrame : public TopFrame
         unsigned int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
-        int         m_zoom;
         float       m_snrBeta;
 
         // Callsign/text messaging
@@ -704,6 +719,5 @@ void my_put_next_rx_char(void *callback_state, char c);
 
 // helper complex freq shift function
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 #endif //__FDMDV2_MAIN__

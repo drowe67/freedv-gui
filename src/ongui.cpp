@@ -82,14 +82,6 @@ void MainFrame::topFrame_OnSize( wxSizeEvent& event )
     TopFrame::topFrame_OnSize(event);
 }
 
-//-------------------------------------------------------------------------
-// OnExitClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnExitClick(wxCommandEvent& event)
-{
-    OnExit(event);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -167,6 +159,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
 
     wxUnusedVar(event);
+
+    // The same dialog is shown each time, and still has the return code it
+    // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
+    // already set to mean that the dialog closed itself while being set up,
+    // and so wouldn't show it a second time.
+    optionsDlg->SetReturnCode(0);
+
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
@@ -297,7 +296,7 @@ void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
-    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/releases");
+    LaunchBrowser("https://github.com/drowe67/freedv-gui/releases");
 }
 
 //-------------------------------------------------------------------------
@@ -313,7 +312,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpManual( wxCommandEvent& )
 {
-    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
+    LaunchBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
 
 //-------------------------------------------------------------------------
@@ -321,7 +320,7 @@ void MainFrame::OnHelpManual( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnHelp( wxCommandEvent& )
 {
-    wxLaunchDefaultBrowser("https://freedv.org/#getting-help");
+    LaunchBrowser("https://freedv.org/#getting-help");
 }
 
 //-------------------------------------------------------------------------
@@ -644,18 +643,6 @@ void MainFrame::OpenOmniRig()
 #endif // defined(WIN32)
 
 //-------------------------------------------------------------------------
-// OnCloseFrame()
-//-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent&)
-{
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
-    
-    Destroy();
-}
-
-//-------------------------------------------------------------------------
 // OnTop()
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
@@ -683,13 +670,11 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
         this, _("Would you like to restore configuration to defaults?"), _("Restore Defaults"),
         wxYES_NO | wxICON_QUESTION | wxCENTRE);
 
-    auto answer = messageDialog.ShowModal();
+    auto answer = ShowMessageDialog(messageDialog);
     if (answer == wxID_YES)
     {
         if(pConfig->DeleteAll())
         {
-            wxLogMessage(_("Config file/registry key successfully deleted."));
-            
             if (wxGetApp().m_sharedReporterObject)
             {
                 wxGetApp().m_sharedReporterObject = nullptr;
@@ -706,10 +691,12 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
             
             // Resets all configuration to defaults.
             loadConfiguration_();
+
+            wxMessageBox(_("Config file/registry key successfully deleted."), _("Restore Defaults"), wxOK | wxICON_INFORMATION, this);
         }
         else
         {
-            wxLogError(_("Deleting config file/registry key failed."));
+            wxMessageBox(_("Deleting config file/registry key failed."), _("Restore Defaults"), wxOK | wxICON_ERROR, this);
         }
     }
 }
@@ -720,20 +707,6 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
     event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// Paint()
-//-------------------------------------------------------------------------
-void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
-{
-    wxPaintDC dc(this);
-
-    if(GetMenuBar()->IsChecked(ID_PAINT_BG))
-    {
-        dc.Clear();
-    }
-    dc.SetUserScale(m_zoom, m_zoom);
 }
 
 //-------------------------------------------------------------------------
@@ -902,7 +875,7 @@ void MainFrame::OnTxLevelContextMenu( wxContextMenuEvent& )
         applyTxLevel();
     }, restoreItem->GetId());
 
-    PopupMenu(&menu);
+    ShowPopupMenu(this, &menu);
 }
 
 void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
@@ -948,7 +921,7 @@ void MainFrame::OnTuneAttenContextMenu( wxContextMenuEvent& )
         }, restoreItem->GetId());
     }
 
-    PopupMenu(&menu);
+    ShowPopupMenu(this, &menu);
 }
 
 //-------------------------------------------------------------------------
@@ -962,6 +935,19 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
+}
+
+void MainFrame::syncSpeakerLevelWithConfiguration()
+{
+    double sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+
+    if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
+    {
+        m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+        m_sliderMicSpkrLevel->Refresh();
+        wxString fmt = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString(sliderVal, 1), DECIBEL_STR);
+        m_txtMicSpkrLevelNum->SetLabel(fmt);
+    }
 }
 
 void MainFrame::setsnrBeta(bool snrSlow)
@@ -1091,7 +1077,7 @@ void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& )
 {
-    m_btnTogPTT->PopupMenu(pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
+    ShowPopupMenu(m_btnTogPTT, pttPopupMenu_, LeftOffsetContextMenuPosition(m_btnTogPTT));
 }
 
 //-------------------------------------------------------------------------
@@ -1913,6 +1899,7 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     // Show log contact dialog 
     auto logDialog = new LogEntryDialog(this);
     logDialog->ShowDialog(dxCall.ToUTF8(), dxGrid.ToUTF8(), logTimeObj, (int64_t)dxFreqHz, (int)snr);
+    logDialog->Destroy();
 }
 
 // Force manual resync, just in case demod gets stuck on false sync
@@ -2236,10 +2223,10 @@ void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT
     );
 
-    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+    wxString path;
+    if (ShowPathDialog(saveFileDialog, path) == wxID_CANCEL)
         return;
 
-    wxString path = saveFileDialog.GetPath();
     wxFileConfig* exportConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), path, path, wxCONFIG_USE_LOCAL_FILE);
     exportConfiguration_(exportConfig);
     exportConfig->Flush();
@@ -2259,10 +2246,10 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
     );
 
-    if (openFileDialog.ShowModal() == wxID_CANCEL)
+    wxString path;
+    if (ShowPathDialog(openFileDialog, path) == wxID_CANCEL)
         return;
 
-    wxString path = openFileDialog.GetPath();
 
     if (!wxFileExists(path))
     {
@@ -2311,14 +2298,35 @@ void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
         _("Load Default Configuration"),
         wxYES_NO | wxICON_QUESTION | wxCENTRE);
 
-    if (messageDialog.ShowModal() != wxID_YES)
+    if (ShowMessageDialog(messageDialog) != wxID_YES)
         return;
 
-    // Create a platform-appropriate default config:
-    // On Windows this uses the registry (wxRegConfig); on macOS/Linux it
-    // uses the default file location (wxFileConfig).  This becomes the
-    // active pConfig going forward — no need to restore the old one.
-    wxConfigBase* defaultConfig = wxConfigBase::Create();
+    // The default configuration is platform-appropriate: on Windows it's in
+    // the registry (wxRegConfig); on macOS/Linux, a file in the default
+    // location (wxFileConfig). It becomes the active pConfig going forward.
+    //
+    // The default configuration is the one that was opened at startup, if
+    // it was (see MainApp::OnCmdLineParsed()). Finding it again from here
+    // isn't reliable: wxConfigBase::Create() just hands back whichever
+    // configuration is in use and, with that out of the way, looks under the
+    // application's name as it is now rather than as it was at startup.
+    wxConfigBase* defaultConfig = wxGetApp().defaultConfig;
+#if wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    if (defaultConfig == nullptr && !wxGetApp().defaultConfigFile.IsEmpty())
+    {
+        // Startup would have had to say where the default configuration is,
+        // so the same goes here. That place was worked out then, as
+        // wxWidgets gives a different answer once it's been set up to use it.
+        wxString defaultLocation = wxGetApp().defaultConfigFile;
+        defaultConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), defaultLocation, defaultLocation, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR | wxCONFIG_USE_XDG);
+    }
+#endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
+    if (defaultConfig == nullptr)
+    {
+        wxConfigBase::Set(nullptr);
+        defaultConfig = wxConfigBase::Create();
+    }
+    wxGetApp().defaultConfig = defaultConfig;
     
     setConfiguration_(defaultConfig);
 

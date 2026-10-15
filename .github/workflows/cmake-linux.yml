@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
@@ -13,6 +16,12 @@ env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
   # FreeDV's GUI targets) unless these are set.
   CCACHE_SLOPPINESS: pch_defines,time_macros
+
+  # What's cached is uploaded again after every run and counts towards the
+  # repository's 10 GB of Actions caches, so trade some time on a cache miss
+  # (ccache's default is zstd level 1) for smaller caches. Reading a cached
+  # result isn't slowed down by this.
+  CCACHE_COMPRESSLEVEL: 10
 
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
@@ -30,12 +39,10 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}
-        max-size: "5G"
-
+    # (No ccache here or in test-application below: they use the system's
+    # wxWidgets and OpenSSL, so there's little to cache, and what there is
+    # would crowd the caches of the builds that compile those out of the
+    # repository's 10 GB.)
     - name: Install required packages
       shell: bash
       run: |
@@ -59,7 +66,7 @@ jobs:
         cd build_linux
         # PCH is disabled because clang-tidy can't read the GCC-built .gch
         # files that compile_commands.json would otherwise reference.
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON ..
         # Build so we have all required .h and .c/.cpp files
         make -j$(nproc)
 
@@ -92,14 +99,14 @@ jobs:
       if: ${{ matrix.os == 'ubuntu-22.04-arm' }}
       with:
         key: ${{ github.job }}-aarch64
-        max-size: "5G"
+        max-size: "1G"
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.23
       if: ${{ matrix.os == 'ubuntu-22.04' }}
       with:
         key: ${{ github.job }}-x86_64
-        max-size: "5G"
+        max-size: "1G"
 
     - uses: ./.github/actions/install-llvm-apt-pool
       with:
@@ -473,12 +480,6 @@ jobs:
     #  with:
     #    detached: true
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.23
-      with:
-        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.sanitizer }}-${{ matrix.native-audio }}
-        max-size: "5G"
-
     - name: Install LLVM/Clang >=20.0 
       if: ${{ matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm' }}
       run: |
@@ -522,7 +523,7 @@ jobs:
       if: ${{ matrix.sanitizer != 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Build freedv-gui 
       shell: bash
@@ -530,12 +531,14 @@ jobs:
       if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 USE_CCACHE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang-21 CXX=clang++-21 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - uses: ./.github/actions/run-linux-gui-test
       if: ${{ matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
       with:
         audio-backend: ${{ (matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm') && 'pulseaudio' || 'pipewire' }}
+        # The GUI tests (see below) need room for FreeDV's windows.
+        screen-geometry: ${{ matrix.os == 'ubuntu-26.04' && '1280x1024x24' || '1024x768x16' }}
 
     - name: Execute unit tests
       shell: bash
@@ -550,6 +553,111 @@ jobs:
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
           echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
-          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V --repeat until-pass:$MAX_EXECUTION_TIMES
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -LE gui --repeat until-pass:$MAX_EXECUTION_TIMES
+
+    # Tests that drive FreeDV's user interface (see test/gui). Only on one
+    # version of Ubuntu for now, as they take a while. (All but the one that
+    # looks at who's on the public FreeDV Reporter server, which depends on
+    # who that is at the time.)
+    - name: Install what the GUI tests need
+      shell: bash
+      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      working-directory: ${{github.workspace}}
+      run: |
+          # rigctld stands in for a radio, and eu-stack says where FreeDV is if it gets stuck.
+          sudo apt-get install libhamlib-utils elfutils
+          . ./rade-venv/bin/activate
+          # For running FreeDV Reporter's server locally.
+          pip install aiohttp python-socketio aiosqlite
+
+    - name: Execute GUI tests
+      shell: bash
+      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      working-directory: ${{github.workspace}}/build_linux
+      run: |
+          if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
+              export MAX_EXECUTION_TIMES=2
+          else
+              export MAX_EXECUTION_TIMES=1
+          fi
+          . ../rade-venv/bin/activate
+          UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 ctest --output-on-failure -L gui -E gui_reporter_live_view --timeout 900 --repeat until-pass:$MAX_EXECUTION_TIMES
+
+  # Reports how much of the code the unit and GUI tests exercise.
+  coverage:
+    runs-on: ubuntu-26.04
+    needs: lint
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        key: ${{ github.job }}
+        max-size: "5G"
+
+    - uses: ./.github/actions/setup-rtkit-linux
+      with:
+        fix-ports-mirror: 'false'
+
+    - name: Install required packages
+      shell: bash
+      run: |
+           sudo apt-get install libpulse-dev libspeexdsp-dev sox git portaudio19-dev libhamlib-dev libhamlib-utils libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio-utils metacity at-spi2-core libebur128-dev python3 python3-dev python3-venv gettext elfutils libwxgtk3.2-dev pipewire pipewire-pulse wireplumber
+
+    - uses: ./.github/actions/setup-rade-python-env
+      with:
+        torch-index-url: https://download.pytorch.org/whl/cpu
+
+    - name: Build freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          . ./rade-venv/bin/activate
+          pip install aiohttp python-socketio aiosqlite gcovr
+          # (Not optimised, so that what's reported matches the source.)
+          BUILD_TYPE=Debug UT_ENABLE=1 CC=gcc CXX=g++ USE_CCACHE=1 WITH_COVERAGE=1 ./build_linux.sh
+
+    - uses: ./.github/actions/run-linux-gui-test
+      with:
+        audio-backend: pipewire
+        screen-geometry: 1280x1024x24
+
+    # Failures are for the test jobs to report; this one is only after what
+    # the tests execute.
+    - name: Execute unit and GUI tests
+      shell: bash
+      working-directory: ${{github.workspace}}/build_linux
+      run: |
+          ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
+          . ../rade-venv/bin/activate
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest --output-on-failure -E gui_reporter_live_view --timeout 900 || echo "::warning::Some tests failed, so coverage may be understated"
+
+    - name: Report coverage
+      if: ${{ !cancelled() }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          . ./rade-venv/bin/activate
+          mkdir -p coverage-html
+          # Branches that the compiler adds, rather than ones in the code,
+          # aren't counted, as no test could take them: those for an exception
+          # being thrown part way through a line (nearly every line that
+          # touches a wxString has some), for cleaning up if a constructor
+          # throws ("new Something(...)"), and for an assert failing.
+          BRANCH_EXCLUSIONS='.*(\bnew\s+[A-Za-z_:<>]+\s*[\(\[\{;]|\bassert\s*\(|\bwxASSERT|\bwxCHECK|GCOVR?_EXCL_BR_LINE).*'
+          gcovr -j "$(nproc)" --root . --object-directory build_linux --filter 'src/' --exclude '.*/test/.*' --exclude 'build_linux/.*' --gcov-ignore-errors=all --gcov-ignore-parse-errors=all --merge-mode-functions=merge-use-line-min --exclude-throw-branches --exclude-branches-by-pattern "$BRANCH_EXCLUSIONS" --json coverage-measured.json
+          # ...and those that take more than the line itself to recognise.
+          python3 .github/scripts/coverage_exclusions.py coverage-measured.json coverage.json
+          gcovr --root . --add-tracefile coverage.json --json-summary coverage-summary.json --html-details coverage-html/index.html
+          python3 .github/scripts/coverage_summary.py coverage-summary.json coverage-html
+
+    - name: Upload coverage report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: coverage-html
+        path: ${{github.workspace}}/coverage-html
 
 

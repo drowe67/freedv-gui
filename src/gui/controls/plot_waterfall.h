@@ -74,7 +74,7 @@ class PlotWaterfall : public PlotPanel
 
         void        OnSize(wxSizeEvent& event) override;
         void        OnShow(wxShowEvent& event) override;
-        void        drawGraticule(wxGraphicsContext* ctx) override;
+        void        drawGraticule(wxGraphicsContext* ctx);
         void        draw(wxGraphicsContext* gc, bool repaintDataOnly = false) override;
         void        plotPixelData(wxGraphicsContext* gc);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);

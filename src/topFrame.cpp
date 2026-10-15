@@ -204,10 +204,6 @@ public:
 };
 #endif // !wxCHECK_VERSION(3, 3, 0)
 
-TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook()
-{
-    WXWIDGETS_SET_LAYOUT_DIRECTION;
-}
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
 
@@ -895,6 +891,52 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // End of layout
     //=====================================================
     
+    //-------------------
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    //-------------------
+    SetName("main");
+    m_gaugeSNR->SetName("main.gaugeSNR");
+    m_textSNR->SetName("main.textSNR");
+    m_ckboxSNR->SetName("main.ckboxSNR");
+    m_gaugeLevel->SetName("main.gaugeLevel");
+    m_textSync->SetName("main.textSync");
+    m_textCurrentDecodeMode->SetName("main.textCurrentDecodeMode");
+    m_btnCenterRx->SetName("main.btnCenterRx");
+    m_audioRecord->SetName("main.btnRecord");
+    m_logQSO->SetName("main.btnLogQSO");
+    m_reporterHidden->SetName("main.btnReporterHidden");
+    m_BtnBerReset->SetName("main.btnBerReset");
+    m_textBits->SetName("main.textBits");
+    m_textErrors->SetName("main.textErrors");
+    m_textBER->SetName("main.textBER");
+    m_textResyncs->SetName("main.textResyncs");
+    m_textClockOffset->SetName("main.textClockOffset");
+    m_textFreqOffset->SetName("main.textFreqOffset");
+    m_textSyncMetric->SetName("main.textSyncMetric");
+    m_textCodec2Var->SetName("main.textCodec2Var");
+    m_auiNbookCtrl->SetName("main.notebook");
+    m_txtModeStatus->SetName("main.textModeStatus");
+    m_BtnCallSignReset->SetName("main.btnCallSignReset");
+    m_txtCtrlCallSign->SetName("main.textCallSign");
+    m_cboLastReportedCallsigns->SetName("main.cboLastReportedCallsigns");
+    m_lastReportedCallsignListView->SetName("main.listLastReportedCallsigns");
+    m_btnTxLevelMM->SetName("main.btnTxLevelDecrBig");
+    m_btnTxLevelM->SetName("main.btnTxLevelDecr");
+    m_btnTxLevelP->SetName("main.btnTxLevelIncr");
+    m_btnTxLevelPP->SetName("main.btnTxLevelIncrBig");
+    m_txtTxLevelNum->SetName("main.textTxLevel");
+    m_sliderMicSpkrLevel->SetName("main.sliderMicSpkrLevel");
+    m_txtMicSpkrLevelNum->SetName("main.textMicSpkrLevel");
+    m_cboReportFrequency->SetName("main.cboReportFrequency");
+    m_togBtnOnOff->SetName("main.btnOnOff");
+    m_togBtnAnalog->SetName("main.btnAnalog");
+    m_btnTogTune->SetName("main.btnTune");
+    m_togBtnVoiceKeyer->SetName("main.btnVoiceKeyer");
+    m_btnTogPTT->SetName("main.btnPTT");
+    m_txLevelBox->SetName("main.boxTxLevel");
+    micSpeakerBox->SetName("main.boxMicSpkrLevel");
+    m_freqBox->SetName("main.boxReportFrequency");
+
     //-------------------
     // Tab ordering for accessibility
     //-------------------

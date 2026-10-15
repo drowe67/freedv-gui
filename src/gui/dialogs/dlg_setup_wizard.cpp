@@ -82,6 +82,7 @@ SetupWizard::SetupWizard(wxWindow* parent)
     topSizer->Add(new wxStaticLine(this), 0, static_cast<int>(wxEXPAND) | wxLEFT | wxRIGHT, 10);
     wxBoxSizer* navSizer = new wxBoxSizer(wxHORIZONTAL);
     wxButton* btnCancel = new wxButton(this, wxID_CANCEL, _("Cancel"));
+    btnCancel->SetName("wizard.btnCancel");
     m_btnPrev   = new wxButton(this, wxID_ANY, _("< Previous"));
     m_btnNext   = new wxButton(this, wxID_ANY, _("Next >"));
     m_btnFinish = new wxButton(this, wxID_ANY, _("Finish"));
@@ -93,6 +94,44 @@ SetupWizard::SetupWizard(wxWindow* parent)
     topSizer->Add(navSizer, 0, static_cast<int>(wxEXPAND) | static_cast<int>(wxALL), 10);
 
     SetSizerAndFit(topSizer);
+
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("wizard");
+    m_book->SetName("wizard.book");
+    m_btnPrev->SetName("wizard.btnPrev");
+    m_btnNext->SetName("wizard.btnNext");
+    m_btnFinish->SetName("wizard.btnFinish");
+    m_cbRadioIn->SetName("wizard.cbRadioIn");
+    m_cbSpeakerOut->SetName("wizard.cbSpeakerOut");
+    m_ckReceiveOnly->SetName("wizard.ckReceiveOnly");
+    m_cbMicIn->SetName("wizard.cbMicIn");
+    m_cbRadioOut->SetName("wizard.cbRadioOut");
+    m_ckHamlib->SetName("wizard.ckHamlib");
+    m_cbRigName->SetName("wizard.cbRigName");
+    m_cbSerialPort->SetName("wizard.cbSerialPort");
+    m_cbSerialRate->SetName("wizard.cbSerialRate");
+    m_cbPttMethod->SetName("wizard.cbPttMethod");
+    m_cbPttSerialPort->SetName("wizard.cbPttSerialPort");
+    m_ckSerialPTT->SetName("wizard.ckSerialPTT");
+    m_cbCtlDevicePath->SetName("wizard.cbCtlDevicePath");
+    m_rbUseRTS->SetName("wizard.rbUseRTS");
+    m_ckRTSPos->SetName("wizard.ckRTSPos");
+    m_rbUseDTR->SetName("wizard.rbUseDTR");
+    m_ckDTRPos->SetName("wizard.ckDTRPos");
+    m_ckUseAnalogModes->SetName("wizard.ckUseAnalogModes");
+    m_ckReportingEnable->SetName("wizard.ckReportingEnable");
+    m_txtCallsign->SetName("wizard.txtCallsign");
+    m_txtGridSquare->SetName("wizard.txtGridSquare");
+    if (m_btnImport != nullptr)
+    {
+        m_chImportSource->SetName("wizard.chImportSource");
+        m_btnImport->SetName("wizard.btnImport");
+        m_stImportStatus->SetName("wizard.stImportStatus");
+    }
+#if defined(WIN32)
+    m_ckOmniRig->SetName("wizard.ckOmniRig");
+    m_cbOmniRigRigId->SetName("wizard.cbOmniRigRigId");
+#endif
 
     // Populate serial ports and load saved config
     populateSerialPorts();
@@ -115,6 +154,8 @@ SetupWizard::SetupWizard(wxWindow* parent)
     m_ckHamlib->Bind(wxEVT_CHECKBOX,    &SetupWizard::OnHamlibChanged,    this);
     m_ckSerialPTT->Bind(wxEVT_CHECKBOX, &SetupWizard::OnSerialPTTChanged, this);
     m_cbRigName->Bind(wxEVT_COMBOBOX,   &SetupWizard::OnRigNameChanged,   this);
+    // Whether the PTT serial device applies depends on the PTT method.
+    m_cbPttMethod->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent&) { updateRadioState(); });
 #if defined(WIN32)
     m_ckOmniRig->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
         m_ckHamlib->SetValue(false);
@@ -1166,8 +1207,8 @@ void SetupWizard::updateRadioState()
     m_stPttMethod->Enable(hl);
     m_cbPttMethod->Enable(hl);
     bool pttNeedsSep = hl &&
-        m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_CAT &&
-        m_cbPttMethod->GetSelection() != HamlibRigController::PTT_VIA_NONE;
+        (m_cbPttMethod->GetSelection() == HamlibRigController::PTT_VIA_RTS ||
+         m_cbPttMethod->GetSelection() == HamlibRigController::PTT_VIA_DTR);
     m_stPttSerialPort->Enable(pttNeedsSep);
     m_cbPttSerialPort->Enable(pttNeedsSep);
 

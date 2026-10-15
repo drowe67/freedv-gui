@@ -656,6 +656,22 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_trackFreqBand->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackExactFreq->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     
+    // Window names, used by GUI test scripts to find controls (see test/gui).
+    SetName("reporter");
+    m_listSpots->SetName("reporter.listSpots");
+    m_buttonOK->SetName("reporter.btnClose");
+    m_buttonSendQSY->SetName("reporter.btnSendQSY");
+    m_buttonDisplayWebpage->SetName("reporter.btnWebsite");
+    m_bandFilter->SetName("reporter.cbBandFilter");
+    m_trackFrequency->SetName("reporter.ckTrackFrequency");
+    m_trackFreqBand->SetName("reporter.rbTrackFreqBand");
+    m_trackExactFreq->SetName("reporter.rbTrackExactFreq");
+    m_filterStatus->SetName("reporter.stFilterStatus");
+    m_statusMessage->SetName("reporter.cbStatusMessage");
+    getMsgPopup()->SetName("reporter.lbSavedMessages");
+    m_buttonSend->SetName("reporter.btnSend");
+    m_buttonClear->SetName("reporter.btnClear");
+
     // Update status message and MRU list
     m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
     for (auto& msg : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts.get())
@@ -875,8 +891,12 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
     auto newColValue =
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterColumnVisibility->at(columnId);
 
-    wxMenuItem* menuItem = static_cast<wxMenuItem*>(event.GetEventObject());
-    menuItem->Check(newColValue);
+    // Note: the event's object is the menu, not the item that was chosen.
+    wxMenuItem* menuItem = showMenu_->FindItem(event.GetId());
+    if (menuItem != nullptr)
+    {
+        menuItem->Check(newColValue);
+    }
 
     // Set column visibility in wxDataViewCtl.
     auto col = getColumnForModelColId_(columnId);
@@ -925,21 +945,22 @@ void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
             }
             else
             {
-                // No changes needed.
-                auto numMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
+                // No changes needed, other than putting the check marks back to
+                // reflect what's in effect (selecting "Custom..." changed them).
+                bool filterEnabled = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter;
+                auto currentMinutes = wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMaxIdleMinutes;
                 auto menuItems = idleLongerThanMenu_->GetMenuItems();
                 bool found = false;
                 for (auto& item : menuItems)
                 {
-                    if (item->GetId() == (wxID_HIGHEST + 200 + numMinutes))
-                    {
-                        item->Check(true);
-                    }
-                    else
-                    {
-                        item->Check(false);
-                    }
+                    // "Disabled" is the only item without an ID of our own choosing.
+                    bool isCurrent = filterEnabled ?
+                        (item->GetId() == (wxID_HIGHEST + 200 + currentMinutes)) :
+                        (item->GetId() < (wxID_HIGHEST + 200));
+                    found |= isCurrent;
+                    item->Check(isCurrent);
                 }
+
                 if (!found)
                 {
                     auto item = idleLongerThanMenu_->FindItem(event.GetId());
@@ -1009,6 +1030,10 @@ void FreeDVReporterDialog::DeselectItem()
         wxGetApp().lastSelectedLoggingRow = MainApp::UNSELECTED;
         m_listSpots->Unselect(item);
     }
+
+    // Deselecting from here isn't reported as a selection change, so the
+    // button that depends on there being a selection has to be told.
+    m_buttonSendQSY->Enable(false);
 }
 
 void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
@@ -1027,11 +1052,6 @@ void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 
     updateFilterStatus_();
     event.Skip();
-}
-
-void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent&)
-{
-    // TBD
 }
 
 void FreeDVReporterDialog::OnShow(wxShowEvent&)
@@ -1116,14 +1136,14 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent&)
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
         wxMessageBox(fullMessage, _("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
 
-        m_listSpots->Unselect(selected);
+        DeselectItem();
     }
 }
 
 void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent&)
 {
     std::string url = std::string("https://") + (const char*)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_str() + "/";
-    wxLaunchDefaultBrowser(url);
+    LaunchBrowser(url);
     DeselectItem();
 }
 
@@ -1980,7 +2000,7 @@ void FreeDVReporterDialog::OnColumnHeaderRightClick(wxDataViewEvent& event)
         m->refreshAllRows();
     }, clearItem->GetId());
 
-    m_listSpots->PopupMenu(&menu);
+    ShowPopupMenu(m_listSpots, &menu);
     event.Skip();
 }
 
@@ -2033,11 +2053,11 @@ void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent&)
         // on some KDE installations where the popup menu immediately closes after
         // right-clicking. This in effect causes the popup to open to the left of
         // the mouse pointer.
-        m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
+        ShowPopupMenu(m_listSpots, spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
     }
     else if (tempCallsign_ != wxT(""))
     {
-        m_listSpots->PopupMenu(callsignPopupMenu_, wxPoint(mouseX, mouseY));
+        ShowPopupMenu(m_listSpots, callsignPopupMenu_, wxPoint(mouseX, mouseY));
     }
 }
 
@@ -2057,7 +2077,7 @@ void FreeDVReporterDialog::OnQRZLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://www.qrz.com/db/%s", tempCallsign_));
     }
 }
 
@@ -2065,7 +2085,7 @@ void FreeDVReporterDialog::OnHamQTHLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://www.hamqth.com/%s", tempCallsign_));
     }
 }
 
@@ -2073,7 +2093,7 @@ void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
 {
     if (tempCallsign_ != wxT(""))
     {
-        wxLaunchDefaultBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
+        LaunchBrowser(wxString::Format("https://hamcall.net/call?callsign=%s", tempCallsign_));
     }
 }
 
@@ -2192,7 +2212,7 @@ void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent&)
                    && (int)popup->GetCount() < STATUS_MESSAGE_MRU_MAX_SIZE;
     setPopupMenu_->Enable(setSaveMenuItem_->GetId(), canSave);
     setPopupMenu_->Enable(saveMenuItem_->GetId(), canSave);
-    m_buttonSend->PopupMenu(setPopupMenu_);
+    ShowPopupMenu(m_buttonSend, setPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusTextSendAndSaveMessage(wxCommandEvent& event)
@@ -2238,7 +2258,7 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent&)
 
 void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent&)
 {
-    m_buttonClear->PopupMenu(clearPopupMenu_);
+    ShowPopupMenu(m_buttonClear, clearPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent&)
@@ -2278,7 +2298,7 @@ void FreeDVReporterDialog::ShowMsgItemContextMenu(int itemIdx)
     contextMenuSelectedIndex_ = itemIdx;
     msgItemPopupMenu_->Enable(addMsgMenuItem_->GetId(),
         getMsgPopup()->GetCount() < STATUS_MESSAGE_MRU_MAX_SIZE);
-    m_statusMessage->PopupMenu(msgItemPopupMenu_);
+    ShowPopupMenu(m_statusMessage, msgItemPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusMessageContextMenuEdit(wxCommandEvent&)
@@ -2572,16 +2592,6 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     return GetFilterForFrequency(freq);
 }
 
-bool FreeDVReporterDialog::FreeDVReporterDataModel::filtersEnabled() const
-{
-    return
-        (currentBandFilter_ != FilterFrequency::BAND_ALL) ||
-        (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq) ||
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnableMaxIdleFilter ||
-        hasAnyColumnFilter();
-}
-
 void FreeDVReporterDialog::FreeDVReporterDataModel::setColumnFilter(int col, int op, const wxString& val)
 {
     if (col >= 0 && col < NUM_COLS)
@@ -2607,18 +2617,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::getColumnFilter(int col, int
         op = columnFilterOperators_[col];
         val = columnFilterValues_[col];
         return true;
-    }
-    return false;
-}
-
-bool FreeDVReporterDialog::FreeDVReporterDataModel::hasAnyColumnFilter() const
-{
-    for (int col = 0; col < NUM_COLS; col++)
-    {
-        if (columnFilterOperators_[col] != FreeDVReporterDialog::FILTER_NONE)
-        {
-            return true;
-        }
     }
     return false;
 }
@@ -2927,6 +2925,13 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     auto leftData = (ReporterData*)item1.GetID();
     auto rightData = (ReporterData*)item2.GetID();
 
+    // Numbers are compared rather than subtracted: the difference between
+    // two of them needn't fit in (or survive being rounded to) an int.
+    // Frequencies more than 2^31 Hz apart came out in the wrong order.
+    auto compareNumbers = [](auto left, auto right) {
+        return (left < right) ? -1 : ((left > right) ? 1 : 0);
+    };
+
     int result = 0;
     switch(column)
     {
@@ -2937,16 +2942,16 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
             break;
         case DISTANCE_COL:
-            result = leftData->distanceVal - rightData->distanceVal;
+            result = compareNumbers(leftData->distanceVal, rightData->distanceVal);
             break;
         case HEADING_COL:
-            result = leftData->headingVal - rightData->headingVal;
+            result = compareNumbers(leftData->headingVal, rightData->headingVal);
             break;
         case VERSION_COL:
             result = leftData->version.CmpNoCase(rightData->version);
             break;
         case FREQUENCY_COL:
-            result = leftData->frequency - rightData->frequency;
+            result = compareNumbers(leftData->frequency, rightData->frequency);
             break;
         case TX_MODE_COL:
             result = leftData->txMode.CmpNoCase(rightData->txMode);
@@ -3011,7 +3016,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
         case SNR_COL:
-            result = leftData->snrVal - rightData->snrVal;
+            result = compareNumbers(leftData->snrVal, rightData->snrVal);
             break;
         case LAST_UPDATE_DATE_COL:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())

@@ -1142,14 +1142,30 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 windows. (PR #1508)</li>
 <li>Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR
 #1513, #1539)</li>
-<li>Add dark mode support for Windows. (PR #1518, #1529)</li>
+<li>Add dark mode support for Windows. (PR #1518, #1529, #1560)</li>
 <li>Add infrastructure for translating FreeDV into other languages. (PR
 #1526)</li>
+<li>Hamlib: only allow selecting a PTT serial device when using RTS or
+DTR for PTT. (PR #1544)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>Update wxWidgets to 3.3.4. (PR #1560, #1556)</li>
 </ul></li>
 <li>Other:
 <ul>
 <li>Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411,
 #1415)</li>
+<li>Add automated tests of the user interface: Setup Wizard, FreeDV
+Reporter, Settings, main, Log QSO, Start Recording and Filter windows,
+plots, audio device errors, serial port PTT and rig control. (PR #1544,
+#1546, #1548, #1550, #1551, #1553, #1554, #1556)</li>
+<li>Run the automated user interface tests, and report test coverage, as
+part of CI. (PR #1556)</li>
+<li>Remove unused plot, main window and FreeDV Reporter code. (PR
+#1556)</li>
+<li>Settings: play back audio input tests through the speaker/headphones
+instead of the radio. (PR #1548)</li>
 </ul></li>
 </ol>
 <p><em>Note: Legacy FreeDV modes (700D/700E/1600) have been removed due
@@ -1198,6 +1214,60 @@ file. (PR #1534)</li>
 #1535)</li>
 <li>Prevent a closed network connection from terminating FreeDV with
 SIGPIPE. (PR #1540)</li>
+<li>Fix equalizer bass/treble filters being designed for the wrong
+sample rate. (PR #1542)</li>
+<li>Fix frequency list entries occasionally being saved 1 Hz low. (PR
+#1542)</li>
+<li>Fix text settings containing e.g. “$HOME” being altered when loaded.
+(PR #1542)</li>
+<li>Hamlib/OmniRig: fix frequency/mode requested prior to connecting not
+being applied. (PR #1542)</li>
+<li>Reject stereo files in “Play File - From Radio” instead of playing
+them at half speed. (PR #1542)</li>
+<li>Fix possible crashes when stopping while using a serial port for PTT
+input. (PR #1542)</li>
+<li>Hamlib: fix limit on time spent waiting for the radio not always
+being applied. (PR #1542)</li>
+<li>FreeDV Reporter: fix incorrect distances/headings when one’s own
+grid square is incomplete. (PR #1542)</li>
+<li>FreeDV Reporter: fix stations sorting in the wrong order when their
+frequencies are more than about 2.1 GHz apart. (PR #1558)</li>
+<li>Fix crash when closing FreeDV right after stopping with a radio
+connected. (PR #1543)</li>
+<li>FreeDV Reporter: fix idle filter menu check marks after cancelling a
+custom idle time. (PR #1547)</li>
+<li>FreeDV Reporter: disable Request QSY once a request has been sent.
+(PR #1547)</li>
+<li>Voice keyer: fix button not showing “Stop Voice Keyer” while the
+voice keyer is running. (PR #1549)</li>
+<li>Voice keyer: fix newly recorded file being forgotten the next time
+FreeDV starts. (PR #1549)</li>
+<li>Fix Load Default Configuration reloading the configuration in use
+instead of the default one. (PR #1549)</li>
+<li>Linux: fix Load Default Configuration loading an empty configuration
+rather than the default one. (PR #1557)</li>
+<li>Logging: fix logged contacts sometimes being timed a second early.
+(PR #1552)</li>
+<li>Fix FreeDV being unable to exit after pressing Start with a sound
+device that couldn’t be opened. (PR #1559)</li>
+<li>Fix possible crash when an audio device fails to open before FreeDV
+has asked to be told of its errors. (PR #1559)</li>
+<li>Linux: fix audio pausing for up to two more seconds after FreeDV’s
+audio processing has been held up for more than two. (PR #1559)</li>
+<li>Settings: fix a typed-in frequency losing its last three digits when
+switching from kHz to MHz and pressing Apply. (PR #1559)</li>
+<li>Linux: fix crash on pressing Start with no sound server
+(PipeWire/PulseAudio) running. (PR #1555)</li>
+<li>Linux: report losing the sound server while running, and fix Stop
+getting stuck afterwards. (PR #1555)</li>
+<li>Fix each use of Adjust Monitor Volume leaving a hidden popup behind.
+(PR #1555)</li>
+<li>Filter: fix equaliser changes being ignored if the window was opened
+before pressing Start. (PR #1552)</li>
+<li>Fix each use of Log QSO leaving a hidden window behind. (PR
+#1552)</li>
+<li>Recording: restrict a pasted recording suffix to the same characters
+as a typed one. (PR #1552)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1210,6 +1280,10 @@ error. (PR #1510)</li>
 <li>Only use system libraries that can actually be linked. (PR
 #1521)</li>
 <li>Optimizations to reduce full rebuild time. (PR #1538)</li>
+<li>Build bundled wxWidgets and LibreSSL optimized and without debugging
+information, and only use ccache in CI for the builds that compile them.
+(PR #1561)</li>
+<li>Add unit tests for non-GUI code. (PR #1542)</li>
 </ul></li>
 <li>Other:
 <ul>

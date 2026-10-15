@@ -125,6 +125,22 @@ LogEntryDialog::LogEntryDialog(wxWindow* parent, wxWindowID id, const wxString& 
     this->Layout();
     this->Centre(wxBOTH);
     this->SetMinSize(GetBestSize());
+
+    // Names for automated GUI testing.
+    SetName("logEntry");
+    labelMyCallVal->SetName("logEntry.myCall");
+    labelMyLocatorVal->SetName("logEntry.myLocator");
+    labelTimeVal_->SetName("logEntry.time");
+    dxCall_->SetName("logEntry.dxCall");
+    dxGrid_->SetName("logEntry.dxLocator");
+    labelFrequency_->SetName("logEntry.labelFrequency");
+    frequency_->SetName("logEntry.frequency");
+    txReport_->SetName("logEntry.txReport");
+    rxReport_->SetName("logEntry.rxReport");
+    name_->SetName("logEntry.name");
+    comments_->SetName("logEntry.comments");
+    m_buttonOK->SetName("logEntry.btnOK");
+    m_buttonCancel->SetName("logEntry.btnCancel");
     
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(LogEntryDialog::OnInitDialog));

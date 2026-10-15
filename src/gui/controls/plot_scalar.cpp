@@ -196,8 +196,6 @@ PlotScalar::PlotScalar(wxWindow* parent,
     memset(m_a_fmt, 0, sizeof(m_a_fmt));
     strncpy(m_a_fmt, a_fmt, sizeof(m_a_fmt) - 1);
     m_mini = mini;
-    m_bar_graph = 0;
-    m_logy = 0;
     leftOffset_ = 0;
     bottomOffset_ = 0;
 
@@ -249,22 +247,6 @@ void PlotScalar::add_new_sample(float sample)
     
     m_mem[m_samples-1] = sample;
     addedPoints_++;
-}
-
-//----------------------------------------------------------------
-// add_new_samples()
-//----------------------------------------------------------------
-void  PlotScalar::add_new_samples(float samples[], int length)
-{
-    int i;
-
-    for(i = 0; i < m_samples-length; i++)
-        m_mem[i] = m_mem[i+length];
-    
-    for(i = m_samples-length; i < m_samples; i++)
-        m_mem[i] = *samples++;
-
-    addedPoints_ += length;
 }
 
 //----------------------------------------------------------------
@@ -516,56 +498,21 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
         // put inside plot window
 
-        if (m_bar_graph) {
-
-            if (m_logy) {
-
-                // can't take log(0)
-
-                assert(m_a_min > 0.0); 
-                assert(m_a_max > 0.0);
-
-                float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-                y = plotHeight*(1.0 - norm);
-            } else {
-                y = plotHeight - a_to_py * a + m_a_min*a_to_py;
-            }
-
-            // use points to make a bar graph
-
-            int x1, x2, y1;
-
-            x1 = index_to_px * ((float)i - 0.5);
-            x2 = index_to_px * ((float)i + 0.5);
-            y1 = plotHeight;
-            x1 += PLOT_BORDER + leftOffset_; x2 += PLOT_BORDER + leftOffset_;
-            y1 += PLOT_BORDER;
-
-            wxGraphicsPath path = ctx->CreatePath();
-            path.MoveToPoint(x1, y1);
-            path.AddLineToPoint(x1, y);
-            path.AddLineToPoint(x2, y);
-            path.AddLineToPoint(x2, y1);
-            ctx->StrokePath(path);
-        }
-        else {
-            if (i)
+        if (i)
+        {
+            for (int x2 = x; x2 <= std::ceil(index_to_px * (i + 1)) && x2 < plotWidth; x2++)
             {
-                for (int x2 = x; x2 <= std::ceil(index_to_px * (i + 1)) && x2 < plotWidth; x2++)
-                {
-                    auto item = &lineMap_[x2];
-                    item->y1 = std::min(item->y1, y);
+                auto item = &lineMap_[x2];
+                item->y1 = std::min(item->y1, y);
 
-                    if (!halfPlot_)
-                    {
-                        item->y2 = std::max(item->y2, y);
-                    }
+                if (!halfPlot_)
+                {
+                    item->y2 = std::max(item->y2, y);
                 }
             }
         }
     }
 
-    if (!m_bar_graph)
     {
         wxGraphicsContext* plotCtx = nullptr;
         if (DRAW_DIRECTLY)
@@ -818,15 +765,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
     if (drawPlotLines && !DRAW_DIRECTLY) plotCtx->SetPen(m_penDotDash);
     for(a=m_a_min; a<=m_a_max; ) 
     {
-        if (m_logy) 
-        {
-            float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-            y = plotHeight*(1.0 - norm);
-        }
-        else 
-        {
-            y = plotHeight - a*a_to_py + m_a_min*a_to_py;
-        }
+        y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         if (m_mini && drawPlotLines) 
         {
             strokeGridLine(horizontalLines, 0, y, plotWidth, y);
@@ -851,16 +790,7 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
             }
         }
  
-        if (m_logy) 
-        {
-            // m_graticule_a_step ==  0.1 means 10 steps/decade
-            float log10_step_size = floor(log10(a));
-            a += pow(10,log10_step_size);
-        }
-        else 
-        {
-            a += m_graticule_a_step;
-        }
+        a += m_graticule_a_step;
    }
 
    int plotX = m_mini ? 0 : PLOT_BORDER + leftOffset_;
@@ -935,11 +865,6 @@ void PlotScalar::drawGraticuleFast(wxGraphicsContext* ctx, bool repaintDataOnly)
    ctx->DrawBitmap(plotLinesBMP_, plotX, plotY, plotWidth, plotHeight);
 }
 
-void PlotScalar::clearSamples()
-{
-    memset(m_mem, 0, sizeof(float) * m_samples);
-}
-
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
@@ -956,16 +881,7 @@ void PlotScalar::OnSize(wxSizeEvent&)
         leftOffset_ = std::max(leftOffset_, text_w);
         bottomOffset_ = std::max(bottomOffset_, text_h);
 
-        if (m_logy)
-        {
-            // m_graticule_a_step ==  0.1 means 10 steps/decade
-            float log10_step_size = floor(log10(a));
-            a += pow(10,log10_step_size);
-        }
-        else
-        {
-            a += m_graticule_a_step;
-        }
+        a += m_graticule_a_step;
     }
 
     m_rCtrl = GetClientRect();
