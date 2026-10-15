@@ -945,6 +945,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
     * Optimizations to reduce full rebuild time. (PR #1538)
+    * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
 3. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
