@@ -854,8 +854,8 @@ endif(NOT SANITIZERS_ENABLED)
 
 # GUI tests: Python scripts that drive FreeDV's user interface (see test/gui).
 # These are labeled so that they can be run (ctest -L gui) or skipped
-# (ctest -LE gui) as a group. Currently Linux-only as they rely on
-# PulseAudio/PipeWire for their audio devices.
+# (ctest -LE gui) as a group. Most rely on PulseAudio/PipeWire for their
+# audio devices, so all of them run on Linux and only some on macOS.
 if(LINUX)
 foreach(scenario first_run second_run receive_only odd_starting_points cancel auto_select radio_control hamlib_start reporting import import_more)
     add_test(NAME gui_setup_wizard_${scenario}
@@ -928,6 +928,40 @@ foreach(scenario control frequency_only mode_display analog_sideband editing_fre
     add_test(NAME gui_rig_control_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+endforeach(scenario)
+elseif(APPLE)
+# On macOS, so far only the scenarios that don't need audio devices of their
+# own. The windows they open take over the screen, keyboard focus and mouse
+# pointer while they run.
+foreach(scenario radio_control reporting)
+    add_test(NAME gui_setup_wizard_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
+    set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
+
+# These need the Python packages listed in test/gui/freedvtest/reporter.py.
+foreach(scenario stations sorting sorted_updates display_options damaged_layout sort_every_column band_filter column_filters numeric_filters idle_filter columns status_message_flags text_filters saved_filters window connection_burst)
+    add_test(NAME gui_reporter_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
+    set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+endforeach(scenario)
+
+foreach(scenario buttons radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging ptt_key_names)
+    add_test(NAME gui_settings_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
+    set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui)
+endforeach(scenario)
+
+foreach(scenario menus help_and_restore default_config bad_command_line)
+    add_test(NAME gui_main_window_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
+    set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+endforeach(scenario)
+
+foreach(scenario controls out_of_range)
+    add_test(NAME gui_filter_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
+    set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
 endforeach(scenario)
 endif(LINUX)
 

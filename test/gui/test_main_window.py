@@ -1635,9 +1635,7 @@ def test_default_config():
     try:
         other = os.path.join(home, "other.conf")
         quiet = {"/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
-        # Where FreeDV has always kept its configuration. (Built with newer
-        # versions of wxWidgets, it moves it to where such things now go.)
-        freedvtest.write_config(os.path.join(home, ".freedv"), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
+        freedvtest.write_config(freedvtest.default_config_path(home), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
         freedvtest.write_config(other, dict(quiet, **{"/Reporting/Callsign": "VK5DGR"}))
 
         def callsign(app):
@@ -2276,13 +2274,20 @@ def test_bad_command_line():
         env = dict(os.environ)
         env.update({"HOME": folder, "XDG_CONFIG_HOME": os.path.join(folder, ".config"), "LANGUAGE": "en",
                     "LC_ALL": "C.UTF-8", "GDK_BACKEND": "x11"})
+        if sys.platform == "darwin":
+            # (See freedvtest.start().)
+            env["CFFIXED_USER_HOME"] = folder
         for arguments in [["--no-such-option"], ["--help"]]:
             result = subprocess.run([freedvtest.default_binary()] + arguments, env=env, timeout=60,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             output = result.stdout.decode("utf-8", "replace")
-            check("Usage: freedv " in output, "Given %s, FreeDV said %r" % (arguments, output))
+            # (It's "FreeDV" on macOS, where that's the program's name.)
+            check("usage: freedv " in output.lower(), "Given %s, FreeDV said %r" % (arguments, output))
             check(result.returncode != 0, "Given %s, FreeDV's exit code was 0" % arguments)
-            check_equal(os.listdir(folder), [], "Left behind when given %s" % arguments)
+            # (Files only: macOS makes some empty folders of its own there.)
+            left = [os.path.relpath(os.path.join(path, file), folder)
+                    for path, _, files in os.walk(folder) for file in files]
+            check_equal(left, [], "Left behind when given %s" % arguments)
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 

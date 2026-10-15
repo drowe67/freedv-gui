@@ -45,6 +45,11 @@ extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<bool> isModemRunning;
 extern FreeDVInterface freedvInterface;
 
+#if defined(__APPLE__)
+// See test_agent_osx.mm.
+void TestAgentActivateApp();
+#endif // defined(__APPLE__)
+
 TestAgent* TestAgent::Instance_ = nullptr;
 
 static std::string ToUtf8_(wxString const& str)
@@ -1338,6 +1343,9 @@ void TestAgent::commandActivate_(yyjson_val* id, yyjson_val* request)
     wxPoint corner = window->ScreenToClient(wxPoint(0, 0));
     window->WarpPointer(corner.x, corner.y);
 
+#if defined(__APPLE__)
+    TestAgentActivateApp();
+#endif // defined(__APPLE__)
     window->Raise();
     window->SetFocus();
 }

@@ -723,8 +723,16 @@ def test_frequency_list():
     """The Rig Control tab's list of predefined frequencies."""
     buttons = ["freqListAdd", "freqListRemove", "freqListMoveUp", "freqListMoveDown"]
 
+    # Thousands are grouped as the user's region has them on macOS (where
+    # LC_ALL doesn't apply), e.g. "3,625.0" in the US: left out here.
+    def ungrouped(text):
+        return text.replace(",", "")
+
     def frequencies(app):
-        return [item["label"] for item in app.get(name("freqList"))["items"]]
+        return [ungrouped(item["label"]) for item in app.get(name("freqList"))["items"]]
+
+    def offered(app):
+        return [ungrouped(item["label"]) for item in app.get("main.cboReportFrequency")["items"]]
 
     def check_buttons(app, add, remove, up, down):
         for button, expected in zip(buttons, [add, remove, up, down]):
@@ -793,14 +801,13 @@ def test_frequency_list():
         press_apply(app)
         check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0"], "Frequencies listed in kHz")
         check_equal(label(app, "labelEnterFreq"), "Enter frequency (kHz):", "Frequency entry label")
-        check_values(app, {"txtCtrlNewFrequency": "14236.0"})
+        check_equal(ungrouped(value(app, "txtCtrlNewFrequency")), "14236.0", "txtCtrlNewFrequency")
         check_buttons(app, True, False, False, False)
         app.click(name("freqListAdd"))
         check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies listed in kHz")
         press_ok(app)
         check_saved(app, {"/Reporting/FrequencyAsKHz": 1})
-        check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
-                    ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
+        check_equal(offered(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
 
         # And back again, along with what's been typed in so far.
         open_settings(app, "Rig Control")

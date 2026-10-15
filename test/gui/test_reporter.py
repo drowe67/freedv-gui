@@ -130,6 +130,13 @@ def quit_and_check_log(app):
     check_equal(errors, [], "Errors logged by FreeDV")
 
 
+def number(text):
+    """Returns the number in a cell. Thousands are grouped as the user's
+    region has them on macOS (where LC_ALL doesn't apply), e.g. "4,153" in
+    the US."""
+    return float(text.replace(",", ""))
+
+
 def callsigns(app):
     """Returns the callsigns in the list, from top to bottom."""
     return [row[CALLSIGN] for row in app.rows(LIST)]
@@ -237,7 +244,7 @@ def test_live_view():
         # they're on, and the list is changing all the time, so it gets a
         # few goes at being caught in order.)
         for attempt in range(5):
-            frequencies = [float(row[FREQUENCY].replace(",", "")) for row in app.rows(LIST)
+            frequencies = [number(row[FREQUENCY]) for row in app.rows(LIST)
                            if row[FREQUENCY].strip() != ""]
             if frequencies == sorted(frequencies):
                 break
@@ -271,8 +278,8 @@ def test_stations():
             wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
             row = row_for(app, "K1ABC")
             check_equal(row[LOCATOR], "FN42", "K1ABC's locator")
-            check(4000 < int(row[DISTANCE]) < 4300, "K1ABC is %s km from DM12" % row[DISTANCE])
-            check(50 < int(row[HEADING]) < 75, "K1ABC is at %s degrees from DM12" % row[HEADING])
+            check(4000 < number(row[DISTANCE]) < 4300, "K1ABC is %s km from DM12" % row[DISTANCE])
+            check(50 < number(row[HEADING]) < 75, "K1ABC is at %s degrees from DM12" % row[HEADING])
             check_equal(row[VERSION], "freedvtest", "K1ABC's version")
             check_equal(row[FREQUENCY], "14.2360", "K1ABC's frequency")
             check_equal(row[STATUS], "", "K1ABC's status")
@@ -280,7 +287,7 @@ def test_stations():
             check(row[LAST_UPDATE] != "", "K1ABC has no last update time")
             row = row_for(app, "VK5DGR")
             check_equal(row[STATUS], "RX Only", "VK5DGR's status")
-            check(12000 < int(row[DISTANCE]) < 14000, "VK5DGR is %s km from DM12" % row[DISTANCE])
+            check(12000 < number(row[DISTANCE]) < 14000, "VK5DGR is %s km from DM12" % row[DISTANCE])
 
             # Transmitting...
             k1abc.transmit("RADEV1", True)
@@ -1187,9 +1194,6 @@ def test_sort_every_column():
 def test_display_options():
     """Distances in miles, directions as compass points and times in UTC,
     and what's shown when where someone is can't be worked out."""
-    def number(text):
-        return float(text.replace(",", ""))
-
     with ReporterServer() as server:
         server.station("K1ABC", "FN42").set_frequency(14236000)
         server.station("W6XYZ", "DM12").set_frequency(14236000)    # the same square as FreeDV
@@ -1211,6 +1215,14 @@ def test_display_options():
                         "Distance and direction to the same square")
             check_equal((rows["N0WHR"][DISTANCE].strip(), rows["N0WHR"][HEADING].strip()), ("", ""),
                         "Distance and direction to nowhere")
+
+            # Nor once the list has been redone (as changing the band filter
+            # does), which used to give a direction of 0.
+            app.set_value("reporter.cbBandFilter", "20 m")
+            app.set_value("reporter.cbBandFilter", "All")
+            rows = {row[CALLSIGN]: row for row in app.rows(LIST)}
+            check_equal((rows["N0WHR"][DISTANCE].strip(), rows["N0WHR"][HEADING].strip()), ("", ""),
+                        "Distance and direction to nowhere after the list was redone")
             local_time = rows["K1ABC"][LAST_UPDATE]
             quit_and_check_log(app)
 

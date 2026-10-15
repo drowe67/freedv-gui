@@ -123,6 +123,8 @@ jobs:
       working-directory: ${{github.workspace}}/build_osx
       run: |
           . ./rade_venv/bin/activate
+          # For the GUI tests, which run FreeDV Reporter's server locally.
+          pip install aiohttp python-socketio aiosqlite
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
               export MAX_EXECUTION_TIMES=2
           else
