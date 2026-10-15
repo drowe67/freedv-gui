@@ -399,7 +399,7 @@ def test_audio_tests():
 
     # A speaker that runs at a different sample rate from what's recorded:
     # the recording still comes back through it, at the pitch it went in at.
-    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 22050}):
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 44100}):
         with freedvtest.start(settings=audio_settings()) as app:
             open_settings(app, "RX Audio")
             with Tone(RADIO_RX):
