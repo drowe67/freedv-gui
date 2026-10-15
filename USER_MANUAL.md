@@ -880,6 +880,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * macOS: fix the last block of audio being sent to the radio over and over after transmitting, rather than silence. (PR #1563)
     * Fix a saved main window size too small to be of use being kept. (PR #1563)
     * Rig control: fix FreeDV briefly going back to the previous frequency after changing it (and so e.g. choosing the wrong sideband for analog mode when switched to straight after changing band). (PR #1563)
+    * macOS/Windows: fix possible crash or garbled log output when audio device errors are logged. (PR #1563)
 3. Build system:
     * Update wxWidgets to 3.3.4. (PR #1560, #1556)
     * CI: only build with PGO, run the tests and report coverage on merges; other pushes get unsigned packages to try out. (PR #1563)
