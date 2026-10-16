@@ -30,6 +30,12 @@
 #include <wx/wx.h>
 #include <wx/timer.h>
 
+// On Windows, wxWidgets has already brought in wincrypt.h, some of whose
+// names LibreSSL's headers (from TcpConnectionHandler.h) replace with their
+// own. Nothing here uses wincrypt.h's, so that's fine.
+#if defined(_WIN32) && !defined(LIBRESSL_DISABLE_OVERRIDE_WINCRYPT_DEFINES_WARNING)
+#define LIBRESSL_DISABLE_OVERRIDE_WINCRYPT_DEFINES_WARNING
+#endif // defined(_WIN32) && !defined(LIBRESSL_DISABLE_OVERRIDE_WINCRYPT_DEFINES_WARNING)
 #include "util/TcpConnectionHandler.h"
 #include "yyjson.h"
 

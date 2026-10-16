@@ -247,26 +247,67 @@ static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
 static const wxChar* const FREEDV_VENDOR_NAME = wxT("CODEC2-Project");
 static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
 
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+// GUI tests (test/gui) keep FreeDV away from the registry, where its default
+// configuration and the state above otherwise go on Windows, by giving a
+// folder for them to be files in instead (as they are on Linux and macOS).
+static wxString TestConfigFile_(const wxString& name)
+{
+    wxString folder;
+    if (!wxGetEnv("FREEDV_TEST_CONFIG_DIR", &folder) || folder.IsEmpty())
+    {
+        return wxEmptyString;
+    }
+    return wxFileName(folder, name).GetFullPath();
+}
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+
+// Opens the default configuration: the one used when FreeDV isn't told which
+// to use.
+[[maybe_unused]] static wxConfigBase* CreateDefaultConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return wxConfigBase::Create();
+}
+
+static std::unique_ptr<wxConfigBase> OpenStateConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV-State.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return std::make_unique<wxFileConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return std::make_unique<wxConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+}
+
 wxString getLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    auto stateConfig = OpenStateConfig_();
     wxString path;
-    stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
+    stateConfig->Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
     return path;
 }
 
 void saveLastUsedConfigPath(const wxString& path)
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, path);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, path);
+    stateConfig->Flush();
 }
 
 void clearLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, wxEmptyString);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, wxEmptyString);
+    stateConfig->Flush();
 }
 
 // Unit test management
@@ -622,7 +663,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // would find the same one as it does when FreeDV is started
         // without being given a configuration to use.
         wxConfigBase::Set(nullptr);
-        defaultConfig = wxConfigBase::Create();
+        defaultConfig = CreateDefaultConfig_();
         wxConfigBase::Set(pConfig);
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
@@ -681,6 +722,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
+        wxConfigBase::Set(CreateDefaultConfig_());
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
 
         // Whichever it is, this is the default configuration.
