@@ -45,6 +45,11 @@ extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<bool> isModemRunning;
 extern FreeDVInterface freedvInterface;
 
+#if defined(__APPLE__)
+// See test_agent_osx.mm.
+void TestAgentActivateApp();
+#endif // defined(__APPLE__)
+
 TestAgent* TestAgent::Instance_ = nullptr;
 
 static std::string ToUtf8_(wxString const& str)
@@ -457,6 +462,27 @@ static wxWindow* FindWindow_(wxString const& name)
 {
     if (!name.StartsWith("@"))
     {
+        // A window that's been closed can stay around (not shown) for a
+        // while before it's destroyed, by which time another of the same
+        // name may have been opened: that one is meant, so windows being
+        // shown come first, newest first.
+        for (auto iter = wxTopLevelWindows.rbegin(); iter != wxTopLevelWindows.rend(); ++iter)
+        {
+            wxWindow* topLevel = *iter;
+            if (!topLevel->IsShown() || topLevel->IsBeingDeleted())
+            {
+                continue;
+            }
+            if (topLevel->GetName() == name)
+            {
+                return topLevel;
+            }
+            wxWindow* found = wxWindow::FindWindowByName(name, topLevel);
+            if (found != nullptr)
+            {
+                return found;
+            }
+        }
         return wxWindow::FindWindowByName(name);
     }
 
@@ -1338,6 +1364,9 @@ void TestAgent::commandActivate_(yyjson_val* id, yyjson_val* request)
     wxPoint corner = window->ScreenToClient(wxPoint(0, 0));
     window->WarpPointer(corner.x, corner.y);
 
+#if defined(__APPLE__)
+    TestAgentActivateApp();
+#endif // defined(__APPLE__)
     window->Raise();
     window->SetFocus();
 }
@@ -1373,6 +1402,14 @@ void TestAgent::commandMenu_(yyjson_val* id, yyjson_val* request)
     {
         int menuIndex = menuBar->FindMenu(labels[0]);
         menu = (menuIndex != wxNOT_FOUND) ? menuBar->GetMenu(menuIndex) : nullptr;
+#if defined(__WXOSX__)
+        // macOS's menu named after the application, which is where
+        // wxWidgets puts some items (e.g. File > Exit, as Quit).
+        if (menu == nullptr && labels[0] == wxTheApp->GetAppDisplayName())
+        {
+            menu = menuBar->OSXGetAppleMenu();
+        }
+#endif // defined(__WXOSX__)
         for (size_t index = 1; menu != nullptr && index < labels.size(); index++)
         {
             item = nullptr;
@@ -1605,8 +1642,12 @@ static bool HoverOverCell_(
     if (itemUnderPointer != item || columnUnderPointer != column)
     {
         error = wxString::Format(
-            "could not move the mouse pointer over the requested cell of '%s' (cell at %d,%d %dx%d, pointer at %d,%d)",
-            dataView->GetName(), rect.x, rect.y, rect.width, rect.height, position.x, position.y);
+            "could not move the mouse pointer over the requested cell of '%s' (cell at %d,%d %dx%d, pointer at %d,%d, "
+            "over %s in column %s, list %dx%d)",
+            dataView->GetName(), rect.x, rect.y, rect.width, rect.height, position.x, position.y,
+            !itemUnderPointer.IsOk() ? "no row" : (itemUnderPointer == item ? "that row" : "another row"),
+            columnUnderPointer == nullptr ? wxString("none") : columnUnderPointer->GetTitle(),
+            dataView->GetClientSize().GetWidth(), dataView->GetClientSize().GetHeight());
         return false;
     }
 

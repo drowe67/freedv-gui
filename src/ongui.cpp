@@ -427,8 +427,13 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
         }
 
-        // Update frequency box
-        if (!suppressFreqModeUpdates_ && (
+        // Update frequency box, unless what's reported was read from the
+        // radio before the frequency FreeDV last asked for was set: that would
+        // put FreeDV back where it was for a moment (and anything done in that
+        // moment, e.g. switching to analog, would go by the old frequency).
+        bool staleFrequency = wxGetApp().rigFrequencyController != nullptr &&
+            wxGetApp().rigFrequencyController->isFrequencyChangePending(freq);
+        if (!suppressFreqModeUpdates_ && !staleFrequency && (
             !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
             !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
         {
@@ -464,7 +469,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
 
         // Auto-save outgoing band levels, then load the new band's levels
         auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(newFreq);
-        if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
+        if (!staleFrequency && newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
         {
             autoSaveCurrentBandLevels_();
             lastBand_ = newBandEnum;

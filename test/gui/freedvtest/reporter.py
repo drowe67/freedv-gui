@@ -274,7 +274,13 @@ class Station:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
 
-        self._client = socketio.AsyncClient(reconnection=False)
+        # Created in that thread: with Python 3.9 (macOS's own), what it
+        # creates belongs to the event loop of whichever thread it's created
+        # in, and messages it's given to send would otherwise never go.
+        async def create_client():
+            return socketio.AsyncClient(reconnection=False)
+
+        self._client = self._run(create_client())
         self._client.on("*", self._on_event)
 
         if callsign is None:

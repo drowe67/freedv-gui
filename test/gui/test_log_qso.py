@@ -8,9 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_log_qso.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with. The "reporter" scenario also needs what
-test_reporter.py does.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs. The "reporter" scenario also needs what test_reporter.py does.
 """
 
 import calendar
@@ -23,6 +22,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.wsjtx import WsjtxListener, utc
 from test_main_window import (CALLSIGN, audio_devices, check, check_equal, label, quit_and_check_log, settings,
                               start_modem, stop_modem)
@@ -396,7 +396,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

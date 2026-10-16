@@ -58,6 +58,16 @@ def default_binary():
 NO_REPORTER_SERVER = "127.0.0.1:9"
 
 
+def default_config_path(home):
+    """Returns where FreeDV looks for its configuration when not told which
+    to use, for the given stand-in home folder (see start()): where it has
+    always kept it on Linux (newer builds move it to where such things now
+    go), and where macOS keeps programs' settings."""
+    if sys.platform == "darwin":
+        return os.path.join(home, "Library", "Preferences", "FreeDV Preferences")
+    return os.path.join(home, ".freedv")
+
+
 def write_config(path, settings):
     """Creates a FreeDV configuration file. settings maps the names of
     settings as they appear in FreeDV's source code (e.g.
@@ -81,6 +91,7 @@ def write_config(path, settings):
             value = int(value)
         groups.setdefault(group, {})[key] = value
 
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w") as f:
         for group in sorted(groups):
             if group:
@@ -118,11 +129,12 @@ def start(binary=None, config=None, settings=None, args=(), env=None, user_confi
     looks for other programs' settings (see FreeDV.user_config_dir). FreeDV
     never sees the real ones.
 
-    home is a folder to stand in for the user's home folder (Linux only),
+    home is a folder to stand in for the user's home folder (Linux and macOS),
     for when what FreeDV keeps there needs to last from one launch to the
     next; otherwise each launch gets an empty one of its own. With
     default_config, FreeDV isn't told which configuration file to use and so
-    finds its own, as it does for a user: in that home folder.
+    finds its own, as it does for a user: in that home folder (see
+    default_config_path()).
     """
     return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout, home,
                   default_config)
@@ -144,10 +156,10 @@ class FreeDV:
         self.config_path = config or os.path.join(self._temp_dir, "freedv.conf")
         #: Everything that FreeDV has printed.
         self.log_path = os.path.join(self._temp_dir, "freedv.log")
-        #: Stands in for the user's ~/.config (Linux only), which is where
-        #: FreeDV looks for other programs' settings.
+        #: Stands in for where FreeDV looks for other programs' settings:
+        #: the user's ~/.config on Linux, ~/Library/Preferences on macOS.
         self.user_config_dir = os.path.join(home, ".config") if home else os.path.join(self._temp_dir, "config")
-        #: Stands in for the user's home folder (Linux only).
+        #: Stands in for the user's home folder (Linux and macOS).
         self.home_dir = None
 
         if settings is not None:
@@ -173,9 +185,15 @@ class FreeDV:
             xauthority = os.path.expanduser("~/.Xauthority")
             if "XAUTHORITY" not in process_env and os.path.exists(xauthority):
                 process_env["XAUTHORITY"] = xauthority
+        if sys.platform.startswith("linux") or sys.platform == "darwin":
             self.home_dir = home or os.path.join(self._temp_dir, "home")
             os.makedirs(self.home_dir, exist_ok=True)
             process_env["HOME"] = self.home_dir
+        if sys.platform == "darwin":
+            # macOS finds the home folder (and so ~/Library/Preferences, where
+            # FreeDV keeps its settings) without looking at $HOME.
+            process_env["CFFIXED_USER_HOME"] = self.home_dir
+            self.user_config_dir = os.path.join(self.home_dir, "Library", "Preferences")
         os.makedirs(self.user_config_dir, exist_ok=True)
         for name, contents in (user_config_files or {}).items():
             with open(os.path.join(self.user_config_dir, name), "w") as f:
