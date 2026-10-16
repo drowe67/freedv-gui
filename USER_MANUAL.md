@@ -951,6 +951,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows: fix FreeDV Reporter not removing what's left of a flag from the status message after part of it is deleted. (PR #1565)
     * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
     * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
+    * Fix silence being mixed into the first half second of each transmission, and holes in the signal at its start. (PR #1567)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
@@ -959,6 +960,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Optimizations to reduce full rebuild time. (PR #1538)
     * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
+    * Add tests of whole transmissions through the TX/RX threads without sound cards. (PR #1567)
 3. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)
