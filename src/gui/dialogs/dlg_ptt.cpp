@@ -562,6 +562,18 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
 
     std::shared_ptr<std::mutex> mtx = std::make_shared<std::mutex>();
     std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
+
+    // Says the test is over. Kept track of, rather than only signalled: a
+    // port that can't be opened says so before the thread below has
+    // started waiting for it, and that thread would otherwise wait forever.
+    std::shared_ptr<bool> finished = std::make_shared<bool>(false);
+    auto finish = [mtx, cv, finished]() {
+        {
+            std::unique_lock<std::mutex> lk(*mtx);
+            *finished = true;
+        }
+        cv->notify_one();
+    };
     
     /* Tone PTT */
 
@@ -619,7 +631,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                     wxMessageBox(wxString::Format("Couldn't connect to Radio with Hamlib (%s).  Make sure the Hamlib serial Device, Rate, and Params match your radio", error), 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
 
-                    cv->notify_one();
+                    finish();
                 });
             };
 
@@ -635,7 +647,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 }
                 else
                 {
-                    cv->notify_one();
+                    finish();
                 }
             };
 
@@ -643,7 +655,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 hamlib->connect();
             
                 std::unique_lock<std::mutex> lk(*mtx);
-                cv->wait(lk);
+                cv->wait(lk, [finished]() { return *finished; });
             
                 hamlib->disconnect();
                 
@@ -685,19 +697,19 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                     wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
 
-                cv->notify_one();
+                finish();
             };
 
             serialPort->onRigConnected += [=](IRigController*) {
                 log_debug("serial port open");
-                cv->notify_one();
+                finish();
             };
 
             std::thread serialPortThread([=, this]() {
                 serialPort->connect();
             
                 std::unique_lock<std::mutex> lk(*mtx);
-                cv->wait(lk);
+                cv->wait(lk, [finished]() { return *finished; });
 
                 if (serialPort->isConnected())
                 {
@@ -738,7 +750,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
                 wxMessageBox(wxString::Format("Couldn't connect to Radio with OmniRig (%s).  Make sure the rig ID and OmniRig configuration is correct.", error),
                     wxT("Error"), wxOK | wxICON_ERROR, this);
 
-                cv->notify_one();
+                finish();
             });
         };
 
@@ -754,7 +766,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
             }
             else
             {
-                cv->notify_one();
+                finish();
             }
         };
 
@@ -762,7 +774,7 @@ void ComPortsDlg::OnTest(wxCommandEvent&) {
             rig->connect();
 
             std::unique_lock<std::mutex> lk(*mtx);
-            cv->wait(lk);
+            cv->wait(lk, [finished]() { return *finished; });
         
             rig->disconnect();
             

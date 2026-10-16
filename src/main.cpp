@@ -966,9 +966,21 @@ void MainFrame::loadConfiguration_()
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     // (Nor anything too small to be of use: macOS, unlike Linux's window
-    // managers, makes the window as small as it's asked to.)
-    if (w < 300 || w > 2048) w = 800;
-    if (h < 200 || h > 2048) h = 780;
+    // managers, makes the window as small as it's asked to.) The default,
+    // for when none has been saved, and that limit are scaled to suit the
+    // display: on Windows, sizes are in the screen's own pixels, and 800 of
+    // those at 200% are only as wide as 400 elsewhere, leaving no room for
+    // the plots beside everything else. (wxWidgets 3.0, which only Linux
+    // builds use, has no FromDIP(), and needs none there.)
+#if wxCHECK_VERSION(3,1,0)
+    wxSize defaultSize = FromDIP(wxSize(800, 780));
+    wxSize smallestSize = FromDIP(wxSize(300, 200));
+#else
+    wxSize defaultSize(800, 780);
+    wxSize smallestSize(300, 200);
+#endif // wxCHECK_VERSION(3,1,0)
+    if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
+    if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
 
     g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
     g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
@@ -1328,6 +1340,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SetThreadName("GUI");
 
     terminating_ = false;
+    closingReporterDialog_ = false;
     realigned_ = false;
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
@@ -2543,6 +2556,19 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         return;
     }
 
+    if (closingReporterDialog_)
+    {
+        // Another request to close (say, a second click on the close button)
+        // while the one before it waits below for the Reporter dialog's last
+        // messages. Going on would destroy the dialog, and this window, out
+        // from under that one, which finishes closing by itself.
+        if (event.CanVeto())
+        {
+            event.Veto();
+        }
+        return;
+    }
+
     if (m_reporterDialog != nullptr)
     {
         // Grab and save the final position explicitly rather than relying
@@ -2557,7 +2583,9 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
+        closingReporterDialog_ = true;
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        closingReporterDialog_ = false;
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
         m_reporterDialog = nullptr;
