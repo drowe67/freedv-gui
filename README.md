@@ -20,7 +20,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- recommended and the default) 
-  $ sudo apt install libpulse-dev
+  $ sudo apt install libpulse-dev pulseaudio-utils
   
   (if using PortAudio)
   $ sudo apt install portaudio19-dev
@@ -39,7 +39,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- default and recommended)
-  $ sudo dnf install pulseaudio-libs-devel
+  $ sudo dnf install pulseaudio-libs-devel pulseaudio-utils
 
   (if using PortAudio)
   $ sudo dnf install portaudio-devel
