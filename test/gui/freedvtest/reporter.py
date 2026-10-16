@@ -155,7 +155,15 @@ class ReporterServer:
             # it one of its own rather than the one containing its source.
             self._work_dir = tempfile.mkdtemp(prefix="freedvtest-reporter-")
             for name in ("index.html", "static"):
-                os.symlink(os.path.join(self._source_dir, name), os.path.join(self._work_dir, name))
+                source, link = os.path.join(self._source_dir, name), os.path.join(self._work_dir, name)
+                try:
+                    os.symlink(source, link)
+                except OSError:
+                    # Windows only lets some users make links.
+                    if os.path.isdir(source):
+                        shutil.copytree(source, link)
+                    else:
+                        shutil.copy2(source, link)
             with open(os.path.join(self._source_dir, "db-schema.sql"), "r") as f:
                 database = sqlite3.connect(os.path.join(self._work_dir, "freedv-reporter.db"))
                 database.executescript(f.read())

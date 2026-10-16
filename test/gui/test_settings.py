@@ -286,20 +286,21 @@ def test_audio():
 
             # ...including after the lists are refreshed, which is how a
             # device that's just been plugged in gets to be listed. (Only the
-            # refreshing on macOS, where a device can't be plugged in here.)
+            # refreshing on macOS and Windows, where a device can't be plugged
+            # in here.)
             with contextlib.ExitStack() as new_device:
-                if not freedvtest.audio.MACOS:
+                if not freedvtest.audio.FIXED_DEVICES:
                     new_device.enter_context(VirtualAudioDevices("FreeDVGuiTest_New_Device"))
                     check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
                           "A new device was listed without refreshing")
                 app.click(name("btnRefreshTxAudio"))
-                if not freedvtest.audio.MACOS:
+                if not freedvtest.audio.FIXED_DEVICES:
                     check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
                           "A new device wasn't listed after refreshing")
                 check_values(app, {"tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                    "tcSoundCard2OutDevice": RADIO_TX})
                 go_to_tab(app, "RX Audio")
-                if not freedvtest.audio.MACOS:
+                if not freedvtest.audio.FIXED_DEVICES:
                     check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
                           "A new device wasn't listed on the other tab after refreshing")
                 check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
@@ -399,7 +400,14 @@ def test_audio_tests():
 
     # A speaker that runs at a different sample rate from what's recorded:
     # the recording still comes back through it, at the pitch it went in at.
-    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 44100}):
+    # (Not where devices' rates can't be changed, as on Windows.)
+    devices = VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 44100})
+    try:
+        devices.__enter__()
+    except freedvtest.audio.Unavailable as e:
+        print("Not tried with a speaker at another sample rate: %s" % e)
+        return
+    try:
         with freedvtest.start(settings=audio_settings()) as app:
             open_settings(app, "RX Audio")
             with Tone(RADIO_RX):
@@ -413,6 +421,8 @@ def test_audio_tests():
             check_equal(app.message_boxes(), [], "Messages displayed")
             press_cancel(app)
             quit_and_check_log(app)
+    finally:
+        devices.__exit__(None, None, None)
 
 
 def find_rig(app, rig):
@@ -616,9 +626,15 @@ def test_ptt_test():
         press_cancel(app)
         check_equal(app.message_boxes(), [], "Messages displayed")
         check_equal(app.quit(), 0, "FreeDV's exit code")
-        # Hamlib has its say about the radio that couldn't be reached.
+        # Hamlib has its say about the radio that couldn't be reached. On
+        # Windows, Hamlib and FreeDV also log what Windows said about the
+        # ports that couldn't be opened.
+        expected = ["127.0.0.1:9"]
+        if sys.platform == "win32":
+            expected += ["ttyFreeDVTestMissing", "WinErrorShow: serial error on CreateFileA",
+                         "SerialPortRigController.cpp", "freedv-test-no-such-port"]
         errors = [line for line in app.log().splitlines()
-                  if (" ERROR " in line or " FATAL " in line) and "127.0.0.1:9" not in line]
+                  if (" ERROR " in line or " FATAL " in line) and not any(text in line for text in expected)]
         check_equal(errors, [], "Errors logged by FreeDV")
 
 

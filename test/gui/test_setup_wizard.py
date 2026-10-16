@@ -742,7 +742,7 @@ def test_import():
         }
         with freedvtest.start(user_config_files=user_config_files) as app:
             def write_wsjtx_settings(**settings):
-                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
                     f.write(wsjtx_settings(**settings))
 
             app.wait_for_window("wizard")
@@ -895,7 +895,7 @@ def test_import_more():
     with VirtualAudioDevices(RADIO_RX, RADIO_TX, SPEAKER):
         with freedvtest.start(user_config_files={"WSJT-X.ini": ""}) as app:
             def import_wsjtx(**settings):
-                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
                     f.write(wsjtx_settings(**settings))
                 app.click("wizard.btnImport")
                 return import_status(app)
