@@ -1376,6 +1376,15 @@ after changing it (and so e.g. choosing the wrong sideband for analog
 mode when switched to straight after changing band). (PR #1564)</li>
 <li>macOS/Windows: fix possible crash or garbled log output when some
 audio device and thread errors are logged. (PR #1564)</li>
+<li>Windows: fix the main window being too small to show the waterfall
+and spectrum the first time FreeDV is started on a high DPI display. (PR
+#1565)</li>
+<li>Windows: fix FreeDV Reporter not removing what’s left of a flag from
+the status message after part of it is deleted. (PR #1565)</li>
+<li>Fix a possible crash when FreeDV is asked to exit again while it’s
+exiting with the FreeDV Reporter window open. (PR #1565)</li>
+<li>Fix Test PTT sometimes staying greyed out after a radio or serial
+port that couldn’t be opened. (PR #1565)</li>
 </ul></li>
 <li>Build system:
 <ul>
