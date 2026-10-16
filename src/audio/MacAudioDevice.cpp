@@ -429,16 +429,6 @@ void MacAudioDevice::start()
         }
         
         log_info("Device %d: starting audio unit", coreAudioId_);
-        cycleStartedNs_.store(std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count(), std::memory_order_relaxed);
-        cycleLastNs_.store(0, std::memory_order_relaxed);
-        cycleLongestGapUs_.store(0, std::memory_order_relaxed);
-        cycleLongestGapAtUs_.store(0, std::memory_order_relaxed);
-        cycleAdvanceAtLongestUs_.store(0, std::memory_order_relaxed);
-        cycleJumps_.store(0, std::memory_order_relaxed);
-        cycleLongestJumpUs_.store(0, std::memory_order_relaxed);
-        overloads_.store(0, std::memory_order_relaxed);
-
         error = AudioOutputUnitStart(auHAL_);
         if (error != noErr)
         {
@@ -510,15 +500,6 @@ void MacAudioDevice::stopImpl_()
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
         log_info("Device %d: removing listeners", coreAudioId_);
-
-        log_info(
-            "Device %d (%s): longest between Core Audio's calls %.1f ms (%.1f s after starting), across which its "
-            "sample position moved on %.1f ms; its sample position jumped ahead %d times (by %.1f ms at most); "
-            "%d overloads reported",
-            coreAudioId_, description.c_str(), cycleLongestGapUs_.load(std::memory_order_relaxed) / 1000.0,
-            cycleLongestGapAtUs_.load(std::memory_order_relaxed) / 1000000.0,
-            cycleAdvanceAtLongestUs_.load(std::memory_order_relaxed) / 1000.0, cycleJumps_.load(std::memory_order_relaxed),
-            cycleLongestJumpUs_.load(std::memory_order_relaxed) / 1000.0, overloads_.load(std::memory_order_relaxed));
         
         const AudioObjectPropertyAddress aliveAddress =
         {
@@ -777,7 +758,6 @@ OSStatus MacAudioDevice::InputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
     OSStatus err = noErr;
-    thisObj->noteCycle_(inTimeStamp, inNumberFrames);
  
     err = AudioUnitRender(thisObj->auHAL_,
                     ioActionFlags,
@@ -825,13 +805,12 @@ OSStatus MacAudioDevice::InputProc_(
 OSStatus MacAudioDevice::OutputProc_(
             void *inRefCon,
             AudioUnitRenderActionFlags *,
-            const AudioTimeStamp *inTimeStamp,
+            const AudioTimeStamp *,
             UInt32,
             UInt32 inNumberFrames,
             AudioBufferList * ioData) FREEDV_NONBLOCKING
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
-    thisObj->noteCycle_(inTimeStamp, inNumberFrames);
 
     if (thisObj->onAudioDataFunction)
     {
@@ -851,43 +830,6 @@ OSStatus MacAudioDevice::OutputProc_(
     }
     
     return OSStatus(noErr);
-}
-
-void MacAudioDevice::noteCycle_(const AudioTimeStamp* timeStamp, UInt32 numFrames) FREEDV_NONBLOCKING
-{
-    auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    int64_t sampleTime = (timeStamp != nullptr && (timeStamp->mFlags & kAudioTimeStampSampleTimeValid)) ?
-        (int64_t)timeStamp->mSampleTime : -1;
-    auto last = cycleLastNs_.exchange(now, std::memory_order_relaxed);
-    auto lastSampleTime = cycleLastSampleTime_.exchange(sampleTime, std::memory_order_relaxed);
-
-    // (Not the first second: starting up is allowed to be uneven.)
-    auto sinceStartNs = now - cycleStartedNs_.load(std::memory_order_relaxed);
-    if (last == 0 || sinceStartNs < 1000000000LL || sampleRate_ <= 0)
-    {
-        return;
-    }
-
-    int64_t advanceUs = (sampleTime >= 0 && lastSampleTime >= 0) ? (sampleTime - lastSampleTime) * 1000000 / sampleRate_ : 0;
-    int64_t gapUs = (now - last) / 1000;
-    if (gapUs > cycleLongestGapUs_.load(std::memory_order_relaxed))
-    {
-        cycleLongestGapUs_.store(gapUs, std::memory_order_relaxed);
-        cycleLongestGapAtUs_.store(sinceStartNs / 1000, std::memory_order_relaxed);
-        cycleAdvanceAtLongestUs_.store(advanceUs, std::memory_order_relaxed);
-    }
-
-    // Jumped ahead: by more than half a block beyond the block itself.
-    int64_t blockUs = (int64_t)numFrames * 1000000 / sampleRate_;
-    if (advanceUs > blockUs + blockUs / 2)
-    {
-        cycleJumps_.fetch_add(1, std::memory_order_relaxed);
-        if (advanceUs > cycleLongestJumpUs_.load(std::memory_order_relaxed))
-        {
-            cycleLongestJumpUs_.store(advanceUs, std::memory_order_relaxed);
-        }
-    }
 }
 
 UInt32 MacAudioDevice::nextPowerOfTwo_(UInt32 val)
@@ -1081,7 +1023,6 @@ int MacAudioDevice::DeviceOverloadCallback_(
     (void)inAddresses;
 
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
-    thisObj->overloads_.fetch_add(1, std::memory_order_relaxed);
 
     // Possible GUI stuff really shouldn't be happening on the audio thread.
     std::thread tmpThread = std::thread([thisObj]() {

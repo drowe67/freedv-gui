@@ -96,25 +96,6 @@ private:
     int64_t waitOvershootUs_ = 0;
     std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
-    // How punctually Core Audio called us, reported when the device stops:
-    // the longest time between calls (and when, from the device starting),
-    // how far Core Audio's own sample position moved on across it (about
-    // one block if Core Audio didn't know it was late, about the whole gap
-    // if it skipped ahead), how many times the sample position jumped ahead
-    // and by how much at most, and how many overloads Core Audio reported.
-    // Only the audio thread writes these, except for the overloads.
-    std::atomic<int64_t> cycleStartedNs_{0};
-    std::atomic<int64_t> cycleLastNs_{0};
-    std::atomic<int64_t> cycleLastSampleTime_{0};
-    std::atomic<int64_t> cycleLongestGapUs_{0};
-    std::atomic<int64_t> cycleLongestGapAtUs_{0};
-    std::atomic<int64_t> cycleAdvanceAtLongestUs_{0};
-    std::atomic<int> cycleJumps_{0};
-    std::atomic<int64_t> cycleLongestJumpUs_{0};
-    std::atomic<int> overloads_{0};
-
-    void noteCycle_(const AudioTimeStamp* timeStamp, UInt32 numFrames) FREEDV_NONBLOCKING;
-
     void stopImpl_();
     void joinWorkgroup_();
     void leaveWorkgroup_();
