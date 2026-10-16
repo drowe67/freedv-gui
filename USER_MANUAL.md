@@ -1008,6 +1008,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows: fix the main window being too small to show the waterfall and spectrum the first time FreeDV is started on a high DPI display. (PR #1565)
     * Windows: fix FreeDV Reporter not removing what's left of a flag from the status message after part of it is deleted. (PR #1565)
     * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
+    * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
