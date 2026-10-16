@@ -1028,9 +1028,15 @@ void MainFrame::loadConfiguration_()
     // for when none has been saved, and that limit are scaled to suit the
     // display: on Windows, sizes are in the screen's own pixels, and 800 of
     // those at 200% are only as wide as 400 elsewhere, leaving no room for
-    // the plots beside everything else.
+    // the plots beside everything else. (wxWidgets 3.0, which only Linux
+    // builds use, has no FromDIP(), and needs none there.)
+#if wxCHECK_VERSION(3,1,0)
     wxSize defaultSize = FromDIP(wxSize(800, 780));
     wxSize smallestSize = FromDIP(wxSize(300, 200));
+#else
+    wxSize defaultSize(800, 780);
+    wxSize smallestSize(300, 200);
+#endif // wxCHECK_VERSION(3,1,0)
     if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
     if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
     
