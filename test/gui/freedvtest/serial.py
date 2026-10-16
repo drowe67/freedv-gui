@@ -83,6 +83,11 @@ class SerialPorts:
         self.env = {}
 
     def __enter__(self):
+        if sys.platform == "win32":
+            # (It would take pairs of virtual ports joined to each other,
+            # such as com0com's.)
+            from .audio import Unavailable
+            raise Unavailable("Serial ports for tests can't be had on Windows")
         self._directory = tempfile.mkdtemp(prefix="freedvtest-serial-")
         try:
             compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")

@@ -33,6 +33,10 @@
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 
+#if defined(__WXMSW__)
+#include <windows.h>
+#endif // defined(__WXMSW__)
+
 #include "test_agent.h"
 #include "main.h"
 #include "freedv_interface.h"
@@ -674,6 +678,11 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     AddString_(doc, obj, "class", window->GetClassInfo()->GetClassName());
     yyjson_mut_obj_add_bool(doc, obj, "enabled", window->IsEnabled());
     yyjson_mut_obj_add_bool(doc, obj, "shown", window->IsShownOnScreen());
+    wxSize clientSize = window->GetClientSize();
+    yyjson_mut_val* sizeArray = yyjson_mut_arr(doc);
+    yyjson_mut_arr_add_int(doc, sizeArray, clientSize.GetWidth());
+    yyjson_mut_arr_add_int(doc, sizeArray, clientSize.GetHeight());
+    yyjson_mut_obj_add_val(doc, obj, "clientSize", sizeArray);
 
     if (auto topLevel = wxDynamicCast(window, wxTopLevelWindow))
     {
@@ -725,6 +734,9 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     else if (auto comboCtrl = wxDynamicCast(window, wxComboCtrl))
     {
         AddString_(doc, obj, "value", comboCtrl->GetValue());
+        // Whether its list has finished opening: until then (while it slides
+        // open, on Windows) it ignores the mouse.
+        yyjson_mut_obj_add_bool(doc, obj, "popupShown", comboCtrl->IsPopupShown());
     }
     else if (auto listBox = wxDynamicCast(window, wxListBox))
     {
@@ -1314,13 +1326,19 @@ void TestAgent::commandClose_(yyjson_val* id, yyjson_val* request)
     // Something that pops up until the user clicks elsewhere.
     if (auto popup = wxDynamicCast(window, wxPopupTransientWindow))
     {
-        // A click outside it, which is seen by whatever in it has the mouse.
         replyOk_(id, yyjson_mut_doc_new(nullptr));
+#if defined(__WXMSW__)
+        // On Windows, it goes when it's no longer the active window, which
+        // is what a click elsewhere does.
+        ::SendMessage((HWND)popup->GetHWND(), WM_ACTIVATE, WA_INACTIVE, 0);
+#else
+        // A click outside it, which is seen by whatever in it has the mouse.
         wxWindow* target = (popup->GetChildren().GetCount() == 1) ? popup->GetChildren().GetFirst()->GetData() : popup;
         wxMouseEvent event(wxEVT_LEFT_DOWN);
         event.SetEventObject(target);
         event.SetPosition(wxPoint(-10, -10));
         target->ProcessWindowEvent(event);
+#endif // defined(__WXMSW__)
         return;
     }
 

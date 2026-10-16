@@ -132,9 +132,9 @@ def test_missing_device():
                 check_equal(app.quit(), 0, "FreeDV's exit code")
 
     # A device that goes away between one start and the next, and comes back.
-    # (Not on macOS, where one can't be taken away here: see
+    # (Not on macOS or Windows, where one can't be taken away here: see
     # freedvtest.audio.)
-    if freedvtest.audio.MACOS:
+    if freedvtest.audio.FIXED_DEVICES:
         return
     with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE):
         speaker = VirtualAudioDevices(SPEAKER)
@@ -298,7 +298,11 @@ def test_receive_only():
                     heard = level(SPEAKER_MONITOR)
                     check(heard > AUDIBLE, "The radio isn't being played through the speaker %s (level %d)"
                           % (what, heard))
-                    check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio " + what)
+                    # (Which can't be told apart from the tone when the radio's
+                    # input and output are the same device: see
+                    # freedvtest.audio.shared().)
+                    if not freedvtest.audio.shared(RADIO_RX, RADIO_TX):
+                        check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio " + what)
 
                 stop_modem(app)
                 quit_and_check_log(app)

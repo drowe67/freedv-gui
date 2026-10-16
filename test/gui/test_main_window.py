@@ -535,7 +535,12 @@ def test_analog():
             # Transmitting in analog mode sends the microphone to the radio.
             app.click("main.btnPTT")
             wait_for_transmit(app)
-            check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio with nothing said")
+            # (Not when both pairs are shared, as on Windows CI (see
+            # freedvtest.audio.shared()): what's sent to the radio is then
+            # received, played through the speaker, heard by the microphone
+            # and sent again, round and round.)
+            if not (freedvtest.audio.shared(RADIO_RX, RADIO_TX) and freedvtest.audio.shared(MICROPHONE, SPEAKER)):
+                check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio with nothing said")
             with Tone(MICROPHONE):
                 check_audible(RADIO_TX_MONITOR, "The microphone isn't being sent to the radio")
             app.click("main.btnPTT")
@@ -1129,9 +1134,24 @@ def test_recording_options():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def set_writable(folder, writable):
+    """Lets a folder be written to, or not. (On Windows, which doesn't apply
+    the read-only attribute to folders, by denying the user permission to.)"""
+    if sys.platform == "win32":
+        user = os.environ["USERNAME"]
+        if writable:
+            subprocess.call(["icacls", folder, "/remove:d", user], stdout=subprocess.DEVNULL)
+        else:
+            # (Only adding files and folders: icacls' "W" takes away what
+            # listing what's there needs too.)
+            subprocess.check_call(["icacls", folder, "/deny", user + ":(OI)(CI)(WD,AD)"], stdout=subprocess.DEVNULL)
+    else:
+        os.chmod(folder, 0o755 if writable else 0o555)
+
+
 def test_unwritable_files():
     """Recordings and voice keyer files that can't be written or read."""
-    if os.geteuid() == 0:
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
         print("Skipped: nothing is unwritable for root", flush=True)
         return
 
@@ -1144,7 +1164,7 @@ def test_unwritable_files():
         not_sound = os.path.join(writable, "not_sound.wav")
         with open(not_sound, "w") as f:
             f.write("This is not a sound file.\n")
-        os.chmod(read_only, 0o555)
+        set_writable(read_only, False)
 
         def start_recording(what):
             app.click("main.btnRecord")
@@ -1206,7 +1226,7 @@ def test_unwritable_files():
                 check_equal(transmitting(app), False, "Transmitting a file that isn't a sound file")
 
                 # Recording still works once there's somewhere to put it.
-                os.chmod(read_only, 0o755)
+                set_writable(read_only, True)
                 start_recording("both")
                 check_equal(app.message_boxes(), [], "Errors displayed")
                 check_equal(app.get("main.btnRecord")["value"], True, "Record button pressed")
@@ -1215,7 +1235,8 @@ def test_unwritable_files():
                 stop_modem(app)
                 quit_and_check_log(app)
     finally:
-        os.chmod(os.path.join(folder, "read_only"), 0o755)
+        if os.path.isdir(os.path.join(folder, "read_only")):
+            set_writable(os.path.join(folder, "read_only"), True)
         shutil.rmtree(folder, ignore_errors=True)
 
 
@@ -1266,16 +1287,25 @@ def test_monitor_volume():
 
                 # The microphone
                 app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
+                # (When the microphone and speaker are the same device, as on
+                # Windows CI (see freedvtest.audio.shared()), the tone played
+                # into the one drowns out what's monitored through the other,
+                # so only the volume is changed.)
+                measure = not freedvtest.audio.shared(MICROPHONE, SPEAKER)
                 with Tone(MICROPHONE):
-                    loud = monitored(app, "main.btnPTT")
-                    check(loud > AUDIBLE, "Transmitted audio isn't being monitored (level %d)" % loud)
+                    if measure:
+                        loud = monitored(app, "main.btnPTT")
+                        check(loud > AUDIBLE, "Transmitted audio isn't being monitored (level %d)" % loud)
                     adjust(app, "main.btnPTT", "monitorTxAudioVol", -20)
-                    quiet = monitored(app, "main.btnPTT")
-                    check(-23 < decibels(loud, quiet) < -17,
-                          "Turning the monitor down 20 dB took it from %d to %d" % (loud, quiet))
+                    if measure:
+                        quiet = monitored(app, "main.btnPTT")
+                        check(-23 < decibels(loud, quiet) < -17,
+                              "Turning the monitor down 20 dB took it from %d to %d" % (loud, quiet))
                     adjust(app, "main.btnPTT", "monitorTxAudioVol", -6)
-                    half = monitored(app, "main.btnPTT")
-                    check(-8.5 < decibels(loud, half) < -3.5, "The monitor at -6 dB took it from %d to %d" % (loud, half))
+                    if measure:
+                        half = monitored(app, "main.btnPTT")
+                        check(-8.5 < decibels(loud, half) < -3.5,
+                              "The monitor at -6 dB took it from %d to %d" % (loud, half))
                 app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
 
                 # The voice keyer, which has a volume of its own
@@ -1953,6 +1983,10 @@ def test_menus():
 
             app.choose_next_path(other)
             app.menu("Settings/Use Configuration...")
+            try:
+                app.wait_until(lambda: callsign() == "K1ABC", timeout=10)
+            except freedvtest.FreeDVError:
+                pass
             check_equal(app.message_boxes(), [], "Messages displayed")
             check_equal(callsign(), "K1ABC", "Callsign after using another configuration")
             check("(other.conf)" in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
@@ -1966,6 +2000,10 @@ def test_menus():
 
             app.answer_next_message_box("yes")
             app.menu("Settings/Load Default Configuration")
+            try:
+                app.wait_until(lambda: callsign() == "", timeout=10)
+            except freedvtest.FreeDVError:
+                pass
             app.message_boxes(clear=True)
             check_equal(callsign(), "", "Callsign after loading the default configuration")
             check(".conf)" not in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
@@ -2087,9 +2125,10 @@ def test_window_geometry():
     check_sensible(saved_geometry(50000, 50000, 50000, 50000), "everything enormous")
     check_sensible(saved_geometry(30, 40, 10, 10), "a size that nothing fits in")
 
-    # One that does make sense is kept.
-    left, top, width, height = saved_geometry(30, 40, 900, 800)
-    check((width, height) == (900, 800), "A 900x800 window was saved as %dx%d" % (width, height))
+    # One that does make sense is kept. (It has to fit on CI's 1024x768
+    # screens: Windows makes no window much taller than the screen.)
+    left, top, width, height = saved_geometry(30, 40, 900, 700)
+    check((width, height) == (900, 700), "A 900x700 window was saved as %dx%d" % (width, height))
 
 
 def test_receive_reports():
@@ -2192,12 +2231,19 @@ def test_test_tone():
                 check(tone_share(channel, 1500) > 0.8, "What's played on the %s is only %.2f the tone (level %d)"
                       % (name, tone_share(channel, 1500), math.sqrt(sum(x * x for x in channel) / len(channel))))
 
-            # Another frequency
+            # Another frequency. (Listened for until it's heard: on Windows CI,
+            # what's played sometimes has gaps in it.)
             set_debugging(app, txtToneFreqHz="700")
-            left, right = heard(SPEAKER_MONITOR)
-            check(tone_share(left, 700) > 0.8 and tone_share(left, 1500) < 0.1,
-                  "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
-                  % (tone_share(left, 700), tone_share(left, 1500)))
+            shares = []
+            def changed():
+                left, right = heard(SPEAKER_MONITOR)
+                shares.append((tone_share(left, 700), tone_share(left, 1500)))
+                return shares[-1][0] > 0.8 and shares[-1][1] < 0.1
+            try:
+                app.wait_until(changed, timeout=10)
+            except freedvtest.FreeDVError:
+                check(False, "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
+                      % shares[-1])
 
             # And it goes away again.
             set_debugging(app, ckboxTone=False)
@@ -2278,12 +2324,19 @@ def test_bad_command_line():
         if sys.platform == "darwin":
             # (See freedvtest.start().)
             env["CFFIXED_USER_HOME"] = folder
+        if sys.platform == "win32":
+            # (Likewise, to keep it out of the registry.)
+            env["FREEDV_TEST_CONFIG_DIR"] = folder
         for arguments in [["--no-such-option"], ["--help"]]:
             result = subprocess.run([freedvtest.default_binary()] + arguments, env=env, timeout=60,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             output = result.stdout.decode("utf-8", "replace")
-            # (It's "FreeDV" on macOS, where that's the program's name.)
-            check("usage: freedv " in output.lower(), "Given %s, FreeDV said %r" % (arguments, output))
+            # (It's "FreeDV" on macOS, where that's the program's name. On
+            # Windows, it's written to the console window that the program
+            # was started from, if any, rather than to stdout or stderr, and
+            # so can't be seen here.)
+            if sys.platform != "win32":
+                check("usage: freedv " in output.lower(), "Given %s, FreeDV said %r" % (arguments, output))
             check(result.returncode != 0, "Given %s, FreeDV's exit code was 0" % arguments)
             # (Files only: macOS makes some empty folders of its own there.)
             left = [os.path.relpath(os.path.join(path, file), folder)

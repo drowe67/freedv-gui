@@ -33,7 +33,7 @@ jobs:
   # unsigned packages to try out, unless the commit pushed says "[full ci]"
   # or the workflow's started by hand ("Run workflow").
   scope:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       full: ${{ steps.scope.outputs.full }}
     steps:
@@ -328,6 +328,27 @@ jobs:
         name: unit-tests-${{ matrix.variant }}-${{ matrix.arch }}
         path: ${{github.workspace}}/build_windows/unit_tests
 
+    # FreeDV itself, as built for testing (with the GUI test agent), for the
+    # gui-tests job below: the files the installer would put in place, plus
+    # the rigctld built along with Hamlib for the rig control tests.
+    - name: Build FreeDV for the GUI tests
+      if: ${{ matrix.variant == 'plain' && matrix.arch == 'x86_64' }}
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        make -j$(nproc) package
+        mkdir gui_tests
+        cp -r _CPack_Packages/*/NSIS/FreeDV-*/bin _CPack_Packages/*/NSIS/FreeDV-*/share gui_tests/
+        cp external/dist/bin/rigctld.exe gui_tests/bin/
+
+    - name: Stash for gui-tests job
+      if: ${{ matrix.variant == 'plain' && matrix.arch == 'x86_64' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: gui-tests-${{ matrix.arch }}
+        path: ${{github.workspace}}/build_windows/gui_tests
+
   unit-tests:
     strategy:
       fail-fast: false
@@ -370,6 +391,63 @@ jobs:
       working-directory: ${{github.workspace}}\unit_tests
       run: |
           .\RunUnitTests.ps1
+
+  # The GUI tests (test/gui), with the two virtual audio cables that the
+  # other tests use: each is shared, one for the radio's input and output and
+  # the other for the microphone and speaker (see freedvtest.audio). Run by
+  # test/gui/run_tests.py, as there's no build folder here for CTest.
+  gui-tests:
+    runs-on: windows-2022
+    needs: [build-unit-tests, scope]
+    if: ${{ needs.scope.outputs.full == 'true' }}
+    timeout-minutes: 120
+    env:
+      RADIO_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Line 1 (Virtual Audio Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_SPEAKER_DEVICE: "Speakers (VB-Audio Virtual Cable)"
+      FREEDVTEST_AUDIO_DEVICES: "Line 1 (Virtual Audio Cable),Line 1 (Virtual Audio Cable),Speakers (VB-Audio Virtual Cable),Speakers (VB-Audio Virtual Cable)"
+      FREEDV_BINARY: ${{github.workspace}}\gui_tests\bin\freedv.exe
+      RIGCTLD: ${{github.workspace}}\gui_tests\bin\rigctld.exe
+      PYTHONIOENCODING: utf-8
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: actions/download-artifact@v8
+      with:
+        name: gui-tests-x86_64
+        path: ${{github.workspace}}\gui_tests
+
+    - uses: ./.github/actions/setup-windows-audio-drivers
+      with:
+        install-freedv: 'false'
+
+    - uses: ./.github/actions/configure-windows-audio-devices
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install Python packages
+      shell: pwsh
+      run: |
+          # sounddevice plays and records; the rest is for the FreeDV
+          # Reporter server that the tests run.
+          pip install sounddevice aiohttp python-socketio aiosqlite
+
+    # live_view uses the public FreeDV Reporter server.
+    - name: Run GUI tests
+      shell: pwsh
+      run: |
+          python test\gui\run_tests.py --retries 1 --exclude reporter:live_view --logs gui_test_logs
+
+    - name: Upload GUI test logs
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: gui-test-logs-windows-x86_64
+        path: ${{github.workspace}}\gui_test_logs
 
   # rade_tx_wav / rade_rx_wav are excluded from the Windows build in the rade_c
   # fork (if(NOT WIN32) in src/CMakeLists.txt), so the RADE loss threshold can't be

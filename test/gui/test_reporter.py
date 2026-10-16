@@ -83,9 +83,10 @@ def reporter_settings(hostname, **settings):
         "/Reporting/FreeDV/Hostname": hostname,
         "/Reporting/FreeDV/UseTls": False,
     }
-    if freedvtest.audio.MACOS:
+    if freedvtest.audio.MACOS or freedvtest.audio.WINDOWS:
         # Room for every column: lists there aren't scrolled sideways to
-        # show a cell that's out of view, as they are on Linux.
+        # show a cell that's out of view, as they are on Linux. (On Windows,
+        # the window's otherwise made only tall enough for a row or so.)
         result.update({"/Windows/FreeDVReporter/width": 1500, "/Windows/FreeDVReporter/height": 500})
     result.update(settings)
     return result

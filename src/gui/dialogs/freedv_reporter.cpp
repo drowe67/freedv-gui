@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <sstream>
+#include <string>
 #include <set>
 #include <memory>
 #include <algorithm>
@@ -2093,10 +2094,50 @@ void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
     }
 }
 
+// The characters in a string, whole: on Windows, wxString holds UTF-16, in
+// which those beyond U+FFFF (such as the ones flags are made of) each take
+// two places.
+static std::u32string ToCodePoints_(const wxString& str)
+{
+    const std::wstring& wide = str.ToStdWstring();
+    std::u32string result;
+    for (size_t i = 0; i < wide.size(); i++)
+    {
+        char32_t chr = (char32_t)wide[i];
+        if (sizeof(wchar_t) == 2 && chr >= 0xD800 && chr <= 0xDBFF && i + 1 < wide.size() &&
+            wide[i + 1] >= 0xDC00 && wide[i + 1] <= 0xDFFF)
+        {
+            chr = 0x10000 + ((chr - 0xD800) << 10) + ((char32_t)wide[i + 1] - 0xDC00);
+            i++;
+        }
+        result += chr;
+    }
+    return result;
+}
+
+static wxString FromCodePoints_(const std::u32string& text)
+{
+    std::wstring wide;
+    for (char32_t chr : text)
+    {
+        if (sizeof(wchar_t) == 2 && chr >= 0x10000)
+        {
+            chr -= 0x10000;
+            wide += (wchar_t)(0xD800 + (chr >> 10));
+            wide += (wchar_t)(0xDC00 + (chr & 0x3FF));
+        }
+        else
+        {
+            wide += (wchar_t)chr;
+        }
+    }
+    return wxString(wide);
+}
+
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)
 {
     auto statusMsg = m_statusMessage->GetValue();
-    int insertPoint = m_statusMessage->GetInsertionPoint();
+    long insertPoint = m_statusMessage->GetInsertionPoint();
 
     log_debug("Status message currently %s", (const char*)statusMsg.ToUTF8());
 
@@ -2111,18 +2152,20 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)
     // begins so this is not a full workaround. Still, this significantly
     // reduces the number of times one must backspace in order to completely
     // remove the flag.
-    int index = 0;
-    while (index < (int)statusMsg.Length())
+    std::u32string text = ToCodePoints_(statusMsg);
+    bool changed = false;
+    size_t index = 0;
+    while (index < text.size())
     {
-        auto chr = statusMsg.GetChar(index);
-        if (chr.GetValue() == 0x1F3F4)
+        char32_t chr = text[index];
+        if (chr == 0x1F3F4)
         {
-            log_debug("Found start char at index %d", index);
+            log_debug("Found start char at index %d", (int)index);
             auto endIndex = index + 1;
             bool foundEnd = false;
-            while (endIndex < (int)statusMsg.Length())
+            while (endIndex < text.size())
             {
-                auto endChar = statusMsg.GetChar(endIndex).GetValue();
+                auto endChar = text[endIndex];
                 if (endChar == 0xE007F)
                 {
                     foundEnd = true;
@@ -2136,33 +2179,38 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent&)
                 }
                 endIndex++;
             }
-            log_debug("Found end at %d", endIndex);
+            log_debug("Found end at %d", (int)endIndex);
 
             if (!foundEnd && endIndex != index)
             {
                 // Strip tag characters and beginning
-                statusMsg = statusMsg.SubString(0, index - 1) + statusMsg.Mid(endIndex + 1);
-                insertPoint = index;
-                log_debug("status msg is now %s", (const char*)statusMsg.ToUTF8());
+                text.erase(index, endIndex + 1 - index);
+                changed = true;
+                // (Where the control counts positions in the same units as
+                // wxString does.)
+                insertPoint = FromCodePoints_(text.substr(0, index)).length();
+                log_debug("status msg is now %s", (const char*)FromCodePoints_(text).ToUTF8());
+                continue;
             }
             else
             {
                 index = endIndex;
             }
         }
-        else if (chr.GetValue() >= 0xE0000 && chr.GetValue() <= 0xE007F)
+        else if (chr >= 0xE0000 && chr <= 0xE007F)
         {
             // Remove any stray tag characters that might still remain.
-            statusMsg.Remove(index, 1);
+            text.erase(index, 1);
+            changed = true;
             continue;
         }
 
         index++;
     }
 
-    if (statusMsg != m_statusMessage->GetValue())
+    if (changed)
     {
-        m_statusMessage->SetValue(statusMsg);
+        m_statusMessage->SetValue(FromCodePoints_(text));
 
         // Reset cursor position to end of new character
         m_statusMessage->SetInsertionPoint(insertPoint);

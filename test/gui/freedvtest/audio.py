@@ -14,6 +14,20 @@ a comma-separated list in $FREEDVTEST_AUDIO_DEVICES. Tests that need something
 that can't be done there (more devices than there are, or anything to do with
 the sound server itself) raise Unavailable, for which a test script exits
 with 77 (skipped). sox plays and records.
+
+Windows is like macOS, with Virtual Audio Cable's lines and VB-Cable as the
+loopback devices (named, as FreeDV names them, after where they're played
+into, e.g. "Line 1 (Virtual Audio Cable)" or "Speakers (VB-Audio Virtual
+Cable)", and recorded from under the same name or that of the input with the
+same driver's name in brackets), and the sounddevice module playing and
+recording (see wasapi.py). Virtual Audio Cable comes first: VB-Cable now and
+then leaves a few milliseconds out of what's played through it.
+With fewer than four, they're shared: with two, as Windows CI has, one for
+the radio's input and output and the other for the microphone and speaker,
+as CI's other tests have them. (With three, the radio's share one.)
+$FREEDVTEST_AUDIO_DEVICES can name the same device more than once to share
+it. Checks that can't be made on a shared device (that nothing's played into
+one while something else is) are left out where shared() says so.
 """
 
 import array
@@ -28,6 +42,10 @@ import time
 import wave
 
 MACOS = sys.platform == "darwin"
+WINDOWS = sys.platform == "win32"
+# Whether tests are given loopback devices that are already there, rather
+# than ones made for them (see above).
+FIXED_DEVICES = MACOS or WINDOWS
 
 
 # How sox is run on macOS, to play into a device and to record from one.
@@ -56,15 +74,51 @@ _assigned = {}
 _loopback_devices = None
 
 
-def _macos_loopback_devices():
+def _windows_loopback_devices():
+    from . import wasapi
+
+    outputs = set(device["name"] for device in wasapi.devices() if device["output"])
+    # (VB-Cable's "CABLE In 16ch" carries what's played into it to the same
+    # place as its other output, so it's left out.)
+    found = sorted(name for name in outputs if name.endswith("(Virtual Audio Cable)"))
+    found += sorted(name for name in outputs if name.endswith("(VB-Audio Virtual Cable)") and "16ch" not in name)
+    # Shared if there are fewer than four (see above).
+    if len(found) == 2:
+        found = [found[0], found[0], found[1], found[1]]
+    elif len(found) == 3:
+        found = [found[0], found[0], found[1], found[2]]
+    return found
+
+
+_windows_inputs = None
+
+
+def _windows_input_name(name):
+    """The input that what's played into an output device on Windows is
+    heard from: the one of the same name or, failing that (as for VB-Cable),
+    with the same driver's name in brackets."""
+    global _windows_inputs
+    if _windows_inputs is None:
+        from . import wasapi
+        _windows_inputs = [device["name"] for device in wasapi.devices() if device["input"]]
+    if name in _windows_inputs:
+        return name
+    driver = name[name.rfind(" ("):] if " (" in name else None
+    matching = [input_name for input_name in _windows_inputs if driver and input_name.endswith(driver)]
+    return matching[0] if len(matching) == 1 else name
+
+
+def _loopback_devices_given():
     global _loopback_devices
     if _loopback_devices is None:
-        from . import coreaudio
-
         given = os.environ.get("FREEDVTEST_AUDIO_DEVICES")
         if given:
             _loopback_devices = [name.strip() for name in given.split(",") if name.strip()]
+        elif WINDOWS:
+            _loopback_devices = _windows_loopback_devices()
         else:
+            from . import coreaudio
+
             both = [device["name"] for device in coreaudio.devices() if device["input"] and device["output"]]
             # Devices named after another with something added (BlackHole's
             # "<name> 2", VB-Cable's "VB-Cable A" and "VB-Cable B") share
@@ -78,12 +132,12 @@ def _macos_loopback_devices():
 
 def device(name):
     """Returns the name of the device that stands for the given one: on
-    Linux, itself (VirtualAudioDevices creates it); on macOS, the loopback
-    device it's been given."""
-    if not MACOS:
+    Linux, itself (VirtualAudioDevices creates it); on macOS and Windows, the
+    loopback device it's been given."""
+    if not FIXED_DEVICES:
         return name
     if name not in _assigned:
-        available = _macos_loopback_devices()
+        available = _loopback_devices_given()
         order = [n for n in _STANDARD_NAMES if n in _STANDARD_NAMES[:len(available)]]
         if name in order:
             _assigned[name] = available[order.index(name)]
@@ -97,8 +151,17 @@ def device(name):
     return _assigned[name]
 
 
+def shared(*names):
+    """Returns whether any of the given devices (from device()) are the same
+    one, so that what's played into one is heard from the others too."""
+    return len(set(names)) < len(names)
+
+
 def default_output():
     """Returns the name of the system's default output device."""
+    if WINDOWS:
+        from . import wasapi
+        return wasapi.default_output()
     if MACOS:
         from . import coreaudio
         return coreaudio.default_output()
@@ -108,6 +171,12 @@ def default_output():
 def record(device, seconds=1.0, channels=1, rate=8000):
     """Listens to an input device (or input_name() of an output device) and
     returns what it hears: a list of 16 bit samples for each channel."""
+    if WINDOWS:
+        from . import wasapi
+        data = wasapi.record(device, seconds, rate, channels)
+        frame = 2 * channels
+        samples = array.array("h", data[:len(data) // frame * frame])
+        return [list(samples[channel::channels]) for channel in range(channels)]
     with tempfile.TemporaryDirectory(prefix="freedvtest-audio-") as folder:
         path = os.path.join(folder, "recording.wav")
         if MACOS:
@@ -187,7 +256,7 @@ class Loopback:
     """Feeds what's played into one output device to another for the
     duration of a "with" block, e.g. so that FreeDV hears what it transmits.
 
-    On macOS, nothing is fed anywhere: instead, input_name() of the second
+    On macOS and Windows, nothing is fed anywhere: instead, input_name() of the second
     device is that of the first while the block lasts, so what's set up
     inside it (FreeDV's settings, say) listens to the first directly.
     (Feeding one of BlackHole's devices to another loses most of what's
@@ -201,7 +270,7 @@ class Loopback:
         self._module = None
 
     def __enter__(self):
-        if MACOS:
+        if FIXED_DEVICES:
             _heard_from[self._to] = self._from_device
         else:
             self._module = _pactl(
@@ -219,6 +288,9 @@ class Loopback:
 def play(device, path):
     """Starts playing a sound file into an output device, and returns the
     process doing it (to be killed when it's no longer wanted)."""
+    if WINDOWS:
+        from . import wasapi
+        return wasapi.Player(device, path)
     if MACOS:
         return subprocess.Popen(_SOX_PLAY + [path, "-t", "coreaudio", device])
     return subprocess.Popen(["paplay", "--device=" + device, path])
@@ -252,7 +324,7 @@ class Tone:
     def __exit__(self, exc_type, exc_value, traceback):
         if self._player is not None:
             # (See VirtualAudioDevices.__exit__().)
-            self._player.kill() if MACOS else self._player.terminate()
+            self._player.kill() if FIXED_DEVICES else self._player.terminate()
             self._player.wait()
         self._folder.cleanup()
         return False
@@ -292,14 +364,20 @@ class VirtualAudioDevices:
 
     @staticmethod
     def input_name(name):
+        if WINDOWS:
+            return _windows_input_name(_heard_from.get(name, name))
         return _heard_from.get(name, name) if MACOS else name + ".monitor"
 
     @staticmethod
     def input_label(name):
         """What FreeDV lists the input_name() of a device as."""
+        if WINDOWS:
+            return VirtualAudioDevices.input_name(name)
         return name if MACOS else "Monitor of " + name
 
     def __enter__(self):
+        if WINDOWS:
+            return self._enter_windows()
         if MACOS:
             return self._enter_macos()
         try:
@@ -329,13 +407,29 @@ class VirtualAudioDevices:
             raise
         return self
 
+    def _enter_windows(self):
+        from . import wasapi
+
+        if self._inputs or any(description != name for name, description in self._outputs.items()):
+            raise Unavailable("Devices that are only inputs, or that have descriptions of their own, can't be had "
+                              "on Windows")
+        available = _loopback_devices_given()
+        for name in self._outputs:
+            if name not in available:
+                raise Unavailable("%s isn't one of the loopback devices (%s); see freedvtest.audio.device()"
+                                  % (name, ", ".join(available) or "none"))
+        for name, rate in self._rates.items():
+            if wasapi.sample_rate(name) != rate:
+                raise Unavailable("%s can't be set to run at %d Hz on Windows" % (name, rate))
+        return self
+
     def _enter_macos(self):
         from . import coreaudio
 
         if self._inputs or any(description != name for name, description in self._outputs.items()):
             raise Unavailable("Devices that are only inputs, or that have descriptions of their own, can't be had "
                               "on macOS")
-        available = _macos_loopback_devices()
+        available = _loopback_devices_given()
         for name in self._outputs:
             if name not in available:
                 raise Unavailable("%s isn't one of the loopback devices (%s); see freedvtest.audio.device()"
@@ -387,8 +481,8 @@ class VirtualAudioDevices:
     def remove(self, *names):
         """Unloads the named devices now, and waits until the sound server
         stops listing them (and, for outputs, their monitors)."""
-        if MACOS:
-            raise Unavailable("Devices can't be taken away on macOS")
+        if FIXED_DEVICES:
+            raise Unavailable("Devices can't be taken away on macOS or Windows")
         for name in names:
             for entry in [entry for entry in self._modules if entry[0] == name]:
                 subprocess.call(["pactl", "unload-module", entry[1]])
@@ -433,8 +527,8 @@ def streams(pid):
     "device" it's connected to."""
     import json
 
-    if MACOS:
-        raise Unavailable("Which device a program's streams are on can't be found out on macOS")
+    if FIXED_DEVICES:
+        raise Unavailable("Which device a program's streams are on can't be found out on macOS or Windows")
     found = []
     for kind, listing, devices, key in [("playback", "sink-inputs", "sinks", "sink"),
                                         ("record", "source-outputs", "sources", "source")]:
@@ -448,8 +542,8 @@ def streams(pid):
 def move_stream(stream, device):
     """Connects one of streams() to a different device, as the system's
     sound settings (or the device it was using going away) would."""
-    if MACOS:
-        raise Unavailable("Streams can't be moved between devices on macOS")
+    if FIXED_DEVICES:
+        raise Unavailable("Streams can't be moved between devices on macOS or Windows")
     command = "move-sink-input" if stream["kind"] == "playback" else "move-source-output"
     _pactl(command, str(stream["index"]), device)
 
@@ -478,7 +572,7 @@ class PrivateAudioServer:
     @classmethod
     def available(cls):
         import shutil
-        if MACOS:
+        if FIXED_DEVICES:
             return False
         return all(shutil.which(program) for program in cls.PROGRAMS + ["pactl"])
 
@@ -597,8 +691,8 @@ class AudioServerGateway:
         self._barrier = None    # set once that action has run
 
     def __enter__(self):
-        if MACOS:
-            raise Unavailable("There's no sound server to stand in front of on macOS")
+        if FIXED_DEVICES:
+            raise Unavailable("There's no sound server to stand in front of on macOS or Windows")
         self._folder = tempfile.mkdtemp(prefix="freedvtest-gateway-")
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._socket.bind(os.path.join(self._folder, "native"))

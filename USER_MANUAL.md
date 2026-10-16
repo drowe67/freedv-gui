@@ -883,6 +883,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
     * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
     * Run the automated user interface tests on macOS. (PR #1563)
+    * Run the automated user interface tests on Windows. (PR #1566)
     * Remove unused plot, main window and FreeDV Reporter code. (PR #1556)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
 
@@ -946,6 +947,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix a saved main window size too small to be of use being kept. (PR #1564)
     * Rig control: fix FreeDV briefly going back to the previous frequency after changing it (and so e.g. choosing the wrong sideband for analog mode when switched to straight after changing band). (PR #1564)
     * macOS/Windows: fix possible crash or garbled log output when some audio device and thread errors are logged. (PR #1564)
+    * Windows: fix the main window being too small to show the waterfall and spectrum the first time FreeDV is started on a high DPI display. (PR #1565)
+    * Windows: fix FreeDV Reporter not removing what's left of a flag from the status message after part of it is deleted. (PR #1565)
+    * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
+    * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))

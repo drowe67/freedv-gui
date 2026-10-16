@@ -40,7 +40,7 @@ jobs:
   # unsigned packages to try out, unless the commit pushed says "[full ci]"
   # or the workflow's started by hand ("Run workflow").
   scope:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       full: ${{ steps.scope.outputs.full }}
     steps:
