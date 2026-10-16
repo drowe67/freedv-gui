@@ -9,8 +9,10 @@ there's no build folder to run CTest in.
 
 With nothing named, every scenario of every script (test_<script>.py) is run.
 A scenario that fails is run again, up to --retries more times. Each one's
-output goes to <logs>/<script>_<scenario>.txt, and that of any that failed
-every time is printed at the end. The exit code is 1 if any failed.
+output goes to <logs>/<script>_<scenario>.txt (and that of a try that failed
+before another was made to <script>_<scenario>.try<N>.txt). The output of
+every failed try is printed at the end, so that one that passed on a retry
+can still be looked into. The exit code is 1 if any failed every time.
 
 FreeDV is $FREEDV_BINARY (see freedvtest.default_binary()).
 """
@@ -51,9 +53,15 @@ def main():
 
     os.makedirs(args.logs, exist_ok=True)
     results = {}
+    retried = []
     for script, scenario in chosen:
         log = os.path.join(args.logs, "%s_%s.txt" % (script, scenario))
         for attempt in range(args.retries + 1):
+            if attempt:
+                # Keep the failed try's output from being overwritten.
+                kept = os.path.join(args.logs, "%s_%s.try%d.txt" % (script, scenario, attempt))
+                os.replace(log, kept)
+                retried.append(((script, scenario), attempt, kept))
             start = time.monotonic()
             with open(log, "wb") as f:
                 try:
@@ -68,6 +76,10 @@ def main():
                 break
         results[(script, scenario)] = (result, log)
 
+    for (script, scenario), attempt, log in retried:
+        print("\n===== %s:%s (try %d) =====" % (script, scenario, attempt))
+        with open(log, "r", errors="replace") as f:
+            sys.stdout.write(f.read()[-20000:])
     failed = [(pair, log) for pair, (result, log) in results.items() if result.startswith("failed")]
     for (script, scenario), log in failed:
         print("\n===== %s:%s =====" % (script, scenario))

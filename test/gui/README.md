@@ -36,7 +36,8 @@ python run_tests.py settings main_window:transmit
 ```
 
 It runs each scenario in a process of its own, says which passed, were
-skipped and failed, and prints the output of those that failed.
+skipped and failed, and prints the output of every try that failed,
+including those of a scenario that then passed on a retry.
 
 `FREEDV_BINARY` says which FreeDV to test. It's otherwise the one in the
 build folder that the script was run from.
