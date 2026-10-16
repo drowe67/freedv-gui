@@ -1340,6 +1340,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     SetThreadName("GUI");
 
     terminating_ = false;
+    closingReporterDialog_ = false;
     realigned_ = false;
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
@@ -2555,6 +2556,19 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         return;
     }
 
+    if (closingReporterDialog_)
+    {
+        // Another request to close (say, a second click on the close button)
+        // while the one before it waits below for the Reporter dialog's last
+        // messages. Going on would destroy the dialog, and this window, out
+        // from under that one, which finishes closing by itself.
+        if (event.CanVeto())
+        {
+            event.Veto();
+        }
+        return;
+    }
+
     if (m_reporterDialog != nullptr)
     {
         // Grab and save the final position explicitly rather than relying
@@ -2569,7 +2583,9 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
+        closingReporterDialog_ = true;
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        closingReporterDialog_ = false;
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
         m_reporterDialog = nullptr;
