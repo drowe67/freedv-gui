@@ -15,12 +15,12 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo apt install libspeexdsp-dev sox git \
   libwxgtk3.2-dev libhamlib-dev libasound2-dev libao-dev \
   libgsm1-dev libsndfile1-dev cmake module-assistant build-essential \
-  autoconf automake libtool libebur128-dev gettext
+  autoconf automake libtool libebur128-dev gettext libssl-dev
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- recommended and the default) 
-  $ sudo apt install libpulse-dev
+  $ sudo apt install libpulse-dev pulseaudio-utils
   
   (if using PortAudio)
   $ sudo apt install portaudio19-dev
@@ -34,12 +34,12 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel gcc-c++ sox autoconf automake libtool libebur128-devel gettext
+    gsm-devel gcc-c++ sox autoconf automake libtool libebur128-devel gettext openssl-devel
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- default and recommended)
-  $ sudo dnf install pulseaudio-libs-devel
+  $ sudo dnf install pulseaudio-libs-devel pulseaudio-utils
 
   (if using PortAudio)
   $ sudo dnf install portaudio-devel

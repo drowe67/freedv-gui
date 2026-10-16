@@ -941,6 +941,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Filter: fix equaliser changes being ignored if the window was opened before pressing Start. (PR #1552)
     * Fix each use of Log QSO leaving a hidden window behind. (PR #1552)
     * Recording: restrict a pasted recording suffix to the same characters as a typed one. (PR #1552)
+    * FreeDV Reporter: fix a direction of 0 being shown for stations without a usable grid square after changing the band filter. (PR #1564)
+    * macOS: fix the last block of audio being sent to the radio over and over after transmitting, rather than silence. (PR #1564)
+    * Fix a saved main window size too small to be of use being kept. (PR #1564)
+    * Rig control: fix FreeDV briefly going back to the previous frequency after changing it (and so e.g. choosing the wrong sideband for analog mode when switched to straight after changing band). (PR #1564)
+    * macOS/Windows: fix possible crash or garbled log output when some audio device and thread errors are logged. (PR #1564)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
