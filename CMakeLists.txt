@@ -854,13 +854,15 @@ endif(NOT SANITIZERS_ENABLED)
 
 # GUI tests: Python scripts that drive FreeDV's user interface (see test/gui).
 # These are labeled so that they can be run (ctest -L gui) or skipped
-# (ctest -LE gui) as a group. Currently Linux-only as they rely on
-# PulseAudio/PipeWire for their audio devices.
-if(LINUX)
+# (ctest -LE gui) as a group. On macOS, they need four loopback audio devices
+# (see test/gui/freedvtest/audio.py), and skip (exit code 77) what can't be
+# done there. They take over the screen, keyboard focus and mouse pointer
+# while they run.
+if(LINUX OR APPLE)
 foreach(scenario first_run second_run receive_only odd_starting_points cancel auto_select radio_control hamlib_start reporting import import_more)
     add_test(NAME gui_setup_wizard_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
-    set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui)
+    set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # These also need a window manager to be running and, other than live_view
@@ -875,7 +877,7 @@ endforeach(scenario)
 foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging ptt_key_names auto_start while_running)
     add_test(NAME gui_settings_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
-    set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui)
+    set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
@@ -883,20 +885,20 @@ endforeach(scenario)
 foreach(scenario transmit ptt_key ptt_key_elsewhere tx_level receive analog play_file play_file_loop voice_keyer voice_keyer_reply voice_keyer_files recording recording_options unwritable_files monitor_volume mouse_controls tune_level_per_band frequency_units time_out_timer voice_keyer_time_out ptt_key_time_out menus help_and_restore default_config exit_menu reporting_without_callsign band_names appearance_change tab_layout heard_list window_geometry receive_reports test_tone exit_while_tuning old_settings bad_command_line)
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
-    set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+    set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # The reporter scenario needs what the FreeDV Reporter tests do.
 foreach(scenario manual frequency_in_khz callsign_list reporter)
     add_test(NAME gui_log_qso_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_log_qso.py ${scenario})
-    set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui)
+    set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 foreach(scenario controls out_of_range volume equalizer equalizer_receive_only noise_suppression)
     add_test(NAME gui_filter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
-    set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+    set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # These need a C compiler when run, for what stands in for a serial port's
@@ -904,7 +906,7 @@ endforeach(scenario)
 foreach(scenario rts polarity ptt_input errors settings_ptt_test)
     add_test(NAME gui_serial_ptt_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_serial_ptt.py ${scenario})
-    set_tests_properties(gui_serial_ptt_${scenario} PROPERTIES LABELS gui)
+    set_tests_properties(gui_serial_ptt_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # device_removed and sound_server_restarted run a sound server of their own
@@ -920,7 +922,7 @@ endforeach(scenario)
 foreach(scenario tuning tuned_away drawing waterfall_colours)
     add_test(NAME gui_plots_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_plots.py ${scenario})
-    set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+    set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
 endforeach(scenario)
 
 # These use Hamlib's rigctld as the radio, and are skipped without it.
@@ -929,6 +931,6 @@ foreach(scenario control frequency_only mode_display analog_sideband editing_fre
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
 endforeach(scenario)
-endif(LINUX)
+endif(LINUX OR APPLE)
 
 endif(UNITTEST)

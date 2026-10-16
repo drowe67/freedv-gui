@@ -8,8 +8,7 @@ arguments all of them are run; otherwise, only those named:
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
 running, as the key used for PTT only works while the window is active.
-Linux only for now, as it relies on PulseAudio/PipeWire for the audio devices
-that FreeDV is set up with, and for listening to what it does with them.
+Linux or macOS: see freedvtest/audio.py for the audio devices it needs.
 """
 
 import array
@@ -30,19 +29,23 @@ import wave
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import (Loopback, Tone, VirtualAudioDevices, file_level, record, record_level, tone_share,
-                              write_tone)
+import freedvtest.audio
+from freedvtest.audio import (Loopback, Tone, VirtualAudioDevices, device, file_level, play, record, record_level,
+                              tone_share, write_tone)
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 # Where to listen for what FreeDV sends to the radio and to the speaker.
 RADIO_TX_MONITOR = VirtualAudioDevices.input_name(RADIO_TX)
 SPEAKER_MONITOR = VirtualAudioDevices.input_name(SPEAKER)
 
 TABS = ["Waterfall", "Spectrum", "Frm Radio", "Frm Mic", "Frm Decoder", "SNR"]
+
+# File > Exit: on macOS, Quit FreeDV, in the menu named after it.
+EXIT_MENU_ITEM = "FreeDV/Quit FreeDV" if sys.platform == "darwin" else "File/Exit"
 
 # Somewhere for FreeDV to report to that isn't the public FreeDV Reporter
 # server (nothing's listening there).
@@ -532,7 +535,12 @@ def test_analog():
             # Transmitting in analog mode sends the microphone to the radio.
             app.click("main.btnPTT")
             wait_for_transmit(app)
-            check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio with nothing said")
+            # (Not when both pairs are shared, as on Windows CI (see
+            # freedvtest.audio.shared()): what's sent to the radio is then
+            # received, played through the speaker, heard by the microphone
+            # and sent again, round and round.)
+            if not (freedvtest.audio.shared(RADIO_RX, RADIO_TX) and freedvtest.audio.shared(MICROPHONE, SPEAKER)):
+                check_silent(RADIO_TX_MONITOR, "Something is being sent to the radio with nothing said")
             with Tone(MICROPHONE):
                 check_audible(RADIO_TX_MONITOR, "The microphone isn't being sent to the radio")
             app.click("main.btnPTT")
@@ -720,12 +728,12 @@ def test_voice_keyer_reply():
 
         def answer(seconds):
             """Plays the start of the reply to FreeDV as if from the radio."""
-            player = subprocess.Popen(["paplay", "--device=" + RADIO_RX, reply])
+            player = play(RADIO_RX, reply)
             try:
                 app.wait_until(lambda: app.state()["sync"] == 1, timeout=15, description="FreeDV to sync on the reply")
                 time.sleep(seconds)
             finally:
-                player.terminate()
+                player.kill()
                 player.wait()
 
         def call():
@@ -778,7 +786,7 @@ def test_voice_keyer_reply():
                 app.key("main.notebook", "Space")
                 wait_for_keyer_to_stop("the PTT key while listening")
                 call()
-                player = subprocess.Popen(["paplay", "--device=" + RADIO_RX, reply])
+                player = play(RADIO_RX, reply)
                 try:
                     app.wait_until(lambda: app.state()["sync"] == 1, timeout=15,
                                    description="FreeDV to sync on the reply")
@@ -786,7 +794,7 @@ def test_voice_keyer_reply():
                     app.key("main.notebook", "Space")
                     wait_for_keyer_to_stop("the PTT key while being answered")
                 finally:
-                    player.terminate()
+                    player.kill()
                     player.wait()
                 check_equal(count_transmissions(app, 14), 0, "Transmissions after the PTT key stopped the keyer")
 
@@ -1126,9 +1134,24 @@ def test_recording_options():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def set_writable(folder, writable):
+    """Lets a folder be written to, or not. (On Windows, which doesn't apply
+    the read-only attribute to folders, by denying the user permission to.)"""
+    if sys.platform == "win32":
+        user = os.environ["USERNAME"]
+        if writable:
+            subprocess.call(["icacls", folder, "/remove:d", user], stdout=subprocess.DEVNULL)
+        else:
+            # (Only adding files and folders: icacls' "W" takes away what
+            # listing what's there needs too.)
+            subprocess.check_call(["icacls", folder, "/deny", user + ":(OI)(CI)(WD,AD)"], stdout=subprocess.DEVNULL)
+    else:
+        os.chmod(folder, 0o755 if writable else 0o555)
+
+
 def test_unwritable_files():
     """Recordings and voice keyer files that can't be written or read."""
-    if os.geteuid() == 0:
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
         print("Skipped: nothing is unwritable for root", flush=True)
         return
 
@@ -1141,7 +1164,7 @@ def test_unwritable_files():
         not_sound = os.path.join(writable, "not_sound.wav")
         with open(not_sound, "w") as f:
             f.write("This is not a sound file.\n")
-        os.chmod(read_only, 0o555)
+        set_writable(read_only, False)
 
         def start_recording(what):
             app.click("main.btnRecord")
@@ -1203,7 +1226,7 @@ def test_unwritable_files():
                 check_equal(transmitting(app), False, "Transmitting a file that isn't a sound file")
 
                 # Recording still works once there's somewhere to put it.
-                os.chmod(read_only, 0o755)
+                set_writable(read_only, True)
                 start_recording("both")
                 check_equal(app.message_boxes(), [], "Errors displayed")
                 check_equal(app.get("main.btnRecord")["value"], True, "Record button pressed")
@@ -1212,7 +1235,8 @@ def test_unwritable_files():
                 stop_modem(app)
                 quit_and_check_log(app)
     finally:
-        os.chmod(os.path.join(folder, "read_only"), 0o755)
+        if os.path.isdir(os.path.join(folder, "read_only")):
+            set_writable(os.path.join(folder, "read_only"), True)
         shutil.rmtree(folder, ignore_errors=True)
 
 
@@ -1263,16 +1287,25 @@ def test_monitor_volume():
 
                 # The microphone
                 app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
+                # (When the microphone and speaker are the same device, as on
+                # Windows CI (see freedvtest.audio.shared()), the tone played
+                # into the one drowns out what's monitored through the other,
+                # so only the volume is changed.)
+                measure = not freedvtest.audio.shared(MICROPHONE, SPEAKER)
                 with Tone(MICROPHONE):
-                    loud = monitored(app, "main.btnPTT")
-                    check(loud > AUDIBLE, "Transmitted audio isn't being monitored (level %d)" % loud)
+                    if measure:
+                        loud = monitored(app, "main.btnPTT")
+                        check(loud > AUDIBLE, "Transmitted audio isn't being monitored (level %d)" % loud)
                     adjust(app, "main.btnPTT", "monitorTxAudioVol", -20)
-                    quiet = monitored(app, "main.btnPTT")
-                    check(-23 < decibels(loud, quiet) < -17,
-                          "Turning the monitor down 20 dB took it from %d to %d" % (loud, quiet))
+                    if measure:
+                        quiet = monitored(app, "main.btnPTT")
+                        check(-23 < decibels(loud, quiet) < -17,
+                              "Turning the monitor down 20 dB took it from %d to %d" % (loud, quiet))
                     adjust(app, "main.btnPTT", "monitorTxAudioVol", -6)
-                    half = monitored(app, "main.btnPTT")
-                    check(-8.5 < decibels(loud, half) < -3.5, "The monitor at -6 dB took it from %d to %d" % (loud, half))
+                    if measure:
+                        half = monitored(app, "main.btnPTT")
+                        check(-8.5 < decibels(loud, half) < -3.5,
+                              "The monitor at -6 dB took it from %d to %d" % (loud, half))
                 app.context_menu("main.btnPTT", choose="Monitor transmitted audio")
 
                 # The voice keyer, which has a volume of its own
@@ -1568,7 +1601,7 @@ def test_exit_menu():
         # With nothing going on
         with freedvtest.start(settings=settings()) as app:
             app.wait_for_window("main")
-            app.menu("File/Exit")
+            app.menu(EXIT_MENU_ITEM)
             check_equal(app.wait_for_exit(), 0, "FreeDV's exit code")
 
         # While transmitting
@@ -1577,7 +1610,7 @@ def test_exit_menu():
             start_modem(app)
             app.click("main.btnPTT")
             wait_for_transmit(app)
-            app.menu("File/Exit")
+            app.menu(EXIT_MENU_ITEM)
             check_equal(app.wait_for_exit(), 0, "FreeDV's exit code having been transmitting")
             errors = [line for line in app.log().splitlines() if " ERROR " in line or " FATAL " in line]
             check_equal(errors, [], "Errors logged by FreeDV")
@@ -1635,9 +1668,7 @@ def test_default_config():
     try:
         other = os.path.join(home, "other.conf")
         quiet = {"/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
-        # Where FreeDV has always kept its configuration. (Built with newer
-        # versions of wxWidgets, it moves it to where such things now go.)
-        freedvtest.write_config(os.path.join(home, ".freedv"), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
+        freedvtest.write_config(freedvtest.default_config_path(home), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
         freedvtest.write_config(other, dict(quiet, **{"/Reporting/Callsign": "VK5DGR"}))
 
         def callsign(app):
@@ -1952,6 +1983,10 @@ def test_menus():
 
             app.choose_next_path(other)
             app.menu("Settings/Use Configuration...")
+            try:
+                app.wait_until(lambda: callsign() == "K1ABC", timeout=10)
+            except freedvtest.FreeDVError:
+                pass
             check_equal(app.message_boxes(), [], "Messages displayed")
             check_equal(callsign(), "K1ABC", "Callsign after using another configuration")
             check("(other.conf)" in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
@@ -1965,6 +2000,10 @@ def test_menus():
 
             app.answer_next_message_box("yes")
             app.menu("Settings/Load Default Configuration")
+            try:
+                app.wait_until(lambda: callsign() == "", timeout=10)
+            except freedvtest.FreeDVError:
+                pass
             app.message_boxes(clear=True)
             check_equal(callsign(), "", "Callsign after loading the default configuration")
             check(".conf)" not in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
@@ -2084,13 +2123,12 @@ def test_window_geometry():
 
     check_sensible(saved_geometry(-500, -500, -800, -600), "everything negative")
     check_sensible(saved_geometry(50000, 50000, 50000, 50000), "everything enormous")
-    # Too small is made bigger, though not always by enough to be of use: it
-    # can come out as small as 195x64.
-    check_sensible(saved_geometry(30, 40, 10, 10), "a size that nothing fits in", smallest=11)
+    check_sensible(saved_geometry(30, 40, 10, 10), "a size that nothing fits in")
 
-    # One that does make sense is kept.
-    left, top, width, height = saved_geometry(30, 40, 900, 800)
-    check((width, height) == (900, 800), "A 900x800 window was saved as %dx%d" % (width, height))
+    # One that does make sense is kept. (It has to fit on CI's 1024x768
+    # screens: Windows makes no window much taller than the screen.)
+    left, top, width, height = saved_geometry(30, 40, 900, 700)
+    check((width, height) == (900, 700), "A 900x700 window was saved as %dx%d" % (width, height))
 
 
 def test_receive_reports():
@@ -2193,12 +2231,19 @@ def test_test_tone():
                 check(tone_share(channel, 1500) > 0.8, "What's played on the %s is only %.2f the tone (level %d)"
                       % (name, tone_share(channel, 1500), math.sqrt(sum(x * x for x in channel) / len(channel))))
 
-            # Another frequency
+            # Another frequency. (Listened for until it's heard: on Windows CI,
+            # what's played sometimes has gaps in it.)
             set_debugging(app, txtToneFreqHz="700")
-            left, right = heard(SPEAKER_MONITOR)
-            check(tone_share(left, 700) > 0.8 and tone_share(left, 1500) < 0.1,
-                  "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
-                  % (tone_share(left, 700), tone_share(left, 1500)))
+            shares = []
+            def changed():
+                left, right = heard(SPEAKER_MONITOR)
+                shares.append((tone_share(left, 700), tone_share(left, 1500)))
+                return shares[-1][0] > 0.8 and shares[-1][1] < 0.1
+            try:
+                app.wait_until(changed, timeout=10)
+            except freedvtest.FreeDVError:
+                check(False, "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
+                      % shares[-1])
 
             # And it goes away again.
             set_debugging(app, ckboxTone=False)
@@ -2237,7 +2282,7 @@ def test_exit_while_tuning():
             start_modem(app)
             app.click("main.btnTune")
             check_audible(RADIO_TX_MONITOR, "Nothing is being sent to the radio while tuning")
-            app.menu("File/Exit")
+            app.menu(EXIT_MENU_ITEM)
             check_equal(app.wait_for_exit(), 0, "FreeDV's exit code having been tuning")
             errors = [line for line in app.log().splitlines() if " ERROR " in line or " FATAL " in line]
             check_equal(errors, [], "Errors logged by FreeDV")
@@ -2276,13 +2321,27 @@ def test_bad_command_line():
         env = dict(os.environ)
         env.update({"HOME": folder, "XDG_CONFIG_HOME": os.path.join(folder, ".config"), "LANGUAGE": "en",
                     "LC_ALL": "C.UTF-8", "GDK_BACKEND": "x11"})
+        if sys.platform == "darwin":
+            # (See freedvtest.start().)
+            env["CFFIXED_USER_HOME"] = folder
+        if sys.platform == "win32":
+            # (Likewise, to keep it out of the registry.)
+            env["FREEDV_TEST_CONFIG_DIR"] = folder
         for arguments in [["--no-such-option"], ["--help"]]:
             result = subprocess.run([freedvtest.default_binary()] + arguments, env=env, timeout=60,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             output = result.stdout.decode("utf-8", "replace")
-            check("Usage: freedv " in output, "Given %s, FreeDV said %r" % (arguments, output))
+            # (It's "FreeDV" on macOS, where that's the program's name. On
+            # Windows, it's written to the console window that the program
+            # was started from, if any, rather than to stdout or stderr, and
+            # so can't be seen here.)
+            if sys.platform != "win32":
+                check("usage: freedv " in output.lower(), "Given %s, FreeDV said %r" % (arguments, output))
             check(result.returncode != 0, "Given %s, FreeDV's exit code was 0" % arguments)
-            check_equal(os.listdir(folder), [], "Left behind when given %s" % arguments)
+            # (Files only: macOS makes some empty folders of its own there.)
+            left = [os.path.relpath(os.path.join(path, file), folder)
+                    for path, _, files in os.walk(folder) for file in files]
+            check_equal(left, [], "Left behind when given %s" % arguments)
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 
@@ -2334,7 +2393,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("Running %s..." % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 

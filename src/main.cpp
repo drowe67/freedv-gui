@@ -275,26 +275,67 @@ static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
 static const wxChar* const FREEDV_VENDOR_NAME = wxT("CODEC2-Project");
 static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
 
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+// GUI tests (test/gui) keep FreeDV away from the registry, where its default
+// configuration and the state above otherwise go on Windows, by giving a
+// folder for them to be files in instead (as they are on Linux and macOS).
+static wxString TestConfigFile_(const wxString& name)
+{
+    wxString folder;
+    if (!wxGetEnv("FREEDV_TEST_CONFIG_DIR", &folder) || folder.IsEmpty())
+    {
+        return wxEmptyString;
+    }
+    return wxFileName(folder, name).GetFullPath();
+}
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+
+// Opens the default configuration: the one used when FreeDV isn't told which
+// to use.
+[[maybe_unused]] static wxConfigBase* CreateDefaultConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return wxConfigBase::Create();
+}
+
+static std::unique_ptr<wxConfigBase> OpenStateConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV-State.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return std::make_unique<wxFileConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return std::make_unique<wxConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+}
+
 wxString getLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    auto stateConfig = OpenStateConfig_();
     wxString path;
-    stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
+    stateConfig->Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
     return path;
 }
 
 void saveLastUsedConfigPath(const wxString& path)
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, path);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, path);
+    stateConfig->Flush();
 }
 
 void clearLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, wxEmptyString);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, wxEmptyString);
+    stateConfig->Flush();
 }
 
 // Unit test management
@@ -729,7 +770,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // would find the same one as it does when FreeDV is started
         // without being given a configuration to use.
         wxConfigBase::Set(nullptr);
-        defaultConfig = wxConfigBase::Create();
+        defaultConfig = CreateDefaultConfig_();
         wxConfigBase::Set(pConfig);
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
@@ -788,6 +829,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
+        wxConfigBase::Set(CreateDefaultConfig_());
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
 
         // Whichever it is, this is the default configuration.
@@ -1088,8 +1130,22 @@ void MainFrame::loadConfiguration_()
 
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
-    if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 780;
+    // (Nor anything too small to be of use: macOS, unlike Linux's window
+    // managers, makes the window as small as it's asked to.) The default,
+    // for when none has been saved, and that limit are scaled to suit the
+    // display: on Windows, sizes are in the screen's own pixels, and 800 of
+    // those at 200% are only as wide as 400 elsewhere, leaving no room for
+    // the plots beside everything else. (wxWidgets 3.0, which only Linux
+    // builds use, has no FromDIP(), and needs none there.)
+#if wxCHECK_VERSION(3,1,0)
+    wxSize defaultSize = FromDIP(wxSize(800, 780));
+    wxSize smallestSize = FromDIP(wxSize(300, 200));
+#else
+    wxSize defaultSize(800, 780);
+    wxSize smallestSize(300, 200);
+#endif // wxCHECK_VERSION(3,1,0)
+    if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
+    if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
     
     wxSize size = GetMinSize();
 
@@ -1396,6 +1452,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     SetThreadName("GUI");
 
     terminating_ = false;
+    closingReporterDialog_ = false;
     realigned_ = false;
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
@@ -2467,6 +2524,19 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         return;
     }
 
+    if (closingReporterDialog_)
+    {
+        // Another request to close (say, a second click on the close button)
+        // while the one before it waits below for the Reporter dialog's last
+        // messages. Going on would destroy the dialog, and this window, out
+        // from under that one, which finishes closing by itself.
+        if (event.CanVeto())
+        {
+            event.Veto();
+        }
+        return;
+    }
+
     if (m_reporterDialog != nullptr)
     {
         // Grab and save the final position explicitly rather than relying
@@ -2481,7 +2551,9 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
+        closingReporterDialog_ = true;
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        closingReporterDialog_ = false;
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
         m_reporterDialog = nullptr;

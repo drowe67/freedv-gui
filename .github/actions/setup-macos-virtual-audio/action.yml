@@ -5,6 +5,12 @@ description: >
   and makes sure no leftover resource-hog processes are running from a
   previous job.
 
+inputs:
+  blackhole-drivers:
+    description: 'How many BlackHole drivers to build (the GUI tests need four)'
+    required: false
+    default: '2'
+
 runs:
   using: 'composite'
   steps:
@@ -21,7 +27,7 @@ runs:
     - name: Install other virtual audio devices
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: ./build_macos_sound_drivers.sh
+      run: ./build_macos_sound_drivers.sh ${{ inputs['blackhole-drivers'] }}
 
     - name: Workaround macOS permission issues
       shell: bash

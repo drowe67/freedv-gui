@@ -8,8 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_filter.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with, and for listening to what it does with them.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs.
 """
 
 import math
@@ -22,7 +22,9 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.audio import Tone
+from test_main_window import RADIO_TX, SPEAKER as SPEAKER_DEVICE
 from test_main_window import (AUDIBLE, MICROPHONE, RADIO_RX, RADIO_TX_MONITOR, SPEAKER_MONITOR, audio_devices, check,
                               check_equal, label, level, quit_and_check_log, settings, start_modem, stop_modem,
                               wait_for_transmit)
@@ -405,7 +407,14 @@ def test_equalizer():
 def test_equalizer_receive_only():
     """The speaker's equaliser when FreeDV only has the one pair of devices,
     and so is only receiving: what it plays goes to the first pair's output."""
-    receive_only = settings(Audio__soundCard2InDeviceName="none", Audio__soundCard2OutDeviceName="none")
+    # (Unless that's the same device as the first pair's input, as on
+    # Windows CI (see freedvtest.audio.shared()), when it would be heard
+    # along with the tone played into that: the speaker stands in for it.)
+    output, output_monitor = RADIO_TX, RADIO_TX_MONITOR
+    if freedvtest.audio.shared(RADIO_RX, RADIO_TX):
+        output, output_monitor = SPEAKER_DEVICE, SPEAKER_MONITOR
+    receive_only = settings(Audio__soundCard1OutDeviceName=output, Audio__soundCard2InDeviceName="none",
+                            Audio__soundCard2OutDeviceName="none")
     with audio_devices():
         with freedvtest.start(settings=receive_only) as app:
             app.wait_for_window("main")
@@ -414,19 +423,19 @@ def test_equalizer_receive_only():
             open_filter(app)
             app.set_value("filter.notebook", 1)
             with Tone(RADIO_RX):
-                normal = settled_level(RADIO_TX_MONITOR)
+                normal = settled_level(output_monitor)
                 check(normal > AUDIBLE, "The radio isn't being played (level %d)" % normal)
 
                 app.set_value(SPEAKER + "ckboxEnable", True)
                 app.set_value(SPEAKER + "midFreq", 1300)
                 app.set_value(SPEAKER + "midGain", gain_slider(-12))
-                check_ratio(normal, settled_level(RADIO_TX_MONITOR), -12, "Speaker mid at -12 dB")
+                check_ratio(normal, settled_level(output_monitor), -12, "Speaker mid at -12 dB")
                 app.set_value(SPEAKER + "ckboxEnable", False)
-                check_ratio(normal, settled_level(RADIO_TX_MONITOR), 0, "Speaker equaliser off")
+                check_ratio(normal, settled_level(output_monitor), 0, "Speaker equaliser off")
                 app.set_value(SPEAKER + "ckboxEnable", True)
-                check_ratio(normal, settled_level(RADIO_TX_MONITOR), -12, "Speaker equaliser back on")
+                check_ratio(normal, settled_level(output_monitor), -12, "Speaker equaliser back on")
                 app.click(SPEAKER + "btnDefault")
-                check_ratio(normal, settled_level(RADIO_TX_MONITOR), 0, "Speaker equaliser after Default")
+                check_ratio(normal, settled_level(output_monitor), 0, "Speaker equaliser after Default")
 
             stop_modem(app)
             close_filter(app)
@@ -481,7 +490,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 
