@@ -2107,7 +2107,7 @@ void FreeDVReporterDialog::OnHamCallLookup(wxCommandEvent&)
 // two places.
 static std::u32string ToCodePoints_(const wxString& str)
 {
-    std::wstring wide = str.ToStdWstring();
+    const std::wstring& wide = str.ToStdWstring();
     std::u32string result;
     for (size_t i = 0; i < wide.size(); i++)
     {
