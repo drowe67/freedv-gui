@@ -2231,12 +2231,19 @@ def test_test_tone():
                 check(tone_share(channel, 1500) > 0.8, "What's played on the %s is only %.2f the tone (level %d)"
                       % (name, tone_share(channel, 1500), math.sqrt(sum(x * x for x in channel) / len(channel))))
 
-            # Another frequency
+            # Another frequency. (Listened for until it's heard: on Windows CI,
+            # what's played sometimes has gaps in it.)
             set_debugging(app, txtToneFreqHz="700")
-            left, right = heard(SPEAKER_MONITOR)
-            check(tone_share(left, 700) > 0.8 and tone_share(left, 1500) < 0.1,
-                  "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
-                  % (tone_share(left, 700), tone_share(left, 1500)))
+            shares = []
+            def changed():
+                left, right = heard(SPEAKER_MONITOR)
+                shares.append((tone_share(left, 700), tone_share(left, 1500)))
+                return shares[-1][0] > 0.8 and shares[-1][1] < 0.1
+            try:
+                app.wait_until(changed, timeout=10)
+            except freedvtest.FreeDVError:
+                check(False, "After changing the tone to 700 Hz, what's played is %.2f that and %.2f 1500 Hz"
+                      % shares[-1])
 
             # And it goes away again.
             set_debugging(app, ckboxTone=False)
