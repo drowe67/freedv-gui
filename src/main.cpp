@@ -966,9 +966,15 @@ void MainFrame::loadConfiguration_()
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     // (Nor anything too small to be of use: macOS, unlike Linux's window
-    // managers, makes the window as small as it's asked to.)
-    if (w < 300 || w > 2048) w = 800;
-    if (h < 200 || h > 2048) h = 780;
+    // managers, makes the window as small as it's asked to.) The default,
+    // for when none has been saved, and that limit are scaled to suit the
+    // display: on Windows, sizes are in the screen's own pixels, and 800 of
+    // those at 200% are only as wide as 400 elsewhere, leaving no room for
+    // the plots beside everything else.
+    wxSize defaultSize = FromDIP(wxSize(800, 780));
+    wxSize smallestSize = FromDIP(wxSize(300, 200));
+    if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
+    if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
 
     g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
     g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;

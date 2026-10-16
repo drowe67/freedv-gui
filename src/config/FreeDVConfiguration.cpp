@@ -33,8 +33,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Position and size of main window */
     , mainWindowLeft("/MainFrame/left", 20)
     , mainWindowTop("/MainFrame/top", 20)
-    , mainWindowWidth("/MainFrame/width", 800)
-    , mainWindowHeight("/MainFrame/height", 780)
+    // (None saved: see MainFrame::loadConfiguration_() for the default.)
+    , mainWindowWidth("/MainFrame/width", -1)
+    , mainWindowHeight("/MainFrame/height", -1)
 
     /* Position and size of Audio Config window */
     , audioConfigWindowLeft("/Windows/AudioConfig/left", -1)
