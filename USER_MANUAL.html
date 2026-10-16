@@ -1385,6 +1385,8 @@ the status message after part of it is deleted. (PR #1565)</li>
 exiting with the FreeDV Reporter window open. (PR #1565)</li>
 <li>Fix Test PTT sometimes staying greyed out after a radio or serial
 port that couldn’t be opened. (PR #1565)</li>
+<li>Fix silence being mixed into the first half second of each
+transmission, and holes in the signal at its start. (PR #1567)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1401,6 +1403,8 @@ error. (PR #1510)</li>
 information, and only use ccache in CI for the builds that compile them.
 (PR #1561)</li>
 <li>Add unit tests for non-GUI code. (PR #1542)</li>
+<li>Add tests of whole transmissions through the TX/RX threads without
+sound cards. (PR #1567)</li>
 </ul></li>
 <li>Other:
 <ul>
