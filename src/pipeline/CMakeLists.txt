@@ -62,6 +62,11 @@ DefineUtilBackedPipelineUnitTest(FreeDVReceiveStepTest)
 DefineUtilBackedPipelineUnitTest(TxRxThreadTest)
 target_sources(TxRxThreadTest PRIVATE ../freedv_interface.cpp ../eq_design.cpp ../sox_biquad.c)
 target_link_libraries(TxRxThreadTest PRIVATE fdv_sox)
+# Real speech for its round trip cases: the recording that comes with the
+# RADE sources the build fetches (see freedv-backend's SpeechSample.h).
+include(ExternalProject)
+ExternalProject_Get_Property(build_rade SOURCE_DIR)
+target_compile_definitions(TxRxThreadTest PRIVATE SPEECH_WAV_PATH="${SOURCE_DIR}/wav/all.wav")
 
 # FreeDVInterface on its own, including the modes TxRxThreadTest doesn't use.
 DefineUtilBackedPipelineUnitTest(FreeDVInterfaceTest)
