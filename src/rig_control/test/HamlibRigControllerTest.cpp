@@ -935,7 +935,7 @@ bool stopsWaitingForAFrequencyTheRadioNeverReports()
     if (!f.connect()) return false;
 
     // A radio that can't be tuned exactly where it was asked to be, or is
-    // retuned straight away, isn't ignored for long.
+    // tuned elsewhere straight away, isn't ignored for long.
     f.controller.setFrequency(14236000);
     if (!f.controller.isFrequencyChangePending(14240000))
     {
