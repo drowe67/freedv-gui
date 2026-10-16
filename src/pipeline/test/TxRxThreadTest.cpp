@@ -1990,8 +1990,7 @@ public:
         // FreeDV is run once to send and again to receive.)
         std::vector<short> signal;
         freedvInterface.stop();
-        freedvInterface.addRxMode(FREEDV_MODE_RADE);
-        freedvInterface.start(FREEDV_MODE_RADE, 100, false, false);
+        freedvInterface.start(100, false);
         {
             std::unique_ptr<TestFile> file;
             if (playedToMic)
@@ -2078,8 +2077,7 @@ public:
 
         // Receive, after a moment of nothing for the receiver to settle on.
         freedvInterface.stop();
-        freedvInterface.addRxMode(FREEDV_MODE_RADE);
-        freedvInterface.start(FREEDV_MODE_RADE, 100, false, false);
+        freedvInterface.start(100, false);
         {
             std::unique_ptr<TestFile> file;
             if (fromFile)
