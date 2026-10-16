@@ -883,6 +883,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
     * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
     * Run the automated user interface tests on macOS. (PR #1563)
+    * Run the automated user interface tests on Windows. (PR #1566)
     * Remove unused plot, main window and FreeDV Reporter code. (PR #1556)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
 
