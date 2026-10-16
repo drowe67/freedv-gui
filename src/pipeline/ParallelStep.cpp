@@ -91,7 +91,7 @@ ParallelStep::ParallelStep(
             {
                 std::stringstream ss;
                 ss << "Could not create semaphore (err = " << GetLastError() << ")";
-                log_warn(ss.str().c_str());
+                log_warn("%s", ss.str().c_str());
             }
 #elif defined(__APPLE__)
             threadState->sem = dispatch_semaphore_create(0);

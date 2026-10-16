@@ -3315,8 +3315,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         updated |= kvp.second->freqString != frequencyString;
         kvp.second->freqString = frequencyString;
 
-        // Refresh cardinal vs. degree directions.
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare != kvp.second->gridSquare)
+        // Refresh cardinal vs. degree directions. (There's no direction to
+        // or from somewhere that isn't a usable grid square.)
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare != kvp.second->gridSquare &&
+            GridSquare::IsValid(kvp.second->gridSquare) &&
+            GridSquare::IsValid(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare))
         {
             wxString newHeading;
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
