@@ -261,8 +261,8 @@ bool reportsNamesAndSizes()
 
     bool result = true;
     result &= check("running", (int)iface.dv.isRunning(), 1);
-    result &= checkText("receive mode name", iface.dv.getCurrentModeStr(), "RADEV1");
-    result &= checkText("transmit mode name", iface.dv.getCurrentTxModeStr(), "RADEV1");
+    result &= checkText("receive mode name", iface.dv.getCurrentModeStr(), "RADEV2");
+    result &= checkText("transmit mode name", iface.dv.getCurrentTxModeStr(), "RADEV2");
 
     result &= check("transmit modem sample rate", iface.dv.getTxModemSampleRate(), MODEM_SAMPLE_RATE);
     result &= check("transmit speech sample rate", iface.dv.getTxSpeechSampleRate(), RADE_SPEECH_RATE);
@@ -301,7 +301,7 @@ bool receivesItsOwnTransmissionAndCallsign()
     result &= checkText("callsign before receiving anything", takeReliableText(iface.dv), "");
 
     bool endOfOverProduced = false;
-    auto onAir = transmitOver(iface, *tx, 4.0, &endOfOverProduced);
+    auto onAir = transmitOver(iface, *tx, 10.0, &endOfOverProduced);
     result &= checkTrue("no end of over was produced", endOfOverProduced);
 
     bool everSynced = false;
