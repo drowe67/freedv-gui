@@ -80,7 +80,7 @@ def reporter_settings(hostname, **settings):
         "/Reporting/ManualFrequencyReporting": True,
         "/Reporting/PSKReporter/Enable": False,
         "/Reporting/FreeDV/Enable": True,
-        "/Reporting/FreeDV/Hostname": hostname,
+        "/Reporting/FreeDV/Hostname3.0": hostname,
         "/Reporting/FreeDV/UseTls": False,
     }
     if freedvtest.audio.MACOS or freedvtest.audio.WINDOWS:
@@ -223,7 +223,7 @@ def test_live_view():
         print("Skipping: the public FreeDV Reporter server can't be reached (%s)" % e)
         sys.exit(SKIPPED)
 
-    public_server = {"/Reporting/FreeDV/Hostname": "qso.freedv.org", "/Reporting/FreeDV/UseTls": True}
+    public_server = {"/Reporting/FreeDV/Hostname3.0": "qso.freedv.org", "/Reporting/FreeDV/UseTls": True}
     with freedvtest.start(settings=public_server) as app:
         open_reporter(app)
         check_equal(app.get("reporter")["label"], "FreeDV Reporter (freedv.conf)", "Window title")

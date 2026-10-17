@@ -856,7 +856,7 @@ def test_reporting():
     needs_reporting = ["txt_callsign", "txt_grid_square", "ckboxManualFrequencyReporting", "ckboxPskReporterEnable",
                        "ckboxFreeDVReporterEnable", "ckboxUDPReportingEnable", "ckboxUDPBroadcastEnable"]
 
-    with freedvtest.start(settings={"/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}) as app:
+    with freedvtest.start(settings={"/Reporting/FreeDV/Hostname3.0": NOWHERE, "/Reporting/FreeDV/UseTls": False}) as app:
         app.wait_for_window("main")
 
         # Without reporting, the main window just has somewhere to show the
@@ -915,7 +915,7 @@ def test_reporting():
         check_saved(app, {
             "/Reporting/Enable": 1, "/Reporting/Callsign": "AA1ZZZ", "/Reporting/GridSquare": "DM12",
             "/Reporting/ManualFrequencyReporting": 1, "/Reporting/PSKReporter/Enable": 0,
-            "/Reporting/FreeDV/Enable": 1, "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": 0,
+            "/Reporting/FreeDV/Enable": 1, "/Reporting/FreeDV/Hostname3.0": NOWHERE, "/Reporting/FreeDV/UseTls": 0,
             "/Reporting/FreeDV/UseMetricDistances": 0, "/Reporting/DirectionAsCardinal": 1,
             "/Reporting/FreeDV/ForceReceiveOnly": 1, "/Reporting/UDP/Enable": 1,
             "/Reporting/UDP/Hostname": "192.0.2.1", "/Reporting/UDP/Port": 2238,
@@ -1194,7 +1194,7 @@ def test_auto_start():
         config = os.path.join(config_dir, "freedv.conf")
         # (Once running, FreeDV looks for its FreeDV Reporter server; keep it
         # away from the public one.)
-        freedvtest.write_config(config, dict(audio_settings(), **{"/Reporting/FreeDV/Hostname": NOWHERE,
+        freedvtest.write_config(config, dict(audio_settings(), **{"/Reporting/FreeDV/Hostname3.0": NOWHERE,
                                                                   "/Reporting/FreeDV/UseTls": False}))
         with audio_devices():
             with freedvtest.start(config=config) as app:
@@ -1245,7 +1245,7 @@ def test_while_running():
     settings = audio_settings()
     settings.update({
         "/Reporting/Enable": True, "/Reporting/Callsign": "AA1ZZZ", "/Reporting/GridSquare": "DM12",
-        "/Reporting/PSKReporter/Enable": False, "/Reporting/FreeDV/Hostname": NOWHERE,
+        "/Reporting/PSKReporter/Enable": False, "/Reporting/FreeDV/Hostname3.0": NOWHERE,
         "/Reporting/FreeDV/UseTls": False,
     })
     with audio_devices():

@@ -91,7 +91,7 @@ def settings(**extra):
     result["/Filter/speexpp_enable"] = False
     result["/Filter/agcEnable"] = False
     # Keep FreeDV off the public FreeDV Reporter server.
-    result["/Reporting/FreeDV/Hostname"] = NOWHERE
+    result["/Reporting/FreeDV/Hostname3.0"] = NOWHERE
     result["/Reporting/FreeDV/UseTls"] = False
     result["/Reporting/PSKReporter/Enable"] = False
     for name, value in extra.items():
@@ -1449,7 +1449,7 @@ def test_play_file_loop():
 def test_help_and_restore():
     """The Help menu's web pages and Tools > Restore defaults."""
     start = {"/Reporting/Callsign": CALLSIGN, "/Reporting/GridSquare": "DM12",
-             "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
+             "/Reporting/FreeDV/Hostname3.0": NOWHERE, "/Reporting/FreeDV/UseTls": False}
     with freedvtest.start(settings=start) as app:
         app.wait_for_window("main")
 
@@ -1667,7 +1667,7 @@ def test_default_config():
     home = tempfile.mkdtemp(prefix="freedvtest-home-")
     try:
         other = os.path.join(home, "other.conf")
-        quiet = {"/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
+        quiet = {"/Reporting/FreeDV/Hostname3.0": NOWHERE, "/Reporting/FreeDV/UseTls": False}
         freedvtest.write_config(freedvtest.default_config_path(home), dict(quiet, **{"/Reporting/Callsign": "K1ABC"}))
         freedvtest.write_config(other, dict(quiet, **{"/Reporting/Callsign": "VK5DGR"}))
 
@@ -1941,7 +1941,7 @@ def test_menus():
         open(empty, "w").close()
 
         start = {"/Reporting/Callsign": CALLSIGN, "/Reporting/GridSquare": "DM12",
-                 "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False}
+                 "/Reporting/FreeDV/Hostname3.0": NOWHERE, "/Reporting/FreeDV/UseTls": False}
         with freedvtest.start(settings=start) as app:
             app.wait_for_window("main")
             title = app.get("main")["label"]

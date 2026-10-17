@@ -98,7 +98,7 @@ def test_controls():
     folder = tempfile.mkdtemp(prefix="freedvtest-files-")
     try:
         config = os.path.join(folder, "mine.conf")
-        freedvtest.write_config(config, {"/Reporting/FreeDV/Hostname": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False})
+        freedvtest.write_config(config, {"/Reporting/FreeDV/Hostname3.0": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False})
 
         with freedvtest.start(config=config) as app:
             app.wait_for_window("main")
@@ -244,7 +244,7 @@ def test_out_of_range():
     extra = {"/Filter/MicIn/BassGaindB": 99, "/Filter/MicIn/TrebleGaindB": -99, "/Filter/MicIn/BassFreqHz": 5000,
              "/Filter/MicIn/MidFreqHz": 0.1, "/Filter/MicIn/EQEnable": True,
              "/Filter/SpkOut/BassGaindB": -99, "/Filter/SpkOut/TrebleGaindB": 99, "/Filter/SpkOut/EQEnable": True,
-             "/Reporting/FreeDV/Hostname": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False}
+             "/Reporting/FreeDV/Hostname3.0": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False}
     with freedvtest.start(settings=extra) as app:
         app.wait_for_window("main")
         open_filter(app)
