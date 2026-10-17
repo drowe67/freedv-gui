@@ -297,19 +297,19 @@ def test_stations():
             check(12000 < number(row[DISTANCE]) < 14000, "VK5DGR is %s km from DM12" % row[DISTANCE])
 
             # Transmitting...
-            k1abc.transmit("RADEV1", True)
+            k1abc.transmit("RADEV2", True)
             wait_for_cell(app, "K1ABC", STATUS, "TX")
-            wait_for_cell(app, "K1ABC", TX_MODE, "RADEV1")
+            wait_for_cell(app, "K1ABC", TX_MODE, "RADEV2")
             wait_for_color(app, "K1ABC", TX_COLOR)
             wait_for_cell(app, "K1ABC", LAST_TX, lambda text: text != "")
 
             # ...and being received by someone, which highlights the receiver.
-            vk5dgr.receive("K1ABC", "RADEV1", 7)
+            vk5dgr.receive("K1ABC", "RADEV2", 7)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
             wait_for_cell(app, "VK5DGR", SNR, lambda text: text.strip() in ("7", "7.0"))
             wait_for_color(app, "VK5DGR", RX_COLOR)
 
-            k1abc.transmit("RADEV1", False)
+            k1abc.transmit("RADEV2", False)
             wait_for_cell(app, "K1ABC", STATUS, "RX")
             wait_for_color(app, "K1ABC", lambda color: color != TX_COLOR)
 
@@ -886,7 +886,7 @@ def test_row_actions():
             open_reporter(app)
             wait_for_callsigns(app, ["K1ABC", "VK5DGR"])
             wait_for_cell(app, "K1ABC", MESSAGE, "Calling CQ on 40m")
-            vk5dgr.receive("K1ABC", "RADEV1", 5)
+            vk5dgr.receive("K1ABC", "RADEV2", 5)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
 
             lookups = ["Lookup via QRZ", "Lookup via HamQTH", "Lookup via HamCall"]
@@ -1152,19 +1152,19 @@ def test_sort_every_column():
         with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
             open_reporter(app)
             wait_for_callsigns(app, ["VK5DGR", "K1ABC", "W6XYZ"])
-            k1abc.transmit("RADEV1", True)
+            k1abc.transmit("RADEV2", True)
             wait_for_cell(app, "K1ABC", STATUS, "TX")
-            k1abc.transmit("RADEV1", False)
+            k1abc.transmit("RADEV2", False)
             wait_for_cell(app, "K1ABC", STATUS, "RX")
             # (W6XYZ a moment later, so that when each last transmitted differs.)
             time.sleep(1.1)
-            w6xyz.transmit("RADEV1", True)
+            w6xyz.transmit("RADEV2", True)
             wait_for_cell(app, "W6XYZ", STATUS, "TX")
-            w6xyz.transmit("RADEV1", False)
+            w6xyz.transmit("RADEV2", False)
             wait_for_cell(app, "W6XYZ", STATUS, "RX")
-            vk5dgr.receive("K1ABC", "RADEV1", 12)
+            vk5dgr.receive("K1ABC", "RADEV2", 12)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
-            w6xyz.receive("AB1CD", "RADEV1", 3)
+            w6xyz.receive("AB1CD", "RADEV2", 3)
             wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "AB1CD")
 
             # Where sorting by a column is known to put them.
@@ -1289,22 +1289,22 @@ def test_sorted_updates():
 
             # Who's transmitting
             sort_by(STATUS)
-            k1abc.transmit("RADEV1", True)
+            k1abc.transmit("RADEV2", True)
             wait_for_cell(app, "K1ABC", STATUS, "TX")
             wait_for_order("VK5DGR", "K1ABC", "K1ABC began transmitting")       # RX, TX
-            vk5dgr.transmit("RADEV1", True)
+            vk5dgr.transmit("RADEV2", True)
             wait_for_cell(app, "VK5DGR", STATUS, "TX")
-            k1abc.transmit("RADEV1", False)
+            k1abc.transmit("RADEV2", False)
             wait_for_cell(app, "K1ABC", STATUS, "RX")
             wait_for_order("K1ABC", "VK5DGR", "they swapped over")
-            vk5dgr.transmit("RADEV1", False)
+            vk5dgr.transmit("RADEV2", False)
             wait_for_cell(app, "VK5DGR", STATUS, "RX")
 
             # The mode last transmitted in
             sort_by(TX_MODE)
-            transmit(k1abc, "RADEV1")
+            transmit(k1abc, "RADEV2")
             transmit(vk5dgr, "700D")
-            wait_for_order("VK5DGR", "K1ABC", "transmitting in 700D and RADEV1")
+            wait_for_order("VK5DGR", "K1ABC", "transmitting in 700D and RADEV2")
             transmit(vk5dgr, "RADEV2")
             wait_for_cell(app, "VK5DGR", TX_MODE, "RADEV2")
             wait_for_order("K1ABC", "VK5DGR", "VK5DGR changed to RADEV2")
@@ -1315,27 +1315,27 @@ def test_sorted_updates():
             sort_by(LAST_TX)
             wait_for_order("K1ABC", "VK5DGR", "sorting by last transmission")
             time.sleep(1.1)
-            transmit(k1abc, "RADEV1")
+            transmit(k1abc, "RADEV2")
             wait_for_order("VK5DGR", "K1ABC", "K1ABC transmitted again")
 
             # Who they last received, and how well
             sort_by(RX_CALLSIGN)
-            k1abc.receive("ZL1ZZ", "RADEV1", 20)
+            k1abc.receive("ZL1ZZ", "RADEV2", 20)
             wait_for_cell(app, "K1ABC", RX_CALLSIGN, "ZL1ZZ")
-            vk5dgr.receive("AA1AA", "RADEV1", -3)
+            vk5dgr.receive("AA1AA", "RADEV2", -3)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "AA1AA")
             wait_for_order("VK5DGR", "K1ABC", "receiving AA1AA and ZL1ZZ")
-            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)
+            vk5dgr.receive("ZZ9ZZ", "RADEV2", -3)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "ZZ9ZZ")
             wait_for_order("K1ABC", "VK5DGR", "VK5DGR received ZZ9ZZ")
-            vk5dgr.receive("ZZ9ZZ", "RADEV1", -3)  # the same again
+            vk5dgr.receive("ZZ9ZZ", "RADEV2", -3)  # the same again
 
             sort_by(SNR)
             wait_for_order("VK5DGR", "K1ABC", "sorting by SNR")                 # -3, 20
-            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+            vk5dgr.receive("ZZ9ZZ", "RADEV2", 25)
             wait_for_cell(app, "VK5DGR", SNR, lambda text: text.strip() in ("25", "25.0"))
             wait_for_order("K1ABC", "VK5DGR", "VK5DGR's SNR rose to 25")
-            vk5dgr.receive("ZZ9ZZ", "RADEV1", 25)
+            vk5dgr.receive("ZZ9ZZ", "RADEV2", 25)
 
             # Receiving nothing in particular (as after changing frequency)
             # clears who and how well, sorted by either.
@@ -1398,9 +1398,9 @@ def test_numeric_filters():
             with freedvtest.start(settings=settings) as app:
                 open_reporter(app)
                 wait_for_callsigns(app, everyone)
-                k1abc.receive("W6XYZ", "RADEV1", 12)
-                vk5dgr.receive("W6XYZ", "RADEV1", -2)
-                w6xyz.receive("K1ABC", "RADEV1", 5)
+                k1abc.receive("W6XYZ", "RADEV2", 12)
+                vk5dgr.receive("W6XYZ", "RADEV2", -2)
+                w6xyz.receive("K1ABC", "RADEV2", 5)
                 wait_for_cell(app, "W6XYZ", RX_CALLSIGN, "K1ABC")
                 wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "W6XYZ")
 
@@ -1516,9 +1516,9 @@ def test_text_filters():
         with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
             open_reporter(app)
             wait_for_callsigns(app, everyone)
-            k1abc.transmit("RADEV1", True)
+            k1abc.transmit("RADEV2", True)
             wait_for_cell(app, "K1ABC", STATUS, "TX")
-            vk5dgr.receive("K1ABC", "RADEV1", 9)
+            vk5dgr.receive("K1ABC", "RADEV2", 9)
             wait_for_cell(app, "VK5DGR", RX_CALLSIGN, "K1ABC")
             wait_for_cell(app, "W6XYZ", MESSAGE, "Listening")
 
@@ -1528,7 +1528,7 @@ def test_text_filters():
                     (LOCATOR, not_equal, "FN42", ["VK5DGR", "W6XYZ"]),
                     (VERSION, equal, "alpha 2", ["W6XYZ"]),
                     (VERSION, after, "alpha 1", ["K1ABC", "W6XYZ"]),    # in alphabetical order
-                    (TX_MODE, equal, "RADEV1", ["K1ABC"]),
+                    (TX_MODE, equal, "RADEV2", ["K1ABC"]),
                     (STATUS, equal, "RX Only", ["VK5DGR"]),
                     (STATUS, equal, "TX", ["K1ABC"]),
                     (MESSAGE, equal, "listening", ["W6XYZ"]),
@@ -1821,9 +1821,9 @@ def test_connection_burst():
                     elif action < 0.65:
                         stations[callsign].set_frequency(rng.choice(frequencies))
                     elif action < 0.75:
-                        stations[callsign].transmit("RADEV1", rng.random() < 0.5)
+                        stations[callsign].transmit("RADEV2", rng.random() < 0.5)
                     elif action < 0.82:
-                        stations[callsign].receive(rng.choice(sorted(stations)), "RADEV1", rng.randrange(-5, 30))
+                        stations[callsign].receive(rng.choice(sorted(stations)), "RADEV2", rng.randrange(-5, 30))
                     elif action < 0.88:
                         stations[callsign].set_message(rng.choice(["", "CQ", "QRV", "testing 1 2 3"]))
                     elif action < 0.94:

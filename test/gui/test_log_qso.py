@@ -94,7 +94,7 @@ def write_csv_log(path, rows):
     with open(path, "w") as f:
         f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
         for moment, callsign, frequency, snr in rows:
-            f.write("%s,%s,%s,RADEV1,%d,%d\n" % (moment[:10], moment[11:], callsign, frequency, snr))
+            f.write("%s,%s,%s,RADEV2,%d,%d\n" % (moment[:10], moment[11:], callsign, frequency, snr))
 
 
 def choose_callsign(app, row):

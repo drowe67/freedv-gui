@@ -7,7 +7,7 @@ public one. Station connects to it as another copy of FreeDV would:
     with ReporterServer() as server:
         with server.station("K1ABC", "FN42") as station:
             station.set_frequency(14236000)
-            station.transmit("RADEV1", True)
+            station.transmit("RADEV2", True)
             ...
 
 Needs the Python packages the server itself does (other than discord):

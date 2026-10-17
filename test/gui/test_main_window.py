@@ -476,7 +476,7 @@ def test_receive():
             except freedvtest.FreeDVError:
                 check(False, "SNR of a clean signal is " + label(app, "main.textSNR"))
             check(app.get("main.gaugeSNR")["value"] > 0, "The SNR gauge isn't showing anything")
-            check_equal(label(app, "main.textCurrentDecodeMode"), "Mode: RADEV1", "Mode while receiving")
+            check_equal(label(app, "main.textCurrentDecodeMode"), "Mode: RADEV2", "Mode while receiving")
             time.sleep(3)
             check_equal(app.state()["sync"], 1, "Sync a few seconds on")
 
@@ -1035,7 +1035,7 @@ def test_recording_options():
         csv_log = os.path.join(folder, "heard.csv")
         with open(csv_log, "w") as f:
             f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
-            f.write("2026-03-04,05:06:07,K1ABC/P,RADEV1,14236000,7\n")
+            f.write("2026-03-04,05:06:07,K1ABC/P,RADEV2,14236000,7\n")
 
         extra = dict(QuickRecord__SavePath=raw_folder, QuickRecord__SaveDecodedPath=decoded_folder,
                      Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
@@ -1335,7 +1335,7 @@ def test_mouse_controls():
         csv_log = os.path.join(folder, "heard.csv")
         with open(csv_log, "w") as f:
             f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
-            f.write("2026-03-04,05:06:07,K1ABC,RADEV1,14236000,7\n")
+            f.write("2026-03-04,05:06:07,K1ABC,RADEV2,14236000,7\n")
         extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
                      Reporting__CSV__LogFilePath=csv_log)
 
@@ -1624,8 +1624,8 @@ def test_frequency_units():
         csv_log = os.path.join(folder, "heard.csv")
         with open(csv_log, "w") as f:
             f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
-            f.write("2026-03-04,05:06:07,K1ABC,RADEV1,14236000,7\n")
-            f.write("2026-03-04,05:16:07,VK5DGR,RADEV1,7177500,3\n")
+            f.write("2026-03-04,05:06:07,K1ABC,RADEV2,14236000,7\n")
+            f.write("2026-03-04,05:16:07,VK5DGR,RADEV2,7177500,3\n")
         extra = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
                      Reporting__CSV__LogFilePath=csv_log, Reporting__Frequency=14236000)
 
@@ -2057,18 +2057,18 @@ def test_heard_list():
         with open(csv_log, "w") as f:
             f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
             for n, callsign in enumerate(callsigns):
-                f.write("2026-03-04,05:%02d:%02d,%s,RADEV1,%d,%d\n"
+                f.write("2026-03-04,05:%02d:%02d,%s,RADEV2,%d,%d\n"
                         % (n // 60, n % 60, callsign, 14236000 + n * 500, n % 20))
                 if n == 110:
                     # Things that aren't stations heard are passed over.
                     f.write("\n")
                     f.write("2026-03-04,06:00:00,NOFREQ\n")
-                    f.write("2026-03-04,06:00:01,BADFREQ,RADEV1,somewhere,3\n")
+                    f.write("2026-03-04,06:00:01,BADFREQ,RADEV2,somewhere,3\n")
                     f.write("2026-03-04\n")
                     f.write("2026-03-04,06:00:02\n")
-                    f.write("2026-03-04,06:00:03,NOFREQ,RADEV1\n")
-                    f.write("2026-03-04,06:00:04,NOSNR,RADEV1,14236000\n")
-                    f.write("2026-03-04,06:00:05,BADSNR,RADEV1,14236000,loud\n")
+                    f.write("2026-03-04,06:00:03,NOFREQ,RADEV2\n")
+                    f.write("2026-03-04,06:00:04,NOSNR,RADEV2,14236000\n")
+                    f.write("2026-03-04,06:00:05,BADSNR,RADEV2,14236000,loud\n")
 
         def heard(app):
             return [(item["columns"][0], item["columns"][1].replace(",", ""))
@@ -2177,14 +2177,14 @@ def test_receive_reports():
                 except socket.timeout:
                     check(False, "Nothing was sent to other programs about the callsign received")
                 check_equal((told.get("type"), told.get("callsign"), told.get("mode"), told.get("frequency_hz")),
-                            ("fdv_callsign", CALLSIGN, "RADEV1", 14236000), "What other programs were told")
+                            ("fdv_callsign", CALLSIGN, "RADEV2", 14236000), "What other programs were told")
 
                 # ...and it's logged.
                 stop_modem(app)
                 quit_and_check_log(app)
                 with open(csv_log, "r") as f:
                     logged = [line.strip().split(",") for line in f if line.strip()]
-                check(len(logged) >= 2 and logged[-1][2:5] == [CALLSIGN, "RADEV1", "14236000"],
+                check(len(logged) >= 2 and logged[-1][2:5] == [CALLSIGN, "RADEV2", "14236000"],
                       "The log of stations heard is %r" % logged)
 
                 # Which is where the list comes from the next time.
