@@ -327,8 +327,8 @@ def test_reporter():
         csv_log = os.path.join(folder, "heard.csv")
         write_csv_log(csv_log, [("2026-03-04 05:06:07", "K1ABC", 7177000, 4),
                                 ("2026-03-04 21:43:02", "ZL9ZZ", 14236000, 11)])
-        extra = dict(Reporting__FreeDV__Enable=True, Reporting__FreeDV__Hostname=server.hostname,
-                     Reporting__FreeDV__UseTls=False, Reporting__CSV__LogFilePath=csv_log)
+        extra = dict(Reporting__FreeDV__Enable=True, Reporting__FreeDV__UseTls=False,
+                     Reporting__CSV__LogFilePath=csv_log, **{"Reporting__FreeDV__Hostname3.0": server.hostname})
         with freedvtest.start(settings=logging_settings(logger, **extra)) as app:
             app.wait_for_window("main")
             app.menu("Tools/FreeDV Reporter")
