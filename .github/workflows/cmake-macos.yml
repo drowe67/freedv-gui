@@ -411,7 +411,7 @@ jobs:
         os: [macos-14, macos-15, macos-26]  # ARM64, ARM64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: [dist-pgo-build, scope]
+    needs: [dist-pgo-build, rade-loss-baseline, scope]
     if: ${{ needs.scope.outputs.full == 'true' }}
 
     steps:

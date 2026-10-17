@@ -840,20 +840,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         // this sound card and the output sound card.
 
         // Run code inside this while loop as soon as we have enough
-        // room for one frame of modem samples.  Aim is to keep about
-        // TX_OUTFIFO_TARGET_MS of audio in outfifo1 so we don't have any
-        // gaps in tx signal if we're woken up late.
+        // room for one frame of modem samples.  Aim is to keep
+        // outfifo1 nice and full so we don't have any gaps in tx
+        // signal.
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
-
-        // When mic audio runs out, silence is encoded to keep the modem stream
-        // continuous, but only while outfifo1 is below this amount. Since mic
-        // audio arrives at the same rate that outfifo1 is drained, any silence
-        // added stays in outfifo1 for the rest of the over and delays everything
-        // sent after it (including the EOO). This needs to cover the worst case
-        // TX thread wakeup delay (>130ms has been observed on CI runners).
-        constexpr int TX_OUTFIFO_TARGET_MS = 200;
-        unsigned int nsam_outfifo_target = (outputSampleRate_ * TX_OUTFIFO_TARGET_MS) / MS_TO_SEC;
 
         if (g_dump_fifo_state) {
              // If this drops to zero we have a problem as we will run out of output samples

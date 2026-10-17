@@ -367,7 +367,7 @@ jobs:
         os: [ubuntu-26.04, ubuntu-24.04, ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04-arm, ubuntu-26.04-arm]
 
     runs-on: ${{ matrix.os }}
-    needs: [build-appimage, scope]
+    needs: [build-appimage, rade-loss-baseline, scope]
     if: ${{ needs.scope.outputs.full == 'true' }}
     steps:
     - uses: actions/checkout@v6
