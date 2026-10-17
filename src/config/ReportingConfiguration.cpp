@@ -43,7 +43,7 @@ ReportingConfiguration::ReportingConfiguration()
         
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
     , freedvReporterForcedOff("/Reporting/FreeDV/ForcedOff", false)
-    , freedvReporterHostname("/Reporting/FreeDV/Hostname3.0", wxT("reporter-radev2.k6aq.net"), //wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
+    , freedvReporterHostname("/Reporting/FreeDV/Hostname3.0", wxT("reporter-radev2.k6aq.net")), //wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
     , freedvReporterUseTls("/Reporting/FreeDV/UseTls", true)
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
     , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
