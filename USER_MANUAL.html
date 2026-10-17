@@ -1148,6 +1148,11 @@ windows. (PR #1508)</li>
 <li>Hamlib: only allow selecting a PTT serial device when using RTS or
 DTR for PTT. (PR #1544)</li>
 </ul></li>
+<li>Bugfixes:
+<ul>
+<li>Fix silence being mixed into the first half second of each
+transmission, and holes in the signal at its start. (PR #1562)</li>
+</ul></li>
 <li>Build system:
 <ul>
 <li>Update wxWidgets to 3.3.4. (PR #1560, #1556)</li>
@@ -1170,6 +1175,9 @@ part of CI. (PR #1556)</li>
 #1556)</li>
 <li>Settings: play back audio input tests through the speaker/headphones
 instead of the radio. (PR #1548)</li>
+<li>Add tests of whole transmissions through the TX/RX threads without
+sound cards, and diagnostics for rade_loss test failures. (PR
+#1562)</li>
 </ul></li>
 </ol>
 <p><em>Note: Legacy FreeDV modes (700D/700E/1600) have been removed due
@@ -1293,6 +1301,8 @@ the status message after part of it is deleted. (PR #1565)</li>
 exiting with the FreeDV Reporter window open. (PR #1565)</li>
 <li>Fix Test PTT sometimes staying greyed out after a radio or serial
 port that couldn’t be opened. (PR #1565)</li>
+<li>Fix silence being mixed into the first half second of each
+transmission, and holes in the signal at its start. (PR #1567)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1309,6 +1319,8 @@ error. (PR #1510)</li>
 information, and only use ccache in CI for the builds that compile them.
 (PR #1561)</li>
 <li>Add unit tests for non-GUI code. (PR #1542)</li>
+<li>Add tests of whole transmissions through the TX/RX threads without
+sound cards. (PR #1567)</li>
 </ul></li>
 <li>Other:
 <ul>
