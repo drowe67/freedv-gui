@@ -6,9 +6,8 @@ of them are run; otherwise, only those named:
 
     python3 test_setup_wizard.py [scenario...]
 
-Run from the build folder (or set FREEDV_BINARY). Linux only for now, as it
-relies on PulseAudio/PipeWire for the audio devices that FreeDV is set up
-with.
+Run from the build folder (or set FREEDV_BINARY), on Linux or macOS: see
+freedvtest/audio.py for the audio devices it needs.
 """
 
 import os
@@ -20,12 +19,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import VirtualAudioDevices, default_output
+import freedvtest.audio
+from freedvtest.audio import VirtualAudioDevices, default_output, device
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 RADIO_RX_IN = VirtualAudioDevices.input_name(RADIO_RX)
 MICROPHONE_IN = VirtualAudioDevices.input_name(MICROPHONE)
@@ -742,7 +742,7 @@ def test_import():
         }
         with freedvtest.start(user_config_files=user_config_files) as app:
             def write_wsjtx_settings(**settings):
-                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
                     f.write(wsjtx_settings(**settings))
 
             app.wait_for_window("wizard")
@@ -774,7 +774,7 @@ def test_import():
                 MyCall='"ZZ0ZZZ"',
                 MyGrid="AA00",
                 PSKReporter="true",
-                SoundInName="Monitor of %s" % RADIO_RX,
+                SoundInName=VirtualAudioDevices.input_label(RADIO_RX),
                 SoundOutName=RADIO_TX.upper(),
                 Rig=rig,
                 CATSerialPort="/dev/ttyFreeDVTest0",
@@ -895,7 +895,7 @@ def test_import_more():
     with VirtualAudioDevices(RADIO_RX, RADIO_TX, SPEAKER):
         with freedvtest.start(user_config_files={"WSJT-X.ini": ""}) as app:
             def import_wsjtx(**settings):
-                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
                     f.write(wsjtx_settings(**settings))
                 app.click("wizard.btnImport")
                 return import_status(app)
@@ -908,17 +908,22 @@ def test_import_more():
             # their devices...
             radio_in_shown = [item["label"] for item in app.get("wizard.cbRadioIn")["items"]
                               if item.get("data") == RADIO_RX_IN][0]
-            check(len(radio_in_shown) > 24 and len(RADIO_TX) > 24,
+            # (Not with the names of macOS's loopback devices, which are too
+            # short for this: see freedvtest.audio.device().)
+            long_names = len(radio_in_shown) > 24 and len(RADIO_TX) > 24
+            check(long_names or freedvtest.audio.MACOS,
                   "Device names are too short for this: %r, %r" % (radio_in_shown, RADIO_TX))
-            check_equal(import_wsjtx(SoundInName=radio_in_shown[:24], SoundOutName=RADIO_TX[:24]),
-                        "Imported: radio audio devices. Review each page before clicking Finish.", "Import result")
-            check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
-            check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
+            if long_names:
+                check_equal(import_wsjtx(SoundInName=radio_in_shown[:24], SoundOutName=RADIO_TX[:24]),
+                            "Imported: radio audio devices. Review each page before clicking Finish.",
+                            "Import result")
+                check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
+                check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
 
-            # ...unless there's too little left to go by.
-            check_equal(import_wsjtx(SoundInName=radio_in_shown[:7], SoundOutName=RADIO_TX[:7]),
-                        "No usable settings were found in WSJT-X. Not imported: radio audio devices (not currently "
-                        "connected). Review each page before clicking Finish.", "Import result")
+                # ...unless there's too little left to go by.
+                check_equal(import_wsjtx(SoundInName=radio_in_shown[:7], SoundOutName=RADIO_TX[:7]),
+                            "No usable settings were found in WSJT-X. Not imported: radio audio devices (not "
+                            "currently connected). Review each page before clicking Finish.", "Import result")
 
             # Only one of the two found: that much is imported, and the rest
             # is said to be missing.
@@ -1004,7 +1009,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (name, ", ".join(SCENARIOS)))
     for name in names:
         print("Running %s..." % name, flush=True)
-        SCENARIOS[name]()
+        try:
+            SCENARIOS[name]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 

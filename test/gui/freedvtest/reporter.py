@@ -155,7 +155,15 @@ class ReporterServer:
             # it one of its own rather than the one containing its source.
             self._work_dir = tempfile.mkdtemp(prefix="freedvtest-reporter-")
             for name in ("index.html", "static"):
-                os.symlink(os.path.join(self._source_dir, name), os.path.join(self._work_dir, name))
+                source, link = os.path.join(self._source_dir, name), os.path.join(self._work_dir, name)
+                try:
+                    os.symlink(source, link)
+                except OSError:
+                    # Windows only lets some users make links.
+                    if os.path.isdir(source):
+                        shutil.copytree(source, link)
+                    else:
+                        shutil.copy2(source, link)
             with open(os.path.join(self._source_dir, "db-schema.sql"), "r") as f:
                 database = sqlite3.connect(os.path.join(self._work_dir, "freedv-reporter.db"))
                 database.executescript(f.read())
@@ -274,7 +282,13 @@ class Station:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
 
-        self._client = socketio.AsyncClient(reconnection=False)
+        # Created in that thread: with Python 3.9 (macOS's own), what it
+        # creates belongs to the event loop of whichever thread it's created
+        # in, and messages it's given to send would otherwise never go.
+        async def create_client():
+            return socketio.AsyncClient(reconnection=False)
+
+        self._client = self._run(create_client())
         self._client.on("*", self._on_event)
 
         if callsign is None:

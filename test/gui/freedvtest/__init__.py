@@ -51,11 +51,56 @@ def default_binary():
         return binary
     if sys.platform == "darwin":
         return "src/FreeDV.app/Contents/MacOS/FreeDV"
+    if sys.platform == "win32":
+        return os.path.join("src", "freedv.exe")
     return "src/freedv"
 
 
 # Somewhere for FreeDV to look for a FreeDV Reporter server and not find one.
 NO_REPORTER_SERVER = "127.0.0.1:9"
+
+
+def default_config_path(home):
+    """Returns where FreeDV looks for its configuration when not told which
+    to use, for the given stand-in home folder (see start()): where it has
+    always kept it on Linux (newer builds move it to where such things now
+    go), where macOS keeps programs' settings, and on Windows, where test
+    builds keep what would otherwise be in the registry (see
+    $FREEDV_TEST_CONFIG_DIR in FreeDV's main.cpp)."""
+    if sys.platform == "darwin":
+        return os.path.join(home, "Library", "Preferences", "FreeDV Preferences")
+    if sys.platform == "win32":
+        return os.path.join(home, "FreeDV.ini")
+    return os.path.join(home, ".freedv")
+
+
+def _escape(value):
+    """Writes a value as wxFileConfig reads it (see FilterOutValue() in
+    wxWidgets' fileconf.cpp), in which a backslash starts an escape sequence:
+    Windows' paths are full of them."""
+    value = str(value)
+    quote = bool(value) and (value[0].isspace() or value[0] == '"')
+    escaped = ""
+    for character in value:
+        if character in "\n\r\t\\" or (character == '"' and quote):
+            escaped += "\\" + {"\n": "n", "\r": "r", "\t": "t"}.get(character, character)
+        else:
+            escaped += character
+    return '"%s"' % escaped if quote else escaped
+
+
+def _unescape(value):
+    """Reads a value as wxFileConfig does (see FilterInValue())."""
+    quoted = value.startswith('"')
+    result = ""
+    characters = iter(value[1:] if quoted else value)
+    for character in characters:
+        if character == "\\":
+            escaped = next(characters, "")
+            result += {"n": "\n", "r": "\r", "t": "\t", "\\": "\\", '"': '"'}.get(escaped, "")
+        elif character != '"' or not quoted:
+            result += character
+    return result
 
 
 def write_config(path, settings):
@@ -81,12 +126,13 @@ def write_config(path, settings):
             value = int(value)
         groups.setdefault(group, {})[key] = value
 
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w") as f:
         for group in sorted(groups):
             if group:
                 f.write("[%s]\n" % group)
             for key, value in groups[group].items():
-                f.write("%s=%s\n" % (key, value))
+                f.write("%s=%s\n" % (key, _escape(value)))
 
 
 def read_config(path):
@@ -102,7 +148,7 @@ def read_config(path):
                 group = "/" + line[1:-1]
             elif "=" in line:
                 key, _, value = line.partition("=")
-                settings["%s/%s" % (group, key)] = value
+                settings["%s/%s" % (group, key)] = _unescape(value)
     return settings
 
 
@@ -118,11 +164,11 @@ def start(binary=None, config=None, settings=None, args=(), env=None, user_confi
     looks for other programs' settings (see FreeDV.user_config_dir). FreeDV
     never sees the real ones.
 
-    home is a folder to stand in for the user's home folder (Linux only),
-    for when what FreeDV keeps there needs to last from one launch to the
+    home is a folder to stand in for the user's home folder, for when what FreeDV keeps there needs to last from one launch to the
     next; otherwise each launch gets an empty one of its own. With
     default_config, FreeDV isn't told which configuration file to use and so
-    finds its own, as it does for a user: in that home folder.
+    finds its own, as it does for a user: in that home folder (see
+    default_config_path()).
     """
     return FreeDV(binary or default_binary(), config, settings, args, env, user_config_files, timeout, home,
                   default_config)
@@ -144,10 +190,11 @@ class FreeDV:
         self.config_path = config or os.path.join(self._temp_dir, "freedv.conf")
         #: Everything that FreeDV has printed.
         self.log_path = os.path.join(self._temp_dir, "freedv.log")
-        #: Stands in for the user's ~/.config (Linux only), which is where
-        #: FreeDV looks for other programs' settings.
+        #: Stands in for where FreeDV looks for other programs' settings:
+        #: the user's ~/.config on Linux, ~/Library/Preferences on macOS,
+        #: %LOCALAPPDATA% on Windows. See user_config_path().
         self.user_config_dir = os.path.join(home, ".config") if home else os.path.join(self._temp_dir, "config")
-        #: Stands in for the user's home folder (Linux only).
+        #: Stands in for the user's home folder.
         self.home_dir = None
 
         if settings is not None:
@@ -173,12 +220,27 @@ class FreeDV:
             xauthority = os.path.expanduser("~/.Xauthority")
             if "XAUTHORITY" not in process_env and os.path.exists(xauthority):
                 process_env["XAUTHORITY"] = xauthority
-            self.home_dir = home or os.path.join(self._temp_dir, "home")
-            os.makedirs(self.home_dir, exist_ok=True)
+        self.home_dir = home or os.path.join(self._temp_dir, "home")
+        os.makedirs(self.home_dir, exist_ok=True)
+        if sys.platform.startswith("linux") or sys.platform == "darwin":
             process_env["HOME"] = self.home_dir
+        if sys.platform == "win32":
+            # What would be in the registry is kept in the stand-in home
+            # folder instead, and other programs' settings in a stand-in
+            # %LOCALAPPDATA% there.
+            process_env["FREEDV_TEST_CONFIG_DIR"] = self.home_dir
+            self.user_config_dir = os.path.join(self.home_dir, "AppData", "Local")
+            process_env["LOCALAPPDATA"] = self.user_config_dir
+        if sys.platform == "darwin":
+            # macOS finds the home folder (and so ~/Library/Preferences, where
+            # FreeDV keeps its settings) without looking at $HOME.
+            process_env["CFFIXED_USER_HOME"] = self.home_dir
+            self.user_config_dir = os.path.join(self.home_dir, "Library", "Preferences")
         os.makedirs(self.user_config_dir, exist_ok=True)
         for name, contents in (user_config_files or {}).items():
-            with open(os.path.join(self.user_config_dir, name), "w") as f:
+            path = self.user_config_path(name)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as f:
                 f.write(contents)
         process_env["XDG_CONFIG_HOME"] = self.user_config_dir
         process_env.update(env or {})
@@ -225,6 +287,14 @@ class FreeDV:
             sys.stderr.write("----- FreeDV output -----\n%s\n-------------------------\n" % self.log())
         self.stop()
         return False
+
+    def user_config_path(self, name):
+        """Returns where FreeDV looks for another program's settings file of
+        the given name (e.g. "WSJT-X.ini"): in user_config_dir or, on
+        Windows, a folder there named after the program."""
+        if sys.platform == "win32":
+            return os.path.join(self.user_config_dir, os.path.splitext(name)[0], name)
+        return os.path.join(self.user_config_dir, name)
 
     # -- Commands ---------------------------------------------------------
 
@@ -334,8 +404,12 @@ class FreeDV:
 
     def combo_popup(self, name, open=True):
         """Opens or closes the list of a control that has its own kind of
-        drop-down list, e.g. FreeDV Reporter's status message."""
+        drop-down list, e.g. FreeDV Reporter's status message, and waits
+        for that to have happened. (On Windows, the list slides open, and
+        ignores the mouse until it's done.)"""
         self.command("combo_popup", name=name, open=open)
+        self.wait_until(lambda: self.get(name).get("popupShown", open) == open, 10,
+                        "the list of '%s' to %s" % (name, "open" if open else "close"))
 
     # -- Lists with columns -------------------------------------------------
 

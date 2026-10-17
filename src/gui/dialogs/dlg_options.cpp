@@ -2695,6 +2695,18 @@ void OptionsDlg::OnTestPTT(wxCommandEvent&)
     std::shared_ptr<std::mutex> mtx = std::make_shared<std::mutex>();
     std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
 
+    // Says the test is over. Kept track of, rather than only signalled: a
+    // port that can't be opened says so before the thread below has
+    // started waiting for it, and that thread would otherwise wait forever.
+    std::shared_ptr<bool> finished = std::make_shared<bool>(false);
+    auto finish = [mtx, cv, finished]() {
+        {
+            std::unique_lock<std::mutex> lk(*mtx);
+            *finished = true;
+        }
+        cv->notify_one();
+    };
+
     if (m_ckLeftChannelVoxTone->GetValue()) {
         wxMessageBox(_("Testing of tone based PTT not supported; try PTT after pressing Start on main window"),
                      _("Error"), wxOK | wxICON_ERROR, this);
@@ -2734,19 +2746,19 @@ void OptionsDlg::OnTestPTT(wxCommandEvent&)
                     // TRANSLATORS: %s is the error message returned by Hamlib.
                     wxMessageBox(wxString::Format(_("Couldn't connect to Radio with Hamlib (%s). Make sure the Hamlib serial Device, Rate, and Params match your radio"), error),
                         _("Error"), wxOK | wxICON_ERROR, this);
-                    cv->notify_one();
+                    finish();
                 });
             };
             hamlib->onRigConnected += [=](IRigController*) { hamlib->ptt(true); };
             hamlib->onPttChange += [=](IRigController*, bool state) {
                 if (state) { std::this_thread::sleep_for(1s); hamlib->ptt(false); }
-                else        { cv->notify_one(); }
+                else        { finish(); }
             };
 
             std::thread([=, this]() {
                 hamlib->connect();
                 std::unique_lock<std::mutex> lk(*mtx);
-                cv->wait(lk);
+                cv->wait(lk, [finished]() { return *finished; });
                 hamlib->disconnect();
                 CallAfter([this]() { isTesting_ = false; updateRadioControlState(); });
             }).detach();
@@ -2769,14 +2781,14 @@ void OptionsDlg::OnTestPTT(wxCommandEvent&)
                     wxMessageBox(wxString::Format(_("Couldn't open serial port %s (%s). This is likely due to not having permission to access the chosen port."), ctrlport, error),
                         _("Error"), wxOK | wxICON_ERROR, this);
                 });
-                cv->notify_one();
+                finish();
             };
-            serialPort->onRigConnected += [=](IRigController*) { cv->notify_one(); };
+            serialPort->onRigConnected += [=](IRigController*) { finish(); };
 
             std::thread([=, this]() {
                 serialPort->connect();
                 std::unique_lock<std::mutex> lk(*mtx);
-                cv->wait(lk);
+                cv->wait(lk, [finished]() { return *finished; });
                 if (serialPort->isConnected()) {
                     serialPort->ptt(true);
                     wxSleep(1);
@@ -2800,19 +2812,19 @@ void OptionsDlg::OnTestPTT(wxCommandEvent&)
                 // TRANSLATORS: %s is the error message returned by OmniRig.
                 wxMessageBox(wxString::Format(_("Couldn't connect to Radio with OmniRig (%s). Make sure the rig ID and OmniRig configuration is correct."), error),
                     _("Error"), wxOK | wxICON_ERROR, this);
-                cv->notify_one();
+                finish();
             });
         };
         omniRig->onRigConnected += [=](IRigController*) { omniRig->ptt(true); };
         omniRig->onPttChange += [=](IRigController*, bool state) {
             if (state) { std::this_thread::sleep_for(1s); omniRig->ptt(false); }
-            else        { cv->notify_one(); }
+            else        { finish(); }
         };
 
         std::thread([=, this]() {
             omniRig->connect();
             std::unique_lock<std::mutex> lk(*mtx);
-            cv->wait(lk);
+            cv->wait(lk, [finished]() { return *finished; });
             omniRig->disconnect();
             CallAfter([this]() { isTesting_ = false; updateRadioControlState(); });
         }).detach();

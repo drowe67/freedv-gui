@@ -8,8 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_serial_ptt.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only, and needs a C compiler: see freedvtest/serial.py for how
-serial ports are stood in for.
+running, on Linux or macOS, and needs a C compiler: see freedvtest/serial.py
+for how serial ports are stood in for.
 """
 
 import os
@@ -21,6 +21,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.serial import SerialPorts
 from test_main_window import (audio_devices, check, check_equal, quit_and_check_log, settings, start_modem,
                               stop_modem, transmitting, wait_for_transmit)
@@ -339,7 +340,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

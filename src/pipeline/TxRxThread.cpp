@@ -91,6 +91,7 @@ extern std::atomic<bool> g_tx;
 extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
+extern std::atomic<bool> g_txOutputStarted;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileFromRadio;
@@ -787,6 +788,10 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
     {
         cbData->outfifo1->reset();
         cbData->infifo2->reset();
+
+        // Nothing's ready for the radio's sound card any more, so it waits
+        // for the start of the next transmission as it did for this one's.
+        g_txOutputStarted.store(false, std::memory_order_release);
     }
     else
     {
@@ -880,11 +885,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-            // infifo2 is written to by another sound card so it may
-            // over or underflow, but we don't really care.  It will
-            // just result in a short interruption in audio being fed
-            // to codec2_enc, possibly making a click every now and
-            // again in the decoded audio at the other end.
+            // infifo2 is written to by another sound card, so it may
+            // have less than a frame for us (in which case we wait for
+            // the rest: see below) or have overflowed, which makes a
+            // click in the decoded audio at the other end.
 
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
@@ -952,11 +956,14 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 pendingEooCount_ = 0;
             }
 
-            if (nread != 0 && (unsigned)cbData->outfifo1->numUsed() >= nsam_outfifo_target)
+            if (nread != 0)
             {
-                // Out of mic audio for now, but there's enough already queued
-                // to cover a late wakeup. Wait for more mic audio rather than
-                // adding more latency.
+                // Less than a frame from the microphone so far: wait for the
+                // rest of it rather than sending silence in its place, which
+                // would go out as a gap in what's being said. (Enough is
+                // made ready before the radio's sound card is given any of a
+                // transmission for it not to go short meanwhile: see
+                // TxOutputStart.h.)
 #if defined(ENABLE_PROCESSING_STATS)
                 processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -984,11 +991,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
-
-            if (nread != 0)
-            {
-                break;
-            }
         }
 
         // A quiet mic during the deliberate end-of-transmission tail is

@@ -30,6 +30,10 @@ def find_rigctld():
     return None
 
 
+class _NoReply(RigctldError):
+    pass
+
+
 class Rigctld:
     """Runs rigctld for the duration of a "with" block."""
 
@@ -89,11 +93,13 @@ class Rigctld:
     def command(self, text):
         """Sends rigctld a command of its own (see its manual), separately
         from FreeDV's connection to it, and returns the lines of its reply."""
-        # It doesn't always take kindly to a second visitor straight away.
+        # It doesn't always take kindly to a second visitor straight away,
+        # and can be slow to answer while FreeDV's asking it things too (its
+        # stand-in radio takes its time over each question).
         for attempt in range(5):
             try:
                 return self._command(text)
-            except OSError:
+            except (OSError, _NoReply):
                 if attempt == 4:
                     raise
                 time.sleep(0.3)
@@ -101,7 +107,7 @@ class Rigctld:
     def _command(self, text):
         with socket.create_connection(("127.0.0.1", self.port), timeout=5) as connection:
             connection.sendall(text.encode() + b"\n")
-            connection.settimeout(1)
+            connection.settimeout(3)
             reply = b""
             try:
                 while not reply.endswith(b"\n") or (text[0].isupper() and b"RPRT" not in reply):
@@ -116,7 +122,7 @@ class Rigctld:
                 pass
         lines = reply.decode(errors="replace").split()
         if not lines:
-            raise RigctldError("No reply from rigctld to '%s'" % text)
+            raise _NoReply("No reply from rigctld to '%s'" % text)
         if lines[0] == "RPRT" and lines[-1] != "0":
             raise RigctldError("rigctld replied '%s' to '%s'" % (" ".join(lines), text))
         return lines

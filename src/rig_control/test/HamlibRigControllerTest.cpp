@@ -890,6 +890,67 @@ bool followsFrequencyChangedOnRadio()
     return f.radioReports(14236000, IRigFrequencyController::USB) && f.errors.empty();
 }
 
+bool tellsWhenAReportedFrequencyPredatesTheOneAskedFor()
+{
+    Fixture f;
+    if (!f.connect()) return false;
+    f.controller.setFrequency(14236000);
+    f.controller.setMode(IRigFrequencyController::USB);
+    if (!f.radioReports(14236000, IRigFrequencyController::USB)) return false;
+
+    // Nothing's been asked for that hasn't been seen.
+    if (f.controller.isFrequencyChangePending(14236000) || f.controller.isFrequencyChangePending(7177000))
+    {
+        std::cout << "[a change was pending with none asked for] ";
+        return false;
+    }
+
+    // Once a new frequency's been asked for, the old one (read from the
+    // radio before the change was made) is out of date...
+    f.controller.setFrequency(7177000);
+    if (!f.controller.isFrequencyChangePending(14236000))
+    {
+        std::cout << "[the frequency before the one asked for was taken as current] ";
+        return false;
+    }
+
+    // ...until the radio's seen to be on the new one, after which anything
+    // goes again (the operator turning the dial, say).
+    if (f.controller.isFrequencyChangePending(7177000))
+    {
+        std::cout << "[the frequency asked for was taken as out of date] ";
+        return false;
+    }
+    if (f.controller.isFrequencyChangePending(14236000))
+    {
+        std::cout << "[a change was still pending once the radio was on the frequency asked for] ";
+        return false;
+    }
+    return f.radioReports(7177000, IRigFrequencyController::USB) && f.errors.empty();
+}
+
+bool stopsWaitingForAFrequencyTheRadioNeverReports()
+{
+    Fixture f;
+    if (!f.connect()) return false;
+
+    // A radio that can't be tuned exactly where it was asked to be, or is
+    // tuned elsewhere straight away, isn't ignored for long.
+    f.controller.setFrequency(14236000);
+    if (!f.controller.isFrequencyChangePending(14240000))
+    {
+        std::cout << "[no change was pending just after asking for one] ";
+        return false;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(3500));
+    if (f.controller.isFrequencyChangePending(14240000))
+    {
+        std::cout << "[still waiting for the frequency asked for after 3.5 s] ";
+        return false;
+    }
+    return true;
+}
+
 bool usesWhicheverVfoIsSelected()
 {
     Fixture f;
@@ -1394,6 +1455,8 @@ int main()
     executeTestCase("reportsUnknownForOtherModes", reportsUnknownForOtherModes);
     executeTestCase("ignoresRequestForCurrentFrequency", ignoresRequestForCurrentFrequency);
     executeTestCase("followsFrequencyChangedOnRadio", followsFrequencyChangedOnRadio);
+    executeTestCase("tellsWhenAReportedFrequencyPredatesTheOneAskedFor", tellsWhenAReportedFrequencyPredatesTheOneAskedFor);
+    executeTestCase("stopsWaitingForAFrequencyTheRadioNeverReports", stopsWaitingForAFrequencyTheRadioNeverReports);
     executeTestCase("usesWhicheverVfoIsSelected", usesWhicheverVfoIsSelected);
     executeTestCase("leavesMemoryChannelToChangeFrequency", leavesMemoryChannelToChangeFrequency);
     executeTestCase("ignoresRequestsWhenNotConnected", ignoresRequestsWhenNotConnected);
