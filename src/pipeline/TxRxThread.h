@@ -158,6 +158,10 @@ private:
     std::unique_ptr<short[]> inputSamples_;
     std::unique_ptr<short[]> inputSamplesZeros_;
     bool deferReset_;
+    // Whether the radio's sound card has been left without a block since the
+    // microphone last gave a whole frame; see txProcessing_().
+    bool txOutputStarved_ = false;
+    int txOutputUnderruns_ = 0;
     std::thread thread_;
 
     Semaphore readySem_;

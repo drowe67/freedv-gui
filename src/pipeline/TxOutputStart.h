@@ -38,6 +38,31 @@
 // is two RADE modem frames: one to cover how it's made, and one to spare.
 constexpr int TX_OUTPUT_START_MS = 240;
 
+// How full the FIFO has to be for the radio's sound card to be given a whole
+// block every time it asks: TX_OUTPUT_START_MS worth of samples, or half the
+// FIFO if that's more than it can hold.
+//
+// The thread making the transmission holds the FIFO at this level while the
+// microphone is falling behind (see txProcessing_() in TxRxThread.cpp), which
+// is how a transmission that has started is kept going: a sound card given
+// nothing because nothing was ready is a carrier that's gone down, and that
+// costs the other station the signal altogether rather than a word or two.
+inline int txOutputStartLevel(int capacity, int sampleRate) FREEDV_NONBLOCKING
+{
+    return std::min((int)((long)TX_OUTPUT_START_MS * sampleRate / 1000), capacity / 2);
+}
+
+// The most the radio's sound card can be given in one go. A card that asks
+// for more than the transmitter can be relied on to have ready is given that
+// many and silence for the rest of its block: it can never be given more --
+// the FIFO is filled a modem frame at a time and never right to the top --
+// and being given nothing every time it asks is a transmission that never
+// starts.
+inline int txOutputWanted(int capacity, int sampleRate, int asked) FREEDV_NONBLOCKING
+{
+    return std::min(asked, txOutputStartLevel(capacity, sampleRate));
+}
+
 enum class TxOutput
 {
     Waiting,    // the transmission hasn't started going out yet: silence
@@ -55,8 +80,7 @@ inline TxOutput txOutputFor(int used, int capacity, int wanted, int sampleRate, 
 {
     if (!started.load(std::memory_order_acquire))
     {
-        // (Never more than the FIFO can be expected to reach.)
-        int threshold = std::min((int)((long)TX_OUTPUT_START_MS * sampleRate / 1000), capacity / 2);
+        int threshold = txOutputStartLevel(capacity, sampleRate);
         if (used < threshold && !ending)
         {
             return TxOutput::Waiting;

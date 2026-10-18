@@ -4287,7 +4287,12 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     short* audioData = static_cast<short*>(data);
     short* tmpOutput = cbData->tmpWriteTxBuffer_.get();
 
-    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+    // A sound card that asks for more than the transmitter can be relied on
+    // to have ready is given that many, and silence for the rest of its
+    // block: it can never be given more than that, and being given nothing
+    // every time it asks is a transmission that never starts.
+    auto wanted = (size_t)txOutputWanted(cbData->outfifo1->capacity(), dev.getSampleRate(), (int)size);
+    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), wanted);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
 
     // A transmission isn't given to the sound card until enough of it is
@@ -4296,11 +4301,11 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     if (!isTuning)
     {
         output = txOutputFor(
-            cbData->outfifo1->numUsed(), cbData->outfifo1->capacity(), (int)size, dev.getSampleRate(),
+            cbData->outfifo1->numUsed(), cbData->outfifo1->capacity(), (int)wanted, dev.getSampleRate(),
             endingTx.load(std::memory_order_acquire), g_txOutputStarted);
     }
 
-    if (output != TxOutput::Waiting && toRead < size && !isTuning)
+    if (output != TxOutput::Waiting && toRead < wanted && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
     }
@@ -4314,7 +4319,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
             toRead = 0;
         }
 
-        if (toRead >= size && cbData->outfifo1->read(tmpOutput, size) != 0)
+        if (toRead >= wanted && cbData->outfifo1->read(tmpOutput, wanted) != 0)
         {
             // Raced with a concurrent reset(); nothing was actually copied
             // into tmpOutput, so fall back to silence below instead of

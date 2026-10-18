@@ -38,6 +38,8 @@
 using namespace std::chrono_literals;
 
 #include "freedv_sanitizers.h"
+#include "TxOutputStart.h"
+
 
 // WebRTC uses FS, which is defined in defines.h. Thus, it needs to be included
 // first.
@@ -94,6 +96,7 @@ extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<bool> g_txOutputStarted;
+extern std::atomic<int> g_outfifo1_empty;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<float> g_TxFreqOffsetHz;
@@ -866,6 +869,26 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         int             nout;
 
+        // MainFrame::OnTxOutAudioData_ counts every time the radio's sound
+        // card is given less than it asked for. That's this thread running
+        // dry: a microphone that delivers less than real time -- as
+        // PulseAudio/pipewire devices do between the bursts they send, or a
+        // 44.1 kHz card read as 48 kHz -- would otherwise stop the
+        // transmission here altogether, the carrier going down for as long as
+        // the shortfall lasts. Until the microphone gives a whole frame again,
+        // fill the FIFO back up to the level the sound card needs to keep
+        // going, with frames of silence.
+        int underruns = g_outfifo1_empty.load(std::memory_order_relaxed);
+        if (underruns > txOutputUnderruns_)
+        {
+            txOutputStarved_ = true;
+        }
+        txOutputUnderruns_ = underruns;
+
+        int startLevel = txOutputStartLevel(cbData->outfifo1->capacity(), outputSampleRate_);
+        int keepaliveFrames = std::max(
+            0, (startLevel - cbData->outfifo1->numUsed() + (int)nsam_one_modem_frame - 1) / (int)nsam_one_modem_frame);
+
         while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -886,6 +909,12 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             if (nread != 0)
             {
                 inputPtr = inputSamplesZeros_.get();
+            }
+            else
+            {
+                // The microphone is keeping up again, so there's no need to
+                // fill in with silence any more.
+                txOutputStarved_ = false;
             }
             if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
@@ -935,6 +964,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                         }
                     }
                 }
+                txOutputStarved_ = false;
                 break;
             }
             else
@@ -948,11 +978,16 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             {
                 // Less than a frame from the microphone so far: wait for the
                 // rest of it rather than sending silence in its place, which
-                // would go out as a gap in what's being said. (Enough is
-                // made ready before the radio's sound card is given any of a
-                // transmission for it not to go short meanwhile: see
-                // TxOutputStart.h.)
-                break;
+                // would go out as a gap in what's being said -- unless the
+                // radio's sound card has already been left without a block
+                // (see above), in which case send a frame of silence (inputPtr
+                // was pointed at zeros above) until the FIFO is back at the
+                // level it needs, and no further.
+                if (!txOutputStarved_ || cbData->outfifo1->numUsed() >= startLevel || keepaliveFrames == 0)
+                {
+                    break;
+                }
+                keepaliveFrames--;
             }
 
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
