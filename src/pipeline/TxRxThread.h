@@ -94,6 +94,7 @@ public:
         , pendingEooCount_(0)
         , helper_(std::move(helper))
         , deferReset_(false)
+        , reachedMinimumTxInput_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -158,14 +159,12 @@ private:
     std::unique_ptr<short[]> inputSamples_;
     std::unique_ptr<short[]> inputSamplesZeros_;
     bool deferReset_;
-    // Whether the radio's sound card has been left without a block since the
-    // microphone last gave a whole frame; see txProcessing_().
-    bool txOutputStarved_ = false;
-    int txOutputUnderruns_ = 0;
     std::thread thread_;
 
     Semaphore readySem_;
     Semaphore startSem_;
+
+    bool reachedMinimumTxInput_;
 
 #if defined(ENABLE_PROCESSING_STATS)
     // Tracks min/max/mean/stdev plus a histogram for one timed interval.

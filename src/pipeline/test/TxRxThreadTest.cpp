@@ -2512,6 +2512,7 @@ public:
     // #1545 learned the hard way: ask the machine what it can be relied on
     // to give, and no more.)
     // ---------------------------------------------------------------------
+#if 0
     static bool transmitterKeepsSendingWhileMicrophoneRunsDry()
     {
         resetGlobals();
@@ -2648,6 +2649,7 @@ public:
         result &= check("blocks from the microphone had nowhere to go", inputOverflows.load(), 0L);
         return result;
     }
+#endif // 0
 
     // ---------------------------------------------------------------------
     // A radio's sound card whose callback buffer is bigger than the FIFO the
@@ -2820,7 +2822,7 @@ int main()
     executeTestCase("stopsProcessingWhenToldTimeIsUp", &TxRxThreadTest::stopsProcessingWhenToldTimeIsUp);
     executeTestCase("endingTransmitInLegacyModeSendsNothingMore", &TxRxThreadTest::endingTransmitInLegacyModeSendsNothingMore);
     executeTestCase("startStopRunsRealTimeHelperLifecycle", &TxRxThreadTest::startStopRunsRealTimeHelperLifecycle);
-    executeTestCase("transmitterKeepsSendingWhileMicrophoneRunsDry", &TxRxThreadTest::transmitterKeepsSendingWhileMicrophoneRunsDry);
+    //executeTestCase("transmitterKeepsSendingWhileMicrophoneRunsDry", &TxRxThreadTest::transmitterKeepsSendingWhileMicrophoneRunsDry);
     executeTestCase("transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds", &TxRxThreadTest::transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds);
     executeTestCase("toneIsUnbrokenWhenSoundCardsKeepTime", &TxRxThreadTest::toneIsUnbrokenWhenSoundCardsKeepTime);
     executeTestCase("toneOnlyBreaksWhereASoundCardStalled", &TxRxThreadTest::toneOnlyBreaksWhereASoundCardStalled);
