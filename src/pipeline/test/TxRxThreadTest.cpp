@@ -253,7 +253,12 @@ public:
 };
 
 // IRealtimeHelper for a thread that runs on a clock of its own: it takes a
-// turn, sleeps for the length of one, and always has time for the next.
+// turn, waits out the rest of one, and always has time for the next. The
+// wait follows what the app's real helpers do (MinimalRealtimeHelper,
+// MacAudioDevice): a cycle whose processing already ran past its turn
+// doesn't sleep at all, and a fastMode turn waits only half a turn --
+// when the transmitter's FIFO is low the helper tries to refill at twice
+// the rate instead of sticking to its usual cadence.
 class ClockRealtimeHelper : public IRealtimeHelper
 {
 public:
@@ -264,8 +269,36 @@ public:
     }
 
     void setHelperRealTime() FREEDV_NONBLOCKING override {}
-    void startRealTimeWork() FREEDV_NONBLOCKING override { turns.fetch_add(1, std::memory_order_relaxed); }
-    void stopRealTimeWork(bool /* fastMode */) FREEDV_NONBLOCKING override { std::this_thread::sleep_for(turn_); }
+    void startRealTimeWork() FREEDV_NONBLOCKING override
+    {
+        turns.fetch_add(1, std::memory_order_relaxed);
+        startTime_ = std::chrono::steady_clock::now();
+    }
+    // A clock's whole job is to block until the next turn, and sleep_for is
+    // a nanosleep. Called from the annotated runOnce_ loop under RTSan, that
+    // blocking is exactly what RealtimeSanitizer is there to catch, so it is
+    // declared with the project's sanctioned disable/enable pair (see
+    // RADEReceiveStep.cpp for the same pattern in the backend).
+    void stopRealTimeWork(bool fastMode) override
+    {
+        auto period = fastMode ? turn_ / 2 : turn_;
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime_);
+        auto wait = period - elapsed - overshoot_;
+        if (wait <= std::chrono::milliseconds(0))
+        {
+            overshoot_ = std::chrono::milliseconds(0);
+            return; // this cycle already spent its turn's time
+        }
+        auto before = std::chrono::steady_clock::now();
+        FREEDV_BEGIN_REALTIME_UNSAFE
+        std::this_thread::sleep_for(wait);
+        FREEDV_END_REALTIME_UNSAFE
+        overshoot_ = std::max(
+            std::chrono::milliseconds(0),
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - before) - wait);
+    }
     void clearHelperRealTime() FREEDV_NONBLOCKING override {}
     bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
 
@@ -273,6 +306,8 @@ public:
 
 private:
     std::chrono::milliseconds turn_;
+    std::chrono::steady_clock::time_point startTime_{};
+    std::chrono::milliseconds overshoot_{0};
 };
 
 // Tone getters: realtime_fp only accepts raw function pointers, so these are
@@ -2468,13 +2503,21 @@ public:
     // stop: the radio's sound card is given a whole block every time it asks,
     // because a block of nothing is the carrier going down and the other
     // station losing the signal altogether.
+    //
+    // Every clock in the test is a wall clock, so what keeping up costs the
+    // machine is as much a part of it as what FreeDV does -- at 48 kHz it
+    // asked for close to real-time throughput, which the CI runners can't be
+    // relied on to give. The cards run at 8 kHz, the rate a rig's sound card
+    // works at, for a sixth of that cost. (What the recording test fixed for
+    // #1545 learned the hard way: ask the machine what it can be relied on
+    // to give, and no more.)
     // ---------------------------------------------------------------------
     static bool transmitterKeepsSendingWhileMicrophoneRunsDry()
     {
         resetGlobals();
         g_tx = true;
 
-        constexpr int CARD_RATE = 48000;
+        constexpr int CARD_RATE = 8000; // what the radio's sound card runs at
         constexpr int TURN_MS = 10;
         constexpr int BLOCK = CARD_RATE * TURN_MS / 1000;
         constexpr int TURNS = 200;
@@ -2496,6 +2539,7 @@ public:
         std::thread mic([&]() {
             std::vector<short> block(BLOCK);
             long sent = 0;
+            auto nextTurn = std::chrono::steady_clock::now();
             for (int turn = 0; turn < MIC_TURNS; turn++)
             {
                 for (int i = 0; i < BLOCK; i++)
@@ -2507,7 +2551,11 @@ public:
                 {
                     inputOverflows.fetch_add(1, std::memory_order_relaxed);
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(TURN_MS));
+                // Microphone audio arrives at real time: each turn is lined
+                // up with the wall clock, and a late wake is caught up on,
+                // not carried along by the delay.
+                nextTurn += std::chrono::milliseconds(TURN_MS);
+                std::this_thread::sleep_until(nextTurn);
             }
         });
 
@@ -2525,6 +2573,7 @@ public:
 
         std::thread radioCard([&]() {
             std::vector<short> block(BLOCK);
+            auto nextTurn = std::chrono::steady_clock::now();
             for (int turn = 0; turn < TURNS; turn++)
             {
                 auto output = txOutputFor(
@@ -2546,7 +2595,12 @@ public:
                     radio.peak = std::max(radio.peak, turnPeak);
                     if (turnPeak > 1000) radio.withSignal++;
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(TURN_MS));
+                // The sound card runs at hardware speed: it asks at the same
+                // rate whether the machine is idle or slammed, so its turns
+                // are lined up with the wall clock and a late wake just
+                // means the next turn comes early, draining the catch-up.
+                nextTurn += std::chrono::milliseconds(TURN_MS);
+                std::this_thread::sleep_until(nextTurn);
             }
         });
 
@@ -2601,19 +2655,23 @@ public:
     // if "not a whole block" means "nothing" then the transmission never
     // starts at all. It has to be given what there is, and silence for the
     // rest of its block.
+    //
+    // The card asks in real time, so its rate is what the test asks of the
+    // machine: 24 kHz, a rate the rig's sound card actually runs at, costs
+    // it a quarter of what the same ask at 48 kHz did.
     // ---------------------------------------------------------------------
     static bool transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds()
     {
         resetGlobals();
         g_tx = true;
 
-        constexpr int CARD_RATE = 48000;
+        constexpr int CARD_RATE = 24000; // what the radio's sound card runs at
         constexpr int TURN_MS = 10;
         constexpr int BLOCK = CARD_RATE * TURN_MS / 1000;
-        constexpr int RADIO_MS = 625;                       // 30000 samples: more than outfifo1 can ever hold
+        constexpr int RADIO_MS = 2000;                       // 48000 samples: more than outfifo1 can ever hold
         constexpr int RADIO_BLOCK = CARD_RATE * RADIO_MS / 1000;
-        constexpr int RADIO_TURNS = 8;
-        constexpr int MIC_TURNS = RADIO_TURNS * RADIO_MS / TURN_MS;
+        constexpr int RADIO_TURNS = 4;                       // two asks may land before priming finishes, leaving it four seconds of real time
+        constexpr int MIC_TURNS = (5 * CARD_RATE) / BLOCK;   // five seconds of microphone: the full room of its FIFO, no more
 
         SoundCardFifos fifos(CARD_RATE);
 
@@ -2629,6 +2687,7 @@ public:
         std::thread mic([&]() {
             std::vector<short> block(BLOCK);
             long sent = 0;
+            auto nextTurn = std::chrono::steady_clock::now();
             for (int turn = 0; turn < MIC_TURNS; turn++)
             {
                 for (int i = 0; i < BLOCK; i++)
@@ -2637,7 +2696,9 @@ public:
                 }
                 sent += BLOCK;
                 g_rxUserdata->infifo2->write(block.data(), BLOCK);
-                std::this_thread::sleep_for(std::chrono::milliseconds(TURN_MS));
+                // Microphone audio arrives at real time, deadline by deadline.
+                nextTurn += std::chrono::milliseconds(TURN_MS);
+                std::this_thread::sleep_until(nextTurn);
             }
         });
 
@@ -2654,6 +2715,7 @@ public:
 
         std::thread radioCard([&]() {
             std::vector<short> block(RADIO_BLOCK);
+            auto nextTurn = std::chrono::steady_clock::now();
             for (int turn = 0; turn < RADIO_TURNS; turn++)
             {
                 int wanted = txOutputWanted(g_rxUserdata->outfifo1->capacity(), CARD_RATE, RADIO_BLOCK);
@@ -2676,7 +2738,10 @@ public:
                     radio.peak = std::max(radio.peak, turnPeak);
                     if (turnPeak > 1000) radio.withSignal++;
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(RADIO_MS));
+                // The sound card asks at hardware pace regardless of how
+                // busy the machine is: turns are deadline-driven.
+                nextTurn += std::chrono::milliseconds(RADIO_MS);
+                std::this_thread::sleep_until(nextTurn);
             }
         });
 
@@ -2694,9 +2759,11 @@ public:
 
         bool result = true;
 
-        // Every ask but the first (which lands while the transmission is
-        // still being primed) was given the most it could be given, rather
-        // than being told there wasn't a whole block and given nothing.
+        // The asks that landed after the transmission was primed were given
+        // the most they could be given, rather than being told there wasn't
+        // a whole block and given nothing. The first lands while it's still
+        // being primed; a busy machine can keep the priming running into
+        // the second ask as well, which is what the allowance of two is for.
         if (radio.asked < RADIO_TURNS - 2)
         {
             std::cout << "[" << RADIO_TURNS - radio.asked << " of " << RADIO_TURNS
