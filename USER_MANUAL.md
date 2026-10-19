@@ -21,7 +21,7 @@ While it may be possible to execute FreeDV on additional platforms and distribut
 (especially ones similar to ones currently supported), this is not guaranteed. Any 
 bugfixes required for an unsupported platform may be deferred or rejected, especially 
 if there is impact to supported platforms. Requests for official support of new platforms 
-should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
+should go through our existing [Feature Request process](https://github.com/freedv/freedv-gui/issues/new?template=feature_request.yml).
 
 ## Easy Setup
 
@@ -216,7 +216,7 @@ on platform:
 |----------|--------------------------------------------------------------|
 | Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
 | Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
-| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
+| macOS    | See https://github.com/freedv/freedv-gui/tree/master/wav    |
 
 To play these files, first select a FreeDV mode and press Start.  Then 
 choose a file using "Tools - Start/Stop Play File From Radio".  You should 
@@ -1079,7 +1079,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## Earlier than V2.3.0
 
-See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
+See [this](https://github.com/freedv/freedv-gui/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
 
 # References
 
