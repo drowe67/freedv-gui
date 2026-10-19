@@ -16,7 +16,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   libwxgtk3.2-dev libhamlib-dev libasound2-dev libao-dev \
   libgsm1-dev libsndfile1-dev cmake module-assistant build-essential \
   autoconf automake libtool libebur128-dev libssl-dev
-  $ git clone https://github.com/drowe67/freedv-gui.git
+  $ git clone https://github.com/freedv/freedv-gui.git
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- recommended and the default) 
@@ -35,7 +35,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo dnf install cmake wxGTK3-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel gcc-c++ sox autoconf automake libtool libebur128-devel openssl-devel
-  $ git clone https://github.com/drowe67/freedv-gui.git
+  $ git clone https://github.com/freedv/freedv-gui.git
   $ cd freedv-gui
 
   (if using pipewire/PulseAudio -- default and recommended)
