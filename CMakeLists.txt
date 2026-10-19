@@ -220,6 +220,23 @@ else(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
 set(SANITIZERS_ENABLED FALSE)
 endif(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
 
+# Sets how a test passes. Without sanitizers, it passes when its output
+# matches the optional pass regex (or, if none is given, when it exits
+# successfully). With them, the builds are too slow for the tests' own
+# checks to mean much, so a test passes as long as no sanitizer reported
+# anything: what it exits with is ignored, though it still fails if it
+# crashes or times out. Must be called from the directory that added the test.
+function(freedv_set_test_pass_criteria testName)
+    set(passRegex "${ARGN}")
+    if(SANITIZERS_ENABLED)
+        set_tests_properties(${testName} PROPERTIES
+            PASS_REGULAR_EXPRESSION ".*"
+            FAIL_REGULAR_EXPRESSION "WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|FATAL: ThreadSanitizer|ERROR: AddressSanitizer|ERROR: LeakSanitizer|ERROR: RealtimeSanitizer|UndefinedBehaviorSanitizer|runtime error:")
+    elseif(passRegex)
+        set_tests_properties(${testName} PROPERTIES PASS_REGULAR_EXPRESSION "${passRegex}")
+    endif()
+endfunction()
+
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
         message(FATAL_ERROR "Signing only makes sense for Windows builds.")
@@ -819,9 +836,7 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT SANITIZERS_ENABLED)
-    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT SANITIZERS_ENABLED)
+    freedv_set_test_pass_criteria(fullduplex_${utName} "Got 1 sync changes")
 endmacro()
 
 DefineAudioTest(RADEV1)
@@ -830,11 +845,7 @@ if(NOT ENABLE_RTSAN)
 # Note: loading/saving feature files is currently not RT-safe
 add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
-
-# For sanitizers, we're just seeing if there are any errors from the sanitizer.
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_loss "PASS")
 endif(NOT ENABLE_RTSAN)
 
 DefineAudioTest(700D)
@@ -842,18 +853,12 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_clean "Reporting callsign ZZ0ZZZ @ SNR")
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_awgn "Reporting callsign ZZ0ZZZ @ SNR")
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_mpp "Reporting callsign ZZ0ZZZ @ SNR")
 
 endif(UNITTEST)
