@@ -249,8 +249,10 @@ jobs:
   #
   # They're built both without and with sanitizers, the latter in the same
   # combinations as build-sanitizer above (llvm-mingw has no ASan for aarch64).
-  # Unlike the audio tests, these don't depend on timing, so a sanitizer
-  # finding fails the job outright.
+  # Some of them (TxRxThreadTest) depend on timing, which the sanitizer builds
+  # are too slow for, so as with ctest on macOS/Linux the sanitizer variants
+  # fail only on a sanitizer report, a crash or a timeout (see -SanitizerMode
+  # in RunUnitTests.ps1).
   build-unit-tests:
     needs: [scope]
     if: ${{ needs.scope.outputs.full == 'true' }}
@@ -390,7 +392,7 @@ jobs:
       shell: pwsh
       working-directory: ${{github.workspace}}\unit_tests
       run: |
-          .\RunUnitTests.ps1
+          .\RunUnitTests.ps1 ${{ matrix.variant != 'plain' && '-SanitizerMode' || '' }}
 
   # The GUI tests (test/gui), with the two virtual audio cables that the
   # other tests use: each is shared, one for the radio's input and output and

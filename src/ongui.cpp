@@ -296,7 +296,7 @@ void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
-    LaunchBrowser("https://github.com/drowe67/freedv-gui/releases");
+    LaunchBrowser("https://github.com/freedv/freedv-gui/releases");
 }
 
 //-------------------------------------------------------------------------
@@ -312,7 +312,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpManual( wxCommandEvent& )
 {
-    LaunchBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
+    LaunchBrowser("https://github.com/freedv/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
 
 //-------------------------------------------------------------------------
