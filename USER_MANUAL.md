@@ -1019,7 +1019,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
     * Add tests of whole transmissions through the TX/RX threads without sound cards. (PR #1567)
-3. Other:
+3. Documentation:
+    * Update documentation to reflect new repo URL. (PR #1569)
+4. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)
 
