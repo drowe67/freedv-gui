@@ -2063,7 +2063,26 @@ public:
                 long shortfallBefore = result.tx.outputShortfallSamples;
                 auto sent = soundCardsTurn(
                     g_rxUserdata->infifo2, g_rxUserdata->outfifo1, samples, block,
-                    [&]() { thread.txProcessing_(&helper); }, result.tx);
+                    [&]() {
+                        thread.txProcessing_(&helper);
+
+                        // The file's read by a thread of its own, which in
+                        // real life has a whole block's time before the
+                        // card asks again; here the next ask comes as soon
+                        // as the machine gets to it, sooner than that
+                        // thread can be relied on to keep up on a slow or
+                        // busy machine (or under a sanitizer). So once the
+                        // transmission's going, give it the time it would
+                        // have had before the card takes its block.
+                        if (!playedToMic || signal.size() < (size_t)(sampleRate * 30 / 100)) return;
+                        auto giveUpAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+                        while (g_rxUserdata->outfifo1->numUsed() < block && micInDone.load() == 0 &&
+                               std::chrono::steady_clock::now() < giveUpAt)
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            thread.txProcessing_(&helper);
+                        }
+                    }, result.tx);
                 // Shortfalls while the thread is still priming just mean the
                 // card's ask ran ahead of the production backlog; after that,
                 // only ones big enough to put a hole in the signal count —
@@ -2082,8 +2101,8 @@ public:
 
                 if (playedToMic)
                 {
-                    // The file's read by a thread of its own; let it keep up,
-                    // as it has all the time it needs when this is for real.
+                    // ...and some time between turns as well, as the file
+                    // thread has when this is for real.
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }

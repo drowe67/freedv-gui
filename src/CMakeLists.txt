@@ -47,6 +47,7 @@ macro(DefineFreeDVUnitTest prefix utName)
         PROPERTIES BUILD_RPATH "${CMAKE_BUILD_RPATH};${CODEC2_BUILD_DIR}/src;${rade_BINARY_DIR}/src")
 
     add_test(NAME ${prefix}_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+    freedv_set_test_pass_criteria(${prefix}_${utName})
 endmacro()
 
 # Sets up a unit test that uses wxWidgets when wxWidgets is being built as part
