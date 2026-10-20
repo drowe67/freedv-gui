@@ -127,7 +127,7 @@ void MainFrame::OnToolsSetupWizard(wxCommandEvent&)
 
 void MainFrame::OnToolsSetupWizardUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -139,7 +139,7 @@ void MainFrame::OnToolsFilter(wxCommandEvent& event)
     
     if (m_filterDialog == nullptr)
     {
-         m_filterDialog = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
+         m_filterDialog = new FilterDlg(NULL, m_RxRunning.load(std::memory_order_acquire), &m_newMicInFilter, &m_newSpkOutFilter);
     }
     else
     {
@@ -268,7 +268,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
 
         // Initialize FreeDV Reporter if required.
-        if (!m_RxRunning)
+        if (!m_RxRunning.load(std::memory_order_acquire))
         {
             initializeFreeDVReporter_();
         }
@@ -304,7 +304,7 @@ void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -711,7 +711,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -995,7 +995,7 @@ int MainApp::FilterEvent(wxEvent& event)
 
             // m_pttKeyRequireRelease_ blocks a key held through a forced TX stop
             // (e.g. TOT) from immediately restarting TX -- see main.h.
-            if (frame->m_RxRunning && !tuneActive && !frame->m_pttKeyRequireRelease_ &&
+            if (frame->m_RxRunning.load(std::memory_order_acquire) && !tuneActive && !frame->m_pttKeyRequireRelease_ &&
                 (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
@@ -1037,7 +1037,7 @@ int MainApp::FilterEvent(wxEvent& event)
                 frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() &&
                 !frame->m_reporterDialog->isTextMessageFieldInFocus();
             bool totWarningActive = frame->m_totWarningDialog_ != nullptr && frame->m_totWarningDialog_->IsActive();
-            if (frame->m_RxRunning && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
+            if (frame->m_RxRunning.load(std::memory_order_acquire) && (mainWindowActive || totWarningActive || reporterActiveButNotUpdatingTextMessage) &&
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly() &&
                 wxGetApp().appConfiguration.pttMomentaryMode) {
 
@@ -1907,8 +1907,6 @@ void MainFrame::OnLogQSO(wxCommandEvent&)
     logDialog->Destroy();
 }
 
-// Force manual resync, just in case demod gets stuck on false sync
-
 // Deselects item on right-click
 void MainFrame::OnRightClickCallsignList(wxMouseEvent&)
 {
@@ -1963,7 +1961,7 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
 
 void MainFrame::resetStats_()
 {
-    if (m_RxRunning)  {
+    if (m_RxRunning.load(std::memory_order_acquire))  {
         g_resyncs = 0;
         int i;
         for(i=0; i<2*g_Nc; i++) {
@@ -2181,7 +2179,7 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 
 void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 {
-    if (m_RxRunning && !g_analog.load(std::memory_order_relaxed) && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+    if (m_RxRunning.load(std::memory_order_acquire) && !g_analog.load(std::memory_order_relaxed) && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
     {
         if (m_reporterHidden->GetValue())
         {
@@ -2207,12 +2205,12 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsImportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
@@ -2291,7 +2289,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
 
 void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
