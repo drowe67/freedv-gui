@@ -1390,6 +1390,8 @@ transmission. (PR #1567, #1568)</li>
 <li>Fix the voice keyer’s RX pause and wait for a reply, the slow SNR
 display and the statistics reset after losing sync running twice as fast
 as intended. (PR #1571)</li>
+<li>Fix the spectrum plot’s sync tuning line being drawn using an
+uninitialized value until the plot’s first update. (PR #1572)</li>
 </ul></li>
 <li>Build system:
 <ul>
