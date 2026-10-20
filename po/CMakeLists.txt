@@ -51,7 +51,7 @@ if(XGETTEXT_EXECUTABLE)
             --sort-by-file
             --package-name=FreeDV
             --package-version=${FreeDV_VERSION}
-            --msgid-bugs-address=https://github.com/drowe67/freedv-gui/issues
+            --msgid-bugs-address=https://github.com/freedv/freedv-gui/issues
             --output=${FREEDV_POT_FILE}
             ${FREEDV_TRANSLATABLE_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

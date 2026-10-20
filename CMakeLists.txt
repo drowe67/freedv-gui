@@ -242,6 +242,23 @@ else(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
 set(SANITIZERS_ENABLED FALSE)
 endif(ENABLE_UBSAN OR ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_RTSAN)
 
+# Sets how a test passes. Without sanitizers, it passes when its output
+# matches the optional pass regex (or, if none is given, when it exits
+# successfully). With them, the builds are too slow for the tests' own
+# checks to mean much, so a test passes as long as no sanitizer reported
+# anything: what it exits with is ignored, though it still fails if it
+# crashes or times out. Must be called from the directory that added the test.
+function(freedv_set_test_pass_criteria testName)
+    set(passRegex "${ARGN}")
+    if(SANITIZERS_ENABLED)
+        set_tests_properties(${testName} PROPERTIES
+            PASS_REGULAR_EXPRESSION ".*"
+            FAIL_REGULAR_EXPRESSION "WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|FATAL: ThreadSanitizer|ERROR: AddressSanitizer|ERROR: LeakSanitizer|ERROR: RealtimeSanitizer|UndefinedBehaviorSanitizer|runtime error:")
+    elseif(passRegex)
+        set_tests_properties(${testName} PROPERTIES PASS_REGULAR_EXPRESSION "${passRegex}")
+    endif()
+endfunction()
+
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
         message(FATAL_ERROR "Signing only makes sense for Windows builds.")
@@ -843,9 +860,7 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT SANITIZERS_ENABLED)
-    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT SANITIZERS_ENABLED)
+    freedv_set_test_pass_criteria(fullduplex_${utName} "Got 1 sync changes")
 endmacro()
 
 DefineAudioTest(RADEV2)
@@ -856,35 +871,32 @@ add_test(NAME rade_loss
 
 # For sanitizers, we're just seeing if there are any errors from the sanitizer.
 if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
+freedv_set_test_pass_criteria(rade_loss "PASS")
 endif(NOT SANITIZERS_ENABLED)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_clean "Reporting callsign ZZ0ZZZ @ SNR")
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh awgn)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_awgn "Reporting callsign ZZ0ZZZ @ SNR")
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh mpp)
-if(NOT SANITIZERS_ENABLED)
-set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT SANITIZERS_ENABLED)
+freedv_set_test_pass_criteria(rade_reporting_mpp "Reporting callsign ZZ0ZZZ @ SNR")
 
 # GUI tests: Python scripts that drive FreeDV's user interface (see test/gui).
 # These are labeled so that they can be run (ctest -L gui) or skipped
 # (ctest -LE gui) as a group. On macOS, they need four loopback audio devices
 # (see test/gui/freedvtest/audio.py), and skip (exit code 77) what can't be
 # done there. They take over the screen, keyboard focus and mouse pointer
-# while they run.
+# while they run. In sanitizer builds, as with the other tests, only a
+# sanitizer's report in FreeDV's output fails them (the scripts show that
+# output whenever there's one in it).
 if(LINUX OR APPLE)
 foreach(scenario first_run second_run receive_only odd_starting_points cancel auto_select radio_control hamlib_start reporting import import_more)
     add_test(NAME gui_setup_wizard_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_setup_wizard.py ${scenario})
     set_tests_properties(gui_setup_wizard_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_setup_wizard_${scenario})
 endforeach(scenario)
 
 # These also need a window manager to be running and, other than live_view
@@ -894,12 +906,14 @@ foreach(scenario live_view stations sorting sorted_updates display_options damag
     add_test(NAME gui_reporter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_reporter.py ${scenario})
     set_tests_properties(gui_reporter_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_reporter_${scenario})
 endforeach(scenario)
 
 foreach(scenario buttons audio audio_tests radio ptt_test rig_control frequency_list reporting voice_keyer display modem_and_debugging ptt_key_names auto_start while_running)
     add_test(NAME gui_settings_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_settings.py ${scenario})
     set_tests_properties(gui_settings_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_settings_${scenario})
 endforeach(scenario)
 
 # These measure what FreeDV plays and records, so they're kept from running
@@ -908,6 +922,7 @@ foreach(scenario transmit ptt_key ptt_key_elsewhere tx_level receive analog play
     add_test(NAME gui_main_window_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_main_window.py ${scenario})
     set_tests_properties(gui_main_window_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_main_window_${scenario})
 endforeach(scenario)
 
 # The reporter scenario needs what the FreeDV Reporter tests do.
@@ -915,12 +930,14 @@ foreach(scenario manual frequency_in_khz callsign_list reporter)
     add_test(NAME gui_log_qso_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_log_qso.py ${scenario})
     set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_log_qso_${scenario})
 endforeach(scenario)
 
 foreach(scenario controls out_of_range volume equalizer equalizer_receive_only noise_suppression)
     add_test(NAME gui_filter_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_filter.py ${scenario})
     set_tests_properties(gui_filter_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_filter_${scenario})
 endforeach(scenario)
 
 # These need a C compiler when run, for what stands in for a serial port's
@@ -929,6 +946,7 @@ foreach(scenario rts polarity ptt_input errors settings_ptt_test)
     add_test(NAME gui_serial_ptt_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_serial_ptt.py ${scenario})
     set_tests_properties(gui_serial_ptt_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_serial_ptt_${scenario})
 endforeach(scenario)
 
 # device_removed and sound_server_restarted run a sound server of their own
@@ -939,12 +957,14 @@ foreach(scenario missing_device low_sample_rate no_devices partly_configured rec
     add_test(NAME gui_audio_errors_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_audio_errors.py ${scenario})
     set_tests_properties(gui_audio_errors_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_audio_errors_${scenario})
 endforeach(scenario)
 
 foreach(scenario tuning tuned_away drawing waterfall_colours)
     add_test(NAME gui_plots_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_plots.py ${scenario})
     set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_plots_${scenario})
 endforeach(scenario)
 
 # These use Hamlib's rigctld as the radio, and are skipped without it.
@@ -952,6 +972,7 @@ foreach(scenario control frequency_only mode_display analog_sideband editing_fre
     add_test(NAME gui_rig_control_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
+    freedv_set_test_pass_criteria(gui_rig_control_${scenario})
 endforeach(scenario)
 endif(LINUX OR APPLE)
 

@@ -91,7 +91,6 @@ extern std::atomic<bool> g_tx;
 extern int g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
-extern std::atomic<bool> g_txOutputStarted;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileFromRadio;
@@ -788,10 +787,6 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
     {
         cbData->outfifo1->reset();
         cbData->infifo2->reset();
-
-        // Nothing's ready for the radio's sound card any more, so it waits
-        // for the start of the next transmission as it did for this one's.
-        g_txOutputStarted.store(false, std::memory_order_release);
     }
     else
     {
@@ -829,6 +824,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             pipeline_->reset();
             clearFifos_();
             pendingEooCount_ = 0;
+            reachedMinimumTxInput_ = false;
 
             // return out and begin processing on the next loop
             return;
@@ -872,24 +868,26 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
+            constexpr int MINIMUM_AUDIO_MS = 200;
+            int minimumAudioNumSamples = std::min(MINIMUM_AUDIO_MS * inputSampleRate_ / 1000, cbData->infifo2->capacity() * 90 / 100);
+            if (!reachedMinimumTxInput_ && cbData->infifo2->numUsed() < minimumAudioNumSamples) break;
+            reachedMinimumTxInput_ = true;
+
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-            // infifo2 is written to by another sound card, so it may
-            // have less than a frame for us (in which case we wait for
-            // the rest: see below) or have overflowed, which makes a
-            // click in the decoded audio at the other end.
+            // infifo2 is written to by another sound card so it may
+            // over or underflow, but we don't really care.  It will
+            // just result in a short interruption in audio being fed
+            // to codec2_enc, possibly making a click every now and
+            // again in the decoded audio at the other end.
 
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             auto inputPtr = inputSamples_.get();
             int nread = cbData->infifo2->read(inputPtr, nsam_in_48);
-            if (nread != 0)
-            {
-                inputPtr = inputSamplesZeros_.get();
-            }
-            else
+            if (nread == 0)
             {
                 gotAnyMicData = true;
             }

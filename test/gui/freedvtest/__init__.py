@@ -27,12 +27,20 @@ FreeDV must have been built with -DUNITTEST=1.
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
 import sys
 import tempfile
 import time
+
+
+# What a sanitizer's report starts with (the same as ctest goes by: see
+# freedv_set_test_pass_criteria in CMakeLists.txt).
+_SANITIZER_REPORT = re.compile(
+    r"WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|FATAL: ThreadSanitizer|ERROR: AddressSanitizer|"
+    r"ERROR: LeakSanitizer|ERROR: RealtimeSanitizer|UndefinedBehaviorSanitizer|runtime error:")
 
 
 class FreeDVError(Exception):
@@ -185,6 +193,7 @@ class FreeDV:
         self._connection = None
         self._process = None
         self._log_file = None
+        self._log_shown = False
 
         #: The configuration file that FreeDV is using.
         self.config_path = config or os.path.join(self._temp_dir, "freedv.conf")
@@ -284,7 +293,7 @@ class FreeDV:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None and not issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
-            sys.stderr.write("----- FreeDV output -----\n%s\n-------------------------\n" % self.log())
+            self._show_log()
         self.stop()
         return False
 
@@ -632,12 +641,24 @@ class FreeDV:
                 return "\n\nThreads:\n" + output
         return ""
 
+    def _show_log(self):
+        """Writes everything that FreeDV printed to stderr, once."""
+        if not self._log_shown:
+            self._log_shown = True
+            sys.stderr.write("----- FreeDV output -----\n%s\n-------------------------\n" % self.log())
+
     def stop(self):
         """Makes sure FreeDV is no longer running and cleans up after it.
         Called automatically at the end of a "with" block."""
         if self._process is not None and self._process.poll() is None:
             self._process.kill()
             self._process.wait()
+
+        # FreeDV's output is only shown when something goes wrong, but in a
+        # sanitizer build a sanitizer's report is what decides whether the
+        # test passes, so it's shown whenever there's one of those in it.
+        if self._process is not None and _SANITIZER_REPORT.search(self.log()):
+            self._show_log()
         if self._connection is not None:
             self._connection.close()
             self._connection = None

@@ -21,7 +21,7 @@ While it may be possible to execute FreeDV on additional platforms and distribut
 (especially ones similar to ones currently supported), this is not guaranteed. Any 
 bugfixes required for an unsupported platform may be deferred or rejected, especially 
 if there is impact to supported platforms. Requests for official support of new platforms 
-should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
+should go through our existing [Feature Request process](https://github.com/freedv/freedv-gui/issues/new?template=feature_request.yml).
 
 ## Setup Wizard
 
@@ -198,7 +198,7 @@ on platform:
 |----------|--------------------------------------------------------------|
 | Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
 | Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
-| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
+| macOS    | See https://github.com/freedv/freedv-gui/tree/master/wav    |
 
 To play these files, first select a FreeDV mode and press Start.  Then 
 choose a file using "Tools - Start/Stop Play File From Radio".  You should 
@@ -954,7 +954,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows: fix FreeDV Reporter not removing what's left of a flag from the status message after part of it is deleted. (PR #1565)
     * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
     * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
-    * Fix silence being mixed into the first half second of each transmission, and holes in the signal at its start. (PR #1567)
+    * Fix silence being mixed into the first half second of each transmission. (PR #1567, #1568)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
@@ -964,7 +964,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
     * Add tests of whole transmissions through the TX/RX threads without sound cards. (PR #1567)
-3. Other:
+3. Documentation:
+    * Update documentation to reflect new repo URL. (PR #1569)
+4. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)
 
@@ -1025,7 +1027,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## Earlier than V2.3.0
 
-See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
+See [this](https://github.com/freedv/freedv-gui/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
 
 # References
 
