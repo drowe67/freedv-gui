@@ -144,13 +144,27 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
 
     # Add noise to the recording to check reporting still decodes in a
     # degraded channel.
+    CH_EXIT_CODE=0
     if [ "$1" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        CH_EXIT_CODE=${PIPESTATUS[1]}
     elif [ "$1" == "awgn" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -14 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        CH_EXIT_CODE=${PIPESTATUS[1]}
     fi
-    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 
+    if [ $CH_EXIT_CODE -ne 0 ]; then
+        # ch stopped part of the way through (e.g. running out of fading,
+        # which lasts 60 s): what's left isn't the whole transmission, so
+        # don't receive it.
+        echo "FAIL: ch exited with $CH_EXIT_CODE, so not all of the recording went through the channel"
+        FREEDV_EXIT_CODE=1
+    else
+        mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+    fi
+fi
+
+if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     # Tee via process substitution: FreeDV log visible in CI, $! still FreeDV's PID.
     $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV2 -rxfile $(pwd)/test.wav > >(tee tmp.log) 2>&1 &
     FDV_PID=$!
