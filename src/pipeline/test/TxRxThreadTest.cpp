@@ -395,13 +395,19 @@ double rms(std::vector<short> const& samples)
     return std::sqrt(sum / samples.size());
 }
 
+// The AGC step's limiter looks 4ms ahead, so it holds back this many
+// samples until more audio arrives (or the pipeline is reset at the end of
+// an over).
+constexpr int AGC_LOOKAHEAD_SAMPLES = TEST_SAMPLE_RATE * 4 / 1000 - 1;
+
 // Returns the frequency of a tone from how often it crosses zero.
 double toneFrequency(std::vector<short> const& samples, int sampleRate)
 {
     // Samples within a few counts of zero are ignored: the leveler/limiter's
-    // look-ahead delay starts the output with a few ms of near-silence that
-    // resampling leaves wobbling between -1 and +1.
-    constexpr int NEAR_ZERO = 16;
+    // look-ahead delay starts the output with a few ms of near-silence, and
+    // resampling rings briefly (by a few tens of counts) where the tone
+    // then starts.
+    constexpr int NEAR_ZERO = 64;
     int crossings = 0;
     int lastSign = 0;
     for (auto sample : samples)
@@ -2648,7 +2654,8 @@ public:
         // nothing but the tone's own crossing of zero for its first
         // second's worth, no filled-in silence anywhere in it.
         int run = 0;
-        for (size_t i = firstTone; i < firstTone + (size_t)TEST_SAMPLE_RATE && i < sent.size(); i++)
+        // (Less the AGC's look-ahead, which still holds the end of it.)
+        for (size_t i = firstTone; i < firstTone + (size_t)(TEST_SAMPLE_RATE - AGC_LOOKAHEAD_SAMPLES) && i < sent.size(); i++)
         {
             run = (sent[i] == 0) ? run + 1 : 0;
             if (run == 2)
@@ -2710,7 +2717,8 @@ public:
         size_t first = 0, last = sent.size();
         while (first < sent.size() && sent[first] == 0) first++;
         while (last > first && sent[last - 1] == 0) last--;
-        long expected = (long)SPEAKING_TURNS * BLOCK;
+        // Less the AGC's look-ahead, which holds the last few ms of it.
+        long expected = (long)SPEAKING_TURNS * BLOCK - AGC_LOOKAHEAD_SAMPLES;
         if ((long)(last - first) != expected)
         {
             std::cout << "[" << (last - first) << " samples of signal sent for " << expected
