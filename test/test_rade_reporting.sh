@@ -140,8 +140,6 @@ FREEDV_EXIT_CODE=$?
 kill $RECORD_PID
 
 if [ $FREEDV_EXIT_CODE -eq 0 ]; then
-    FADING_DIR="$SCRIPTPATH/fading"
-
     # Add noise to the recording to check reporting still decodes in a
     # degraded channel.
     #
@@ -159,13 +157,39 @@ if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     # expected from the per-over rate). Earlier intermittent failures at
     # this level came from the recording losing the second over's EOO (see
     # parecord above), which left only one chance to decode the callsign.
+    CH_EXIT_CODE=0
     if [ "$2" == "mpp" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -25 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    elif [ "$2" == "awgn" ]; then
-        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $(pwd)/codec2/build_linux/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    fi
-    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+        # The fading file has 60 s of fading in it (ch takes two complex
+        # samples from it, for the direct and delayed paths, for each one
+        # it sends at 8 kHz), and ch stops when it runs out: that would
+        # leave only the first 60 s of the ~100 s recording, about 4 of
+        # its 7 overs, to decode the callsign from. So ch is given one
+        # three times as long (180 s): the file's header (the four HF gain
+        # floats ch reads first), then its samples three times over. The
+        # overs come every ~14 s, so they don't line up with the repeats.
+        MPP_FADING_DIR=$(mktemp -d)
+        MPP_FADING_FILE="$SCRIPTPATH/fading/fast_fading_samples.float"
+        { head -c 16 "$MPP_FADING_FILE"; for i in 1 2 3; do tail -c +17 "$MPP_FADING_FILE"; done; } > "$MPP_FADING_DIR/fast_fading_samples.float"
 
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -25 --mpp --fading_dir $MPP_FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        CH_EXIT_CODE=${PIPESTATUS[1]}
+        rm -rf "$MPP_FADING_DIR"
+    elif [ "$2" == "awgn" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+        CH_EXIT_CODE=${PIPESTATUS[1]}
+    fi
+
+    if [ $CH_EXIT_CODE -ne 0 ]; then
+        # ch stopped part of the way through (e.g. running out of fading):
+        # what's left isn't the whole transmission, so don't receive it.
+        echo "FAIL: ch exited with $CH_EXIT_CODE, so not all of the recording went through the channel"
+        FREEDV_EXIT_CODE=1
+    else
+        mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+    fi
+fi
+
+if [ $FREEDV_EXIT_CODE -eq 0 ]; then
     ($FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfile $(pwd)/test.wav 2>&1 | tee tmp.log) &
     FDV_PID=$!
 
