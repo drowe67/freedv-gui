@@ -1012,6 +1012,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix silence being mixed into the first half second of each transmission. (PR #1567, #1568)
     * Fix the voice keyer's RX pause and wait for a reply, the slow SNR display and the statistics reset after losing sync running twice as fast as intended. (PR #1571)
     * Fix the spectrum plot's sync tuning line being drawn using an uninitialized value until the plot's first update. (PR #1572)
+    * FreeDV Reporter: fix stations that connected or transmitted within the same second sorting in a random order. (PR #1573)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
