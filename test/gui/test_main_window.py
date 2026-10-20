@@ -485,12 +485,21 @@ def test_receive():
             app.click("main.btnCenterRx")
             app.click("main.btnBerReset")
 
-            # The callsign arrives as the transmission ends.
+            # Sync is lost at the end of the transmission (its end-of-over).
+            # Full duplex, FreeDV carries on sending what the microphone
+            # hears (here, nothing) once PTT is released, and the receiver
+            # finds that again within a second or so, so it's watched for
+            # from the moment PTT is released, and more often than usual.
             app.click("main.btnPTT")
+            deadline = time.monotonic() + 10
+            while app.state()["sync"] != 0:
+                check(time.monotonic() < deadline, "Sync wasn't lost at the end of the transmission")
+                time.sleep(0.02)
             wait_for_transmit(app, False)
+
+            # The callsign comes with the signal (RADE V2 sends it all the way through).
             app.wait_until(lambda: app.get("main.cboLastReportedCallsigns")["value"] == CALLSIGN, timeout=15,
                            description="the callsign to be received")
-            app.wait_until(lambda: app.state()["sync"] == 0, timeout=15, description="sync to be lost")
 
             app.click("main.btnCallSignReset")
             check_equal(app.get("main.cboLastReportedCallsigns")["value"], "", "Last callsign after clearing")
