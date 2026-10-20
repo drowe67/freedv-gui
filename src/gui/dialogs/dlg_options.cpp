@@ -572,14 +572,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
     
     m_freqList = new wxListBox(sb_freqList, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
-    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(2, 2), static_cast<int>(wxEXPAND));
+    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(1, 2), static_cast<int>(wxEXPAND));
 
+    // Add and Remove stacked at the top beside the list, rather than spread
+    // over its height.
     const int FREQ_LIST_BUTTON_WIDTH = 100; 
     const int FREQ_LIST_BUTTON_HEIGHT = -1;
+    wxBoxSizer* freqListButtons = new wxBoxSizer(wxVERTICAL);
     m_freqListAdd = new wxButton(sb_freqList, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
-    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
+    freqListButtons->Add(m_freqListAdd, 0, static_cast<int>(wxEXPAND) | wxBOTTOM, 5);
     m_freqListRemove = new wxButton(sb_freqList, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
-    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, static_cast<int>(wxEXPAND));
+    freqListButtons->Add(m_freqListRemove, 0, static_cast<int>(wxEXPAND));
+    gridSizer->Add(freqListButtons, wxGBPosition(0, 2), wxDefaultSpan, wxALIGN_TOP);
     
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
@@ -589,10 +593,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     {
         m_labelEnterFreq = new wxStaticText(sb_freqList, wxID_ANY, _("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
     }
-    gridSizer->Add(m_labelEnterFreq, wxGBPosition(2, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
+    gridSizer->Add(m_labelEnterFreq, wxGBPosition(1, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(sb_freqList, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(2, 1), wxGBSpan(1, 2), static_cast<int>(wxEXPAND));
+    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(1, 1), wxGBSpan(1, 2), static_cast<int>(wxEXPAND));
     
     sbSizer_freqList->Add(gridSizer, 0, static_cast<int>(wxALL), 5);
     

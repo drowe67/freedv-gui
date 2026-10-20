@@ -2153,15 +2153,15 @@ void MainFrame::OnReportFrequencyContextMenu(wxContextMenuEvent&)
 
     wxMenu menu;
     wxMenuItem* addItem = menu.Append(wxID_ANY,
-        freq.IsEmpty() ? _("Add frequency to list") : wxString::Format(_("Add %s %s to list"), freq, units));
+        freq.IsEmpty() ? _("&Add frequency to list") : wxString::Format(_("&Add %s%s to list"), freq, units));
     addItem->Enable(!freq.IsEmpty() && !listed);
     menu.Bind(wxEVT_MENU, [this, freq](wxCommandEvent&) { addReportFrequencyToList_(freq); }, addItem->GetId());
 
     wxTextCtrl* text = m_cboReportFrequency->GetTextCtrl();
     menu.AppendSeparator();
-    menu.Append(wxID_CUT, _("Cut"))->Enable(text->CanCut());
-    menu.Append(wxID_COPY, _("Copy"))->Enable(text->CanCopy());
-    menu.Append(wxID_PASTE, _("Paste"))->Enable(text->CanPaste());
+    menu.Append(wxID_CUT, _("&Cut"))->Enable(text->CanCut());
+    menu.Append(wxID_COPY, _("C&opy"))->Enable(text->CanCopy());
+    menu.Append(wxID_PASTE, _("&Paste"))->Enable(text->CanPaste());
     menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Cut(); }, wxID_CUT);
     menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Copy(); }, wxID_COPY);
     menu.Bind(wxEVT_MENU, [text](wxCommandEvent&) { text->Paste(); }, wxID_PASTE);
@@ -2184,7 +2184,7 @@ void MainFrame::OnReportFrequencyItemMenu(int item)
 
     wxMenu menu;
     wxMenuItem* deleteItem = menu.Append(wxID_ANY,
-        wxString::Format(_("Delete %s %s from list"), m_reportFrequencyList->GetString(item), units));
+        wxString::Format(_("&Delete %s%s from list"), m_reportFrequencyList->GetString(item), units));
     menu.Bind(wxEVT_MENU, [this, item, top](wxCommandEvent&) {
         OnReportFrequencyItemDelete(item);
         CallAfter([this, top]() {

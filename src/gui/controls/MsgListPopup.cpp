@@ -177,6 +177,59 @@ void MsgListPopup::OnKeyDown(wxKeyEvent& event)
         SetSelection(HitTest(ScreenToClient(wxGetMousePosition())));
         return;
     }
+
+    // While the list is open, wxComboCtrl passes its key events here rather
+    // than to the native list box, so moving the highlight is done here.
+    int count = (int)GetCount();
+    int page = std::max(1, GetClientSize().GetHeight() / (GetCharHeight() + 8) - 1);
+    int next = wxNOT_FOUND;
+    switch (key)
+    {
+        case WXK_UP:
+        case WXK_NUMPAD_UP:
+            next = item == wxNOT_FOUND ? count - 1 : item - 1;
+            break;
+        case WXK_DOWN:
+        case WXK_NUMPAD_DOWN:
+            next = item == wxNOT_FOUND ? 0 : item + 1;
+            break;
+        case WXK_PAGEUP:
+        case WXK_NUMPAD_PAGEUP:
+            next = item == wxNOT_FOUND ? 0 : item - page;
+            break;
+        case WXK_PAGEDOWN:
+        case WXK_NUMPAD_PAGEDOWN:
+            next = item == wxNOT_FOUND ? count - 1 : item + page;
+            break;
+        case WXK_HOME:
+        case WXK_NUMPAD_HOME:
+            next = 0;
+            break;
+        case WXK_END:
+        case WXK_NUMPAD_END:
+            next = count - 1;
+            break;
+        case WXK_RETURN:
+        case WXK_NUMPAD_ENTER:
+            // Enter takes the highlighted item, as a click on it does.
+            if (item != wxNOT_FOUND)
+            {
+                picked_ = true;
+                Dismiss();
+                deselTimer_.StartOnce(20);
+                return;
+            }
+            break;
+        default:
+            break;
+    }
+    if (next != wxNOT_FOUND && count > 0)
+    {
+        next = std::clamp(next, 0, count - 1);
+        SetSelection(next);
+        EnsureVisible(next);
+        return;
+    }
     event.Skip();
 }
 

@@ -861,21 +861,21 @@ def test_frequency_list_from_main_window():
 
         # The frequency in the box can be added, into its place in the list.
         app.set_value("main.cboReportFrequency", "10.136")
-        items = app.context_menu("main.cboReportFrequency", choose="Add 10.1360 MHz to list")
+        items = app.context_menu("main.cboReportFrequency", choose="Add 10.1360MHz to list")
         check_equal([(item["label"], item["enabled"]) for item in items][0],
-                    ("Add 10.1360 MHz to list", True), "Frequency box's menu")
+                    ("Add 10.1360MHz to list", True), "Frequency box's menu")
         check_equal(offered(app), ["3.6250", "7.1770", "10.1360", "14.2360"], "Frequencies offered")
 
         # ...but only once.
         items = app.context_menu("main.cboReportFrequency")
         check_equal([(item["label"], item["enabled"]) for item in items][0],
-                    ("Add 10.1360 MHz to list", False), "Frequency box's menu when it's listed")
+                    ("Add 10.1360MHz to list", False), "Frequency box's menu when it's listed")
 
         # One in the open list can be deleted from its menu, and the list
         # opens again for the next.
         app.combo_popup("main.cboReportFrequency", True)
         app.wait_until(lambda: list_shown(app), description="the frequencies to be listed")
-        app.context_menu("main.lbReportFrequencies", item=0, choose="Delete 3.6250 MHz from list")
+        app.context_menu("main.lbReportFrequencies", item=0, choose="Delete 3.6250MHz from list")
         check_equal(offered(app), ["7.1770", "10.1360", "14.2360"], "Frequencies offered")
         app.wait_until(lambda: list_shown(app), description="the list to open again")
 
