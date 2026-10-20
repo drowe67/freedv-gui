@@ -53,6 +53,9 @@ class PlotScalar: public PlotPanel
 
          virtual void refreshData() override;
 
+         // Width of the trace in pixels (default 1).
+         void setLineWidth(int width) { lineWidth_ = width; }
+
     private:
         struct MinMaxPoints
         {
@@ -77,6 +80,7 @@ class PlotScalar: public PlotPanel
          int      leftOffset_;
          int      bottomOffset_;
          bool halfPlot_;
+         int lineWidth_;
          bool disableFirstLastLabels_;
 
          wxBitmap* plotArea_;
