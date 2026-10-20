@@ -321,7 +321,10 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelDemodIn;
         PlotScalar*             m_panelSNR;
 
-        bool                    m_RxRunning;
+        // Set by startRxStream()/stopRxStream(), mostly on the thread that
+        // starts and stops FreeDV (see OnTogBtnOnOff()), and read all over
+        // the UI thread, so atomic.
+        std::atomic<bool>       m_RxRunning;
         bool                    txChangeoverOccurring_;
         
         bool                    OpenHamlibRig();
