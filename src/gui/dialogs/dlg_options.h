@@ -60,6 +60,7 @@ class OptionsDlg : public wxDialog
         void    OnApply(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
+        void    OnNotebookPageChanged(wxBookCtrlEvent& event);
  
         void    OnTestFrame(wxScrollEvent& event);
         void    OnChannelNoise(wxScrollEvent& event);

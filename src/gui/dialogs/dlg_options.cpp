@@ -23,6 +23,10 @@
 #include <wx/numformatter.h>
 #include "dlg_options.h"
 
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+#include <gtk/gtk.h>
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
+
 extern FreeDVInterface freedvInterface;
 
 // F13-F24 on Linux (and possibly other platforms) return values different
@@ -897,6 +901,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Connect Events -------------------------------------------------------
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(OptionsDlg::OnInitDialog));
+    m_notebook->Connect(wxEVT_NOTEBOOK_PAGE_CHANGED, wxBookCtrlEventHandler(OptionsDlg::OnNotebookPageChanged), NULL, this);
 
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
@@ -958,6 +963,7 @@ OptionsDlg::~OptionsDlg()
     // Disconnect Events
 
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(OptionsDlg::OnInitDialog));
+    m_notebook->Disconnect(wxEVT_NOTEBOOK_PAGE_CHANGED, wxBookCtrlEventHandler(OptionsDlg::OnNotebookPageChanged), NULL, this);
 
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnOK), NULL, this);
     m_sdbSizer5Cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnCancel), NULL, this);
@@ -1459,6 +1465,41 @@ void OptionsDlg::OnApply(wxCommandEvent&)
 void OptionsDlg::OnInitDialog(wxInitDialogEvent&)
 {
     ExchangeData(EXCHANGE_DATA_IN, false);
+}
+
+//-------------------------------------------------------------------------
+// OnNotebookPageChanged()
+//-------------------------------------------------------------------------
+void OptionsDlg::OnNotebookPageChanged(wxBookCtrlEvent& event)
+{
+    event.Skip();
+
+#if defined(__WXGTK__) && defined(HAS_GTK3)
+    // This dialog is created at startup, long before it is first shown, and
+    // on GTK3 that can leave a layout request that is never carried out. The
+    // first time the Rig Control tab is shown, the frequency list's scrollbar
+    // then never gets laid out: it can't be dragged and doesn't follow the
+    // list. Laying out the whole window again clears this.
+    if (m_notebook->GetPage(event.GetSelection()) == m_rigControlTab)
+    {
+        CallAfter([this]() {
+            GtkWidget* list = m_freqList->GetHandle();
+            GtkWidget* top = gtk_widget_get_toplevel(list);
+            GtkAllocation alloc;
+            gtk_widget_get_allocation(top, &alloc);
+            gtk_widget_queue_resize(list);
+            gtk_widget_size_allocate(top, &alloc);
+
+            // The scrollbar's slider position is only worked out when the
+            // scrollbar itself is laid out, so ask for that too.
+            GtkWidget* scrollbar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(list));
+            if (scrollbar != nullptr)
+            {
+                gtk_widget_queue_resize(scrollbar);
+            }
+        });
+    }
+#endif // defined(__WXGTK__) && defined(HAS_GTK3)
 }
 
 // immediately change flags rather using ExchangeData() so we can switch on and off at run time

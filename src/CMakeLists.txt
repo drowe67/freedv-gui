@@ -228,6 +228,8 @@ if(LINUX)
                 # point, so it has to be set on the already-created target directly.
                 target_compile_definitions(fdv_gui_util PRIVATE HAS_GTK3)
                 target_include_directories(fdv_gui_util PRIVATE ${GTK3_INCLUDE_DIRS})
+                target_compile_definitions(fdv_gui_dialogs PRIVATE HAS_GTK3)
+                target_include_directories(fdv_gui_dialogs PRIVATE ${GTK3_INCLUDE_DIRS})
             else(WX_BUILT_FOR_GTK3)
                 message(WARNING "GTK3 development files (gtk+-3.0.pc) were found, but the detected wxWidgets does not define __WXGTK3__ (it appears to target GTK2) -- including <gtk/gtk.h> directly alongside wx headers would conflict, so Linux-specific GUI workarounds (including window position restore) will be disabled")
             endif(WX_BUILT_FOR_GTK3)
