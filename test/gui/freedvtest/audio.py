@@ -296,6 +296,36 @@ def play(device, path):
     return subprocess.Popen(["paplay", "--device=" + device, path])
 
 
+def speech_file():
+    """Returns a recording of speech (about 50 seconds of it), for when what's
+    sent has to be something RADE can carry, as a tone isn't:
+    $FREEDVTEST_SPEECH, or the one that comes with RADE in the build folder
+    that the script was run from."""
+    path = os.environ.get("FREEDVTEST_SPEECH") or os.path.join(
+        "_deps", "freedv_backend-build", "rade_src", "wav", "all.wav")
+    if not os.path.exists(path):
+        raise FileNotFoundError("No speech recording at %s (set FREEDVTEST_SPEECH)" % path)
+    return path
+
+
+class Speech:
+    """Plays speech (see speech_file()) into an output device for the
+    duration of a "with" block."""
+
+    def __init__(self, device):
+        self._device = device
+        self._player = None
+
+    def __enter__(self):
+        self._player = play(self._device, speech_file())
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._player.kill()
+        self._player.wait()
+        return False
+
+
 class Tone:
     """Plays a tone into an output device for the duration of a "with" block
     (at most max_seconds)."""

@@ -30,8 +30,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
 import freedvtest.audio
-from freedvtest.audio import (Loopback, Tone, VirtualAudioDevices, device, file_level, play, record, record_level,
-                              tone_share, write_tone)
+from freedvtest.audio import (Loopback, Speech, Tone, VirtualAudioDevices, device, file_level, play, record,
+                              record_level, tone_share, write_tone)
 
 RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
 RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
@@ -755,7 +755,9 @@ def test_voice_keyer_reply():
                 start_modem(app)
 
                 # Someone to answer: FreeDV's own transmission, kept for later.
-                with Tone(MICROPHONE):
+                # (Speech, not a tone: a tone isn't something RADE carries,
+                # and its receiver can take one for the end of an over.)
+                with Speech(MICROPHONE):
                     app.click("main.btnPTT")
                     wait_for_transmit(app)
                     time.sleep(1)

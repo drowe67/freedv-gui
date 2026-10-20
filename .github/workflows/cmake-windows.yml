@@ -343,6 +343,9 @@ jobs:
         mkdir gui_tests
         cp -r _CPack_Packages/*/NSIS/FreeDV-*/bin _CPack_Packages/*/NSIS/FreeDV-*/share gui_tests/
         cp external/dist/bin/rigctld.exe gui_tests/bin/
+        # Speech for the tests that need something RADE can carry (see
+        # speech_file() in test/gui/freedvtest/audio.py).
+        cp _deps/freedv_backend-build/rade_src/wav/all.wav gui_tests/
 
     - name: Stash for gui-tests job
       if: ${{ matrix.variant == 'plain' && matrix.arch == 'x86_64' }}
@@ -411,6 +414,7 @@ jobs:
       FREEDVTEST_AUDIO_DEVICES: "Line 1 (Virtual Audio Cable),Line 1 (Virtual Audio Cable),Speakers (VB-Audio Virtual Cable),Speakers (VB-Audio Virtual Cable)"
       FREEDV_BINARY: ${{github.workspace}}\gui_tests\bin\freedv.exe
       RIGCTLD: ${{github.workspace}}\gui_tests\bin\rigctld.exe
+      FREEDVTEST_SPEECH: ${{github.workspace}}\gui_tests\all.wav
       PYTHONIOENCODING: utf-8
 
     steps:
