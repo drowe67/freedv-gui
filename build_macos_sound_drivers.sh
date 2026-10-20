@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git clone https://github.com/tmiw/BlackHole.git
+git clone https://github.com/freedv/BlackHole.git
 cd BlackHole
 
 # How many (BlackHole1, BlackHole2, ...): two unless told otherwise. The GUI
