@@ -94,6 +94,7 @@ public:
         , pendingEooCount_(0)
         , helper_(std::move(helper))
         , deferReset_(false)
+        , reachedMinimumTxInput_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -162,6 +163,8 @@ private:
 
     Semaphore readySem_;
     Semaphore startSem_;
+
+    bool reachedMinimumTxInput_;
 
 #if defined(ENABLE_PROCESSING_STATS)
     // Tracks min/max/mean/stdev plus a histogram for one timed interval.

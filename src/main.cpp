@@ -54,7 +54,6 @@
 #endif // defined(ENABLE_TEST_AGENT)
 #include "audio/AudioEngineFactory.h"
 #include "pipeline/TxRxThread.h"
-#include "pipeline/TxOutputStart.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "reporting/CsvReporter.h"
@@ -230,10 +229,6 @@ std::mutex g_mutexProtectingPlayFiles;
 
 // End of TX state control
 std::atomic<bool> endingTx;
-
-// Whether the radio's sound card has begun to be given the current
-// transmission: see TxOutputStart.h.
-std::atomic<bool> g_txOutputStarted;
 
 // Running state
 std::atomic<bool> isModemRunning;
@@ -2017,6 +2012,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
+      else if (timerId == ID_TIMER_SNR)
+      {
+          // Only the SNR plot here: everything below goes by time passing
+          // (the SNR filter, the voice keyer, how long since sync was lost)
+          // and so must only happen once per DT, on ID_TIMER_UPDATE_OTHER.
+          if (!halfDuplexState || !txState)
+          {
+              float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
+              snr = std::min(snr, (float)MAX_SNR_VAL);
+              snr = std::max(snr, (float)NO_SNR_VAL);
+              m_panelSNR->add_new_sample(snr);
+              m_panelSNR->refreshData();
+          }
+      }
       else
       {
          // Update average magnitudes
@@ -2090,15 +2099,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
-        {
-            float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, (float)MAX_SNR_VAL);
-            snr = std::max(snr, (float)NO_SNR_VAL);
-            m_panelSNR->add_new_sample(snr);
-            m_panelSNR->refreshData();
-        }
-        
         // sync LED (Colours don't work on Windows) ------------------------
 
         auto state = g_State.load(std::memory_order_acquire);
@@ -4022,18 +4022,7 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
 
     auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
     auto isTuning = cbData->isTuning.load(std::memory_order_acquire);
-
-    // A transmission isn't given to the sound card until enough of it is
-    // ready that the sound card won't run out part of the way through.
-    auto output = TxOutput::Ready;
-    if (!isTuning)
-    {
-        output = txOutputFor(
-            cbData->outfifo1->numUsed(), cbData->outfifo1->capacity(), (int)size, dev.getSampleRate(),
-            endingTx.load(std::memory_order_acquire), g_txOutputStarted);
-    }
-
-    if (output != TxOutput::Waiting && toRead < size && !isTuning)
+    if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
         if (g_tx.load(std::memory_order_acquire))
@@ -4043,14 +4032,6 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     }
     else
     {
-        if (output == TxOutput::Waiting)
-        {
-            // Silence meanwhile, with the VOX tone (if it's on) so that a
-            // radio keyed by it is transmitting by the time the signal
-            // arrives.
-            toRead = 0;
-        }
-
         if (toRead >= size && cbData->outfifo1->read(tmpOutput, size) != 0)
         {
             // Raced with a concurrent reset(); nothing was actually copied

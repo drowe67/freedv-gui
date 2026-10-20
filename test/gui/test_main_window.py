@@ -1453,8 +1453,8 @@ def test_help_and_restore():
     with freedvtest.start(settings=start) as app:
         app.wait_for_window("main")
 
-        for item, url in [("Help/Check for Updates", "https://github.com/drowe67/freedv-gui/releases"),
-                          ("Help/User Manual...", "https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf"),
+        for item, url in [("Help/Check for Updates", "https://github.com/freedv/freedv-gui/releases"),
+                          ("Help/User Manual...", "https://github.com/freedv/freedv-gui/blob/master/USER_MANUAL.pdf"),
                           ("Help/Get Assistance", "https://freedv.org/#getting-help")]:
             app.menu(item)
             check_equal(app.browser_urls(clear=True), [url], "Web pages opened by " + item)

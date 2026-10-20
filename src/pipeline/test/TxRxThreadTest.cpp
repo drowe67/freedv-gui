@@ -9,6 +9,7 @@
 // is a friend of TxRxThread).
 //=========================================================================
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -29,7 +30,6 @@
 #include <sndfile.h>
 
 #include "../TxRxThread.h"
-#include "../TxOutputStart.h"
 #include "pipeline/LinkStep.h"
 #include "pipeline/ResampleStep.h"
 #include "pipeline/test/SpeechSample.h"
@@ -63,7 +63,6 @@ std::atomic<bool>   g_monitorTxAudio(false);
 std::atomic<bool>   g_monitorVoiceKeyerAudio(false);
 std::atomic<bool>   g_totBeepActive(false);
 std::atomic<bool>   g_eoo_enqueued(false);
-std::atomic<bool>   g_txOutputStarted(false);
 std::atomic<bool>   g_recFileFromModulator(false);
 std::atomic<bool>   g_recFileFromMic(false);
 std::atomic<bool>   g_recVoiceKeyerFile(false);
@@ -79,6 +78,7 @@ std::atomic<int>    g_channel_noise(0);
 std::atomic<int>    g_noiseSNR(0);
 std::atomic<int>    g_sfFs(8000);
 std::atomic<int>    g_sfTxFs(8000);
+std::atomic<int>    g_outfifo1_empty(0);
 std::atomic<int64_t> g_rxMutedUntilNs(0);
 std::atomic<float>  g_txLevelScale(1.0f);
 std::atomic<float>  g_monitorTxAudioVol(0.0f);
@@ -144,7 +144,7 @@ void resetGlobals()
     g_monitorVoiceKeyerAudioVol = 0.0f;
     g_totBeepActive = false;
     g_eoo_enqueued = false;
-    g_txOutputStarted = false;
+    g_outfifo1_empty = 0;
     g_analog = 0;
     g_State = 0;
     g_channel_noise = 0;
@@ -241,6 +241,64 @@ public:
     std::atomic<int> stopCalls{0};
     std::atomic<int> clearRealTimeCalls{0};
     std::atomic<bool> lastFastMode{false};
+};
+
+// IRealtimeHelper for a thread that runs on a clock of its own: it takes a
+// turn, waits out the rest of one, and always has time for the next. The
+// wait follows what the app's real helpers do (MinimalRealtimeHelper,
+// MacAudioDevice): a cycle whose processing already ran past its turn
+// doesn't sleep at all, and a fastMode turn waits only half a turn --
+// when the transmitter's FIFO is low the helper tries to refill at twice
+// the rate instead of sticking to its usual cadence.
+class ClockRealtimeHelper : public IRealtimeHelper
+{
+public:
+    explicit ClockRealtimeHelper(std::chrono::milliseconds turn)
+        : turn_(turn)
+    {
+        // empty
+    }
+
+    void setHelperRealTime() FREEDV_NONBLOCKING override {}
+    void startRealTimeWork() FREEDV_NONBLOCKING override
+    {
+        turns.fetch_add(1, std::memory_order_relaxed);
+        startTime_ = std::chrono::steady_clock::now();
+    }
+    // A clock's whole job is to block until the next turn, and sleep_for is
+    // a nanosleep. Called from the annotated runOnce_ loop under RTSan, that
+    // blocking is exactly what RealtimeSanitizer is there to catch, so it is
+    // declared with the project's sanctioned disable/enable pair (see
+    // RADEReceiveStep.cpp for the same pattern in the backend).
+    void stopRealTimeWork(bool fastMode) override
+    {
+        auto period = fastMode ? turn_ / 2 : turn_;
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime_);
+        auto wait = period - elapsed - overshoot_;
+        if (wait <= std::chrono::milliseconds(0))
+        {
+            overshoot_ = std::chrono::milliseconds(0);
+            return; // this cycle already spent its turn's time
+        }
+        auto before = std::chrono::steady_clock::now();
+        FREEDV_BEGIN_REALTIME_UNSAFE
+        std::this_thread::sleep_for(wait);
+        FREEDV_END_REALTIME_UNSAFE
+        overshoot_ = std::max(
+            std::chrono::milliseconds(0),
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - before) - wait);
+    }
+    void clearHelperRealTime() FREEDV_NONBLOCKING override {}
+    bool mustStopWork() FREEDV_NONBLOCKING override { return false; }
+
+    std::atomic<long> turns{0};
+
+private:
+    std::chrono::milliseconds turn_;
+    std::chrono::steady_clock::time_point startTime_{};
+    std::chrono::milliseconds overshoot_{0};
 };
 
 // Tone getters: realtime_fp only accepts raw function pointers, so these are
@@ -524,19 +582,21 @@ public:
 // What the sound cards did that the thread between them couldn't help.
 struct SoundCardCounts
 {
-    long inputOverflows = 0;    // blocks from a sound card with nowhere to go
-    long outputUnderruns = 0;   // blocks a sound card wanted and didn't get
+    long inputOverflows = 0;        // blocks from a sound card with nowhere to go
+    long outputUnderruns = 0;       // blocks a sound card wanted and didn't quite get
+    long outputShortfallSamples = 0;// samples it wanted that there weren't
 };
 
 // One turn of a pair of sound cards running off the same clock, as the
 // application's callbacks do it: so many samples arrive from one, the thread
-// gets to run, and the other takes the same number away (silence, if they
-// aren't there to take). toRadio is for the pair that a transmission goes
-// through, whose output is the radio's sound card: that one isn't given
-// anything until enough is ready, and then gets a whole block or nothing.
+// gets to run, and the other takes away whatever is there, silence for the
+// rest of its block. The radio's card is served the way
+// MainFrame::OnTxOutAudioData_() serves it, whatever the thread has made:
+// the thread primes itself before it makes the first samples of an over,
+// but the card asking for them is fed what is ready and no more.
 template<typename ProcessFn>
 std::vector<short> soundCardsTurn(
-    GenericFIFO<short>* in, GenericFIFO<short>* out, const short* samples, int numSamples, int sampleRate, bool toRadio,
+    GenericFIFO<short>* in, GenericFIFO<short>* out, const short* samples, int numSamples,
     ProcessFn process, SoundCardCounts& counts, bool outputTaken = true)
 {
     if (numSamples > 0 && in->write(const_cast<short*>(samples), numSamples) != 0)
@@ -550,17 +610,10 @@ std::vector<short> soundCardsTurn(
     if (outputTaken && numSamples > 0)
     {
         int available = std::min(out->numUsed(), numSamples);
-        if (toRadio)
+        if (available < numSamples)
         {
-            // (What MainFrame::OnTxOutAudioData_() goes by.)
-            auto output = txOutputFor(out->numUsed(), out->capacity(), numSamples, sampleRate, false, g_txOutputStarted);
-            if (output == TxOutput::Short) counts.outputUnderruns++;
-            if (output != TxOutput::Ready) available = 0;
-        }
-        else if (available < numSamples)
-        {
-            // The speaker's gets whatever there is.
             counts.outputUnderruns++;
+            counts.outputShortfallSamples += numSamples - available;
         }
         if (available > 0)
         {
@@ -1952,6 +2005,7 @@ public:
         int framesReceived = 0;
         int framesOfSpeech = 0;     // what there was to send
         SoundCardCounts tx, rx;
+        long txLateUnderruns = 0;  // short blocks after the priming window had passed
         long silentSamplesSent = 0; // within the signal, once it had started
         long silentSamplesSentOnceGoing = 0; // ...and was two seconds in
         double lastSilenceAt = -1;  // seconds into the signal
@@ -2033,15 +2087,49 @@ public:
                     offset += block;
                 }
 
+                long shortfallBefore = result.tx.outputShortfallSamples;
                 auto sent = soundCardsTurn(
-                    g_rxUserdata->infifo2, g_rxUserdata->outfifo1, samples, block, sampleRate, true,
-                    [&]() { thread.txProcessing_(&helper); }, result.tx);
+                    g_rxUserdata->infifo2, g_rxUserdata->outfifo1, samples, block,
+                    [&]() {
+                        thread.txProcessing_(&helper);
+
+                        // The file's read by a thread of its own, which in
+                        // real life has a whole block's time before the
+                        // card asks again; here the next ask comes as soon
+                        // as the machine gets to it, sooner than that
+                        // thread can be relied on to keep up on a slow or
+                        // busy machine (or under a sanitizer). So once the
+                        // transmission's going, give it the time it would
+                        // have had before the card takes its block.
+                        if (!playedToMic || signal.size() < (size_t)(sampleRate * 30 / 100)) return;
+                        auto giveUpAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+                        while (g_rxUserdata->outfifo1->numUsed() < block && micInDone.load() == 0 &&
+                               std::chrono::steady_clock::now() < giveUpAt)
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            thread.txProcessing_(&helper);
+                        }
+                    }, result.tx);
+                // Shortfalls while the thread is still priming just mean the
+                // card's ask ran ahead of the production backlog; after that,
+                // only ones big enough to put a hole in the signal count —
+                // a sound card's callback can arrive a few samples early in
+                // real life, and main.cpp pads those every day.
+                long shortBy = result.tx.outputShortfallSamples - shortfallBefore;
+                // Padding after the source has run out is just the silence
+                // that follows a transmission, not a hole in it; a shortfall
+                // while there's still speech to send is one.
+                bool moreSource = playedToMic ? (micInDone.load() == 0) : (offset < speech.size());
+                if (shortBy >= 16 && signal.size() >= (size_t)(sampleRate * 30 / 100) && moreSource)
+                {
+                    result.txLateUnderruns++;
+                }
                 signal.insert(signal.end(), sent.begin(), sent.end());
 
                 if (playedToMic)
                 {
-                    // The file's read by a thread of its own; let it keep up,
-                    // as it has all the time it needs when this is for real.
+                    // ...and some time between turns as well, as the file
+                    // thread has when this is for real.
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
@@ -2100,7 +2188,7 @@ public:
             auto process = [&]() { thread.rxProcessing_(&helper); };
             for (int quiet = 0; quiet < sampleRate / 2; quiet += sampleRate / 50)
             {
-                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, silence.data(), sampleRate / 50, sampleRate, false, process, result.rx);
+                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, silence.data(), sampleRate / 50, process, result.rx);
             }
             result.rx = SoundCardCounts();
 
@@ -2129,7 +2217,7 @@ public:
                 }
                 received += block;
 
-                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, samples, block, sampleRate, false, process, result.rx);
+                soundCardsTurn(g_rxUserdata->infifo1, g_rxUserdata->outfifo2, samples, block, process, result.rx);
 
                 bool nowInSync = freedvInterface.getSync() != 0;
                 if (nowInSync && result.secondsToSync < 0)
@@ -2214,11 +2302,12 @@ public:
         bool result = true;
         auto fail = [&]() -> std::ostream& { result = false; return std::cout << "[" << what << ": "; };
 
-        // Nothing was lost on the way in, the radio's sound card never asked
-        // for more than was ready, and the signal has no holes in it.
+        // Nothing was lost on the way in; once the thread is past its
+        // priming the radio's sound card always got its whole block; and the
+        // signal has no holes in it.
         if (roundTrip.tx.inputOverflows != 0) fail() << roundTrip.tx.inputOverflows << " blocks from the microphone had nowhere to go] ";
         if (roundTrip.rx.inputOverflows != 0) fail() << roundTrip.rx.inputOverflows << " blocks from the radio had nowhere to go] ";
-        if (roundTrip.tx.outputUnderruns != 0) fail() << "the radio's sound card went short " << roundTrip.tx.outputUnderruns << " times] ";
+        if (roundTrip.txLateUnderruns != 0) fail() << "the radio's sound card went short " << roundTrip.txLateUnderruns << " times after the thread had primed] ";
         if (roundTrip.silentSamplesSent != 0) fail() << roundTrip.silentSamplesSent << " samples of silence within the signal sent, the last " << roundTrip.lastSilenceAt << " s into it] ";
 
         // What's sent is the speech and no more: nothing's put in to make up
@@ -2234,9 +2323,13 @@ public:
         if (roundTrip.syncLosses != 0) fail() << "lost sync " << roundTrip.syncLosses << " time(s) part of the way through] ";
 
         // Most of what was sent comes back (the receiver takes a moment to
-        // find the signal), and as what was sent.
+        // find the signal), and stays that good from then on: the overall
+        // figure carries the demodulator's lock-on — a good second of
+        // rough frames right after sync, wherever the cards happen to put
+        // it — so mostLoss is the bar for the once-going measure.
         if (roundTrip.framesReceived < roundTrip.framesOfSpeech - 300) fail() << roundTrip.framesReceived << " frames received of " << roundTrip.framesOfSpeech << " of speech] ";
-        if (roundTrip.loss < 0 || roundTrip.loss > mostLoss) fail() << "loss " << roundTrip.loss << ", expected " << mostLoss << " at most] ";
+        if (roundTrip.lossOnceGoing < 0 || roundTrip.lossOnceGoing > mostLoss) fail() << "loss " << roundTrip.lossOnceGoing << " once going, expected " << mostLoss << " at most] ";
+        if (roundTrip.loss < 0 || roundTrip.loss > mostLoss + 0.05) fail() << "loss " << roundTrip.loss << " overall, expected " << mostLoss + 0.05 << " at most] ";
         return result;
     }
 
@@ -2287,6 +2380,7 @@ public:
         long breaks = 0;            // places where it wasn't the same tone carrying on
         long unexplainedBreaks = 0; // ...with nothing just before to account for it
         long lateEvents = 0;        // things that account for breaks, once it had got going
+        long lateUnderruns = 0;     // short blocks once past the priming window
         SoundCardCounts counts;
     };
 
@@ -2357,9 +2451,14 @@ public:
             auto process = [&]() { if (tx) thread.txProcessing_(&helper); else thread.rxProcessing_(&helper); };
 
             auto countsBefore = result.counts;
-            auto turn = soundCardsTurn(in, out, block.data(), numSamples, TEST_SAMPLE_RATE, tx, process, result.counts, taken);
+            auto turn = soundCardsTurn(in, out, block.data(), numSamples, process, result.counts, taken);
             event |= result.counts.inputOverflows != countsBefore.inputOverflows ||
                      result.counts.outputUnderruns != countsBefore.outputUnderruns;
+            if (written > TEST_SAMPLE_RATE * 30 / 100 &&
+                result.counts.outputShortfallSamples > countsBefore.outputShortfallSamples)
+            {
+                result.lateUnderruns++;
+            }
             if (event)
             {
                 lastEventAt = written;
@@ -2421,18 +2520,19 @@ public:
         // Receiving, the speaker gets silence when it asks for more than has
         // been decoded, which leaves that much more in hand for the next
         // time: it soon stops happening. Transmitting, the radio's sound
-        // card isn't given anything until there's enough in hand, so the
-        // tone goes out in one piece.
+        // card is fed whatever the thread has made: it comes up short only
+        // while the thread is priming for its first modem frame, which
+        // lasts a fifth of a second however the blocks are sized.
         if (!stalls && !transmitting && continuity.counts.outputUnderruns > 16)
         {
             std::cout << "[" << what << ": the speaker went short " << continuity.counts.outputUnderruns
                       << " times, expected 16 at most] ";
             result = false;
         }
-        if (!stalls && transmitting && (continuity.breaks != 0 || continuity.counts.outputUnderruns != 0))
+        if (!stalls && transmitting && (continuity.breaks != 0 || continuity.lateUnderruns != 0))
         {
             std::cout << "[" << what << ": the tone was broken in " << continuity.breaks << " places and the radio's sound card went short "
-                      << continuity.counts.outputUnderruns << " times] ";
+                      << continuity.lateUnderruns << " times after priming] ";
             result = false;
         }
         return result;
@@ -2459,6 +2559,300 @@ public:
         }
         return result;
     }
+
+    // ---------------------------------------------------------------------
+    // What the thread promises the radio's sound card at each end of a
+    // transmission, with the cards kept in step so that only FreeDV's own
+    // behaviour can break it. Priming: the thread makes nothing for the
+    // radio until a fifth of a second of microphone audio is in hand, so
+    // what starts a transmission is speech and not silence filled in for
+    // audio that isn't there. And when the microphone goes dry part of the
+    // way through an over, the thread sends what the microphone's audio
+    // made and then stops: the carrier goes down with it rather than the
+    // thread inventing samples to keep it up. (Keeping the carrier up
+    // through a dry microphone means mixing in fabricated audio, which is
+    // the very complaint #1567 set out to fix; whether the holes are worse
+    // than the fabrication is for a station on the air to judge, so this
+    // pins the honest behaviour and leaves that question open.)
+    // ---------------------------------------------------------------------
+    static bool transmitterPrimesWithSpeechBeforeItsFirstFrame()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1; // what goes in is what comes out, so the tone can be followed
+        SoundCardFifos fifos(TEST_SAMPLE_RATE);
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        FakeRealtimeHelper helper;
+        SoundCardCounts counts;
+        constexpr int BLOCK = TEST_SAMPLE_RATE / 50; // 20 ms at a time
+        constexpr int SPEAKING_TURNS = 50;           // the microphone speaks for a second
+        constexpr int DRY_TURNS = 25;                // ...and the card asks on for half a second
+        const double step = 2.0 * M_PI * 500.0 / TEST_SAMPLE_RATE;
+
+        std::vector<short> sent;
+        long written = 0;
+        for (int turn = 0; turn < SPEAKING_TURNS + DRY_TURNS; turn++)
+        {
+            // The card asks for its block every turn; the microphone only
+            // hands anything over while it's speaking.
+            int numSamples = turn < SPEAKING_TURNS ? BLOCK : 0;
+            std::vector<short> block(numSamples);
+            for (int i = 0; i < numSamples; i++)
+            {
+                // Phase offset keeps every tone sample non-zero, so the
+                // zero/non-zero accounting can't trip over a crossing.
+                block[i] = (short)(8000.0 * std::sin(step * (written + i) + 0.25));
+            }
+            written += numSamples;
+            if (numSamples > 0 && g_rxUserdata->infifo2->write(block.data(), numSamples) != 0) counts.inputOverflows++;
+
+            thread.txProcessing_(&helper);
+
+            int available = std::min(g_rxUserdata->outfifo1->numUsed(), BLOCK);
+            std::vector<short> taken(BLOCK, 0);
+            if (available > 0) g_rxUserdata->outfifo1->read(taken.data(), available);
+            sent.insert(sent.end(), taken.begin(), taken.end());
+        }
+
+        bool result = true;
+        result &= check("blocks from the microphone had nowhere to go", counts.inputOverflows, 0L);
+
+        // Nothing was given to the radio while the thread primed, and the
+        // waiting was for about the length of the priming: a fifth of a
+        // second of microphone audio, give or take a frame's worth.
+        size_t firstTone = 0;
+        while (firstTone < sent.size() && sent[firstTone] == 0) firstTone++;
+        if (firstTone < (size_t)(TEST_SAMPLE_RATE * 16 / 100) || firstTone > (size_t)(TEST_SAMPLE_RATE * 28 / 100))
+        {
+            std::cout << "[the first samples out came " << firstTone * 1000 / TEST_SAMPLE_RATE
+                      << " ms in, expected about 200 ms of priming first] ";
+            result = false;
+        }
+        // Once tone was going it kept going while the microphone spoke:
+        // nothing but the tone's own crossing of zero for its first
+        // second's worth, no filled-in silence anywhere in it.
+        int run = 0;
+        for (size_t i = firstTone; i < firstTone + (size_t)TEST_SAMPLE_RATE && i < sent.size(); i++)
+        {
+            run = (sent[i] == 0) ? run + 1 : 0;
+            if (run == 2)
+            {
+                std::cout << "[samples of silence filled in " << (i - 1) * 1000 / TEST_SAMPLE_RATE
+                          << " ms into the transmission] ";
+                result = false;
+                break;
+            }
+        }
+        return result;
+    }
+
+    static bool transmitterSendsOnlyWhatTheMicrophoneMade()
+    {
+        resetGlobals();
+        g_tx = true;
+        g_analog = 1;
+        SoundCardFifos fifos(TEST_SAMPLE_RATE);
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        TxRxThread thread(true, TEST_SAMPLE_RATE, TEST_SAMPLE_RATE, nullptr, nullptr, makeHooks(micInDone, recRadioDone, playRadioDone));
+        thread.initializePipeline_();
+
+        FakeRealtimeHelper helper;
+        SoundCardCounts counts;
+        constexpr int BLOCK = TEST_SAMPLE_RATE / 50;
+        constexpr int SPEAKING_TURNS = 20;           // the microphone speaks for 400 ms, then goes dry
+        constexpr int DRY_TURNS = 40;                // ...the card asks on for eight times as long
+        const double step = 2.0 * M_PI * 500.0 / TEST_SAMPLE_RATE;
+
+        std::vector<short> sent;
+        long written = 0;
+        for (int turn = 0; turn < SPEAKING_TURNS + DRY_TURNS; turn++)
+        {
+            int numSamples = turn < SPEAKING_TURNS ? BLOCK : 0;
+            std::vector<short> block(numSamples);
+            for (int i = 0; i < numSamples; i++)
+            {
+                block[i] = (short)(8000.0 * std::sin(step * (written + i) + 0.25));
+            }
+            written += numSamples;
+            if (numSamples > 0 && g_rxUserdata->infifo2->write(block.data(), numSamples) != 0) counts.inputOverflows++;
+
+            thread.txProcessing_(&helper);
+
+            int available = std::min(g_rxUserdata->outfifo1->numUsed(), BLOCK);
+            std::vector<short> taken(BLOCK, 0);
+            if (available > 0) g_rxUserdata->outfifo1->read(taken.data(), available);
+            sent.insert(sent.end(), taken.begin(), taken.end());
+        }
+
+        bool result = true;
+        result &= check("blocks from the microphone had nowhere to go", counts.inputOverflows, 0L);
+
+        // What the radio was given, from the first sample to the last, is
+        // exactly the speech the microphone spoke: nothing made up for the
+        // silence, and nothing of the speech lost along the way.
+        size_t first = 0, last = sent.size();
+        while (first < sent.size() && sent[first] == 0) first++;
+        while (last > first && sent[last - 1] == 0) last--;
+        long expected = (long)SPEAKING_TURNS * BLOCK;
+        if ((long)(last - first) != expected)
+        {
+            std::cout << "[" << (last - first) << " samples of signal sent for " << expected
+                      << " of speech] ";
+            result = false;
+        }
+        // And once that was all spent, nothing more: the card is left with
+        // silence for the rest of its asking rather than fabricated audio.
+        for (size_t i = last; i < sent.size(); i++)
+        {
+            if (sent[i] != 0)
+            {
+                std::cout << "[samples were still being sent " << i * 1000 / TEST_SAMPLE_RATE
+                          << " ms in, after all the speech had been sent] ";
+                result = false;
+                break;
+            }
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------------
+    // A radio's sound card whose callback buffer is bigger than the FIFO the
+    // transmission is made ready in: it can never be given a whole block, so
+    // if "not a whole block" means "nothing" then the transmission never
+    // starts at all. It has to be given what there is, and silence for the
+    // rest of its block.
+    //
+    // The card asks in real time, so its rate is what the test asks of the
+    // machine: 24 kHz, a rate the rig's sound card actually runs at, costs
+    // it a quarter of what the same ask at 48 kHz did.
+    // ---------------------------------------------------------------------
+    static bool transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds()
+    {
+        resetGlobals();
+        g_tx = true;
+
+        constexpr int CARD_RATE = 24000; // what the radio's sound card runs at
+        constexpr int TURN_MS = 10;
+        constexpr int BLOCK = CARD_RATE * TURN_MS / 1000;
+        constexpr int RADIO_MS = 2000;                       // 48000 samples: more than outfifo1 can ever hold
+        constexpr int RADIO_BLOCK = CARD_RATE * RADIO_MS / 1000;
+        constexpr int RADIO_TURNS = 4;                       // two asks may land before priming finishes, leaving it four seconds of real time
+        constexpr int MIC_TURNS = (5 * CARD_RATE) / BLOCK;   // five seconds of microphone: the full room of its FIFO, no more
+
+        SoundCardFifos fifos(CARD_RATE);
+
+        std::atomic<int> micInDone{0}, recRadioDone{0}, playRadioDone{0};
+        auto helper = std::make_shared<ClockRealtimeHelper>(std::chrono::milliseconds(TURN_MS));
+        NeverReused<TxRxThread> thread(true, CARD_RATE, CARD_RATE, nullptr, helper, makeHooks(micInDone, recRadioDone, playRadioDone));
+
+        (*thread).start();
+        (*thread).waitForReady();
+        (*thread).signalToStart();
+
+        // The microphone, at real time.
+        std::thread mic([&]() {
+            std::vector<short> block(BLOCK);
+            long sent = 0;
+            auto nextTurn = std::chrono::steady_clock::now();
+            for (int turn = 0; turn < MIC_TURNS; turn++)
+            {
+                for (int i = 0; i < BLOCK; i++)
+                {
+                    block[i] = (short)(8000.0 * std::sin(2.0 * M_PI * 1000.0 * (sent + i) / CARD_RATE));
+                }
+                sent += BLOCK;
+                g_rxUserdata->infifo2->write(block.data(), BLOCK);
+                // Microphone audio arrives at real time, deadline by deadline.
+                nextTurn += std::chrono::milliseconds(TURN_MS);
+                std::this_thread::sleep_until(nextTurn);
+            }
+        });
+
+        // The radio's sound card, asking for more each time than the FIFO can
+        // be filled with, and going by the same decisions the application's
+        // callback makes.
+        struct RadioTurns
+        {
+            long asked = 0;       // asks it was given samples for
+            long shortTurns = 0;  // asks it was given nothing for
+            long withSignal = 0;  // asks it was given something to send
+            int peak = 0;         // the loudest sample it was given
+        } radio;
+
+        std::thread radioCard([&]() {
+            std::vector<short> block(RADIO_BLOCK);
+            auto nextTurn = std::chrono::steady_clock::now();
+            for (int turn = 0; turn < RADIO_TURNS; turn++)
+            {
+                // (What MainFrame::OnTxOutAudioData_() does with a block
+                // this big: whatever is there, and silence for the rest of
+                // its buffer.)
+                int available = std::min(g_rxUserdata->outfifo1->numUsed(), RADIO_BLOCK);
+                if (available < RADIO_BLOCK)
+                {
+                    g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
+                }
+                if (available == 0)
+                {
+                    radio.shortTurns++;
+                }
+                else if (g_rxUserdata->outfifo1->read(block.data(), available) == 0)
+                {
+                    int turnPeak = 0;
+                    for (int i = 0; i < available; i++)
+                    {
+                        turnPeak = std::max(turnPeak, std::abs((int)block[i]));
+                    }
+                    radio.asked++;
+                    radio.peak = std::max(radio.peak, turnPeak);
+                    if (turnPeak > 1000) radio.withSignal++;
+                }
+                // The sound card asks at hardware pace regardless of how
+                // busy the machine is: turns are deadline-driven.
+                nextTurn += std::chrono::milliseconds(RADIO_MS);
+                std::this_thread::sleep_until(nextTurn);
+            }
+        });
+
+        mic.join();
+        radioCard.join();
+        (*thread).stop();
+
+        if (getenv("FREEDV_TEST_VERBOSE") != nullptr)
+        {
+            std::cout << std::endl << "    " << radio.asked << " of " << RADIO_TURNS << " asks given samples, "
+                      << radio.shortTurns << " given nothing, " << radio.withSignal << " with something to send; peak "
+                      << radio.peak << std::endl;
+        }
+
+        bool result = true;
+
+        // The asks that landed after the transmission was primed were given
+        // the most they could be given, rather than being told there wasn't
+        // a whole block and given nothing. The first lands while it's still
+        // being primed; a busy machine can keep the priming running into
+        // the second ask as well, which is what the allowance of two is for.
+        if (radio.asked < RADIO_TURNS - 2)
+        {
+            std::cout << "[" << RADIO_TURNS - radio.asked << " of " << RADIO_TURNS
+                      << " asks were given nothing, expected 2 at most] ";
+            result = false;
+        }
+        // And what it was given was the transmission, not silence.
+        if (radio.withSignal < RADIO_TURNS - 2)
+        {
+            std::cout << "[only " << radio.withSignal << " of " << RADIO_TURNS
+                      << " asks were given something to send] ";
+            result = false;
+        }
+        return result;
+    }
+
 };
 
 int main()
@@ -2508,6 +2902,9 @@ int main()
     executeTestCase("stopsProcessingWhenToldTimeIsUp", &TxRxThreadTest::stopsProcessingWhenToldTimeIsUp);
     executeTestCase("endOfOverIsSentOnceWhenTransmitEnds", &TxRxThreadTest::endOfOverIsSentOnceWhenTransmitEnds);
     executeTestCase("startStopRunsRealTimeHelperLifecycle", &TxRxThreadTest::startStopRunsRealTimeHelperLifecycle);
+    executeTestCase("transmitterPrimesWithSpeechBeforeItsFirstFrame", &TxRxThreadTest::transmitterPrimesWithSpeechBeforeItsFirstFrame);
+    executeTestCase("transmitterSendsOnlyWhatTheMicrophoneMade", &TxRxThreadTest::transmitterSendsOnlyWhatTheMicrophoneMade);
+    executeTestCase("transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds", &TxRxThreadTest::transmitterFeedsASoundCardAskingForMoreThanTheFifoHolds);
     executeTestCase("toneIsUnbrokenWhenSoundCardsKeepTime", &TxRxThreadTest::toneIsUnbrokenWhenSoundCardsKeepTime);
     executeTestCase("toneOnlyBreaksWhereASoundCardStalled", &TxRxThreadTest::toneOnlyBreaksWhereASoundCardStalled);
     executeTestCase("speechSurvivesRoundTrip", &TxRxThreadTest::speechSurvivesRoundTrip);
