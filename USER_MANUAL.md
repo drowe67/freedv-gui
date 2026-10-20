@@ -1010,6 +1010,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
     * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
     * Fix silence being mixed into the first half second of each transmission. (PR #1567, #1568)
+    * Fix the voice keyer's RX pause and wait for a reply, the slow SNR display and the statistics reset after losing sync running twice as fast as intended. (PR #1571)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
