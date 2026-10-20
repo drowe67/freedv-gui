@@ -2017,6 +2017,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           m_panelDemodIn->add_new_short_samples(demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
           m_panelDemodIn->refreshData();
       }
+      else if (timerId == ID_TIMER_SNR)
+      {
+          // Only the SNR plot here: everything below goes by time passing
+          // (the SNR filter, the voice keyer, how long since sync was lost)
+          // and so must only happen once per DT, on ID_TIMER_UPDATE_OTHER.
+          if (!halfDuplexState || !txState)
+          {
+              float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
+              snr = std::min(snr, (float)MAX_SNR_VAL);
+              snr = std::max(snr, (float)NO_SNR_VAL);
+              m_panelSNR->add_new_sample(snr);
+              m_panelSNR->refreshData();
+          }
+      }
       else
       {
          // Update average magnitudes
@@ -2106,15 +2120,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
-        {
-            float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, (float)MAX_SNR_VAL);
-            snr = std::max(snr, (float)NO_SNR_VAL);
-            m_panelSNR->add_new_sample(snr);
-            m_panelSNR->refreshData();
-        }
-        
         // sync LED (Colours don't work on Windows) ------------------------
 
         auto state = g_State.load(std::memory_order_acquire);
