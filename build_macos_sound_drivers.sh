@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git clone https://github.com/tmiw/BlackHole.git
+git clone https://github.com/freedv/BlackHole.git
 cd BlackHole
 
 for i in {1..2}; do
