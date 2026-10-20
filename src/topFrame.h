@@ -262,7 +262,6 @@ class TopFrame : public wxFrame
 class TabFreeAuiNotebook : public wxAuiNotebook
 {
 public:
-    TabFreeAuiNotebook();
     TabFreeAuiNotebook(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE);
     virtual ~TabFreeAuiNotebook() = default;
 

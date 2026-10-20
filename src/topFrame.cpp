@@ -204,10 +204,6 @@ public:
 };
 #endif // !wxCHECK_VERSION(3, 3, 0)
 
-TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook()
-{
-    WXWIDGETS_SET_LAYOUT_DIRECTION;
-}
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
 

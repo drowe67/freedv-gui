@@ -9,8 +9,8 @@ them are run; otherwise, only those named:
     python3 test_plots.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs.
 """
 
 import os
@@ -20,6 +20,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.audio import Loopback, Tone
 from test_main_window import (CALLSIGN, MICROPHONE, RADIO_RX, RADIO_TX, TABS, audio_devices, check, check_equal,
                               quit_and_check_log, settings, start_modem, stop_modem, wait_for_transmit)
@@ -108,11 +109,12 @@ def test_tuning():
                 app.mouse(plot, "wheel", rotation=-1)
                 check_equal(tuned_to(app), CENTRE, "Tuned to back at the middle")
 
-                # There's no going past either end.
+                # There's no going past either end. (Not too near the left
+                # edge, which can be the frequency axis's labels instead.)
                 for rotation, limit in [(1, HIGHEST), (-1, LOWEST)]:
-                    app.mouse(plot, "left_dclick", x=0.95 if rotation > 0 else 0.12, y=0.5)
+                    app.mouse(plot, "left_dclick", x=0.95 if rotation > 0 else 0.25, y=0.5)
                     previous = None
-                    for notch in range(60):
+                    for notch in range(200):
                         app.mouse(plot, "wheel", rotation=rotation)
                         now = tuned_to(app)
                         if now == previous:
@@ -212,8 +214,46 @@ def test_drawing():
             quit_and_check_log(app)
 
 
+def test_waterfall_colours():
+    """The waterfall's other colour schemes, and tuning across it with the
+    arrow keys as far as it goes.
+
+    What's drawn can't be seen from here: this is FreeDV drawing a quiet
+    and a loud signal in each scheme without anything going wrong."""
+    plot = PLOTS["Waterfall"]
+    with audio_devices():
+        for scheme in (1, 2):
+            with freedvtest.start(settings=settings(Waterfall__Color=scheme)) as app:
+                app.wait_for_window("main")
+                start_modem(app)
+                show(app, "Waterfall")
+                time.sleep(1)
+                with Tone(RADIO_RX):
+                    time.sleep(2)
+                    check_equal(app.state()["running"], True, "Running while drawing in colour scheme %d" % scheme)
+
+                    # The arrow keys stop at either end.
+                    for key, x, limit in [("Up", 0.95, HIGHEST), ("Down", 0.12, LOWEST)]:
+                        app.mouse(plot, "left_dclick", x=x, y=0.5)
+                        previous = None
+                        for press in range(60):
+                            app.key(plot, key)
+                            now = tuned_to(app)
+                            if now == previous:
+                                break
+                            previous = now
+                        check_equal(previous, limit, "Furthest that the %s key goes" % key)
+                    app.mouse(plot, "middle_down")
+                time.sleep(1)
+                stop_modem(app)
+                quit_and_check_log(app)
+                check_equal(int(freedvtest.read_config(app.config_path)["/Waterfall/Color"]), scheme,
+                            "Colour scheme saved")
+
+
 SCENARIOS = {
     "tuning": test_tuning,
+    "waterfall_colours": test_waterfall_colours,
     "tuned_away": test_tuned_away,
     "drawing": test_drawing,
 }
@@ -226,7 +266,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

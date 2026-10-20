@@ -21,7 +21,7 @@ While it may be possible to execute FreeDV on additional platforms and distribut
 (especially ones similar to ones currently supported), this is not guaranteed. Any 
 bugfixes required for an unsupported platform may be deferred or rejected, especially 
 if there is impact to supported platforms. Requests for official support of new platforms 
-should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
+should go through our existing [Feature Request process](https://github.com/freedv/freedv-gui/issues/new?template=feature_request.yml).
 
 ## Setup Wizard
 
@@ -198,7 +198,7 @@ on platform:
 |----------|--------------------------------------------------------------|
 | Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
 | Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
-| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
+| macOS    | See https://github.com/freedv/freedv-gui/tree/master/wav    |
 
 To play these files, first select a FreeDV mode and press Start.  Then 
 choose a file using "Tools - Start/Stop Play File From Radio".  You should 
@@ -872,13 +872,23 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to record both the raw and decoded RX audio. (PR #1501)
     * Linux/PulseAudio: Show friendlier device names in configuration windows. (PR #1508)
     * Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR #1513, #1539)
-    * Add dark mode support for Windows. (PR #1518, #1529)
+    * Add dark mode support for Windows. (PR #1518, #1529, #1560)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
-2. Other:
+2. Bugfixes:
+    * Fix silence being mixed into the first half second of each transmission, and holes in the signal at its start. (PR #1562)
+3. Build system:
+    * Update wxWidgets to 3.3.4. (PR #1560, #1556)
+    * CI: only build with PGO, run the tests and report coverage on merges; other pushes get unsigned packages to try out. (PR #1563)
+4. Other:
     * Remove legacy FreeDV modes (700D/700E/1600). (PR #1407, #1411, #1415)
-    * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554)
+    * Add automated tests of the user interface: Setup Wizard, FreeDV Reporter, Settings, main, Log QSO, Start Recording and Filter windows, plots, audio device errors, serial port PTT and rig control. (PR #1544, #1546, #1548, #1550, #1551, #1553, #1554, #1556)
+    * Run the automated user interface tests, and report test coverage, as part of CI. (PR #1556)
+    * Run the automated user interface tests on macOS. (PR #1563)
+    * Run the automated user interface tests on Windows. (PR #1566)
+    * Remove unused plot, main window and FreeDV Reporter code. (PR #1556)
     * Settings: play back audio input tests through the speaker/headphones instead of the radio. (PR #1548)
+    * Add tests of whole transmissions through the TX/RX threads without sound cards, and diagnostics for rade_loss test failures. (PR #1562)
 
 *Note: Legacy FreeDV modes (700D/700E/1600) have been removed due to low use. FreeDV 2.4.x is still available if one wishes to operate these modes.*
 
@@ -925,20 +935,40 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix Load Default Configuration reloading the configuration in use instead of the default one. (PR #1549)
     * Linux: fix Load Default Configuration loading an empty configuration rather than the default one. (PR #1557)
     * Logging: fix logged contacts sometimes being timed a second early. (PR #1552)
+    * Fix FreeDV being unable to exit after pressing Start with a sound device that couldn't be opened. (PR #1559)
+    * Fix possible crash when an audio device fails to open before FreeDV has asked to be told of its errors. (PR #1559)
+    * Linux: fix audio pausing for up to two more seconds after FreeDV's audio processing has been held up for more than two. (PR #1559)
+    * Settings: fix a typed-in frequency losing its last three digits when switching from kHz to MHz and pressing Apply. (PR #1559)
     * Linux: fix crash on pressing Start with no sound server (PipeWire/PulseAudio) running. (PR #1555)
     * Linux: report losing the sound server while running, and fix Stop getting stuck afterwards. (PR #1555)
     * Fix each use of Adjust Monitor Volume leaving a hidden popup behind. (PR #1555)
     * Filter: fix equaliser changes being ignored if the window was opened before pressing Start. (PR #1552)
     * Fix each use of Log QSO leaving a hidden window behind. (PR #1552)
     * Recording: restrict a pasted recording suffix to the same characters as a typed one. (PR #1552)
+    * FreeDV Reporter: fix a direction of 0 being shown for stations without a usable grid square after changing the band filter. (PR #1564)
+    * macOS: fix the last block of audio being sent to the radio over and over after transmitting, rather than silence. (PR #1564)
+    * Fix a saved main window size too small to be of use being kept. (PR #1564)
+    * Rig control: fix FreeDV briefly going back to the previous frequency after changing it (and so e.g. choosing the wrong sideband for analog mode when switched to straight after changing band). (PR #1564)
+    * macOS/Windows: fix possible crash or garbled log output when some audio device and thread errors are logged. (PR #1564)
+    * Windows: fix the main window being too small to show the waterfall and spectrum the first time FreeDV is started on a high DPI display. (PR #1565)
+    * Windows: fix FreeDV Reporter not removing what's left of a flag from the status message after part of it is deleted. (PR #1565)
+    * Fix a possible crash when FreeDV is asked to exit again while it's exiting with the FreeDV Reporter window open. (PR #1565)
+    * Fix Test PTT sometimes staying greyed out after a radio or serial port that couldn't be opened. (PR #1565)
+    * Fix silence being mixed into the first half second of each transmission. (PR #1567, #1568)
+    * Fix the voice keyer's RX pause and wait for a reply, the slow SNR display and the statistics reset after losing sync running twice as fast as intended. (PR #1571)
+    * Fix the spectrum plot's sync tuning line being drawn using an uninitialized value until the plot's first update. (PR #1572)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
     * Fix bundled libsndfile build on lib64 systems and strncpy build error. (PR #1510)
     * Only use system libraries that can actually be linked. (PR #1521)
     * Optimizations to reduce full rebuild time. (PR #1538)
+    * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
-3. Other:
+    * Add tests of whole transmissions through the TX/RX threads without sound cards. (PR #1567)
+3. Documentation:
+    * Update documentation to reflect new repo URL. (PR #1569)
+4. Other:
     * Various GUI performance improvements. (PR #1481, #1521, #1524, #1527, #1531)
     * Windows audio thread timing improvements. (PR #1488)
 
@@ -999,7 +1029,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## Earlier than V2.3.0
 
-See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
+See [this](https://github.com/freedv/freedv-gui/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to 2.3.0.
 
 # References
 

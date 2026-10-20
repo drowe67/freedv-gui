@@ -6,9 +6,8 @@ of them are run; otherwise, only those named:
 
     python3 test_setup_wizard.py [scenario...]
 
-Run from the build folder (or set FREEDV_BINARY). Linux only for now, as it
-relies on PulseAudio/PipeWire for the audio devices that FreeDV is set up
-with.
+Run from the build folder (or set FREEDV_BINARY), on Linux or macOS: see
+freedvtest/audio.py for the audio devices it needs.
 """
 
 import os
@@ -20,12 +19,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import VirtualAudioDevices, default_output
+import freedvtest.audio
+from freedvtest.audio import VirtualAudioDevices, default_output, device
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 RADIO_RX_IN = VirtualAudioDevices.input_name(RADIO_RX)
 MICROPHONE_IN = VirtualAudioDevices.input_name(MICROPHONE)
@@ -324,6 +324,70 @@ def test_receive_only():
             finish_wizard(app)
             check_audio_config(app, receive_only)
 
+            quit_and_check_log(app)
+
+
+def test_odd_starting_points():
+    """Opened on settings that it wouldn't have made itself: devices that
+    have since gone, and only some of what transmitting needs."""
+    def audio(radio_in, radio_out, microphone, speaker):
+        settings = {}
+        for card, device in [("soundCard1In", radio_in), ("soundCard1Out", radio_out),
+                             ("soundCard2In", microphone), ("soundCard2Out", speaker)]:
+            settings["/Audio/%sDeviceName" % card] = device
+            settings["/Audio/%sSampleRate" % card] = 48000
+        return settings
+
+    def choose_everything_and_finish(app):
+        go_to_page(app, 0)
+        app.set_value("wizard.cbRadioIn", data=RADIO_RX_IN)
+        app.set_value("wizard.cbSpeakerOut", data=SPEAKER)
+        go_to_page(app, 1)
+        app.set_value("wizard.ckReceiveOnly", False)
+        app.set_value("wizard.cbMicIn", data=MICROPHONE_IN)
+        app.set_value("wizard.cbRadioOut", data=RADIO_TX)
+        finish_wizard(app)
+        check_audio_config(app, TWO_SOUND_CARDS)
+
+    gone = "FreeDVGuiTest_Gone"
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER):
+        # Every device has gone. Finishing without choosing others leaves
+        # nothing that's there to be chosen in their place.
+        with freedvtest.start(settings=audio(gone + ".monitor", gone, gone + "2.monitor", gone + "2")) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": False})
+            finish_wizard(app)
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            reopen_wizard(app)
+            choose_everything_and_finish(app)
+            start_and_stop_modem(app)
+            quit_and_check_log(app)
+
+        # Receive only, without a speaker having been chosen: one's suggested.
+        with freedvtest.start(settings=audio(RADIO_RX_IN, "none", "none", "none")) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            speaker = app.get("wizard.cbSpeakerOut")
+            if any(item.get("data") == default_output() for item in speaker["items"]):
+                check_equal(speaker["data"], default_output(), "Suggested speaker")
+            check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": True})
+            choose_everything_and_finish(app)
+            quit_and_check_log(app)
+
+        # A speaker but no microphone isn't receive only.
+        with freedvtest.start(settings=audio(RADIO_RX_IN, RADIO_TX, "none", SPEAKER)) as app:
+            app.wait_for_window("main")
+            reopen_wizard(app)
+            check_equal(app.get("wizard.cbSpeakerOut")["data"], SPEAKER, "Speaker")
+            go_to_page(app, 1)
+            check_values(app, {"ckReceiveOnly": False})
+            check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
+            choose_everything_and_finish(app)
+            start_and_stop_modem(app)
             quit_and_check_log(app)
 
 
@@ -678,7 +742,7 @@ def test_import():
         }
         with freedvtest.start(user_config_files=user_config_files) as app:
             def write_wsjtx_settings(**settings):
-                with open(os.path.join(app.user_config_dir, "WSJT-X.ini"), "w") as f:
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
                     f.write(wsjtx_settings(**settings))
 
             app.wait_for_window("wizard")
@@ -710,7 +774,7 @@ def test_import():
                 MyCall='"ZZ0ZZZ"',
                 MyGrid="AA00",
                 PSKReporter="true",
-                SoundInName="Monitor of %s" % RADIO_RX,
+                SoundInName=VirtualAudioDevices.input_label(RADIO_RX),
                 SoundOutName=RADIO_TX.upper(),
                 Rig=rig,
                 CATSerialPort="/dev/ttyFreeDVTest0",
@@ -826,16 +890,115 @@ def test_import():
             quit_and_check_log(app)
 
 
+def test_import_more():
+    """The less usual things that WSJT-X's settings can say."""
+    with VirtualAudioDevices(RADIO_RX, RADIO_TX, SPEAKER):
+        with freedvtest.start(user_config_files={"WSJT-X.ini": ""}) as app:
+            def import_wsjtx(**settings):
+                with open(app.user_config_path("WSJT-X.ini"), "w") as f:
+                    f.write(wsjtx_settings(**settings))
+                app.click("wizard.btnImport")
+                return import_status(app)
+
+            app.wait_for_window("wizard")
+            rig = find_rig(app, "Icom IC-7300")
+            rigs = [item["label"].strip() for item in app.get("wizard.cbRigName")["items"]]
+
+            # Device names cut short (as Qt once did on Windows) still find
+            # their devices...
+            radio_in_shown = [item["label"] for item in app.get("wizard.cbRadioIn")["items"]
+                              if item.get("data") == RADIO_RX_IN][0]
+            # (Not with the names of macOS's loopback devices, which are too
+            # short for this: see freedvtest.audio.device().)
+            long_names = len(radio_in_shown) > 24 and len(RADIO_TX) > 24
+            check(long_names or freedvtest.audio.MACOS,
+                  "Device names are too short for this: %r, %r" % (radio_in_shown, RADIO_TX))
+            if long_names:
+                check_equal(import_wsjtx(SoundInName=radio_in_shown[:24], SoundOutName=RADIO_TX[:24]),
+                            "Imported: radio audio devices. Review each page before clicking Finish.",
+                            "Import result")
+                check_equal(app.get("wizard.cbRadioIn")["data"], RADIO_RX_IN, "Radio input")
+                check_equal(app.get("wizard.cbRadioOut")["data"], RADIO_TX, "Radio output")
+
+                # ...unless there's too little left to go by.
+                check_equal(import_wsjtx(SoundInName=radio_in_shown[:7], SoundOutName=RADIO_TX[:7]),
+                            "No usable settings were found in WSJT-X. Not imported: radio audio devices (not "
+                            "currently connected). Review each page before clicking Finish.", "Import result")
+
+            # Only one of the two found: that much is imported, and the rest
+            # is said to be missing.
+            check_equal(import_wsjtx(SoundInName=radio_in_shown, SoundOutName="FreeDVGuiTest Nonexistent Device"),
+                        "Imported: radio audio devices. Not imported: radio audio devices (not currently "
+                        "connected). Review each page before clicking Finish.", "Import result")
+
+            # A radio keyed by DTR on its own port, with no word on modes.
+            check_equal(import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", PTTMethod="PTT_method_DTR",
+                                     PTTport="/dev/ttyFreeDVTest1"),
+                        "Imported: Hamlib rig control (%s). Review each page before clicking Finish." % rig,
+                        "Import result")
+            check_values(app, {"ckHamlib": True, "cbRigName": rig, "cbSerialPort": "/dev/ttyFreeDVTest0",
+                               "cbSerialRate": "default", "cbPttMethod": "DTR",
+                               "cbPttSerialPort": "/dev/ttyFreeDVTest1"})
+
+            # Keyed by DTR on the port it's controlled through.
+            import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", CATSerialRate="9600",
+                         PTTMethod="PTT_method_DTR", PTTport="/dev/ttyFreeDVTest0")
+            check_values(app, {"cbSerialRate": "9600", "cbPttMethod": "DTR", "cbPttSerialPort": ""})
+
+            # Keyed by its own VOX: FreeDV has nothing to do.
+            import_wsjtx(Rig=rig, CATSerialPort="/dev/ttyFreeDVTest0", PTTMethod="PTT_method_VOX", PTTport="CAT")
+            check_values(app, {"ckHamlib": True, "cbPttMethod": "None", "cbPttSerialPort": ""})
+
+            # A radio that plugs straight into USB has a setting of its own
+            # for where it is.
+            usb_rigs = [name for name in rigs if "FUNcube Dongle" in name or "Si570 AVR-USB" in name]
+            if usb_rigs:
+                check_equal(import_wsjtx(Rig=usb_rigs[0], CATUSBPort="1-2.3", CATSerialPort="/dev/ttyFreeDVTest0",
+                                         CATSerialRate="19200"),
+                            "Imported: Hamlib rig control (%s). Review each page before clicking Finish."
+                            % usb_rigs[0], "Import result")
+                check_values(app, {"ckHamlib": True, "cbRigName": usb_rigs[0], "cbSerialPort": "1-2.3",
+                                   "cbSerialRate": "default"})
+
+            # No radio to control, keyed by RTS.
+            check_equal(import_wsjtx(PTTMethod="PTT_method_RTS", PTTport="/dev/ttyFreeDVTest2"),
+                        "Imported: serial port PTT (/dev/ttyFreeDVTest2). Review each page before clicking Finish.",
+                        "Import result")
+            check_values(app, {"ckHamlib": False, "ckSerialPTT": True, "cbCtlDevicePath": "/dev/ttyFreeDVTest2",
+                               "rbUseRTS": True, "rbUseDTR": False})
+
+            # No radio to control and nothing to key it with either.
+            for nothing in [dict(Rig="None", PTTMethod="PTT_method_CAT", PTTport="CAT"),
+                            dict(Rig="None", PTTMethod="PTT_method_DTR", PTTport=""),
+                            dict(MyCall="", MyGrid="", PSKReporter="false")]:
+                check_equal(import_wsjtx(**nothing),
+                            "No usable settings were found in WSJT-X. Review each page before clicking Finish.",
+                            "Import result for %r" % nothing)
+
+            # Who and where, without the rest.
+            check_equal(import_wsjtx(MyCall="ZZ0ZZZ", PSKReporter="TRUE"),
+                        "Imported: callsign, reporting enabled. Review each page before clicking Finish.",
+                        "Import result")
+            check_equal(import_wsjtx(MyGrid="AA00"),
+                        "Imported: grid square. Review each page before clicking Finish.", "Import result")
+
+            app.click("wizard.btnCancel")
+            app.wait_for_window_closed("wizard")
+            quit_and_check_log(app)
+
+
 SCENARIOS = {
     "first_run": test_first_run,
     "second_run": test_second_run,
     "receive_only": test_receive_only,
+    "odd_starting_points": test_odd_starting_points,
     "cancel": test_cancel,
     "auto_select": test_auto_select,
     "radio_control": test_radio_control,
     "hamlib_start": test_hamlib_start,
     "reporting": test_reporting,
     "import": test_import,
+    "import_more": test_import_more,
 }
 
 
@@ -846,7 +1009,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (name, ", ".join(SCENARIOS)))
     for name in names:
         print("Running %s..." % name, flush=True)
-        SCENARIOS[name]()
+        try:
+            SCENARIOS[name]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 

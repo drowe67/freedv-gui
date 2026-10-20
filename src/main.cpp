@@ -174,6 +174,7 @@ int                 g_nSoundCards;
 
 std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
+std::atomic<int>    g_outfifo1_emptyWhileTransmitting; // ...the times that mattered
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
 int                 g_AEstatus1[4];
@@ -251,26 +252,67 @@ static const wxChar* const FREEDV_STATE_APP_NAME    = wxT("FreeDV-State");
 static const wxChar* const FREEDV_VENDOR_NAME = wxT("CODEC2-Project");
 static const wxChar* const LAST_USED_CONFIG_KEY     = wxT("/LastUsedConfigFile");
 
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+// GUI tests (test/gui) keep FreeDV away from the registry, where its default
+// configuration and the state above otherwise go on Windows, by giving a
+// folder for them to be files in instead (as they are on Linux and macOS).
+static wxString TestConfigFile_(const wxString& name)
+{
+    wxString folder;
+    if (!wxGetEnv("FREEDV_TEST_CONFIG_DIR", &folder) || folder.IsEmpty())
+    {
+        return wxEmptyString;
+    }
+    return wxFileName(folder, name).GetFullPath();
+}
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+
+// Opens the default configuration: the one used when FreeDV isn't told which
+// to use.
+[[maybe_unused]] static wxConfigBase* CreateDefaultConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return new wxFileConfig(wxT("FreeDV"), FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return wxConfigBase::Create();
+}
+
+static std::unique_ptr<wxConfigBase> OpenStateConfig_()
+{
+#if defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    wxString testFile = TestConfigFile_(wxT("FreeDV-State.ini"));
+    if (!testFile.IsEmpty())
+    {
+        return std::make_unique<wxFileConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME, testFile, testFile, wxCONFIG_USE_LOCAL_FILE);
+    }
+#endif // defined(ENABLE_TEST_AGENT) && defined(__WXMSW__)
+    return std::make_unique<wxConfig>(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+}
+
 wxString getLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
+    auto stateConfig = OpenStateConfig_();
     wxString path;
-    stateConfig.Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
+    stateConfig->Read(LAST_USED_CONFIG_KEY, &path, wxEmptyString);
     return path;
 }
 
 void saveLastUsedConfigPath(const wxString& path)
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, path);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, path);
+    stateConfig->Flush();
 }
 
 void clearLastUsedConfigPath()
 {
-    wxConfig stateConfig(FREEDV_STATE_APP_NAME, FREEDV_VENDOR_NAME);
-    stateConfig.Write(LAST_USED_CONFIG_KEY, wxEmptyString);
-    stateConfig.Flush();
+    auto stateConfig = OpenStateConfig_();
+    stateConfig->Write(LAST_USED_CONFIG_KEY, wxEmptyString);
+    stateConfig->Flush();
 }
 
 // Unit test management
@@ -538,7 +580,18 @@ void MainApp::UnitTest_()
     
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
- 
+
+    // What the sound cards went through, for telling a failure that started
+    // there from one that didn't. (Only the radio's output going short while
+    // transmitting is of any account: otherwise there's nothing to send it.
+    // Likewise the microphone's input overflowing while receiving, when
+    // nothing's taking it.)
+    log_info(
+        "Sound card FIFOs: radio out short %d times while transmitting, radio in overflowed %d times, "
+        "mic in overflowed %d times, speaker out short %d times",
+        g_outfifo1_emptyWhileTransmitting.load(std::memory_order_relaxed), g_infifo1_full.load(std::memory_order_relaxed),
+        g_infifo2_full.load(std::memory_order_relaxed), g_outfifo2_empty.load(std::memory_order_relaxed));
+
     // Fire event to stop FreeDV
     log_info("Firing stop");
     CallAfter([this]() {
@@ -626,7 +679,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         // would find the same one as it does when FreeDV is started
         // without being given a configuration to use.
         wxConfigBase::Set(nullptr);
-        defaultConfig = wxConfigBase::Create();
+        defaultConfig = CreateDefaultConfig_();
         wxConfigBase::Set(pConfig);
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
     }
@@ -685,6 +738,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         }
 #else
         defaultConfigFilePath = tempOldFile.GetPath();
+        wxConfigBase::Set(CreateDefaultConfig_());
 #endif // wxCHECK_VERSION(3,3,0) && defined(__linux__)
 
         // Whichever it is, this is the default configuration.
@@ -985,8 +1039,22 @@ void MainFrame::loadConfiguration_()
 
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
-    if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 780;
+    // (Nor anything too small to be of use: macOS, unlike Linux's window
+    // managers, makes the window as small as it's asked to.) The default,
+    // for when none has been saved, and that limit are scaled to suit the
+    // display: on Windows, sizes are in the screen's own pixels, and 800 of
+    // those at 200% are only as wide as 400 elsewhere, leaving no room for
+    // the plots beside everything else. (wxWidgets 3.0, which only Linux
+    // builds use, has no FromDIP(), and needs none there.)
+#if wxCHECK_VERSION(3,1,0)
+    wxSize defaultSize = FromDIP(wxSize(800, 780));
+    wxSize smallestSize = FromDIP(wxSize(300, 200));
+#else
+    wxSize defaultSize(800, 780);
+    wxSize smallestSize(300, 200);
+#endif // wxCHECK_VERSION(3,1,0)
+    if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
+    if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
     
     wxSize size = GetMinSize();
 
@@ -1293,6 +1361,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     SetThreadName("GUI");
 
     terminating_ = false;
+    closingReporterDialog_ = false;
     realigned_ = false;
     syncState_ = false;
     tabLayoutPersistenceEnabledAtStartup_ = false;
@@ -1329,7 +1398,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     m_panelDemodIn = nullptr;
     m_panelSNR = nullptr;
 
-    m_zoom              = 1.;
     suppressFreqModeUpdates_ = false;
     lastBand_ = BAND_OTHER;
     
@@ -1515,7 +1583,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
     optionsDlg = new OptionsDlg(NULL);
-    m_schedule_restore = false;
 
     vk_state = VK_IDLE;
 
@@ -1957,6 +2024,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
           // Level meter only, handled below. Kept out of the branch below,
           // which (e.g. the voice keyer) expects to run once per DT.
       }
+      else if (timerId == ID_TIMER_SNR)
+      {
+          // Only the SNR plot here: everything below goes by time passing
+          // (the SNR filter, the voice keyer, how long since sync was lost)
+          // and so must only happen once per DT, on ID_TIMER_UPDATE_OTHER.
+          if (!halfDuplexState || !txState)
+          {
+              float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
+              snr = std::min(snr, (float)MAX_SNR_VAL);
+              snr = std::max(snr, (float)NO_SNR_VAL);
+              m_panelSNR->add_new_sample(snr);
+              m_panelSNR->refreshData();
+          }
+      }
       else
       {
          // Update average magnitudes
@@ -2030,15 +2111,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_gaugeSNR->SetValue(0);
         }
 
-        if (timerId == ID_TIMER_SNR && (!halfDuplexState || !txState))
-        {
-            float snr = freedvInterface.getSync() ? g_snr : NO_SNR_VAL;
-            snr = std::min(snr, (float)MAX_SNR_VAL);
-            snr = std::max(snr, (float)NO_SNR_VAL);
-            m_panelSNR->add_new_sample(snr);
-            m_panelSNR->refreshData();
-        }
-        
         // sync LED (Colours don't work on Windows) ------------------------
 
         auto state = g_State.load(std::memory_order_acquire);
@@ -2296,13 +2368,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* FIFO and PortAudio under/overflow debug counters */
         optionsDlg->DisplayFifoPACounters();
 
-        // command from UDP thread that is best processed in main thread to avoid seg faults
-
-        if (m_schedule_restore) {
-            if (IsIconized())
-                Restore();
-            m_schedule_restore = false;
-        }
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
@@ -2395,6 +2460,19 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         return;
     }
 
+    if (closingReporterDialog_)
+    {
+        // Another request to close (say, a second click on the close button)
+        // while the one before it waits below for the Reporter dialog's last
+        // messages. Going on would destroy the dialog, and this window, out
+        // from under that one, which finishes closing by itself.
+        if (event.CanVeto())
+        {
+            event.Veto();
+        }
+        return;
+    }
+
     if (m_reporterDialog != nullptr)
     {
         // Grab and save the final position explicitly rather than relying
@@ -2409,7 +2487,9 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         m_reporterDialog->stopTrackingPosition();
 
         m_reporterDialog->setReporter(nullptr);
+        closingReporterDialog_ = true;
         wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        closingReporterDialog_ = false;
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
         m_reporterDialog = nullptr;
@@ -3450,6 +3530,7 @@ void MainFrame::startRxStream()
 
         g_infifo1_full.store(0, std::memory_order_relaxed);
         g_outfifo1_empty.store(0, std::memory_order_relaxed);
+        g_outfifo1_emptyWhileTransmitting.store(0, std::memory_order_relaxed);
         g_infifo2_full.store(0, std::memory_order_relaxed);
         g_outfifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
@@ -3584,6 +3665,13 @@ void MainFrame::startRxStream()
         // Create link to allow monitoring TX/VK audio
         wxGetApp().linkStep = std::make_shared<LinkStep>(rxOutSoundDevice->getSampleRate());
         
+        // Nothing's left over from an earlier start that got no further
+        // than this (below, when a device couldn't be opened): its
+        // processing threads were never started, and mustn't be mistaken
+        // for this start's, e.g. on changing to receiving only.
+        m_txThread = nullptr;
+        m_rxThread = nullptr;
+
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
@@ -3610,8 +3698,6 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-
-            m_txThread->start();
         }
 
         m_rxThread = std::make_shared<TxRxThread>(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice, MakeTxRxUiHooks());
@@ -3643,6 +3729,15 @@ void MainFrame::startRxStream()
             txOutSoundDevice.reset();
             m_RxRunning = false;
             return;
+        }
+
+        // Both processing threads are only started now, once every device
+        // is open: a thread that was started but never signalled to start
+        // (what the failures above would leave behind) can't be stopped,
+        // and FreeDV then hangs when it exits.
+        if (m_txThread != nullptr)
+        {
+            m_txThread->start();
         }
 
         m_rxThread->start();
@@ -3991,6 +4086,10 @@ void MainFrame::OnTxOutAudioData_(IAudioDevice& dev, void* data, size_t size, vo
     if (toRead < size && !isTuning)
     {
         g_outfifo1_empty.fetch_add(1, std::memory_order_relaxed);
+        if (g_tx.load(std::memory_order_acquire))
+        {
+            g_outfifo1_emptyWhileTransmitting.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     else
     {

@@ -82,14 +82,6 @@ void MainFrame::topFrame_OnSize( wxSizeEvent& event )
     TopFrame::topFrame_OnSize(event);
 }
 
-//-------------------------------------------------------------------------
-// OnExitClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnExitClick(wxCommandEvent& event)
-{
-    OnExit(event);
-}
-
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
 {
     if (m_reporterDialog != nullptr)
@@ -167,6 +159,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
 
     wxUnusedVar(event);
+
+    // The same dialog is shown each time, and still has the return code it
+    // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
+    // already set to mean that the dialog closed itself while being set up,
+    // and so wouldn't show it a second time.
+    optionsDlg->SetReturnCode(0);
+
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
@@ -297,7 +296,7 @@ void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent&)
 {
-    LaunchBrowser("https://github.com/drowe67/freedv-gui/releases");
+    LaunchBrowser("https://github.com/freedv/freedv-gui/releases");
 }
 
 //-------------------------------------------------------------------------
@@ -313,7 +312,7 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpManual( wxCommandEvent& )
 {
-    LaunchBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
+    LaunchBrowser("https://github.com/freedv/freedv-gui/blob/master/USER_MANUAL.pdf");
 }
 
 //-------------------------------------------------------------------------
@@ -428,8 +427,13 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
         }
 
-        // Update frequency box
-        if (!suppressFreqModeUpdates_ && (
+        // Update frequency box, unless what's reported was read from the
+        // radio before the frequency FreeDV last asked for was set: that would
+        // put FreeDV back where it was for a moment (and anything done in that
+        // moment, e.g. switching to analog, would go by the old frequency).
+        bool staleFrequency = wxGetApp().rigFrequencyController != nullptr &&
+            wxGetApp().rigFrequencyController->isFrequencyChangePending(freq);
+        if (!suppressFreqModeUpdates_ && !staleFrequency && (
             !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
             !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
         {
@@ -465,7 +469,7 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
 
         // Auto-save outgoing band levels, then load the new band's levels
         auto newBandEnum = FreeDVReporterDialog::getFilterForFrequency_(newFreq);
-        if (newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
+        if (!staleFrequency && newBandEnum != BAND_OTHER && newBandEnum != lastBand_)
         {
             autoSaveCurrentBandLevels_();
             lastBand_ = newBandEnum;
@@ -644,18 +648,6 @@ void MainFrame::OpenOmniRig()
 #endif // defined(WIN32)
 
 //-------------------------------------------------------------------------
-// OnCloseFrame()
-//-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent&)
-{
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
-    
-    Destroy();
-}
-
-//-------------------------------------------------------------------------
 // OnTop()
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
@@ -720,20 +712,6 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
     event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// Paint()
-//-------------------------------------------------------------------------
-void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
-{
-    wxPaintDC dc(this);
-
-    if(GetMenuBar()->IsChecked(ID_PAINT_BG))
-    {
-        dc.Clear();
-    }
-    dc.SetUserScale(m_zoom, m_zoom);
 }
 
 //-------------------------------------------------------------------------

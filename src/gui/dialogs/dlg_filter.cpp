@@ -664,14 +664,6 @@ void FilterDlg::OnInitDialog(wxInitDialogEvent&)
     ExchangeData(EXCHANGE_DATA_IN);
 }
 
-void FilterDlg::OnEnable(wxScrollEvent&) {
-    updateControlState();
-}
-
-void FilterDlg::OnBassBoost(wxScrollEvent&) {
-    updateControlState();
-}
-
 void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
     wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
     g_noiseReductionEnabled.store(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable, std::memory_order_release); // forces immediate change at pipeline level

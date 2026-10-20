@@ -824,6 +824,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             pipeline_->reset();
             clearFifos_();
             pendingEooCount_ = 0;
+            reachedMinimumTxInput_ = false;
 
             // return out and begin processing on the next loop
             return;
@@ -858,7 +859,12 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
         while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
-            
+
+            constexpr int MINIMUM_AUDIO_MS = 200;
+            int minimumAudioNumSamples = std::min(MINIMUM_AUDIO_MS * inputSampleRate_ / 1000, cbData->infifo2->capacity() * 90 / 100);
+            if (!reachedMinimumTxInput_ && cbData->infifo2->numUsed() < minimumAudioNumSamples) break;
+            reachedMinimumTxInput_ = true;
+
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.start();
 #endif // defined(ENABLE_PROCESSING_STATS)
@@ -873,10 +879,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             auto inputPtr = inputSamples_.get();
             int nread = cbData->infifo2->read(inputPtr, nsam_in_48);
-            if (nread != 0)
-            {
-                inputPtr = inputSamplesZeros_.get();
-            }
             if (nread != 0 && endingTx.load(std::memory_order_acquire))
             {
                 if (!hasEooBeenSent_)
@@ -931,6 +933,11 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 pendingEooCount_ = 0;
             }
 
+            if (nread != 0)
+            {
+                break;
+            }
+
             auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
 
             // For the AGC gain plot (polled by the GUI thread).
@@ -958,11 +965,6 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 #if defined(ENABLE_PROCESSING_STATS)
             processingStats_.end();
 #endif // defined(ENABLE_PROCESSING_STATS)
-
-            if (nread != 0)
-            {
-                break;
-            }
         }
     }
     else

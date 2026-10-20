@@ -6,11 +6,11 @@ of them are run; otherwise, only those named:
 
     python3 test_settings.py [scenario...]
 
-Run from the build folder (or set FREEDV_BINARY). Linux only for now, as it
-relies on PulseAudio/PipeWire for the audio devices that FreeDV is set up
-with.
+Run from the build folder (or set FREEDV_BINARY), on Linux or macOS: see
+freedvtest/audio.py for the audio devices it needs.
 """
 
+import contextlib
 import os
 import shutil
 import sys
@@ -20,12 +20,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
-from freedvtest.audio import Tone, VirtualAudioDevices, record_level
+import freedvtest.audio
+from freedvtest.audio import Tone, VirtualAudioDevices, device, record, record_level, tone_share
 
-RADIO_RX = "FreeDVGuiTest_Radio_To_Computer"
-RADIO_TX = "FreeDVGuiTest_Computer_To_Radio"
-MICROPHONE = "FreeDVGuiTest_Microphone_To_Computer"
-SPEAKER = "FreeDVGuiTest_Computer_To_Speaker"
+RADIO_RX = device("FreeDVGuiTest_Radio_To_Computer")
+RADIO_TX = device("FreeDVGuiTest_Computer_To_Radio")
+MICROPHONE = device("FreeDVGuiTest_Microphone_To_Computer")
+SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 
 RADIO_RX_IN = VirtualAudioDevices.input_name(RADIO_RX)
 MICROPHONE_IN = VirtualAudioDevices.input_name(MICROPHONE)
@@ -225,16 +226,17 @@ def test_audio():
             # selected to begin with.
             inputs = device_labels(app, "lcSoundCard1InDevice")
             outputs = device_labels(app, "lcSoundCard1OutDevice")
-            check("Monitor of " + RADIO_RX in inputs, "The radio's input isn't listed: %r" % inputs)
+            check(VirtualAudioDevices.input_label(RADIO_RX) in inputs, "The radio's input isn't listed: %r" % inputs)
             check(SPEAKER in outputs, "The speaker isn't listed: %r" % outputs)
             check_equal((inputs[-1], outputs[-1]), ("none", "none"), "Last devices listed")
             listed = [item for item in app.get(name("lcSoundCard1OutDevice"))["items"] if item["label"] == SPEAKER]
             check_equal(listed[0]["columns"][2], "48000 Hz", "Speaker's sample rate as listed")
             check_values(app, {"tcSoundCard1InDevice": "none", "tcSoundCard1OutDevice": "none"})
 
-            set_value(app, "lcSoundCard1InDevice", "Monitor of " + RADIO_RX)
+            set_value(app, "lcSoundCard1InDevice", VirtualAudioDevices.input_label(RADIO_RX))
             set_value(app, "lcSoundCard1OutDevice", SPEAKER)
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
 
             # Receive only until told otherwise.
             go_to_tab(app, "TX Audio")
@@ -252,11 +254,12 @@ def test_audio():
             # With transmit devices as well, the speaker becomes the second
             # sound card's output and the radio the first's.
             open_settings(app, "RX Audio")
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
             go_to_tab(app, "TX Audio")
             set_value(app, "ckTxReceiveOnly", False)
             check_enabled(app, transmit_controls, True)
-            set_value(app, "lcSoundCard2InDevice", "Monitor of " + MICROPHONE)
+            set_value(app, "lcSoundCard2InDevice", VirtualAudioDevices.input_label(MICROPHONE))
             set_value(app, "lcSoundCard2OutDevice", RADIO_TX)
             press_ok(app)
             two_cards = {
@@ -274,28 +277,36 @@ def test_audio():
 
             # It's all still there next time...
             open_settings(app, "RX Audio")
-            check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX, "tcSoundCard1OutDevice": SPEAKER})
+            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                               "tcSoundCard1OutDevice": SPEAKER})
             go_to_tab(app, "TX Audio")
-            check_values(app, {"ckTxReceiveOnly": False, "tcSoundCard2InDevice": "Monitor of " + MICROPHONE,
+            check_values(app, {"ckTxReceiveOnly": False,
+                               "tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                "tcSoundCard2OutDevice": RADIO_TX})
 
             # ...including after the lists are refreshed, which is how a
-            # device that's just been plugged in gets to be listed.
-            with VirtualAudioDevices("FreeDVGuiTest_New_Device"):
-                check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
-                      "A new device was listed without refreshing")
+            # device that's just been plugged in gets to be listed. (Only the
+            # refreshing on macOS and Windows, where a device can't be plugged
+            # in here.)
+            with contextlib.ExitStack() as new_device:
+                if not freedvtest.audio.FIXED_DEVICES:
+                    new_device.enter_context(VirtualAudioDevices("FreeDVGuiTest_New_Device"))
+                    check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
+                          "A new device was listed without refreshing")
                 app.click(name("btnRefreshTxAudio"))
-                check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
-                      "A new device wasn't listed after refreshing")
-                check_values(app, {"tcSoundCard2InDevice": "Monitor of " + MICROPHONE,
+                if not freedvtest.audio.FIXED_DEVICES:
+                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
+                          "A new device wasn't listed after refreshing")
+                check_values(app, {"tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                    "tcSoundCard2OutDevice": RADIO_TX})
                 go_to_tab(app, "RX Audio")
-                check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
-                      "A new device wasn't listed on the other tab after refreshing")
-                check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX,
+                if not freedvtest.audio.FIXED_DEVICES:
+                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
+                          "A new device wasn't listed on the other tab after refreshing")
+                check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
                 app.click(name("btnRefreshRxAudio"))
-                check_values(app, {"tcSoundCard1InDevice": "Monitor of " + RADIO_RX,
+                check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
 
             # Back to receive only: the speaker goes back to the first card.
@@ -386,6 +397,32 @@ def test_audio_tests():
             press_cancel(app)
 
             quit_and_check_log(app)
+
+    # A speaker that runs at a different sample rate from what's recorded:
+    # the recording still comes back through it, at the pitch it went in at.
+    # (Not where devices' rates can't be changed, as on Windows.)
+    devices = VirtualAudioDevices(RADIO_RX, RADIO_TX, MICROPHONE, SPEAKER, rates={SPEAKER: 44100})
+    try:
+        devices.__enter__()
+    except freedvtest.audio.Unavailable as e:
+        print("Not tried with a speaker at another sample rate: %s" % e)
+        return
+    try:
+        with freedvtest.start(settings=audio_settings()) as app:
+            open_settings(app, "RX Audio")
+            with Tone(RADIO_RX):
+                app.click(name("btnSoundCard1InTest"))
+                app.wait_until(lambda: label(app, "btnSoundCard1InTest") == "Playing", timeout=15,
+                               description="the recording to be played back")
+            share = tone_share(record(VirtualAudioDevices.input_name(SPEAKER), 1.5)[0], 1000)
+            check(share > 0.5, "The recording played back isn't the 1000 Hz tone that was recorded (%d%% of it is)"
+                  % (100 * share))
+            wait_for_test_to_finish(app, "btnSoundCard1InTest")
+            check_equal(app.message_boxes(), [], "Messages displayed")
+            press_cancel(app)
+            quit_and_check_log(app)
+    finally:
+        devices.__exit__(None, None, None)
 
 
 def find_rig(app, rig):
@@ -563,8 +600,42 @@ def test_ptt_test():
         check_equal(len(messages), 1, "Number of messages displayed for a port that isn't there (%r)" % messages)
         check("/dev/ttyFreeDVTestMissing" in messages[0], "Unexpected message: %r" % messages[0])
 
+        # Somewhere that FreeDV can't check for itself beforehand: what goes
+        # wrong is whatever Hamlib or the system says did.
+        set_value(app, "ckUseHamlibPTT", True)
+        set_value(app, "cbRigName", find_rig(app, "Hamlib NET rigctl"))
+        set_value(app, "cbSerialPort", "127.0.0.1:9")
+        set_value(app, "cbSerialRate", "9600")
+        app.click(name("buttonTestPTT"))
+        wait_for_test_to_finish(app)
+        messages = [box["message"] for box in app.message_boxes(clear=True)]
+        check_equal(len(messages), 1, "Number of messages displayed for a radio that can't be reached (%r)" % messages)
+        check(messages[0].startswith("Couldn't connect to Radio with Hamlib (")
+              and messages[0].endswith("Make sure the Hamlib serial Device, Rate, and Params match your radio"),
+              "Unexpected message: %r" % messages[0])
+
+        set_value(app, "ckUseSerialPTT", True)
+        set_value(app, "cbCtlDevicePath", "freedv-test-no-such-port")
+        app.click(name("buttonTestPTT"))
+        wait_for_test_to_finish(app)
+        messages = [box["message"] for box in app.message_boxes(clear=True)]
+        check_equal(len(messages), 1, "Number of messages displayed for a port that can't be opened (%r)" % messages)
+        check(messages[0].startswith("Couldn't open serial port freedv-test-no-such-port ("),
+              "Unexpected message: %r" % messages[0])
+
         press_cancel(app)
-        quit_and_check_log(app)
+        check_equal(app.message_boxes(), [], "Messages displayed")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+        # Hamlib has its say about the radio that couldn't be reached. On
+        # Windows, Hamlib and FreeDV also log what Windows said about the
+        # ports that couldn't be opened.
+        expected = ["127.0.0.1:9"]
+        if sys.platform == "win32":
+            expected += ["ttyFreeDVTestMissing", "WinErrorShow: serial error on CreateFileA",
+                         "SerialPortRigController.cpp", "freedv-test-no-such-port"]
+        errors = [line for line in app.log().splitlines()
+                  if (" ERROR " in line or " FATAL " in line) and not any(text in line for text in expected)]
+        check_equal(errors, [], "Errors logged by FreeDV")
 
 
 def test_rig_control():
@@ -678,8 +749,16 @@ def test_frequency_list():
     """The Rig Control tab's list of predefined frequencies."""
     buttons = ["freqListAdd", "freqListRemove", "freqListMoveUp", "freqListMoveDown"]
 
+    # Thousands are grouped as the user's region has them on macOS (where
+    # LC_ALL doesn't apply), e.g. "3,625.0" in the US: left out here.
+    def ungrouped(text):
+        return text.replace(",", "")
+
     def frequencies(app):
-        return [item["label"] for item in app.get(name("freqList"))["items"]]
+        return [ungrouped(item["label"]) for item in app.get(name("freqList"))["items"]]
+
+    def offered(app):
+        return [ungrouped(item["label"]) for item in app.get("main.cboReportFrequency")["items"]]
 
     def check_buttons(app, add, remove, up, down):
         for button, expected in zip(buttons, [add, remove, up, down]):
@@ -748,19 +827,23 @@ def test_frequency_list():
         press_apply(app)
         check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0"], "Frequencies listed in kHz")
         check_equal(label(app, "labelEnterFreq"), "Enter frequency (kHz):", "Frequency entry label")
-        check_values(app, {"txtCtrlNewFrequency": "14236.0"})
+        check_equal(ungrouped(value(app, "txtCtrlNewFrequency")), "14236.0", "txtCtrlNewFrequency")
         check_buttons(app, True, False, False, False)
         app.click(name("freqListAdd"))
         check_equal(frequencies(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies listed in kHz")
         press_ok(app)
         check_saved(app, {"/Reporting/FrequencyAsKHz": 1})
-        check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
-                    ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
+        check_equal(offered(app), ["3625.0", "28330.0", "7177.0", "14236.0"], "Frequencies offered in the main window")
 
-        # And back again.
+        # And back again, along with what's been typed in so far.
         open_settings(app, "Rig Control")
         check_values(app, {"ckboxFrequencyEntryAsKHz": True})
+        set_value(app, "txtCtrlNewFrequency", "21313.5")
         set_value(app, "ckboxFrequencyEntryAsKHz", False)
+        press_apply(app)
+        check_equal(label(app, "labelEnterFreq"), "Enter frequency (MHz):", "Frequency entry label")
+        check_values(app, {"txtCtrlNewFrequency": "21.3135"})
+        set_value(app, "txtCtrlNewFrequency", "")
         press_ok(app)
         check_equal([item["label"] for item in app.get("main.cboReportFrequency")["items"]],
                     ["3.6250", "28.3300", "7.1770", "14.2360"], "Frequencies offered in the main window")
@@ -1046,6 +1129,64 @@ def test_modem_and_debugging():
         quit_and_check_log(app)
 
 
+def test_ptt_key_names():
+    """Choosing the key used for PTT: what each kind of key is called, and
+    the keys that can't be chosen."""
+    with freedvtest.start(settings={}) as app:
+        open_settings(app, "Rig Control")
+        check_values(app, {"txtPTTKeyName": "Space"})
+
+        def choose(key):
+            app.click(name("btnSetPTTKey"))
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            app.key(name("txtPTTKeyName"), key)
+
+        for key, called in [("5", "5"), ("0", "0"), ("q", "Q"), ("Z", "Z"), ("F1", "F1"), ("F12", "F12"),
+                            ("Enter", "Enter"), ("Backspace", "Backspace"),
+                            ("Delete", "Delete"), ("Insert", "Insert"), ("Home", "Home"), ("End", "End"),
+                            ("PageUp", "Page Up"), ("PageDown", "Page Down"), ("Up", "Up"), ("Down", "Down"),
+                            ("Left", "Left"), ("Right", "Right"), (";", ";"), ("[", "["),
+                            # A letter as some keyboards give it, in lower case
+                            (ord("q"), "Q"),
+                            # F13 and F24 as they are everywhere but Linux, and as they are there
+                            (340 + 12, "F13"), (340 + 23, "F24"), (436, "F13"), (447, "F24"),
+                            # Something FreeDV has no name for
+                            (390, "Key(390)"), ("Space", "Space")]:
+            choose(key)
+            check_values(app, {"txtPTTKeyName": called})
+            check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after choosing %s" % key)
+
+        # Keys that only modify others aren't a choice; FreeDV keeps waiting.
+        app.click(name("btnSetPTTKey"))
+        # (By number: Alt, Caps Lock, Num Lock, Scroll Lock, both Windows keys
+        # and the menu key.)
+        for modifier in ["Shift", "Control", 307, 311, 364, 365, 393, 394, 395]:
+            app.key(name("txtPTTKeyName"), modifier)
+            check_values(app, {"txtPTTKeyName": "Press any key..."})
+            check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button after pressing %s" % modifier)
+        app.key(name("txtPTTKeyName"), "F7")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Tab moves on, leaving the key as it was...
+        choose("Tab")
+        check_values(app, {"txtPTTKeyName": "F7"})
+        check_equal(label(app, "btnSetPTTKey"), "Change...", "PTT key button after pressing Tab")
+
+        # ...as does thinking better of it.
+        app.click(name("btnSetPTTKey"))
+        check_equal(label(app, "btnSetPTTKey"), "Cancel", "PTT key button while choosing")
+        app.click(name("btnSetPTTKey"))
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        # Keys pressed when FreeDV isn't waiting for one are just keys.
+        app.key(name("txtPTTKeyName"), "F9")
+        check_values(app, {"txtPTTKeyName": "F7"})
+
+        press_ok(app)
+        check_saved(app, {"/Rig/PttKeyCode": 340 + 6})  # F7
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_auto_start():
     """The Modem tab's Start Automatically on Launch."""
     config_dir = tempfile.mkdtemp(prefix="freedvtest-config-")
@@ -1150,6 +1291,7 @@ SCENARIOS = {
     "voice_keyer": test_voice_keyer,
     "display": test_display,
     "modem_and_debugging": test_modem_and_debugging,
+    "ptt_key_names": test_ptt_key_names,
     "auto_start": test_auto_start,
     "while_running": test_while_running,
 }
@@ -1162,7 +1304,12 @@ def main():
             sys.exit("Unknown scenario '%s'. Scenarios: %s" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("Running %s..." % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
     print("PASS")
 
 

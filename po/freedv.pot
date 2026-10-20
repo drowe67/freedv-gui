@@ -7,7 +7,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/drowe67/freedv-gui/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/freedv/freedv-gui/issues\n"
 "POT-Creation-Date: 2026-10-11 15:56-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"

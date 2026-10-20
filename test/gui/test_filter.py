@@ -8,8 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_filter.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with, and for listening to what it does with them.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs.
 """
 
 import math
@@ -22,7 +22,9 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.audio import Tone
+from test_main_window import RADIO_TX, SPEAKER as SPEAKER_DEVICE
 from test_main_window import (AUDIBLE, MICROPHONE, RADIO_RX, RADIO_TX_MONITOR, SPEAKER_MONITOR, audio_devices, check,
                               check_equal, label, level, quit_and_check_log, settings, start_modem, stop_modem,
                               wait_for_transmit)
@@ -236,6 +238,26 @@ def test_controls():
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_out_of_range():
+    """Saved settings beyond what the sliders allow are brought back within
+    it when the window's opened."""
+    extra = {"/Filter/MicIn/BassGaindB": 99, "/Filter/MicIn/TrebleGaindB": -99, "/Filter/MicIn/BassFreqHz": 5000,
+             "/Filter/MicIn/MidFreqHz": 0.1, "/Filter/MicIn/EQEnable": True,
+             "/Filter/SpkOut/BassGaindB": -99, "/Filter/SpkOut/TrebleGaindB": 99, "/Filter/SpkOut/EQEnable": True,
+             "/Reporting/FreeDV/Hostname": "127.0.0.1:9", "/Reporting/FreeDV/UseTls": False}
+    with freedvtest.start(settings=extra) as app:
+        app.wait_for_window("main")
+        open_filter(app)
+        microphone = values(app, MIC)
+        check_equal((microphone["bassGain"], microphone["trebleGain"], microphone["bassFreq"], microphone["midFreq"]),
+                    ("20.0", "-20.0", "600", "1"), "Microphone bass gain, treble gain, bass and mid frequencies")
+        speaker = values(app, SPEAKER)
+        check_equal((speaker["bassGain"], speaker["trebleGain"]), ("-20.0", "20.0"), "Speaker bass and treble gains")
+        close_filter(app)
+        check_equal(app.message_boxes(), [], "Messages displayed")
+        check_equal(app.quit(), 0, "FreeDV's exit code")
+
+
 def test_volume():
     """The two volume sliders, and the speaker's twin in the main window."""
     with audio_devices():
@@ -382,6 +404,44 @@ def test_equalizer():
                 quit_and_check_log(app)
 
 
+def test_equalizer_receive_only():
+    """The speaker's equaliser when FreeDV only has the one pair of devices,
+    and so is only receiving: what it plays goes to the first pair's output."""
+    # (Unless that's the same device as the first pair's input, as on
+    # Windows CI (see freedvtest.audio.shared()), when it would be heard
+    # along with the tone played into that: the speaker stands in for it.)
+    output, output_monitor = RADIO_TX, RADIO_TX_MONITOR
+    if freedvtest.audio.shared(RADIO_RX, RADIO_TX):
+        output, output_monitor = SPEAKER_DEVICE, SPEAKER_MONITOR
+    receive_only = settings(Audio__soundCard1OutDeviceName=output, Audio__soundCard2InDeviceName="none",
+                            Audio__soundCard2OutDeviceName="none")
+    with audio_devices():
+        with freedvtest.start(settings=receive_only) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnAnalog")
+            open_filter(app)
+            app.set_value("filter.notebook", 1)
+            with Tone(RADIO_RX):
+                normal = settled_level(output_monitor)
+                check(normal > AUDIBLE, "The radio isn't being played (level %d)" % normal)
+
+                app.set_value(SPEAKER + "ckboxEnable", True)
+                app.set_value(SPEAKER + "midFreq", 1300)
+                app.set_value(SPEAKER + "midGain", gain_slider(-12))
+                check_ratio(normal, settled_level(output_monitor), -12, "Speaker mid at -12 dB")
+                app.set_value(SPEAKER + "ckboxEnable", False)
+                check_ratio(normal, settled_level(output_monitor), 0, "Speaker equaliser off")
+                app.set_value(SPEAKER + "ckboxEnable", True)
+                check_ratio(normal, settled_level(output_monitor), -12, "Speaker equaliser back on")
+                app.click(SPEAKER + "btnDefault")
+                check_ratio(normal, settled_level(output_monitor), 0, "Speaker equaliser after Default")
+
+            stop_modem(app)
+            close_filter(app)
+            quit_and_check_log(app)
+
+
 def test_noise_suppression():
     """Noise suppression, which takes a steady tone to be noise."""
     with audio_devices():
@@ -414,9 +474,11 @@ def test_noise_suppression():
 
 
 SCENARIOS = {
+    "out_of_range": test_out_of_range,
     "controls": test_controls,
     "volume": test_volume,
     "equalizer": test_equalizer,
+    "equalizer_receive_only": test_equalizer_receive_only,
     "noise_suppression": test_noise_suppression,
 }
 
@@ -428,7 +490,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

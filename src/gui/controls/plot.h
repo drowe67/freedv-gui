@@ -119,17 +119,12 @@ class PlotPanel : public wxPanel
         virtual void    OnMouseWheelMoved(wxMouseEvent& event);
         void            OnClose(wxCloseEvent& event ){ event.Skip(); }
         virtual void    OnSize( wxSizeEvent& event ) = 0;
-        void            OnErase(wxEraseEvent& event);
         virtual void    OnPaint(wxPaintEvent& event);
         //void OnUpdateUI( wxUpdateUIEvent& event ){ event.Skip(); }
 
         void            paintEvent(wxPaintEvent & evt);
         virtual void    draw(wxGraphicsContext* ctx, bool repaintDataOnly = false) = 0;
-        virtual void    drawGraticule(wxGraphicsContext* ctx);
-        virtual double  SetZoomFactor(double zf);
-        virtual double  GetZoomFactor(double zf);
         virtual void    OnShow(wxShowEvent& event);
-        virtual double  GetLabelSize();
         virtual void    SetLabelSize(double size);
         
         void setSync(bool sync) { sync_ = sync; }
@@ -164,7 +159,6 @@ class PlotPanel : public wxPanel
         bool            m_rubberBand;
         bool            m_mouseDown;
         bool            m_firstPass;
-        double          m_zoomFactor;
         int             m_greyscale;
         int             m_line_color;
         

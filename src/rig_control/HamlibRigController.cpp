@@ -245,6 +245,7 @@ void HamlibRigController::ptt(bool state)
 
 void HamlibRigController::setFrequency(uint64_t frequency)
 {
+    noteRequestedFrequency_(frequency);
     enqueue_(std::bind(&HamlibRigController::setFrequencyImpl_, this, frequency));
 }
 

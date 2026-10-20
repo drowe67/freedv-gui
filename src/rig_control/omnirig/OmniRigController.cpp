@@ -95,6 +95,7 @@ void OmniRigController::ptt(bool state)
 
 void OmniRigController::setFrequency(uint64_t frequency)
 {
+    noteRequestedFrequency_(frequency);
     enqueue_(std::bind(&OmniRigController::setFrequencyImpl_, this, frequency));
 }
 

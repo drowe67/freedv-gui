@@ -8,9 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_log_qso.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only for now, as it relies on PulseAudio/PipeWire for the audio
-devices that FreeDV is set up with. The "reporter" scenario also needs what
-test_reporter.py does.
+running, on Linux or macOS: see freedvtest/audio.py for the audio devices it
+needs. The "reporter" scenario also needs what test_reporter.py does.
 """
 
 import calendar
@@ -23,6 +22,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.wsjtx import WsjtxListener, utc
 from test_main_window import (CALLSIGN, audio_devices, check, check_equal, label, quit_and_check_log, settings,
                               start_modem, stop_modem)
@@ -318,12 +318,17 @@ def test_reporter():
     """Logging someone chosen in the FreeDV Reporter window."""
     from freedvtest.reporter import ReporterServer
 
+    folder = tempfile.mkdtemp(prefix="freedvtest-files-")
     with ReporterServer() as server, WsjtxListener() as logger, audio_devices():
         k1abc = server.station("K1ABC", "FN42")
         k1abc.set_frequency(7177000)
 
+        # Two who were heard earlier, only one of whom is on FreeDV Reporter.
+        csv_log = os.path.join(folder, "heard.csv")
+        write_csv_log(csv_log, [("2026-03-04 05:06:07", "K1ABC", 7177000, 4),
+                                ("2026-03-04 21:43:02", "ZL9ZZ", 14236000, 11)])
         extra = dict(Reporting__FreeDV__Enable=True, Reporting__FreeDV__Hostname=server.hostname,
-                     Reporting__FreeDV__UseTls=False)
+                     Reporting__FreeDV__UseTls=False, Reporting__CSV__LogFilePath=csv_log)
         with freedvtest.start(settings=logging_settings(logger, **extra)) as app:
             app.wait_for_window("main")
             app.menu("Tools/FreeDV Reporter")
@@ -336,7 +341,7 @@ def test_reporter():
                 return [row[0] for row in app.rows("reporter.listSpots")]
 
             app.wait_until(lambda: "K1ABC" in callsigns(), timeout=15, description="K1ABC to be listed")
-            app.select_row("reporter.listSpots", callsigns().index("K1ABC"))
+            app.select_row("reporter.listSpots", (0, "K1ABC"))
 
             open_log_entry(app)
             check_equal(log_entry(app), dict(dxCall="K1ABC", dxLocator="FN42", frequency="7.1770", txReport="59",
@@ -350,8 +355,30 @@ def test_reporter():
                         "Contact logged")
             check(abs(contact["time_on"] - time.time()) < 60, "The contact is logged at %s" % utc(contact["time_on"]))
 
+            # Someone chosen from the list of callsigns heard instead has
+            # their locator looked up there, if that's where they are.
+            for row, callsign, locator in [(1, "K1ABC", "FN42"), (0, "ZL9ZZ", "")]:
+                app.activate("main")
+                choose_callsign(app, row)
+                check_equal(app.get("main.cboLastReportedCallsigns")["value"], callsign, "Callsign chosen")
+                open_log_entry(app)
+                entry = log_entry(app)
+                check_equal((entry["dxCall"], entry["dxLocator"]), (callsign, locator), "Who's being logged")
+                app.click("logEntry.btnCancel")
+                app.wait_for_window_closed("logEntry")
+            app.activate("reporter")
+            app.select_row("reporter.listSpots", (0, "K1ABC"))
+
+            # They're also who a recording started now is named after.
+            app.click("main.btnRecord")
+            app.wait_for_window("beginRecording")
+            check_equal(app.get("beginRecording.recordingSuffix")["value"], "K1ABC", "Recording suffix")
+            app.click("beginRecording.btnCancel")
+            app.wait_for_window_closed("beginRecording")
+
             stop_modem(app)
             quit_and_check_log(app)
+    shutil.rmtree(folder, ignore_errors=True)
 
 
 SCENARIOS = {
@@ -369,7 +396,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 

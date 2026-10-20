@@ -5,6 +5,14 @@ description: >
   freshly-built FreeDV installer found in the workspace root, and installs
   SoX. Used by every FreeDV Windows CI job that exercises real audio I/O.
 
+inputs:
+  install-freedv:
+    description: >
+      Whether to install the FreeDV installer found in the workspace root
+      (and SoX). The GUI tests bring a FreeDV of their own and need neither.
+    required: false
+    default: 'true'
+
 runs:
   using: 'composite'
   steps:
@@ -55,12 +63,14 @@ runs:
           .\ci\Install-Driver.ps1 $outputFile VBCable_Driver_Pack45\vbMmeCable64_win10.inf VBAudioVACWDM
 
     - name: Install FreeDV on hard drive
+      if: ${{ inputs['install-freedv'] == 'true' }}
       shell: pwsh
       run: |
           Get-ChildItem *.exe | Rename-Item -NewName FreeDV.exe
           .\FreeDV.exe /S /D=${{ github.workspace }}\FreeDV-Install-Location | Out-Null
 
     - name: Install SoX
+      if: ${{ inputs['install-freedv'] == 'true' }}
       shell: pwsh
       run: |
            choco install sox.portable

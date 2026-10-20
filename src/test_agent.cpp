@@ -33,6 +33,10 @@
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
 
+#if defined(__WXMSW__)
+#include <windows.h>
+#endif // defined(__WXMSW__)
+
 #include "test_agent.h"
 #include "main.h"
 #include "freedv_interface.h"
@@ -46,6 +50,11 @@ extern std::atomic<bool> g_loopPlayFileFromRadio;
 extern std::atomic<bool> isModemRunning;
 extern std::atomic<float> g_agcAppliedGainDb;
 extern FreeDVInterface freedvInterface;
+
+#if defined(__APPLE__)
+// See test_agent_osx.mm.
+void TestAgentActivateApp();
+#endif // defined(__APPLE__)
 
 TestAgent* TestAgent::Instance_ = nullptr;
 
@@ -406,6 +415,26 @@ void TestAgent::handleLine_(std::string const& line)
     {
         commandClipboard_(id);
     }
+    else if (cmd == "focus")
+    {
+        commandFocus_(id, request);
+    }
+    else if (cmd == "system_colours_changed")
+    {
+        // As when the desktop switches between its light and dark themes.
+        replyOk_(id, yyjson_mut_doc_new(nullptr));
+        std::vector<wxWindow*> topLevels;
+        for (auto window : wxTopLevelWindows)
+        {
+            topLevels.push_back(window);
+        }
+        for (auto window : topLevels)
+        {
+            wxSysColourChangedEvent event;
+            event.SetEventObject(window);
+            window->ProcessWindowEvent(event);
+        }
+    }
     else if (cmd == "message_boxes")
     {
         commandMessageBoxes_(id, request);
@@ -439,6 +468,27 @@ static wxWindow* FindWindow_(wxString const& name)
 {
     if (!name.StartsWith("@"))
     {
+        // A window that's been closed can stay around (not shown) for a
+        // while before it's destroyed, by which time another of the same
+        // name may have been opened: that one is meant, so windows being
+        // shown come first, newest first.
+        for (auto iter = wxTopLevelWindows.rbegin(); iter != wxTopLevelWindows.rend(); ++iter)
+        {
+            wxWindow* topLevel = *iter;
+            if (!topLevel->IsShown() || topLevel->IsBeingDeleted())
+            {
+                continue;
+            }
+            if (topLevel->GetName() == name)
+            {
+                return topLevel;
+            }
+            wxWindow* found = wxWindow::FindWindowByName(name, topLevel);
+            if (found != nullptr)
+            {
+                return found;
+            }
+        }
         return wxWindow::FindWindowByName(name);
     }
 
@@ -630,6 +680,11 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     AddString_(doc, obj, "class", window->GetClassInfo()->GetClassName());
     yyjson_mut_obj_add_bool(doc, obj, "enabled", window->IsEnabled());
     yyjson_mut_obj_add_bool(doc, obj, "shown", window->IsShownOnScreen());
+    wxSize clientSize = window->GetClientSize();
+    yyjson_mut_val* sizeArray = yyjson_mut_arr(doc);
+    yyjson_mut_arr_add_int(doc, sizeArray, clientSize.GetWidth());
+    yyjson_mut_arr_add_int(doc, sizeArray, clientSize.GetHeight());
+    yyjson_mut_obj_add_val(doc, obj, "clientSize", sizeArray);
 
     if (auto topLevel = wxDynamicCast(window, wxTopLevelWindow))
     {
@@ -681,6 +736,9 @@ yyjson_mut_val* TestAgent::describeWindow_(yyjson_mut_doc* doc, wxWindow* window
     else if (auto comboCtrl = wxDynamicCast(window, wxComboCtrl))
     {
         AddString_(doc, obj, "value", comboCtrl->GetValue());
+        // Whether its list has finished opening: until then (while it slides
+        // open, on Windows) it ignores the mouse.
+        yyjson_mut_obj_add_bool(doc, obj, "popupShown", comboCtrl->IsPopupShown());
     }
     else if (auto listBox = wxDynamicCast(window, wxListBox))
     {
@@ -1279,13 +1337,19 @@ void TestAgent::commandClose_(yyjson_val* id, yyjson_val* request)
     // Something that pops up until the user clicks elsewhere.
     if (auto popup = wxDynamicCast(window, wxPopupTransientWindow))
     {
-        // A click outside it, which is seen by whatever in it has the mouse.
         replyOk_(id, yyjson_mut_doc_new(nullptr));
+#if defined(__WXMSW__)
+        // On Windows, it goes when it's no longer the active window, which
+        // is what a click elsewhere does.
+        ::SendMessage((HWND)popup->GetHWND(), WM_ACTIVATE, WA_INACTIVE, 0);
+#else
+        // A click outside it, which is seen by whatever in it has the mouse.
         wxWindow* target = (popup->GetChildren().GetCount() == 1) ? popup->GetChildren().GetFirst()->GetData() : popup;
         wxMouseEvent event(wxEVT_LEFT_DOWN);
         event.SetEventObject(target);
         event.SetPosition(wxPoint(-10, -10));
         target->ProcessWindowEvent(event);
+#endif // defined(__WXMSW__)
         return;
     }
 
@@ -1329,6 +1393,9 @@ void TestAgent::commandActivate_(yyjson_val* id, yyjson_val* request)
     wxPoint corner = window->ScreenToClient(wxPoint(0, 0));
     window->WarpPointer(corner.x, corner.y);
 
+#if defined(__APPLE__)
+    TestAgentActivateApp();
+#endif // defined(__APPLE__)
     window->Raise();
     window->SetFocus();
 }
@@ -1364,6 +1431,14 @@ void TestAgent::commandMenu_(yyjson_val* id, yyjson_val* request)
     {
         int menuIndex = menuBar->FindMenu(labels[0]);
         menu = (menuIndex != wxNOT_FOUND) ? menuBar->GetMenu(menuIndex) : nullptr;
+#if defined(__WXOSX__)
+        // macOS's menu named after the application, which is where
+        // wxWidgets puts some items (e.g. File > Exit, as Quit).
+        if (menu == nullptr && labels[0] == wxTheApp->GetAppDisplayName())
+        {
+            menu = menuBar->OSXGetAppleMenu();
+        }
+#endif // defined(__WXOSX__)
         for (size_t index = 1; menu != nullptr && index < labels.size(); index++)
         {
             item = nullptr;
@@ -1596,8 +1671,12 @@ static bool HoverOverCell_(
     if (itemUnderPointer != item || columnUnderPointer != column)
     {
         error = wxString::Format(
-            "could not move the mouse pointer over the requested cell of '%s' (cell at %d,%d %dx%d, pointer at %d,%d)",
-            dataView->GetName(), rect.x, rect.y, rect.width, rect.height, position.x, position.y);
+            "could not move the mouse pointer over the requested cell of '%s' (cell at %d,%d %dx%d, pointer at %d,%d, "
+            "over %s in column %s, list %dx%d)",
+            dataView->GetName(), rect.x, rect.y, rect.width, rect.height, position.x, position.y,
+            !itemUnderPointer.IsOk() ? "no row" : (itemUnderPointer == item ? "that row" : "another row"),
+            columnUnderPointer == nullptr ? wxString("none") : columnUnderPointer->GetTitle(),
+            dataView->GetClientSize().GetWidth(), dataView->GetClientSize().GetHeight());
         return false;
     }
 
@@ -1677,6 +1756,17 @@ void TestAgent::commandDataView_(yyjson_val* id, yyjson_val* request)
                 if (column->IsSortKey())
                 {
                     column->UnsetAsSortKey();
+                }
+
+                // Only one column is sorted by at a time, which not every
+                // version of wxWidgets sees to itself when asked like this.
+                for (unsigned int index = 0; index < dataView->GetColumnCount(); index++)
+                {
+                    auto other = dataView->GetColumn(index);
+                    if (other != column && other->IsSortKey())
+                    {
+                        other->UnsetAsSortKey();
+                    }
                 }
                 column->SetSortOrder(ascending);
                 if (dataView->GetModel() != nullptr)
@@ -1777,6 +1867,14 @@ void TestAgent::commandGetState_(yyjson_val* id)
     yyjson_mut_obj_add_int(doc, state, "numSoundCards", g_nSoundCards);
     yyjson_mut_obj_add_int(doc, state, "sync", running ? freedvInterface.getSync() : 0);
     yyjson_mut_obj_add_bool(doc, state, "analog", g_analog.load(std::memory_order_relaxed) != 0);
+
+    // Whether this is being answered from inside an event loop other than
+    // the application's own, i.e. a dialog's. One that's just been dismissed
+    // can still be finishing up, with whatever FreeDV does once it has closed
+    // yet to happen.
+    auto mainLoop = wxTheApp->GetMainLoop();
+    yyjson_mut_obj_add_bool(
+        doc, state, "inNestedEventLoop", mainLoop != nullptr && wxEventLoopBase::GetActive() != mainLoop);
     yyjson_mut_obj_add_real(doc, state, "rxFreqOffsetHz", g_RxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_real(doc, state, "txFreqOffsetHz", g_TxFreqOffsetHz.load(std::memory_order_relaxed));
     yyjson_mut_obj_add_bool(doc, state, "loopPlayFileFromRadio", g_loopPlayFileFromRadio.load(std::memory_order_relaxed));
@@ -1901,14 +1999,21 @@ void TestAgent::commandKey_(yyjson_val* id, yyjson_val* request)
         { "Up", WXK_UP }, { "Down", WXK_DOWN }, { "Left", WXK_LEFT }, { "Right", WXK_RIGHT },
         { "F1", WXK_F1 }, { "F2", WXK_F2 }, { "F3", WXK_F3 }, { "F4", WXK_F4 }, { "F5", WXK_F5 }, { "F6", WXK_F6 },
         { "F7", WXK_F7 }, { "F8", WXK_F8 }, { "F9", WXK_F9 }, { "F10", WXK_F10 }, { "F11", WXK_F11 },
-        { "F12", WXK_F12 },
+        { "F12", WXK_F12 }, { "Insert", WXK_INSERT }, { "Home", WXK_HOME }, { "End", WXK_END },
+        { "PageUp", WXK_PAGEUP }, { "PageDown", WXK_PAGEDOWN },
     };
 
-    const char* keyStr = yyjson_get_str(yyjson_obj_get(request, "key"));
+    yyjson_val* keyVal = yyjson_obj_get(request, "key");
+    const char* keyStr = yyjson_get_str(keyVal);
     wxString key = (keyStr != nullptr) ? wxString::FromUTF8(keyStr) : wxString();
     int keyCode = 0;
     auto namedKey = namedKeys.find(key);
-    if (namedKey != namedKeys.end())
+    if (yyjson_is_int(keyVal))
+    {
+        // A key code as wxWidgets has it, for keys without a name here.
+        keyCode = (int)yyjson_get_int(keyVal);
+    }
+    else if (namedKey != namedKeys.end())
     {
         keyCode = namedKey->second;
     }
@@ -2024,6 +2129,26 @@ void TestAgent::commandClipboard_(yyjson_val* id)
     yyjson_mut_val* result = yyjson_mut_obj(doc);
     AddString_(doc, result, "text", text);
     replyOk_(id, doc, result);
+}
+
+// The keyboard focus arriving at, or (with "lost") leaving, a control.
+void TestAgent::commandFocus_(yyjson_val* id, yyjson_val* request)
+{
+    wxWindow* window = findWindow_(id, request);
+    if (window == nullptr) return;
+
+    wxString error;
+    if (!CanInteract_(window, error))
+    {
+        replyError_(id, error);
+        return;
+    }
+
+    replyOk_(id, yyjson_mut_doc_new(nullptr));
+    bool lost = yyjson_get_bool(yyjson_obj_get(request, "lost"));
+    wxFocusEvent event(lost ? wxEVT_KILL_FOCUS : wxEVT_SET_FOCUS, window->GetId());
+    event.SetEventObject(window);
+    window->ProcessWindowEvent(event);
 }
 
 void TestAgent::commandMouse_(yyjson_val* id, yyjson_val* request)

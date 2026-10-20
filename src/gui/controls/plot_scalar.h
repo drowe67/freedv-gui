@@ -49,12 +49,8 @@ class PlotScalar: public PlotPanel
                );
         ~PlotScalar();
          void add_new_sample(float sample);
-         void add_new_samples(float samples[], int length);
          void add_new_short_samples(short samples[], int length, float scale_factor);
-         void setBarGraph(int bar_graph) { m_bar_graph = bar_graph; }
-         void setLogY(int logy) { m_logy = logy; }
 
-         void clearSamples();
          virtual void refreshData() override;
 
     private:
@@ -78,8 +74,6 @@ class PlotScalar: public PlotPanel
          int      m_mini;
          int      m_samples;
          float   *m_mem;   
-         int      m_bar_graph;                 // non zero to plot bar graphs 
-         int      m_logy;                      // plot graph on log scale
          int      leftOffset_;
          int      bottomOffset_;
          bool halfPlot_;

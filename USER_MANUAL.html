@@ -22,7 +22,7 @@ this is not guaranteed. Any bugfixes required for an unsupported
 platform may be deferred or rejected, especially if there is impact to
 supported platforms. Requests for official support of new platforms
 should go through our existing <a
-href="https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml">Feature
+href="https://github.com/freedv/freedv-gui/issues/new?template=feature_request.yml">Feature
 Request process</a>.</p>
 <h2 data-number="2.2" id="setup-wizard"><span
 class="header-section-number">2.2</span> Setup Wizard</h2>
@@ -249,7 +249,7 @@ locations depending on platform:</p>
 </tr>
 <tr class="odd">
 <td>macOS</td>
-<td>See https://github.com/drowe67/freedv-gui/tree/master/wav</td>
+<td>See https://github.com/freedv/freedv-gui/tree/master/wav</td>
 </tr>
 </tbody>
 </table>
@@ -1142,11 +1142,22 @@ class="citation" data-cites="barjac">@barjac</span>!</li>
 windows. (PR #1508)</li>
 <li>Add ability to import configuration from WSJT-X/WS/JTDX/JS8Call. (PR
 #1513, #1539)</li>
-<li>Add dark mode support for Windows. (PR #1518, #1529)</li>
+<li>Add dark mode support for Windows. (PR #1518, #1529, #1560)</li>
 <li>Add infrastructure for translating FreeDV into other languages. (PR
 #1526)</li>
 <li>Hamlib: only allow selecting a PTT serial device when using RTS or
 DTR for PTT. (PR #1544)</li>
+</ul></li>
+<li>Bugfixes:
+<ul>
+<li>Fix silence being mixed into the first half second of each
+transmission, and holes in the signal at its start. (PR #1562)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>Update wxWidgets to 3.3.4. (PR #1560, #1556)</li>
+<li>CI: only build with PGO, run the tests and report coverage on
+merges; other pushes get unsigned packages to try out. (PR #1563)</li>
 </ul></li>
 <li>Other:
 <ul>
@@ -1155,9 +1166,18 @@ DTR for PTT. (PR #1544)</li>
 <li>Add automated tests of the user interface: Setup Wizard, FreeDV
 Reporter, Settings, main, Log QSO, Start Recording and Filter windows,
 plots, audio device errors, serial port PTT and rig control. (PR #1544,
-#1546, #1548, #1550, #1551, #1553, #1554)</li>
+#1546, #1548, #1550, #1551, #1553, #1554, #1556)</li>
+<li>Run the automated user interface tests, and report test coverage, as
+part of CI. (PR #1556)</li>
+<li>Run the automated user interface tests on macOS. (PR #1563)</li>
+<li>Run the automated user interface tests on Windows. (PR #1566)</li>
+<li>Remove unused plot, main window and FreeDV Reporter code. (PR
+#1556)</li>
 <li>Settings: play back audio input tests through the speaker/headphones
 instead of the radio. (PR #1548)</li>
+<li>Add tests of whole transmissions through the TX/RX threads without
+sound cards, and diagnostics for rade_loss test failures. (PR
+#1562)</li>
 </ul></li>
 </ol>
 <p><em>Note: Legacy FreeDV modes (700D/700E/1600) have been removed due
@@ -1222,6 +1242,8 @@ input. (PR #1542)</li>
 being applied. (PR #1542)</li>
 <li>FreeDV Reporter: fix incorrect distances/headings when one’s own
 grid square is incomplete. (PR #1542)</li>
+<li>FreeDV Reporter: fix stations sorting in the wrong order when their
+frequencies are more than about 2.1 GHz apart. (PR #1558)</li>
 <li>Fix crash when closing FreeDV right after stopping with a radio
 connected. (PR #1543)</li>
 <li>FreeDV Reporter: fix idle filter menu check marks after cancelling a
@@ -1234,14 +1256,56 @@ voice keyer is running. (PR #1549)</li>
 FreeDV starts. (PR #1549)</li>
 <li>Fix Load Default Configuration reloading the configuration in use
 instead of the default one. (PR #1549)</li>
+<li>Linux: fix Load Default Configuration loading an empty configuration
+rather than the default one. (PR #1557)</li>
 <li>Logging: fix logged contacts sometimes being timed a second early.
 (PR #1552)</li>
+<li>Fix FreeDV being unable to exit after pressing Start with a sound
+device that couldn’t be opened. (PR #1559)</li>
+<li>Fix possible crash when an audio device fails to open before FreeDV
+has asked to be told of its errors. (PR #1559)</li>
+<li>Linux: fix audio pausing for up to two more seconds after FreeDV’s
+audio processing has been held up for more than two. (PR #1559)</li>
+<li>Settings: fix a typed-in frequency losing its last three digits when
+switching from kHz to MHz and pressing Apply. (PR #1559)</li>
+<li>Linux: fix crash on pressing Start with no sound server
+(PipeWire/PulseAudio) running. (PR #1555)</li>
+<li>Linux: report losing the sound server while running, and fix Stop
+getting stuck afterwards. (PR #1555)</li>
+<li>Fix each use of Adjust Monitor Volume leaving a hidden popup behind.
+(PR #1555)</li>
 <li>Filter: fix equaliser changes being ignored if the window was opened
 before pressing Start. (PR #1552)</li>
 <li>Fix each use of Log QSO leaving a hidden window behind. (PR
 #1552)</li>
 <li>Recording: restrict a pasted recording suffix to the same characters
 as a typed one. (PR #1552)</li>
+<li>FreeDV Reporter: fix a direction of 0 being shown for stations
+without a usable grid square after changing the band filter. (PR
+#1564)</li>
+<li>macOS: fix the last block of audio being sent to the radio over and
+over after transmitting, rather than silence. (PR #1564)</li>
+<li>Fix a saved main window size too small to be of use being kept. (PR
+#1564)</li>
+<li>Rig control: fix FreeDV briefly going back to the previous frequency
+after changing it (and so e.g. choosing the wrong sideband for analog
+mode when switched to straight after changing band). (PR #1564)</li>
+<li>macOS/Windows: fix possible crash or garbled log output when some
+audio device and thread errors are logged. (PR #1564)</li>
+<li>Windows: fix the main window being too small to show the waterfall
+and spectrum the first time FreeDV is started on a high DPI display. (PR
+#1565)</li>
+<li>Windows: fix FreeDV Reporter not removing what’s left of a flag from
+the status message after part of it is deleted. (PR #1565)</li>
+<li>Fix a possible crash when FreeDV is asked to exit again while it’s
+exiting with the FreeDV Reporter window open. (PR #1565)</li>
+<li>Fix Test PTT sometimes staying greyed out after a radio or serial
+port that couldn’t be opened. (PR #1565)</li>
+<li>Fix silence being mixed into the first half second of each
+transmission. (PR #1567, #1568)</li>
+<li>Fix the voice keyer’s RX pause and wait for a reply, the slow SNR
+display and the statistics reset after losing sync running twice as fast
+as intended. (PR #1571)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -1254,7 +1318,16 @@ error. (PR #1510)</li>
 <li>Only use system libraries that can actually be linked. (PR
 #1521)</li>
 <li>Optimizations to reduce full rebuild time. (PR #1538)</li>
+<li>Build bundled wxWidgets and LibreSSL optimized and without debugging
+information, and only use ccache in CI for the builds that compile them.
+(PR #1561)</li>
 <li>Add unit tests for non-GUI code. (PR #1542)</li>
+<li>Add tests of whole transmissions through the TX/RX threads without
+sound cards. (PR #1567)</li>
+</ul></li>
+<li>Documentation:
+<ul>
+<li>Update documentation to reflect new repo URL. (PR #1569)</li>
 </ul></li>
 <li>Other:
 <ul>
@@ -1379,7 +1452,7 @@ data-cites="barjac">@barjac</span>!</li>
 <h2 data-number="19.4" id="earlier-than-v2.3.0"><span
 class="header-section-number">19.4</span> Earlier than V2.3.0</h2>
 <p>See <a
-href="https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md">this</a>
+href="https://github.com/freedv/freedv-gui/blob/master/CHANGELOG_OLD.md">this</a>
 for more information about changes in versions prior to 2.3.0.</p>
 <h1 data-number="20" id="references"><span
 class="header-section-number">20</span> References</h1>

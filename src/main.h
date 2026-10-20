@@ -74,8 +74,8 @@
 #include "gui/dialogs/tot_warning.h"
 #include "gui/controls/plot.h"
 #include "gui/controls/plot_scalar.h"
-#include "gui/controls/plot_scatter.h"
 #include "gui/controls/plot_waterfall.h"
+#include "comp.h"
 #include "gui/controls/plot_spectrum.h"
 #include "sndfile.h"
 #include "sox_biquad.h"
@@ -389,7 +389,6 @@ class MainFrame : public TopFrame
 
     void togglePTT(void);
 
-    bool                    m_schedule_restore;
 
     // Voice Keyer state machine
 
@@ -410,9 +409,7 @@ class MainFrame : public TopFrame
         // protected event handlers
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
-        virtual void OnCloseFrame(wxCloseEvent& event);
         virtual void OnActivateWindow(wxActivateEvent& event) override;
-        void OnExitClick(wxCommandEvent& event);
 
         void startTxStream();
         void startRxStream();
@@ -473,7 +470,6 @@ class MainFrame : public TopFrame
         void OnBerReset( wxCommandEvent& event ) override;
 
         //System Events
-        void OnPaint(wxPaintEvent& event);
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
@@ -573,7 +569,6 @@ class MainFrame : public TopFrame
         unsigned int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
-        int         m_zoom;
         float       m_snrBeta;
 
         // Callsign/text messaging
@@ -625,6 +620,7 @@ class MainFrame : public TopFrame
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
 
         bool terminating_; // used for terminating FreeDV
+        bool closingReporterDialog_; // set while closing waits for the Reporter dialog's last messages
         bool realigned_; // used to inhibit resize hack once already done
         bool syncState_; // GUI copy of current sync state
 
@@ -728,6 +724,5 @@ void my_put_next_rx_char(void *callback_state, char c);
 
 // helper complex freq shift function
 
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING;
 
 #endif //__FDMDV2_MAIN__

@@ -18,6 +18,12 @@ set(FREEDV_SOURCES
 # Lets GUI test scripts (test/gui) drive FreeDV. Not for release builds.
 if(UNITTEST)
     list(APPEND FREEDV_SOURCES test_agent.cpp)
+    if(APPLE)
+        list(APPEND FREEDV_SOURCES test_agent_osx.mm)
+        # (activateIgnoringOtherApps: is deprecated from macOS 14 on, but
+        # still does what's needed here.)
+        set_source_files_properties(test_agent_osx.mm PROPERTIES COMPILE_OPTIONS -Wno-deprecated-declarations)
+    endif(APPLE)
 endif(UNITTEST)
 
 set(FREEDV_LINK_LIBS_OSX
@@ -52,6 +58,7 @@ macro(DefineFreeDVUnitTest prefix utName)
         PROPERTIES BUILD_RPATH "${CMAKE_BUILD_RPATH};${CODEC2_BUILD_DIR}/src;${rade_BINARY_DIR}/src")
 
     add_test(NAME ${prefix}_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+    freedv_set_test_pass_criteria(${prefix}_${utName})
 endmacro()
 
 # Sets up a unit test that uses wxWidgets when wxWidgets is being built as part

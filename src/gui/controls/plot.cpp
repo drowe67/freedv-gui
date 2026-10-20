@@ -62,7 +62,6 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
 {
     WXWIDGETS_SET_LAYOUT_DIRECTION;
     
-    m_zoomFactor        = 1.0;
     m_firstPass         = true;
     m_line_color        = 0;
     m_newdata           = false;
@@ -70,6 +69,7 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
     m_use_bitmap        = true;
     m_rubberBand        = false;
     m_mouseDown         = false;
+    sync_               = false;
     m_penShortDash      = wxPen(wxColor(0xA0, 0xA0, 0xA0), 1, wxPENSTYLE_SHORT_DASH);
     m_penDotDash        = wxPen(wxColor(0xD0, 0xD0, 0xD0), 1, wxPENSTYLE_DOT_DASH);
     m_penSolid          = wxPen(wxColor(0x00, 0x00, 0x00), 1, wxPENSTYLE_SOLID);
@@ -89,14 +89,6 @@ PlotPanel::~PlotPanel()
 }
 
 //-------------------------------------------------------------------------
-// GetLabelSize()
-//-------------------------------------------------------------------------
-double PlotPanel::GetLabelSize()
-{
-    return m_label_size;
-}
-
-//-------------------------------------------------------------------------
 // SetLabelSize()
 //-------------------------------------------------------------------------
 void PlotPanel::SetLabelSize(double size)
@@ -110,14 +102,6 @@ void PlotPanel::SetLabelSize(double size)
 void PlotPanel::OnShow(wxShowEvent&)
 {
     this->Refresh();
-}
-
-//-------------------------------------------------------------------------
-// OnErase()
-//-------------------------------------------------------------------------
-void PlotPanel::OnErase(wxEraseEvent& event)
-{
-    event.Skip();
 }
 
 //-------------------------------------------------------------------------
@@ -158,67 +142,6 @@ void PlotPanel::OnMouseWheelMoved(wxMouseEvent&)
 void PlotPanel::OnMouseLeftUp(wxMouseEvent&)
 {
     m_mouseDown = false;
-}
-
-//-------------------------------------------------------------------------
-// SetZoomFactor()
-//-------------------------------------------------------------------------
-double PlotPanel::SetZoomFactor(double zf)
-{
-    if((zf > 0) && (zf < 5.0))
-    {
-        m_zoomFactor = zf;
-    }
-    return zf;
-}
-
-//-------------------------------------------------------------------------
-// GetZoomFactor()
-//-------------------------------------------------------------------------
-double PlotPanel::GetZoomFactor(double)
-{
-    return m_zoomFactor;
-}
-
-//-------------------------------------------------------------------------
-// drawGraticule()
-//-------------------------------------------------------------------------
-void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
-{
-    const int STR_LENGTH = 15;
-    
-    int p;
-    char buf[STR_LENGTH];
-
-    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
-    ctx->SetFont(tmpFont);
-    
-    // Vertical gridlines
-    ctx->SetPen(m_penShortDash);
-    for(p = (PLOT_BORDER + XLEFT_OFFSET + GRID_INCREMENT); p < ((m_rGrid.GetWidth() - XLEFT_OFFSET) + GRID_INCREMENT); p += GRID_INCREMENT)
-    {
-        ctx->StrokeLine(p, (m_rGrid.GetHeight() + PLOT_BORDER), p, PLOT_BORDER);
-    }
-    // Horizontal gridlines
-    ctx->SetPen(m_penDotDash);
-    for(p = (m_rGrid.GetHeight() - GRID_INCREMENT); p > PLOT_BORDER; p -= GRID_INCREMENT)
-    {
-        ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, (p + PLOT_BORDER), (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), (p + PLOT_BORDER));
-    }
-    // Label the X-Axis
-    ctx->SetPen(wxPen(GREY_COLOR, 1));
-    for(p = GRID_INCREMENT; p < (m_rGrid.GetWidth() - YBOTTOM_OFFSET); p += GRID_INCREMENT)
-    {
-        snprintf(buf, STR_LENGTH, "%1.1f Hz",(double)(p / 10));
-        ctx->DrawText(buf, p - PLOT_BORDER + XLEFT_OFFSET, m_rGrid.GetHeight() + YBOTTOM_OFFSET/2);
-    }
-    // Label the Y-Axis
-    //for(p = GRID_INCREMENT; p < (h - YBOTTOM_OFFSET); p += GRID_INCREMENT)
-    for(p = (m_rGrid.GetHeight() - GRID_INCREMENT); p > PLOT_BORDER; p -= GRID_INCREMENT)
-    {
-        snprintf(buf, STR_LENGTH, "%1.0f", (double)((m_rGrid.GetHeight() - p) * -10));
-        ctx->DrawText(buf, XLEFT_TEXT_OFFSET, p);
-    }
 }
 
 //-------------------------------------------------------------------------

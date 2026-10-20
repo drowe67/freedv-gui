@@ -1,4 +1,4 @@
-"""Serial ports for FreeDV to use during tests (Linux only).
+"""Serial ports for FreeDV to use during tests (Linux and macOS).
 
 These are pseudo-terminals, which FreeDV can open as it would a real port.
 What they lack is a real port's control lines, so FreeDV is run with a
@@ -13,7 +13,9 @@ keeps track of the ones it sets and lets the test set the one it reads.
 """
 
 import os
+import re
 import shutil
+import sys
 import subprocess
 import tempfile
 
@@ -26,7 +28,8 @@ class SerialPort:
     def __init__(self, directory):
         self._control, self._port = os.openpty()
         self.name = os.ttyname(self._port)
-        self._prefix = os.path.join(directory, self.name.rsplit("/", 1)[1])
+        # (As serial_shim.c numbers them: /dev/pts/<n>, or /dev/ttys<n>.)
+        self._prefix = os.path.join(directory, str(int(re.search(r"(\d+)$", self.name).group(1))))
         # Whatever had this name before is nothing to do with this port.
         for suffix in (".lines", ".history", ".cts"):
             if os.path.exists(self._prefix + suffix):
@@ -80,6 +83,11 @@ class SerialPorts:
         self.env = {}
 
     def __enter__(self):
+        if sys.platform == "win32":
+            # (It would take pairs of virtual ports joined to each other,
+            # such as com0com's.)
+            from .audio import Unavailable
+            raise Unavailable("Serial ports for tests can't be had on Windows")
         self._directory = tempfile.mkdtemp(prefix="freedvtest-serial-")
         try:
             compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
@@ -87,7 +95,8 @@ class SerialPorts:
                 raise SerialError("A C compiler is needed for serial port tests")
             shim = os.path.join(self._directory, "serial_shim.so")
             source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "serial_shim.c")
-            result = subprocess.run([compiler, "-shared", "-fPIC", "-O1", "-o", shim, source, "-ldl", "-lpthread"],
+            kind = ["-dynamiclib"] if sys.platform == "darwin" else ["-shared", "-fPIC"]
+            result = subprocess.run([compiler] + kind + ["-O1", "-o", shim, source, "-ldl", "-lpthread"],
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             if result.returncode != 0:
                 raise SerialError("Could not build serial_shim.c:\n" + result.stdout.decode(errors="replace"))
@@ -95,7 +104,8 @@ class SerialPorts:
             shutil.rmtree(self._directory, ignore_errors=True)
             raise
 
-        self.env = {"LD_PRELOAD": shim, "FREEDVTEST_SERIAL_DIR": self._directory}
+        preload = "DYLD_INSERT_LIBRARIES" if sys.platform == "darwin" else "LD_PRELOAD"
+        self.env = {preload: shim, "FREEDVTEST_SERIAL_DIR": self._directory}
         # A FreeDV built with the address sanitizer expects that to be what's
         # loaded first.
         options = os.environ.get("ASAN_OPTIONS", "")

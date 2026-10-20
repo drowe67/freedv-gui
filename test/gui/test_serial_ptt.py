@@ -8,8 +8,8 @@ arguments all of them are run; otherwise, only those named:
     python3 test_serial_ptt.py [scenario...]
 
 Run from the build folder (or set FREEDV_BINARY) with a window manager
-running. Linux only, and needs a C compiler: see freedvtest/serial.py for how
-serial ports are stood in for.
+running, on Linux or macOS, and needs a C compiler: see freedvtest/serial.py
+for how serial ports are stood in for.
 """
 
 import os
@@ -21,6 +21,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
+import freedvtest.audio
 from freedvtest.serial import SerialPorts
 from test_main_window import (audio_devices, check, check_equal, quit_and_check_log, settings, start_modem,
                               stop_modem, transmitting, wait_for_transmit)
@@ -238,6 +239,25 @@ def test_errors():
                 stop_modem(app)
                 check_equal(app.quit(), 0, "FreeDV's exit code")
 
+            # Something that can be opened but isn't a serial port: FreeDV
+            # finds that out when it comes to set it up, and carries on
+            # without.
+            not_serial = "/dev/null"
+            config = settings(Rig__UseSerialPTT=True, Rig__Port=not_serial)
+            with freedvtest.start(settings=config, env=ports.env) as app:
+                app.wait_for_window("main")
+                app.click("main.btnOnOff")
+                app.wait_until(lambda: app.get("main.btnOnOff")["enabled"], description="FreeDV to start")
+                app.wait_until(lambda: app.message_boxes(), timeout=10, description="a message to be displayed")
+                check_equal([(box["caption"], box["message"]) for box in app.message_boxes(clear=True)],
+                            [("Error", "Couldn't open serial port for PTT output: Could not open serial port %s"
+                              % not_serial)], "Messages displayed")
+                check_equal(app.state()["running"], True, "Running without %s" % not_serial)
+                key(app)
+                unkey(app)
+                stop_modem(app)
+                check_equal(app.quit(), 0, "FreeDV's exit code")
+
             # No port chosen at all is the same as not using one.
             with freedvtest.start(settings=settings(Rig__UseSerialPTT=True, Rig__Port=""), env=ports.env) as app:
                 app.wait_for_window("main")
@@ -320,7 +340,12 @@ def main():
             sys.exit("Unknown scenario '%s' (available: %s)" % (scenario, ", ".join(SCENARIOS)))
     for scenario in names:
         print("=== %s ===" % scenario, flush=True)
-        SCENARIOS[scenario]()
+        try:
+            SCENARIOS[scenario]()
+        except freedvtest.audio.Unavailable as e:
+            # What it needs of the audio devices can't be had here (see freedvtest.audio).
+            print("SKIPPED: %s" % e, flush=True)
+            sys.exit(77)
         print("PASS: %s" % scenario, flush=True)
 
 
