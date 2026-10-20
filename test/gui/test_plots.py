@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import freedvtest
 import freedvtest.audio
-from freedvtest.audio import Loopback, Tone
+from freedvtest.audio import Loopback, Speech, Tone
 from test_main_window import (CALLSIGN, MICROPHONE, RADIO_RX, RADIO_TX, TABS, audio_devices, check, check_equal,
                               quit_and_check_log, settings, start_modem, stop_modem, wait_for_transmit)
 
@@ -182,7 +182,9 @@ def test_drawing():
                 show(app, tab)
 
             start_modem(app)
-            with Tone(MICROPHONE):
+            # (Speech, not a tone: a tone isn't something RADE carries, and
+            # its receiver can take one for the end of an over.)
+            with Speech(MICROPHONE):
                 app.click("main.btnPTT")
                 wait_for_transmit(app)
                 app.wait_until(lambda: app.state()["sync"] == 1, timeout=20, description="FreeDV to sync")
