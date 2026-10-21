@@ -122,7 +122,7 @@ void MsgListPopup::OnLeftUp(wxMouseEvent& event)
         SetSelection(item);
         picked_ = true;
         Dismiss();
-        deselTimer_.StartOnce(20);
+        deselTimer_.StartOnce(DESELECT_TIMEOUT_MS_);
     }
     else
     {
@@ -216,7 +216,7 @@ void MsgListPopup::OnKeyDown(wxKeyEvent& event)
             {
                 picked_ = true;
                 Dismiss();
-                deselTimer_.StartOnce(20);
+                deselTimer_.StartOnce(DESELECT_TIMEOUT_MS_);
                 return;
             }
             break;

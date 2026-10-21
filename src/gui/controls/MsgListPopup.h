@@ -56,6 +56,8 @@ public:
     wxSize GetAdjustedSize(int minWidth, int prefHeight, int maxHeight) override;
 
 private:
+    static constexpr int DESELECT_TIMEOUT_MS_ = 20;
+
     void OnLeftDown(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
     void OnMouseMove(wxMouseEvent& event);
