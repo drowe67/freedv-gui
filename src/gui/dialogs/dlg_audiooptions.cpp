@@ -444,16 +444,16 @@ int AudioOptsDialog::ExchangeData(int inout)
         // on number of sound cards in use
 
         log_debug("EXCHANGE_DATA_IN:");
-        log_debug("  g_nSoundCards: %d", g_nSoundCards);
+        log_debug("  g_nSoundCards: %d", g_nSoundCards.load(std::memory_order_acquire));
 
-        if (g_nSoundCards == 0) {
+        if (g_nSoundCards.load(std::memory_order_acquire) == 0) {
             m_textCtrlRxIn ->SetValue("none");
             m_textCtrlRxOut->SetValue("none");
             m_textCtrlTxIn ->SetValue("none");
             m_textCtrlTxOut->SetValue("none");           
         }
 
-        if (g_nSoundCards == 1) {
+        if (g_nSoundCards.load(std::memory_order_acquire) == 1) {
             log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
@@ -479,7 +479,7 @@ int AudioOptsDialog::ExchangeData(int inout)
             m_textCtrlTxOut->SetValue("none");           
         }
 
-        if (g_nSoundCards == 2) {
+        if (g_nSoundCards.load(std::memory_order_acquire) == 2) {
             log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
@@ -585,10 +585,10 @@ int AudioOptsDialog::ExchangeData(int inout)
         // Map Rx/TX device numbers to sound card device names used
         // in callbacks.
         // ---------------------------------------------------------------
-        g_nSoundCards = 0;
+        g_nSoundCards.store(0, std::memory_order_release);
 
         if (valid_one_card_config) {
-            g_nSoundCards = 1;
+            g_nSoundCards.store(1, std::memory_order_release);
             wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = wxAtoi(sampleRate1);
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = wxAtoi(sampleRate2);
             
@@ -597,7 +597,7 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (valid_two_card_config) {
-            g_nSoundCards = 2;
+            g_nSoundCards.store(2, std::memory_order_release);
             wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = wxAtoi(sampleRate1);
             wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = wxAtoi(sampleRate2);
             wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = wxAtoi(sampleRate3);
@@ -609,7 +609,7 @@ int AudioOptsDialog::ExchangeData(int inout)
             log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
         }
 
-        log_debug("  g_nSoundCards: %d", g_nSoundCards);
+        log_debug("  g_nSoundCards: %d", g_nSoundCards.load(std::memory_order_acquire));
         
         assert (pConfig != NULL);
         

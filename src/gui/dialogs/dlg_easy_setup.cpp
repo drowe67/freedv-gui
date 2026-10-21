@@ -506,7 +506,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = analogPlaybackDeviceData->rxDeviceName;
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = analogPlaybackDeviceData->rxSampleRate;
 
-            g_nSoundCards = 1;
+            g_nSoundCards.store(1, std::memory_order_release);
         }
         else
         {
@@ -523,7 +523,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = deviceData->txSampleRate;
             }
 
-            g_nSoundCards = 2;
+            g_nSoundCards.store(2, std::memory_order_release);
         }
         
         wxGetApp().appConfiguration.save(pConfig);

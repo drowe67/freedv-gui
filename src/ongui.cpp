@@ -33,8 +33,8 @@
 
 extern int g_mode;
 
-extern int   g_SquelchActive;
-extern float g_SquelchLevel;
+extern std::atomic<int>   g_SquelchActive;
+extern std::atomic<float> g_SquelchLevel;
 extern std::atomic<int>   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int64_t> g_rxMutedUntilNs;
@@ -50,7 +50,7 @@ extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
-extern int g_resyncs;
+extern std::atomic<int> g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
@@ -65,8 +65,8 @@ extern paCallBackData* g_rxUserdata;
 
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromRadio;
+extern std::atomic<SNDFILE*>    g_sfRecFile;
+extern std::atomic<bool> g_recFileFromRadio;
 
 extern std::atomic<bool>                g_playFileFromRadio;
 
@@ -177,7 +177,7 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
 {
-    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
+    bool oldRxOnly = g_nSoundCards.load(std::memory_order_acquire) <= 1 ? true : false;
 
     wxUnusedVar(event);
     int rv = 0;
@@ -187,7 +187,7 @@ void MainFrame::OnToolsAudio(wxCommandEvent& event)
     {
         dlg->ExchangeData(EXCHANGE_DATA_OUT);
 
-        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
+        bool newRxOnly = g_nSoundCards.load(std::memory_order_acquire) <= 1 ? true : false;
         if (oldRxOnly != newRxOnly &&
             wxGetApp().m_sharedReporterObject->isValidForReporting())
         {
@@ -852,8 +852,9 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
 //-------------------------------------------------------------------------
 void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
+    float newSquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
+    g_SquelchLevel.store(newSquelchLevel, std::memory_order_release);
+    wxString sqsnr_string = wxNumberFormatter::ToString(newSquelchLevel, 1) + "dB"; // 0.5 dB steps
     m_textSQ->SetLabel(sqsnr_string);
 
     event.Skip();
@@ -1084,12 +1085,12 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     if (g_tx.load(std::memory_order_acquire))
     {
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
-        m_newMicInFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_release);
     }
     else
     {
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-        m_newSpkOutFilter = true;
+        m_newSpkOutFilter.store(true, std::memory_order_release);
     }
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
@@ -1101,13 +1102,13 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnCheckSQClick(wxCommandEvent&)
 {
-    if(!g_SquelchActive)
+    if(!g_SquelchActive.load(std::memory_order_acquire))
     {
-        g_SquelchActive = true;
+        g_SquelchActive.store(true, std::memory_order_release);
     }
     else
     {
-        g_SquelchActive = false;
+        g_SquelchActive.store(false, std::memory_order_release);
     }
 }
 
@@ -1730,16 +1731,16 @@ void MainFrame::togglePTT(void) {
     }
     
     // If we're recording, switch to/from modulator and radio.
-    if (g_sfRecFile != nullptr)
+    if (g_sfRecFile.load(std::memory_order_acquire) != nullptr)
     {
         if (!newTx)
         {
             g_recFileFromModulator = false;
-            g_recFileFromRadio = true;
+            g_recFileFromRadio.store(true, std::memory_order_release);
         }
         else
         {
-            g_recFileFromRadio = false;
+            g_recFileFromRadio.store(false, std::memory_order_release);
             g_recFileFromModulator = true;
         }
     }
@@ -2102,7 +2103,7 @@ void MainFrame::resetStats_()
 {
     if (m_RxRunning.load(std::memory_order_acquire))  {
         freedvInterface.resetBitStats();
-        g_resyncs = 0;
+        g_resyncs.store(0, std::memory_order_relaxed);
         int i;
         for(i=0; i<2*g_Nc; i++) {
             g_error_hist[i] = 0;
@@ -2314,12 +2315,12 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
     if (g_tx.load(std::memory_order_acquire))
     {
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
-        m_newMicInFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_release);
     }
     else
     {
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-        m_newSpkOutFilter = true;
+        m_newSpkOutFilter.store(true, std::memory_order_release);
     }
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);

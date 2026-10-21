@@ -82,11 +82,11 @@ extern std::atomic<int>    g_infifo1_full;
 extern std::atomic<int>    g_outfifo1_empty;
 extern std::atomic<int>    g_infifo2_full;
 extern std::atomic<int>    g_outfifo2_empty;
-extern int                 g_AEstatus1[4];
-extern int                 g_AEstatus2[4];
+extern std::atomic<int>    g_AEstatus1[4];
+extern std::atomic<int>    g_AEstatus2[4];
 extern wxDatagramSocket    *g_sock;
-extern int                 g_dump_timing;
-extern int                 g_dump_fifo_state;
+extern std::atomic<int>    g_dump_timing;
+extern std::atomic<int>    g_dump_fifo_state;
 extern int                 g_freedv_verbose;
 extern wxConfigBase *pConfig;
 
@@ -1088,8 +1088,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.fifoSizeMs.get()));
 
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
-        m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
-        m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
+        m_ckboxTxRxDumpTiming->SetValue(g_dump_timing.load(std::memory_order_relaxed));
+        m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state.load(std::memory_order_relaxed));
         m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
         m_showDecodeStats->SetValue(wxGetApp().appConfiguration.showDecodeStats);
@@ -1293,8 +1293,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.fifoSizeMs = (int)FifoSize_ms;
 
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
-        g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
-        g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
+        g_dump_timing.store(m_ckboxTxRxDumpTiming->GetValue(), std::memory_order_relaxed);
+        g_dump_fifo_state.store(m_ckboxTxRxDumpFifoState->GetValue(), std::memory_order_relaxed);
         wxGetApp().appConfiguration.debugVerbose = m_ckboxVerbose->GetValue();
         if (wxGetApp().appConfiguration.debugVerbose)
         {
@@ -1553,7 +1553,8 @@ void OptionsDlg::OnFifoReset(wxCommandEvent&)
     g_infifo2_full.store(0, std::memory_order_relaxed);
     g_outfifo2_empty.store(0, std::memory_order_relaxed);
     for (int i=0; i<4; i++) {
-        g_AEstatus1[i] = g_AEstatus2[i] = 0;
+        g_AEstatus1[i].store(0, std::memory_order_relaxed);
+        g_AEstatus2[i].store(0, std::memory_order_relaxed);
     }
 }
 
@@ -1809,11 +1810,11 @@ void OptionsDlg::DisplayFifoPACounters() {
         m_textFifos->SetLabel(fifo_counters);
 
         // input: underflow overflow output: underflow overflow
-        wxString pa_counters_1 = wxString::Format(wxT("Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
+        wxString pa_counters_1 = wxString::Format(wxT("Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus1[0].load(std::memory_order_relaxed), g_AEstatus1[1].load(std::memory_order_relaxed), g_AEstatus1[2].load(std::memory_order_relaxed), g_AEstatus1[3].load(std::memory_order_relaxed));
         m_textPA1->SetLabel(pa_counters_1);
 
         // input: underflow overflow output: underflow overflow
-        wxString pa_counters_2 = wxString::Format(wxT("Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+        wxString pa_counters_2 = wxString::Format(wxT("Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d"), g_AEstatus2[0].load(std::memory_order_relaxed), g_AEstatus2[1].load(std::memory_order_relaxed), g_AEstatus2[2].load(std::memory_order_relaxed), g_AEstatus2[3].load(std::memory_order_relaxed));
         m_textPA2->SetLabel(pa_counters_2);
     }
 }

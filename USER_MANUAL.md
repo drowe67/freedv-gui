@@ -1014,6 +1014,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix the spectrum plot's sync tuning line being drawn using an uninitialized value until the plot's first update. (PR #1572)
     * FreeDV Reporter: fix stations that connected or transmitted within the same second sorting in a random order. (PR #1573)
     * Fix a data race on whether FreeDV is running, between the window and the thread that starts and stops it. (PR #1575)
+    * Fix data races between the window, audio and processing threads on squelch, resync count, sound card count, PortAudio counters, debug switches, recording state and EQ filter re-apply flags. (PR #1578)
+    * Fix data races on the transmit mode selection when changed while FreeDV is running, and on the queue holding received text characters. (PR #1578)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))

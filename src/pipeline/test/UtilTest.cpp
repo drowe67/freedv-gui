@@ -95,7 +95,7 @@ bool txTextIsTakenFromQueueInOrder()
 
 bool rxTextIsQueuedInOrder()
 {
-    g_rxDataOutFifo = codec2_fifo_create(16);
+    g_rxDataOutFifo.store(new GenericFIFO<short>(16));
 
     // Includes a character with its top bit set, which mustn't turn negative.
     const unsigned char TEXT[] = { 'H', 'i', 0xE9, '\r' };
@@ -104,22 +104,22 @@ bool rxTextIsQueuedInOrder()
         my_put_next_rx_char(nullptr, (char)ch);
     }
 
-    bool result = codec2_fifo_used(g_rxDataOutFifo) == 4;
+    bool result = g_rxDataOutFifo.load()->numUsed() == 4;
     for (unsigned char expected : TEXT)
     {
         short value = -1;
-        result &= codec2_fifo_read(g_rxDataOutFifo, &value, 1) == 0 && value == expected;
+        result &= g_rxDataOutFifo.load()->read(&value, 1) == 0 && value == expected;
     }
     if (!result) std::cout << "[queued text didn't match what was received] ";
 
-    codec2_fifo_destroy(g_rxDataOutFifo);
-    g_rxDataOutFifo = nullptr;
+    delete g_rxDataOutFifo.load();
+    g_rxDataOutFifo.store(nullptr);
     return result;
 }
 
 bool rxTextIsDroppedWhenQueueIsFull()
 {
-    g_rxDataOutFifo = codec2_fifo_create(4);
+    g_rxDataOutFifo.store(new GenericFIFO<short>(4));
 
     for (char ch : std::string("ABCDEFGH"))
     {
@@ -129,13 +129,13 @@ bool rxTextIsDroppedWhenQueueIsFull()
     // What fit is kept as is.
     std::string queued;
     short value = 0;
-    while (codec2_fifo_read(g_rxDataOutFifo, &value, 1) == 0)
+    while (g_rxDataOutFifo.load()->read(&value, 1) == 0)
     {
         queued += (char)value;
     }
 
-    codec2_fifo_destroy(g_rxDataOutFifo);
-    g_rxDataOutFifo = nullptr;
+    delete g_rxDataOutFifo.load();
+    g_rxDataOutFifo.store(nullptr);
 
     if (queued.empty() || std::string("ABCDEFGH").compare(0, queued.size(), queued) != 0)
     {

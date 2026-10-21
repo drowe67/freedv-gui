@@ -120,7 +120,7 @@ bool MainFrame::isReceiveOnly()
 {
     return 
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
-        g_nSoundCards <= 1;
+        g_nSoundCards.load(std::memory_order_acquire) <= 1;
 }
 
 //----------------------------------------------------------------
@@ -213,7 +213,7 @@ void MainFrame::ClosePTTInPort(void)
 }
 
 extern std::atomic<GenericFIFO<short>*> g_txDataInFifo;
-struct FIFO extern *g_rxDataOutFifo;
+extern std::atomic<GenericFIFO<short>*> g_rxDataOutFifo;
 
 char my_get_next_tx_char(void *) {
     short ch = 0;
@@ -225,7 +225,11 @@ char my_get_next_tx_char(void *) {
 
 void my_put_next_rx_char(void *, char c) {
     short ch = (short)((unsigned char)c);
-    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
+    auto tmpFifo = g_rxDataOutFifo.load(std::memory_order_acquire);
+    if (tmpFifo != nullptr)
+    {
+        tmpFifo->write(&ch, 1);
+    }
 }
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin) FREEDV_NONBLOCKING

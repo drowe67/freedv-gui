@@ -110,7 +110,7 @@ int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
 std::atomic<int>    g_channel_noise;
-int                 g_resyncs;
+std::atomic<int>    g_resyncs;
 float               g_sig_pwr_av = 0.0;
 short              *g_error_hist, *g_error_histn;
 std::atomic<float>    g_tone_phase;
@@ -127,8 +127,8 @@ int g_tuneLevel = 0;
 std::atomic<float> g_tuneLevelScale;
 
 // GUI controls that affect rx and tx processes
-int   g_SquelchActive;
-float g_SquelchLevel;
+std::atomic<int>    g_SquelchActive;
+std::atomic<float>  g_SquelchLevel;
 std::atomic<int>    g_analog;
 std::atomic<bool>   g_tx;
 float g_snr;
@@ -156,13 +156,13 @@ std::atomic<bool>  g_noiseReductionEnabled;
 std::atomic<bool>  g_bwExpandEnabled;
 // sending and receiving Call Sign data
 std::atomic<GenericFIFO<short>*> g_txDataInFifo;
-struct FIFO         *g_rxDataOutFifo;
+std::atomic<GenericFIFO<short>*> g_rxDataOutFifo;
 
 // tx/rx processing states
 std::atomic<int>                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
-int                 g_dump_timing;
-int                 g_dump_fifo_state;
+std::atomic<int>                 g_dump_timing;
+std::atomic<int>                 g_dump_fifo_state;
 time_t              g_sync_time;
 
 // FIFOs used for plotting waveforms
@@ -172,7 +172,7 @@ GenericFIFO<short>  g_plotSpeechOutFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
-int                 g_nSoundCards;
+std::atomic<int>         g_nSoundCards;
 
 // PortAudio over/underflow counters
 
@@ -180,8 +180,8 @@ std::atomic<int>    g_infifo1_full;
 std::atomic<int>    g_outfifo1_empty;
 std::atomic<int>    g_infifo2_full;
 std::atomic<int>    g_outfifo2_empty;
-int                 g_AEstatus1[4];
-int                 g_AEstatus2[4];
+std::atomic<int>         g_AEstatus1[4];
+std::atomic<int>         g_AEstatus2[4];
 
 // playing and recording from sound files
 
@@ -191,8 +191,8 @@ extern std::atomic<bool>                g_playFileToMicIn;
 extern std::atomic<bool>   g_loopPlayFileToMicIn;
 extern int                 g_playFileToMicInEventId;
 
-extern SNDFILE            *g_sfRecFile;
-extern bool                g_recFileFromRadio;
+extern std::atomic<SNDFILE*>     g_sfRecFile;
+extern std::atomic<bool>         g_recFileFromRadio;
 extern std::atomic<unsigned int> g_recFromRadioSamples;
 extern int                 g_recFileFromRadioEventId;
 extern int                 g_recFileFromDecoderEventId;
@@ -212,8 +212,8 @@ extern std::atomic<SNDFILE*> g_sfRecMicFile;
 extern std::atomic<bool>   g_recFileFromMic;
 extern std::atomic<bool>   g_recVoiceKeyerFile;
 
-extern SNDFILE* g_sfRecDecoderFile;
-extern bool g_recFileFromDecoder;
+extern std::atomic<SNDFILE*> g_sfRecDecoderFile;
+extern std::atomic<bool> g_recFileFromDecoder;
 
 wxWindow           *g_parent;
 
@@ -519,8 +519,8 @@ void MainApp::UnitTest_()
             recSf.channels   = 1;
             recSf.samplerate = RECORD_FILE_SAMPLE_RATE;
 
-            g_sfRecDecoderFile = sf_open((const char*)utRxOutFile.ToUTF8(), SFM_WRITE, &recSf);
-            g_recFileFromDecoder = true;
+            g_sfRecDecoderFile.store(sf_open((const char*)utRxOutFile.ToUTF8(), SFM_WRITE, &recSf), std::memory_order_release);
+            g_recFileFromDecoder.store(true, std::memory_order_release);
         }
 
         if (utRxFile != "")
@@ -562,10 +562,10 @@ void MainApp::UnitTest_()
             } 
         }
 
-        if (g_recFileFromDecoder)
+        if (g_recFileFromDecoder.load(std::memory_order_acquire))
         {
-            g_recFileFromDecoder = false;
-            sf_close(g_sfRecDecoderFile);
+            g_recFileFromDecoder.store(false, std::memory_order_release);
+            sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
         }
     }
     
@@ -982,9 +982,8 @@ void MainFrame::loadConfiguration_()
     if (w < smallestSize.GetWidth() || w > 2048) w = defaultSize.GetWidth();
     if (h < smallestSize.GetHeight() || h > 2048) h = defaultSize.GetHeight();
 
-    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
-    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
-    g_SquelchLevel /= 2.0;
+    g_SquelchActive.store(wxGetApp().appConfiguration.squelchActive, std::memory_order_release);
+    g_SquelchLevel.store(wxGetApp().appConfiguration.squelchLevel / 2.0, std::memory_order_release);
     
     wxSize size = GetMinSize();
 
@@ -1180,10 +1179,10 @@ setDefaultMode:
     m_togBtnVoiceKeyer->Disable();
 
     // squelch settings
-    m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB";
+    m_sliderSQ->SetValue((int)((g_SquelchLevel.load(std::memory_order_acquire)+5.0)*2.0));
+    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel.load(std::memory_order_acquire), 1) + "dB";
     m_textSQ->SetLabel(sqsnr_string);
-    m_ckboxSQ->SetValue(g_SquelchActive);
+    m_ckboxSQ->SetValue(g_SquelchActive.load(std::memory_order_acquire));
 
     // SNR settings
 
@@ -1231,11 +1230,11 @@ setDefaultMode:
     bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
     bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
-    g_nSoundCards = 0;
+    g_nSoundCards.store(0, std::memory_order_release);
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
-        g_nSoundCards = 1;
+        g_nSoundCards.store(1, std::memory_order_release);
         if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
-            g_nSoundCards = 2;
+            g_nSoundCards.store(2, std::memory_order_release);
     }
     
     // Update the reporting list as needed.
@@ -1516,8 +1515,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_playFileToMicIn.store(false, std::memory_order_release);
     g_loopPlayFileToMicIn.store(false, std::memory_order_relaxed);
 
-    g_sfRecFile = NULL;
-    g_recFileFromRadio = false;
+    g_sfRecFile.store(NULL, std::memory_order_release);
+    g_recFileFromRadio.store(false, std::memory_order_release);
 
     g_sfPlayFileFromRadio.store(NULL, std::memory_order_release);
     g_playFileFromRadio.store(false, std::memory_order_release);
@@ -1543,13 +1542,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     // data states
     g_txDataInFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
-    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_rxDataOutFifo.store(new GenericFIFO<short>(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS), std::memory_order_release);
 
     sox_biquad_start();
 
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
-    g_resyncs = 0;
+    g_resyncs.store(0, std::memory_order_relaxed);
     wxGetApp().m_testFrames = false;
     wxGetApp().m_channel_noise = false;
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
@@ -1631,7 +1630,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
        to helpo debug 700D windows sound break up */
 
     wxGetApp().m_txRxThreadHighPriority = true;
-    g_dump_timing = g_dump_fifo_state = 0;
+    g_dump_timing.store(0, std::memory_order_relaxed);
+    g_dump_fifo_state.store(0, std::memory_order_relaxed);
 }
 
 void MainFrame::restoreCallsignListFromCsv_()
@@ -1752,8 +1752,8 @@ void MainFrame::exportConfiguration_(wxConfigBase* config)
     }
 
 
-    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
-    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
+    wxGetApp().appConfiguration.squelchActive = g_SquelchActive.load(std::memory_order_acquire);
+    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel.load(std::memory_order_acquire)*2.0);
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     autoSaveCurrentBandLevels_(false);
@@ -1851,10 +1851,10 @@ MainFrame::~MainFrame()
             g_sfPlayFileReader = nullptr;
         }
     }
-    if (g_sfRecFile != NULL)
+    if (g_sfRecFile.load(std::memory_order_acquire) != NULL)
     {
-        sf_close(g_sfRecFile);
-        g_sfRecFile = NULL;
+        sf_close(g_sfRecFile.load(std::memory_order_acquire));
+        g_sfRecFile.store(NULL, std::memory_order_release);
     }
     if (g_sfRecFileFromModulator != NULL)
     {
@@ -2132,7 +2132,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 if (g_prev_State.load(std::memory_order_acquire) == 0) 
                 {
-                    g_resyncs++;
+                    g_resyncs.fetch_add(1, std::memory_order_relaxed);
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
                     // NOTE: m_timeSinceSyncLoss is in milliseconds.
@@ -2201,7 +2201,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // See if any Callsign info received --------------------------------
 
             short ashort;
-            while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
+            auto rxDataFifo = g_rxDataOutFifo.load(std::memory_order_acquire);
+            while (rxDataFifo != nullptr && rxDataFifo->read(&ashort, 1) == 0) {
                 unsigned char incomingChar = (unsigned char)ashort;
         
                 // Pre-1.5.1 behavior, where text is handled as-is.
@@ -2362,7 +2363,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         bool micEqEnableOld = g_rxUserdata->micInEQEnable.load(std::memory_order_relaxed);
         bool spkrEqEnableOld = g_rxUserdata->spkOutEQEnable.load(std::memory_order_relaxed);
 
-        if (m_newMicInFilter || m_newSpkOutFilter ||
+        if (m_newMicInFilter.load(std::memory_order_relaxed) || m_newSpkOutFilter.load(std::memory_order_relaxed) ||
             micEqEnableOld != wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
             spkrEqEnableOld != wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable) {
             
@@ -2371,9 +2372,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_rxUserdata->micInEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable, std::memory_order_relaxed);
             g_rxUserdata->spkOutEQEnable.store(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable, std::memory_order_relaxed);
 
-            if (m_newMicInFilter || m_newSpkOutFilter)
+            if (m_newMicInFilter.load(std::memory_order_relaxed) || m_newSpkOutFilter.load(std::memory_order_relaxed))
             {
-                if (g_nSoundCards == 1)
+                if (g_nSoundCards.load(std::memory_order_relaxed) == 1)
                 {
                     designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 0);
                 }
@@ -2383,7 +2384,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
 
-            m_newMicInFilter = m_newSpkOutFilter = false;
+            m_newMicInFilter.store(false, std::memory_order_relaxed);
+            m_newSpkOutFilter.store(false, std::memory_order_relaxed);
         }
         g_mutexProtectingCallbackData.Unlock();
     
@@ -2457,7 +2459,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxString ber = wxString::Format(BER_FMT, b); 
             m_textBER->SetLabel(ber);
 
-            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs); 
+            wxString resyncs = wxString::Format(RESYNC_FMT, g_resyncs.load(std::memory_order_relaxed));
             m_textResyncs->SetLabel(resyncs);
 
             wxString syncMetric = wxString::Format(SYNC_FMT, freedvInterface.getCurrentRxModemStats()->sync_metric);
@@ -2676,8 +2678,8 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         }
     
         // Force recreation of EQ filters.
-        m_newMicInFilter = true;
-        m_newSpkOutFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_release);
+        m_newSpkOutFilter.store(true, std::memory_order_release);
     
         // Report TX change to registered reporters
         auto txStatus = g_tx.load(std::memory_order_acquire);
@@ -2783,7 +2785,7 @@ void MainFrame::performFreeDVOn_()
             }
         
             // If we're receive-only, it doesn't make sense to be able to change TX mode.
-            if (g_nSoundCards <= 1)
+            if (g_nSoundCards.load(std::memory_order_acquire) <= 1)
             {
                 m_rb1600->Disable();
                 m_rbRADE->Disable();
@@ -2901,7 +2903,7 @@ void MainFrame::performFreeDVOn_()
             if (m_RxRunning.load(std::memory_order_acquire))
             {
                 // Enable Tune button if TX is valid.
-                if (g_nSoundCards > 1)
+                if (g_nSoundCards.load(std::memory_order_acquire) > 1)
                 {
                     executeOnUiThreadAndWait_([&]() {
                         m_btnTogTune->Enable(true);
@@ -3158,7 +3160,8 @@ void MainFrame::performFreeDVOff_()
     delete[] g_error_histn;
     freedvInterface.stop();
     
-    m_newMicInFilter = m_newSpkOutFilter = true;
+    m_newMicInFilter.store(true, std::memory_order_release);
+    m_newSpkOutFilter.store(true, std::memory_order_release);
     
     wxGetApp().logger = nullptr;
 
@@ -3222,7 +3225,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 bool txEnabled = 
                     m_RxRunning.load(std::memory_order_acquire) && 
                     !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
-                    (g_nSoundCards == 2);
+                    (g_nSoundCards.load(std::memory_order_acquire) == 2);
                 
                 m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnVoiceKeyer->Enable(txEnabled);
@@ -3348,8 +3351,8 @@ void MainFrame::stopRxStream()
         destroy_fifos();
         
         // Free memory allocated for filters.
-        m_newMicInFilter = true;
-        m_newSpkOutFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_relaxed);
+        m_newSpkOutFilter.store(true, std::memory_order_relaxed);
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
         
@@ -3451,7 +3454,7 @@ void MainFrame::startRxStream()
             3 * (freedvInterface.getTxNNomModemSamples() * wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate) / freedvInterface.getTxModemSampleRate(),
             m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000);
 
-        if (g_nSoundCards == 2)
+        if (g_nSoundCards.load(std::memory_order_acquire) == 2)
         {
             int soundCard2InFifoSizeSamples = MAX_INCOMING_AUDIO_SEC * wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
 
@@ -3490,7 +3493,7 @@ void MainFrame::startRxStream()
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
-        if (g_nSoundCards == 0) 
+        if (g_nSoundCards.load(std::memory_order_acquire) == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
                 wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
@@ -3503,7 +3506,7 @@ void MainFrame::startRxStream()
             delete g_rxUserdata;
             return;
         }
-        else if (g_nSoundCards == 1)
+        else if (g_nSoundCards.load(std::memory_order_acquire) == 1)
         {
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
@@ -3597,12 +3600,12 @@ void MainFrame::startRxStream()
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
                 {
-                    g_AEstatus2[1]++;
+                    g_AEstatus2[1].fetch_add(1, std::memory_order_relaxed);
                 }, nullptr);
         
                 txInSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
                 {
-                    g_AEstatus2[0]++;
+                    g_AEstatus2[0].fetch_add(1, std::memory_order_relaxed);
                 }, nullptr);
                 
                 txInSoundDevice->setOnAudioError(errorCallback, this);                
@@ -3629,12 +3632,12 @@ void MainFrame::startRxStream()
         
                 txOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
                 {
-                    g_AEstatus1[3]++;
+                    g_AEstatus1[3].fetch_add(1, std::memory_order_relaxed);
                 }, nullptr);
         
                 txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
                 {
-                    g_AEstatus1[2]++;
+                    g_AEstatus1[2].fetch_add(1, std::memory_order_relaxed);
                 }, nullptr);
             
                 txOutSoundDevice->setOnAudioError(errorCallback, this);
@@ -3727,7 +3730,8 @@ void MainFrame::startRxStream()
         g_infifo2_full.store(0, std::memory_order_relaxed);
         g_outfifo2_empty.store(0, std::memory_order_relaxed);
         for (int i=0; i<4; i++) {
-            g_AEstatus1[i] = g_AEstatus2[i] = 0;
+            g_AEstatus1[i].store(0, std::memory_order_relaxed);
+            g_AEstatus2[i].store(0, std::memory_order_relaxed);
         }
 
         // These FIFOs interface between the 20ms tx/rxProcessing()
@@ -3788,12 +3792,12 @@ void MainFrame::startRxStream()
         
         rxInSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
         {
-            g_AEstatus1[1]++;
+            g_AEstatus1[1].fetch_add(1, std::memory_order_relaxed);
         }, nullptr);
         
         rxInSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
         {
-            g_AEstatus1[0]++;
+            g_AEstatus1[0].fetch_add(1, std::memory_order_relaxed);
         }, nullptr);
         
         rxInSoundDevice->setOnAudioError(errorCallback, this);
@@ -3805,12 +3809,12 @@ void MainFrame::startRxStream()
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
             {
-                g_AEstatus2[3]++;
+                g_AEstatus2[3].fetch_add(1, std::memory_order_relaxed);
             }, nullptr);
         
             rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
             {
-                g_AEstatus2[2]++;
+                g_AEstatus2[2].fetch_add(1, std::memory_order_relaxed);
             }, nullptr);
         }
         else
@@ -3846,12 +3850,12 @@ void MainFrame::startRxStream()
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice&, void*)
             {
-                g_AEstatus1[3]++;
+                g_AEstatus1[3].fetch_add(1, std::memory_order_relaxed);
             }, nullptr);
         
             rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice&, void*)
             {
-                g_AEstatus1[2]++;
+                g_AEstatus1[2].fetch_add(1, std::memory_order_relaxed);
             }, nullptr);
         }
         
@@ -3992,11 +3996,11 @@ bool MainFrame::validateSoundCardSetup(bool silent)
     bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
     bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
-    g_nSoundCards = 0;
+    g_nSoundCards.store(0, std::memory_order_release);
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
-        g_nSoundCards = 1;
+        g_nSoundCards.store(1, std::memory_order_release);
         if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
-            g_nSoundCards = 2;
+            g_nSoundCards.store(2, std::memory_order_release);
     }
     
     // For the purposes of validation, number of channels isn't necessary.
@@ -4027,7 +4031,7 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         canRun = false;
     }
     
-    if (canRun && g_nSoundCards == 0)
+    if (canRun && g_nSoundCards.load(std::memory_order_acquire) == 0)
     {
         if (!silent)
         {
@@ -4073,7 +4077,7 @@ bool MainFrame::validateSoundCardSetup(bool silent)
         const int MIN_SAMPLE_RATE_RADIO = 8000;
         int failedSampleRate = 0;
         int expectedSampleRate = 0;
-        int expectedSampleRate1Out = (g_nSoundCards == 1 ? MIN_SAMPLE_RATE_ANALOG : MIN_SAMPLE_RATE_RADIO);
+        int expectedSampleRate1Out = (g_nSoundCards.load(std::memory_order_acquire) == 1 ? MIN_SAMPLE_RATE_ANALOG : MIN_SAMPLE_RATE_RADIO);
         
         // Validate sample rates
         if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE_RADIO)
