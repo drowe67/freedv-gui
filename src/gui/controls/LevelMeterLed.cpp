@@ -47,7 +47,7 @@ LevelMeterLed::LevelMeterLed(
     numSegments_ = (int)std::lround((maxDb_ - minDb_) / segmentDb_);
 
     Create(parent, id, pos, wxSize(segmentWidthPx_ * numSegments_, segmentHeightPx_));
-    SetBackgroundStyle(wxBG_STYLE_PAINT); // we draw every pixel ourselves
+    SetBackgroundStyle(wxBG_STYLE_PAINT); // OnPaint() clears and draws everything
     Bind(wxEVT_PAINT, &LevelMeterLed::OnPaint, this);
 }
 
@@ -84,7 +84,7 @@ void LevelMeterLed::SetLevelDb(float db)
     if (newLit != litSegments_)
     {
         litSegments_ = newLit;
-        Refresh(false); // false: we repaint every pixel ourselves, no need to erase first
+        Refresh(false); // false: OnPaint() clears and redraws everything, no need to erase first
     }
 }
 
@@ -92,9 +92,8 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
 {
     wxAutoBufferedPaintDC dc(this);
 
-    // Normally fully covered by segments; the clear only matters if the
-    // widget is ever given more space than DoGetBestSize(). Unstyled
-    // parents (e.g. a wxStaticBox on GTK) don't report a usable colour.
+    // Shows between the LEDs. Unstyled parents (e.g. a wxStaticBox on GTK)
+    // don't report a usable colour.
     wxWindow* parent = GetParent();
     wxColour background = parent->UseBackgroundColour() ? parent->GetBackgroundColour() : wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
     dc.SetBackground(wxBrush(background));
@@ -104,9 +103,17 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
     static const wxColour AMBER(230, 160, 0);
     static const wxColour RED(220, 30, 30);
     static const wxColour BLUE(60, 145, 240);
-    static const wxColour UNLIT(128, 128, 128); // mid grey, visible on light and dark themes
+
+    // Lightness for an unlit LED: a dark version of its own colour, like a
+    // real LED's coloured body when it's off.
+    constexpr int UNLIT_LIGHTNESS = 40;
 
     dc.SetPen(*wxTRANSPARENT_PEN);
+
+    // Each LED sits centred in its own segment, LED_GAP_PX narrower, so
+    // neighbouring LEDs are LED_GAP_PX apart.
+    constexpr int LED_GAP_PX = 2;
+    int ledWidth = std::max(1, segmentWidthPx_ - LED_GAP_PX);
 
     for (int i = 0; i < numSegments_; i++)
     {
@@ -114,9 +121,9 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
         wxColour zoneColour = !zoneColours_ ? BLUE :
             (lowerDb >= redStartDb_) ? RED : (lowerDb >= amberStartDb_) ? AMBER : GREEN;
 
-        wxColour fillColour = (i < litSegments_) ? zoneColour : UNLIT;
+        wxColour fillColour = (i < litSegments_) ? zoneColour : zoneColour.ChangeLightness(UNLIT_LIGHTNESS);
 
         dc.SetBrush(wxBrush(fillColour));
-        dc.DrawRectangle(i * segmentWidthPx_, 0, segmentWidthPx_, segmentHeightPx_);
+        dc.DrawRectangle(i * segmentWidthPx_ + LED_GAP_PX / 2, 0, ledWidth, segmentHeightPx_);
     }
 }

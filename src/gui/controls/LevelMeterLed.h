@@ -27,12 +27,12 @@
 // jittery on it; discrete LED steps are the expected look for a peak meter.
 // Custom-drawn so it looks and behaves the same on every platform.
 //
-// Segments are segmentDb wide, spanning minDb..maxDb, butted together with
-// no gaps. With zone colours on, segments are green, then amber from
-// amberStartDb, then red from redStartDb. With zone colours off, every
-// segment is the same fixed blue. Fixed colours (not theme colours) keep
-// the meter readable when the window is unfocused. Unlit segments are a
-// neutral mid grey, which stays visible on both light and dark themes.
+// Segments are segmentDb wide, spanning minDb..maxDb. Each is drawn as a
+// separate LED, centred in its segment with a small gap to its neighbours.
+// With zone colours on, LEDs are green, then amber from amberStartDb, then
+// red from redStartDb. With zone colours off, every LED is the same fixed
+// blue. Fixed colours (not theme colours) keep the meter readable when the
+// window is unfocused. An unlit LED is a dark version of its own colour.
 class LevelMeterLed : public wxWindow
 {
     public:

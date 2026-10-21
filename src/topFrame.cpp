@@ -564,10 +564,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
     levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
 
-    // LED-style meter, 13x8px segments (see LEVEL_METER_* in defines.h).
+    // LED-style meter, 13x12px segments (see LEVEL_METER_* in defines.h).
     m_gaugeLevel = new LevelMeterLed(
         levelBox, wxID_ANY, -LEVEL_GAUGE_MIN_DB, 0.0f, LEVEL_METER_SEGMENT_DB,
-        LEVEL_METER_AMBER_START_DBFS, LEVEL_METER_RED_START_DBFS, 13, 8);
+        LEVEL_METER_AMBER_START_DBFS, LEVEL_METER_RED_START_DBFS, 13, 12);
     m_gaugeLevel->SetToolTip(_("RX: Peak level of radio's audio output, TX: Peak level of microphone audio from the sound card (before noise reduction/AGC/level settings)."));
     levelSizer->Add(m_gaugeLevel, 0, static_cast<int>(wxALIGN_CENTER_HORIZONTAL)|static_cast<int>(wxALL), 10);
     
