@@ -160,8 +160,8 @@ void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReli
             // Special case for RADE.
             // Note: multi-RX not currently supported.
             rxMode_.store(mode, std::memory_order_release);
-            txMode_ = mode;
-            modemStatsIndex_ = 0;
+            txMode_.store(mode, std::memory_order_release);
+            modemStatsIndex_.store(0, std::memory_order_release);
 
             // Suppress const string warning.
             // TBD - modelFile may be used by RADE in the future!
@@ -256,10 +256,10 @@ void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReli
         
         if (mode == txMode)
         {
-            currentTxMode_ = dv;
+            currentTxMode_.store(dv, std::memory_order_release);
             currentRxMode_.store(dv, std::memory_order_release);
             rxMode_.store(mode, std::memory_order_release);
-            txMode_ = mode;
+            txMode_.store(mode, std::memory_order_release);
         }
         
         if (usingReliableText)
@@ -325,10 +325,10 @@ void FreeDVInterface::stop()
     enabledModes_.clear();
     
     modemStatsList_ = nullptr;
-    currentTxMode_ = nullptr;
+    currentTxMode_.store(nullptr, std::memory_order_release);
     currentRxMode_.store(nullptr, std::memory_order_release);
-    modemStatsIndex_ = 0;
-    txMode_ = 0;
+    modemStatsIndex_.store(0, std::memory_order_relaxed);
+    txMode_.store(0, std::memory_order_relaxed);
     rxMode_.store(0, std::memory_order_release);
 
     if (rade_ != nullptr)
@@ -464,14 +464,14 @@ const char* FreeDVInterface::getCurrentModeStr() const
 
 const char* FreeDVInterface::getCurrentTxModeStr() const
 {
-    return GetCurrentModeStrImpl_(txMode_);
+    return GetCurrentModeStrImpl_(txMode_.load(std::memory_order_acquire));
 }
 
 void FreeDVInterface::changeTxMode(int txMode)
 {
     if (txMode >= FREEDV_MODE_RADE)
     {
-        txMode_ = txMode;
+        txMode_.store(txMode, std::memory_order_release);
         return;
     }
 
@@ -480,8 +480,8 @@ void FreeDVInterface::changeTxMode(int txMode)
     {
         if (mode == txMode)
         {
-            currentTxMode_ = dvObjects_[index];
-            txMode_ = mode;            
+            currentTxMode_.store(dvObjects_[index], std::memory_order_release);
+            txMode_.store(mode, std::memory_order_release);
             return;
         }
         index++;
@@ -557,40 +557,43 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
 
 int FreeDVInterface::getTxModemSampleRate() const FREEDV_NONBLOCKING
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return RADE_MODEM_SAMPLE_RATE;
     }
 
-    assert(currentTxMode_ != nullptr);
-    return freedv_get_modem_sample_rate(currentTxMode_);
+    auto txDv = currentTxMode_.load(std::memory_order_acquire);
+    assert(txDv != nullptr);
+    return freedv_get_modem_sample_rate(txDv);
 }
 
 int FreeDVInterface::getTxSpeechSampleRate() const
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return RADE_SPEECH_SAMPLE_RATE;
     }
 
-    assert(currentTxMode_ != nullptr);
-    return freedv_get_speech_sample_rate(currentTxMode_);
+    auto txDv = currentTxMode_.load(std::memory_order_acquire);
+    assert(txDv != nullptr);
+    return freedv_get_speech_sample_rate(txDv);
 }
 
 int FreeDVInterface::getTxNumSpeechSamples() const
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         return rade_n_features_in_out(rade_) * LPCNET_FRAME_SIZE / NB_TOTAL_FEATURES;
     }
 
-    assert(currentTxMode_ != nullptr);
-    return freedv_get_n_speech_samples(currentTxMode_);   
+    auto txDv = currentTxMode_.load(std::memory_order_acquire);
+    assert(txDv != nullptr);
+    return freedv_get_n_speech_samples(txDv);   
 }
 
 int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         // Verified that rade_api.c from librade has no unbounded operations
         // as of 2025-10-03.
@@ -599,8 +602,9 @@ int FreeDVInterface::getTxNNomModemSamples() const FREEDV_NONBLOCKING
         FREEDV_END_VERIFIED_SAFE
     }
 
-    assert(currentTxMode_ != nullptr);
-    return freedv_get_n_nom_modem_samples(currentTxMode_);   
+    auto txDv = currentTxMode_.load(std::memory_order_acquire);
+    assert(txDv != nullptr);
+    return freedv_get_n_nom_modem_samples(txDv);   
 }
 
 void FreeDVInterface::setLpcPostFilter(int enable, int bassBoost, float beta, float gamma)
@@ -763,7 +767,7 @@ void FreeDVInterface::setReliableText(const char* callsign)
 
 float FreeDVInterface::getSNREstimate()
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
         return (getSync() ? radeSnr_.load(std::memory_order_acquire) : 0);
@@ -776,7 +780,7 @@ float FreeDVInterface::getSNREstimate()
 
 float FreeDVInterface::getCurrentRxModemOffset()
 {
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
         return rade_freq_offset(rade_);
@@ -795,7 +799,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
 {
     std::vector<IPipelineStep*> parallelSteps;
 
-    if (txMode_ >= FREEDV_MODE_RADE)
+    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE. Note that ParallelStep is not being used
         // as it has known issues with Bluetooth and macOS (but only with RADE;
@@ -818,8 +822,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
             FreeDVInterface* thisObj = (FreeDVInterface*)s->getCallbackState();
             int index = 0;
 
-            auto currentTxMode = thisObj->currentTxMode_;
-            auto txModeInt = thisObj->txMode_; 
+            auto currentTxMode = thisObj->currentTxMode_.load(std::memory_order_acquire);
+            auto txModeInt = thisObj->txMode_.load(std::memory_order_acquire);
 
             // Special handling for RADE.
             if (txModeInt >= FREEDV_MODE_RADE) return 0;

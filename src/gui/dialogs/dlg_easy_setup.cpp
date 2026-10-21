@@ -356,6 +356,12 @@ EasySetupDialog::~EasySetupDialog()
 
 void EasySetupDialog::ExchangeData(int inout)
 {
+    if (inout == EXCHANGE_DATA_OUT && g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        // Don't write appConfiguration (or save pConfig) while the onOffExec
+        // thread is reading it during startup/teardown; see OnTogBtnOnOff.
+        return;
+    }
     ExchangeSoundDeviceData(inout);
     ExchangePttDeviceData(inout);
     ExchangeReportingData(inout);
@@ -506,7 +512,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = analogPlaybackDeviceData->rxDeviceName;
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = analogPlaybackDeviceData->rxSampleRate;
 
-            g_nSoundCards = 1;
+            g_nSoundCards.store(1, std::memory_order_release);
         }
         else
         {
@@ -523,7 +529,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = deviceData->txSampleRate;
             }
 
-            g_nSoundCards = 2;
+            g_nSoundCards.store(2, std::memory_order_release);
         }
         
         wxGetApp().appConfiguration.save(pConfig);
@@ -738,6 +744,11 @@ void EasySetupDialog::OnInitDialog(wxInitDialogEvent&)
 
 void EasySetupDialog::OnOK(wxCommandEvent& event)
 {
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        wxLogStatus("Please wait for FreeDV to finish starting or stopping; settings were not saved.");
+        return;
+    }
     OnApply(event);
     if (canSaveSettings_())
     {
@@ -765,6 +776,11 @@ void EasySetupDialog::OnClose(wxCloseEvent&)
 
 void EasySetupDialog::OnApply(wxCommandEvent&)
 {
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        wxLogStatus("Please wait for FreeDV to finish starting or stopping; settings were not saved.");
+        return;
+    }
     if (canSaveSettings_())
     {
         ExchangeData(EXCHANGE_DATA_OUT);
@@ -780,6 +796,10 @@ void EasySetupDialog::OnApply(wxCommandEvent&)
 
 void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
 {
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        return;
+    }
     wxUnusedVar(event);
     
     AudioOptsDialog *dlg = new AudioOptsDialog(this);
@@ -799,6 +819,10 @@ void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
 
 void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
 {
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        return;
+    }
     wxUnusedVar(event);
     
     ComPortsDlg *dlg = new ComPortsDlg(this);
@@ -812,6 +836,10 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
 
 void EasySetupDialog::OnTest(wxCommandEvent&)
 {
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        return;
+    }
     if (canTestRadioSettings_())
     {
         if (m_buttonTest->GetLabel() == "Stop Test")

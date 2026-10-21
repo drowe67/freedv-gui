@@ -79,7 +79,7 @@ public:
     void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText, bool verbose = false);
     void stop();
     void changeTxMode(int txMode);
-    int getTxMode() const { return txMode_; }
+    int getTxMode() const { return txMode_.load(std::memory_order_acquire); }
     bool isRunning() const { return rade_ != nullptr || dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
     void setRunTimeOptions(bool clip, bool bpf);
@@ -128,7 +128,7 @@ public:
 
     float getCurrentRxModemOffset();
     
-    struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
+    struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_.load(std::memory_order_acquire)]; }
     
     void resetReliableText();
     const char* getReliableText();
@@ -179,7 +179,7 @@ private:
     
     void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
-    int txMode_;
+    std::atomic<int> txMode_;
     std::atomic<int> rxMode_;
     bool squelchEnabled_;
     std::deque<int> enabledModes_;
@@ -197,9 +197,9 @@ private:
     std::deque<float> snrAdjust_; 
     
     struct MODEM_STATS* modemStatsList_;
-    int modemStatsIndex_;
+    std::atomic<int> modemStatsIndex_;
     
-    struct freedv* currentTxMode_;
+    std::atomic<struct freedv*> currentTxMode_;
     std::atomic<struct freedv*> currentRxMode_; 
     struct freedv* lastSyncRxMode_;
     

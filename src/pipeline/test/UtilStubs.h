@@ -13,11 +13,11 @@
 #include "../../main.h"
 
 // Defined by main.cpp in the application.
-int g_nSoundCards = 1;
+std::atomic<int> g_nSoundCards{1};
 std::atomic<float> g_RxFreqOffsetHz(0.0f);
 std::atomic<float> g_TxFreqOffsetHz(0.0f);
 std::atomic<GenericFIFO<short>*> g_txDataInFifo(nullptr);
-struct FIFO* g_rxDataOutFifo = nullptr;
+std::atomic<GenericFIFO<short>*> g_rxDataOutFifo{nullptr};
 wxString testName;
 
 // wxIMPLEMENT_APP() in main.cpp defines this; no test reaches it.

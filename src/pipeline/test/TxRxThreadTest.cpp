@@ -92,12 +92,12 @@ std::atomic<float>  g_tone_phase(0.0f);
 
 int g_mode = 0;
 int g_txLevel = 0;
-int g_dump_timing = 0;
-int g_dump_fifo_state = 0;
-int g_resyncs = 0;
+std::atomic<int> g_dump_timing(0);
+std::atomic<int> g_dump_fifo_state(0);
+std::atomic<int> g_resyncs(0);
 
-int   g_SquelchActive = 0;
-float g_SquelchLevel = 0.0f;
+std::atomic<int>   g_SquelchActive(0);
+std::atomic<float> g_SquelchLevel(0.0f);
 float g_sig_pwr_av = 0.0f;
 
 GenericFIFO<float> g_avmag(2000);
@@ -109,10 +109,10 @@ std::atomic<SNDFILE*> g_sfPlayFile(nullptr);
 std::atomic<SNDFILE*> g_sfPlayFileFromRadio(nullptr);
 std::atomic<SNDFILE*> g_sfRecFileFromModulator(nullptr);
 std::atomic<SNDFILE*> g_sfRecMicFile(nullptr);
-SNDFILE* g_sfRecFile = nullptr;
-SNDFILE* g_sfRecDecoderFile = nullptr;
-bool g_recFileFromRadio = false;
-bool g_recFileFromDecoder = false;
+std::atomic<SNDFILE*> g_sfRecFile(nullptr);
+std::atomic<SNDFILE*> g_sfRecDecoderFile(nullptr);
+std::atomic<bool> g_recFileFromRadio(false);
+std::atomic<bool> g_recFileFromDecoder(false);
 std::atomic<unsigned int> g_recFromRadioSamples(0);
 
 namespace {
@@ -1427,7 +1427,7 @@ public:
 
         bool result = true;
         result &= check("resync still queued", (int)g_queueResync.load(), 0);
-        result &= check("resyncs carried out", g_resyncs, 1);
+        result &= check("resyncs carried out", g_resyncs.load(), 1);
         return result;
     }
 

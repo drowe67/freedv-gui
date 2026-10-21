@@ -33,8 +33,8 @@
 
 extern int g_mode;
 
-extern int   g_SquelchActive;
-extern float g_SquelchLevel;
+extern std::atomic<int>   g_SquelchActive;
+extern std::atomic<float> g_SquelchLevel;
 extern std::atomic<int>   g_analog;
 extern std::atomic<bool>   g_tx;
 extern std::atomic<int64_t> g_rxMutedUntilNs;
@@ -50,7 +50,7 @@ extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern std::atomic<bool> g_queueResync;
 extern short *g_error_hist, *g_error_histn;
-extern int g_resyncs;
+extern std::atomic<int> g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
@@ -65,8 +65,8 @@ extern paCallBackData* g_rxUserdata;
 
 extern std::atomic<SNDFILE*>            g_sfRecFileFromModulator;
 extern std::atomic<bool>                g_recFileFromModulator;
-extern SNDFILE            *g_sfRecFile;
-extern bool g_recFileFromRadio;
+extern std::atomic<SNDFILE*>    g_sfRecFile;
+extern std::atomic<bool> g_recFileFromRadio;
 
 extern std::atomic<bool>                g_playFileFromRadio;
 
@@ -135,7 +135,7 @@ void MainFrame::OnToolsEasySetup(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
@@ -177,7 +177,7 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
 {
-    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
+    bool oldRxOnly = g_nSoundCards.load(std::memory_order_acquire) <= 1 ? true : false;
 
     wxUnusedVar(event);
     int rv = 0;
@@ -187,7 +187,7 @@ void MainFrame::OnToolsAudio(wxCommandEvent& event)
     {
         dlg->ExchangeData(EXCHANGE_DATA_OUT);
 
-        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
+        bool newRxOnly = g_nSoundCards.load(std::memory_order_acquire) <= 1 ? true : false;
         if (oldRxOnly != newRxOnly &&
             wxGetApp().m_sharedReporterObject->isValidForReporting())
         {
@@ -203,7 +203,7 @@ void MainFrame::OnToolsAudio(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -399,7 +399,7 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -561,13 +561,16 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // on the radio side). Note that this also causes reporting to not fire 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
-            auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
-            if (oldFreq != newFreq)
+            if (!g_sessionTransitioning.load(std::memory_order_acquire))
             {
-                for (auto& ptr : wxGetApp().m_reporters)
+                auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+                if (oldFreq != newFreq)
                 {
-                    ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                    for (auto& ptr : wxGetApp().m_reporters)
+                    {
+                        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                    }
                 }
             }
             
@@ -830,7 +833,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -852,8 +855,9 @@ void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
 //-------------------------------------------------------------------------
 void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    wxString sqsnr_string = wxNumberFormatter::ToString(g_SquelchLevel, 1) + "dB"; // 0.5 dB steps
+    float newSquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
+    g_SquelchLevel.store(newSquelchLevel, std::memory_order_release);
+    wxString sqsnr_string = wxNumberFormatter::ToString(newSquelchLevel, 1) + "dB"; // 0.5 dB steps
     m_textSQ->SetLabel(sqsnr_string);
 
     event.Skip();
@@ -1084,12 +1088,12 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
     if (g_tx.load(std::memory_order_acquire))
     {
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
-        m_newMicInFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_release);
     }
     else
     {
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-        m_newSpkOutFilter = true;
+        m_newSpkOutFilter.store(true, std::memory_order_release);
     }
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
@@ -1101,13 +1105,13 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
 //-------------------------------------------------------------------------
 void MainFrame::OnCheckSQClick(wxCommandEvent&)
 {
-    if(!g_SquelchActive)
+    if(!g_SquelchActive.load(std::memory_order_acquire))
     {
-        g_SquelchActive = true;
+        g_SquelchActive.store(true, std::memory_order_release);
     }
     else
     {
-        g_SquelchActive = false;
+        g_SquelchActive.store(false, std::memory_order_release);
     }
 }
 
@@ -1583,11 +1587,14 @@ void MainFrame::togglePTT(void) {
         
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
-        auto outDevice = txOutSoundDevice;
-        auto latency = 0;
-        if (outDevice)
+        int latency = 0;
+        if (!g_sessionTransitioning.load(std::memory_order_acquire))
         {
-            latency = outDevice->getLatencyInMicroseconds();
+            auto outDevice = txOutSoundDevice;
+            if (outDevice)
+            {
+                latency = outDevice->getLatencyInMicroseconds();
+            }
         }
 
         log_info(
@@ -1631,7 +1638,8 @@ void MainFrame::togglePTT(void) {
         // onRigPttChange_()). If it never does, give up after a timeout.
         if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
         {
-            auto inDevice = rxInSoundDevice;
+            auto inDevice = g_sessionTransitioning.load(std::memory_order_acquire)
+                ? std::shared_ptr<IAudioDevice>() : rxInSoundDevice;
             g_rxInputLatencyUs.store(inDevice ? inDevice->getLatencyInMicroseconds() : 0, std::memory_order_release);
             g_rxMutedUntilNs.store(
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -1730,16 +1738,16 @@ void MainFrame::togglePTT(void) {
     }
     
     // If we're recording, switch to/from modulator and radio.
-    if (g_sfRecFile != nullptr)
+    if (g_sfRecFile.load(std::memory_order_acquire) != nullptr)
     {
         if (!newTx)
         {
             g_recFileFromModulator = false;
-            g_recFileFromRadio = true;
+            g_recFileFromRadio.store(true, std::memory_order_release);
         }
         else
         {
-            g_recFileFromRadio = false;
+            g_recFileFromRadio.store(false, std::memory_order_release);
             g_recFileFromModulator = true;
         }
     }
@@ -2102,7 +2110,7 @@ void MainFrame::resetStats_()
 {
     if (m_RxRunning.load(std::memory_order_acquire))  {
         freedvInterface.resetBitStats();
-        g_resyncs = 0;
+        g_resyncs.store(0, std::memory_order_relaxed);
         int i;
         for(i=0; i<2*g_Nc; i++) {
             g_error_hist[i] = 0;
@@ -2130,6 +2138,12 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
 {    
+    if (g_sessionTransitioning.load(std::memory_order_acquire))
+    {
+        // Configuration and QSY are deliberately left alone while the modem
+        // is mid-startup/teardown; see OnTogBtnOnOff.
+        return;
+    }
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
@@ -2314,12 +2328,12 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
     if (g_tx.load(std::memory_order_acquire))
     {
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
-        m_newMicInFilter = true;
+        m_newMicInFilter.store(true, std::memory_order_release);
     }
     else
     {
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-        m_newSpkOutFilter = true;
+        m_newSpkOutFilter.store(true, std::memory_order_release);
     }
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
@@ -2355,12 +2369,12 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsImportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
@@ -2439,7 +2453,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
 
 void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)
