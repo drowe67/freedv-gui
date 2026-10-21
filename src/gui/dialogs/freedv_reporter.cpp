@@ -916,10 +916,6 @@ void FreeDVReporterDialog::OnShowColumn(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnIdleFilter(wxCommandEvent& event)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     if (event.GetId() >= (wxID_HIGHEST + 200))
     {
         auto numMinutes = event.GetId() - wxID_HIGHEST - 200;
@@ -1225,10 +1221,6 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
         m_bandFilter->GetSelection();
     
@@ -1653,10 +1645,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency
         = m_trackFrequency->GetValue();
     m_bandFilter->Enable(
@@ -1846,10 +1834,6 @@ void FreeDVReporterDialog::OnSetFocus(wxFocusEvent& event)
 
 void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     // Preserve new column ordering
     // Note: Windows uses the same indices for model column and GetColumn()
     // so we need to use an alternate implementation for that platform.
@@ -1901,10 +1885,6 @@ void FreeDVReporterDialog::OnColumnReordered(wxDataViewEvent&)
 
 void FreeDVReporterDialog::saveColumnFilters_()
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     FreeDVReporterDataModel* model = static_cast<FreeDVReporterDataModel*>(m_listSpots->GetModel());
 
     std::vector<int> ops(NUM_COLS, FreeDVReporterDialog::FILTER_NONE);

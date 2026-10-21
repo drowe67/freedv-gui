@@ -1394,11 +1394,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnOK(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        wxLogStatus("Please wait for FreeDV to finish starting or stopping; options were not saved.");
-        return;
-    }
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
     EndModal(wxOK);
@@ -1426,11 +1421,6 @@ void OptionsDlg::OnCancel(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnApply(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        wxLogStatus("Please wait for FreeDV to finish starting or stopping; options were not saved.");
-        return;
-    }
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
     
     ExchangeData(EXCHANGE_DATA_OUT, true);

@@ -130,7 +130,6 @@ enum {
 #define EXCHANGE_DATA_OUT   1
 
 extern std::atomic<int>      g_nSoundCards;
-extern std::atomic<bool> g_sessionTransitioning;
 
 // Last-used configuration file helpers.
 // The path is stored in a platform-appropriate state store

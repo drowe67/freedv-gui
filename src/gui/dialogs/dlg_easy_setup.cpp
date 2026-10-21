@@ -356,12 +356,6 @@ EasySetupDialog::~EasySetupDialog()
 
 void EasySetupDialog::ExchangeData(int inout)
 {
-    if (inout == EXCHANGE_DATA_OUT && g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        // Don't write appConfiguration (or save pConfig) while the onOffExec
-        // thread is reading it during startup/teardown; see OnTogBtnOnOff.
-        return;
-    }
     ExchangeSoundDeviceData(inout);
     ExchangePttDeviceData(inout);
     ExchangeReportingData(inout);
@@ -744,11 +738,6 @@ void EasySetupDialog::OnInitDialog(wxInitDialogEvent&)
 
 void EasySetupDialog::OnOK(wxCommandEvent& event)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        wxLogStatus("Please wait for FreeDV to finish starting or stopping; settings were not saved.");
-        return;
-    }
     OnApply(event);
     if (canSaveSettings_())
     {
@@ -776,11 +765,6 @@ void EasySetupDialog::OnClose(wxCloseEvent&)
 
 void EasySetupDialog::OnApply(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        wxLogStatus("Please wait for FreeDV to finish starting or stopping; settings were not saved.");
-        return;
-    }
     if (canSaveSettings_())
     {
         ExchangeData(EXCHANGE_DATA_OUT);
@@ -796,10 +780,6 @@ void EasySetupDialog::OnApply(wxCommandEvent&)
 
 void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxUnusedVar(event);
     
     AudioOptsDialog *dlg = new AudioOptsDialog(this);
@@ -819,10 +799,6 @@ void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
 
 void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxUnusedVar(event);
     
     ComPortsDlg *dlg = new ComPortsDlg(this);
@@ -836,10 +812,6 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
 
 void EasySetupDialog::OnTest(wxCommandEvent&)
 {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     if (canTestRadioSettings_())
     {
         if (m_buttonTest->GetLabel() == "Stop Test")

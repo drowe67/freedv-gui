@@ -483,12 +483,6 @@ void FilterDlg::syncVolumes()
 //-------------------------------------------------------------------------
 void FilterDlg::ExchangeData(int inout)
 {
-    if (inout == EXCHANGE_DATA_OUT && g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        // FilterDlg is modeless and can stay open across Start/Stop; don't
-        // race the onOffExec thread reading filter config during boot.
-        return;
-    }
     if(inout == EXCHANGE_DATA_IN)
     {
         // LPC Post filter
@@ -773,10 +767,6 @@ void FilterDlg::OnGammaScroll(wxScrollEvent&) {
 }
 
 void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable = m_ckboxNoiseReduction->GetValue();
     g_noiseReductionEnabled.store(wxGetApp().appConfiguration.filterConfiguration.noiseReductionEnable, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
@@ -784,30 +774,18 @@ void FilterDlg::OnNoiseReductionEnable(wxScrollEvent&) {
 }
 
 void FilterDlg::OnAgcEnable(wxScrollEvent&) {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
     g_agcEnabled.store(wxGetApp().appConfiguration.filterConfiguration.agcEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::OnBwExpandEnable(wxScrollEvent&) {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled = m_ckboxBwExpandEnabled->GetValue();
     g_bwExpandEnabled.store(wxGetApp().appConfiguration.filterConfiguration.bwExpandEnabled, std::memory_order_release); // forces immediate change at pipeline level
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::On700C_EQ(wxScrollEvent&) {
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        return;
-    }
     wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
     if (m_running) {
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);

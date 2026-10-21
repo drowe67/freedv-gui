@@ -135,7 +135,7 @@ void MainFrame::OnToolsEasySetup(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnActivateWindow(wxActivateEvent& event)
@@ -203,7 +203,7 @@ void MainFrame::OnToolsAudio(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -399,7 +399,7 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -561,16 +561,13 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
             // on the radio side). Note that this also causes reporting to not fire 
             // by m_cboReportFrequency's change handler, so we should fire off reporting
             // here.
-            if (!g_sessionTransitioning.load(std::memory_order_acquire))
+            auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
+            if (oldFreq != newFreq)
             {
-                auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = newFreq;
-                if (oldFreq != newFreq)
+                for (auto& ptr : wxGetApp().m_reporters)
                 {
-                    for (auto& ptr : wxGetApp().m_reporters)
-                    {
-                        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                    }
+                    ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 }
             }
             
@@ -833,7 +830,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 //-------------------------------------------------------------------------
 void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 //-------------------------------------------------------------------------
@@ -1587,14 +1584,11 @@ void MainFrame::togglePTT(void) {
         
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
-        int latency = 0;
-        if (!g_sessionTransitioning.load(std::memory_order_acquire))
+        auto outDevice = txOutSoundDevice;
+        auto latency = 0;
+        if (outDevice)
         {
-            auto outDevice = txOutSoundDevice;
-            if (outDevice)
-            {
-                latency = outDevice->getLatencyInMicroseconds();
-            }
+            latency = outDevice->getLatencyInMicroseconds();
         }
 
         log_info(
@@ -1638,8 +1632,7 @@ void MainFrame::togglePTT(void) {
         // onRigPttChange_()). If it never does, give up after a timeout.
         if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
         {
-            auto inDevice = g_sessionTransitioning.load(std::memory_order_acquire)
-                ? std::shared_ptr<IAudioDevice>() : rxInSoundDevice;
+            auto inDevice = rxInSoundDevice;
             g_rxInputLatencyUs.store(inDevice ? inDevice->getLatencyInMicroseconds() : 0, std::memory_order_release);
             g_rxMutedUntilNs.store(
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -2138,12 +2131,6 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& )
 {    
-    if (g_sessionTransitioning.load(std::memory_order_acquire))
-    {
-        // Configuration and QSY are deliberately left alone while the modem
-        // is mid-startup/teardown; see OnTogBtnOnOff.
-        return;
-    }
     wxString freqStr = m_cboReportFrequency->GetValue();
     auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
@@ -2369,12 +2356,12 @@ void MainFrame::OnToggleReporterVisibility (wxCommandEvent&)
 
 void MainFrame::OnToolsExportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsImportConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsExportConfig(wxCommandEvent& event)
@@ -2453,7 +2440,7 @@ void MainFrame::OnToolsImportConfig(wxCommandEvent& event)
 
 void MainFrame::OnToolsLoadDefaultConfigUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning.load(std::memory_order_acquire) && !g_sessionTransitioning.load(std::memory_order_acquire));
+    event.Enable(!m_RxRunning.load(std::memory_order_acquire));
 }
 
 void MainFrame::OnToolsLoadDefaultConfig(wxCommandEvent& event)

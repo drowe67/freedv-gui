@@ -173,7 +173,6 @@ GenericFIFO<short>  g_plotSpeechInFifo(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT_BUF);
 
 // Soundcard config
 std::atomic<int>         g_nSoundCards;
-std::atomic<bool>   g_sessionTransitioning{false};
 
 // PortAudio over/underflow counters
 
@@ -2735,10 +2734,8 @@ void MainFrame::performFreeDVOn_()
         m_logQSO->Disable();
     });
     
-    executeOnUiThreadAndWait_([&]() {
-        memset(m_callsign, 0, MAX_CALLSIGN);
-        m_pcallsign = m_callsign;
-    });
+    memset(m_callsign, 0, MAX_CALLSIGN);
+    m_pcallsign = m_callsign;
 
     freedvInterface.resetReliableText();
     
@@ -2864,10 +2861,8 @@ void MainFrame::performFreeDVOn_()
     g_snr = 0.0;
     g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
-    executeOnUiThreadAndWait_([&]() {
-        m_pcallsign = m_callsign;
-        memset(m_callsign, 0, sizeof(m_callsign));
-    });
+    m_pcallsign = m_callsign;
+    memset(m_callsign, 0, sizeof(m_callsign));
 
     m_maxLevel = 0;
     executeOnUiThreadAndWait_([&]() 
@@ -3161,15 +3156,9 @@ void MainFrame::performFreeDVOff_()
     }
     
     // FreeDV clean up
-    executeOnUiThreadAndWait_([&]() {
-        delete[] g_error_hist;
-        g_error_hist = nullptr;
-        delete[] g_error_histn;
-        g_error_histn = nullptr;
-        // Marshalled to the UI thread: stop() frees the modem stats/dv objects
-        // that an in-flight OnTimerUpdateOther() (UI) may still be reading.
-        freedvInterface.stop();
-    });
+    delete[] g_error_hist;
+    delete[] g_error_histn;
+    freedvInterface.stop();
     
     m_newMicInFilter.store(true, std::memory_order_release);
     m_newSpkOutFilter.store(true, std::memory_order_release);
@@ -3214,13 +3203,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->Enable(false);
     m_btnTogPTT->Enable(false);
-
-    // m_RxRunning only turns true deep inside startRxStream() and stays
-    // true until stopRxStream() finishes tearing down, so menu gates that
-    // check it alone leave config dialogs writable on the UI thread while
-    // the onOffExec thread reads appConfiguration during startup/teardown.
-    // This flag blocks those writes for the whole on/off transition.
-    g_sessionTransitioning.store(true, std::memory_order_release);
         
     // we are attempting to start
 
@@ -3240,7 +3222,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
-                g_sessionTransitioning.store(false, std::memory_order_release);
                 bool txEnabled = 
                     m_RxRunning.load(std::memory_order_acquire) && 
                     !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
@@ -3297,7 +3278,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
-                g_sessionTransitioning.store(false, std::memory_order_release);
                 m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnVoiceKeyer->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_btnTogPTT->Enable(m_RxRunning.load(std::memory_order_acquire));
@@ -3368,7 +3348,6 @@ void MainFrame::stopRxStream()
         }
 
         wxGetApp().linkStep = nullptr;
-        g_mutexProtectingCallbackData.Lock();
         destroy_fifos();
         
         // Free memory allocated for filters.
@@ -3376,7 +3355,6 @@ void MainFrame::stopRxStream()
         m_newSpkOutFilter.store(true, std::memory_order_relaxed);
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
-        g_mutexProtectingCallbackData.Unlock();
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         engine->stop();
@@ -3806,10 +3784,8 @@ void MainFrame::startRxStream()
 
         // optional tone in left channel to reliably trigger vox
 
-        // Initialize the phase before enabling the tone, so the RT callback
-        // (OnTxOutAudioData_) never touches voxTonePhase while it is (re)initialized.
+        g_rxUserdata->leftChannelVoxTone = wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone;
         g_rxUserdata->voxTonePhase = 0;
-        g_rxUserdata->leftChannelVoxTone.store(wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone, std::memory_order_release);
 
         // Set sound card callbacks
         rxInSoundDevice->setOnAudioData(&OnRxInAudioData_, g_rxUserdata);
