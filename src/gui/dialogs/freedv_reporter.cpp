@@ -2528,6 +2528,26 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
 {
     wxRegEx& millisecondsRemoval = millisecondsRgx_;
     wxString tmp = timeStr;
+
+    // ParseISOCombined() can't take the fraction of a second (the server
+    // sends microseconds, and none at all when there are exactly zero), so
+    // it's taken off here and its milliseconds added back once parsed.
+    // Otherwise, e.g. stations that connected within the same second
+    // can't be told apart when sorting.
+    int milliseconds = 0;
+    if (millisecondsRemoval.Matches(tmp))
+    {
+        wxString fraction = millisecondsRemoval.GetMatch(tmp); // e.g. ".123456"
+        int digits = 0;
+        for (size_t i = 1; i < fraction.length() && digits < 3 && wxIsdigit(fraction[i]); i++, digits++)
+        {
+            milliseconds = milliseconds * 10 + (int)(fraction[i].GetValue() - '0');
+        }
+        for (; digits < 3; digits++)
+        {
+            milliseconds *= 10;
+        }
+    }
     millisecondsRemoval.Replace(&tmp, parent_->EMPTY_STR);
     
     wxRegEx& timezoneRgx = timezoneRgx_;
@@ -2555,6 +2575,7 @@ wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::stri
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
+        tmpDate += wxTimeSpan::Milliseconds(milliseconds);
         timeObj = tmpDate;
         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
         {
