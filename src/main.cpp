@@ -1526,7 +1526,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
         this
         );
 
-    m_RxRunning = false;
+    m_RxRunning.store(false, std::memory_order_release);
 
     m_txThread = nullptr;
     m_rxThread = nullptr;
@@ -1815,7 +1815,7 @@ MainFrame::~MainFrame()
 
     {
         std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
-        if (m_RxRunning)
+        if (m_RxRunning.load(std::memory_order_acquire))
         {
             stopRxStream();
             freedvInterface.stop();
@@ -1930,7 +1930,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     auto& timer = evt.GetTimer();
     auto timerId = timer.GetId();
-    if (!m_RxRunning || !timer.IsRunning())
+    if (!m_RxRunning.load(std::memory_order_acquire) || !timer.IsRunning())
     {
         return;
     }
@@ -2367,7 +2367,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         bool updated = false;
-        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning)
+        if (timerId == ID_TIMER_DEMOD_IN && !txState && m_RxRunning.load(std::memory_order_acquire))
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
@@ -2469,7 +2469,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         m_reporterDialog = nullptr;
     }
 
-    if (m_RxRunning)
+    if (m_RxRunning.load(std::memory_order_acquire))
     {
         if (m_btnTogPTT->GetValue())
         {
@@ -2496,7 +2496,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent&)
 {
-    if (m_RxRunning)
+    if (m_RxRunning.load(std::memory_order_acquire))
     {
         if (m_btnTogPTT->GetValue())
         {
@@ -2655,7 +2655,7 @@ void MainFrame::performFreeDVOn_()
             
             startRxStream();
 
-            if (m_RxRunning)
+            if (m_RxRunning.load(std::memory_order_acquire))
             {
                 // Enable Tune button if TX is valid.
                 if (g_nSoundCards > 1)
@@ -2951,7 +2951,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
         
     // we are attempting to start
 
-    if (!m_RxRunning)
+    if (!m_RxRunning.load(std::memory_order_acquire))
     {
         std::thread onOffExec([this]() 
         {
@@ -2959,7 +2959,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 
             performFreeDVOn_();
             
-            if (!m_RxRunning)
+            if (!m_RxRunning.load(std::memory_order_acquire))
             {
                 // Startup failed.
                 performFreeDVOff_();
@@ -2968,20 +2968,20 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 bool txEnabled = 
-                    m_RxRunning && 
+                    m_RxRunning.load(std::memory_order_acquire) && 
                     !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
                     (g_nSoundCards == 2);
                 
-                m_togBtnAnalog->Enable(m_RxRunning);
+                m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnVoiceKeyer->Enable(txEnabled);
                 m_btnTogPTT->Enable(txEnabled);
-                optionsDlg->setSessionActive(m_RxRunning);
+                optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
 
-                if (m_RxRunning)
+                if (m_RxRunning.load(std::memory_order_acquire))
                 {
                     m_togBtnOnOff->SetLabel(_("&Stop Modem"));
                 }
-                m_togBtnOnOff->SetValue(m_RxRunning);
+                m_togBtnOnOff->SetValue(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnOnOff->Enable(true);
 
                 // On some systems the Report Frequency box ends up getting
@@ -3023,11 +3023,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
 
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
-                m_togBtnAnalog->Enable(m_RxRunning);
-                m_togBtnVoiceKeyer->Enable(m_RxRunning);
-                m_btnTogPTT->Enable(m_RxRunning);
-                optionsDlg->setSessionActive(m_RxRunning);
-                m_togBtnOnOff->SetValue(m_RxRunning);
+                m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
+                m_togBtnVoiceKeyer->Enable(m_RxRunning.load(std::memory_order_acquire));
+                m_btnTogPTT->Enable(m_RxRunning.load(std::memory_order_acquire));
+                optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+                m_togBtnOnOff->SetValue(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnOnOff->SetLabel(_("&Start Modem"));
                 m_togBtnOnOff->Enable(true);
 
@@ -3048,11 +3048,11 @@ void MainFrame::stopRxStream()
 {
     std::unique_lock<std::recursive_mutex> lk(stoppingMutex);
 
-    if(m_RxRunning)
+    if(m_RxRunning.load(std::memory_order_acquire))
     {
         StopLowLatencyActivity();
 
-        m_RxRunning = false;
+        m_RxRunning.store(false, std::memory_order_release);
 
         if (m_txThread)
         {
@@ -3159,8 +3159,8 @@ static TxRxThreadUiHooks MakeTxRxUiHooks()
 void MainFrame::startRxStream()
 {
     log_debug("startRxStream .....");
-    if(!m_RxRunning) {
-        m_RxRunning = true;
+    if(!m_RxRunning.load(std::memory_order_acquire)) {
+        m_RxRunning.store(true, std::memory_order_release);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         engine->setOnEngineError([](IAudioEngine& dev, std::string const& error, void* state) { 
@@ -3244,7 +3244,7 @@ void MainFrame::startRxStream()
                 wxMessageBox(_("No Sound Cards configured, use Tools->Settings to configure"), _("Error"), wxOK);
             });
             
-            m_RxRunning = false;
+            m_RxRunning.store(false, std::memory_order_release);
             
             engine->stop();
             engine->setOnEngineError(nullptr, nullptr);
@@ -3303,7 +3303,7 @@ void MainFrame::startRxStream()
                     rxOutSoundDevice.reset();
                 }
                 
-                m_RxRunning = false;
+                m_RxRunning.store(false, std::memory_order_release);
             
                 engine->stop();
                 engine->setOnEngineError(nullptr, nullptr);
@@ -3449,7 +3449,7 @@ void MainFrame::startRxStream()
                     txOutSoundDevice.reset();
                 }
                 
-                m_RxRunning = false;
+                m_RxRunning.store(false, std::memory_order_release);
             
                 engine->stop();
                 engine->setOnEngineError(nullptr, nullptr);
@@ -3625,7 +3625,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice.reset();
                 txInSoundDevice.reset();
                 txOutSoundDevice.reset();
-                m_RxRunning = false;
+                m_RxRunning.store(false, std::memory_order_release);
                 return;
             }
 
@@ -3637,7 +3637,7 @@ void MainFrame::startRxStream()
                 rxOutSoundDevice.reset();
                 txInSoundDevice.reset();
                 txOutSoundDevice.reset();
-                m_RxRunning = false;
+                m_RxRunning.store(false, std::memory_order_release);
                 return;
             }
         }
@@ -3654,7 +3654,7 @@ void MainFrame::startRxStream()
             rxOutSoundDevice.reset();
             txInSoundDevice.reset();
             txOutSoundDevice.reset();
-            m_RxRunning = false;
+            m_RxRunning.store(false, std::memory_order_release);
             return;
         }
 
@@ -3669,7 +3669,7 @@ void MainFrame::startRxStream()
             rxOutSoundDevice.reset();
             txInSoundDevice.reset();
             txOutSoundDevice.reset();
-            m_RxRunning = false;
+            m_RxRunning.store(false, std::memory_order_release);
             return;
         }
 
@@ -3708,10 +3708,10 @@ void MainFrame::startRxStream()
         bool rxDevicesRunning = 
             (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
             (rxOutSoundDevice && rxOutSoundDevice->isRunning());
-        m_RxRunning = txDevicesRunning && rxDevicesRunning;
+        m_RxRunning.store(txDevicesRunning && rxDevicesRunning, std::memory_order_release);
     }
 
-    if (m_RxRunning)
+    if (m_RxRunning.load(std::memory_order_acquire))
     {
         StartLowLatencyActivity();
     }
