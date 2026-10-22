@@ -345,16 +345,17 @@ bool reportingFrequencySurvivesRestart()
 
 bool frequencyListLoadsInConfiguredUnits()
 {
-    // The units have to be known before the list can be presented.
+    // The units have to be known before the list can be presented. The list
+    // is also shown in ascending order, whatever order the config has it in.
     auto config = makeTestConfig("[Reporting]\nFrequencyAsKHz=1\nFrequencyList=14.236000,7.177000\n");
     ReportingConfiguration reporting;
     reporting.load(config.get());
-    if (!check("list in kHz", reporting.reportingFrequencyList.get(), StringList { "14236.0", "7177.0" })) return false;
+    if (!check("list in kHz", reporting.reportingFrequencyList.get(), StringList { "7177.0", "14236.0" })) return false;
 
     config = makeTestConfig("[Reporting]\nFrequencyAsKHz=0\nFrequencyList=14.236000,7.177000\n");
     ReportingConfiguration reportingInMhz;
     reportingInMhz.load(config.get());
-    return check("list in MHz", reportingInMhz.reportingFrequencyList.get(), StringList { "14.2360", "7.1770" });
+    return check("list in MHz", reportingInMhz.reportingFrequencyList.get(), StringList { "7.1770", "14.2360" });
 }
 
 bool frequencyListSurvivesRestart()
@@ -376,10 +377,15 @@ bool frequencyListSurvivesRestart()
         // Always stored as MHz regardless of what's displayed.
         if (!check("stored list", config->Read("/Reporting/FrequencyList", ""), "14.236000,2.002000,7.177500")) return false;
 
+        // Comes back sorted in ascending order.
+        StringList sortedList =
+            asKhz ?
+            StringList { "2002.0", "7177.5", "14236.0" } :
+            StringList { "2.0020", "7.1775", "14.2360" };
         auto reloaded = reload(*config);
         ReportingConfiguration reportingAfterRestart;
         reportingAfterRestart.load(reloaded.get());
-        if (!check("list", reportingAfterRestart.reportingFrequencyList.get(), list)) return false;
+        if (!check("list", reportingAfterRestart.reportingFrequencyList.get(), sortedList)) return false;
     }
     return true;
 }
