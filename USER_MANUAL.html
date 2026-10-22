@@ -1147,6 +1147,9 @@ windows. (PR #1508)</li>
 #1526)</li>
 <li>Hamlib: only allow selecting a PTT serial device when using RTS or
 DTR for PTT. (PR #1544)</li>
+<li>Improved ease of use when adjusting predefined frequencies. (PR
+#1570, #1581) - thanks <span class="citation"
+data-cites="barjac">@barjac</span>!</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
@@ -1310,6 +1313,8 @@ as intended. (PR #1571)</li>
 uninitialized value until the plot’s first update. (PR #1572)</li>
 <li>FreeDV Reporter: fix stations that connected or transmitted within
 the same second sorting in a random order. (PR #1573)</li>
+<li>Fix a data race on whether FreeDV is running, between the window and
+the thread that starts and stops it. (PR #1575)</li>
 </ul></li>
 <li>Build system:
 <ul>
