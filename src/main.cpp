@@ -1365,6 +1365,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
+    optionsDlg = nullptr;
 
     // Initialize panel pointers to null before creation since "page changed" 
     // events fire as we're adding these (and we compare against these pointers
@@ -1553,7 +1554,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     wxGetApp().m_channel_noise = false;
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
-    optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
@@ -2485,7 +2485,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
 
         /* FIFO and PortAudio under/overflow debug counters */
-        optionsDlg->DisplayFifoPACounters();
+        if (optionsDlg != nullptr)
+        {
+            optionsDlg->DisplayFifoPACounters();
+        }
 
         // command from UDP thread that is best processed in main thread to avoid seg faults
 
@@ -3230,7 +3233,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnVoiceKeyer->Enable(txEnabled);
                 m_btnTogPTT->Enable(txEnabled);
-                optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+                if (optionsDlg != nullptr)
+                {
+                    optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+                }
 
                 if (m_RxRunning.load(std::memory_order_acquire))
                 {
@@ -3281,7 +3287,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent&)
                 m_togBtnAnalog->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnVoiceKeyer->Enable(m_RxRunning.load(std::memory_order_acquire));
                 m_btnTogPTT->Enable(m_RxRunning.load(std::memory_order_acquire));
-                optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+                if (optionsDlg != nullptr)
+                {
+                    optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+                }
                 m_togBtnOnOff->SetValue(m_RxRunning.load(std::memory_order_acquire));
                 m_togBtnOnOff->SetLabel(wxT("&Start Modem"));
                 m_togBtnOnOff->Enable(true);

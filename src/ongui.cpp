@@ -235,6 +235,15 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
 
     wxUnusedVar(event);
+
+    if (optionsDlg == nullptr)
+    {
+        optionsDlg = new OptionsDlg(NULL);
+        // Initialize the session-active state so controls are displayed
+        // correctly in case a session is already running.
+        optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+    }
+
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Enable/disable FreeDV Reporter quick options
