@@ -824,7 +824,20 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
     
-    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
+    // A wxComboCtrl with our own list (rather than a native wxComboBox), so
+    // that a frequency can be deleted from the open list: with Del on the
+    // highlighted one, or from its right-click menu. The list keeps the
+    // configured (ascending) order, and only an item actually clicked
+    // changes the frequency -- not one the pointer just passed over.
+    m_cboReportFrequency = new wxComboCtrl(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+    MsgListPopup::Options freqListOptions;
+    freqListOptions.sorted = false;
+    freqListOptions.openAbove = false;
+    freqListOptions.hoverPicks = false;
+    m_reportFrequencyList = new MsgListPopup([this](int item) { OnReportFrequencyItemMenu(item); }, freqListOptions);
+    m_cboReportFrequency->SetPopupControl(m_reportFrequencyList);
+    m_reportFrequencyList->SetDeleteKeyCallback([this](int item) { OnReportFrequencyItemDelete(item); });
+    m_cboReportFrequency->SetPopupMaxHeight(300);
     m_cboReportFrequency->SetMinSize(wxSize(150,-1));
     txtReportFreqSizer->Add(m_cboReportFrequency, 1, static_cast<int>(wxALL), 5);
     
@@ -928,6 +941,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderMicSpkrLevel->SetName("main.sliderMicSpkrLevel");
     m_txtMicSpkrLevelNum->SetName("main.textMicSpkrLevel");
     m_cboReportFrequency->SetName("main.cboReportFrequency");
+    m_reportFrequencyList->SetName("main.lbReportFrequencies");
     m_togBtnOnOff->SetName("main.btnOnOff");
     m_togBtnAnalog->SetName("main.btnAnalog");
     m_btnTogTune->SetName("main.btnTune");
@@ -1026,6 +1040,20 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTxLevelPP->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
     m_btnTogTune->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(TopFrame::OnTxLevelMouseWheel), NULL, this);
 
+    // Right-click menu on the frequency box (adding it to the list), in
+    // place of the text entry's own. GTK opens the entry's menu on
+    // button-press, so take the press and show ours on release.
+    for (wxWindow* window : { static_cast<wxWindow*>(m_cboReportFrequency),
+                              static_cast<wxWindow*>(m_cboReportFrequency->GetTextCtrl()) })
+    {
+#if defined(__WXGTK__)
+        window->Bind(wxEVT_RIGHT_DOWN, [](wxMouseEvent&) { });
+        window->Bind(wxEVT_RIGHT_UP, [this](wxMouseEvent&) { wxContextMenuEvent ctx; OnReportFrequencyContextMenu(ctx); });
+#else
+        window->Bind(wxEVT_CONTEXT_MENU, [this](wxContextMenuEvent& ctx) { OnReportFrequencyContextMenu(ctx); });
+#endif
+    }
+
 #if wxCHECK_VERSION(3, 3, 0) && defined(__WXGTK__)
     // wxGTK 3.3+ fires wxEVT_CONTEXT_MENU on button-press for these widget types,
     // causing GTK to dismiss PopupMenu on button release; use RIGHT_UP instead.
@@ -1059,7 +1087,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     m_cboReportFrequency->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
-    m_cboReportFrequency->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
+    // A frequency picked from the list applies at once, as wxEVT_COMBOBOX
+    // did for the native combo (typing waits for Enter or leaving the box).
+    m_cboReportFrequency->Connect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
     
@@ -1145,7 +1175,7 @@ TopFrame::~TopFrame()
     
     m_cboReportFrequency->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequencyVerify), NULL, this);
-    m_cboReportFrequency->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
+    m_cboReportFrequency->Disconnect(wxEVT_COMBOBOX_CLOSEUP, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
     
     m_cboReportFrequency->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);

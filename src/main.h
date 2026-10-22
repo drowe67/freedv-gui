@@ -502,6 +502,9 @@ class MainFrame : public TopFrame
         
         void OnReportFrequencySetFocus(wxFocusEvent& event) override;
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
+        void OnReportFrequencyContextMenu(wxContextMenuEvent& event) override;
+        void OnReportFrequencyItemMenu(int item) override;
+        void OnReportFrequencyItemDelete(int item) override;
 
         void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
         
@@ -654,6 +657,8 @@ class MainFrame : public TopFrame
         void executeOnUiThreadAndWait_(std::function<void()> fn);
         
         void updateReportingFreqList_();
+        wxString reportFrequencyListString_(wxString const& text);
+        void addReportFrequencyToList_(wxString const& freq);
         
         void initializeFreeDVReporter_();
         void updateVoiceKeyerButtonLabel_();

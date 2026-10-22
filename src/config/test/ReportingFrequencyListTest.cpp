@@ -40,7 +40,7 @@ bool loadConvertsToMHz()
     ReportingConfiguration config;
     config.reportingFrequencyAsKhz = false;
     config.reportingFrequencyList.setWithoutProcessing({ "14.236000", "7.177000", "3.625", "50", "1.997500" });
-    return listIs(config.reportingFrequencyList.get(), { "14.2360", "7.1770", "3.6250", "50.0000", "1.9975" });
+    return listIs(config.reportingFrequencyList.get(), { "1.9975", "3.6250", "7.1770", "14.2360", "50.0000" });
 }
 
 bool loadConvertsToKHz()
@@ -48,7 +48,7 @@ bool loadConvertsToKHz()
     ReportingConfiguration config;
     config.reportingFrequencyAsKhz = true;
     config.reportingFrequencyList.setWithoutProcessing({ "14.236000", "7.177000", "3.625", "50", "1.997500" });
-    return listIs(config.reportingFrequencyList.get(), { "14236.0", "7177.0", "3625.0", "50000.0", "1997.5" });
+    return listIs(config.reportingFrequencyList.get(), { "1997.5", "3625.0", "7177.0", "14236.0", "50000.0" });
 }
 
 bool saveConvertsFromMHz()
@@ -130,10 +130,20 @@ bool savedThenLoadedIsUnchanged(bool asKhz)
 
     StringList displayed = 
         asKhz ? 
-        StringList { "14236.0", "2002.0", "7177.5", "50313.0" } :
-        StringList { "14.2360", "2.0020", "7.1775", "50.3130" };
+        StringList { "2002.0", "7177.5", "14236.0", "50313.0" } :
+        StringList { "2.0020", "7.1775", "14.2360", "50.3130" };
     config.reportingFrequencyList = displayed;
     return listIs(config.reportingFrequencyList.get(), displayed);
+}
+
+// A frequency added to the list goes before the first one above it.
+bool sortedFrequencyIndex()
+{
+    StringList list { "3.6250", "7.1770", "14.2360" };
+    return ReportingConfiguration::SortedFrequencyIndex(list, 1.9975) == 0 &&
+           ReportingConfiguration::SortedFrequencyIndex(list, 10.136) == 2 &&
+           ReportingConfiguration::SortedFrequencyIndex(list, 28.33) == 3 &&
+           ReportingConfiguration::SortedFrequencyIndex(StringList {}, 7.0) == 0;
 }
 
 }
@@ -155,5 +165,6 @@ int main()
     executeTestCase("savedFrequencyIsExact (kHz)", []() { return savedFrequencyIsExact(true); });
     executeTestCase("savedThenLoadedIsUnchanged (MHz)", []() { return savedThenLoadedIsUnchanged(false); });
     executeTestCase("savedThenLoadedIsUnchanged (kHz)", []() { return savedThenLoadedIsUnchanged(true); });
+    executeTestCase("sortedFrequencyIndex", sortedFrequencyIndex);
     return testResult();
 }
