@@ -2188,7 +2188,12 @@ void MainFrame::OnReportFrequencyItemMenu(int item)
     }
 
     wxString units = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? _("kHz") : _("MHz");
+#if wxCHECK_VERSION(3, 1, 0)
     int top = m_reportFrequencyList->GetTopItem();
+#else
+    // GetTopItem() needs wxWidgets 3.1+; without it the list reopens at the top.
+    int top = wxNOT_FOUND;
+#endif // wxCHECK_VERSION(3, 1, 0)
 
     wxMenu menu;
     wxMenuItem* deleteItem = menu.Append(wxID_ANY,
