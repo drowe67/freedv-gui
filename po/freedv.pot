@@ -1,13 +1,13 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# FreeDV language translation template
+# Copyright (C) 2026 FreeDV Project
 # This file is distributed under the same license as the FreeDV package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Mooneer Salem <mooneer@gmail.com>, 2026
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/freedv/freedv-gui/issues\n"
+"Report-Msgid-Bugs-To: mooneer@gmail.com\n"
 "POT-Creation-Date: 2026-10-20 10:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
