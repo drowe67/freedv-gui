@@ -213,10 +213,10 @@ void MainFrame::StopRecFileFromRadio()
     {
         log_debug("Stopping Record....");
         g_mutexProtectingCallbackData.Lock();
-        g_recFileFromRadio = false;
+        g_recFileFromRadio.store(false, std::memory_order_release);
         g_recFileFromModulator = false;
         sf_close(g_sfRecFile.load(std::memory_order_acquire));
-        g_sfRecFile = nullptr;
+        g_sfRecFile.store(nullptr, std::memory_order_release);
         g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         
@@ -233,9 +233,9 @@ void MainFrame::StopRecFileFromDecoder()
     {
         log_debug("Stopping Record....");
         g_mutexProtectingCallbackData.Lock();
-        g_recFileFromDecoder = false;
+        g_recFileFromDecoder.store(false, std::memory_order_release);
         sf_close(g_sfRecDecoderFile.load(std::memory_order_acquire));
-        g_sfRecDecoderFile = nullptr;
+        g_sfRecDecoderFile.store(nullptr, std::memory_order_release);
         SetStatusText(wxT(""));
         
         g_mutexProtectingCallbackData.Unlock();
@@ -357,11 +357,11 @@ void MainFrame::OnTogBtnRecord(wxCommandEvent& event)
                 if (!g_tx.load(std::memory_order_acquire))
                 {
                     g_recFileFromModulator = false;
-                    g_recFileFromRadio = true;
+                    g_recFileFromRadio.store(true, std::memory_order_release);
                 }
                 else
                 {
-                    g_recFileFromRadio = false;
+                    g_recFileFromRadio.store(false, std::memory_order_release);
                     g_recFileFromModulator = true;
                 }
             }

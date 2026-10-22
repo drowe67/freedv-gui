@@ -63,8 +63,6 @@ bool clickTuneSnapsToCenterWhenClose()
     return result;
 }
 
-}
-
 int main()
 {
     ulog_set_quiet(true);

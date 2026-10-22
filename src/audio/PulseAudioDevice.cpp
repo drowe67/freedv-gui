@@ -205,6 +205,8 @@ void PulseAudioDevice::stopImpl_()
 
 int64_t PulseAudioDevice::getLatencyInMicroseconds()
 {
+    // stopImpl_() destroys mainloop_ while holding objLock_.
+    std::unique_lock<std::mutex> lk(objLock_);
     if (mainloop_ == nullptr)
     {
         return 0;

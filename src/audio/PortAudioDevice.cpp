@@ -71,6 +71,7 @@ PortAudioDevice::~PortAudioDevice()
 
 bool PortAudioDevice::isRunning()
 {
+    std::unique_lock<std::mutex> lk(streamLock_);
     return deviceStream_ != nullptr;
 }
 
@@ -104,8 +105,11 @@ void PortAudioDevice::start()
     streamParameters.hostApiSpecificStreamInfo = NULL;
 #endif // defined(WIN32)
     
+    // Only published to deviceStream_ once running, so the error callbacks
+    // below aren't called with streamLock_ held.
+    PaStream* stream = nullptr;
     auto error = portAudioLibrary_->OpenStream(
-        &deviceStream_,
+        &stream,
         direction_ == IAudioEngine::AUDIO_ENGINE_IN ? &streamParameters : nullptr,
         direction_ == IAudioEngine::AUDIO_ENGINE_OUT ? &streamParameters : nullptr,
         sampleRate_,
@@ -117,8 +121,13 @@ void PortAudioDevice::start()
         
     if (error == paNoError)
     {
-        error = portAudioLibrary_->StartStream(deviceStream_).get();
-        if (error != paNoError)
+        error = portAudioLibrary_->StartStream(stream).get();
+        if (error == paNoError)
+        {
+            std::unique_lock<std::mutex> lk(streamLock_);
+            deviceStream_ = stream;
+        }
+        else
         {
             std::string errText = portAudioLibrary_->GetErrorText(error).get();
             if (error == paUnanticipatedHostError)
@@ -134,8 +143,7 @@ void PortAudioDevice::start()
                 onAudioErrorFunction(*this, errText, onAudioErrorState);
             }
             
-            portAudioLibrary_->CloseStream(deviceStream_).wait();
-            deviceStream_ = nullptr;
+            portAudioLibrary_->CloseStream(stream).wait();
         }
     }
     else
@@ -153,12 +161,12 @@ void PortAudioDevice::start()
         {
             onAudioErrorFunction(*this, errText, onAudioErrorState);
         }
-        deviceStream_ = nullptr;
     }
 }
 
 void PortAudioDevice::stop()
 {
+    std::unique_lock<std::mutex> lk(streamLock_);
     if (deviceStream_ != nullptr)
     {
         portAudioLibrary_->StopStream(deviceStream_).wait();
@@ -170,6 +178,7 @@ void PortAudioDevice::stop()
 int64_t PortAudioDevice::getLatencyInMicroseconds()
 {
     int64_t latency = 0;
+    std::unique_lock<std::mutex> lk(streamLock_);
     if (deviceStream_ != nullptr)
     {
         auto streamInfo = portAudioLibrary_->GetStreamInfo(deviceStream_).get();

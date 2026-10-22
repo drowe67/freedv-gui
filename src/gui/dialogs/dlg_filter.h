@@ -52,7 +52,7 @@ typedef struct {
 class FilterDlg : public wxDialog
 {
     public:
-    FilterDlg( wxWindow* parent, bool running, bool *newMicInFilter, bool *newSpkOutFilter,
+    FilterDlg( wxWindow* parent, bool running, std::atomic<bool> *newMicInFilter, std::atomic<bool> *newSpkOutFilter,
                wxWindowID id = wxID_ANY, const wxString& title = _("Filter"), 
                const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
                long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER );
@@ -161,8 +161,8 @@ class FilterDlg : public wxDialog
 
         float         limit(float value, float min, float max);
  
-        bool          *m_newMicInFilter;
-        bool          *m_newSpkOutFilter;
+        std::atomic<bool> *m_newMicInFilter;
+        std::atomic<bool> *m_newSpkOutFilter;
 
         bool volsChanged_;
 private:

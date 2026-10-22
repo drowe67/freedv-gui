@@ -13,7 +13,7 @@
 #include "../../main.h"
 
 // Defined by main.cpp in the application.
-int g_nSoundCards = 1;
+std::atomic<int> g_nSoundCards{1};
 std::atomic<float> g_RxFreqOffsetHz(0.0f);
 std::atomic<float> g_TxFreqOffsetHz(0.0f);
 wxString testName;
