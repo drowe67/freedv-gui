@@ -32,7 +32,8 @@
 // With zone colours on, LEDs are green, then amber from amberStartDb, then
 // red from redStartDb. With zone colours off, every LED is the same fixed
 // blue. Fixed colours (not theme colours) keep the meter readable when the
-// window is unfocused. An unlit LED is a dark version of its own colour.
+// window is unfocused. Each LED is outlined in its own colour; unlit LEDs
+// are left empty.
 class LevelMeterLed : public wxWindow
 {
     public:

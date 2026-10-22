@@ -104,11 +104,8 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
     static const wxColour RED(220, 30, 30);
     static const wxColour BLUE(60, 145, 240);
 
-    // Lightness for an unlit LED: a dark version of its own colour, like a
-    // real LED's coloured body when it's off.
-    constexpr int UNLIT_LIGHTNESS = 40;
-
-    dc.SetPen(*wxTRANSPARENT_PEN);
+    // Each LED is outlined in its own colour, so unlit LEDs (left empty)
+    // still show where they are and which zone they belong to.
 
     // Each LED sits centred in its own segment, LED_GAP_PX narrower, so
     // neighbouring LEDs are LED_GAP_PX apart.
@@ -121,9 +118,10 @@ void LevelMeterLed::OnPaint(wxPaintEvent&)
         wxColour zoneColour = !zoneColours_ ? BLUE :
             (lowerDb >= redStartDb_) ? RED : (lowerDb >= amberStartDb_) ? AMBER : GREEN;
 
-        wxColour fillColour = (i < litSegments_) ? zoneColour : zoneColour.ChangeLightness(UNLIT_LIGHTNESS);
+        wxColour fillColour = (i < litSegments_) ? zoneColour : background;
 
         dc.SetBrush(wxBrush(fillColour));
+        dc.SetPen(wxPen(zoneColour, 1));
         dc.DrawRectangle(i * segmentWidthPx_ + LED_GAP_PX / 2, 0, ledWidth, segmentHeightPx_);
     }
 }
