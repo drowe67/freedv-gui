@@ -1016,6 +1016,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix a data race on whether FreeDV is running, between the window and the thread that starts and stops it. (PR #1575)
     * Fix data races between the window, audio and processing threads on squelch, resync count, sound card count, PortAudio counters, debug switches, recording state and EQ filter re-apply flags. (PR #1578)
     * Fix data races on the transmit mode selection when changed while FreeDV is running, and on the queue holding received text characters. (PR #1578)
+    * Linux: Fix Options frequency list scrollbar on first open. (PR #1579)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
