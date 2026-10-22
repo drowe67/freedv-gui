@@ -2899,7 +2899,11 @@ void MainFrame::performFreeDVOn_()
         
         if (soundCardSetupValid)
         {
-            wxGetApp().m_reporters.clear();
+            // The reporter list is used from the UI thread, so it's only
+            // changed there.
+            executeOnUiThreadAndWait_([&]() {
+                wxGetApp().m_reporters.clear();
+            });
             
             startRxStream();
 
@@ -2962,8 +2966,9 @@ void MainFrame::performFreeDVOn_()
                     }
                     else
                     {
+                        std::vector<std::shared_ptr<IReporter>> reporters;
                         auto csvPath = wxGetApp().appConfiguration.reportingConfiguration.csvLogFilePath.get();
-                        wxGetApp().m_reporters.push_back(std::make_shared<CsvReporter>(csvPath.ToStdString()));
+                        reporters.push_back(std::make_shared<CsvReporter>(csvPath.ToStdString()));
 
                         if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
                         {
@@ -2973,17 +2978,7 @@ void MainFrame::performFreeDVOn_()
                                     wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                     std::string("FreeDV ") + GetFreeDVVersion());
                             assert(pskReporter != nullptr);
-                            wxGetApp().m_reporters.push_back(pskReporter);
-                        }
-                        
-                        if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
-                        {
-                            wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-
-                            if (!m_reporterHidden->GetValue())
-                            {
-                                wxGetApp().m_sharedReporterObject->showOurselves();
-                            }
+                            reporters.push_back(pskReporter);
                         }
 
                         if (wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastEnabled)
@@ -2991,35 +2986,46 @@ void MainFrame::performFreeDVOn_()
                             auto udpBroadcastReporter = std::make_shared<UdpReporter>(
                                 wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastAddress->ToStdString(),
                                 wxGetApp().appConfiguration.reportingConfiguration.udpBroadcastPort);
-                            wxGetApp().m_reporters.push_back(udpBroadcastReporter);
+                            reporters.push_back(udpBroadcastReporter);
                         }
 
-                        // Enable FreeDV Reporter timer (every 5 minutes).
                         executeOnUiThreadAndWait_([&]() 
                         {
-                            m_pskReporterTimer.Start(5 * 60 * 1000);
-                        });
+                            wxGetApp().m_reporters = std::move(reporters);
 
-                        // Make sure QSY button becomes enabled after start.
-                        executeOnUiThreadAndWait_([&]() 
-                        {
+                            if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+                            {
+                                wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
+
+                                if (!m_reporterHidden->GetValue())
+                                {
+                                    wxGetApp().m_sharedReporterObject->showOurselves();
+                                }
+                            }
+
+                            // Enable FreeDV Reporter timer (every 5 minutes).
+                            m_pskReporterTimer.Start(5 * 60 * 1000);
+
+                            // Make sure QSY button becomes enabled after start.
                             if (m_reporterDialog != nullptr)
                             {
                                 m_reporterDialog->refreshQSYButtonState();
                             }
-                        });
                         
-                        // Immediately transmit selected TX mode and frequency to avoid UI glitches.
-                        for (auto& obj : wxGetApp().m_reporters)
-                        {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
-                            obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                        }
+                            // Immediately transmit selected TX mode and frequency to avoid UI glitches.
+                            for (auto& obj : wxGetApp().m_reporters)
+                            {
+                                obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
+                                obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                            }
+                        });
                     }
                 }
                 else
                 {
-                    wxGetApp().m_reporters.clear();
+                    executeOnUiThreadAndWait_([&]() {
+                        wxGetApp().m_reporters.clear();
+                    });
                 }
 
                 if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
@@ -3152,11 +3158,14 @@ void MainFrame::performFreeDVOff_()
     
     stopRxStream();
          
-    wxGetApp().m_reporters.clear();
-    if (wxGetApp().m_sharedReporterObject)
+    executeOnUiThreadAndWait_([&]() 
     {
-        wxGetApp().m_sharedReporterObject->hideFromView();
-    }
+        wxGetApp().m_reporters.clear();
+        if (wxGetApp().m_sharedReporterObject)
+        {
+            wxGetApp().m_sharedReporterObject->hideFromView();
+        }
+    });
     
     // FreeDV clean up
     delete[] g_error_hist;

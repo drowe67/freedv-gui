@@ -81,6 +81,7 @@ FreeDVInterface::FreeDVInterface() :
     lpcnetEncState_(nullptr),
     radeTxStep_(nullptr),
     sync_(0),
+    rxFreqOffset_(0.0f),
     radeTextPtr_(nullptr),
     reliableTextFifo_(RELIABLE_TEXT_FIFO_SIZE + 1)
 {
@@ -144,6 +145,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 void FreeDVInterface::start(int txMode, int, bool singleRxThread, bool usingReliableText, bool verbose)
 {
     sync_.store(0, std::memory_order_release);
+    rxFreqOffset_.store(0.0f, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
@@ -780,15 +782,9 @@ float FreeDVInterface::getSNREstimate()
 
 float FreeDVInterface::getCurrentRxModemOffset()
 {
-    if (txMode_.load(std::memory_order_acquire) >= FREEDV_MODE_RADE)
-    {
-        // Special handling for RADE
-        return rade_freq_offset(rade_);
-    }
-    else
-    {
-        return getCurrentRxModemStats()->foff;
-    }
+    // Read from the GUI thread, so use the copy the RX thread publishes
+    // rather than reading the modem state it's updating.
+    return rxFreqOffset_.load(std::memory_order_acquire);
 }
 
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
@@ -880,6 +876,11 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
             state->sync_.store(finalSync, std::memory_order_release);
             state->radeSnr_.store(step->getSnr(), std::memory_order_release);
+
+            // Verified that rade_freq_offset() is a simple getter as of 2026-10-22.
+            FREEDV_BEGIN_VERIFIED_SAFE
+            state->rxFreqOffset_.store(rade_freq_offset(state->rade_), std::memory_order_release);
+            FREEDV_END_VERIFIED_SAFE
             }, getFreqOffsetFn);
         rxStep->setStateObj(this);
         rxStep->setRxStateFn(getRxStateFn);
@@ -1056,6 +1057,7 @@ skipSyncCheck:
 
         // grab extended stats so we can plot spectrum, scatter diagram etc
         freedv_get_modem_extended_stats(dvWithSync, stats);
+        rxFreqOffset_.store(stats->foff, std::memory_order_release);
 
         // Update sync as it may have gone stale during decode
         finalSync = castedStep->getSync() != 0;

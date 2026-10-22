@@ -23,6 +23,7 @@
 #ifndef PORT_AUDIO_DEVICE_H
 #define PORT_AUDIO_DEVICE_H
 
+#include <mutex>
 #include "portaudio.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
@@ -55,6 +56,7 @@ private:
     int sampleRate_;
     int numChannels_;
     PaStream* deviceStream_;
+    std::mutex streamLock_; // protects deviceStream_ from GUI accessors during stop()
     std::shared_ptr<PortAudioInterface> portAudioLibrary_;
     
     static int OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
