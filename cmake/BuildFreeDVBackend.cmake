@@ -2,8 +2,8 @@ include(FetchContent)
 
 FetchContent_Declare(
     freedv_backend
-    GIT_REPOSITORY https://github.com/barjac/freedv-backend
-    GIT_TAG bcj-leveler-limiter
+    GIT_REPOSITORY https://github.com/freedv/freedv-backend
+    GIT_TAG v2.0-dev
 )
 
 FetchContent_MakeAvailable(freedv_backend)
