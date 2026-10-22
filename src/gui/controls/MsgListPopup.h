@@ -31,8 +31,22 @@ class MsgListPopup : public wxListBox, public wxComboPopup
 {
 public:
     using ContextMenuCallback = std::function<void(int)>;
+    using DeleteKeyCallback = std::function<void(int)>;
+
+    struct Options
+    {
+        bool sorted = true;      // keep the items in alphabetical order
+        bool openAbove = true;   // open above the combo rather than below it
+        bool hoverPicks = true;  // closing the list in any way takes the
+                                 // highlighted item, not only a click on it
+    };
 
     explicit MsgListPopup(ContextMenuCallback onRightClick);
+    MsgListPopup(ContextMenuCallback onRightClick, Options const& options);
+
+    // Called with the highlighted item when Del is pressed while the list
+    // is open. The list stays open.
+    void SetDeleteKeyCallback(DeleteKeyCallback onDeleteKey) { onDeleteKey_ = std::move(onDeleteKey); }
 
     bool Create(wxWindow* parent) override;
     wxWindow* GetControl() override { return this; }
@@ -42,14 +56,20 @@ public:
     wxSize GetAdjustedSize(int minWidth, int prefHeight, int maxHeight) override;
 
 private:
+    static constexpr int DESELECT_TIMEOUT_MS_ = 20;
+
     void OnLeftDown(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
     void OnMouseMove(wxMouseEvent& event);
     void OnRightDown(wxMouseEvent& event);
     void OnRightUp(wxMouseEvent& event);
+    void OnKeyDown(wxKeyEvent& event);
     void OnDeselect(wxTimerEvent& event);
 
     ContextMenuCallback onRightClick_;
+    DeleteKeyCallback onDeleteKey_;
+    Options options_;
+    bool picked_ = false;
     int pendingContextItem_ = wxNOT_FOUND;
     wxTimer deselTimer_;
     wxPoint mouseDownPos_ = wxDefaultPosition;

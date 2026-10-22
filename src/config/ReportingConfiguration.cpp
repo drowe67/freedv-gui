@@ -24,6 +24,7 @@
 #include <wx/stdpaths.h>
 #include <wx/filename.h>
 #include <inttypes.h>
+#include <algorithm>
 #include <cmath>
 
 #include "../defines.h"
@@ -105,7 +106,7 @@ ReportingConfiguration::ReportingConfiguration()
 {
     // Special handling for the frequency list to properly handle locales
     reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> const& list) {
-        std::vector<wxString> newList;
+        std::vector<uint64_t> freqs;
         for (auto& val : list)
         {
             // Frequencies are unfortunately saved in US format (legacy behavior). We need 
@@ -128,8 +129,15 @@ ReportingConfiguration::ReportingConfiguration()
             long long mhz = 0;
             wholeNumber.ToLongLong(&mhz);
             fraction.ToLongLong(&hz);
-            uint64_t freq = mhz * 1000000 + hz;
+            freqs.push_back(mhz * 1000000 + hz);
+        }
 
+        // Shown in ascending order, whatever order an older config has them in.
+        std::sort(freqs.begin(), freqs.end());
+
+        std::vector<wxString> newList;
+        for (auto freq : freqs)
+        {
             if (reportingFrequencyAsKhz)
             {
                 double khzFloat = freq / 1000.0;
@@ -329,4 +337,19 @@ void ReportingConfiguration::save(wxConfigBase* config)
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());
     config->Write(reportingFrequency.getElementName(), tempFreqStr);
+}
+
+size_t ReportingConfiguration::SortedFrequencyIndex(std::vector<wxString> const& list, double freq)
+{
+    size_t index = 0;
+    for (; index < list.size(); index++)
+    {
+        double existing = 0;
+        wxNumberFormatter::FromString(list[index], &existing);
+        if (existing > freq)
+        {
+            break;
+        }
+    }
+    return index;
 }

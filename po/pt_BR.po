@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/freedv/freedv-gui/issues\n"
-"POT-Creation-Date: 2026-10-11 15:56-0700\n"
+"POT-Creation-Date: 2026-10-20 10:06+0100\n"
 "PO-Revision-Date: 2026-10-06 14:00+ZONE\n"
 "Last-Translator: manotroll <manotroll@gmail.com>\n"
 "Language-Team: pt-br <LL@li.org>\n"
@@ -599,14 +599,6 @@ msgstr "Adicionar"
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Remove"
 msgstr "Remover"
-
-#: src/gui/dialogs/dlg_options.cpp
-msgid "Move Up"
-msgstr "Para cima"
-
-#: src/gui/dialogs/dlg_options.cpp
-msgid "Move Down"
-msgstr "Para baixo"
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Enter frequency (kHz):"
@@ -2071,6 +2063,32 @@ msgid "Switch to A&nalog"
 msgstr "Mudar para analógico"
 
 #: src/ongui.cpp
+#, c-format
+msgid "&Add %s%s to list"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Add frequency to list"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Cut"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "C&opy"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Paste"
+msgstr ""
+
+#: src/ongui.cpp
+#, fuzzy, c-format
+msgid "&Delete %s%s from list"
+msgstr "Remover os selecionados da lista"
+
+#: src/ongui.cpp
 msgid "Export FreeDV Configuration"
 msgstr ""
 
@@ -2499,11 +2517,7 @@ msgid "Couldn't open PTT input port: %s"
 msgstr "Não foi possível abrir a porta de entrada PTT: %s"
 
 #: src/voicekeyer.cpp
-msgid "Start Voice Keyer"
-msgstr "Iniciar o Voice Keyer"
-
-#: src/voicekeyer.cpp
-msgid "Stop Voice Keyer"
+msgid "Stop Voice &Keyer"
 msgstr "Parar o Voice Keyer"
 
 #: src/voicekeyer.cpp
@@ -2559,6 +2573,14 @@ msgstr "Canais demais"
 msgid "Voice Keyer: Playing file %s to mic input"
 msgstr "Voice Keyer: Reproduzindo o arquivo %s na entrada do microfone"
 
-#: src/voicekeyer.cpp
-msgid "Stop Voice &Keyer"
-msgstr "Parar o Voice Keyer"
+#~ msgid "Move Up"
+#~ msgstr "Para cima"
+
+#~ msgid "Move Down"
+#~ msgstr "Para baixo"
+
+#~ msgid "Start Voice Keyer"
+#~ msgstr "Iniciar o Voice Keyer"
+
+#~ msgid "Stop Voice Keyer"
+#~ msgstr "Parar o Voice Keyer"

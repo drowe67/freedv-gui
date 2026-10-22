@@ -1,14 +1,14 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# FreeDV language translation template
+# Copyright (C) 2026 FreeDV Project
 # This file is distributed under the same license as the FreeDV package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Mooneer Salem <mooneer@gmail.com>, 2026
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: FreeDV 3.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/freedv/freedv-gui/issues\n"
-"POT-Creation-Date: 2026-10-11 15:56-0700\n"
+"Report-Msgid-Bugs-To: mooneer@gmail.com\n"
+"POT-Creation-Date: 2026-10-20 10:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -576,14 +576,6 @@ msgstr ""
 
 #: src/gui/dialogs/dlg_options.cpp
 msgid "Remove"
-msgstr ""
-
-#: src/gui/dialogs/dlg_options.cpp
-msgid "Move Up"
-msgstr ""
-
-#: src/gui/dialogs/dlg_options.cpp
-msgid "Move Down"
 msgstr ""
 
 #: src/gui/dialogs/dlg_options.cpp
@@ -1984,6 +1976,32 @@ msgid "Switch to A&nalog"
 msgstr ""
 
 #: src/ongui.cpp
+#, c-format
+msgid "&Add %s%s to list"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Add frequency to list"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Cut"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "C&opy"
+msgstr ""
+
+#: src/ongui.cpp
+msgid "&Paste"
+msgstr ""
+
+#: src/ongui.cpp
+#, c-format
+msgid "&Delete %s%s from list"
+msgstr ""
+
+#: src/ongui.cpp
 msgid "Export FreeDV Configuration"
 msgstr ""
 
@@ -2392,11 +2410,7 @@ msgid "Couldn't open PTT input port: %s"
 msgstr ""
 
 #: src/voicekeyer.cpp
-msgid "Start Voice Keyer"
-msgstr ""
-
-#: src/voicekeyer.cpp
-msgid "Stop Voice Keyer"
+msgid "Stop Voice &Keyer"
 msgstr ""
 
 #: src/voicekeyer.cpp
@@ -2445,8 +2459,4 @@ msgstr ""
 #: src/voicekeyer.cpp
 #, c-format
 msgid "Voice Keyer: Playing file %s to mic input"
-msgstr ""
-
-#: src/voicekeyer.cpp
-msgid "Stop Voice &Keyer"
 msgstr ""

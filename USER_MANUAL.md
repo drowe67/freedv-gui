@@ -875,6 +875,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add dark mode support for Windows. (PR #1518, #1529, #1560)
     * Add infrastructure for translating FreeDV into other languages. (PR #1526)
     * Hamlib: only allow selecting a PTT serial device when using RTS or DTR for PTT. (PR #1544)
+    * Improved ease of use when adjusting predefined frequencies. (PR #1570, #1581) - thanks @barjac!
 2. Bugfixes:
     * Fix silence being mixed into the first half second of each transmission, and holes in the signal at its start. (PR #1562)
 3. Build system:
