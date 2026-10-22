@@ -1573,8 +1573,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, wxT("FreeDV 
     g_resyncs.store(0, std::memory_order_relaxed);
     g_tone_phase.store(0.0f, std::memory_order_relaxed);
 
-    m_schedule_restore = false;
-
     vk_state = VK_IDLE;
 
     m_timeSinceSyncLoss = 0;

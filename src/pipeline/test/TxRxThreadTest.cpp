@@ -1819,7 +1819,9 @@ public:
 
     static bool automaticGainControlRaisesQuietMicrophone()
     {
-        auto quietSpeech = sine(TEST_SAMPLE_RATE, 440.0, 300.0);
+        // Loud enough that the leveler treats it as speech rather than
+        // silence, but well below its loudness target.
+        auto quietSpeech = sine(TEST_SAMPLE_RATE, 440.0, 1000.0);
 
         resetGlobals();
         g_tx = true;
@@ -1833,7 +1835,7 @@ public:
         double with = rms(lastSecondSentToRadio(quietSpeech));
 
         bool result = true;
-        result &= checkBetween("level sent without gain control", (int)without, 400, 450); // 300 peak, doubled
+        result &= checkBetween("level sent without gain control", (int)without, 1350, 1480); // 1000 peak, doubled
         if (with < without * 1.15)
         {
             std::cout << "[level sent with gain control was " << with << ", expected well above " << without << "] ";
