@@ -171,6 +171,38 @@ jobs:
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
+    # EXPERIMENT (to be reverted): where does each GUI test's extra ~4 s go on these runners?
+    - name: Time a GUI test's phases
+      shell: bash
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+          ctest -N -V -R '^gui_settings_display$' | grep "Test command"
+          PY=$(ctest -N -V -R '^gui_settings_display$' | sed -nE 's/.*Test command: ([^ ]+) .*/\1/p')
+          echo "python: $PY"
+          for i in 1 2 3; do /usr/bin/time -p "$PY" -c pass 2>&1 | grep real; done
+          cat > "$RUNNER_TEMP/phases.py" <<'PYEOF'
+          import sys, time
+          t0 = time.monotonic()
+          sys.path.insert(0, sys.argv[1])
+          import freedvtest
+          t1 = time.monotonic()
+          app = freedvtest.start(settings={})
+          t2 = time.monotonic()
+          app.command("ping")
+          t3 = time.monotonic()
+          code = app.quit()
+          t4 = time.monotonic()
+          log = app.log()
+          app.stop()
+          t5 = time.monotonic()
+          print("import %.2f s, launch %.2f s, ping %.3f s, quit %.2f s, clean up %.2f s, exit code %s"
+                % (t1 - t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4, code))
+          if len(sys.argv) > 2:
+              print(log)
+          PYEOF
+          for i in 1 2 3; do "$PY" "$RUNNER_TEMP/phases.py" "${{github.workspace}}/test/gui" $([ $i = 3 ] && echo log); done
+          for i in 1 2 3; do ctest -R '^gui_settings_display$' | grep "Test #"; done
+
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
