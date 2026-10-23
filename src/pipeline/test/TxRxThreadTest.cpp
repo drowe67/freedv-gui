@@ -2013,6 +2013,26 @@ public:
         double lastSilenceAt = -1;  // seconds into the signal
     };
 
+    // Gives a file's thread time between the sound cards' turns, as it has
+    // when this is for real. A sleep can last far longer than asked for
+    // (several times over on some CI machines), so what one oversleeps by
+    // is taken off the turns that follow rather than added to them all.
+    class TimeBetweenTurns
+    {
+    public:
+        void wait()
+        {
+            owed_ += std::chrono::milliseconds(1);
+            if (owed_ <= std::chrono::steady_clock::duration::zero()) return;
+            auto before = std::chrono::steady_clock::now();
+            std::this_thread::sleep_for(owed_);
+            owed_ -= std::chrono::steady_clock::now() - before;
+        }
+
+    private:
+        std::chrono::steady_clock::duration owed_{};
+    };
+
     // Sends seconds of speech and receives it again, with both sound cards
     // at sampleRate. The samples are handed over in blocks of sizes chosen
     // by the two seeds (zero meaning 20 ms every time). With playedToMic,
@@ -2070,6 +2090,7 @@ public:
             BlockSizes blocks(sampleRate, txSeed);
             std::vector<short> silence(sampleRate / 10, 0);
             size_t offset = 0;
+            TimeBetweenTurns timeBetweenTurns;
             auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(120);
             while (std::chrono::steady_clock::now() < deadline)
             {
@@ -2132,7 +2153,7 @@ public:
                 {
                     // ...and some time between turns as well, as the file
                     // thread has when this is for real.
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    timeBetweenTurns.wait();
                 }
             }
 
@@ -2202,6 +2223,7 @@ public:
 
             bool inSync = false;
             size_t received = 0;
+            TimeBetweenTurns timeBetweenTurns;
             auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(120);
             while (std::chrono::steady_clock::now() < deadline)
             {
@@ -2234,7 +2256,7 @@ public:
 
                 if (fromFile)
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    timeBetweenTurns.wait();
                 }
             }
 
