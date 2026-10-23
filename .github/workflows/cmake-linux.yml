@@ -46,6 +46,8 @@ env:
 
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
+  # EXPERIMENT (to be reverted): where the GUI test harness records each FreeDV launch's timing.
+  FREEDVTEST_TIMING: ${{ github.workspace }}/freedvtest-timing.jsonl
 
   # Needed to suppress possible cause of test errors.
   # See https://github.com/alexmurray/emacs-snap/issues/60
@@ -565,6 +567,14 @@ jobs:
           fi
           . ../rade-venv/bin/activate
           UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1:suppressions=${{github.workspace}}/test/ubsan_suppressions.txt ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt TSAN_OPTIONS=halt_on_error=1:ignore_noninstrumented_modules=1 ctest --output-on-failure -L gui -E gui_reporter_live_view --timeout 900 --repeat until-pass:$MAX_EXECUTION_TIMES
+
+    # EXPERIMENT (to be reverted)
+    - name: Show GUI test launch timings
+      if: ${{ always() }}
+      shell: bash
+      run: |
+          f='${{ github.workspace }}/freedvtest-timing.jsonl'
+          if [ -f "$f" ]; then echo "$(wc -l < "$f") launches"; sed 's/^/TIMING /' "$f"; else echo "no timings"; fi
 
   # Reports how much of the code the unit and GUI tests exercise.
   coverage:
