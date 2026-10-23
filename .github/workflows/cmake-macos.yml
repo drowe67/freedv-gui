@@ -171,27 +171,6 @@ jobs:
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
-    # EXPERIMENT (to be reverted): do the tests run faster with App Nap off?
-    # Sleeps there run up to 3x long compared with Linux and with a real Mac.
-    - name: Disable App Nap and measure sleeps
-      shell: bash
-      run: |
-          echo "CPUs: $(sysctl -n hw.ncpu)"
-          measure() {
-              python3 -c '
-          import time
-          for ms in (1, 10, 100):
-              n = 200 if ms < 100 else 20
-              t = time.monotonic()
-              for _ in range(n):
-                  time.sleep(ms / 1000)
-              print("sleep(%d ms) took %.2f ms on average" % (ms, (time.monotonic() - t) * 1000 / n))
-          '
-          }
-          echo "Before:"; measure
-          defaults write NSGlobalDomain NSAppSleepDisabled -bool YES
-          echo "After disabling App Nap:"; measure
-
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
