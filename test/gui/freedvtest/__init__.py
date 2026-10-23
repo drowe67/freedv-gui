@@ -281,6 +281,10 @@ class FreeDV:
                         raise FreeDVError(
                             "FreeDV did not connect within %d seconds:\n%s" % (timeout, self.log()))
             self._connection.settimeout(timeout)
+            # Commands are small and each waits for its answer, so send them
+            # straight away rather than letting TCP hold them back to fill a
+            # packet (which can take a tenth of a second or more).
+            self._connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.command("ping")
         except BaseException:
             self.stop()
@@ -567,7 +571,9 @@ class FreeDV:
                 return result
             if time.monotonic() > deadline:
                 raise FreeDVError("Timed out waiting for %s" % (description or "condition"))
-            time.sleep(0.1)
+            # Checking often matters most where sleeps last longer than asked
+            # (as on the macOS CI runners, by up to several times over).
+            time.sleep(0.02)
 
     def wait_for_window(self, name, timeout=30):
         """Waits for a top-level window to be displayed and returns its state."""

@@ -448,7 +448,7 @@ jobs:
           sanitizer: WITH_UBSAN=1
 
     runs-on: ${{ matrix.os }}
-    needs: [lint, scope]
+    needs: [scope]
     if: ${{ needs.scope.outputs.tier != 'none' }}
 
     env:
@@ -569,7 +569,7 @@ jobs:
   # Reports how much of the code the unit and GUI tests exercise.
   coverage:
     runs-on: ubuntu-26.04
-    needs: [lint, scope]
+    needs: [scope]
     if: ${{ needs.scope.outputs.tier == 'full' }}
 
     steps:
