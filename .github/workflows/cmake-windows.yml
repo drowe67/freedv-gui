@@ -1,17 +1,37 @@
 name: Build FreeDV (Windows)
 
 on:
-  workflow_dispatch:
-  push:
-    branches-ignore:
-    - 'dr-render-manual'
+  # Run on the result of merging the pull request, rather than on its branch,
+  # so that what's already been merged into its base is tested too.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
     - "**.md"
     - "**/README"
+  # Merges, in effect.
+  push:
+    branches:
+    - master
+    - 'v*-dev'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
+  # "Run workflow", for a branch without a pull request, for instance.
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Which jobs to run (see "scope")'
+        type: choice
+        options: [full, pr]
+        default: full
 
+# A newer push to a pull request cancels the run for the one before. Merges
+# aren't cancelled, so that each gets a full set of results. Adding a label
+# other than full-ci runs nothing (see "scope"), so that gets a group of its
+# own rather than cancelling the run already under way.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
     
 env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
@@ -28,26 +48,33 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  # Pushes to master and the v*-dev branches (merges, in effect) get the full
-  # set: PGO builds, tests and coverage. Other branches get lint and plain,
-  # unsigned packages to try out, unless the commit pushed says "[full ci]"
-  # or the workflow's started by hand ("Run workflow").
+  # Which jobs to run ("tier"):
+  #
+  # - full: everything, including PGO builds, every sanitizer, the other
+  #   distributions, OS versions and architectures, and signing (given the
+  #   secrets). For merges to master and the v*-dev branches, pull requests
+  #   labelled "full-ci", and "Run workflow" unless told otherwise.
+  # - pr: lint, plain unsigned packages to try out, and the unit and GUI tests
+  #   in one configuration per platform (plus one with ASan and UBSan on
+  #   Linux). Enough to catch most problems in under an hour without holding
+  #   up everything else. For every other pull request.
+  # - none: a label other than full-ci was added, which needs no new run.
   scope:
     runs-on: ubuntu-slim
     outputs:
-      full: ${{ steps.scope.outputs.full }}
+      tier: ${{ steps.scope.outputs.tier }}
     steps:
     - id: scope
       env:
-        FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && endsWith(github.ref, '-dev')) || contains(github.event.head_commit.message, '[full ci]') }}
-      run: echo "full=$FULL" >> "$GITHUB_OUTPUT"
+        TIER: ${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && 'none' || (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tier != 'pr') || contains(github.event.pull_request.labels.*.name, 'full-ci')) && 'full' || 'pr' }}
+      run: echo "tier=$TIER" >> "$GITHUB_OUTPUT"
 
   # Not on a merge: plain installers (no PGO), to try out. (No ccache: merges
   # don't build these, so there'd be nothing for a branch to start from, and
   # each branch's own cache would count towards the repository's 10 GB.)
   build-installer:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full != 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'pr' }}
 
     strategy:
       fail-fast: false
@@ -100,7 +127,7 @@ jobs:
 
   build-pgo-inst:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     outputs: 
       INSTALLER_FILENAME: ${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
 
@@ -170,7 +197,7 @@ jobs:
   # production performance.
   build-sanitizer:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     strategy:
       fail-fast: false
       matrix:
@@ -253,28 +280,20 @@ jobs:
   # are too slow for, so as with ctest on macOS/Linux the sanitizer variants
   # fail only on a sanitizer report, a crash or a timeout (see -SanitizerMode
   # in RunUnitTests.ps1).
+  #
+  # On a pull request (the "pr" tier), only the plain x86_64 variant, which is
+  # also the one the GUI tests use.
   build-unit-tests:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - variant: plain
-          sanitizer_flag: ""
-          arch: x86_64
-        - variant: plain
-          sanitizer_flag: ""
-          arch: aarch64
-        - variant: UBSAN
-          sanitizer_flag: -DENABLE_UBSAN=1
-          arch: x86_64
-        - variant: UBSAN
-          sanitizer_flag: -DENABLE_UBSAN=1
-          arch: aarch64
+        variant: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["plain", "UBSAN", "ASAN"]' || '["plain"]') }}
+        arch: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["x86_64", "aarch64"]' || '["x86_64"]') }}
+        exclude:
         - variant: ASAN
-          sanitizer_flag: -DENABLE_ASAN=1
-          arch: x86_64
+          arch: aarch64
 
     runs-on: ubuntu-22.04
 
@@ -310,7 +329,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake ${{ matrix.sanitizer_flag }} -DUNITTEST=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
+        cmake ${{ matrix.variant == 'UBSAN' && '-DENABLE_UBSAN=1' || matrix.variant == 'ASAN' && '-DENABLE_ASAN=1' || '' }} -DUNITTEST=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-${{ matrix.arch }}.cmake ..
 
     - name: Build unit tests (${{ matrix.variant }})
       shell: bash
@@ -355,26 +374,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - variant: plain
-          arch: x86_64
-          runner: windows-2022
-        - variant: plain
-          arch: aarch64
-          runner: windows-11-arm
-        - variant: UBSAN
-          arch: x86_64
-          runner: windows-2022
-        - variant: UBSAN
-          arch: aarch64
-          runner: windows-11-arm
+        # The same as build-unit-tests above.
+        variant: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["plain", "UBSAN", "ASAN"]' || '["plain"]') }}
+        arch: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["x86_64", "aarch64"]' || '["x86_64"]') }}
+        exclude:
         - variant: ASAN
-          arch: x86_64
-          runner: windows-2022
+          arch: aarch64
 
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'aarch64' && 'windows-11-arm' || 'windows-2022' }}
     needs: [build-unit-tests, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     env:
       # Only have an effect on the sanitizer builds. Bare relative filenames
       # are used for the same reason as in windows-audio-test.yml: a drive
@@ -401,7 +410,7 @@ jobs:
   gui-tests:
     runs-on: windows-2022
     needs: [build-unit-tests, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     timeout-minutes: 120
     env:
       RADIO_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)"
@@ -458,7 +467,7 @@ jobs:
   # https://github.com/drowe67/radae/blob/dr-tx-bpf/doc/verification/verification_procedure.md
   rade-loss-baseline:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     runs-on: ubuntu-22.04
     outputs:
       baseline: ${{ steps.baseline.outputs.baseline }}
@@ -529,7 +538,7 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     needs: [build-pgo-inst, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     env:
       # The radio path is on VAC and the mic/speaker on VB-Cable, not the other way
       # around: VB-Cable occasionally inserts ~10 ms of silence into its loop early in a
@@ -591,7 +600,7 @@ jobs:
 
     runs-on: ubuntu-22.04
     needs: [collect-pgo-profile, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
 
     env:
       PKCS11_PROXY_SOCKET: tcp://127.0.0.1:2222
@@ -719,16 +728,15 @@ jobs:
         path: ${{github.workspace}}/build_windows/${{ steps.installer-filename.outputs.INSTALLER_FILENAME }}
         archive: false
 
+  # On a pull request (the "pr" tier), against build-installer's x86_64
+  # installer instead of the PGO-optimised ones.
   test:
-    needs: [build-pgo-use-profile, rade-loss-baseline, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    needs: [build-installer, build-pgo-use-profile, rade-loss-baseline, scope]
+    if: ${{ !cancelled() && needs.rade-loss-baseline.result == 'success' && (needs.build-pgo-use-profile.result == 'success' || (needs.scope.outputs.tier == 'pr' && needs.build-installer.result == 'success')) }}
     uses: ./.github/workflows/windows-audio-test.yml
     with:
-      matrix-json: |
-        [
-          {"runner": "windows-2022", "arch": "x86_64"},
-          {"runner": "windows-11-arm", "arch": "aarch64"}
-        ]
+      matrix-json: >-
+        ${{ needs.scope.outputs.tier == 'full' && '[{"runner": "windows-2022", "arch": "x86_64"}, {"runner": "windows-11-arm", "arch": "aarch64"}]' || '[{"runner": "windows-2022", "arch": "x86_64"}]' }}
       loss-threshold: ${{ needs.rade-loss-baseline.outputs.threshold }}
 
   # Runs the same test suite as `test`, but against the sanitizer-instrumented
@@ -741,7 +749,7 @@ jobs:
   # log), not whether a loss threshold was met under instrumentation overhead.
   test-sanitizer:
     needs: [build-sanitizer, rade-loss-baseline, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     uses: ./.github/workflows/windows-audio-test.yml
     with:
       matrix-json: |
