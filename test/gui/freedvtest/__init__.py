@@ -187,13 +187,6 @@ class FreeDV:
 
     def __init__(self, binary, config, settings, args, env, user_config_files, timeout, home=None,
                  default_config=False):
-        # EXPERIMENT (to be reverted): timing of each launch, for $FREEDVTEST_TIMING.
-        self._timing = {"scenario": " ".join([os.path.basename(sys.argv[0])] + sys.argv[1:]),
-                        "settings": json.dumps(settings, sort_keys=True, default=str) if settings is not None else None,
-                        "config": config is not None, "args": list(args), "env": sorted(env or {}),
-                        "files": sorted(user_config_files or {}), "home": home is not None,
-                        "default_config": default_config, "begin": time.time()}
-        _t0 = time.monotonic()
         self._temp_dir = tempfile.mkdtemp(prefix="freedvtest-")
         self._next_id = 1
         self._received = b""
@@ -289,7 +282,6 @@ class FreeDV:
                             "FreeDV did not connect within %d seconds:\n%s" % (timeout, self.log()))
             self._connection.settimeout(timeout)
             self.command("ping")
-            self._timing["launch"] = time.monotonic() - _t0
         except BaseException:
             self.stop()
             raise
@@ -629,12 +621,9 @@ class FreeDV:
     def quit(self, timeout=60):
         """Closes FreeDV's main window, waits for FreeDV to exit and returns
         its exit code."""
-        _t0 = time.monotonic()
         self.command("quit")
         try:
-            code = self._process.wait(timeout)
-            self._timing["quit"] = time.monotonic() - _t0
-            return code
+            return self._process.wait(timeout)
         except subprocess.TimeoutExpired:
             raise FreeDVError("FreeDV did not exit within %d seconds%s" % (timeout, self._stacks()))
 
@@ -661,8 +650,6 @@ class FreeDV:
     def stop(self):
         """Makes sure FreeDV is no longer running and cleans up after it.
         Called automatically at the end of a "with" block."""
-        _t0 = time.monotonic()
-        self._timing.setdefault("killed", self._process is not None and self._process.poll() is None)
         if self._process is not None and self._process.poll() is None:
             self._process.kill()
             self._process.wait()
@@ -679,9 +666,3 @@ class FreeDV:
             self._log_file.close()
             self._log_file = None
         shutil.rmtree(self._temp_dir, ignore_errors=True)
-        self._timing["stop"] = time.monotonic() - _t0
-        self._timing["end"] = time.time()
-        if os.environ.get("FREEDVTEST_TIMING") and not self._timing.get("written"):
-            self._timing["written"] = True
-            with open(os.environ["FREEDVTEST_TIMING"], "a") as f:
-                f.write(json.dumps(self._timing) + "\n")

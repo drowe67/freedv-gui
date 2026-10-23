@@ -46,8 +46,6 @@ env:
 
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
-  # EXPERIMENT (to be reverted): where the GUI test harness records each FreeDV launch's timing.
-  FREEDVTEST_TIMING: ${{ github.workspace }}/freedvtest-timing.jsonl
 
 jobs:
   # Which jobs to run ("tier"):
@@ -454,14 +452,6 @@ jobs:
       shell: pwsh
       run: |
           python test\gui\run_tests.py --retries 1 --exclude reporter:live_view --logs gui_test_logs
-
-    # EXPERIMENT (to be reverted)
-    - name: Show GUI test launch timings
-      if: ${{ always() }}
-      shell: bash
-      run: |
-          f='${{ github.workspace }}/freedvtest-timing.jsonl'
-          if [ -f "$f" ]; then echo "$(wc -l < "$f") launches"; sed 's/^/TIMING /' "$f"; else echo "no timings"; fi
 
     - name: Upload GUI test logs
       if: ${{ failure() }}
