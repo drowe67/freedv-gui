@@ -171,6 +171,85 @@ jobs:
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
+    # EXPERIMENT (to be reverted): is any storage on the runner faster than the workspace, and does it speed up the GUI tests?
+    - name: Compare storage
+      shell: bash
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+          echo "=== Runner"
+          sysctl -n hw.ncpu hw.memsize machdep.cpu.brand_string
+          echo "TMPDIR=$TMPDIR RUNNER_TEMP=$RUNNER_TEMP"
+          df -h / /System/Volumes/Data "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$TMPDIR" /private/tmp
+          diskutil info / | grep -E "Device Node|Protocol|Solid State|File System Personality|Disk Size|Physical|Device / Media"
+          diskutil list physical
+          vm_stat | head -6
+
+          echo "=== RAM disk"
+          dev=$(hdiutil attach -nomount ram://4194304 | tr -d '[:space:]')   # 2 GB
+          diskutil erasevolume APFS RAMDisk "$dev" >/dev/null
+          RAM=/Volumes/RAMDisk; df -h "$RAM"
+
+          cat > "$RUNNER_TEMP/iobench.py" <<'PYEOF'
+          import os, sys, time
+          d = os.path.join(sys.argv[1], "iobench"); os.makedirs(d, exist_ok=True)
+          big = os.path.join(d, "big"); buf = os.urandom(1 << 20)
+          t = time.monotonic()
+          with open(big, "wb") as f:
+              for _ in range(512): f.write(buf)
+              f.flush(); os.fsync(f.fileno())
+          w = 512 / (time.monotonic() - t)
+          os.system("sudo -n purge 2>/dev/null")
+          t = time.monotonic()
+          with open(big, "rb") as f:
+              while f.read(1 << 20): pass
+          r = 512 / (time.monotonic() - t)
+          os.remove(big)
+          t = time.monotonic()
+          for i in range(2000):
+              with open(os.path.join(d, "s%d" % i), "wb") as f: f.write(buf[:4096])
+          for i in range(2000): os.remove(os.path.join(d, "s%d" % i))
+          small = (time.monotonic() - t) / 2000 * 1e6
+          t = time.monotonic()
+          with open(os.path.join(d, "sync"), "wb") as f:
+              for _ in range(200): f.write(buf[:4096]); f.flush(); os.fsync(f.fileno())
+          sync = (time.monotonic() - t) / 200 * 1e3
+          print("%-60s write %6.0f MB/s  read %6.0f MB/s  small file %5.0f us  fsync %6.2f ms" % (sys.argv[1], w, r, small, sync))
+          PYEOF
+          cat > "$RUNNER_TEMP/launch.py" <<'PYEOF'
+          import sys, time
+          sys.path.insert(0, sys.argv[1])
+          import freedvtest
+          t1 = time.monotonic(); app = freedvtest.start(settings={}); t2 = time.monotonic()
+          app.quit(); t3 = time.monotonic(); app.stop()
+          print("%.2f %.2f" % (t2 - t1, t3 - t2))
+          PYEOF
+
+          PY=$(ctest -N -V -R '^gui_settings_display$' | sed -nE 's/.*Test command: ([^ ]+) .*/\1/p')
+          echo "=== I/O (512 MB sequential, 2000 x 4 KB files, 200 x 4 KB fsync), twice each"
+          for i in 1 2; do for d in "$GITHUB_WORKSPACE/build_osx" "$RUNNER_TEMP" "$TMPDIR" "$RAM"; do "$PY" "$RUNNER_TEMP/iobench.py" "$d"; done; done
+
+          ditto src/FreeDV.app "$RAM/FreeDV.app"
+          mkdir -p "$RAM/tmp"
+          WS_BIN=src/FreeDV.app/Contents/MacOS/FreeDV; RAM_BIN="$RAM/FreeDV.app/Contents/MacOS/FreeDV"
+          run() {  # label, binary, TMPDIR
+              FREEDV_BINARY="$2" TMPDIR="$3" "$PY" "$RUNNER_TEMP/launch.py" "${{github.workspace}}/test/gui" | sed "s|^|LAUNCH $1 |"
+          }
+          echo "=== FreeDV launch + quit (s): first launches, then 5 interleaved rounds"
+          run first-ws "$WS_BIN" "$TMPDIR"; run first-ram "$RAM_BIN" "$RAM/tmp"
+          for i in 1 2 3 4 5; do
+              run ws-bundle+ws-tmp "$WS_BIN" "$TMPDIR"
+              run ws-bundle+ram-tmp "$WS_BIN" "$RAM/tmp"
+              run ram-bundle+ram-tmp "$RAM_BIN" "$RAM/tmp"
+          done
+
+          echo "=== gui_settings_* scenarios, normal vs. everything on the RAM disk"
+          . ./rade_venv/bin/activate
+          for i in 1 2; do
+              /usr/bin/time -p ctest -R '^gui_settings_' -Q 2>&1 | sed 's/^/CTEST normal /'
+              FREEDV_BINARY="$RAM_BIN" TMPDIR="$RAM/tmp" /usr/bin/time -p ctest -R '^gui_settings_' -Q 2>&1 | sed 's/^/CTEST ramdisk /'
+          done
+          hdiutil detach "$dev" >/dev/null
+
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
