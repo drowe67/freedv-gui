@@ -41,6 +41,9 @@ NOWHERE = "127.0.0.1:9"
 PTT_VIA_CAT, PTT_VIA_RTS, PTT_VIA_DTR, PTT_VIA_NONE, PTT_VIA_CAT_DATA = range(5)
 
 WXK_F5 = 344
+# wxWidgets' code for the keypad's Enter. The plain one never reaches the
+# list: the combo's text box acts on it first.
+NUMPAD_ENTER = 370
 
 
 def check(condition, message):
@@ -870,6 +873,17 @@ def test_frequency_list_from_main_window():
         items = app.context_menu("main.cboReportFrequency")
         check_equal([(item["label"], item["enabled"]) for item in items][0],
                     ("Add 10.1360MHz to list", False), "Frequency box's menu when it's listed")
+        # Text that isn't a frequency, or too small to round to one, can't
+        # be added: the menu says so and disables the item.
+        app.set_value("main.cboReportFrequency", "not a frequency")
+        items = app.context_menu("main.cboReportFrequency")
+        check_equal([(item["label"], item["enabled"]) for item in items][0],
+                    ("Add frequency to list", False), "Menu for text that isn't a frequency")
+        app.set_value("main.cboReportFrequency", "0.00004")
+        items = app.context_menu("main.cboReportFrequency")
+        check_equal([(item["label"], item["enabled"]) for item in items][0],
+                    ("Add frequency to list", False), "Menu for too small a frequency")
+        app.set_value("main.cboReportFrequency", "10.1360")
 
         # One in the open list can be deleted from its menu, and the list
         # opens again for the next.
@@ -884,19 +898,101 @@ def test_frequency_list_from_main_window():
         app.key("main.lbReportFrequencies", "Delete")
         check_equal(offered(app), ["7.1770", "10.1360"], "Frequencies offered")
         check(list_shown(app), "The list closed")
-
-        # Closing the list doesn't take what was highlighted.
-        before = app.get("main.cboReportFrequency")["value"]
+        # Keys in the open list move the highlight about, clamping at the
+        # ends, and Enter takes the highlighted frequency.
         app.set_value("main.lbReportFrequencies", "7.1770")
+        app.key("main.lbReportFrequencies", "Down")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 1, "Highlight moved down")
+        app.key("main.lbReportFrequencies", "Down")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 1, "Highlight clamped at the end")
+        app.key("main.lbReportFrequencies", "Up")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 0, "Highlight moved up")
+        app.key("main.lbReportFrequencies", "PageDown")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 1, "Highlight paged down")
+        app.key("main.lbReportFrequencies", "PageUp")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 0, "Highlight clamped by paging up")
+        app.key("main.lbReportFrequencies", "End")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 1, "Highlight at the end")
+        app.key("main.lbReportFrequencies", "Home")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 0, "Highlight at the top")
+        app.key("main.lbReportFrequencies", NUMPAD_ENTER)
+        check_equal(app.get("main.cboReportFrequency")["value"], "7.1770", "Frequency taken with Enter")
+        check(not list_shown(app), "The list closed on Enter")
+
+        # Reopening the list: it highlights the frequency the box already
+        # has, and Up clamps at the top. A box that matches no item opens
+        # with nothing highlighted, and then Up starts at the end. Closing
+        # without a pick leaves the box as it was.
+        app.combo_popup("main.cboReportFrequency", True)
+        app.wait_until(lambda: list_shown(app), description="the frequencies to be listed")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 0, "The open list highlights the box's frequency")
+        app.key("main.lbReportFrequencies", "Up")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 0, "Up clamps at the top")
         app.combo_popup("main.cboReportFrequency", False)
-        check_equal(app.get("main.cboReportFrequency")["value"], before, "Frequency after closing the list")
+        app.set_value("main.cboReportFrequency", "10.136")
+        app.combo_popup("main.cboReportFrequency", True)
+        app.wait_until(lambda: list_shown(app), description="the frequencies to be listed again")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], -1, "A box matching nothing opens with no highlight")
+        app.key("main.lbReportFrequencies", "Up")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], 1, "Up starts at the end of the list")
+        app.combo_popup("main.cboReportFrequency", False)
+        check_equal(app.get("main.cboReportFrequency")["value"], "10.136", "Frequency after closing the list")
 
         # The changes are kept, as Tools > Options shows.
         open_settings(app, "Rig Control")
         check_equal([item["label"] for item in app.get(name("freqList"))["items"]],
                     ["7.1770", "10.1360"], "Frequencies listed in Options")
         press_cancel(app)
+        # Deleting down to nothing leaves an empty list that isn't reopened.
+        app.combo_popup("main.cboReportFrequency", True)
+        app.wait_until(lambda: list_shown(app), description="the frequencies to be listed")
+        app.context_menu("main.lbReportFrequencies", item=0, choose="Delete 7.1770MHz from list")
+        check_equal(offered(app), ["10.1360"], "The last frequency")
+        app.wait_until(lambda: list_shown(app), description="the list to open again")
+        app.context_menu("main.lbReportFrequencies", item=0, choose="Delete 10.1360MHz from list")
+        check_equal(offered(app), [], "No frequencies left")
+        time.sleep(0.5)
+        check(not list_shown(app), "An empty list isn't reopened")
 
+        # With an empty list open, nothing is highlighted and keys do
+        # nothing, including Delete and the numpad one. Enter there leaves
+        # the box alone.
+        app.combo_popup("main.cboReportFrequency", True)
+        app.wait_until(lambda: list_shown(app), description="the empty list to open")
+        check_equal(app.get("main.lbReportFrequencies")["selection"], -1, "Highlight in the empty list")
+        app.key("main.lbReportFrequencies", "Down")
+        app.key("main.lbReportFrequencies", "PageDown")
+        app.key("main.lbReportFrequencies", "PageUp")
+        app.key("main.lbReportFrequencies", "x")
+        app.key("main.lbReportFrequencies", "Delete")
+        app.key("main.lbReportFrequencies", 385)  # numpad Delete
+        check_equal(offered(app), [], "Still no frequencies")
+        app.key("main.lbReportFrequencies", "Enter")
+        check_equal(app.get("main.cboReportFrequency")["value"], "10.136", "Frequency box after Enter on the empty list")
+        app.combo_popup("main.cboReportFrequency", False)
+        check_equal(app.get("main.cboReportFrequency")["value"], "10.136", "Frequency box after closing the empty list")
+
+        quit_and_check_log(app)
+
+    # In kHz mode, the box and the list show the list's frequencies in kHz,
+    # to one decimal place, and the box is read as kHz too.
+    settings = {"/Reporting/FrequencyList": "3.6,14.2", "/Reporting/FrequencyAsKHz": True,
+                "/Reporting/Frequency": "14200000"}
+    with freedvtest.start(settings=settings) as app:
+        check_equal(offered(app), ["3600.0", "14200.0"], "Frequencies offered in kHz")
+        app.set_value("main.cboReportFrequency", "10136")
+        items = app.context_menu("main.cboReportFrequency", choose="Add 10136.0kHz to list")
+        check_equal([(item["label"], item["enabled"]) for item in items][0],
+                    ("Add 10136.0kHz to list", True), "Frequency box's menu in kHz")
+        check_equal(offered(app), ["3600.0", "10136.0", "14200.0"], "Frequencies offered")
+        app.combo_popup("main.cboReportFrequency", True)
+        app.wait_until(lambda: list_shown(app), description="the frequencies to be listed")
+        app.context_menu("main.lbReportFrequencies", item=1, choose="Delete 10136.0kHz from list")
+        check_equal(offered(app), ["3600.0", "14200.0"], "Frequencies after a kHz delete")
+        # The delete reopened the list; close it, as quitting with it open
+        # holds the window up.
+        app.wait_until(lambda: list_shown(app), description="the list to open again")
+        app.combo_popup("main.cboReportFrequency", False)
         quit_and_check_log(app)
 
 
@@ -1336,6 +1432,7 @@ SCENARIOS = {
     "ptt_test": test_ptt_test,
     "rig_control": test_rig_control,
     "frequency_list": test_frequency_list,
+    "frequency_list_from_main_window": test_frequency_list_from_main_window,
     "reporting": test_reporting,
     "voice_keyer": test_voice_keyer,
     "display": test_display,
