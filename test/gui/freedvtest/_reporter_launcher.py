@@ -6,6 +6,7 @@ The server's own source is used as is; this only arranges for it to listen
 on the given port and to do without its optional link to Discord.
 """
 
+import os
 import runpy
 import sys
 import types
@@ -30,6 +31,10 @@ def main():
     sys.path.insert(0, source_dir)
     sys.argv = [source_dir + "/freedv-reporter.py"]
     runpy.run_path(sys.argv[0], run_name="__main__")
+
+    # The server never closes its database, whose thread would otherwise keep
+    # Python running after the server has stopped (until it is killed).
+    os._exit(0)
 
 
 if __name__ == "__main__":
