@@ -85,8 +85,11 @@ private:
     std::thread renderCaptureThread_;
     HANDLE renderCaptureEvent_;
     bool isRenderCaptureRunning_;
+    // Created on first start() and only closed in the destructor, so the
+    // processing thread never sees a handle being closed under it.
     HANDLE semaphore_;
     HANDLE highResTimer_;
+    bool timePeriodSet_;
 
     // For mix<->int16 conversions
     int containerBits_;

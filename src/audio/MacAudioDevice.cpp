@@ -122,6 +122,8 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , inputFrames_(nullptr)
     , isDefaultDevice_(false)
     , parent_(parent)
+    , auHAL_(nullptr)
+    , bufferList_(nullptr)
     , running_(false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
@@ -131,10 +133,8 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
 
 MacAudioDevice::~MacAudioDevice()
 {
-    if (running_)
-    {
-        stopImpl_();
-    }
+    // Also cleans up after a start() that failed partway through.
+    stopImpl_();
     
     waitForAllTasksComplete_();
     dispatch_release(sem_);
@@ -499,49 +499,59 @@ void MacAudioDevice::stopImpl_()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
-        log_info("Device %d: removing listeners", coreAudioId_);
-        
-        const AudioObjectPropertyAddress aliveAddress =
+        // Safe to call more than once, or without a successful start():
+        // only undo what start() actually did.
+        if (running_)
         {
-            kAudioDevicePropertyDeviceIsAlive,
-            kAudioObjectPropertyScopeGlobal,
-            kAudioObjectPropertyElementMaster
-        };
-        AudioObjectRemovePropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
-
-        const AudioObjectPropertyAddress overloadAddress =
-        {
-            kAudioDeviceProcessorOverload,
-            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
-            0
-        };
-        AudioObjectRemovePropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
-
-        log_info("Device %d: stopping audio unit", coreAudioId_);
-        running_ = false;
-        AudioOutputUnitStop(auHAL_);
-        
-        // Wait for audio to stop
-        Boolean isRunning = 1;
-        while (isRunning)
-        {
-            log_info("[Device %d] Waiting for audio unit to stop", coreAudioId_);
+            log_info("Device %d: removing listeners", coreAudioId_);
             
-            UInt32 s = sizeof( isRunning );
-            auto err = AudioUnitGetProperty( 
-                auHAL_, 
-                kAudioOutputUnitProperty_IsRunning, 
-                kAudioUnitScope_Global, 
-                0,  &isRunning, &s );
-            if (err != noErr)
+            const AudioObjectPropertyAddress aliveAddress =
             {
-                log_warn("[Device %d] Could not get kAudioOutputUnitProperty_IsRunning value (err %d)", coreAudioId_, err);
+                kAudioDevicePropertyDeviceIsAlive,
+                kAudioObjectPropertyScopeGlobal,
+                kAudioObjectPropertyElementMaster
+            };
+            AudioObjectRemovePropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
+            const AudioObjectPropertyAddress overloadAddress =
+            {
+                kAudioDeviceProcessorOverload,
+                (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
+                0
+            };
+            AudioObjectRemovePropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
+
+            log_info("Device %d: stopping audio unit", coreAudioId_);
+            running_ = false;
+            AudioOutputUnitStop(auHAL_);
+            
+            // Wait for audio to stop
+            Boolean isRunning = 1;
+            while (isRunning)
+            {
+                log_info("[Device %d] Waiting for audio unit to stop", coreAudioId_);
+                
+                UInt32 s = sizeof( isRunning );
+                auto err = AudioUnitGetProperty( 
+                    auHAL_, 
+                    kAudioOutputUnitProperty_IsRunning, 
+                    kAudioUnitScope_Global, 
+                    0,  &isRunning, &s );
+                if (err != noErr)
+                {
+                    log_warn("[Device %d] Could not get kAudioOutputUnitProperty_IsRunning value (err %d)", coreAudioId_, err);
+                    break;
+                }
+                std::this_thread::sleep_for(10ms);
             }
-            std::this_thread::sleep_for(10ms);
         }
         
-        AudioUnitUninitialize(auHAL_);
-        AudioComponentInstanceDispose(auHAL_);
+        if (auHAL_ != nullptr)
+        {
+            AudioUnitUninitialize(auHAL_);
+            AudioComponentInstanceDispose(auHAL_);
+            auHAL_ = nullptr;
+        }
         if (bufferList_ != nullptr)
         {
             for(UInt32 i =0; i< bufferList_->mNumberBuffers ; i++) 
@@ -549,8 +559,10 @@ void MacAudioDevice::stopImpl_()
                 free(bufferList_->mBuffers[i].mData);
             }
             free(bufferList_);
+            bufferList_ = nullptr;
         }
         delete[] inputFrames_;
+        inputFrames_ = nullptr;
         
         prom->set_value();
     });

@@ -41,7 +41,7 @@ extern std::atomic<float> g_monitorTxAudioVol;
 extern std::atomic<int>   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern short *g_error_hist, *g_error_histn;
-extern int g_resyncs;
+extern std::atomic<int> g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
@@ -160,11 +160,21 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
 
     wxUnusedVar(event);
 
-    // The same dialog is shown each time, and still has the return code it
-    // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
-    // already set to mean that the dialog closed itself while being set up,
-    // and so wouldn't show it a second time.
-    optionsDlg->SetReturnCode(0);
+    if (optionsDlg == nullptr)
+    {
+        optionsDlg = new OptionsDlg(NULL);
+        // Initialize the session-active state so controls are displayed
+        // correctly in case a session is already running.
+        optionsDlg->setSessionActive(m_RxRunning.load(std::memory_order_acquire));
+    }
+    else
+    {
+        // The same dialog is shown each time, and still has the return code it
+        // was closed with the last time. wxWidgets 3.3.4 on GTK takes one that's
+        // already set to mean that the dialog closed itself while being set up,
+        // and so wouldn't show it a second time.
+        optionsDlg->SetReturnCode(0);
+    }
 
     if (optionsDlg->ShowModal() == wxOK)
     {
@@ -936,7 +946,7 @@ void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& )
 {
     auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
     wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-    m_newSpkOutFilter = true;
+    m_newSpkOutFilter.store(true, std::memory_order_release);
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
@@ -1576,11 +1586,11 @@ void MainFrame::togglePTT(void) {
         if (!newTx)
         {
             g_recFileFromModulator = false;
-            g_recFileFromRadio = true;
+            g_recFileFromRadio.store(true, std::memory_order_release);
         }
         else
         {
-            g_recFileFromRadio = false;
+            g_recFileFromRadio.store(false, std::memory_order_release);
             g_recFileFromModulator = true;
         }
     }
@@ -1935,7 +1945,7 @@ void MainFrame::OnCloseCallsignList( wxCommandEvent& event )
 void MainFrame::resetStats_()
 {
     if (m_RxRunning.load(std::memory_order_acquire))  {
-        g_resyncs = 0;
+        g_resyncs.store(0, std::memory_order_relaxed);
         int i;
         for(i=0; i<2*g_Nc; i++) {
             g_error_hist[i] = 0;
@@ -2272,7 +2282,7 @@ void MainFrame::OnResetMicSpkrLevel(wxMouseEvent&)
 {
     auto sliderLevel = 0;
     wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
-    m_newSpkOutFilter = true;
+    m_newSpkOutFilter.store(true, std::memory_order_release);
     
     wxString fmtString = wxString::Format(MIC_SPKR_LEVEL_FORMAT_STR, wxNumberFormatter::ToString((double)sliderLevel, 1), DECIBEL_STR);
     m_txtMicSpkrLevelNum->SetLabel(fmtString);
