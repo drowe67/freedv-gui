@@ -35,6 +35,11 @@ if(LINUX)
         if(CAIRO_FOUND)
             target_compile_definitions(fdv_gui_controls PRIVATE HAS_CAIRO)
             target_include_directories(fdv_gui_controls PRIVATE ${CAIRO_INCLUDE_DIRS})
+
+            # Link cairo explicitly rather than relying on it arriving via GTK3's
+            # libraries (only linked when gtk+-3.0.pc is found); modern ld won't
+            # resolve symbols through wxWidgets' own indirect dependency on it.
+            target_link_libraries(fdv_gui_controls PUBLIC ${CAIRO_LINK_LIBRARIES})
         endif(CAIRO_FOUND)
     endif(PkgConfig_FOUND)
 endif(LINUX)

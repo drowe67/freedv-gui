@@ -81,10 +81,10 @@ using namespace std::chrono_literals;
 // TBD -- work on fully removing the need for these.
 extern paCallBackData* g_rxUserdata;
 extern std::atomic<int> g_analog;
-extern int g_nSoundCards;
+extern std::atomic<int> g_nSoundCards;
 extern std::atomic<bool> g_half_duplex;
 extern std::atomic<bool> g_tx;
-extern int g_dump_fifo_state;
+extern std::atomic<int> g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
 extern std::atomic<int> g_sfTxFs;
@@ -96,8 +96,8 @@ extern GenericFIFO<short> g_plotDemodInFifo;
 extern GenericFIFO<short> g_plotSpeechOutFifo;
 extern int g_txLevel;
 extern std::atomic<float> g_txLevelScale;
-extern int g_dump_timing;
-extern int g_resyncs;
+extern std::atomic<int> g_dump_timing;
+extern std::atomic<int> g_resyncs;
 extern std::atomic<bool> g_recFileFromRadio;
 extern std::atomic<unsigned int> g_recFromRadioSamples;
 extern std::atomic<SNDFILE*> g_sfRecFile;
@@ -671,7 +671,7 @@ void TxRxThread::runOnce_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     auto outFifo = cbData->outfifo1;
     if (!m_tx)
     {
-        outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+        outFifo = (g_nSoundCards.load(std::memory_order_acquire) == 1) ? cbData->outfifo1 : cbData->outfifo2;
     }
     auto totalFifoCapacity = outFifo->capacity();
     auto fifoUsed = outFifo->numUsed();
@@ -792,7 +792,7 @@ void TxRxThread::clearFifos_() FREEDV_NONBLOCKING
     {
         cbData->infifo1->reset();
 
-        auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+        auto outFifo = (g_nSoundCards.load(std::memory_order_acquire) == 1) ? cbData->outfifo1 : cbData->outfifo2;
         outFifo->reset();
     }
 }
@@ -815,7 +815,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     //
 
     bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
-    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)))) {        
+    if (((g_nSoundCards.load(std::memory_order_acquire) == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile.load(std::memory_order_relaxed) || g_recFileFromMic.load(std::memory_order_relaxed)))) {        
         if (deferReset_)
         {
             // We just entered TX from RX.
@@ -842,7 +842,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
 
         unsigned int nsam_one_modem_frame = (freedvInterface.getTxNNomModemSamples() * outputSampleRate_) / freedvInterface.getTxModemSampleRate();
 
-        if (g_dump_fifo_state) {
+        if (g_dump_fifo_state.load(std::memory_order_relaxed)) {
              // If this drops to zero we have a problem as we will run out of output samples
              // to send to the sound driver
              FREEDV_BEGIN_VERIFIED_SAFE
@@ -946,7 +946,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
                 g_agcAppliedGainDb.store(agcStep_->getLiveAppliedGainDb(), std::memory_order_relaxed);
             }
             
-            if (g_dump_fifo_state) {
+            if (g_dump_fifo_state.load(std::memory_order_relaxed)) {
                 FREEDV_BEGIN_VERIFIED_SAFE
                 log_info("  nout: %d", nout);
                 FREEDV_END_VERIFIED_SAFE
@@ -1001,7 +1001,7 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) FREEDV_NONBLOCKING
     int             nout;
 
     int nsam_one_speech_frame = (freedvInterface.getRxNumSpeechSamples() * outputSampleRate_) / freedvInterface.getRxSpeechSampleRate();
-    auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+    auto outFifo = (g_nSoundCards.load(std::memory_order_acquire) == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough space in the output FIFO ...
     while (!helper->mustStopWork() && outFifo->numFree() >= nsam_one_speech_frame) {

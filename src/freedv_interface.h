@@ -145,6 +145,7 @@ private:
     RADETransmitStep *radeTxStep_;
     std::atomic<int> sync_;
     std::atomic<int> radeSnr_;
+    std::atomic<float> rxFreqOffset_; // published by the RX thread for the GUI
     rade_text_t radeTextPtr_;
     
     static constexpr int RELIABLE_TEXT_FIFO_SIZE = 64;

@@ -10,7 +10,7 @@
 #include <functional>
 using namespace std::placeholders;
 
-extern int g_nSoundCards;
+extern std::atomic<int> g_nSoundCards;
 
 static EQBandSettings getBandSettings_(auto& channel)
 {
@@ -30,13 +30,13 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
     cb->micEqLock.lock();
 
     // Volume can be adjusted via main window without enabling filters
-    if (wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB != 0 && g_nSoundCards > 1)
+    if (wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB != 0 && g_nSoundCards.load(std::memory_order_acquire) > 1)
     {
         cb->sbqMicInVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB, 0, txSampleRate);
     }
     
     // init Mic In Equaliser Filters
-    if (cb->micInEQEnable.load(std::memory_order_relaxed) && g_nSoundCards > 1) {
+    if (cb->micInEQEnable.load(std::memory_order_relaxed) && g_nSoundCards.load(std::memory_order_acquire) > 1) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
         //printf("designing new Min In filters\n");
         designEQBandFilters(getBandSettings_(wxGetApp().appConfiguration.filterConfiguration.micInChannel), txSampleRate, &cb->sbqMicInBass, &cb->sbqMicInTreble, &cb->sbqMicInMid);

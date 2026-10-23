@@ -960,6 +960,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix the spectrum plot's sync tuning line being drawn using an uninitialized value until the plot's first update. (PR #1572)
     * FreeDV Reporter: fix stations that connected or transmitted within the same second sorting in a random order. (PR #1573)
     * Fix a data race on whether FreeDV is running, between the window and the thread that starts and stops it. (PR #1575)
+    * Fix data races between the window, audio and processing threads on squelch, resync count, sound card count, PortAudio counters, debug switches, recording state and EQ filter re-apply flags. (PR #1578)
+    * Fix data races on the transmit mode selection when changed while FreeDV is running, and on the queue holding received text characters. (PR #1578)
+    * Linux: Fix Options frequency list scrollbar on first open. (PR #1579)
+    * Fix data races between the window and the threads that start/stop FreeDV and process audio on the frequency offset display, the list of active reporters and the audio device latency check at the end of TX. (PR #1583)
+    * macOS: fix a possible crash when an audio device that failed to start, or was already stopped, is stopped again. (PR #1583)
+    * Windows: fix audio devices closing their timing handles while the audio processing thread could still be waiting on them, and undoing the 1 ms timer resolution request twice. (PR #1583)
 2. Build system:
     * Windows versions are now built with llvm-mingw 20260908 (PR #1489)
     * Ccache support extended to third party dependencies. (PR #1498, #1505))
@@ -969,6 +975,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build bundled wxWidgets and LibreSSL optimized and without debugging information, and only use ccache in CI for the builds that compile them. (PR #1561)
     * Add unit tests for non-GUI code. (PR #1542)
     * Add tests of whole transmissions through the TX/RX threads without sound cards. (PR #1567)
+    * Resolve build failure on OpenSUSE Tumbleweed. (PR #1577)
 3. Documentation:
     * Update documentation to reflect new repo URL. (PR #1569)
 4. Other:

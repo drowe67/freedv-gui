@@ -57,6 +57,7 @@ FreeDVInterface::FreeDVInterface() :
     lpcnetEncState_(nullptr),
     radeTxStep_(nullptr),
     sync_(0),
+    rxFreqOffset_(0.0f),
     radeTextPtr_(nullptr),
     reliableTextFifo_(RELIABLE_TEXT_FIFO_SIZE + 1)
 {
@@ -277,7 +278,9 @@ float FreeDVInterface::getSNREstimate()
 
 float FreeDVInterface::getCurrentRxModemOffset()
 {
-    return rade_freq_offset(rade_);
+    // Read from the GUI thread, so use the copy the RX thread publishes
+    // rather than reading the modem state it's updating.
+    return rxFreqOffset_.load(std::memory_order_acquire);
 }
 
 IPipelineStep* FreeDVInterface::createTransmitPipeline(
@@ -313,6 +316,11 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         (*step->getRxStateFn()()).store(finalSync, std::memory_order_release);
         state->sync_.store(finalSync, std::memory_order_release);
         state->radeSnr_.store(step->getSnr(), std::memory_order_release);
+
+        // Verified that rade_freq_offset() is a simple getter as of 2026-10-22.
+        FREEDV_BEGIN_VERIFIED_SAFE
+        state->rxFreqOffset_.store(rade_freq_offset(state->rade_), std::memory_order_release);
+        FREEDV_END_VERIFIED_SAFE
     }, getFreqOffsetFn);
     rxStep->setStateObj(this);
     rxStep->setRxStateFn(getRxStateFn);

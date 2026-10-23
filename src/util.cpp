@@ -120,7 +120,7 @@ bool MainFrame::isReceiveOnly()
 {
     return 
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
-        g_nSoundCards <= 1;
+        g_nSoundCards.load(std::memory_order_acquire) <= 1;
 }
 
 //----------------------------------------------------------------
