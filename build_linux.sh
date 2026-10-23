@@ -41,7 +41,9 @@ fi
 
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR
-if [ -d .git ]; then
+# Not in CI, which builds the commit it checked out (for a pull request,
+# a merge that isn't on any branch to pull).
+if [ -d .git ] && [ -z "${CI:-}" ]; then
      git pull
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
