@@ -271,6 +271,7 @@ class Station:
 
         self._server = server
         self._lock = threading.Lock()
+        self._arrived = threading.Condition(self._lock)
         self._events = []
         self._users = {}
 
@@ -328,6 +329,7 @@ class Station:
                     self._users[update["sid"]] = update["callsign"]
                 elif name == "remove_connection":
                     self._users.pop(update["sid"], None)
+            self._arrived.notify_all()
 
     # -- What this station reports ----------------------------------------
 
@@ -365,6 +367,8 @@ class Station:
         self._client = None
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(5)
+        if not self._thread.is_alive():
+            self._loop.close()
         if self in self._server._stations:
             self._server._stations.remove(self)
 
@@ -374,10 +378,13 @@ class Station:
         """Returns the data of the updates received so far, oldest first,
         optionally only those of one kind and/or about one station."""
         with self._lock:
-            return [
-                data for event, data in self._events
-                if (name is None or event == name) and
-                   (callsign is None or (isinstance(data, dict) and self._callsign_of(data) == callsign))]
+            return self._events_of(name, callsign)
+
+    def _events_of(self, name, callsign):
+        return [
+            data for event, data in self._events
+            if (name is None or event == name) and
+               (callsign is None or (isinstance(data, dict) and self._callsign_of(data) == callsign))]
 
     def _callsign_of(self, data):
         return data.get("callsign") or self._users.get(data.get("sid"))
@@ -401,12 +408,14 @@ class Station:
         station and/or satisfying where(data)) and returns the latest one's
         data."""
         deadline = time.monotonic() + timeout
-        while True:
-            matches = [data for data in self.events(name, callsign) if where is None or where(data)]
-            if matches:
-                return matches[-1]
-            if time.monotonic() > deadline:
-                raise ReporterError(
-                    "Timed out waiting for '%s'%s from the FreeDV Reporter server"
-                    % (name, " about %s" % callsign if callsign else ""))
-            time.sleep(0.05)
+        with self._arrived:
+            while True:
+                matches = [data for data in self._events_of(name, callsign) if where is None or where(data)]
+                if matches:
+                    return matches[-1]
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ReporterError(
+                        "Timed out waiting for '%s'%s from the FreeDV Reporter server"
+                        % (name, " about %s" % callsign if callsign else ""))
+                self._arrived.wait(remaining)

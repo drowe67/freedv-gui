@@ -23,10 +23,12 @@ def main():
     discord.Embed = object
     sys.modules["discord"] = discord
 
-    # The server always listens on aiohttp's default port.
+    # The server always listens on aiohttp's default port. And when stopped,
+    # it needn't wait (by default, up to a minute) for whoever's connected to
+    # go first: stopping is meant to be as if it had gone away.
     from aiohttp import web
     run_app = web.run_app
-    web.run_app = lambda app, **kwargs: run_app(app, **dict(kwargs, port=port))
+    web.run_app = lambda app, **kwargs: run_app(app, **dict(kwargs, port=port, shutdown_timeout=0.1))
 
     sys.path.insert(0, source_dir)
     sys.argv = [source_dir + "/freedv-reporter.py"]
