@@ -73,7 +73,7 @@ bool HamlibRigController::RigCompare_(const struct rig_caps *rig1, const struct 
 }
 
 HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn)
-    : ThreadedObject("hamlib", nullptr, Priority::Responsive)
+    : ThreadedObject("hamlib")
     , rigName_(std::move(rigName))
     , serialPort_(std::move(serialPort))
     , serialRate_(serialRate)
@@ -102,7 +102,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
 }
 
 HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly, bool forceRtsOn, bool forceDtrOn)
-    : ThreadedObject("hamlib", nullptr, Priority::Responsive)
+    : ThreadedObject("hamlib")
     , rigName_(RigIndexToName(rigIndex))
     , serialPort_(std::move(serialPort))
     , serialRate_(serialRate)
