@@ -2436,6 +2436,12 @@ def test_receive_reports():
         listener.bind(("127.0.0.1", 0))
         listener.settimeout(20)
         csv_log = os.path.join(folder, "heard.csv")
+        # The log already holds the very callsign and frequency about to be
+        # heard, so the report takes the place of that entry from the log
+        # instead of merely being added to the front of the list.
+        with open(csv_log, "w") as f:
+            f.write("date,time,callsign,mode,frequency_hz,snr_db\n")
+            f.write("2026-10-23,12:00:00,%s,RADEV1,14236000,10\n" % CALLSIGN)
         extra = dict(Rig__HalfDuplex=False, Reporting__Enable=True, Reporting__Callsign=CALLSIGN,
                      Reporting__GridSquare="DM12", Reporting__Frequency=14236000, Reporting__FrequencyAsKHz=True,
                      Reporting__ManualFrequencyReporting=True, Reporting__FreeDV__Enable=False,
@@ -2449,7 +2455,7 @@ def test_receive_reports():
                 app.click("main.btnPTT")
                 wait_for_transmit(app)
                 app.wait_until(lambda: app.state()["sync"] == 1, timeout=20, description="FreeDV to sync")
-                time.sleep(3)
+                time.sleep(8)
                 app.click("main.btnPTT")
                 wait_for_transmit(app, False)
                 app.wait_until(lambda: app.get("main.cboLastReportedCallsigns")["value"] == CALLSIGN, timeout=15,
@@ -2458,7 +2464,7 @@ def test_receive_reports():
                 # The list of stations heard, in kHz and UTC as asked.
                 items = app.get("main.listLastReportedCallsigns")["items"]
                 check_equal([(item["columns"][0], item["columns"][1].replace(",", "")) for item in items],
-                            [(CALLSIGN, "14236.0")], "Stations heard")
+                            [(CALLSIGN, "14236.0")] * 2, "Stations heard")
                 when = re.match(r"^(\d{4}-\d\d-\d\d)\D(\d\d:\d\d:\d\d)$", items[0]["columns"][2])
                 check(when, "Time heard is %r" % items[0]["columns"][2])
                 heard_at = datetime.datetime.strptime(" ".join(when.groups()), "%Y-%m-%d %H:%M:%S")
@@ -2486,8 +2492,8 @@ def test_receive_reports():
                 with freedvtest.start(config=app.config_path) as again:
                     again.wait_for_window("main")
                     items = again.get("main.listLastReportedCallsigns")["items"]
-                    check_equal([(item["columns"][0], item["columns"][1].replace(",", "")) for item in items],
-                                [(CALLSIGN, "14236.0")], "Stations heard the next time")
+                    check([(item["columns"][0], item["columns"][1].replace(",", "")) for item in items][:2]
+                          == [(CALLSIGN, "14236.0")] * 2, "Stations heard the next time: %r" % items)
                     check_equal(again.quit(), 0, "FreeDV's exit code the next time")
     finally:
         listener.close()
