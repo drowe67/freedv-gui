@@ -493,21 +493,20 @@ def test_column_filters():
                 # The menu offers the comparisons; nothing is ticked, and
                 # there's no filter to clear, at first.
                 items = app.column_context_menu(LIST, CALLSIGN)
-                labels = [entry["label"] for entry in items]
-                check(all(label in labels for label in [
-                    ">= (Greater or equal to)", ">  (Greater than)", "=  (Equal to)", "!= (Not equal to)",
-                    "<  (Less than)", "<= (Less or equal to)", "Clear Column Filter"]),
-                      "The filter comparisons are offered: %r" % labels)
-                check(all(entry["checked"] is False for entry in items), "Nothing is ticked at first")
-                check([entry["enabled"] for entry in items if entry["label"] == "Clear Column Filter"] == [False],
-                      "Clear Column Filter is offered before there is a filter")
+                check_equal([entry["label"] for entry in items],
+                            [">= (Greater or equal to)", ">  (Greater than)", "=  (Equal to)", "!= (Not equal to)",
+                             "<  (Less than)", "<= (Less or equal to)", "Clear Column Filter"], "Filter menu")
+                check_equal([entry["label"] for entry in items if entry["checked"]], [], "Filters in use")
+                check_equal(items[-1]["enabled"], False, "Clear Column Filter enabled")
 
                 # Filtering by callsign leaves only the matching ones.
                 set_filter(app, CALLSIGN, "=  (Equal to)", "K1ABC")
                 wait_for_callsigns(app, ["K1ABC"])
                 check("Callsign *" in column_titles(app), "The filtered column isn't marked: %r" % column_titles(app))
-                check(any(entry["label"] == "=  (Equal to)" and entry["checked"]
-                          for entry in app.column_context_menu(LIST, CALLSIGN)), "The active comparison is ticked")
+                items = app.column_context_menu(LIST, CALLSIGN)
+                check_equal([entry["label"] for entry in items if entry["checked"]], ["=  (Equal to)"],
+                            "Filters in use")
+                check_equal(items[-1]["enabled"], True, "Clear Column Filter enabled")
 
                 # The filter value can be changed from the menu.
                 set_filter(app, CALLSIGN, "=  (Equal to)", "VK5DGR", existing="K1ABC")
@@ -538,8 +537,32 @@ def test_column_filters():
                 wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
                 set_filter(app, DISTANCE, "<  (Less than)", "10000", existing="4000")
                 wait_for_callsigns(app, ["K1ABC", "W6XYZ"])
+
+                # A filter on another column at the same time narrows it
+                # further.
+                set_filter(app, CALLSIGN, "!= (Not equal to)", "W6XYZ")
+                wait_for_callsigns(app, ["K1ABC"])
+                check("km *" in column_titles(app) and "Callsign *" in column_titles(app),
+                      "The filtered columns aren't both marked: %r" % column_titles(app))
+
+                # Cancelling leaves things as they were.
+                app.column_context_menu(LIST, CALLSIGN, choose="=  (Equal to)")
+                app.wait_for_window("@Set Column Filter")
+                app.set_value("@Set Column Filter/wxTextCtrl", "VK5DGR")
+                app.click("@Set Column Filter/Cancel")
+                app.wait_for_window_closed("@Set Column Filter")
+                app.activate("reporter")
+                wait_for_callsigns(app, ["K1ABC"])
+                check_equal([entry["label"] for entry in app.column_context_menu(LIST, CALLSIGN) if entry["checked"]],
+                            ["!= (Not equal to)"], "Filters in use after cancelling")
+
+                # Clearing one leaves the other.
                 app.column_context_menu(LIST, DISTANCE, choose="Clear Column Filter")
+                wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
+                app.column_context_menu(LIST, CALLSIGN, choose="Clear Column Filter")
                 wait_for_callsigns(app, everyone)
+                check("km *" not in column_titles(app) and "Callsign *" not in column_titles(app),
+                      "Columns are still marked as filtered: %r" % column_titles(app))
 
                 # The filter survives closing and reopening the window.
                 set_filter(app, CALLSIGN, "=  (Equal to)", "K1ABC", existing="")
@@ -853,22 +876,24 @@ def test_status_message():
                 check_equal([entry["label"] for entry in items], ["Edit message", "Delete message", "Add new message"],
                             "Saved message's menu")
 
-            saved_message_menu(0, "Edit message")
-            app.wait_for_window("@Edit Message")
-            check_equal(app.get("@Edit Message/wxTextCtrl")["value"], "Back in 5 minutes", "Message being edited")
-            app.set_value("@Edit Message/wxTextCtrl", "Back in 10 minutes")
-            app.click("@Edit Message/OK")
-            app.wait_for_window_closed("@Edit Message")
-            app.activate("reporter")
-            check_equal(saved(app), ["Back in 10 minutes", "QRV 20 m"], "Saved messages after editing one")
-
             saved_message_menu(0, "Add new message")
             app.wait_for_window("@Add Message")
             app.set_value("@Add Message/wxTextCtrl", "73")
             app.click("@Add Message/OK")
             app.wait_for_window_closed("@Add Message")
             app.activate("reporter")
-            check_equal(saved(app), ["73", "Back in 10 minutes", "QRV 20 m"], "Saved messages after adding one")
+            check_equal(saved(app), ["73", "Back in 5 minutes", "QRV 20 m"], "Saved messages after adding one")
+
+            # The one added moved the others down; editing goes by where
+            # they are now.
+            saved_message_menu(1, "Edit message")
+            app.wait_for_window("@Edit Message")
+            check_equal(app.get("@Edit Message/wxTextCtrl")["value"], "Back in 5 minutes", "Message being edited")
+            app.set_value("@Edit Message/wxTextCtrl", "Back in 10 minutes")
+            app.click("@Edit Message/OK")
+            app.wait_for_window_closed("@Edit Message")
+            app.activate("reporter")
+            check_equal(saved(app), ["73", "Back in 10 minutes", "QRV 20 m"], "Saved messages after editing one")
 
             # Editing the message that's in the box changes it there too.
             saved_message_menu(2, "Edit message")

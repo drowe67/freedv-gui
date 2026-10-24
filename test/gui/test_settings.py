@@ -221,41 +221,50 @@ def test_buttons():
 
 def test_audio():
     """The RX Audio and TX Audio tabs."""
+    transmit_controls = ["lcSoundCard2InDevice", "tcSoundCard2InDevice", "btnSoundCard2InTest",
+                         "lcSoundCard2OutDevice", "tcSoundCard2OutDevice", "btnSoundCard2OutTest"]
+
+    def first_settings(app):
+        """Choosing receive devices only, from where FreeDV starts out."""
+        open_settings(app, "RX Audio")
+
+        # Every device is offered, along with "none", which is what's
+        # selected to begin with.
+        inputs = device_labels(app, "lcSoundCard1InDevice")
+        outputs = device_labels(app, "lcSoundCard1OutDevice")
+        check(VirtualAudioDevices.input_label(RADIO_RX) in inputs, "The radio's input isn't listed: %r" % inputs)
+        check(SPEAKER in outputs, "The speaker isn't listed: %r" % outputs)
+        check_equal((inputs[-1], outputs[-1]), ("none", "none"), "Last devices listed")
+        listed = [item for item in app.get(name("lcSoundCard1OutDevice"))["items"] if item["label"] == SPEAKER]
+        check_equal(listed[0]["columns"][2], "48000 Hz", "Speaker's sample rate as listed")
+        check_values(app, {"tcSoundCard1InDevice": "none", "tcSoundCard1OutDevice": "none"})
+
+        set_value(app, "lcSoundCard1InDevice", VirtualAudioDevices.input_label(RADIO_RX))
+        set_value(app, "lcSoundCard1OutDevice", SPEAKER)
+        check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
+                           "tcSoundCard1OutDevice": SPEAKER})
+
+        # Receive only until told otherwise.
+        go_to_tab(app, "TX Audio")
+        check_values(app, {"ckTxReceiveOnly": True})
+        check_enabled(app, transmit_controls, False)
+        press_ok(app)
+        check_saved(app, {
+            "/Audio/soundCard1InDeviceName": RADIO_RX_IN, "/Audio/soundCard1InSampleRate": 48000,
+            "/Audio/soundCard1OutDeviceName": SPEAKER, "/Audio/soundCard1OutSampleRate": 48000,
+            "/Audio/soundCard2InDeviceName": "none", "/Audio/soundCard2OutDeviceName": "none",
+        })
+
     with audio_devices():
-        # The transmit devices start out explicitly "none" (as FreeDV's own
-        # defaults are saved), not merely unset.
+        # Transmit devices that aren't set at all start out the same as
+        # ones saved as "none".
+        with freedvtest.start(settings={}) as app:
+            first_settings(app)
+            quit_and_check_log(app)
+
         with freedvtest.start(settings={"/Audio/soundCard2InDeviceName": "none",
                                         "/Audio/soundCard2OutDeviceName": "none"}) as app:
-            open_settings(app, "RX Audio")
-
-            # Every device is offered, along with "none", which is what's
-            # selected to begin with.
-            inputs = device_labels(app, "lcSoundCard1InDevice")
-            outputs = device_labels(app, "lcSoundCard1OutDevice")
-            check(VirtualAudioDevices.input_label(RADIO_RX) in inputs, "The radio's input isn't listed: %r" % inputs)
-            check(SPEAKER in outputs, "The speaker isn't listed: %r" % outputs)
-            check_equal((inputs[-1], outputs[-1]), ("none", "none"), "Last devices listed")
-            listed = [item for item in app.get(name("lcSoundCard1OutDevice"))["items"] if item["label"] == SPEAKER]
-            check_equal(listed[0]["columns"][2], "48000 Hz", "Speaker's sample rate as listed")
-            check_values(app, {"tcSoundCard1InDevice": "none", "tcSoundCard1OutDevice": "none"})
-
-            set_value(app, "lcSoundCard1InDevice", VirtualAudioDevices.input_label(RADIO_RX))
-            set_value(app, "lcSoundCard1OutDevice", SPEAKER)
-            check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
-                               "tcSoundCard1OutDevice": SPEAKER})
-
-            # Receive only until told otherwise.
-            go_to_tab(app, "TX Audio")
-            transmit_controls = ["lcSoundCard2InDevice", "tcSoundCard2InDevice", "btnSoundCard2InTest",
-                                 "lcSoundCard2OutDevice", "tcSoundCard2OutDevice", "btnSoundCard2OutTest"]
-            check_values(app, {"ckTxReceiveOnly": True})
-            check_enabled(app, transmit_controls, False)
-            press_ok(app)
-            check_saved(app, {
-                "/Audio/soundCard1InDeviceName": RADIO_RX_IN, "/Audio/soundCard1InSampleRate": 48000,
-                "/Audio/soundCard1OutDeviceName": SPEAKER, "/Audio/soundCard1OutSampleRate": 48000,
-                "/Audio/soundCard2InDeviceName": "none", "/Audio/soundCard2OutDeviceName": "none",
-            })
+            first_settings(app)
 
             # With transmit devices as well, the speaker becomes the second
             # sound card's output and the radio the first's.
@@ -303,6 +312,11 @@ def test_audio():
                 app.click(name("btnRefreshTxAudio"))
                 if not freedvtest.audio.FIXED_DEVICES:
                     check(not new_device_unlisted(), "A new device wasn't listed after refreshing")
+                    # Refreshing one tab's lists refreshes the other's too.
+                    go_to_tab(app, "RX Audio")
+                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
+                          "A new device wasn't listed on the other tab after refreshing")
+                    go_to_tab(app, "TX Audio")
                     new_device.close()
                     app.click(name("btnRefreshTxAudio"))
                     check(new_device_unlisted(), "An unplugged device was still listed after refreshing")
