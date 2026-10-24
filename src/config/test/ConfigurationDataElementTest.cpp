@@ -249,6 +249,76 @@ bool intMapProcessorRoundTrip()
             { wxString::FromUTF8("a"), 1 }, { wxString::FromUTF8("b"), 2 } };
 }
 
+// The types that the rest of the configuration code reads with a plain
+// assignment all convert through the load processor (or don't, where there
+// isn't one).
+bool everyTypeConvertsImplicitly()
+{
+    ConfigurationDataElement<float> frequency("/Test/Frequency", 8.0f);
+    frequency = 8000.0f;                    // no save processor: stored as given
+    frequency.setLoadProcessor([](float val) { return val / 1000.0f; });
+    float converted = frequency;   // reads the stored 8000 through the processor
+    if (frequency.getWithoutProcessing() != 8000.0f || converted != 8.0f) return false;
+
+    ConfigurationDataElement<std::string> name("/Test/Name", "abc");
+    std::string given = name;
+    name.setLoadProcessor([](std::string val) { return val + "!"; });
+    std::string processed = name;
+    if (given != "abc" || processed != "abc!" || name.get() != "abc!") return false;
+
+    ConfigurationDataElement<std::vector<std::string>> list("/Test/List", {});
+    list = std::vector<std::string> { "x" };  // no save processor: stored as given
+    std::vector<std::string> items = list;
+    list.setLoadProcessor([](std::vector<std::string> val) {
+        std::vector<std::string> extended = val;
+        extended.push_back("more");
+        return extended;
+    });
+    std::vector<std::string> extended = list;
+    if (items != std::vector<std::string> { "x" } ||
+        extended != std::vector<std::string> { "x", "more" }) return false;
+
+    // The kinds of list and map that configuration settings really hold,
+    // converted the plain way and through a load processor.
+    ConfigurationDataElement<std::vector<wxString>> words("/Test/Words", {});
+    words = std::vector<wxString> { wxString::FromUTF8("a") };
+    std::vector<wxString> plainWords = words;
+    words.setLoadProcessor([](std::vector<wxString> val) {
+        val.push_back(wxString::FromUTF8("b"));
+        return val;
+    });
+    std::vector<wxString> saidWords = words;
+    if (plainWords != std::vector<wxString> { wxString::FromUTF8("a") } ||
+        saidWords != std::vector<wxString> { wxString::FromUTF8("a"), wxString::FromUTF8("b") }) return false;
+
+    ConfigurationDataElement<std::vector<bool>> flags("/Test/Flags", {});
+    flags = std::vector<bool> { true };
+    std::vector<bool> plainFlags = flags;
+    flags.setLoadProcessor([](std::vector<bool> val) { val.push_back(false); return val; });
+    std::vector<bool> addedFlags = flags;
+    if (plainFlags != std::vector<bool> { true } ||
+        addedFlags != std::vector<bool> { true, false }) return false;
+
+    ConfigurationDataElement<std::vector<int>> numbers("/Test/Numbers", {});
+    numbers = std::vector<int> { 3 };
+    std::vector<int> plainNumbers = numbers;
+    numbers.setLoadProcessor([](std::vector<int> val) { val.push_back(4); return val; });
+    std::vector<int> extraNumbers = numbers;
+    if (plainNumbers != std::vector<int> { 3 } ||
+        extraNumbers != std::vector<int> { 3, 4 }) return false;
+
+    ConfigurationDataElement<std::map<wxString, int>> bands("/Test/BandMap", {});
+    bands = std::map<wxString, int> { { wxString::FromUTF8("40m"), 7 } };
+    std::map<wxString, int> plainBands = bands;
+    bands.setLoadProcessor([](std::map<wxString, int> val) {
+        for (auto& item : val) item.second += 1;
+        return val;
+    });
+    std::map<wxString, int> tunedBands = bands;
+    return plainBands == std::map<wxString, int> { { wxString::FromUTF8("40m"), 7 } } &&
+        tunedBands == std::map<wxString, int> { { wxString::FromUTF8("40m"), 8 } };
+}
+
 }
 
 int main()
@@ -271,5 +341,6 @@ int main()
     executeTestCase("intListProcessorRoundTrip", intListProcessorRoundTrip);
     executeTestCase("stringListProcessorRoundTrip", stringListProcessorRoundTrip);
     executeTestCase("intMapProcessorRoundTrip", intMapProcessorRoundTrip);
+    executeTestCase("everyTypeConvertsImplicitly", everyTypeConvertsImplicitly);
     return testResult();
 }
