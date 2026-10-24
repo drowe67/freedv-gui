@@ -238,6 +238,21 @@ def test_ptt_key():
             app.key("main.notebook", "Space")
             wait_for_transmit(app)
             check_equal(app.get("main.btnPTT")["value"], True, "PTT button pressed")
+
+            # A key held down and repeating does nothing more until it's let
+            # go and pressed again for real.
+            app.key("main.notebook", "Space", hold=True)
+            wait_for_transmit(app, False)
+            check_equal(app.get("main.btnPTT")["value"], False, "PTT button pressed after the key pressed again")
+            app.key("main.notebook", "Space", hold=True)  # as a held key repeats
+            time.sleep(0.5)
+            check_equal(transmitting(app), False, "Transmitting after the held PTT key repeated")
+            app.key("main.notebook", "Space", release=True)
+            time.sleep(0.5)
+            check_equal(transmitting(app), False, "Transmitting after letting go of the held key")
+            app.key("main.notebook", "Space")
+            wait_for_transmit(app)
+            check_equal(app.get("main.btnPTT")["value"], True, "PTT button pressed again")
             # Any other key is just a key.
             app.key("main.notebook", "F5")
             time.sleep(0.5)
@@ -555,6 +570,26 @@ def test_analog():
             stop_modem(app)
             quit_and_check_log(app)
 
+        # The FreeDV Reporter visibility button, including while in analog
+        # mode, and resetting the statistics before anything is running.
+        reporting = dict(Reporting__Enable=True, Reporting__Callsign=CALLSIGN, Reporting__GridSquare="DM12",
+                         Reporting__FreeDV__Enable=True)
+        with freedvtest.start(settings=settings(Debug__showDecodeStats=True, **reporting)) as app:
+            app.wait_for_window("main")
+            app.click("main.btnBerReset")
+            start_modem(app)
+            before = label(app, "main.btnReporterHidden")
+            app.click("main.btnReporterHidden")
+            after = label(app, "main.btnReporterHidden")
+            check(before != after, "The Reporter visibility button's label didn't change (%r then %r)" % (before, after))
+            app.click("main.btnAnalog")
+            app.click("main.btnReporterHidden")
+            check(label(app, "main.btnReporterHidden") != after,
+                  "The Reporter visibility button's label didn't change in analog mode")
+            app.click("main.btnAnalog")
+            stop_modem(app)
+            quit_and_check_log(app)
+
 
 def test_play_file():
     """Tools > Play File - From Radio, which stands a file in for the radio."""
@@ -596,6 +631,13 @@ def test_play_file():
                 app.menu(start_item)
                 check_equal(app.get("main")["status"], "Playing file %s as radio input" % tone, "Status while playing")
                 check_audible(SPEAKER_MONITOR, "The file isn't being played")
+
+                # Starting a transmission cuts the file short.
+                app.click("main.btnPTT")
+                wait_for_transmit(app)
+                check_equal(app.get("main")["status"], "", "Status after a transmission cut the file short")
+                app.click("main.btnPTT")
+                wait_for_transmit(app, False)
 
                 # ...which stops by itself when it runs out,
                 app.wait_until(lambda: app.get("main")["status"] == "", timeout=15, description="the file to finish")
@@ -1048,6 +1090,25 @@ def test_recording():
                       "Recordings are %r and %r" % (raw, decoded))
                 check_equal(app.get("main.btnRecord")["value"], False, "Record button pressed after stopping")
 
+                # Transmitting while recording takes the recording along.
+                time.sleep(1.1)
+                recordings_before = recordings()
+                app.click("main.btnRecord")
+                app.wait_for_window("beginRecording")
+                app.click("beginRecording.rawRecording")
+                app.click("beginRecording.btnStart")
+                app.wait_for_window_closed("beginRecording")
+                time.sleep(1)
+                app.click("main.btnPTT")
+                wait_for_transmit(app)
+                time.sleep(1)
+                app.click("main.btnPTT")
+                wait_for_transmit(app, False)
+                time.sleep(1)
+                app.click("main.btnRecord")
+                check_equal(app.get("main.btnRecord")["value"], False, "Record button pressed after stopping")
+                check(len(recordings()[0]) > len(recordings_before[0]), "Nothing was recorded while transmitting")
+
                 # Started while transmitting, what's recorded is what's sent.
                 time.sleep(1.1)
                 app.click("main.btnPTT")
@@ -1062,7 +1123,7 @@ def test_recording():
                 app.click("main.btnRecord")
                 app.click("main.btnPTT")
                 wait_for_transmit(app, False)
-                check_equal(len(recordings()[0]), 3, "Off air recordings after recording while transmitting")
+                check_equal(len(recordings()[0]), 4, "Off air recordings after recording while transmitting")
 
                 # Recording stops with FreeDV.
                 app.click("main.btnRecord")
@@ -1981,6 +2042,21 @@ def test_time_out_timer():
             stop_modem(app)
             quit_and_check_log(app)
 
+        # The PTT key while the warning window has the focus ends the
+        # transmission in latch mode.
+        with freedvtest.start(settings=settings(Rig__TotTimerSecs=18)) as app:
+            app.wait_for_window("main")
+            app.activate("main")
+            start_modem(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            app.wait_for_window("totWarning", timeout=10)
+            app.key("main.notebook", "Space")
+            wait_for_transmit(app, False)
+            check(not app.window_exists("totWarning"), "The time-out warning is still there")
+            stop_modem(app)
+            quit_and_check_log(app)
+
         # It can be turned off.
         with freedvtest.start(settings=settings(Rig__TotTimerSecs=5, Rig__TotTimerEnabled=False)) as app:
             app.wait_for_window("main")
@@ -1990,6 +2066,20 @@ def test_time_out_timer():
             time.sleep(8)
             check_equal(transmitting(app), True, "Transmitting past a time-out that's turned off")
             check(not app.window_exists("totWarning"), "The time-out warning appeared with the timer turned off")
+            app.click("main.btnPTT")
+            wait_for_transmit(app, False)
+            stop_modem(app)
+            quit_and_check_log(app)
+
+        # With no length given, there's no time-out to arm.
+        with freedvtest.start(settings=settings(Rig__TotTimerEnabled=True, Rig__TotTimerSecs=0)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            time.sleep(4)
+            check_equal(transmitting(app), True, "Transmitting past a time-out of no length")
+            check(not app.window_exists("totWarning"), "The time-out warning appeared with no length to count down")
             app.click("main.btnPTT")
             wait_for_transmit(app, False)
             stop_modem(app)
@@ -2060,6 +2150,18 @@ def test_ptt_key_time_out():
             stop_modem(app)
             quit_and_check_log(app)
 
+        # Clicking the PTT button, with the key in momentary mode, still
+        # runs the time-out out to the end.
+        with freedvtest.start(settings=settings(Rig__PttMomentaryMode=True, Rig__TotTimerSecs=8)) as app:
+            app.wait_for_window("main")
+            start_modem(app)
+            app.click("main.btnPTT")
+            wait_for_transmit(app)
+            wait_for_transmit(app, False, timeout=25)
+            check_equal(app.get("main.btnPTT")["value"], False, "PTT button pressed after timing out")
+            stop_modem(app)
+            quit_and_check_log(app)
+
         # Letting go of the key while TX is still starting must not leave the
         # rig keyed. A delay before TX begins makes that window easy to hit.
         with freedvtest.start(settings=settings(Rig__PttMomentaryMode=True, Rig__PttKeyCode=WXK_F5,
@@ -2094,7 +2196,8 @@ def test_menus():
         exported = os.path.join(folder, "exported.conf")
         other = os.path.join(folder, "other.conf")
         empty = os.path.join(folder, "empty.conf")
-        freedvtest.write_config(other, {"/Reporting/Callsign": "K1ABC", "/Reporting/GridSquare": "FN42"})
+        freedvtest.write_config(other, {"/Reporting/Callsign": "K1ABC", "/Reporting/GridSquare": "FN42",
+                                        "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False})
         open(empty, "w").close()
 
         start = {"/Reporting/Callsign": CALLSIGN, "/Reporting/GridSquare": "DM12",
@@ -2147,6 +2250,41 @@ def test_menus():
             check_equal(app.message_boxes(), [], "Messages displayed")
             check_equal(callsign(), "K1ABC", "Callsign after using another configuration")
             check("(other.conf)" in app.get("main")["label"], "Window title is %r" % app.get("main")["label"])
+            # (Restoring defaults below deletes the file that's in use, so
+            # this checks here that using one left the original alone.)
+            check_equal(freedvtest.read_config(other).get("/Reporting/Callsign"), "K1ABC",
+                        "Callsign in the file that was used")
+
+            # Settings > Restore defaults, which also closes the reporter
+            # window that startup set up.
+            app.answer_next_message_box("yes")
+            app.menu("Tools/Restore defaults")
+            app.wait_until(lambda: callsign() == "", timeout=10,
+                           description="the configuration to be reset")
+            app.wait_until(lambda: any("successfully deleted" in b["message"] for b in app.message_boxes()),
+                           timeout=10, description="FreeDV to say the restore is done")
+            app.message_boxes(clear=True)
+            # The PTT key with no reporter window around at all.
+            app.key("main.notebook", "Space")
+            time.sleep(0.5)
+
+            # Restoring defaults again, with no reporter window to close.
+            app.answer_next_message_box("yes")
+            app.menu("Tools/Restore defaults")
+            app.wait_until(lambda: any("successfully deleted" in b["message"] for b in app.message_boxes()),
+                           timeout=10, description="FreeDV to say the second restore is done")
+            app.message_boxes(clear=True)
+            # Restoring defaults deleted the configuration file that was in
+            # use, so getting the reporter window back needs a new one.
+            another = os.path.join(folder, "another.conf")
+            freedvtest.write_config(another, {"/Reporting/Callsign": "K1ABC", "/Reporting/GridSquare": "FN42",
+                                              "/Reporting/FreeDV/Hostname": NOWHERE, "/Reporting/FreeDV/UseTls": False})
+            app.choose_next_path(another)
+            app.menu("Settings/Use Configuration...")
+            app.wait_until(lambda: callsign() == "K1ABC", timeout=10, description="the new configuration to be used")
+            app.menu("Tools/FreeDV Reporter")
+            app.wait_for_window("reporter")
+            check_equal(app.message_boxes(), [], "Messages displayed with the reporter window made afresh")
 
             # Settings > Load Default Configuration, which asks first.
             app.answer_next_message_box("no")
@@ -2168,7 +2306,7 @@ def test_menus():
             check_equal(app.quit(), 0, "FreeDV's exit code")
 
         # What was in use before is left as it was.
-        check_equal(freedvtest.read_config(other).get("/Reporting/Callsign"), "K1ABC", "Callsign in other.conf")
+        check_equal(freedvtest.read_config(another).get("/Reporting/Callsign"), "K1ABC", "Callsign in another.conf")
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 

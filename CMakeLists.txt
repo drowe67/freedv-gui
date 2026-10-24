@@ -905,7 +905,7 @@ foreach(scenario transmit ptt_key ptt_key_elsewhere tx_level receive analog play
 endforeach(scenario)
 
 # The reporter scenario needs what the FreeDV Reporter tests do.
-foreach(scenario manual frequency_in_khz callsign_list reporter no_udp)
+foreach(scenario manual frequency_in_khz callsign_list reporter selected_khz no_udp)
     add_test(NAME gui_log_qso_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_log_qso.py ${scenario})
     set_tests_properties(gui_log_qso_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
