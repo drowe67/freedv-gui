@@ -222,7 +222,10 @@ def test_buttons():
 def test_audio():
     """The RX Audio and TX Audio tabs."""
     with audio_devices():
-        with freedvtest.start(settings={}) as app:
+        # The transmit devices start out explicitly "none" (as FreeDV's own
+        # defaults are saved), not merely unset.
+        with freedvtest.start(settings={"/Audio/soundCard2InDeviceName": "none",
+                                        "/Audio/soundCard2OutDeviceName": "none"}) as app:
             open_settings(app, "RX Audio")
 
             # Every device is offered, along with "none", which is what's
@@ -288,31 +291,32 @@ def test_audio():
                                "tcSoundCard2OutDevice": RADIO_TX})
 
             # ...including after the lists are refreshed, which is how a
-            # device that's just been plugged in gets to be listed. (Only the
-            # refreshing on macOS and Windows, where a device can't be plugged
-            # in here.)
+            # device that's just been plugged in gets to be listed, and how a
+            # removal of a device gets noticed too. (Only the refreshing on
+            # macOS and Windows, where a device can't be plugged in here.)
+            def new_device_unlisted():
+                return "FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice")
             with contextlib.ExitStack() as new_device:
                 if not freedvtest.audio.FIXED_DEVICES:
                     new_device.enter_context(VirtualAudioDevices("FreeDVGuiTest_New_Device"))
-                    check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard2OutDevice"),
-                          "A new device was listed without refreshing")
+                    check(new_device_unlisted(), "A new device was listed without refreshing")
                 app.click(name("btnRefreshTxAudio"))
                 if not freedvtest.audio.FIXED_DEVICES:
-                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard2OutDevice"),
-                          "A new device wasn't listed after refreshing")
+                    check(not new_device_unlisted(), "A new device wasn't listed after refreshing")
+                    new_device.close()
+                    app.click(name("btnRefreshTxAudio"))
+                    check(new_device_unlisted(), "An unplugged device was still listed after refreshing")
                 check_values(app, {"tcSoundCard2InDevice": VirtualAudioDevices.input_label(MICROPHONE),
                                    "tcSoundCard2OutDevice": RADIO_TX})
                 go_to_tab(app, "RX Audio")
                 if not freedvtest.audio.FIXED_DEVICES:
-                    check("FreeDVGuiTest_New_Device" in device_labels(app, "lcSoundCard1OutDevice"),
-                          "A new device wasn't listed on the other tab after refreshing")
+                    check("FreeDVGuiTest_New_Device" not in device_labels(app, "lcSoundCard1OutDevice"),
+                          "An unplugged device was listed on the other tab after refreshing")
                 check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
                 app.click(name("btnRefreshRxAudio"))
                 check_values(app, {"tcSoundCard1InDevice": VirtualAudioDevices.input_label(RADIO_RX),
                                    "tcSoundCard1OutDevice": SPEAKER})
-
-            # Back to receive only: the speaker goes back to the first card.
             go_to_tab(app, "TX Audio")
             set_value(app, "ckTxReceiveOnly", True)
             check_enabled(app, transmit_controls, False)
@@ -386,6 +390,18 @@ def test_audio_tests():
             check(radio_level < 50, "The microphone recording was played to the radio (level %d)" % radio_level)
             app.wait_until(lambda: label(app, "btnSoundCard2InTest") == "Test", timeout=30,
                            description="the audio test to finish")
+            # An input whose matching output is set to none records, but
+            # plays its recording to nothing.
+            go_to_tab(app, "RX Audio")
+            set_value(app, "lcSoundCard1OutDevice", "none")
+            with Tone(RADIO_RX):
+                app.click(name("btnSoundCard1InTest"))
+                check_equal(label(app, "btnSoundCard1InTest"), "Recording", "Test button's label while testing")
+                level = record_level(VirtualAudioDevices.input_name(SPEAKER), 4.0)
+            check(level < 50, "A recording was played through the speaker although its device is none (level %d)" % level)
+            app.wait_until(lambda: label(app, "btnSoundCard1InTest") == "Test", timeout=15,
+                           description="the test to finish without playback")
+
 
             # There has to be a device to test.
             go_to_tab(app, "RX Audio")
@@ -574,6 +590,13 @@ def test_ptt_test():
         check_enabled(app, ["buttonTestPTT"] + everything_else, False)
         wait_for_test_to_finish(app)
         check_equal(app.message_boxes(), [], "Messages displayed by a successful test")
+
+        # Keying by RTS through Hamlib works just as CAT does.
+        set_value(app, "cbPttMethod", "RTS")
+        app.click(name("buttonTestPTT"))
+        wait_for_test_to_finish(app)
+        check_equal(app.message_boxes(), [], "Messages displayed by a successful RTS test")
+        set_value(app, "cbPttMethod", "CAT")
 
         # Keying by tone can't be tested from here, which gets said.
         set_value(app, "ckLeftChannelVoxTone", True)
@@ -774,7 +797,21 @@ def test_frequency_list():
         check_equal(label(app, "labelEnterFreq"), "Enter frequency (MHz):", "Frequency entry label")
         check_values(app, {"txtCtrlNewFrequency": ""})
         check_buttons(app, False, False)
+        # Switching to kHz and back with nothing typed in changes the units
+        # on offer but nothing else.
+        set_value(app, "ckboxFrequencyEntryAsKHz", True)
+        press_apply(app)
+        check_equal(frequencies(app), ["3625.0", "7177.0", "14236.0"], "Frequencies listed in kHz")
+        set_value(app, "ckboxFrequencyEntryAsKHz", False)
+        press_apply(app)
+        check_equal(frequencies(app), ["3.6250", "7.1770", "14.2360"], "Frequencies listed again in MHz")
+        check_values(app, {"txtCtrlNewFrequency": ""})
 
+        # Applying while something is typed in but the units haven't
+        # changed adds nothing.
+        set_value(app, "txtCtrlNewFrequency", "10.136")
+        press_apply(app)
+        check_equal(frequencies(app), ["3.6250", "7.1770", "14.2360"], "Frequencies listed")
         # Something that isn't a frequency can't be added.
         for text in ["abc", "0", "-5"]:
             set_value(app, "txtCtrlNewFrequency", text)
@@ -801,6 +838,7 @@ def test_frequency_list():
         set_value(app, "freqList", "7.1770")
         check_values(app, {"txtCtrlNewFrequency": "7.1770"})
         check_buttons(app, False, True)
+
 
         set_value(app, "freqList", "14.2360")
         app.click(name("freqListRemove"))
