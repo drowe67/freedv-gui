@@ -352,7 +352,8 @@ class UlogLogTarget : public wxLog
 {
     void DoLogRecord(wxLogLevel level, const wxString& msg, const wxLogRecordInfo& /* info */) override
     {
-        const char* text = msg.ToUTF8().data();
+        auto utf8 = msg.ToUTF8();
+        const char* text = utf8.data();
         switch (level)
         {
             case wxLOG_Error:
