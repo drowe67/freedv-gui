@@ -2330,11 +2330,11 @@ def test_connection_burst():
     back, which reuses their place in the list) and when it reconnects to a
     busy server.
 
-    Runs for $FREEDV_BURST_SECONDS (default 20) seconds per round. What's
-    done is random but the same from run to run; set $FREEDV_BURST_SEED to
-    try something else.
+    Does $FREEDV_BURST_ACTIONS (default 250) things per round. What's done
+    is random but the same from run to run; set $FREEDV_BURST_SEED to try
+    something else.
     """
-    duration = float(os.environ.get("FREEDV_BURST_SECONDS", "20"))
+    actions_per_round = int(os.environ.get("FREEDV_BURST_ACTIONS", "250"))
     rng = random.Random(int(os.environ.get("FREEDV_BURST_SEED", "1495")))
     grid_squares = ["FN42", "PF95", "DM13", "IO91", "JN58", "PM95", "QF22", "EM48", "KP20", "GG87"]
     frequencies = [1997000, 3625000, 3693000, 5403500, 7177000, 7197000, 14236000, 14240000, 18118000, 21313000,
@@ -2345,6 +2345,7 @@ def test_connection_burst():
             open_reporter(app)
 
             stations = {}  # by callsign
+            hidden = {}  # when each station that's hiding for a moment shows itself again, by callsign
 
             def connect(callsign):
                 station = server.station(callsign, rng.choice(grid_squares), rx_only=rng.random() < 0.2)
@@ -2359,11 +2360,21 @@ def test_connection_burst():
                 except freedvtest.FreeDVError:
                     check_equal(sorted(callsigns(app)), expected, "Callsigns listed")
 
-            def churn(seconds):
-                actions = 0
-                deadline = time.monotonic() + seconds
-                while time.monotonic() < deadline:
-                    callsign = rng.choice(sorted(stations)) if stations else None
+            def show_again(everyone=False):
+                for callsign, when in sorted(hidden.items()):
+                    if everyone or when <= time.monotonic():
+                        stations[callsign].show()
+                        del hidden[callsign]
+
+            def churn(actions=None, seconds=None):
+                """Does the given number of things, or keeps going for the
+                given time."""
+                done = 0
+                deadline = time.monotonic() + seconds if seconds is not None else None
+                while done < actions if actions is not None else time.monotonic() < deadline:
+                    show_again()
+                    showing = sorted(set(stations) - set(hidden))
+                    callsign = rng.choice(showing) if showing else None
                     action = rng.random()
                     if callsign is None or (action < 0.15 and len(stations) < 60):
                         new_callsign = "W%d%s" % (rng.randrange(10), "".join(rng.choice("ABCDEFGH") for _ in range(3)))
@@ -2372,11 +2383,14 @@ def test_connection_burst():
                     elif action < 0.25:
                         stations.pop(callsign).disconnect()
                     elif action < 0.40:
-                        # Gone and straight back as the same connection...
+                        # Gone and straight back (or back after a moment,
+                        # while everything else carries on) as the same
+                        # connection...
                         stations[callsign].hide()
                         if rng.random() < 0.5:
-                            time.sleep(rng.random() * 1.5)
-                        stations[callsign].show()
+                            hidden[callsign] = time.monotonic() + rng.random() * 1.5
+                        else:
+                            stations[callsign].show()
                     elif action < 0.50:
                         # ...or as a new one.
                         stations.pop(callsign).disconnect()
@@ -2397,10 +2411,11 @@ def test_connection_burst():
                     else:
                         app.rows(LIST)
 
-                    actions += 1
-                    if actions % 50 == 0:
+                    done += 1
+                    if done % 50 == 0:
                         app.command("ping")
-                return actions
+                show_again(everyone=True)
+                return done
 
             # A busy server to begin with...
             for number in range(40):
@@ -2408,7 +2423,7 @@ def test_connection_burst():
             check_list()
 
             for round_number in range(4):
-                actions = churn(duration)
+                actions = churn(actions_per_round)
                 print("Round %d: %d actions, %d stations on" % (round_number + 1, actions, len(stations)), flush=True)
                 app.set_value("reporter.cbBandFilter", "All")
                 check_list()
@@ -2418,7 +2433,7 @@ def test_connection_burst():
                     # reconnects after a few seconds to find mostly the same
                     # stations as before, still coming and going.
                     server.interrupt_freedv()
-                    churn(8)
+                    churn(seconds=8)
                     app.set_value("reporter.cbBandFilter", "All")
                     check_list()
                 elif round_number == 1:

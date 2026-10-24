@@ -449,7 +449,10 @@ void MainApp::UnitTest_()
     }
     std::this_thread::sleep_for(2s);
     
-    constexpr int MAX_TIME_AS_COUNTER = 12000; // 20 minutes
+    // The loops below wait against the clock rather than counting their
+    // sleeps: a sleep can last well past what's asked for (several times
+    // over on some CI machines), so counting them stretches the waits out.
+    constexpr auto MAX_TIME = 20min;
     if (testName == "tx")
     {
         if (utTxOutFile != "")
@@ -492,8 +495,8 @@ void MainApp::UnitTest_()
                     delete txEvent;
                 });
 
-                int counter = 0;
-                while (g_playFileToMicIn.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
+                auto giveUpAt = std::chrono::steady_clock::now() + MAX_TIME;
+                while (g_playFileToMicIn.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < giveUpAt)
                 {
                     std::this_thread::sleep_for(100ms);
                 } 
@@ -568,8 +571,8 @@ void MainApp::UnitTest_()
             g_playFileFromRadio.store(true, std::memory_order_release);
 
             auto sync = 0;
-            int counter = 0;
-            while (g_playFileFromRadio.load(std::memory_order_acquire) && (counter++) < MAX_TIME_AS_COUNTER)
+            auto giveUpAt = std::chrono::steady_clock::now() + MAX_TIME;
+            while (g_playFileFromRadio.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < giveUpAt)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
@@ -584,7 +587,8 @@ void MainApp::UnitTest_()
         {
             // Receive for txtime seconds
             auto sync = 0;
-            for (int i = 0; i < utTxTimeSeconds*10; i++)
+            auto stopAt = std::chrono::steady_clock::now() + std::chrono::seconds(utTxTimeSeconds);
+            while (std::chrono::steady_clock::now() < stopAt)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();

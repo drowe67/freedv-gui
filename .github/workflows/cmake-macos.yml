@@ -1,17 +1,37 @@
 name: Build FreeDV (macOS)
 
 on:
-  workflow_dispatch:
-  push:
-    branches-ignore:
-    - 'dr-render-manual'
+  # Run on the result of merging the pull request, rather than on its branch,
+  # so that what's already been merged into its base is tested too.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
     - "**.md"
     - "**/README"
+  # Merges, in effect.
+  push:
+    branches:
+    - master
+    - 'v*-dev'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
+  # "Run workflow", for a branch without a pull request, for instance.
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Which jobs to run (see "scope")'
+        type: choice
+        options: [full, pr]
+        default: full
 
+# A newer push to a pull request cancels the run for the one before. Merges
+# aren't cancelled, so that each gets a full set of results. Adding a label
+# other than full-ci runs nothing (see "scope"), so that gets a group of its
+# own rather than cancelling the run already under way.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
     
 env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
@@ -28,21 +48,30 @@ env:
   BUILD_TYPE: RelWithDebInfo
 
 jobs:
-  # Pushes to master and the v*-dev branches (merges, in effect) get the full
-  # set: PGO builds, tests and coverage. Other branches get lint and plain,
-  # unsigned packages to try out, unless the commit pushed says "[full ci]"
-  # or the workflow's started by hand ("Run workflow").
+  # Which jobs to run ("tier"):
+  #
+  # - full: everything, including PGO builds, every sanitizer, the other
+  #   distributions, OS versions and architectures, and signing (given the
+  #   secrets). For merges to master and the v*-dev branches, pull requests
+  #   labelled "full-ci", and "Run workflow" unless told otherwise.
+  # - pr: lint, plain unsigned packages to try out, and the unit and GUI tests
+  #   in one configuration per platform (plus one with ASan and UBSan on
+  #   Linux). Enough to catch most problems in under an hour without holding
+  #   up everything else. For every other pull request.
+  # - none: a label other than full-ci was added, which needs no new run.
   scope:
     runs-on: ubuntu-slim
     outputs:
-      full: ${{ steps.scope.outputs.full }}
+      tier: ${{ steps.scope.outputs.tier }}
     steps:
     - id: scope
       env:
-        FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && endsWith(github.ref, '-dev')) || contains(github.event.head_commit.message, '[full ci]') }}
-      run: echo "full=$FULL" >> "$GITHUB_OUTPUT"
+        TIER: ${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && 'none' || (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tier != 'pr') || contains(github.event.pull_request.labels.*.name, 'full-ci')) && 'full' || 'pr' }}
+      run: echo "tier=$TIER" >> "$GITHUB_OUTPUT"
 
   lint:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     runs-on: macos-26
 
     steps:
@@ -90,16 +119,18 @@ jobs:
         # fine with the same compiler.
         run-clang-tidy -p . -extra-arg=-isysroot -extra-arg="$(xcrun --show-sdk-path)"
 
+  # On a pull request (the "pr" tier), only without sanitizers: the Linux
+  # tests cover ASan and UBSan there, and macOS runners are the scarcest.
   test:
     strategy:
       fail-fast: false
       matrix:
         os: [macos-26]  # ARM64
-        sanitizer: [WITH_ASAN=0, WITH_ASAN=1, WITH_RTSAN=1, WITH_TSAN=1, WITH_UBSAN=1]
+        sanitizer: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["WITH_ASAN=0", "WITH_ASAN=1", "WITH_RTSAN=1", "WITH_TSAN=1", "WITH_UBSAN=1"]' || '["WITH_ASAN=0"]') }}
 
     runs-on: ${{ matrix.os }}
-    needs: [lint, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    needs: [scope]
+    if: ${{ needs.scope.outputs.tier != 'none' }}
 
     steps:
     - uses: actions/checkout@v6
@@ -182,7 +213,7 @@ jobs:
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist-pgo-instrument:
     needs: [scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     strategy:
       fail-fast: false
       matrix:
@@ -248,7 +279,7 @@ jobs:
     env:
       MACOS_NOTARYTOOL_PROFILE_NAME: "FreeDVCodeSigning"
     needs: [dist-pgo-instrument, scope]
-    if: ${{ !cancelled() && needs.scope.result == 'success' && (needs.dist-pgo-instrument.result == 'success' || needs.scope.outputs.full != 'true') }}
+    if: ${{ !cancelled() && needs.scope.result == 'success' && (needs.dist-pgo-instrument.result == 'success' || needs.scope.outputs.tier == 'pr') }}
 
     steps:
     - uses: actions/checkout@v6
@@ -263,7 +294,7 @@ jobs:
         brew install automake libtool numpy sox llvm@20 lld@20 gettext # note: LLVM 21 introduces incompatibilities - see https://github.com/Homebrew/homebrew-core/issues/235411
 
     - name: Initialize code signing infrastructure
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.tier == 'full' }}
       env:
         MACOS_CODE_SIGNING_USERNAME: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_USERNAME }}
         MACOS_CODE_SIGNING_PASSWORD: ${{ secrets.FREEDV_MACOS_CODE_SIGNING_PASSWORD }}
@@ -283,7 +314,7 @@ jobs:
         xcrun notarytool store-credentials --apple-id "${{ env.MACOS_CODE_SIGNING_USERNAME }}" --password "${{ env.MACOS_CODE_SIGNING_PASSWORD }}" --team-id "${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID }}" ${{ env.MACOS_NOTARYTOOL_PROFILE_NAME }}
 
     - name: Download profile data
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       uses: actions/download-artifact@v8
       with:
         merge-multiple: false
@@ -291,12 +322,12 @@ jobs:
         path: ${{github.workspace}}
 
     - name: Merge profile data
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       run: |
           $(xcrun -find llvm-profdata) merge -output ${{ github.workspace }}/code.profdata ${{github.workspace}}/profdata-macos-26-intel/code-*.profraw ${{github.workspace}}/profdata-macos-26/code-*.profraw
 
     - name: Build freedv-gui (unsigned)
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID == '' && needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -305,7 +336,7 @@ jobs:
 
     # Not on a merge: a plain build, to try out.
     - name: Build freedv-gui (unsigned, without PGO)
-      if: ${{ needs.scope.outputs.full != 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'pr' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -313,7 +344,7 @@ jobs:
           BUILD_TYPE=Release UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh
 
     - name: Build freedv-gui (signed)
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -326,7 +357,7 @@ jobs:
           make release
 
     - name: Validate DMG signature
-      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ vars.FREEDV_MACOS_CODE_SIGNING_TEAM_ID != '' && needs.scope.outputs.tier == 'full' }}
       run: |
         codesign -v ${{github.workspace}}/build_osx/src/FreeDV.dmg --verbose
 
@@ -354,7 +385,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     needs: [dist-pgo-build, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
 
     steps:
     - uses: actions/checkout@v6
