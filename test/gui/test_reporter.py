@@ -568,6 +568,22 @@ def test_column_filters():
                 app.column_context_menu(LIST, CALLSIGN, choose="Clear Column Filter")
                 wait_for_callsigns(app, everyone)
                 app.menu("Show/User Message", window="reporter")
+                # Band filter with frequency tracking on but exact
+                # frequency off: rows follow the tracked band, and a station
+                # in that band stays listed even when the exact frequency
+                # being tracked is different.
+                app.set_value("reporter.ckTrackFrequency", True)
+                app.set_value("main.cboReportFrequency", "7.1770")
+                app.focus("main.cboReportFrequency", lost=True)
+                app.wait_until(lambda: callsigns(app) == ["VK5DGR"], timeout=15,
+                               description="only the 40 m station to be listed")
+                app.set_value("main.cboReportFrequency", "14.2360")
+                app.focus("main.cboReportFrequency", lost=True)
+                app.wait_until(lambda: callsigns(app) == ["K1ABC"], timeout=15,
+                               description="only the 20 m station to be listed")
+                app.set_value("reporter.ckTrackFrequency", False)
+                app.set_value("reporter.cbBandFilter", "All")
+                wait_for_callsigns(app, everyone)
 
                 # A filter left on when FreeDV quits comes back the next time.
                 set_filter(app, DISTANCE, ">= (Greater or equal to)", "4000", existing="")
@@ -599,7 +615,8 @@ def test_idle_filter():
                         "Idle filter '%s' checked" % item)
 
     with ReporterServer() as server:
-        server.station("K1ABC", "FN42").set_frequency(14236000)
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
         t0 = time.monotonic()  # from when K1ABC last said anything
 
         with freedvtest.start(settings=reporter_settings(server.hostname)) as app:
@@ -621,6 +638,14 @@ def test_idle_filter():
             check_equal(app.get("@Max Idle Time/wxSpinCtrl")["value"], 90, "Suggested idle time")
             app.set_value("@Max Idle Time/wxSpinCtrl", 45)
             app.click("@Max Idle Time/OK")
+            app.wait_for_window_closed("@Max Idle Time")
+            check_idle_setting(app, "Custom...", "Idle 45")
+
+            # Cancelling while the number is one the menu can't name keeps
+            # it as it was, with the custom item left ticked.
+            app.menu(idle_menu + "Custom...", window="reporter")
+            app.wait_for_window("@Max Idle Time")
+            app.click("@Max Idle Time/Cancel")
             app.wait_for_window_closed("@Max Idle Time")
             check_idle_setting(app, "Custom...", "Idle 45")
 
@@ -670,9 +695,14 @@ def test_idle_filter():
             app.wait_until(lambda: callsigns(app) == [], timeout=25, description="K1ABC to be hidden as idle")
             check_equal([row[CALLSIGN] for row in app.rows(LIST) if row["selected"]], [],
                         "Selected station after its row was hidden")
+            # A station that left while hidden by the idle filter stays
+            # gone when the filter goes away: it was deleted, not just
+            # out of sight.
+            k1abc.disconnect()
             app.menu(idle_menu + "Disabled", window="reporter")
             check_idle_setting(app, "Disabled", "Idle Off")
-            wait_for_callsigns(app, ["K1ABC"])
+            time.sleep(5)  # long enough for a refresh to have run
+            check_equal(callsigns(app), [], "Stations listed after leaving while hidden")
 
             quit_and_check_log(app)
 
@@ -2073,13 +2103,16 @@ def test_saved_filters():
 
 def test_selection():
     """What unselects a station, other than selecting another."""
-    with audio_devices(), ReporterServer() as server:
+    from test_log_qso import WsjtxListener
+    with audio_devices(), ReporterServer() as server, WsjtxListener() as logger:
         k1abc = server.station("K1ABC", "FN42")
         k1abc.set_frequency(14240000)
         server.station("VK5DGR", "PF95").set_frequency(7177000)
 
         settings = reporter_settings(server.hostname)
         settings.update(audio_settings())
+        settings.update({"/Reporting/UDP/Enable": True, "/Reporting/UDP/Hostname": "127.0.0.1",
+                         "/Reporting/UDP/Port": logger.port})
         with freedvtest.start(settings=settings) as app:
             open_reporter(app)
             wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
@@ -2162,6 +2195,18 @@ def test_selection():
             k1abc.disconnect()
             app.wait_until(lambda: "K1ABC" not in callsigns(app), timeout=15, description="K1ABC to go")
             check("K1ABC" not in selected(), "K1ABC is still selected after leaving")
+
+            # Logging and recording now, after the chosen station left:
+            # its details went with it, so the windows fall back to what
+            # the main window says.
+            app.click("main.btnLogQSO")
+            app.wait_for_window("logEntry")
+            app.click("logEntry.btnCancel")
+            app.wait_for_window_closed("logEntry")
+            app.click("main.btnRecord")
+            app.wait_for_window("beginRecording")
+            app.click("beginRecording.btnCancel")
+            app.wait_for_window_closed("beginRecording")
 
             stop_modem(app)
 
@@ -2392,6 +2437,44 @@ def test_connection_burst():
             quit_and_check_log(app)
 
 
+
+def test_frequency_in_khz():
+    """The list when frequencies are reported in kHz rather than MHz:
+    cells and filter comparisons both use the chosen unit."""
+    with ReporterServer() as server:
+        k1abc = server.station("K1ABC", "FN42")
+        k1abc.set_frequency(14236000)
+        vk5dgr = server.station("VK5DGR", "PF95")
+        vk5dgr.set_frequency(7177000)
+
+        with freedvtest.start(settings=reporter_settings(server.hostname,
+                                                         **{"/Reporting/FrequencyAsKHz": True})) as app:
+            open_reporter(app)
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
+            wait_for_cell(app, "K1ABC", FREQUENCY, "14236.0")
+
+            def set_filter(column, operator, value):
+                app.column_context_menu(LIST, column, choose=operator)
+                app.wait_for_window("@Set Column Filter")
+                app.set_value("@Set Column Filter/wxTextCtrl", value)
+                app.click("@Set Column Filter/OK")
+                app.wait_for_window_closed("@Set Column Filter")
+                app.activate("reporter")
+
+            # Filter values are given in the column's own units.
+            set_filter(FREQUENCY, ">= (Greater or equal to)", "10000")
+            wait_for_callsigns(app, ["K1ABC"])
+            set_filter(FREQUENCY, "<  (Less than)", "10000")
+            wait_for_callsigns(app, ["VK5DGR"])
+            app.column_context_menu(LIST, FREQUENCY, choose="Clear Column Filter")
+            wait_for_callsigns(app, ["VK5DGR", "K1ABC"])
+
+            # Frequency changes come out in kHz too.
+            k1abc.set_frequency(3500000)
+            wait_for_cell(app, "K1ABC", FREQUENCY, "3500.0")
+
+            quit_and_check_log(app)
+
 SCENARIOS = {
     "live_view": test_live_view,
     "stations": test_stations,
@@ -2419,6 +2502,7 @@ SCENARIOS = {
     "selection": test_selection,
     "window": test_window,
     "connection_burst": test_connection_burst,
+    "frequency_in_khz": test_frequency_in_khz,
 }
 
 
