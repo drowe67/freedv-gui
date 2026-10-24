@@ -1,0 +1,109 @@
+From 95d28cfd8ebd0d4661696a6326434993ec759ddb Mon Sep 17 00:00:00 2001
+From: Mooneer Salem <mooneer@gmail.com>
+Date: Fri, 23 Oct 2026 22:51:26 -0700
+Subject: [PATCH] Let a ThreadedObject ask for a thread that responds quickly.
+
+On macOS, every ThreadedObject runs at utility QoS, at which the system
+lets sleeps and timeouts run long: a 20 ms sleep takes about 150 ms. That
+slows down anything waiting on an outside device, e.g. Hamlib talking to a
+radio (whose own sleeps are stretched too), or an audio unit stopping.
+Such objects can now ask for Priority::Responsive (user-initiated QoS);
+the default is unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SYMA9QiGksM1Dox6TuavLZ
+---
+ src/util/ThreadedObject.cpp |  8 +++++---
+ src/util/ThreadedObject.h   | 11 ++++++++++-
+ src/util/ThreadedObject.mm  |  6 ++++--
+ 3 files changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/src/util/ThreadedObject.cpp b/src/util/ThreadedObject.cpp
+index c982ed8..4569d39 100644
+--- a/src/util/ThreadedObject.cpp
++++ b/src/util/ThreadedObject.cpp
+@@ -27,9 +27,10 @@
+ 
+ using namespace std::chrono_literals;
+ 
+-ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
++ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent, Priority priority)
+     : parent_(parent)
+     , name_(std::move(name))
++    , priority_(priority)
+     , suppressEnqueue_(false)
+     , isDestroying_(false)
+     , taskCurrentlyExecuting_(false)
+@@ -112,8 +113,9 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
+ void ThreadedObject::eventLoop_()
+ {
+ #if defined(__APPLE__)
+-    // Downgrade thread QoS to Utility to avoid thread contention issues.
+-    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
++    // Downgrade thread QoS to Utility to avoid thread contention issues,
++    // unless the object has to respond quickly (see Priority).
++    pthread_set_qos_class_self_np(priority_ == Priority::Responsive ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0);
+ #endif // defined(__APPLE__)
+ 
+     SetThreadName(name_);
+diff --git a/src/util/ThreadedObject.h b/src/util/ThreadedObject.h
+index c587850..53fc79c 100644
+--- a/src/util/ThreadedObject.h
++++ b/src/util/ThreadedObject.h
+@@ -38,10 +38,18 @@
+ class ThreadedObject
+ {
+ public:
++    // How quickly the object's thread needs to respond (only makes a
++    // difference on macOS). Low keeps it out of the way of the audio threads,
++    // but macOS then lets its sleeps and timeouts run long (a 20 ms sleep can
++    // take 150 ms or more), so anything that has to keep up with an outside
++    // device, e.g. a radio's PTT, is better off Responsive.
++    enum class Priority { Low, Responsive };
++
+     virtual ~ThreadedObject();
+ 
+ protected:
+-    ThreadedObject(std::string name, ThreadedObject* parent = nullptr);
++    // An object with a parent shares its parent's thread, and so its priority.
++    ThreadedObject(std::string name, ThreadedObject* parent = nullptr, Priority priority = Priority::Low);
+     
+     // Enqueues some code to run on a different thread.
+     // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
+@@ -52,6 +60,7 @@ protected:
+ private:
+     ThreadedObject* parent_;
+     std::string name_;
++    Priority priority_;
+     // Control flags/counter only. The task payload travels through eventQueueMutex_
+     // (below) or GCD's dispatch_async, and the final barrier is objectThread_.join()
+     // / waitForAllTasksComplete_(), so relaxed ordering is sufficient here.
+diff --git a/src/util/ThreadedObject.mm b/src/util/ThreadedObject.mm
+index ec31d35..842b90f 100644
+--- a/src/util/ThreadedObject.mm
++++ b/src/util/ThreadedObject.mm
+@@ -27,9 +27,10 @@
+ 
+ using namespace std::chrono_literals;
+ 
+-ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent)
++ThreadedObject::ThreadedObject(std::string name, ThreadedObject* parent, Priority priority)
+     : parent_(parent)
+     , name_(std::move(name))
++    , priority_(priority)
+     , suppressEnqueue_(false)
+ {
+     dispatch_queue_t parentQueue;
+@@ -40,7 +41,8 @@
+     }
+     else
+     {
+-        parentQueue = dispatch_get_global_queue(QOS_CLASS_UTILITY, 0);
++        parentQueue = dispatch_get_global_queue(
++            priority_ == Priority::Responsive ? QOS_CLASS_USER_INITIATED : QOS_CLASS_UTILITY, 0);
+     }
+     
+     queue_ = dispatch_queue_create_with_target(nullptr, DISPATCH_QUEUE_SERIAL, parentQueue);
+-- 
+2.54.0 (Apple Git-157)
+

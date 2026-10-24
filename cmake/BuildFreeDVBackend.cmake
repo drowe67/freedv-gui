@@ -4,6 +4,8 @@ FetchContent_Declare(
     freedv_backend
     GIT_REPOSITORY https://github.com/freedv/freedv-backend
     GIT_TAG v2.0-dev
+    # EXPERIMENT (to be reverted): let ThreadedObjects ask for a responsive thread.
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_LIST_DIR}/freedv-backend-thread-priority.patch
 )
 
 FetchContent_MakeAvailable(freedv_backend)

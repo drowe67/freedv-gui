@@ -27,7 +27,7 @@
 #include "../util/logging/ulog.h"
 
 SerialPortRigController::SerialPortRigController(std::string serialPort)
-    : ThreadedObject("SerialController")
+    : ThreadedObject("SerialController", nullptr, Priority::Responsive)
     , serialPortHandle_(COM_HANDLE_INVALID)
     , serialPort_(std::move(serialPort))
 {
