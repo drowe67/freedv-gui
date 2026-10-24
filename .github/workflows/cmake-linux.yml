@@ -1,17 +1,37 @@
 name: Build FreeDV (Linux)
 
 on:
-  workflow_dispatch:
-  push:
-    branches-ignore:
-    - 'dr-render-manual'
+  # Run on the result of merging the pull request, rather than on its branch,
+  # so that what's already been merged into its base is tested too.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
     - "**.md"
     - "**/README"
+  # Merges, in effect.
+  push:
+    branches:
+    - master
+    - 'v*-dev'
+    paths-ignore:
+    - "**.md"
+    - "**/README"
+  # "Run workflow", for a branch without a pull request, for instance.
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Which jobs to run (see "scope")'
+        type: choice
+        options: [full, pr]
+        default: full
 
+# A newer push to a pull request cancels the run for the one before. Merges
+# aren't cancelled, so that each gets a full set of results. Adding a label
+# other than full-ci runs nothing (see "scope"), so that gets a group of its
+# own rather than cancelling the run already under way.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
     
 env:
   # ccache skips compiles that use precompiled headers (wxWidgets and
@@ -35,21 +55,30 @@ env:
   LLVM_POOL: https://apt.llvm.org/jammy/pool/main/l/llvm-toolchain-21/
 
 jobs:
-  # Pushes to master and the v*-dev branches (merges, in effect) get the full
-  # set: PGO builds, tests and coverage. Other branches get lint and plain,
-  # unsigned packages to try out, unless the commit pushed says "[full ci]"
-  # or the workflow's started by hand ("Run workflow").
+  # Which jobs to run ("tier"):
+  #
+  # - full: everything, including PGO builds, every sanitizer, the other
+  #   distributions, OS versions and architectures, and signing (given the
+  #   secrets). For merges to master and the v*-dev branches, pull requests
+  #   labelled "full-ci", and "Run workflow" unless told otherwise.
+  # - pr: lint, plain unsigned packages to try out, and the unit and GUI tests
+  #   in one configuration per platform (plus one with ASan and UBSan on
+  #   Linux). Enough to catch most problems in under an hour without holding
+  #   up everything else. For every other pull request.
+  # - none: a label other than full-ci was added, which needs no new run.
   scope:
     runs-on: ubuntu-slim
     outputs:
-      full: ${{ steps.scope.outputs.full }}
+      tier: ${{ steps.scope.outputs.tier }}
     steps:
     - id: scope
       env:
-        FULL: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/heads/v') && endsWith(github.ref, '-dev')) || contains(github.event.head_commit.message, '[full ci]') }}
-      run: echo "full=$FULL" >> "$GITHUB_OUTPUT"
+        TIER: ${{ (github.event.action == 'labeled' && github.event.label.name != 'full-ci') && 'none' || (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tier != 'pr') || contains(github.event.pull_request.labels.*.name, 'full-ci')) && 'full' || 'pr' }}
+      run: echo "tier=$TIER" >> "$GITHUB_OUTPUT"
 
   lint:
+    needs: [scope]
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v6
@@ -92,6 +121,7 @@ jobs:
 
   build-appimage:
     needs: [scope]
+    if: ${{ needs.scope.outputs.tier != 'none' }}
     #needs: lint
     env:
       FREEDV_LINUX_CODE_SIGNING_KEY_ID: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY_ID }}
@@ -138,20 +168,20 @@ jobs:
     - uses: ./.github/actions/setup-pulseaudio-legacy
 
     - uses: ./.github/actions/setup-rade-python-env
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       with:
         torch-index-url: https://download.pytorch.org/whl/cpu
 
     # Not on a merge: a plain build, to try out.
     - name: Build freedv-gui
-      if: ${{ needs.scope.outputs.full != 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'pr' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 USE_CCACHE=1 STATIC_LIBGCC=1 ./build_linux.sh
 
     - name: Build instrumented freedv-gui 
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -159,7 +189,7 @@ jobs:
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 USE_CCACHE=1 PGO_INSTRUMENT=1 ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Generate optimization profile
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -180,7 +210,7 @@ jobs:
           llvm-profdata-21 merge -output ${{ github.workspace }}/code.profdata code-*.profraw
 
     - name: Build PGO optimized freedv-gui 
-      if: ${{ needs.scope.outputs.full == 'true' }}
+      if: ${{ needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
@@ -189,7 +219,7 @@ jobs:
           BUILD_TYPE=Release CC=clang-21 CXX=clang++-21 PGO_USE_PROFILE=${{github.workspace}}/code.profdata ENABLE_LTO=1 STATIC_LIBGCC=1 ./build_linux.sh 
 
     - name: Initialize GPG keys
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY != '' && needs.scope.outputs.tier == 'full' }}
       env:
         FREEDV_LINUX_CODE_SIGNING_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_KEY }}
         FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY: ${{ secrets.FREEDV_LINUX_CODE_SIGNING_PUBLIC_KEY }}
@@ -204,14 +234,14 @@ jobs:
         gpg --import tmp_private.pem
 
     - name: Build AppImage (unsigned)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID == '' || needs.scope.outputs.full != 'true' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID == '' || needs.scope.outputs.tier == 'pr' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
           ./make-appimage.sh
 
     - name: Build AppImage (signed)
-      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID != '' && needs.scope.outputs.full == 'true' }}
+      if: ${{ env.FREEDV_LINUX_CODE_SIGNING_KEY_ID != '' && needs.scope.outputs.tier == 'full' }}
       shell: bash
       working-directory: ${{github.workspace}}/appimage
       run: |
@@ -240,7 +270,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     steps:
     - uses: actions/checkout@v6
 
@@ -310,7 +340,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     needs: [build-appimage, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    if: ${{ needs.scope.outputs.tier == 'full' }}
     steps:
     - uses: actions/checkout@v6
 
@@ -365,13 +395,16 @@ jobs:
           FREEDV_BINARY=./$(echo -n *.AppImage) ./test/test_rade_loss.sh 2>&1 | tee tmp.log
           grep "PASS" tmp.log
 
+  # On a pull request (the "pr" tier), only ubuntu-26.04 with native audio,
+  # once plain and once with ASan and UBSan together (which, unlike TSan and
+  # RTSan, can share a build).
   test-application:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-24.04, ubuntu-22.04, ubuntu-26.04-arm, ubuntu-24.04-arm, ubuntu-22.04-arm]
-        sanitizer: [WITH_ASAN=0, WITH_RTSAN=1, WITH_ASAN=1, WITH_TSAN=1, WITH_UBSAN=1]
-        native-audio: [USE_NATIVE_AUDIO=0, USE_NATIVE_AUDIO=1]
+        os: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["ubuntu-26.04", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-26.04-arm", "ubuntu-24.04-arm", "ubuntu-22.04-arm"]' || '["ubuntu-26.04"]') }}
+        sanitizer: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["WITH_ASAN=0", "WITH_RTSAN=1", "WITH_ASAN=1", "WITH_TSAN=1", "WITH_UBSAN=1"]' || '["WITH_ASAN=0", "WITH_ASAN=1 WITH_UBSAN=1"]') }}
+        native-audio: ${{ fromJSON(needs.scope.outputs.tier == 'full' && '["USE_NATIVE_AUDIO=0", "USE_NATIVE_AUDIO=1"]' || '["USE_NATIVE_AUDIO=1"]') }}
         exclude:
         - sanitizer: WITH_RTSAN=1
           native-audio: USE_NATIVE_AUDIO=0
@@ -415,8 +448,8 @@ jobs:
           sanitizer: WITH_UBSAN=1
 
     runs-on: ${{ matrix.os }}
-    needs: [lint, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    needs: [scope]
+    if: ${{ needs.scope.outputs.tier != 'none' }}
 
     env:
       LLVM_ARCH: ${{ (matrix.os == 'ubuntu-22.04-arm' || matrix.os == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
@@ -507,10 +540,11 @@ jobs:
     # Tests that drive FreeDV's user interface (see test/gui). Only on one
     # version of Ubuntu for now, as they take a while. (All but the one that
     # looks at who's on the public FreeDV Reporter server, which depends on
-    # who that is at the time.)
+    # who that is at the time.) On a pull request, only without sanitizers,
+    # which make them take longer still.
     - name: Install what the GUI tests need
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' && (needs.scope.outputs.tier == 'full' || matrix.sanitizer == 'WITH_ASAN=0') }}
       working-directory: ${{github.workspace}}
       run: |
           # rigctld stands in for a radio, and eu-stack says where FreeDV is if it gets stuck.
@@ -521,7 +555,7 @@ jobs:
 
     - name: Execute GUI tests
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}
+      if: ${{ matrix.os == 'ubuntu-26.04' && matrix.native-audio == 'USE_NATIVE_AUDIO=1' && (needs.scope.outputs.tier == 'full' || matrix.sanitizer == 'WITH_ASAN=0') }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
           if [[ "${{ matrix.sanitizer }}" == "WITH_ASAN=0" ]]; then
@@ -535,8 +569,8 @@ jobs:
   # Reports how much of the code the unit and GUI tests exercise.
   coverage:
     runs-on: ubuntu-26.04
-    needs: [lint, scope]
-    if: ${{ needs.scope.outputs.full == 'true' }}
+    needs: [scope]
+    if: ${{ needs.scope.outputs.tier == 'full' }}
 
     steps:
     - uses: actions/checkout@v6
