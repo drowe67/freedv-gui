@@ -179,6 +179,7 @@ PlotScalar::PlotScalar(wxWindow* parent,
     plotSurface_ = nullptr;
     addedPoints_ = 0;
     halfPlot_ = halfPlot;
+    lineWidth_ = 1;
     disableFirstLastLabels_ = disableFirstLastLabels;
 
     int i;
@@ -459,7 +460,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx, bool repaintDataOnly)
 
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
-    pen.SetWidth(1);
+    pen.SetWidth(lineWidth_);
     if (!DRAW_DIRECTLY && !useSurface)
     {
         plotAreaDC_->SetPen(pen);

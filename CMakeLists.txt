@@ -941,6 +941,12 @@ foreach(scenario tuning tuned_away drawing waterfall_colours)
     freedv_set_test_pass_criteria(gui_plots_${scenario})
 endforeach(scenario)
 
+foreach(scenario meter agc agc_off saved_gain)
+    add_test(NAME gui_level_meter_agc_${scenario}
+             COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_level_meter_agc.py ${scenario})
+    set_tests_properties(gui_level_meter_agc_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE)
+endforeach(scenario)
+
 # These use Hamlib's rigctld as the radio, and are skipped without it.
 foreach(scenario control frequency_only mode_display analog_sideband editing_frequency unreachable lost)
     add_test(NAME gui_rig_control_${scenario}

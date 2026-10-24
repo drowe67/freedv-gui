@@ -42,7 +42,7 @@ SPEAKER = device("FreeDVGuiTest_Computer_To_Speaker")
 RADIO_TX_MONITOR = VirtualAudioDevices.input_name(RADIO_TX)
 SPEAKER_MONITOR = VirtualAudioDevices.input_name(SPEAKER)
 
-TABS = ["Waterfall", "Spectrum", "Frm Radio", "Frm Mic", "Frm Decoder", "SNR"]
+TABS = ["Waterfall", "Spectrum", "Frm Radio", "Frm Mic", "Frm Decoder", "SNR", "AGC dB"]
 
 # File > Exit: on macOS, Quit FreeDV, in the menu named after it.
 EXIT_MENU_ITEM = "FreeDV/Quit FreeDV" if sys.platform == "darwin" else "File/Exit"

@@ -298,11 +298,12 @@ def play(device, path):
 
 class Tone:
     """Plays a tone into an output device for the duration of a "with" block
-    (at most max_seconds)."""
+    (at most max_seconds). amplitude is its peak, in 16 bit samples."""
 
-    def __init__(self, device, frequency=1000.0, max_seconds=30):
+    def __init__(self, device, frequency=1000.0, max_seconds=30, amplitude=16000):
         self._device = device
         self._frequency = frequency
+        self._amplitude = amplitude
         self._seconds = max_seconds
         self._folder = None
         self._player = None
@@ -312,7 +313,7 @@ class Tone:
         path = os.path.join(self._folder.name, "tone.wav")
         rate = 8000
         samples = array.array("h", (
-            int(16000 * math.sin(2 * math.pi * self._frequency * n / rate)) for n in range(rate * self._seconds)))
+            int(self._amplitude * math.sin(2 * math.pi * self._frequency * n / rate)) for n in range(rate * self._seconds)))
         with wave.open(path, "wb") as f:
             f.setnchannels(1)
             f.setsampwidth(2)

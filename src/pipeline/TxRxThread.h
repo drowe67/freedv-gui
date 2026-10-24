@@ -53,6 +53,7 @@
 // Forward declarations
 class LinkStep;
 class BeepStep;
+class AgcStep;
 
 //#define ENABLE_PROCESSING_STATS
 
@@ -76,6 +77,14 @@ struct TxRxThreadUiHooks
     realtime_fp<float()> toneFreqHz;
     realtime_fp<float()> toneAmplitude;
     realtime_fp<bool()> toneEnabled;
+
+    // Leveler state from the previous session and the loudness target,
+    // read when the thread is created. saveLevelerState is called at the
+    // end of Entry() so the next session resumes from the current gain.
+    float levelerGainDb = 0.0f;
+    float levelerIntegralErrorDb = 0.0f;
+    float levelerTargetLufs = -26.0f;
+    std::function<void(float gainDb, float integralErrorDb)> saveLevelerState;
 };
 
 class TxRxThread
@@ -90,6 +99,7 @@ public:
         , equalizedMicAudioLink_(std::move(micAudioLink))
         , uiHooks_(std::move(uiHooks))
         , beepStep_(nullptr)
+        , agcStep_(nullptr)
         , hasEooBeenSent_(false)
         , pendingEooCount_(0)
         , helper_(std::move(helper))
@@ -152,6 +162,10 @@ private:
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     TxRxThreadUiHooks uiHooks_;
     BeepStep* beepStep_;
+    // Non-owning (pipeline_ owns it), TX side only. Polled for the AGC
+    // gain plot, and used at the end of Entry() to save the leveler's gain
+    // state to config.
+    AgcStep* agcStep_;
     bool hasEooBeenSent_;
     std::unique_ptr<short[]> pendingEooSamples_;
     int pendingEooCount_;
