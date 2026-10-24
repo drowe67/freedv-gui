@@ -522,22 +522,6 @@ jobs:
         # The GUI tests (see below) need room for FreeDV's windows.
         screen-geometry: ${{ matrix.os == 'ubuntu-26.04' && '1280x1024x24' || '1024x768x16' }}
 
-    # EXPERIMENT (to be reverted): how much longer than asked do sleeps take here, and in the Hamlib test?
-    - name: Measure sleeps
-      shell: bash
-      if: ${{ matrix.sanitizer == 'WITH_ASAN=0' }}
-      working-directory: ${{github.workspace}}/build_linux
-      run: |
-          E=${{github.workspace}}/.github/experiment
-          nproc 2>/dev/null || sysctl -n hw.ncpu
-          cc -O2 -o "$RUNNER_TEMP/sleeptest" "$E/sleeptest.c" -lpthread
-          "$RUNNER_TEMP/sleeptest"; "$RUNNER_TEMP/sleeptest"
-          cc -O2 -shared -fPIC -o "$RUNNER_TEMP/sleepstats.so" "$E/sleepstats.c" -ldl
-          start=$(date +%s)
-          LD_PRELOAD="$RUNNER_TEMP/sleepstats.so" src/rig_control/HamlibRigControllerTest > "$RUNNER_TEMP/hamlib.out" 2>&1 || echo "HAMLIB exit $?"
-          echo "HAMLIB wall $(( $(date +%s) - start )) s, $(grep -c 'passed$' "$RUNNER_TEMP/hamlib.out") passed"
-          grep -E "^SLEEP|failed" "$RUNNER_TEMP/hamlib.out" || true
-
     - name: Execute unit tests
       shell: bash
       if: ${{ matrix.native-audio == 'USE_NATIVE_AUDIO=1' }}

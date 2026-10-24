@@ -171,21 +171,6 @@ jobs:
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
-    # EXPERIMENT (to be reverted): how much longer than asked do sleeps take here, and in the Hamlib test?
-    - name: Measure sleeps
-      shell: bash
-      working-directory: ${{github.workspace}}/build_osx
-      run: |
-          E=${{github.workspace}}/.github/experiment
-          nproc 2>/dev/null || sysctl -n hw.ncpu
-          cc -O2 -o "$RUNNER_TEMP/sleeptest" "$E/sleeptest.c" -lpthread
-          "$RUNNER_TEMP/sleeptest"; "$RUNNER_TEMP/sleeptest"
-          cc -O2 -dynamiclib -o "$RUNNER_TEMP/sleepstats.dylib" "$E/sleepstats.c" -ldl
-          start=$(date +%s)
-          DYLD_INSERT_LIBRARIES="$RUNNER_TEMP/sleepstats.dylib" src/rig_control/HamlibRigControllerTest > "$RUNNER_TEMP/hamlib.out" 2>&1 || echo "HAMLIB exit $?"
-          echo "HAMLIB wall $(( $(date +%s) - start )) s, $(grep -c 'passed$' "$RUNNER_TEMP/hamlib.out") passed"
-          grep -E "^SLEEP|failed" "$RUNNER_TEMP/hamlib.out" || true
-
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
