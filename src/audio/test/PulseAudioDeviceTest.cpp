@@ -597,6 +597,20 @@ int newlyAddedSinkInputId(std::string const& before, std::string const& after)
     return -1;
 }
 
+// The index of the sink a sink input is playing to, or -1.
+int sinkOfSinkInput(int sinkInputId)
+{
+    std::istringstream lines(runPactl("list sink-inputs short"));
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        std::istringstream parts(line);
+        int id = -1, sink = -1;
+        if (parts >> id >> sink && id == sinkInputId) return sink;
+    }
+    return -1;
+}
+
 // A recording device pointed at a speaker is refused (there's nothing to
 // record there), and the refusal names the device it was about. Servers
 // word and time their refusal differently: native PulseAudio can fail the
@@ -853,8 +867,16 @@ bool aMovedStreamCarriesOnWithTheNewDeviceName()
         return true;
     }
 
-    runPactl("move-sink-input " + std::to_string(streamId) + " " + std::to_string(moveSink));
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // PipeWire sometimes accepts a move without carrying it out, so ask
+    // again until the stream is actually on the other sink.
+    bool moved = false;
+    for (int attempt = 0; attempt < 5 && !moved; attempt++)
+    {
+        runPactl("move-sink-input " + std::to_string(streamId) + " " + std::to_string(moveSink));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        moved = sinkOfSinkInput(streamId) == moveSink;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     wxString nowAt = PulseAudioDeviceTestAccess::deviceName(*device);
     bool running = device->isRunning();
@@ -862,6 +884,12 @@ bool aMovedStreamCarriesOnWithTheNewDeviceName()
     unloadModule(moduleA);
     unloadModule(moduleB);
     useNoSoundServer();
+
+    if (!moved)
+    {
+        std::cout << "[the sound server never moved the stream] ";
+        return false;
+    }
 
     if (nowAt != "FreeDVTestMoveB" || !running || heard.contains("Lost connection"))
     {

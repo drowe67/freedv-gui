@@ -844,7 +844,7 @@ DefineAudioTest(RADEV1)
 # The -txfile/-txoutfile and -rxfile/-rxoutfile unit-test options.
 add_test(NAME ut_file_recording
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_ut_recording.sh")
-freedv_set_test_pass_criteria(ut_file_recording "PASS")
+freedv_set_test_pass_criteria(ut_file_recording "PASS: file input and output")
 
 if(NOT ENABLE_RTSAN)
 # Note: loading/saving feature files is currently not RT-safe
@@ -947,7 +947,7 @@ foreach(scenario tuning tuned_away drawing waterfall_colours spectrum_averaging 
 endforeach(scenario)
 
 # These use Hamlib's rigctld as the radio, and are skipped without it.
-foreach(scenario control frequency_only mode_display analog_sideband editing_frequency unreachable missing_port lost)
+foreach(scenario control frequency_only mode_display analog_sideband editing_frequency unreachable serial_ptt missing_port lost)
     add_test(NAME gui_rig_control_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_rig_control.py ${scenario})
     set_tests_properties(gui_rig_control_${scenario} PROPERTIES LABELS gui SKIP_RETURN_CODE 77)
