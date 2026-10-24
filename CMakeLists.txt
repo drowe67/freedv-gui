@@ -934,7 +934,7 @@ foreach(scenario missing_device low_sample_rate no_devices partly_configured rec
     freedv_set_test_pass_criteria(gui_audio_errors_${scenario})
 endforeach(scenario)
 
-foreach(scenario tuning tuned_away drawing waterfall_colours)
+foreach(scenario tuning tuned_away drawing waterfall_colours spectrum_averaging sized_plots translated_layout)
     add_test(NAME gui_plots_${scenario}
              COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/gui/test_plots.py ${scenario})
     set_tests_properties(gui_plots_${scenario} PROPERTIES LABELS gui RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
