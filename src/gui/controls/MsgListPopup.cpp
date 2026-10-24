@@ -59,8 +59,11 @@ wxString MsgListPopup::GetStringValue() const
 {
     // The combo takes this whenever the list closes. Without hoverPicks,
     // only an item actually clicked counts, not one just passed over.
+    // This also runs from ~wxComboCtrlBase() if the list is open when the
+    // combo is destroyed, by which point GetComboCtrl()'s cast to
+    // wxComboCtrl asserts, so use the base class pointer instead.
     if (!options_.hoverPicks && !picked_)
-        return GetComboCtrl()->GetValue();
+        return m_combo->GetValue();
 
     int sel = GetSelection();
     return sel != wxNOT_FOUND ? GetString(sel) : wxString();

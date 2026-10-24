@@ -1936,9 +1936,6 @@ def test_config_migration_failure():
             app.wait_for_window("main")
             check("Could not create folder" in open(app.log_path, errors="replace").read(),
                   "FreeDV's output when its new settings folder can't be created")
-            # Give the folder back before quitting; otherwise the settings
-            # save at exit fails as well, and FreeDV gets stuck reporting it.
-            os.chmod(os.path.join(home, ".config"), 0o700)
             check_equal(app.quit(), 0, "FreeDV's exit code (unreadable folder)")
         check(not os.path.exists(migrated(home)), "Migrated configuration file exists (unreadable folder)")
     finally:
@@ -1955,7 +1952,6 @@ def test_config_migration_failure():
             app.wait_for_window("main")
             check("Could not copy" in open(app.log_path, errors="replace").read(),
                   "FreeDV's output when the configuration copy is refused")
-            os.chmod(os.path.join(home, ".config", "freedv"), 0o700)
             check_equal(app.quit(), 0, "FreeDV's exit code (unwritable folder)")
         check(not os.path.exists(migrated(home)), "Migrated configuration file exists (unwritable folder)")
     finally:

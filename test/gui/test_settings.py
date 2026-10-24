@@ -1027,10 +1027,9 @@ def test_frequency_list_from_main_window():
         app.wait_until(lambda: list_shown(app), description="the frequencies to be listed")
         app.context_menu("main.lbReportFrequencies", item=1, choose="Delete 10136.0kHz from list")
         check_equal(offered(app), ["3600.0", "14200.0"], "Frequencies after a kHz delete")
-        # The delete reopened the list; close it, as quitting with it open
-        # holds the window up.
+        # The delete reopened the list; quitting with it still open has to
+        # work too.
         app.wait_until(lambda: list_shown(app), description="the list to open again")
-        app.combo_popup("main.cboReportFrequency", False)
         quit_and_check_log(app)
 
 
