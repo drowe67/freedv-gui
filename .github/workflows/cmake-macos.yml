@@ -171,6 +171,26 @@ jobs:
         venv-path: rade_venv
         working-directory: ${{github.workspace}}/build_osx
 
+    # EXPERIMENT (to be reverted): do sleeps overrun less while something keeps a CPU from going idle?
+    - name: Measure sleeps
+      shell: bash
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+          E=${{github.workspace}}/.github/experiment
+          cc -O2 -o "$RUNNER_TEMP/sleeptest" "$E/sleeptest.c" -lpthread
+          cc -O2 -o "$RUNNER_TEMP/spin" "$E/spin.c"
+          cc -O2 -dynamiclib -o "$RUNNER_TEMP/sleepstats.dylib" "$E/sleepstats.c" -ldl
+          echo "MODE none"; "$RUNNER_TEMP/sleeptest"
+          "$RUNNER_TEMP/spin" tick & p=$!; echo "MODE tick"; "$RUNNER_TEMP/sleeptest"; kill $p
+          nice -n 20 "$RUNNER_TEMP/spin" & p=$!; echo "MODE spin1"; "$RUNNER_TEMP/sleeptest"; kill $p
+          for i in 1 2 3; do nice -n 20 "$RUNNER_TEMP/spin" & done; echo "MODE spin3"; "$RUNNER_TEMP/sleeptest"; pkill -f "$RUNNER_TEMP/spin"
+          # One niced spinner stays on for the Hamlib test and every later step.
+          nohup nice -n 20 "$RUNNER_TEMP/spin" > /dev/null 2>&1 &
+          start=$(date +%s)
+          DYLD_INSERT_LIBRARIES="$RUNNER_TEMP/sleepstats.dylib" src/rig_control/HamlibRigControllerTest > "$RUNNER_TEMP/hamlib.out" 2>&1 || echo "HAMLIB exit $?"
+          echo "HAMLIB wall $(( $(date +%s) - start )) s, $(grep -c 'passed$' "$RUNNER_TEMP/hamlib.out") passed"
+          grep -E "^SLEEP|failed" "$RUNNER_TEMP/hamlib.out" || true
+
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
